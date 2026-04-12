@@ -104,10 +104,9 @@ PetscErrorCode TSPseudoComputeFunction(TS ts, Vec solution, Vec *residual, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Copy the src to dest along with residual information (if said information is valid)
+// Copy residual information from src to dest (if said information is valid)
 // This allows residual information to be copied between ts->vec_sol and pseudo->update
-// Actual copying of the Vec information is optional, in cases where we know the Vecs are already identical
-static PetscErrorCode TSPseudoCopy(Vec src, Vec dest, PetscBool skip_copy)
+static PetscErrorCode TSPseudoCopyResidualInfo(Vec src, Vec dest)
 {
   PetscObjectState    src_state, dest_state;
   TS_Pseudo_Residual *src_pseudo_residual = NULL, *dest_pseudo_residual = NULL;
@@ -115,23 +114,16 @@ static PetscErrorCode TSPseudoCopy(Vec src, Vec dest, PetscBool skip_copy)
   PetscFunctionBegin;
   PetscCall(PetscObjectStateGet((PetscObject)src, &src_state));
   PetscCall(PetscObjectContainerQuery((PetscObject)src, TSPSEUDO_RESIDUAL_KEY, &src_pseudo_residual));
-  PetscCall(PetscObjectContainerQuery((PetscObject)dest, TSPSEUDO_RESIDUAL_KEY, &dest_pseudo_residual));
   PetscCheck(src_pseudo_residual, PetscObjectComm((PetscObject)src), PETSC_ERR_ARG_WRONGSTATE, "Source vector should have TSPSEUDO residual information attached to it before copying");
 
-  if (src_pseudo_residual->Xstate != src_state) {
-    // If residual information is out-of-date, just copy the vector
-    if (!skip_copy) PetscCall(VecCopy(src, dest));
-    // Ensure residual info in dest is invalidated even if skip_copy = true
-    if (dest_pseudo_residual) dest_pseudo_residual->Xstate = -1;
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
+  if (src_pseudo_residual->Xstate != src_state) PetscFunctionReturn(PETSC_SUCCESS);
 
+  PetscCall(PetscObjectContainerQuery((PetscObject)dest, TSPSEUDO_RESIDUAL_KEY, &dest_pseudo_residual));
   if (!dest_pseudo_residual) {
     PetscCall(PetscNew(&dest_pseudo_residual));
     PetscCall(VecDuplicate(dest, &dest_pseudo_residual->func));
     PetscCall(PetscObjectContainerCompose((PetscObject)dest, TSPSEUDO_RESIDUAL_KEY, dest_pseudo_residual, (PetscCtxDestroyFn *)TSPseudoResidualDestroy));
   }
-  if (!skip_copy) PetscCall(VecCopy(src, dest));
   PetscCall(PetscObjectStateGet((PetscObject)dest, &dest_state));
   PetscCall(VecCopy(src_pseudo_residual->func, dest_pseudo_residual->func));
   dest_pseudo_residual->Xstate = dest_state;
@@ -151,10 +143,6 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   if (ts->start_step == step_num) {
     pseudo->dt_initial = ts->time_step;
     PetscCall(VecCopy(ts->vec_sol, pseudo->update));
-  } else {
-    // in all future updates pseudo->update already contains the current time solution
-    // Thus we only need to copy over the residual information
-    PetscCall(TSPseudoCopy(ts->vec_sol, pseudo->update, PETSC_TRUE));
   }
 
   pseudo->status = TS_STEP_INCOMPLETE;
@@ -171,7 +159,9 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
     if (!accept) goto reject_step;
 
     pseudo->status = TS_STEP_PENDING;
-    PetscCall(TSPseudoCopy(pseudo->update, ts->vec_sol, PETSC_FALSE));
+    PetscCall(VecCopy(pseudo->update, ts->vec_sol));
+    // Copy residual info in case TSPseudoComputeFunction() was called in TSAdaptCheckStage()
+    PetscCall(TSPseudoCopyResidualInfo(pseudo->update, ts->vec_sol));
     PetscCall(TSAdaptChoose(adapt, ts, ts->time_step, NULL, &next_time_step, &accept));
     pseudo->status = accept ? TS_STEP_COMPLETE : TS_STEP_INCOMPLETE;
     if (!accept) {
@@ -195,6 +185,8 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
 
   // Check solution convergence
   PetscCall(TSPseudoComputeFunction(ts, ts->vec_sol, NULL, &fnorm));
+  // Copy residual info back to pseudo->update. These Vecs are exactly the same, so no need for extra VecCopy
+  PetscCall(TSPseudoCopyResidualInfo(ts->vec_sol, pseudo->update));
   if (pseudo->fnorm_initial == -1) pseudo->fnorm_initial = fnorm;
 
   if (fnorm < pseudo->fatol) {
