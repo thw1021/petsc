@@ -1,26 +1,7 @@
 /* MANSEC = DM */
 /* SUBMANSEC = FE */
 /*
-  petscfekokkos.h -- Header-template kernel API for PETSCFEKOKKOS
-
-  Provides compile-time template kernels for GPU-resident PetscFE residual
-  and Jacobian integration. Users write KOKKOS_INLINE_FUNCTION callbacks and
-  pass them as C++ template parameters, enabling device inlining.
-
-  Usage (in .kokkos.cxx file):
-
-    #include <petscfekokkos.h>
-
-    KOKKOS_INLINE_FUNCTION
-    static void f0_poisson(PETSC_POINT_ARGS, PetscScalar f0[]) { ... }
-
-    KOKKOS_INLINE_FUNCTION
-    static void f1_poisson(PETSC_POINT_ARGS, PetscScalar f1[]) { ... }
-
-    PetscCall(PetscFEKokkosComputeResidual<f0_poisson, f1_poisson>(ds, key, Ne, cgeom,
-                coefficients, coefficients_t, t, elemVec));
-
-  Requires C++14+. Compatible with nvcc_wrapper, hipcc, and host-only Kokkos.
+  Kokkos template kernels for GPU-resident PetscFE residual and Jacobian integration
 */
 
 #pragma once
