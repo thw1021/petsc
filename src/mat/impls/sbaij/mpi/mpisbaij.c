@@ -1798,8 +1798,7 @@ static PetscErrorCode MatZeroRowsColumns_MPISBAIJ(Mat A, PetscInt N, const Petsc
     PetscScalar       *c_vals;
 
     PetscCall(VecDuplicate(l->lvec, &lvec_contrib));
-    PetscCall(VecSet(lvec_contrib, 0.0));
-    PetscCall(VecGetArrayWrite(lvec_contrib, &c_vals));
+    PetscCall(VecGetArray(lvec_contrib, &c_vals));
     PetscCall(VecGetArrayRead(x, &x_vals));
     /* Only accumulate b[c] -= A[r,c] * x[r] when off-process col c is not also a zeroed row
        (mask[c] non-zero means col c is zeroed, so b[c] = diag * x[c] is already set).
@@ -1818,7 +1817,7 @@ static PetscErrorCode MatZeroRowsColumns_MPISBAIJ(Mat A, PetscInt N, const Petsc
       }
     }
     PetscCall(VecRestoreArrayRead(x, &x_vals));
-    PetscCall(VecRestoreArrayWrite(lvec_contrib, &c_vals));
+    PetscCall(VecRestoreArray(lvec_contrib, &c_vals));
   }
   /* remove zeroed rows of off-diagonal matrix */
   for (i = 0; i < len; ++i) {

@@ -2914,14 +2914,13 @@ static PetscErrorCode MatZeroRowsColumns_Private_IS(Mat A, PetscInt n, const Pet
 
       PetscCall(PetscMalloc1(len, &saved));
       PetscCall(VecDuplicate(x, &x_zeroed));
-      PetscCall(VecSet(x_zeroed, 0.0));
       PetscCall(VecGetArrayRead(x, &xx));
-      PetscCall(VecGetArrayWrite(x_zeroed, &xz));
+      PetscCall(VecGetArray(x_zeroed, &xz));
       for (PetscInt i = 0; i < len; i++) {
         xz[lrows[i]] = xx[lrows[i]];
         saved[i]     = diag * xx[lrows[i]];
       }
-      PetscCall(VecRestoreArrayWrite(x_zeroed, &xz));
+      PetscCall(VecRestoreArray(x_zeroed, &xz));
       PetscCall(VecRestoreArrayRead(x, &xx));
       PetscCall(VecDuplicate(b, &temp));
       PetscCall(MatMult(A, x_zeroed, temp));
@@ -2929,17 +2928,17 @@ static PetscErrorCode MatZeroRowsColumns_Private_IS(Mat A, PetscInt n, const Pet
       PetscCall(VecDestroy(&temp));
       PetscCall(VecDestroy(&x_zeroed));
       /* Overwrite zeroed rows: b[r] = diag * x[r] (after the MatMult() so it is not clobbered) */
-      PetscCall(VecGetArrayWrite(b, &bb));
+      PetscCall(VecGetArray(b, &bb));
       for (PetscInt i = 0; i < len; i++) bb[lrows[i]] = saved[i];
-      PetscCall(VecRestoreArrayWrite(b, &bb));
+      PetscCall(VecRestoreArray(b, &bb));
       PetscCall(PetscFree(saved));
     } else {
       /* MatZeroRows(): only set b[r] = diag * x[r] for the zeroed rows */
       PetscCall(VecGetArrayRead(x, &xx));
-      PetscCall(VecGetArrayWrite(b, &bb));
+      PetscCall(VecGetArray(b, &bb));
       for (PetscInt i = 0; i < len; ++i) bb[lrows[i]] = diag * xx[lrows[i]];
       PetscCall(VecRestoreArrayRead(x, &xx));
-      PetscCall(VecRestoreArrayWrite(b, &bb));
+      PetscCall(VecRestoreArray(b, &bb));
     }
   }
   /* get rows associated to the local matrices */
