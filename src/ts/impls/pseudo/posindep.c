@@ -68,7 +68,7 @@ static PetscErrorCode TSPseudoResidualDestroy(void *pseudo_residual)
 
   This can be used in a custom adaptive timestepping implementation that needs access to the residual, but can reuse the calculation already done by `TSPSEUDO`.
 
-  To correctly get the residual reuse behavior, `solution` must be the same `Vec` that returned by `TSGetSolution()`.
+  To correctly get the residual reuse behavior, `solution` must be the same `Vec` that was returned by `TSGetSolution()` or the `Vec` given by `TSAdaptCheckStage()`.
 
 .seealso: [](ch_ts), `TSPSEUDO`
 @*/
