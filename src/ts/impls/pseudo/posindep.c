@@ -65,9 +65,9 @@ static PetscErrorCode TSPseudoResidualDestroy(void *pseudo_residual)
   Level: advanced
 
   Note:
-  `TSPSEUDO` records the nonlinear residual and the `solution` vector used to generate it. If given the same `solution` vector (as determined by the vectors `PetscObjectState`), this function will return those recorded values.
+  `TSPSEUDO` records the nonlinear residual and the `solution` vector used to generate it. If given the same `solution` vector (as determined by the vector's `PetscObjectState`), this function will return those recorded values.
 
-  This would be used in a custom adaptive timestepping implementation that needs access to the residual, but reuses the calculation done by `TSPSEUDO` by default.
+  This can be used in a custom adaptive timestepping implementation that needs access to the residual, but can reuse the calculation already done by `TSPSEUDO`.
 
   To correctly get the residual reuse behavior, `solution` must be the same `Vec` that returned by `TSGetSolution()`.
 
