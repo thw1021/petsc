@@ -32,8 +32,7 @@ typedef struct {
 // This struct is attached to any vector that has a solution in it.
 // Use and copying of this struct between Vecs allows residual information to be carried between ts->vec_sol and pseudo->update
 typedef struct {
-  Vec              func; /* work vector where F(t[i],u[i]) is stored */
-  PetscReal        fnorm;
+  Vec              func;   /* work vector where F(t[i],u[i]) is stored */
   PetscObjectState Xstate; /* state of vector given to TSComputeIFunction() with 0 Xdot to compute `residual`*/
 } TS_Pseudo_Residual;
 
@@ -98,11 +97,10 @@ PetscErrorCode TSPseudoComputeFunction(TS ts, Vec solution, Vec *residual, Petsc
     PetscCall(VecZeroEntries(pseudo->xdot));
     PetscCall(TSComputeIFunction(ts, ts->ptime, solution, pseudo->xdot, pseudo_residual->func, PETSC_FALSE));
     pseudo_residual->Xstate = Xstate;
-    PetscCall(VecNorm(pseudo_residual->func, NORM_2, &pseudo_residual->fnorm));
   }
 
   if (residual) *residual = pseudo_residual->func;
-  if (fnorm) *fnorm = pseudo_residual->fnorm;
+  if (fnorm) PetscCall(VecNorm(pseudo_residual->func, NORM_2, fnorm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -135,7 +133,6 @@ static PetscErrorCode TSPseudoCopy(Vec src, Vec dest, PetscBool skip_copy)
   }
   if (!skip_copy) PetscCall(VecCopy(src, dest));
   PetscCall(PetscObjectStateGet((PetscObject)dest, &dest_state));
-  dest_pseudo_residual->fnorm = src_pseudo_residual->fnorm;
   PetscCall(VecCopy(src_pseudo_residual->func, dest_pseudo_residual->func));
   dest_pseudo_residual->Xstate = dest_state;
   PetscFunctionReturn(PETSC_SUCCESS);
