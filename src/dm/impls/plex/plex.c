@@ -10195,6 +10195,8 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (pointSF) PetscValidHeaderSpecific(pointSF, PETSCSF_CLASSID, 2);
   else pointSF = dm->sf;
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_plex_point_sf_view"));
+  PetscCall(PetscSFViewFromOptions(pointSF, NULL, "-dm_plex_point_sf_view"));
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCheck(pointSF, comm, PETSC_ERR_ARG_WRONGSTATE, "DMPlex must have Point SF attached");
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
@@ -10275,7 +10277,7 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
     for (PetscInt d = 0; d <= depth; ++d) {
       PetscCall(DMPlexGetDepthStratum(dm, d, &starts[d], NULL));
     }
-    PetscCall(DMPlexGetDepthStratum(dm, 1, NULL, &starts[depth + 1]));
+    PetscCall(DMPlexGetDepthStratum(dm, depths[depth], NULL, &starts[depth + 1]));
     PetscCallMPI(MPI_Allgather(starts, depth + 2, MPIU_INT, gstarts, depth + 2, MPIU_INT, comm));
     for (l = 0; l < nleaves; ++l) {
       const PetscInt point  = locals ? locals[l] : l;
