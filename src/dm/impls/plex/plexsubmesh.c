@@ -1418,13 +1418,14 @@ static PetscErrorCode divideCell(DMLabel label, PetscInt p, PetscInt val, PetscC
 static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
 {
   const PetscInt   debug = ((DM_Plex *)dm->data)->printCohesive;
+  const PetscInt   shift = 100;
   DMPlexPointQueue queue = NULL;
   PointDivision    div;
   PetscSF          pointSF;
   IS               pointIS;
   const PetscInt  *points;
   PetscBool        empty;
-  PetscInt         dim, shift = 100, n, i;
+  PetscInt         dim, n;
   PetscMPIInt      rank;
 
   PetscFunctionBegin;
@@ -1438,7 +1439,7 @@ static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
   if (pointIS) {
     PetscCall(ISGetLocalSize(pointIS, &n));
     PetscCall(ISGetIndices(pointIS, &points));
-    for (i = 0; i < n; ++i) {
+    for (PetscInt i = 0; i < n; ++i) {
       PetscCall(DMPlexPointQueueEnqueue(queue, points[i]));
       if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Init: Enqueued point %d with value %d\n", rank, points[i], shift + dim));
     }
@@ -1449,7 +1450,7 @@ static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
   if (pointIS) {
     PetscCall(ISGetLocalSize(pointIS, &n));
     PetscCall(ISGetIndices(pointIS, &points));
-    for (i = 0; i < n; ++i) {
+    for (PetscInt i = 0; i < n; ++i) {
       PetscCall(DMPlexPointQueueEnqueue(queue, points[i]));
       if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Init: Enqueued point %d with value %d\n", rank, points[i], -(shift + dim)));
     }
@@ -2274,10 +2275,13 @@ static PetscErrorCode GetSurfaceSide_Static(DM dm, DM subdm, PetscInt numSubpoin
 
 static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool split)
 {
+  const PetscInt  debug  = ((DM_Plex *)dm->data)->printCohesive;
+  const PetscInt  shift  = 100;
+  const PetscInt  shift2 = 200;
   IS              facePosIS, faceNegIS, dimIS;
   const PetscInt *points;
   PetscInt       *closure = NULL, *inclosure = NULL;
-  PetscInt        dim, numPoints, shift = 100, shift2 = 200, debug = 0;
+  PetscInt        dim, numPoints;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
@@ -2288,6 +2292,7 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
   if (!facePosIS || !faceNegIS) {
     PetscCall(ISDestroy(&facePosIS));
     PetscCall(ISDestroy(&faceNegIS));
+    if (debug) PetscCall(PetscSynchronizedFlush(PetscObjectComm((PetscObject)dm), NULL));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(ISExpand(facePosIS, faceNegIS, &dimIS));
@@ -2323,7 +2328,7 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
       }
       if (!split) continue;
     }
-    if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Point %" PetscInt_FMT " is impinging (%" PetscInt_FMT ":%" PetscInt_FMT ", %" PetscInt_FMT ":%" PetscInt_FMT ")\n", point, support[0], valA, support[1], valB));
+    if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Point %" PetscInt_FMT " is impinging (%" PetscInt_FMT ":%" PetscInt_FMT ", %" PetscInt_FMT ":%" PetscInt_FMT ")\n", PetscGlobalRank, point, support[0], valA, support[1], valB));
     if (split) {
       // Split the face
       PetscCall(DMLabelGetValue(label, point, &valA));
@@ -2356,11 +2361,11 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
       PetscCall(DMPlexGetTransitiveClosure(dm, point, PETSC_TRUE, &Ncl, &closure));
       for (PetscInt cl = 0; cl < Ncl * 2; cl += 2) {
         PetscCall(DMLabelGetValue(label, closure[cl], &val));
-        if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Point %" PetscInt_FMT ":%" PetscInt_FMT "\n", closure[cl], val));
+        if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]  Point %" PetscInt_FMT ":%" PetscInt_FMT "\n", PetscGlobalRank, closure[cl], val));
         if (val >= 0 && val <= dim) {
           PetscInt Nincl, inval, indep;
 
-          if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Point %" PetscInt_FMT " is being unsplit\n", closure[cl]));
+          if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]  Point %" PetscInt_FMT " is being unsplit\n", PetscGlobalRank, closure[cl]));
           PetscCall(DMPlexGetPointDepth(dm, closure[cl], &dep));
           PetscCall(DMLabelClearValue(label, closure[cl], val));
           PetscCall(DMLabelSetValue(label, closure[cl], shift2 + dep));
@@ -2369,7 +2374,7 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
           for (PetscInt incl = 0; incl < Nincl * 2; incl += 2) {
             PetscCall(DMLabelGetValue(label, inclosure[cl], &inval));
             if (inval >= 0 && inval <= dim) {
-              if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "    Point %" PetscInt_FMT " is being unsplit\n", inclosure[incl]));
+              if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]    Point %" PetscInt_FMT " is being unsplit\n", PetscGlobalRank, inclosure[incl]));
               PetscCall(DMPlexGetPointDepth(dm, inclosure[incl], &indep));
               PetscCall(DMLabelClearValue(label, inclosure[incl], inval));
               PetscCall(DMLabelSetValue(label, inclosure[incl], shift2 + indep));
@@ -2383,6 +2388,7 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
   PetscCall(DMPlexRestoreTransitiveClosure(dm, 0, PETSC_TRUE, NULL, &closure));
   PetscCall(ISRestoreIndices(dimIS, &points));
   PetscCall(ISDestroy(&dimIS));
+  if (debug) PetscCall(PetscSynchronizedFlush(PetscObjectComm((PetscObject)dm), NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2413,12 +2419,15 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
 @*/
 PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel, PetscInt bvalue, PetscBool flip, PetscBool split, DM subdm)
 {
-  const PetscInt  debug = ((DM_Plex *)dm->data)->printCohesive;
+  const PetscInt  debug  = ((DM_Plex *)dm->data)->printCohesive;
+  const PetscInt  shift  = 100;
+  const PetscInt  shift2 = 200;
+  const PetscInt  shift3 = split ? 300 : 0;
   DMLabel         depthLabel;
   IS              dimIS, subpointIS = NULL;
   const PetscInt *points, *subpoints;
   const PetscInt  rev   = flip ? -1 : 1;
-  PetscInt        shift = 100, shift2 = 200, shift3 = split ? 300 : 0, dim, depth, numPoints, numSubpoints, p, val;
+  PetscInt        dim, depth, numPoints, numSubpoints, p, val;
   MPI_Comm        comm;
 
   PetscFunctionBegin;
@@ -2465,6 +2474,7 @@ PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel,
       PetscCall(GetSurfaceSide_Static(dm, subdm, numSubpoints, subpoints, support[s], points[p], &pos));
       if (pos) PetscCall(DMLabelSetValue(label, support[s], rev * (shift + dim)));
       else PetscCall(DMLabelSetValue(label, support[s], -rev * (shift + dim)));
+      if (debug) PetscCall(PetscSynchronizedPrintf(comm, "[%d] Cell %d on %s side\n", PetscGlobalRank, support[s], pos ? "positive" : "negative"));
       if (rev < 0) pos = !pos ? PETSC_TRUE : PETSC_FALSE;
       /* Put faces touching the fault in the label */
       PetscCall(DMPlexGetConeSize(dm, support[s], &coneSize));
@@ -2592,6 +2602,7 @@ PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel,
     PetscCall(ISDestroy(&dimIS));
   }
 divide:
+  if (debug) PetscCall(PetscSynchronizedFlush(comm, NULL));
   if (subpointIS) PetscCall(ISRestoreIndices(subpointIS, &subpoints));
   if (debug) PetscCall(ViewCohesiveLabel_Static(comm, label));
   PetscCall(DMPlexLabelFaultHalo(dm, label));
