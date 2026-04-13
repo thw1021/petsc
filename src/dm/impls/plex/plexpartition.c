@@ -2052,7 +2052,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
 }
 
 // If the point is in the closure of a label cell, set the owner to this process
-PetscErrorCode CheckLabelPoint_Private(DM plex, DMLabel label, PetscInt Nv, const PetscInt values[], PetscInt cellDepth, PetscInt point, PetscInt *owner)
+static PetscErrorCode CheckLabelPoint_Private(DM plex, DMLabel label, PetscInt Nv, const PetscInt values[], PetscInt cellDepth, PetscInt point, PetscInt *owner)
 {
   PetscInt    starSize, *star = NULL;
   PetscMPIInt rank;
@@ -2082,11 +2082,11 @@ PetscErrorCode CheckLabelPoint_Private(DM plex, DMLabel label, PetscInt Nv, cons
   DMPlexRebalanceSharedLabelPoints - Change ownership of labeled points in the Plex so that processes owning shared label points also own a cell that contains them. This routine updates the `PointSF` of the `DM` inplace.
 
   Input Parameters:
-+ dm              - the `DMPLEX` object
-. label           - the `DMLabel` object
-. Nv              - the number of label values
-. values          - the array of label values
-- cellDepth       - depth of the cells in the label
++ dm        - the `DMPLEX` object
+. label     - the `DMLabel` object
+. Nv        - the number of label values
+. values    - the array of label values
+- cellDepth - depth of the cells in the label
 
   Level: intermediate
 
