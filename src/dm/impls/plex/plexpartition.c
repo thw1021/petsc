@@ -1469,10 +1469,6 @@ PetscErrorCode DMPlexPartitionLabelCreateSF(DM dm, DMLabel label, PetscBool sort
   #include <parmetis.h>
 #endif
 
-/* The two functions below are used by DMPlexRebalanceSharedPoints which errors
- * when PETSc is built without ParMETIS. To avoid -Wunused-function, we take
- * them out in that case. */
-#if defined(PETSC_HAVE_PARMETIS)
 /*
   DMPlexRewriteSF - Rewrites the ownership of the `PetscSF` of a `DM` (in place).
 
@@ -1612,6 +1608,10 @@ static PetscErrorCode DMPlexRewriteSF(DM dm, PetscInt n, PetscInt *pointsToRewri
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* The function below is used by DMPlexRebalanceSharedPoints which errors
+ * when PETSc is built without ParMETIS. To avoid -Wunused-function, we take
+ * this out in that case. */
+#if defined(PETSC_HAVE_PARMETIS)
 static PetscErrorCode DMPlexViewDistribution(MPI_Comm comm, PetscInt n, PetscInt skip, PetscInt *vtxwgt, PetscInt *part, PetscViewer viewer)
 {
   PetscInt   *distribution, min, max, sum;
@@ -1638,7 +1638,6 @@ static PetscErrorCode DMPlexViewDistribution(MPI_Comm comm, PetscInt n, PetscInt
   PetscCall(PetscFree(distribution));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 #endif
 
 /*@
