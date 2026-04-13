@@ -1345,7 +1345,7 @@ static PetscErrorCode DMPlexDistributeLabels(DM dm, PetscSF migrationSF, DM dmPa
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Point %" PetscInt_FMT " has no cell type\n", rank, p));
         }
       }
-      PetscCallMPI(MPI_Allreduce(&defined, &gdefined, 1, MPI_C_BOOL, MPI_LAND, comm));
+      PetscCallMPI(MPIU_Allreduce(&defined, &gdefined, 1, MPI_C_BOOL, MPI_LAND, comm));
       PetscCheck(gdefined, comm, PETSC_ERR_PLIB, "Not all points have a valid cell type");
     }
     // Reset label for fast lookup
