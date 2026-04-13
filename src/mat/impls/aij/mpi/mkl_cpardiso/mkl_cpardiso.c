@@ -27,7 +27,9 @@
 #define IPARM_SIZE 64
 #define INT_TYPE   MKL_INT
 
-/* Force the linker to keep libmkl_blacs by referencing a symbol from it. Otherwise, the library might be removed during linking which can cause runtime errors and might require the user to manually link it. */
+/* 
+   Force the linker to explicitly keep the link against libmkl_blacs_*_*.so, for example, libmkl_blacs_openmpi_ilp64.so, by referencing a symbol from it. Otherwise, the linker might remove the link from the link list at link time, causing runtime errors such as "Intel oneMKL FATAL ERROR: Cannot load symbol MKLMPI_Get_wrappers". BlasLapack.py ensures that the correct version of the library (for example, libmkl_blacs_openmpi_ilp64.so) is the one linked against.
+*/
 extern void MKLMPI_Init(int *, char ***);
 static void (*volatile _mkl_blacs_ref)(int *, char ***) = MKLMPI_Init;
 
