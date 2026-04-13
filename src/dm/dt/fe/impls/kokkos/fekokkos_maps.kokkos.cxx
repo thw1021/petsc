@@ -116,7 +116,6 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   maps->geom_cached         = PETSC_FALSE;
 
   /* num_face: number of DOFs on a face edge = degree + 1 for 2D quads.
-   * Landau computes this as pow(num_face, dim-1) for higher dimensions.
    * For tensor-product quads: Nb = (degree+1)^dim, so degree+1 = round(Nb^(1/dim)).
    * For simplices or dim==1 we fall back to Nb (no constraint expansion needed).
    * num_face computation assumes tensor-product elements; simplex not yet supported for constraints */
@@ -183,7 +182,7 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   PetscScalar *elMat;
   PetscCall(PetscMalloc1(totDim * totDim, &elMat));
 
-  /* Landau probing loop: for each element e and basis function q,
+  /* Probing loop: for each element e and basis function q,
    * set a unit element matrix and call DMPlexGetClosureIndices to discover
    * whether the DOF is unconstrained or constrained (hanging node). */
   for (PetscInt e = 0; e < Ne; ++e) {
@@ -209,7 +208,7 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
        *   - Unconstrained DOF: diagonal ~ 1.0 at one position
        *   - Constrained DOF:   diagonal entries = c_i^2 at parent positions
        *
-       * Classification (matching Landau convention):
+       * Classification:
        *   1. diag ~ 1.0 -> unconstrained active DOF
        *   2. 0 < diag < 1 -> hanging-node constrained DOF
        *   3. No non-zero diagonal found -> Dirichlet (fully constrained away)
