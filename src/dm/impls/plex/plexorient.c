@@ -883,8 +883,7 @@ PetscErrorCode DMPlexOrientCells_Internal(DM dm, IS cellIS, IS faceIS)
         else rorntComp[face].rank = ornt[c] < 0 ? 1 : -1;
       }
       rorntComp[face].index = faceComp[GetPointIndex(face, fStart, fEnd, faces)];
-      if (view)
-        PetscCall(PetscViewerASCIIPrintf(selfviewer, "[%d]: Boundary face %" PetscInt_FMT " component %" PetscInt_FMT " orientation %" PetscInt_FMT "\n", rank, face, rorntComp[face].index, rorntComp[face].rank));
+      if (view) PetscCall(PetscViewerASCIIPrintf(selfviewer, "[%d]: Boundary face %" PetscInt_FMT " component %" PetscInt_FMT " orientation %" PetscInt_FMT "\n", rank, face, rorntComp[face].index, rorntComp[face].rank));
     }
     // Communicate boundary edge orientations
     PetscCall(PetscSFBcastBegin(sf, MPIU_SF_NODE, rorntComp, lorntComp, MPI_REPLACE));
