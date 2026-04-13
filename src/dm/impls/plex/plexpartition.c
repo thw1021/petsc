@@ -2055,8 +2055,8 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
 // If the point is in the closure of a label cell, set the owner to this process
 PetscErrorCode CheckLabelPoint_Private(DM plex, DMLabel label, PetscInt Nv, const PetscInt values[], PetscInt cellDepth, PetscInt point, PetscInt *owner)
 {
-  PetscInt starSize, *star = NULL;
-  PetscMPIInt     rank;
+  PetscInt    starSize, *star = NULL;
+  PetscMPIInt rank;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)plex), &rank));
