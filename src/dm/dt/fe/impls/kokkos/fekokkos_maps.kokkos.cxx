@@ -312,10 +312,7 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 
   PetscCall(PetscFree2(tmp_c_gid, tmp_c_scale));
 
-  /* Build active_idx, Nb_active, and coo_elem_offsets.
-   *
-   * Phase 1.D: coo_size = sum_e fullNb[e]^2 (accounts for constraint expansion).
-   * Phase 1.C: fullNb[e] == Nb_active[e] when num_reduced == 0. */
+  /* Build active_idx, Nb_active, and coo_elem_offsets */
   maps->h_coo_elem_offsets[0] = 0;
   for (PetscInt e = 0; e < Ne; ++e) {
     PetscInt cnt = 0;
@@ -402,7 +399,7 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
     Kokkos::deep_copy(maps->d_coo_elem_offsets, hv);
   }
 
-  /* Phase 1.D: constraint maps */
+  /* Stage constraint maps to device */
   const PetscInt nr = maps->num_reduced;
   if (nr > 0) {
     maps->d_c_maps_gid = Kokkos::View<PetscInt *>("fekokkos_c_maps_gid", nr * num_face);
