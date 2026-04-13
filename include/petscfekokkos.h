@@ -892,11 +892,6 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
 
 typedef PetscInt PetscFEKokkosIdx;
 
-typedef struct {
-  PetscInt    gid;   /* global DOF index of parent face DOF; -1 = unused */
-  PetscScalar scale; /* interpolation weight */
-} PetscFEKokkosConstraint;
-
   #if !defined(PETSCFE_KOKKOS_MAX_FACE)
     #define PETSCFE_KOKKOS_MAX_FACE 8
   #endif
