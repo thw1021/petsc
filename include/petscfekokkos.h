@@ -27,14 +27,40 @@ struct PetscPointJacFnNonNull : std::true_type { };
 template <>
 struct PetscPointJacFnNonNull<nullptr> : std::false_type { };
 
-  /* Macro: PETSC_POINT_ARGS
-   Expands to the full PetscPointFn argument list (minus the output array).
-   Use this in KOKKOS_INLINE_FUNCTION callback declarations to keep them
-   consistent with the PetscDS weak-form signature. */
+/*MC
+  PETSC_POINT_ARGS - Argument list for `KOKKOS_INLINE_FUNCTION` residual callbacks, matching `PetscPointFn`
+
+  Synopsis:
+  #include <petscfekokkos.h>
+  PETSC_POINT_ARGS
+
+  Level: intermediate
+
+  Note:
+  Expands to the full `PetscPointFn` argument list (minus the output array). Use in
+  `KOKKOS_INLINE_FUNCTION` callback declarations to keep them consistent with the
+  `PetscDS` weak-form signature.
+
+.seealso: `PETSC_JAC_POINT_ARGS`, `PetscPointFn`, `PetscFEKokkosComputeResidual()`
+MC*/
   #define PETSC_POINT_ARGS \
     PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
-  /* Jacobian callbacks have an extra u_tShift argument between t and x */
+/*MC
+  PETSC_JAC_POINT_ARGS - Argument list for `KOKKOS_INLINE_FUNCTION` Jacobian callbacks, matching `PetscPointJacFn`
+
+  Synopsis:
+  #include <petscfekokkos.h>
+  PETSC_JAC_POINT_ARGS
+
+  Level: intermediate
+
+  Note:
+  Expands to the full `PetscPointJacFn` argument list (minus the output array). Includes
+  the extra `u_tShift` argument between `t` and `x` required for Jacobian callbacks.
+
+.seealso: `PETSC_POINT_ARGS`, `PetscPointJacFn`, `PetscFEKokkosComputeJacobian()`
+MC*/
   #define PETSC_JAC_POINT_ARGS \
     PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
