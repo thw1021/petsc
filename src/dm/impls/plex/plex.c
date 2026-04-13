@@ -10433,7 +10433,7 @@ static void MPIAPI cell_stats_reduce(void *a, void *b, int *len, MPI_Datatype *d
   Notes:
   The condition number $\kappa_c$ of a cell $c$ is given by
   ```{math}
-    \kappa_c = \left\lVert J_c \right\rVert \left\lVert J^{-1}_c \right\rVert
+  \kappa_c = \left\lVert J_c \right\rVert \left\lVert J^{-1}_c \right\rVert
   ```
   where $J_c$ is the Jacobian of the mapping from the reference cell to cell $c$.
 
