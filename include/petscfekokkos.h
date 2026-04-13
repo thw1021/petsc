@@ -890,53 +890,30 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* COO Assembly Infrastructure
-
-   PetscFEKokkosMaps -- precomputed assembly maps for COO scatter.
-
-   Built once at setup time from DMPlex closure indices by probing;
-   staged to device so that the Jacobian and residual kernels can scatter
-   element contributions directly into the global COO arrays without any
-   host round-trip.
-
-   Phase 1.C design (no AMR, no hanging nodes):
-     gIdx[e * Nb + b]   = global DOF index for element e, basis function b.
-                          Negative values = Dirichlet-constrained DOF (skip).
-     active_idx[e*Nb+b] = sequential index among active (non-Dirichlet) bases
-                          for element e; -1 if constrained.
-     Nb_active[e]       = number of active bases for element e.
-     coo_elem_offsets[e] = index of first COO entry for element e in the flat
-                           COO arrays (prefix sum over Nb_active[e]^2).
-
-   Phase 1.D additions (p4est AMR, hanging nodes via Landau probing):
-     num_reduced        = number of constrained (hanging) DOFs across all elements.
-     num_face           = max parent DOFs per constrained DOF (degree+1 for 2D edges).
-     c_maps_gid[idx*num_face+q]   = global DOF of q-th parent for constraint idx.
-     c_maps_scale[idx*num_face+q] = interpolation weight for that parent.
-     coo_elem_point_offsets[e*(Nb+1)+b] = prefix sum of expanded COO rows per
-                                          basis function within element e.
-     fullNb[e]          = total expanded basis count for element e
-                          (Nb for no constraints, > Nb when hanging nodes present).
-
-   Backward compatibility: when num_reduced == 0 (uniform mesh or simplex),
-   the Phase 1.C code path works unchanged. */
-
-/* typedef matching LandauIdx for future unification */
 typedef PetscInt PetscFEKokkosIdx;
 
-/* Constraint map entry: one parent DOF with its interpolation weight.
- * Mirrors the Landau LandauIdx/scale pair. */
 typedef struct {
   PetscInt    gid;   /* global DOF index of parent face DOF; -1 = unused */
   PetscScalar scale; /* interpolation weight */
 } PetscFEKokkosConstraint;
 
-  /* Maximum parent DOFs per constrained DOF.
- * For Q2 in 2D: 3 DOFs on a face edge.  8 matches LANDAU_MAX_Q_FACE. */
   #if !defined(PETSCFE_KOKKOS_MAX_FACE)
     #define PETSCFE_KOKKOS_MAX_FACE 8
   #endif
 
+/*S
+  PetscFEKokkosMaps - Precomputed COO assembly maps for Kokkos-accelerated `PetscFE` integration
+
+  Level: developer
+
+  Note:
+  Built once at setup time from `DMPlex` closure indices. Staged to device so that
+  residual and Jacobian kernels can scatter element contributions directly into the
+  global COO arrays without a host round-trip. Supports uniform meshes and p4est AMR
+  with hanging nodes. Managed by `PetscFEKokkosSetUp()` and `PetscFEKokkosMapsDestroy()`.
+
+.seealso: `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsDestroy()`, `PetscFEKokkosCreateMaps()`
+S*/
 typedef struct {
   /* Phase 1.C fields */
   PetscInt   num_elements; /* Ne -- number of owned cells */
