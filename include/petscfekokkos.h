@@ -3,7 +3,6 @@
 /*
   Kokkos template kernels for GPU-resident PetscFE residual and Jacobian integration
 */
-
 #pragma once
 
 #if defined(PETSC_HAVE_KOKKOS)
@@ -1044,7 +1043,6 @@ typedef struct {
   PetscFEGeom *cached_fullGeom;
   PetscFEGeom *cached_chunkGeom;
   IS           cached_cellIS;
-
 } PetscFEKokkosMaps;
 
 PETSC_EXTERN PetscErrorCode PetscFEKokkosCreateMaps(DM, PetscFEKokkosMaps *);
