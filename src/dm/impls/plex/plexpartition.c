@@ -2174,7 +2174,7 @@ PetscErrorCode DMPlexRebalanceSharedLabelPoints(DM dm, DMLabel label, PetscInt N
     if (lowner[leaf] == rank) {
       newPoints[tmp]  = leaf;
       newOwner[tmp++] = rank;
-      if (debug) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Changed leaf point %" PetscInt_FMT " to owner %" PetscInt_FMT "\n", rank, leaf, rank));
+      if (debug) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Changed leaf point %" PetscInt_FMT " to owner %d"\n", rank, leaf, rank));
     }
   }
   for (PetscInt root = 0; root < Nr; ++root) {
