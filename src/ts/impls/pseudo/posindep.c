@@ -36,13 +36,13 @@ typedef struct {
   PetscObjectState Xstate; /* state of vector given to TSComputeIFunction() with 0 Xdot to compute `residual`*/
 } TS_Pseudo_Residual;
 
-static PetscErrorCode TSPseudoResidualDestroy(void *pseudo_residual)
+static PetscErrorCode TSPseudoResidualDestroy(PetscCtx ctx)
 {
-  TS_Pseudo_Residual *pseudo_residual_ = *(TS_Pseudo_Residual **)pseudo_residual;
+  TS_Pseudo_Residual *pseudo_residual = *(TS_Pseudo_Residual **)ctx;
 
   PetscFunctionBeginUser;
-  PetscCall(VecDestroy(&pseudo_residual_->func));
-  PetscCall(PetscFree(pseudo_residual_));
+  PetscCall(VecDestroy(&pseudo_residual->func));
+  PetscCall(PetscFree(pseudo_residual));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -91,7 +91,7 @@ PetscErrorCode TSPseudoComputeFunction(TS ts, Vec solution, Vec *residual, Petsc
     PetscCall(PetscNew(&pseudo_residual));
     PetscCall(VecDuplicate(solution, &pseudo_residual->func));
     pseudo_residual->Xstate = -1;
-    PetscCall(PetscObjectContainerCompose((PetscObject)solution, TSPSEUDO_RESIDUAL_KEY, pseudo_residual, (PetscCtxDestroyFn *)TSPseudoResidualDestroy));
+    PetscCall(PetscObjectContainerCompose((PetscObject)solution, TSPSEUDO_RESIDUAL_KEY, pseudo_residual, TSPseudoResidualDestroy));
   }
   if (pseudo_residual->Xstate != Xstate) {
     PetscCall(VecZeroEntries(pseudo->xdot));
@@ -122,7 +122,7 @@ static PetscErrorCode TSPseudoCopyResidualInfo(Vec src, Vec dest)
   if (!dest_pseudo_residual) {
     PetscCall(PetscNew(&dest_pseudo_residual));
     PetscCall(VecDuplicate(dest, &dest_pseudo_residual->func));
-    PetscCall(PetscObjectContainerCompose((PetscObject)dest, TSPSEUDO_RESIDUAL_KEY, dest_pseudo_residual, (PetscCtxDestroyFn *)TSPseudoResidualDestroy));
+    PetscCall(PetscObjectContainerCompose((PetscObject)dest, TSPSEUDO_RESIDUAL_KEY, dest_pseudo_residual, TSPseudoResidualDestroy));
   }
   PetscCall(PetscObjectStateGet((PetscObject)dest, &dest_state));
   PetscCall(VecCopy(src_pseudo_residual->func, dest_pseudo_residual->func));
@@ -185,7 +185,7 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
 
   // Check solution convergence
   PetscCall(TSPseudoComputeFunction(ts, ts->vec_sol, NULL, &fnorm));
-  // Copy residual info back to pseudo->update. These Vecs are exactly the same, so no need for extra VecCopy
+  // Copy residual info back to pseudo->update. These Vecs have the same values, so no need for VecCopy
   PetscCall(TSPseudoCopyResidualInfo(ts->vec_sol, pseudo->update));
   if (pseudo->fnorm_initial == -1) pseudo->fnorm_initial = fnorm;
 
