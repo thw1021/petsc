@@ -302,8 +302,8 @@ PetscErrorCode DMPlexLabelComplete(DM dm, DMLabel label)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscInt label_defval_private = -1;
-static PetscInt label_errval_private = -2;
+static PetscInt    label_defval_private = -1;
+static PetscInt    label_errval_private = -2;
 static void MPIAPI label_value_check(void *a, void *b, int *len, MPI_Datatype *datatype)
 {
   const int N = *len;
@@ -2328,7 +2328,8 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
       }
       if (!split) continue;
     }
-    if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Point %" PetscInt_FMT " is impinging (%" PetscInt_FMT ":%" PetscInt_FMT ", %" PetscInt_FMT ":%" PetscInt_FMT ")\n", PetscGlobalRank, point, support[0], valA, support[1], valB));
+    if (debug)
+      PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Point %" PetscInt_FMT " is impinging (%" PetscInt_FMT ":%" PetscInt_FMT ", %" PetscInt_FMT ":%" PetscInt_FMT ")\n", PetscGlobalRank, point, support[0], valA, support[1], valB));
     if (split) {
       // Split the face
       PetscCall(DMLabelGetValue(label, point, &valA));
@@ -2426,7 +2427,7 @@ PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel,
   DMLabel         depthLabel;
   IS              dimIS, subpointIS = NULL;
   const PetscInt *points, *subpoints;
-  const PetscInt  rev   = flip ? -1 : 1;
+  const PetscInt  rev = flip ? -1 : 1;
   PetscInt        dim, depth, numPoints, numSubpoints, p, val;
   MPI_Comm        comm;
 
