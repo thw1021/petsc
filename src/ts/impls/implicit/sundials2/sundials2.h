@@ -28,10 +28,10 @@ typedef struct {
   Vec w1, w2; /* work space vectors for function evaluation */
 
   /* PETSc preconditioner objects used by SUNDIALS */
-  PetscInt                  cvode_type; /* the SUNDIALS method, BDF or ADAMS  */
-  TSSundialsGramSchmidtType gtype;
-  PetscReal                 linear_tol;
-  PetscReal                 mindt, maxdt;
+  PetscInt                   cvode_type; /* the SUNDIALS method, BDF or ADAMS  */
+  TSSundials2GramSchmidtType gtype;
+  PetscReal                  linear_tol;
+  PetscReal                  mindt, maxdt;
 
   /* Variables used by Sundials */
   MPI_Comm  comm_sundials;
@@ -43,5 +43,5 @@ typedef struct {
   PetscInt  maxl;        /* max dimension of the Krylov subspace to be used */
   PetscInt  maxord;      /* max order of BDF / Adams method */
   PetscBool use_dense;   /* Use a dense instead of iterative solve within SUNDIALS (serial only) */
-} TS_Sundials;
+} TS_Sundials2;
 #endif
