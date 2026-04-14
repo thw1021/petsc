@@ -36,7 +36,7 @@ typedef const char *TSType;
 #define TSBASICSYMPLECTIC "basicsymplectic"
 #define TSPSEUDO          "pseudo"
 #define TSCN              "cn"
-#define TSSUNDIALS        "sundials"
+#define TSSUNDIALS2       "sundials2"
 #define TSRK              "rk"
 #define TSPYTHON          "python"
 #define TSTHETA           "theta"
@@ -1521,29 +1521,29 @@ PETSC_EXTERN PetscErrorCode TSDiscGradGetType(TS, TSDGType *);
 */
 #ifdef PETSC_HAVE_SUNDIALS2
 typedef enum {
-  SUNDIALS_ADAMS = 1,
-  SUNDIALS_BDF   = 2
-} TSSundialsLmmType;
-PETSC_EXTERN const char *const TSSundialsLmmTypes[];
+  SUNDIALS2_ADAMS = 1,
+  SUNDIALS2_BDF   = 2
+} TSSundials2LmmType;
+PETSC_EXTERN const char *const TSSundials2LmmTypes[];
 typedef enum {
-  SUNDIALS_MODIFIED_GS  = 1,
-  SUNDIALS_CLASSICAL_GS = 2
-} TSSundialsGramSchmidtType;
-PETSC_EXTERN const char *const TSSundialsGramSchmidtTypes[];
+  SUNDIALS2_MODIFIED_GS  = 1,
+  SUNDIALS2_CLASSICAL_GS = 2
+} TSSundials2GramSchmidtType;
+PETSC_EXTERN const char *const TSSundials2GramSchmidtTypes[];
 
-PETSC_EXTERN PetscErrorCode TSSundialsSetType(TS, TSSundialsLmmType);
-PETSC_EXTERN PetscErrorCode TSSundialsGetPC(TS, PC *);
-PETSC_EXTERN PetscErrorCode TSSundialsSetTolerance(TS, PetscReal, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMinTimeStep(TS, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxTimeStep(TS, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsGetIterations(TS, PetscInt *, PetscInt *);
-PETSC_EXTERN PetscErrorCode TSSundialsSetGramSchmidtType(TS, TSSundialsGramSchmidtType);
-PETSC_EXTERN PetscErrorCode TSSundialsSetGMRESRestart(TS, PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetLinearTolerance(TS, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsMonitorInternalSteps(TS, PetscBool);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxl(TS, PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxord(TS, PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetUseDense(TS, PetscBool);
+PETSC_EXTERN PetscErrorCode TSSundials2SetType(TS, TSSundials2LmmType);
+PETSC_EXTERN PetscErrorCode TSSundials2GetPC(TS, PC *);
+PETSC_EXTERN PetscErrorCode TSSundials2SetTolerance(TS, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMinTimeStep(TS, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMaxTimeStep(TS, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2GetIterations(TS, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode TSSundials2SetGramSchmidtType(TS, TSSundials2GramSchmidtType);
+PETSC_EXTERN PetscErrorCode TSSundials2SetGMRESRestart(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSSundials2SetLinearTolerance(TS, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2MonitorInternalSteps(TS, PetscBool);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMaxl(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMaxord(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSSundials2SetUseDense(TS, PetscBool);
 #endif
 
 PETSC_EXTERN PetscErrorCode TSThetaSetTheta(TS, PetscReal);

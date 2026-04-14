@@ -67,6 +67,8 @@
 
 ## TS
 
+- Add the symbol 2 after Sundials for all `TS` functions and enums that contain the word Sundials
+
 
 ## TAO
 
