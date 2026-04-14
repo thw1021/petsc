@@ -93,6 +93,8 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
+- Add the symbol 2 after Sundials for all `TS` functions and enums that contain the word Sundials
+
 
 ## TAO
 

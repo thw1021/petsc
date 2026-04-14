@@ -6,7 +6,7 @@ cdef extern from * nogil:
     PetscTSType TSBASICSYMPLECTIC
     PetscTSType TSPSEUDO
     PetscTSType TSCN
-    PetscTSType TSSUNDIALS
+    PetscTSType TSSUNDIALS2
     PetscTSType TSRK
     PetscTSType TSPYTHON
     PetscTSType TSTHETA
