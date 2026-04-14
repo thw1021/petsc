@@ -10266,6 +10266,7 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
     PetscInt   *starts, *gstarts, *depths;
     PetscInt    depth;
     PetscMPIInt size;
+    PetscBool   skip = PETSC_FALSE;
 
     PetscCallMPI(MPI_Comm_size(comm, &size));
     PetscCall(DMPlexGetDepth(dm, &depth));
@@ -10277,9 +10278,12 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
     for (PetscInt d = 0; d <= depth; ++d) {
       PetscCall(DMPlexGetDepthStratum(dm, d, &starts[d], NULL));
     }
-    PetscCall(DMPlexGetDepthStratum(dm, depths[depth], NULL, &starts[depth + 1]));
+    // This is necessary because some strata might be missing
+    PetscCall(DMPlexGetChart(dm, NULL, &starts[depth + 1]));
     PetscCallMPI(MPI_Allgather(starts, depth + 2, MPIU_INT, gstarts, depth + 2, MPIU_INT, comm));
-    for (l = 0; l < nleaves; ++l) {
+    // Check is invalid with empty strata
+    for (PetscInt p = 0; p < size * (depth + 2); ++p) if (gstarts[p] < 0) skip = PETSC_TRUE;
+    for (l = skip ? nleaves : 0; l < nleaves; ++l) {
       const PetscInt point  = locals ? locals[l] : l;
       const PetscInt rpoint = remotes[l].index;
       const PetscInt rrank  = remotes[l].rank;
