@@ -1041,7 +1041,7 @@ PetscErrorCode TSComputeIJacobian(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal
 
 /*@C
   TSSetRHSFunction - Sets the routine for evaluating the function,
-  where U_t = G(t,u).
+  where $U_t = G(t,u)$.
 
   Logically Collective
 
@@ -2057,7 +2057,7 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
   PetscCall(DMTSView(sdm, viewer));
 
   PetscCall(PetscViewerASCIIPushTab(viewer));
-  PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSSUNDIALS, &issundials));
+  PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSSUNDIALS2, &issundials));
   PetscCall(PetscViewerASCIIPopTab(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
