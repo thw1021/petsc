@@ -25,7 +25,7 @@ configure_options = [
   '--download-hpddm=1',
   '--download-spai=1',
   '--download-radau5=1',
-  #'--download-sundials2=1',
+  #'--download-ancientsundials=1',
 
   '--download-make=1',
   '--download-metis=1',

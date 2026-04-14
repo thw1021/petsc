@@ -27,7 +27,7 @@ configure_options = [
   '--download-hdf5',
   '--with-zlib=1',
   # '--download-elemental=1', # disabled since its maxCxxVersion is c++14, but Kokkos-4.0's minCxxVersion is c++17
-  #'--download-sundials2=1',
+  #'--download-ancientsundials=1',
   #'--download-hypre=1',
   #'--download-suitesparse=1',
   #'--download-chaco=1',

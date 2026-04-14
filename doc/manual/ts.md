@@ -214,7 +214,7 @@ TSSetType(TS ts,TSType type);
 ```
 
 Some of the currently supported types are `TSEULER`, `TSRK` (Runge-Kutta), `TSBEULER`, `TSCN` (Crank-Nicolson), `TSTHETA`, `TSGLLE` (generalized linear), and `TSPSEUDO`.
-They can also be set with the options database option `-ts_type euler, rk, beuler, cn, theta, gl, pseudo, sundials, eimex, arkimex, rosw`.
+They can also be set with the options database option `-ts_type euler, rk, beuler, cn, theta, gl, pseudo, sundials2, eimex, arkimex, rosw`.
 A list of available methods is given in {any}`integrator_table`.
 
 Set the initial time with the command
@@ -1368,72 +1368,72 @@ Some other useful options are listed below.
   MATLAB via the script
   `$PETSC_DIR/share/petsc/matlab/PetscReadBinaryTrajectory.m`.
 
-(sec_sundials)=
+(sec_ancientsundials)=
 
-## Using Sundials from PETSc
+## Using SUNDIALS version 2 from PETSc
 
-Sundials is a parallel ODE solver developed by Hindmarsh et al. at LLNL.
+SUNDIALS is a parallel ODE solver developed by Hindmarsh et al. at LLNL.
 The `TS` library provides an interface to use the CVODE component of
-Sundials directly from PETSc. (To configure PETSc to use Sundials, see
+SUNDIALS directly from PETSc. (To configure PETSc to use SUNDIALS, see
 the installation guide, `installation/index.htm`.)
 
-To use the Sundials integrators, call
+To use the SUNDIALS integrators, call
 
 ```
-TSSetType(TS ts,TSType TSSUNDIALS);
+TSSetType(TS ts,TSType TSANCIENTSUNDIALS);
 ```
 
-or use the command line option `-ts_type` `sundials`.
+or use the command line option `-ts_type` `ancientsundials`.
 
-Sundials’ CVODE solver comes with two main integrator families, Adams
+SUNDIALS CVODE solver comes with two main integrator families, Adams
 and BDF (backward differentiation formula). One can select these with
 
 ```
-TSSundialsSetType(TS ts,TSSundialsLmmType [SUNDIALS_ADAMS,SUNDIALS_BDF]);
+TSAncientSundialsSetType(TS ts,TSAncientSundialsLmmType [ANCIENTSUNDIALS_ADAMS,ANCIENTSUNDIALS_BDF]);
 ```
 
-or the command line option `-ts_sundials_type <adams,bdf>`. BDF is the
+or the command line option `-ts_ancientsundials_type <adams,bdf>`. BDF is the
 default.
 
-Sundials does not use the `SNES` library within PETSc for its
+SUNDIALS does not use the `SNES` library within PETSc for its
 nonlinear solvers, so one cannot change the nonlinear solver options via
-`SNES`. Rather, Sundials uses the preconditioners within the `PC`
+`SNES`. Rather, SUNDIALS uses the preconditioners within the `PC`
 package of PETSc, which can be accessed via
 
 ```
-TSSundialsGetPC(TS ts,PC *pc);
+TSAncientSundialsGetPC(TS ts,PC *pc);
 ```
 
 The user can then directly set preconditioner options; alternatively,
 the usual runtime options can be employed via `-pc_xxx`.
 
-Finally, one can set the Sundials tolerances via
+Finally, one can set the SUNDIALS tolerances via
 
 ```
-TSSundialsSetTolerance(TS ts,double abs,double rel);
+TSAncientSundialsSetTolerance(TS ts,double abs,double rel);
 ```
 
 where `abs` denotes the absolute tolerance and `rel` the relative
 tolerance.
 
-Other PETSc-Sundials options include
+Other PETSc-SUNDIALS options include
 
 ```
-TSSundialsSetGramSchmidtType(TS ts,TSSundialsGramSchmidtType type);
+TSAncientSundialsSetGramSchmidtType(TS ts,TSAncientSundialsGramSchmidtType type);
 ```
 
-where `type` is either `SUNDIALS_MODIFIED_GS` or
-`SUNDIALS_UNMODIFIED_GS`. This may be set via the options data base
-with `-ts_sundials_gramschmidt_type <modifed,unmodified>`.
+where `type` is either `ANCIENTSUNDIALS_MODIFIED_GS` or
+`ANCIENTSUNDIALS_UNMODIFIED_GS`. This may be set via the options data base
+with `-ts_ancientsundials_gramschmidt_type <modified,unmodified>`.
 
 The routine
 
 ```
-TSSundialsSetMaxl(TS ts,PetscInt restart);
+TSAncientSundialsSetMaxl(TS ts,PetscInt restart);
 ```
 
 sets the number of vectors in the Krylov subpspace used by GMRES. This
-may be set in the options database with `-ts_sundials_maxl` `maxl`.
+may be set in the options database with `-ts_ancientsundials_maxl` `maxl`.
 
 ## Using TChem from PETSc
 
