@@ -10282,7 +10282,8 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
     PetscCall(DMPlexGetChart(dm, NULL, &starts[depth + 1]));
     PetscCallMPI(MPI_Allgather(starts, depth + 2, MPIU_INT, gstarts, depth + 2, MPIU_INT, comm));
     // Check is invalid with empty strata
-    for (PetscInt p = 0; p < size * (depth + 2); ++p) if (gstarts[p] < 0) skip = PETSC_TRUE;
+    for (PetscInt p = 0; p < size * (depth + 2); ++p)
+      if (gstarts[p] < 0) skip = PETSC_TRUE;
     for (l = skip ? nleaves : 0; l < nleaves; ++l) {
       const PetscInt point  = locals ? locals[l] : l;
       const PetscInt rpoint = remotes[l].index;
