@@ -92,6 +92,8 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)aij->B), ec, ec, 1, &aij->B->cmap));
     PetscCall(PetscFree(indices));
 #endif
+    // Increase the state since we changed B->j[] and B->cmap. Device matrices detect this state change to sync the device copy.
+    aij->B->nonzerostate++;
   } else {
     garray = aij->garray;
   }
