@@ -29,8 +29,10 @@ typedef struct {
 
 #define TSPSEUDO_RESIDUAL_KEY "TSPSEUDO Residual Key"
 
-// This struct is attached to any vector that has a solution in it.
-// Use and copying of this struct between Vecs allows residual information to be carried between ts->vec_sol and pseudo->update
+/*
+  This struct is attached to any vector that has a solution in it.
+  Use and copying of this struct between Vecs allows residual information to be carried between ts->vec_sol and pseudo->update
+*/
 typedef struct {
   Vec              func;   /* work vector where F(t[i],u[i]) is stored */
   PetscObjectState Xstate; /* state of vector given to TSComputeIFunction() with 0 Xdot to compute `residual`*/
@@ -40,7 +42,7 @@ static PetscErrorCode TSPseudoResidualDestroy(PetscCtx ctx)
 {
   TS_Pseudo_Residual *pseudo_residual = *(TS_Pseudo_Residual **)ctx;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscCall(VecDestroy(&pseudo_residual->func));
   PetscCall(PetscFree(pseudo_residual));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -185,18 +187,18 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
 
   // Check solution convergence
   PetscCall(TSPseudoComputeFunction(ts, ts->vec_sol, NULL, &fnorm));
-  // Copy residual info back to pseudo->update. These Vecs have the same values, so no need for VecCopy
+  // Copy residual info back to pseudo->update. vec_sol and update have the same values, so no need for VecCopy on them
   PetscCall(TSPseudoCopyResidualInfo(ts->vec_sol, pseudo->update));
   if (pseudo->fnorm_initial == -1) pseudo->fnorm_initial = fnorm;
 
   if (fnorm < pseudo->fatol) {
     ts->reason = TS_CONVERGED_PSEUDO_FATOL;
-    PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n", ts->steps, (double)fnorm, (double)pseudo->frtol));
+    PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n", ts->steps, (double)fnorm, (double)pseudo->fatol));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (fnorm / pseudo->fnorm_initial < pseudo->frtol) {
     ts->reason = TS_CONVERGED_PSEUDO_FRTOL;
-    PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n", ts->steps, (double)fnorm, (double)pseudo->fnorm_initial, (double)pseudo->fatol));
+    PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n", ts->steps, (double)fnorm, (double)pseudo->fnorm_initial, (double)pseudo->frtol));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
