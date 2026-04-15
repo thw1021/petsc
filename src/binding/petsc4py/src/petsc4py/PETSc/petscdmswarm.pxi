@@ -2,6 +2,8 @@
 
 cdef extern from * nogil:
 
+    enum: PETSC_DOUBLE
+
     ctypedef enum PetscDMSwarmType "DMSwarmType":
         DMSWARM_BASIC
         DMSWARM_PIC
