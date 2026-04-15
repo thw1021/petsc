@@ -2895,11 +2895,8 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C, IS rowemb, IS dcolemb, IS ocolemb, Ma
     PetscCall(MatSetBlockSizesFromMats(aij->A, C, C));
     PetscCall(MatSetType(aij->A, MATSEQAIJ));
   }
-  if (A) {
-    PetscCall(MatSetSeqMat_SeqAIJ(aij->A, rowemb, dcolemb, pattern, A));
-  } else {
-    PetscCall(MatSetUp(aij->A));
-  }
+  if (A) PetscCall(MatSetSeqMat_SeqAIJ(aij->A, rowemb, dcolemb, pattern, A));
+  else PetscCall(MatSetUp(aij->A));
   if (B) { /* Destroy the old matrix or the column map, depending on the sparsity pattern. */
     /*
       If pattern == DIFFERENT_NONZERO_PATTERN, we reallocate B and
@@ -2938,10 +2935,17 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C, IS rowemb, IS dcolemb, IS ocolemb, Ma
     Bdisassembled = PETSC_TRUE;
   }
   if (B) {
-    Baij = (Mat_SeqAIJ *)B->data;
+    Baij       = (Mat_SeqAIJ *)B->data;
+    rowindices = NULL;
+    if (rowemb) PetscCall(ISGetIndices(rowemb, &rowindices));
     if (pattern == DIFFERENT_NONZERO_PATTERN) {
-      PetscCall(PetscMalloc1(B->rmap->n, &nz));
-      for (PetscInt i = 0; i < B->rmap->n; i++) nz[i] = Baij->i[i + 1] - Baij->i[i];
+      PetscCall(PetscMalloc1(C->rmap->n, &nz));
+      if (rowemb) {
+        PetscCall(PetscArrayzero(nz, C->rmap->n));
+        for (PetscInt i = 0; i < B->rmap->n; i++) nz[rowindices[i]] = Baij->i[i + 1] - Baij->i[i];
+      } else {
+        for (PetscInt i = 0; i < B->rmap->n; i++) nz[i] = Baij->i[i + 1] - Baij->i[i];
+      }
       PetscCall(MatSeqAIJSetPreallocation(aij->B, 0, nz));
       PetscCall(PetscFree(nz));
     }
@@ -2949,9 +2953,7 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C, IS rowemb, IS dcolemb, IS ocolemb, Ma
     PetscCall(PetscLayoutGetRange(C->cmap, &cstart, &cend));
     shift      = cend - cstart;
     count      = 0;
-    rowindices = NULL;
     colindices = NULL;
-    if (rowemb) PetscCall(ISGetIndices(rowemb, &rowindices));
     if (ocolemb) PetscCall(ISGetIndices(ocolemb, &colindices));
     for (PetscInt i = 0; i < B->rmap->n; i++) {
       PetscInt row;
@@ -2966,6 +2968,8 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C, IS rowemb, IS dcolemb, IS ocolemb, Ma
         ++count;
       }
     }
+    if (ocolemb) PetscCall(ISRestoreIndices(ocolemb, &colindices));
+    if (rowemb) PetscCall(ISRestoreIndices(rowemb, &rowindices));
     /* No assembly for aij->B is necessary. */
     /* FIXME: set aij->B's nonzerostate correctly. */
   } else {
