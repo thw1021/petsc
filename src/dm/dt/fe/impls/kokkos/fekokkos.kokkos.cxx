@@ -35,50 +35,34 @@ static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
 }
 
 typedef struct {
-  /* Tabulation device Views -- re-staged when Nq changes (DS quadrature may differ from FE quadrature) */
-  Kokkos::View<PetscReal *> d_B; /* basis values:       [Nq * Nb * Nc]          */
-  Kokkos::View<PetscReal *> d_D; /* basis derivatives:  [Nq * Nb * Nc * dim]    */
-  /* Quadrature weights -- staged once at setup (from FE quadrature, same Nq as DS for matching rules) */
-  Kokkos::View<PetscReal *> d_w; /* quadrature weights: [Nq]                    */
-  /* Host mirrors of tabulation -- updated when Nq changes */
+  // Tabulation device Views, re-staged when Nq changes
+  Kokkos::View<PetscReal *> d_B;
+  Kokkos::View<PetscReal *> d_D;
+  Kokkos::View<PetscReal *> d_w;
+  // Host mirrors of tabulation
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_B;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_D;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_w;
-  /* Cached per-call device Views -- reallocated only when Ne or totDim changes */
-  Kokkos::View<PetscReal *>   d_invJ;    /* [Ne * Nq * dE * dE]  */
-  Kokkos::View<PetscScalar *> d_elemVec; /* [Ne * totDim]         */
-  Kokkos::View<PetscScalar *> d_f0_scr;  /* [Ne * Nq * Nc]        */
-  Kokkos::View<PetscScalar *> d_f1_scr;  /* [Ne * Nq * Nc * dE]   */
-  Kokkos::View<PetscScalar *> d_val;     /* [Ne * Nb] -- per-element accumulator (Nb = total DOFs) */
-  /* Host mirror of d_elemVec -- cached to avoid per-call mirror alloc */
+  // Cached per-call device Views, reallocated when Ne or totDim changes
+  Kokkos::View<PetscReal *>   d_invJ;
+  Kokkos::View<PetscScalar *> d_elemVec;
+  Kokkos::View<PetscScalar *> d_f0_scr;
+  Kokkos::View<PetscScalar *> d_f1_scr;
+  Kokkos::View<PetscScalar *> d_val;
   Kokkos::View<PetscScalar *, Kokkos::HostSpace> h_elemVec;
-  /* Host scratch for f0/f1 -- single contiguous allocation; h_f1_buf = h_f0_buf + Ne*Nq*Nc.
-     Packed into one block to reduce allocator overhead and improve cache locality. */
-  PetscScalar *h_f0_buf; /* points to start of block: [Ne * Nq * Nc]      */
-  PetscScalar *h_f1_buf; /* points into block:        [Ne * Nq * Nc * dE] */
-  /* Expanded invJ buffer [Ne * Nq * dE * dE] -- for affine elements the single
-     per-element invJ is replicated across all Nq slots so Phase 2 can index
-     uniformly as invJ[e * Nq * dE * dE + q * dE * dE].  Cached and reallocated
-     only when Ne or Nq changes (same lifetime as h_f0_buf). */
-  PetscReal *h_invJ_buf; /* [Ne * Nq * dE * dE] */
-  /* Per-(e,q) interpolation scratch -- heap-allocated at setup.
-     h_u_buf  [Nc]:       field values at one quadrature point (Nc components).
-     h_ux_buf [Nc * dim]: field gradients at one quadrature point.
-     Note: u_loc[c] and ux_loc[c*dE+d] are indexed by component c only;
-     the basis-function loop (b=0..Nb-1) accumulates into these Nc-sized arrays. */
-  PetscScalar *h_u_buf;      /* [Nc]       -- field values at one quadrature point  */
-  PetscScalar *h_ux_buf;     /* [Nc * dim] -- field gradients at one quadrature point */
-  PetscInt     Ne_alloc;     /* Ne    for which cached Views/bufs were last allocated */
-  PetscInt     Nq_alloc;     /* Nq    for which d_B/d_D/d_w/d_f0_scr/d_f1_scr were last staged */
-  PetscInt     totDim_alloc; /* totDim for which d_elemVec/h_elemVec were last allocated */
-  /* Sizes cached at setup */
-  PetscInt  Nb;  /* total number of DOFs per element = PetscDualSpaceGetDimension()
-                     For scalar FE (Nc=1): Nb = number of scalar basis functions.
-                     For vector FE (Nc>1): Nb = Nb_scalar * Nc (total DOFs).
-                     Matches T->Nb from PetscFECreateTabulation. */
-  PetscInt  Nc;  /* number of field components  */
-  PetscInt  dim; /* spatial dimension           */
-  PetscBool setup_done;
+  // Host scratch: h_f0_buf and h_f1_buf share one contiguous block
+  PetscScalar *h_f0_buf;
+  PetscScalar *h_f1_buf;
+  PetscReal   *h_invJ_buf; // expanded invJ [Ne * Nq * dE * dE]
+  PetscScalar *h_u_buf;    // field values at one qp [Nc]
+  PetscScalar *h_ux_buf;   // field gradients at one qp [Nc * dim]
+  PetscInt     Ne_alloc;
+  PetscInt     Nq_alloc;
+  PetscInt     totDim_alloc;
+  PetscInt     Nb;  // total DOFs per element
+  PetscInt     Nc;  // field components
+  PetscInt     dim; // spatial dimension
+  PetscBool    setup_done;
 } PetscFE_Kokkos;
 
 /* PetscFESetUp_Kokkos: call Basic setup (builds invV, tabulation), then

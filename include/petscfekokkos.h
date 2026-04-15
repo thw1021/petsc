@@ -64,66 +64,9 @@ MC*/
   #define PETSC_JAC_POINT_ARGS \
     PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
-/* PetscFEKokkosIntegrateResidualCell<F0, F1>
-
-   Device-callable template function that integrates the residual for a
-   single element e.  Both F0 and F1 are resolved at compile time -- no
-   function pointer indirection on device.
-
-   Template parameters:
-     F0  -- KOKKOS_INLINE_FUNCTION callback for the zeroth-order term
-            (volume source / reaction).  Signature: PetscPointFn.
-            Pass nullptr to skip.
-     F1  -- KOKKOS_INLINE_FUNCTION callback for the first-order term
-            (flux / diffusion).  Signature: PetscPointFn.
-            Pass nullptr to skip.
-
-   Arguments (all flat device-accessible arrays):
-     e          -- element index (0-based)
-     Nq         -- number of quadrature points
-     Nb         -- TOTAL number of DOFs per element = T->Nb = Nb_scalar * Nc
-                  (matches PetscFEEvaluateFieldJets_Internal convention)
-     Nc         -- number of field components (1 for scalar)
-     dim        -- spatial / reference dimension
-     dE         -- embedding dimension (== dim for non-embedded meshes)
-     B[Nq*Nb*Nc]          -- basis values
-     D[Nq*Nb*Nc*dim]      -- basis reference derivatives
-     w[Nq]                -- quadrature weights
-     invJ[Ne*Nq*dE*dE]    -- inverse Jacobian (expanded: one per (e,q))
-     detJ[Ne*Nq]          -- Jacobian determinant (expanded: one per (e,q))
-     coords[Ne*Nq*dE]     -- physical coordinates at each (e,q)
-     coeff[Ne*totDim]     -- element coefficients (solution DOFs)
-     totDim               -- total DOFs per element across all fields
-     uOff                 -- field offset in coeff (scalar: 0)
-     fOff                 -- field offset in elemVec
-     t                    -- time
-     numConstants         -- number of PDE constants
-     constants[numConstants] -- PDE constants
-     elemVec[Ne*totDim]   -- output element vector (accumulated, not zeroed here)
-
-   Layout conventions (match PetscFEEvaluateFieldJets_Internal):
-     B[q * Nb*Nc + b*Nc + c]          -- b = 0..Nb-1 (total DOFs), c = 0..Nc-1
-     D[q * Nb*Nc*dim + b*Nc*dim + c*dim + e2]
-     invJ[e * Nq*dE*dE + q*dE*dE + i*dE + j]   (expanded, affine replicated)
-     detJ[e * Nq + q]                            (expanded)
-     coords[e * Nq*dE + q*dE + d]
-     coeff[e * totDim + uOff + b]               -- b indexes ALL DOFs (0..Nb-1)
-     elemVec[e * totDim + fOff + b*Nc + c]
-
-   IMPORTANT: coeff is indexed as coeff[b] (not coeff[b*Nc+c]) because PETSc
-   stores DOFs in the order imposed by PetscDualSpaceGetDimension(), where b
-   already encodes both the scalar basis index and the component.  This matches
-   PetscFEEvaluateFieldJets_Internal exactly.
-
-   Note: elemVec is accumulated (+=), not zeroed.  The caller must zero it
-   before the kernel launch (or use Kokkos::deep_copy to zero the device View). */
-/* Opt #3: precompute physical gradients once per (q,b) and reuse for both
-   grad_u interpolation and F1 contraction.
-   Opt #4: IsAffine template parameter -- when true, load invJ/detJ once per
-   element (before the q loop) instead of re-indexing at every quadrature point.
-   For affine hex meshes the expanded arrays have identical values for all q,
-   so reading slot q=0 is correct for all q.  For non-affine meshes use
-   IsAffine=false to keep per-q indexing. */
+/* Device-callable residual integration for one element.
+   F0/F1 are compile-time PetscPointFn callbacks (nullptr to skip).
+   IsAffine=true loads invJ/detJ once per element instead of per quadrature point. */
 template <PetscPointFn *F0, PetscPointFn *F1, bool IsAffine = true>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::TeamPolicy<>::member_type &team, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B,  /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                                                                 /* [Nq * Nb * Nc * dim]    */
@@ -268,36 +211,9 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
   }); /* end TeamThreadRange over q */
 }
 
-/* PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>
-
-   Device-callable template function that integrates the Jacobian for a
-   single element e.  All four Jacobian callbacks are resolved at compile time.
-
-   Template parameters (any may be nullptr to skip that term):
-     G0  -- g0[fc*Nc+gc]         = df0[fc]/du[gc]
-     G1  -- g1[fc*Nc*dE+gc*dE+d] = df0[fc]/d(gradu)[gc,d]
-     G2  -- g2[fc*dE*Nc+d*Nc+gc] = df1[fc,d]/du[gc]
-     G3  -- g3[fc*dE*Nc*dE+d*Nc*dE+gc*dE+e2] = df1[fc,d]/d(gradu)[gc,e2]
-
-   Arguments: same geometry/tabulation arrays as the residual kernel, plus:
-     Nb                            -- TOTAL DOFs per element (= T->Nb = Nb_scalar * Nc)
-     elemMat[Ne * totDim * totDim] -- output element matrix (accumulated)
-     u_tShift                      -- time-derivative shift (for implicit TS)
-
-   Layout of elemMat (matches PetscFEUpdateElementMat_Internal):
-     elemMat[e * totDim*totDim + (fOff + b) * totDim + (gOff + b2)]
-     where b, b2 = 0..Nb-1 (total DOFs, not scalar basis x component pairs)
-
-   Note: For Poisson, only G3 is non-zero (g3[d*dE+e2] = delta_{d,e2}). */
-/* Opt #4: IsAffine template parameter for the Jacobian kernel.
-   When IsAffine=true, invJ/detJ are loaded once per element (before the q loop)
-   instead of re-indexing at every quadrature point.
-   Opt #5: IsLinear template parameter.
-   When IsLinear=true, the Jacobian callbacks do not depend on u or grad_u
-   (linear problems: Poisson, elasticity).  The interpolation of u_loc and
-   ux_loc is skipped entirely -- they are zeroed and passed as zeros to the
-   callbacks, which ignore them.  This eliminates O(Nb*Nc*dim) FLOPs per
-   quadrature point (~50% of the kernel work for low-order elements). */
+/* Device-callable Jacobian integration for one element.
+   G0..G3 are compile-time PetscPointJacFn callbacks (nullptr to skip).
+   IsAffine=true loads geometry once per element; IsLinear=true skips u interpolation. */
 template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsAffine = true, bool IsLinear = false>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::TeamPolicy<>::member_type &team, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B, /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                                                                /* [Nq * Nb * Nc * dim]    */
@@ -1018,9 +934,9 @@ typedef struct {
   IS           cached_cellIS;
 } PetscFEKokkosMaps;
 
-/* Lifecycle function declarations live in a private header so the Fortran
+  /* Lifecycle function declarations live in a private header so the Fortran
    binding generator (which greps include/ *.h) does not create stubs. */
-#include <petsc/private/petscfekokkosmapsimpl.h>
+  #include <petsc/private/petscfekokkosmapsimpl.h>
 
 template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
