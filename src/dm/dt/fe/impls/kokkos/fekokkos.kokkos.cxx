@@ -44,11 +44,11 @@ typedef struct {
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_D;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_w;
   // Cached per-call device Views, reallocated when Ne or totDim changes
-  Kokkos::View<PetscReal *>   d_invJ;
-  Kokkos::View<PetscScalar *> d_elemVec;
-  Kokkos::View<PetscScalar *> d_f0_scr;
-  Kokkos::View<PetscScalar *> d_f1_scr;
-  Kokkos::View<PetscScalar *> d_val;
+  Kokkos::View<PetscReal *>                      d_invJ;
+  Kokkos::View<PetscScalar *>                    d_elemVec;
+  Kokkos::View<PetscScalar *>                    d_f0_scr;
+  Kokkos::View<PetscScalar *>                    d_f1_scr;
+  Kokkos::View<PetscScalar *>                    d_val;
   Kokkos::View<PetscScalar *, Kokkos::HostSpace> h_elemVec;
   // Host scratch: h_f0_buf and h_f1_buf share one contiguous block
   PetscScalar *h_f0_buf;
