@@ -10,6 +10,7 @@
   #include <petscfe.h>
   #include <petscds.h>
   #include <petscsnes.h>
+  #include <petscdmplex.h>
   #include <Kokkos_Core.hpp>
 
 /* Helper: compile-time check whether a function-pointer template parameter is non-null.
