@@ -15,6 +15,7 @@ configure_options = [
   '--download-openblas=1',
   #'--download-openblas-make-options=TARGET=GENERIC',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-cmake=1',
   '--download-metis=1',
   '--download-parmetis=1',
