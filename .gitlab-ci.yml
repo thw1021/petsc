@@ -329,7 +329,7 @@ ai-review-optional:
   allow_failure: true
   interruptible: true
   environment:
-    name: review/AI/$CI_COMMIT_REF_SLUG
+    name: AI-Review/$CI_MERGE_REQUEST_IID
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/ai-review.html
     auto_stop_in: one week
     deployment_tier: development
@@ -1279,7 +1279,7 @@ coverage-analyze:
 coverage-total-review:
   extends: .coverage-review
   environment:
-    name: coverage/All/$CI_COMMIT_REF_SLUG
+    name: Coverage-All/$CI_MERGE_REQUEST_IID
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/arch-ci-analyze-pipeline/gcovr/html/report.html
     auto_stop_in: one week
     deployment_tier: testing
@@ -1287,7 +1287,7 @@ coverage-total-review:
 coverage-untested-review:
   extends: .coverage-review
   environment:
-    name: coverage/Untested/$CI_COMMIT_REF_SLUG
+    name: Coverage-Untested/$CI_MERGE_REQUEST_IID
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/arch-ci-analyze-pipeline/gcovr/html_untested/report_untested.html
     auto_stop_in: one week
     deployment_tier: testing
@@ -1341,7 +1341,7 @@ docs-review:
     - (time make latexpdf SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - cp _build/latex/manual.pdf ../public/html/manual/
   environment:
-    name: review/Documentation/$CI_COMMIT_REF_SLUG
+    name: Documentation/$CI_MERGE_REQUEST_IID
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/public/html/index.html
     auto_stop_in: one week
     deployment_tier: development
