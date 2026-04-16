@@ -23,10 +23,12 @@ if __name__ == '__main__':
     '--with-blaslapack-dir='+os.environ['MKLROOT'],
     '--with-mkl_pardiso-dir='+os.environ['MKLROOT'],
     '--with-mkl_cpardiso-dir='+os.environ['MKLROOT'],
-    '--download-superlu_dist',
+    # SUNDIALS cannot deal with single precision SuperLU_DIST
+    #'--download-superlu_dist',
     '--download-metis',
     '--download-parmetis',
     '--download-hypre',
+    '--download-sundials',
     '--with-strict-petscerrorcode',
   ]
   configure.petsc_configure(configure_options)
