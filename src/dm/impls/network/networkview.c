@@ -1,4 +1,7 @@
 #include <petscconf.h>
+#if defined(PETSC_HAVE_MKSTEMP) && defined(__cplusplus) && defined(PETSC_USING_DARWIN) && defined(__GNUC__)
+  #undef PETSC_HAVE_MKSTEMP
+#endif
 // We need to define this ahead of any other includes to make sure mkstemp is actually defined
 #if defined(PETSC_HAVE_MKSTEMP)
   #if !defined(_XOPEN_SOURCE)
