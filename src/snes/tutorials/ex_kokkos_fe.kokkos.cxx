@@ -196,10 +196,13 @@ int main(int argc, char **argv)
     filter: grep "L2 error"
     test:
       suffix: fallback_2d_quad
+      output_file: output/ex_kokkos_fe_fallback_2d_quad.out
     test:
       suffix: fallback_2d_quad_deg2
       args: -petscspace_degree 2
+      output_file: output/ex_kokkos_fe_fallback_2d_quad_deg2.out
     test:
       suffix: fallback_3d_hex
       args: -dm_plex_dim 3 -dm_plex_box_faces 2,2,2
+      output_file: output/ex_kokkos_fe_fallback_3d_hex.out
 TEST*/
