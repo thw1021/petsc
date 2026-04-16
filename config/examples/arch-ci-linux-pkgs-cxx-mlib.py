@@ -13,6 +13,7 @@ configure_options = [
   '--download-mpich=1',
   '--download-fblaslapack=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-metis=1',
   '--download-parmetis=1',
   '--download-ptscotch=1',
