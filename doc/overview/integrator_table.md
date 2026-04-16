@@ -47,11 +47,21 @@
      - one-step
      - implicit
      - :math:`\le 6`
+   * - cvodebdf
+     - Backward Differentiation Formulas implemented in SUNDIALS CVode
+     - one-step
+     - implicit
+     - :math:`\le 5`
    * - alpha
      - alpha-method :cite:`jansen_2000`
      - one-step
      - implicit
      - :math:`2`
+   * - cvodeadams
+     - Adams implemented in SUNDIALS CVode
+     - one-step
+     - implicit
+     - :math:`\le 12`
    * - gl
      - general linear :cite:`butcher_2007`
      - multistep-multistage

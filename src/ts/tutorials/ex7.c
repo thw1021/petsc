@@ -19,15 +19,13 @@ static char help[] = "Nonlinear, time-dependent PDE in 2d.\n";
 */
 extern PetscErrorCode FormFunction(TS, PetscReal, Vec, Vec, void *), FormInitialSolution(DM, Vec);
 extern PetscErrorCode MyTSMonitor(TS, PetscInt, PetscReal, Vec, void *);
-extern PetscErrorCode MySNESMonitor(SNES, PetscInt, PetscReal, PetscViewerAndFormat *);
 
 int main(int argc, char **argv)
 {
-  TS                    ts; /* time integrator */
-  SNES                  snes;
-  Vec                   x, r; /* solution, residual vectors */
-  DM                    da;
-  PetscViewerAndFormat *vf;
+  TS        ts;   /* time integrator */
+  Vec       x, r; /* solution, residual vectors */
+  DM        da;
+  PetscBool isCVode;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program
@@ -37,7 +35,7 @@ int main(int argc, char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create distributed array (DMDA) to manage parallel grid and vectors
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 8, 8, PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, &da));
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 5, 5, PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, &da));
   PetscCall(DMSetFromOptions(da));
   PetscCall(DMSetUp(da));
 
@@ -76,9 +74,6 @@ int main(int argc, char **argv)
      Customize nonlinear solver
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(TSSetType(ts, TSBEULER));
-  PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, &vf));
-  PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, void *))MySNESMonitor, vf, (PetscCtxDestroyFn *)PetscViewerAndFormatDestroy));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set initial conditions
@@ -91,6 +86,43 @@ int main(int argc, char **argv)
      Set runtime options
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(TSSetFromOptions(ts));
+
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     Impose non-negativity bounds on the solution
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)ts, &isCVode, TSCVODEBDF, TSCVODEADAMS, ""));
+  if (!isCVode) {
+    /*
+      Solves the ODE nonlinear system as a variational inequality to ensure it never produces
+      negative entries. Since we know the negative entries creep in very slowly due to round-off
+      we assume the variational inequality solution is the correct solution for the ODE integrator.
+
+      One could also just set all negative entries in the solution to zero after SNESSolve()
+      but TS/SNES has no API to perform that operation.
+    */
+    Vec  xlow, xhigh;
+    SNES snes;
+
+    PetscCall(TSGetSNES(ts, &snes));
+    PetscCall(VecDuplicate(x, &xlow));
+    PetscCall(VecDuplicate(x, &xhigh));
+    PetscCall(VecSet(xhigh, PETSC_INFINITY));
+    PetscCall(SNESVISetVariableBounds(snes, xlow, xhigh));
+    PetscCall(VecDestroy(&xlow));
+    PetscCall(VecDestroy(&xhigh));
+    PetscCall(SNESSetType(snes, SNESVINEWTONRSLS));
+  } else {
+    /*
+     CVode tries to decrease the time-step to ensure the nonlinear system solution has
+     no negative entries. This does not work very well resulting in extremely small time steps.
+      */
+    Vec ones;
+
+    PetscCall(VecDuplicate(x, &ones));
+    PetscCall(VecSet(ones, 1.0));
+    PetscCall(TSCVodeSetConstraints(ts, ones));
+    PetscCall(VecDestroy(&ones));
+  }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve nonlinear system
@@ -109,7 +141,7 @@ int main(int argc, char **argv)
   PetscCall(PetscFinalize());
   return 0;
 }
-/* ------------------------------------------------------------------- */
+
 /*
    FormFunction - Evaluates nonlinear function, F(x).
 
@@ -168,10 +200,9 @@ PetscErrorCode FormFunction(TS ts, PetscReal ftime, Vec X, Vec F, void *ptr)
         f[j][i] = x[j][i];
         continue;
       }
-      u   = x[j][i];
-      uxx = (two * u - x[j][i - 1] - x[j][i + 1]) * sx;
-      uyy = (two * u - x[j - 1][i] - x[j + 1][i]) * sy;
-      /*      f[j][i] = -(uxx + uyy); */
+      u       = x[j][i];
+      uxx     = (two * u - x[j][i - 1] - x[j][i + 1]) * sx;
+      uyy     = (two * u - x[j - 1][i] - x[j + 1][i]) * sy;
       f[j][i] = -u * (uxx + uyy) - (4.0 - 1.0) * ((x[j][i + 1] - x[j][i - 1]) * (x[j][i + 1] - x[j][i - 1]) * .25 * sx + (x[j + 1][i] - x[j - 1][i]) * (x[j + 1][i] - x[j - 1][i]) * .25 * sy);
     }
   }
@@ -186,7 +217,13 @@ PetscErrorCode FormFunction(TS ts, PetscReal ftime, Vec X, Vec F, void *ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------------- */
+/*
+     Initial solution is:
+     * 1 at the center of the square
+     * exp(-2063. * r * r * r) within the radius of .25 from the square's center
+     * 1.e-14 at the radius of .25 from the square's center
+     * 0 outside the radius of .25 from the square's center
+*/
 PetscErrorCode FormInitialSolution(DM da, Vec U)
 {
   PetscInt      i, j, xs, ys, xm, ym, Mx, My;
@@ -210,14 +247,14 @@ PetscErrorCode FormInitialSolution(DM da, Vec U)
   PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   /*
-     Compute function over the locally owned part of the grid
+     Compute initial solution function over the locally owned part of the grid
   */
   for (j = ys; j < ys + ym; j++) {
     y = j * hy;
     for (i = xs; i < xs + xm; i++) {
       x = i * hx;
       r = PetscSqrtReal((x - .5) * (x - .5) + (y - .5) * (y - .5));
-      if (r < .125) u[j][i] = PetscExpReal(-30.0 * r * r * r);
+      if (r <= .25) u[j][i] = PetscExpReal(-2063. * r * r * r);
       else u[j][i] = 0.0;
     }
   }
@@ -231,44 +268,48 @@ PetscErrorCode FormInitialSolution(DM da, Vec U)
 
 PetscErrorCode MyTSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec v, PetscCtx ctx)
 {
-  PetscReal norm;
+  DM        da;
+  PetscInt  Mx, My;
+  PetscReal hx, hy;
+  PetscReal norm, min;
   MPI_Comm  comm;
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(PETSC_SUCCESS); /* step of -1 indicates an interpolated solution */
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
+  hx = 1.0 / (PetscReal)(Mx - 1);
+  hy = 1.0 / (PetscReal)(My - 1);
   PetscCall(VecNorm(v, NORM_2, &norm));
+  norm = norm * PetscSqrtReal(hx * hy);
   PetscCall(PetscObjectGetComm((PetscObject)ts, &comm));
   PetscCall(PetscPrintf(comm, "timestep %" PetscInt_FMT " time %g norm %g\n", step, (double)ptime, (double)norm));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-   MySNESMonitor - illustrate how to set user-defined monitoring routine for SNES.
-   Input Parameters:
-     snes - the SNES context
-     its - iteration number
-     fnorm - 2-norm function value (may be estimated)
-     ctx - optional user-defined context for private data for the
-         monitor routine, as set by SNESMonitorSet()
- */
-PetscErrorCode MySNESMonitor(SNES snes, PetscInt its, PetscReal fnorm, PetscViewerAndFormat *vf)
-{
-  PetscFunctionBeginUser;
-  PetscCall(SNESMonitorDefaultShort(snes, its, fnorm, vf));
+  PetscCall(VecMin(v, NULL, &min));
+  PetscCheck(min >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Solution minimum is negative %g", (double)min);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*TEST
 
     test:
-      args: -ts_max_steps 5
+      args: -ts_max_time .0005 -ts_exact_final_time matchstep
 
     test:
       suffix: 2
-      args: -ts_max_steps 5 -snes_mf_operator
+      args: -ts_max_time .0005 -snes_mf_operator -ts_exact_final_time matchstep
 
     test:
       suffix: 3
-      args: -ts_max_steps 5 -snes_mf -pc_type none
+      args: -ts_max_time .0005 -snes_mf -pc_type none -ts_exact_final_time matchstep
+
+    test:
+      requires: sundials
+      suffix: cvodebdf
+      args: -da_refine 4 -ts_max_time .05 -snes_mf -pc_type none -ts_exact_final_time matchstep -ts_type cvodebdf
+
+    test:
+      requires: sundials
+      suffix: cvodeadams
+      args: -da_refine 4 -ts_max_time .05 -snes_mf -pc_type none -ts_exact_final_time matchstep -ts_type cvodeadams
 
 TEST*/

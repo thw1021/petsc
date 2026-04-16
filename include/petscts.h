@@ -55,6 +55,8 @@ typedef const char *TSType;
 #define TSDISCGRAD        "discgrad"
 #define TSIRK             "irk"
 #define TSDIRK            "dirk"
+#define TSCVODEBDF        "cvodebdf"
+#define TSCVODEADAMS      "cvodeadams"
 
 /*E
    TSProblemType - Determines the type of problem this `TS` object is to be used to solve
@@ -1606,3 +1608,8 @@ PETSC_EXTERN PetscErrorCode TSComputeExactError(TS, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscConvEstUseTS(PetscConvEst, PetscBool);
 
 PETSC_EXTERN PetscErrorCode TSSetMatStructure(TS, MatStructure);
+
+PETSC_EXTERN PetscErrorCode TSCVodeSetOrder(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSCVodeGetOrder(TS, PetscInt *);
+PETSC_EXTERN PetscErrorCode TSCVodeSetConstraints(TS, Vec);
+PETSC_EXTERN PetscErrorCode TSCVodeGetConstraints(TS, Vec *);
