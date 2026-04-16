@@ -185,6 +185,9 @@ check_build:
             cd - > /dev/null;\
           fi;\
         fi;
+	+@if [ "`grep -E '^#define PETSC_HAVE_SUNDIALS 1' ${PETSCCONF_H}`" = "#define PETSC_HAVE_SUNDIALS 1" ]; then\
+             cd src/ts/impls/sundials/tests >/dev/null; ${RUN_TEST} runcv;\
+         fi;
 	+@if [ "`grep -E '^#define PETSC_HAVE_HDF5 1' ${PETSCCONF_H}`" = "#define PETSC_HAVE_HDF5 1" ]; then\
           cd src/vec/vec/tests >/dev/null;\
           ${RUN_TEST} clean-legacy;\
