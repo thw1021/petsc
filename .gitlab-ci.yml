@@ -1,4 +1,6 @@
 #
+# test complete revert
+#
 # stage-1 take only a few minutes; they do not run the full test suite or external packages.
 #
 # stage-2 runs on MCS systems and may take 10 to 15 minutes. They run the full test suite but with limited mixture of external packages
