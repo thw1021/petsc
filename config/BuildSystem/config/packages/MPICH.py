@@ -67,7 +67,7 @@ class Configure(config.package.GNUPackage):
       args.append('--without-hwloc')
     else:
       args.append('--with-hwloc=embedded')
-    args.append("--enable-fast=\"\"") # set to empty so that --with-debugging=1, -O0 is not there twice (since it is already in PETSc CFLAGS), and --with-debugging=0, -O2 (set by MPICH if there is no --enable-fast configure option) does not shadow what is in PETSc COPTFLAGS (usually -O3)
+    args.append('--enable-fast=""') # set to empty so that --with-debugging=1, -O0 is not there twice (since it is already in PETSc CFLAGS), and --with-debugging=0, -O2 (set by MPICH if there is no --enable-fast configure option) does not shadow what is in PETSc COPTFLAGS (usually -O3)
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
       mpich_device = 'ch3:sock'
