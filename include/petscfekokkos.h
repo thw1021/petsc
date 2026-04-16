@@ -449,8 +449,8 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
         /* Compute physical coords from reference quadrature point.
          * J_e and xi_e must be non-NULL for affine elements (cgeom->J and
          * cgeom->xi are always set when isAffine == PETSC_TRUE by DMFieldCreateFEGeom). */
-        PetscCheck(J_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->J is NULL for affine element %d -- DMFieldCreateFEGeom must provide J", (int)e);
-        PetscCheck(xi_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->xi is NULL for affine element %d -- DMFieldCreateFEGeom must provide xi", (int)e);
+        PetscAssert(J_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->J is NULL for affine element %d -- DMFieldCreateFEGeom must provide J", (int)e);
+        PetscAssert(xi_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->xi is NULL for affine element %d -- DMFieldCreateFEGeom must provide xi", (int)e);
         PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], &h_coords[eq * dE]);
       } else {
         /* Non-affine: geometry stored per quadrature point */
