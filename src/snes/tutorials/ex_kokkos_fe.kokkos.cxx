@@ -192,9 +192,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos
     nsize: {{1 3}}
-    args: -petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 4,4
-          -dm_mat_type aij -dm_vec_type standard
-          -ksp_type cg -pc_type jacobi -use_kokkos_maps 0
+    args: -petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 4,4 -dm_mat_type aij -dm_vec_type standard -ksp_type cg -pc_type jacobi -use_kokkos_maps 0
     filter: grep "L2 error"
     test:
       suffix: fallback_2d_quad
