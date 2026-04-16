@@ -98,7 +98,6 @@
 - Add `TSCVodeSetOrder()` and `TSCVodeGetOrder()`
 - Add `TSCVodeSetConstraints()`
 
-
 ## TAO
 
 - Add `TaoGetDM()` and `TaoSetDM()`

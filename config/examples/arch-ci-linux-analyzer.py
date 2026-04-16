@@ -17,6 +17,7 @@ configure_options = [
   '--download-strumpack=1',
   '--download-mumps=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-ctetgen=1',
   '--download-triangle=1',
   '--download-triangle-build-exec=1',
