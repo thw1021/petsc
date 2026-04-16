@@ -46,7 +46,6 @@ class Configure(config.base.Configure):
       self.dir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
       self.petscDir = self.petscdir.dir
       self.petscArch = self.arch.arch
-    self.addMakeMacro('PREFIXDIR',self.dir)
     self.confDir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
 
   def configureInstallDir(self):

@@ -1,0 +1,192 @@
+# -*- mode: makefile-gmake -*-
+
+# If $(PETSC_ARCH) is empty, this defines it and PETSC_DIR
+include ./$(PETSC_ARCH)/lib/petsc/conf/petscvariables
+include ./lib/petsc/conf/variables
+
+OBJDIR := $(PETSC_ARCH)/obj
+ifneq ($(PREFIXDIR),)
+LIBDIR := $(PREFIXDIR)/lib
+# the following lines add the correct final location of the PETSc and SUNDIALS include files but do not remove the incorrect $PETSC_DIR/$PETSC_ARCH ones
+$(OBJDIR)/%.o : CCPPFLAGS+=-I$(PREFIXDIR)/include
+$(OBJDIR)/%.o : CXXCPPFLAGS+=-I$(PREFIXDIR)/include
+$(OBJDIR)/%.o : CUDACPPFLAGS+=-I$(PREFIXDIR)/include
+else
+LIBDIR := $(PETSC_ARCH)/lib
+endif
+
+# Note: SONAME_FUNCTION, SONAME_SFX_FUNCTION, SL_LINKER_FUNCTION are set in configure - they override the lines below
+# $(call SONAME_FUNCTION,libfoo,abiversion)
+SONAME_FUNCTION ?= $(1).$(SL_LINKER_SUFFIX).$(2)
+# $(call SONAME_SFX_FUNCTION,libfoo,abiversion)
+SONAME_SFX_FUNCTION ?= $(1)$(LIB_NAME_SUFFIX).$(SL_LINKER_SUFFIX).$(2)
+# $(call SL_LINKER_FUNCTION,libfoo,abiversion,libversion)
+SL_LINKER_FUNCTION ?= -shared -Wl,-soname,$(call SONAME_FUNCTION,$(notdir $(1)),$(2))
+
+PETSC_VERSION_MAJOR := $(shell awk '/define PETSC_VERSION_MAJOR/{print $$3;}' ./include/petscversion.h)
+PETSC_VERSION_MINOR := $(shell awk '/define PETSC_VERSION_MINOR/{print $$3;}' ./include/petscversion.h)
+PETSC_VERSION_SUBMINOR := $(shell awk '/define PETSC_VERSION_SUBMINOR/{print $$3;}' ./include/petscversion.h)
+PETSC_VERSION_RELEASE := $(shell awk '/define PETSC_VERSION_RELEASE/{print $$3;}' ./include/petscversion.h)
+
+libpetsc_abi_version := $(PETSC_VERSION_MAJOR).$(if $(filter $(PETSC_VERSION_RELEASE), 0 -2 -3 -4 -5),0)$(PETSC_VERSION_MINOR)
+libpetsc_lib_version := $(libpetsc_abi_version).$(PETSC_VERSION_SUBMINOR)
+soname_function = $(call SONAME_SFX_FUNCTION,$(1),$(libpetsc_abi_version))
+libname_function = $(call SONAME_SFX_FUNCTION,$(1),$(libpetsc_lib_version))
+absbasename_all = $(basename $(basename $(basename $(basename $(abspath $(1))))))# arch/lib/libpetscsundials.so.3.8.0 -> /path/to/arch/lib/libpetscsundials
+sl_linker_args = $(call SL_LINKER_FUNCTION,$(call absbasename_all,$@),$(libpetsc_abi_version),$(libpetsc_lib_version))
+
+libpetsc_shared  := $(LIBDIR)/libpetscsundials$(LIB_NAME_SUFFIX).$(SL_LINKER_SUFFIX)
+libpetsc_soname  := $(call soname_function,$(LIBDIR)/libpetscsundials)
+libpetsc_libname := $(call libname_function,$(LIBDIR)/libpetscsundials)
+libpetsc_static  := $(LIBDIR)/libpetscsundials$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)
+
+libpetscall := $(if $(filter-out no,$(BUILDSHAREDLIB)),$(libpetsc_shared),$(libpetsc_static))
+
+libs : $(libpetscall)
+
+.PHONY: libs
+
+.SECONDEXPANSION:               # to expand $$(@D)/.DIR
+
+# Test framework includes rules and variables relevant to both build and test
+include ./gmakefile.test
+
+srcs.o := ${PETSC_ARCH}/obj/src/ts/impls/sundials/cvode/impl/icvode.o ${PETSC_ARCH}/obj/ftn/ts/impls/sundials/cvode/cvodef.o
+
+# implies shared libraries with MS compilers
+ifeq ($(PETSC_DLL_EXPORTS),1)
+$(OBJDIR)/%.o : CCPPFLAGS+=-Dpetsc_EXPORTS
+$(OBJDIR)/%.o : CXXCPPFLAGS+=-Dpetsc_EXPORTS
+$(OBJDIR)/%.o : CUDACPPFLAGS+=-Dpetsc_EXPORTS
+endif
+
+langs := F F90 cxx c
+ifneq ($(CUDAC),)
+langs += cu
+endif
+ifneq ($(HIPC),)
+langs += hip.cxx
+endif
+ifneq ($(SYCLC),)
+langs += sycl.cxx
+endif
+ifneq ($(KOKKOS_LIB),)
+langs += kokkos.cxx
+endif
+
+define SHARED_RECIPE_DLL
+  @$(RM) $@ dllcmd.${PETSC_ARCH}
+  @cygpath -w $^ > dllcmd.${PETSC_ARCH}
+  $(call quiet,CLINKER) $(sl_linker_args) -o $@ @dllcmd.${PETSC_ARCH} $(SUNDIALS_LIB) $(PETSC_WITH_EXTERNAL_LIB)
+  @$(RM) dllcmd.${PETSC_ARCH}
+endef
+
+define SHARED_RECIPE_ATFILE
+  $(file > $@.args,$^)
+  $(call quiet,CLINKER) $(sl_linker_args) -o $@ @$@.args $(SUNDIALS_LIB) $(PETSC_WITH_EXTERNAL_LIB)
+  @$(RM) $@.args
+endef
+
+define SHARED_RECIPE_DEFAULT
+  $(call quiet,CLINKER) $(sl_linker_args) -o $@ $^ $(SUNDIALS_LIB) $(PETSC_WITH_EXTERNAL_LIB)
+endef
+
+GMAKE4 = $(if $(findstring 3.99,$(firstword $(sort 3.99 $(MAKE_VERSION)))),1,)
+SHARED_RECIPE = $(if $(findstring -LD,$(SL_LINKER_FUNCTION)),$(SHARED_RECIPE_DLL),$(if $(PCC_AT_FILE),$(if $(GMAKE4),$(SHARED_RECIPE_ATFILE),$(SHARED_RECIPE_DEFAULT)),$(SHARED_RECIPE_DEFAULT)))
+
+$(libpetsc_libname) : $(srcs.o) | $$(@D)/.DIR
+	$(SHARED_RECIPE)
+ifneq ($(DSYMUTIL),true)
+	$(call quiet,DSYMUTIL) $@
+endif
+
+$(libpetsc_static) : obj := $(srcs.o)
+
+define ARCHIVE_RECIPE_WIN32FE_LIB
+  @$(RM) $@ $@.args
+  @cygpath -w $^ > $@.args
+  $(call quiet,AR) $(AR_FLAGS) $@ @$@.args
+  @$(RM) $@.args
+endef
+
+define ARCHIVE_RECIPE_ARGFILE
+  @$(RM) $@
+  $(file > $@.args,$^)
+  $(call quiet,AR) $(AR_FLAGS) $@ @$@.args
+  @$(RM) $@.args
+  $(call quiet,RANLIB) $@
+endef
+
+define ARCHIVE_RECIPE_DEFAULT
+  @$(RM) $@
+  $(call quiet,AR) $(AR_FLAGS) $@ $^
+  $(call quiet,RANLIB) $@
+endef
+
+%$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX) : $$(obj) | $$(@D)/.DIR
+	$(if $(findstring win32fe_lib,$(AR)),$(ARCHIVE_RECIPE_WIN32FE_LIB),$(if $(findstring yes,$(AR_ARGFILE)),$(if $(GMAKE4),$(ARCHIVE_RECIPE_ARGFILE),$(ARCHIVE_RECIPE_DEFAULT)),$(ARCHIVE_RECIPE_DEFAULT)))
+
+%$(LIB_NAME_SUFFIX).$(SL_LINKER_SUFFIX) : $(call libname_function,%) | $(call soname_function,%)
+	@ln -sf $(notdir $<) $@
+
+$(call soname_function,%) : $(call libname_function,%)
+	@ln -sf $(notdir $<) $@
+
+.PRECIOUS: $(call soname_function,%)
+
+$(OBJDIR)/%.o : %.sycl.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
+
+$(OBJDIR)/src/%.o : src/%.c | $$(@D)/.DIR
+	$(PETSC_COMPILE.c) $(abspath $<) -o $@
+
+$(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.c | $$(@D)/.DIR
+	$(PETSC_COMPILE.c) $(abspath $<) -o $@
+
+$(OBJDIR)/%.o : %.kokkos.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.kokkos.cxx) $(abspath $<) -o $@
+
+$(OBJDIR)/src/%.o : src/%.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
+
+$(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
+
+$(OBJDIR)/%.o : %.hip.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.hip.cxx) $(abspath $<) -o $@
+
+$(OBJDIR)/%.o : %.cu | $$(@D)/.DIR
+	$(PETSC_COMPILE.cu) $(abspath $<) -o $@ # Compile first so that if there is an error, it comes from a normal compile
+	@$(PETSC_GENDEPS.cu) $(abspath $<) -o $(@:%.o=%.d) # Generate the dependencies for later
+
+FCMOD = cd
+$(OBJDIR)/%.o : %.F | $$(@D)/.DIR
+ifeq ($(FC_MODULE_OUTPUT_FLAG),)
+	$(call quiet,FCMOD) $(MODDIR) && $(FC) -c $(FC_FLAGS) $(FFLAGS) $(FCPPFLAGS) $(FC_DEPFLAGS) $(abspath $<) -o $(abspath $@)
+else
+	$(PETSC_COMPILE.F) $(abspath $<) -o $@ $(FC_MODULE_OUTPUT_FLAG)$(MODDIR)
+endif
+	-@$(GFORTRAN_DEP_CLEANUP)
+
+$(OBJDIR)/%.o : %.F90 | $$(@D)/.DIR
+ifeq ($(FC_MODULE_OUTPUT_FLAG),)
+	$(call quiet,FCMOD) $(MODDIR) && $(FC) -c $(FC_FLAGS) $(FFLAGS) $(FCPPFLAGS) $(FC_DEPFLAGS) $(abspath $<) -o $(abspath $@)
+else
+	$(PETSC_COMPILE.F) $(abspath $<) -o $@ $(FC_MODULE_OUTPUT_FLAG)$(MODDIR)
+endif
+	-@$(GFORTRAN_DEP_CLEANUP)
+
+# Combine with Jacob's massive lint project?
+# Only works with ./configure --with-mpi=0 since clang-tidy cannot find MPI include files (love MPI compiler wrappers, the worse thing to come from MPI)
+$(OBJDIR)/%.tidy : %.c | $$(@D)/.DIR
+	@clang-tidy --checks='clang-diagnostic-*,-clang-analyzer-*,-clang-analyzer-security.insecureAPI.rand,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,clang-analyzer-deadcode.DeadStores,bugprone-too-small-loop-variable'  $(abspath $<) -- ${CCPPFLAGS}
+
+clang-tidy: $(srcs.tidy)
+
+allobj.d := $(srcs.o:%.o=%.d)
+# Tell make that allobj.d are all up to date. Without this, the include
+# below has quadratic complexity, taking more than one second for a
+# do-nothing build of PETSc (much worse for larger projects)
+$(allobj.d) : ;
+
+-include $(allobj.d)
