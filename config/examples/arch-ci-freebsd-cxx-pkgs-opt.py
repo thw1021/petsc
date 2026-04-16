@@ -26,6 +26,7 @@ configure_options = [
   '--with-zlib=1',
   '--download-sundials2=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-suitesparse=1',
   '--download-make=1', # required by suitesparse
   '--download-chaco=1',
