@@ -1602,3 +1602,77 @@ PETSC_EXTERN PetscErrorCode TSComputeExactError(TS, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscConvEstUseTS(PetscConvEst, PetscBool);
 
 PETSC_EXTERN PetscErrorCode TSSetMatStructure(TS, MatStructure);
+
+/*MC
+  PetscCallSUNDIALS - Calls a SUNDIALS function and then checks the resulting error code, if it is
+  non-zero it calls the error handler and returns from the current function with a PETSc error code.
+
+  Synopsis:
+  #include <petscsys.h>
+  void PetscCallSUNDIALS(functionname, args)
+
+  Not Collective
+
+  Input Parameter:
++ functioname - any SUNDIALS function that returns an error code
+- args        - the function arguments
+
+  Level: beginner
+
+.seealso: `PetscCallSUNDIALSMem()`, `PetscCallSUNDIALSVoid()`, `PetscCall()`, `PetscCheck()`, `PetscAssert()`, `PetscTraceBackErrorHandler()`,
+           `PetscCallHYPRE()`
+M*/
+#define PetscCallSUNDIALS(fn, ...) \
+  do { \
+    SUNErrCode ierr_sundials = fn(__VA_ARGS__); \
+    PetscCheck(!ierr_sundials, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SUNDIALS: " #fn " return code %d", ierr_sundials); \
+  } while (0)
+
+/*MC
+  PetscCallSUNDIALSMem - Calls a SUNDIALS function that returns an object/array and then checks the resulting object is not `NULL`, if it is
+  `NULL` it calls the error handler and returns from the current function with a PETSc error code.
+
+  Synopsis:
+  #include <petscsys.h>
+  void PetscCallSUNDIALSMem(returnarg, functionname, args)
+
+  Not Collective
+
+  Input Parameter:
++ returnarg   - name of the argument that is being returned by the function
+. functioname - any SUNDIALS function that returns an object/array
+- args        - the function arguments
+
+  Level: beginner
+
+.seealso: `PetscCallSUNDIALS()`, `PetscCallSUNDIALSVoid()`, `PetscCall()`, `PetscCheck()`, `PetscAssert()`, `PetscTraceBackErrorHandler()`, `PetscCallHYPRE()`
+M*/
+#define PetscCallSUNDIALSMem(ret, fn, ...) \
+  do { \
+    ret = fn(__VA_ARGS__); \
+    PetscCheck(ret, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SUNDIALS: " #fn " unexpected NULL returned"); \
+  } while (0)
+
+/*MC
+  PetscCallSUNDIALSVoid - Calls a SUNDIALS function that returns void.
+
+  Synopsis:
+  #include <petscsys.h>
+  void PetscCallSUNDIALS(functionname, args)
+
+  Not Collective
+
+  Input Parameter:
++ functioname - any SUNDIALS function that returns a void
+- args        - the function arguments
+
+  Level: beginner
+
+.seealso: `PetscCallSUNDIALS()`, `PetscCallSUNDIALSMem()`, `PetscCall()`, `PetscCheck()`, `PetscAssert()`, `PetscTraceBackErrorHandler()`, `PetscCallHYPRE()`
+M*/
+#define PetscCallSUNDIALSVoid(fn, args) \
+  do { \
+    PetscStackPushExternal(#fn); \
+    fn(args); \
+    PetscStackPop; \
+  } while (0)

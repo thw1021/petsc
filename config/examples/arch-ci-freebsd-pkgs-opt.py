@@ -26,6 +26,7 @@ configure_options = [
   #'--download-hdf5',
   '--download-sundials2=1',
   '--download-hypre=1',
+  '--download-sundials',
   #'--download-suitesparse=1', requires gnumake
   '--download-chaco=1',
   '--download-spai=1',

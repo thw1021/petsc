@@ -30,6 +30,7 @@ if __name__ == '__main__':
     '--download-kokkos-kernels-commit=4.7.01',
     '--download-umpire',
     '--download-hypre',
+    '--download-sundials',
     '--download-magma',
     '--download-mfem',
     '--download-metis',
