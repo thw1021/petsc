@@ -567,7 +567,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS ts)
 
   Level: intermediate
 
-.seealso: `TSBDFGetOrder()`, `TS`, `TSBDF`
+.seealso: `TSBDFGetOrder()`, `TS`, `TSBDF`, `TSCVodeSetOrder()`, `TSCVODEBDF`, `TSCVODEADAMS`
 @*/
 PetscErrorCode TSBDFSetOrder(TS ts, PetscInt order)
 {
@@ -591,7 +591,7 @@ PetscErrorCode TSBDFSetOrder(TS ts, PetscInt order)
 
   Level: intermediate
 
-.seealso: `TSBDFSetOrder()`, `TS`, `TSBDF`
+.seealso: `TSBDFSetOrder()`, `TS`, `TSBDF`, `TSCVodeGetOrder()`, `TSCVODEBDF`, `TSCVODEADAMS`
 @*/
 PetscErrorCode TSBDFGetOrder(TS ts, PetscInt *order)
 {

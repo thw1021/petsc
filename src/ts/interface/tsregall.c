@@ -2,7 +2,9 @@
 PETSC_EXTERN PetscErrorCode TSCreate_Euler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS);
+#if defined(PETSC_HAVE_SUNDIALS2)
 PETSC_EXTERN PetscErrorCode TSCreate_Sundials2(TS);
+#endif
 PETSC_EXTERN PetscErrorCode TSCreate_Radau5(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_CN(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS);
