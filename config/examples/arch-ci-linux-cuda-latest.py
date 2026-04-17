@@ -21,6 +21,7 @@ if __name__ == '__main__':
     '--download-umpire',
     '--with-cuda-arch=80,86',
     '--download-hypre=1',
+    '--download-sundials',
     '--download-superlu_dist',
     '--with-cxx-dialect=17',
     '--with-strict-petscerrorcode',

@@ -35,6 +35,7 @@ configure_options = [
   '--download-hdf5=1',
   '--download-sundials2=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-amrex=1',
   '--download-cmake=1',
   '--download-suitesparse=1',

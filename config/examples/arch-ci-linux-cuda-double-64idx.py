@@ -13,6 +13,7 @@ if __name__ == '__main__':
     '--with-make-test-np=2',
     '--download-openmpi=1',
     '--download-hypre=1',
+    '--download-sundials',
     '--download-hwloc=1',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
