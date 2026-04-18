@@ -36,7 +36,7 @@ typedef const char *TSType;
 #define TSBASICSYMPLECTIC "basicsymplectic"
 #define TSPSEUDO          "pseudo"
 #define TSCN              "cn"
-#define TSSUNDIALS        "sundials"
+#define TSSUNDIALS2       "sundials2"
 #define TSRK              "rk"
 #define TSPYTHON          "python"
 #define TSTHETA           "theta"
@@ -1521,29 +1521,29 @@ PETSC_EXTERN PetscErrorCode TSDiscGradGetType(TS, TSDGType *);
 */
 #ifdef PETSC_HAVE_SUNDIALS2
 typedef enum {
-  SUNDIALS_ADAMS = 1,
-  SUNDIALS_BDF   = 2
-} TSSundialsLmmType;
-PETSC_EXTERN const char *const TSSundialsLmmTypes[];
+  SUNDIALS2_ADAMS = 1,
+  SUNDIALS2_BDF   = 2
+} TSSundials2LmmType;
+PETSC_EXTERN const char *const TSSundials2LmmTypes[];
 typedef enum {
-  SUNDIALS_MODIFIED_GS  = 1,
-  SUNDIALS_CLASSICAL_GS = 2
-} TSSundialsGramSchmidtType;
-PETSC_EXTERN const char *const TSSundialsGramSchmidtTypes[];
+  SUNDIALS2_MODIFIED_GS  = 1,
+  SUNDIALS2_CLASSICAL_GS = 2
+} TSSundials2GramSchmidtType;
+PETSC_EXTERN const char *const TSSundials2GramSchmidtTypes[];
 
-PETSC_EXTERN PetscErrorCode TSSundialsSetType(TS, TSSundialsLmmType);
-PETSC_EXTERN PetscErrorCode TSSundialsGetPC(TS, PC *);
-PETSC_EXTERN PetscErrorCode TSSundialsSetTolerance(TS, PetscReal, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMinTimeStep(TS, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxTimeStep(TS, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsGetIterations(TS, PetscInt *, PetscInt *);
-PETSC_EXTERN PetscErrorCode TSSundialsSetGramSchmidtType(TS, TSSundialsGramSchmidtType);
-PETSC_EXTERN PetscErrorCode TSSundialsSetGMRESRestart(TS, PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetLinearTolerance(TS, PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsMonitorInternalSteps(TS, PetscBool);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxl(TS, PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxord(TS, PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetUseDense(TS, PetscBool);
+PETSC_EXTERN PetscErrorCode TSSundials2SetType(TS, TSSundials2LmmType);
+PETSC_EXTERN PetscErrorCode TSSundials2GetPC(TS, PC *);
+PETSC_EXTERN PetscErrorCode TSSundials2SetTolerance(TS, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMinTimeStep(TS, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMaxTimeStep(TS, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2GetIterations(TS, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode TSSundials2SetGramSchmidtType(TS, TSSundials2GramSchmidtType);
+PETSC_EXTERN PetscErrorCode TSSundials2SetGMRESRestart(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSSundials2SetLinearTolerance(TS, PetscReal);
+PETSC_EXTERN PetscErrorCode TSSundials2MonitorInternalSteps(TS, PetscBool);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMaxl(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSSundials2SetMaxord(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSSundials2SetUseDense(TS, PetscBool);
 #endif
 
 PETSC_EXTERN PetscErrorCode TSThetaSetTheta(TS, PetscReal);
@@ -1602,3 +1602,77 @@ PETSC_EXTERN PetscErrorCode TSComputeExactError(TS, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscConvEstUseTS(PetscConvEst, PetscBool);
 
 PETSC_EXTERN PetscErrorCode TSSetMatStructure(TS, MatStructure);
+
+/*MC
+  PetscCallSUNDIALS - Calls a SUNDIALS function and then checks the resulting error code, if it is
+  non-zero it calls the error handler and returns from the current function with a PETSc error code.
+
+  Synopsis:
+  #include <petscsys.h>
+  void PetscCallSUNDIALS(functionname, args)
+
+  Not Collective
+
+  Input Parameter:
++ functioname - any SUNDIALS function that returns an error code
+- args        - the function arguments
+
+  Level: beginner
+
+.seealso: `PetscCallSUNDIALSMem()`, `PetscCallSUNDIALSVoid()`, `PetscCall()`, `PetscCheck()`, `PetscAssert()`, `PetscTraceBackErrorHandler()`,
+           `PetscCallHYPRE()`
+M*/
+#define PetscCallSUNDIALS(fn, ...) \
+  do { \
+    SUNErrCode ierr_sundials = fn(__VA_ARGS__); \
+    PetscCheck(!ierr_sundials, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SUNDIALS: " #fn " return code %d", ierr_sundials); \
+  } while (0)
+
+/*MC
+  PetscCallSUNDIALSMem - Calls a SUNDIALS function that returns an object/array and then checks the resulting object is not `NULL`, if it is
+  `NULL` it calls the error handler and returns from the current function with a PETSc error code.
+
+  Synopsis:
+  #include <petscsys.h>
+  void PetscCallSUNDIALSMem(returnarg, functionname, args)
+
+  Not Collective
+
+  Input Parameter:
++ returnarg   - name of the argument that is being returned by the function
+. functioname - any SUNDIALS function that returns an object/array
+- args        - the function arguments
+
+  Level: beginner
+
+.seealso: `PetscCallSUNDIALS()`, `PetscCallSUNDIALSVoid()`, `PetscCall()`, `PetscCheck()`, `PetscAssert()`, `PetscTraceBackErrorHandler()`, `PetscCallHYPRE()`
+M*/
+#define PetscCallSUNDIALSMem(ret, fn, ...) \
+  do { \
+    ret = fn(__VA_ARGS__); \
+    PetscCheck(ret, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SUNDIALS: " #fn " unexpected NULL returned"); \
+  } while (0)
+
+/*MC
+  PetscCallSUNDIALSVoid - Calls a SUNDIALS function that returns void.
+
+  Synopsis:
+  #include <petscsys.h>
+  void PetscCallSUNDIALS(functionname, args)
+
+  Not Collective
+
+  Input Parameter:
++ functioname - any SUNDIALS function that returns a void
+- args        - the function arguments
+
+  Level: beginner
+
+.seealso: `PetscCallSUNDIALS()`, `PetscCallSUNDIALSMem()`, `PetscCall()`, `PetscCheck()`, `PetscAssert()`, `PetscTraceBackErrorHandler()`, `PetscCallHYPRE()`
+M*/
+#define PetscCallSUNDIALSVoid(fn, args) \
+  do { \
+    PetscStackPushExternal(#fn); \
+    fn(args); \
+    PetscStackPop; \
+  } while (0)

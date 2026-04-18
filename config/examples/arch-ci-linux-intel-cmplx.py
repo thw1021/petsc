@@ -28,6 +28,7 @@ if __name__ == '__main__':
     '--download-ctetgen',
     '--download-hdf5',
     '--download-hypre',
+    '--download-sundials',
     '--download-metis',
     '--download-mpi4py',
     # '--download-mumps',

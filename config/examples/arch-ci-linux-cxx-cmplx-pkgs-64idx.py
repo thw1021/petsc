@@ -22,6 +22,7 @@ configure_options = [
   '--download-blis=1',
   '--download-f2cblaslapack=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-mpich=1',
   '--download-cmake=1',
   '--download-make=1',

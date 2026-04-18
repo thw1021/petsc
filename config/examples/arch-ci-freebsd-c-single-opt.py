@@ -13,6 +13,7 @@ configure_options = [
   '--download-metis',
   '--download-parmetis',
   '--download-hypre',
+  '--download-sundials',
   '--with-strict-petscerrorcode',
   '--with-devicelanguage=cxx',
 ]

@@ -56,7 +56,6 @@ def check_for_option_changed(opts):
             ('cholmod','suitesparse'),
             ('umfpack','suitesparse'),
             ('matlabengine','matlab-engine'),
-            ('sundials','sundials2'),
             ('f-blas-lapack','fblaslapack'),
             ('with-packages-dir','with-packages-download-dir'),
             ('with-external-packages-dir','with-packages-build-dir'),
