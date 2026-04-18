@@ -338,7 +338,7 @@ ai-review-optional:
     name: AI-Review/$CI_COMMIT_REF_SLUG
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/ai-review.html
     auto_stop_in: one week
-    deployment_tier: development
+    deployment_tier: staging
   artifacts:
     paths:
       - ai-review.*
