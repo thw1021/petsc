@@ -1618,7 +1618,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
     // finish COO
     { // setup COO assembly
       PetscInt *oor, *ooc;
-      ctx->SData_d.coo_size = coo_elem_offsets[ncellsTot] * ctx->batch_sz;
+      ctx->SData_d.coo_size = (PetscCount)coo_elem_offsets[ncellsTot] * ctx->batch_sz;
       PetscCall(PetscMalloc2(ctx->SData_d.coo_size, &oor, ctx->SData_d.coo_size, &ooc));
       for (PetscInt i = 0; i < ctx->SData_d.coo_size; i++) oor[i] = ooc[i] = -1;
       // get

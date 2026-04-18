@@ -395,7 +395,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   P4estVertexMaps *maps[LANDAU_MAX_GRIDS]; // this gets captured
   PetscContainer   container;
   const int        conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0) ? Nq : 1;
-  const PetscInt   coo_sz_batch = SData_d->coo_size / batch_sz;                                                 // capture
+  const PetscCount coo_sz_batch = SData_d->coo_size / batch_sz;                                                 // capture
   auto             d_alpha_k    = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->alpha); //static data
   const PetscReal *d_alpha      = d_alpha_k->data();
   const PetscInt   Nftot        = d_alpha_k->size(); // total number of species
@@ -582,12 +582,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
 
     PetscCall(PetscDeviceGetDefault_Internal(&device));
     PetscCall(PetscDeviceGetAttribute(device, PETSC_DEVICE_ATTR_SIZE_T_SHARED_MEM_PER_BLOCK, &maximum_shared_mem_size));
-    // Clamp against the Kokkos execution-space level-0 scratch limit (e.g. 32KB on Serial/CPU).
-    // PetscDeviceGetAttribute may return a stale default (64000) that exceeds the actual limit.
-    {
-      const size_t kokkos_l0_max = (size_t)Kokkos::TeamPolicy<>::scratch_size_max(0);
-      if (kokkos_l0_max < maximum_shared_mem_size) maximum_shared_mem_size = kokkos_l0_max;
-    }
     size_t    jac_scr_bytes    = (size_t)2 * (g2_scr_t::shmem_size(dim, Nf_max, Nq) + g3_scr_t::shmem_size(dim, dim, Nf_max, Nq));
     const int jac_shared_level = (jac_scr_bytes > maximum_shared_mem_size) ? 1 : KOKKOS_SHARED_LEVEL;
     // device function/lambda
