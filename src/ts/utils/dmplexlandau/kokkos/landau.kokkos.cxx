@@ -353,9 +353,11 @@ PetscErrorCode landau_mat_assemble(PetscScalar *coo_vals, const PetscScalar Aij,
       row_scale[0] = 1.;
     } else {
       idx = -idx - 1;
-      for (q = 0, nr = 0; q < d_maps->num_face; q++, nr++) {
-        if (d_maps->c_maps[idx][q].gid < 0) break;
-        row_scale[q] = d_maps->c_maps[idx][q].scale;
+      for (q = 0, nr = 0; q < d_maps->num_face; q++) {
+        if (d_maps->c_maps[idx][q].gid >= 0) { // skip gid<0; do not break -- they may be non-contiguous in 3D AMR
+          row_scale[nr] = d_maps->c_maps[idx][q].scale;
+          nr++;
+        }
       }
     }
     idx = Idxs[g];
@@ -364,10 +366,11 @@ PetscErrorCode landau_mat_assemble(PetscScalar *coo_vals, const PetscScalar Aij,
       col_scale[0] = 1.;
     } else {
       idx = -idx - 1;
-      nc  = d_maps->num_face;
-      for (q = 0, nc = 0; q < d_maps->num_face; q++, nc++) {
-        if (d_maps->c_maps[idx][q].gid < 0) break;
-        col_scale[q] = d_maps->c_maps[idx][q].scale;
+      for (q = 0, nc = 0; q < d_maps->num_face; q++) {
+        if (d_maps->c_maps[idx][q].gid >= 0) { // skip gid<0; do not break -- they may be non-contiguous in 3D AMR
+          col_scale[nc] = d_maps->c_maps[idx][q].scale;
+          nc++;
+        }
       }
     }
     const int idx0 = bid_coo_sz_batch + coo_elem_offsets[glb_elem_idx] + fieldA * fullNb2 + fullNb * coo_elem_point_offsets[glb_elem_idx][f] + nr * coo_elem_point_offsets[glb_elem_idx][g];
@@ -392,7 +395,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   P4estVertexMaps *maps[LANDAU_MAX_GRIDS]; // this gets captured
   PetscContainer   container;
   const int        conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0) ? Nq : 1;
-  const PetscInt   coo_sz_batch = SData_d->coo_size / batch_sz;                                                 // capture
+  const PetscCount coo_sz_batch = SData_d->coo_size / batch_sz;                                                 // capture
   auto             d_alpha_k    = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->alpha); //static data
   const PetscReal *d_alpha      = d_alpha_k->data();
   const PetscInt   Nftot        = d_alpha_k->size(); // total number of species
@@ -446,7 +449,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
 
   PetscFunctionBegin;
   while (vector_size & (vector_size - 1)) vector_size = vector_size & (vector_size - 1);
-  if (vector_size > 16) vector_size = 16; // printf("DEBUG\n");
+  if (vector_size > 16) vector_size = 16;
   PetscCall(PetscLogEventBegin(events[3], 0, 0, 0, 0));
   PetscCall(DMGetApplicationContext(plex[0], &ctx));
   PetscCheck(ctx, PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
