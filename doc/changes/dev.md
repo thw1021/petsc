@@ -111,6 +111,7 @@
 - Add `DMPlexRebalanceSharedLabelPoints()`
 - Add `DMPlexCheckLabel()` and `DMPlexReconcileLabel()`
 - Change CGNS viewer to use multi-component read/write interface for better performance
+- Add `DMPlexTransformOrderSupports()`
 
 ## FE/FV
 
