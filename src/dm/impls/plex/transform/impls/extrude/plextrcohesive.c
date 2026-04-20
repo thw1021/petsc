@@ -1,3 +1,4 @@
+#include "petscsys.h"
 #include <petsc/private/dmplextransformimpl.h> /*I "petscdmplextransform.h" I*/
 
 #include <petsc/private/dmlabelimpl.h> // For DMLabelMakeAllInvalid_Internal()
@@ -928,6 +929,11 @@ static PetscErrorCode DMPlexTransformCellTransform_Cohesive(DMPlexTransform tr, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Reorder the supports so that
+
+   Negative face support: [negative neighbor, cohesive]
+   Positive face support: [cohesive, positive neighbor]
+*/
 static PetscErrorCode OrderCohesiveSupport_Private(DM dm, PetscInt p)
 {
   const PetscInt *cone;
