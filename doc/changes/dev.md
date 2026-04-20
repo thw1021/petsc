@@ -49,7 +49,7 @@
 
 ## Mat
 
-- Add `MATPRODUCT_PtAP` support for `MATDIAGONAL`
+- Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
 
 ## MatCoarsen
 
