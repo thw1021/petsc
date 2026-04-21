@@ -120,10 +120,16 @@ static PetscErrorCode BuildStrengthGraph(const PetscInt *ai, const PetscInt *aj,
 /* -----------------------------------------------------------------------
    C/F splitting -- greedy Ruge-Stuben
    CF_marker[i] = 1 (C-point) or -1 (F-point)
+
+   Complexity: O(n^2) due to linear scan for max-lambda node on each
+   iteration.  Acceptable for the small block sizes typical of batched
+   Landau collision operators (~30-300 DOFs).
    ----------------------------------------------------------------------- */
-#define CF_UNSET  0
-#define CF_CPOINT 1
-#define CF_FPOINT (-1)
+enum {
+  CF_UNSET  = 0,
+  CF_CPOINT = 1,
+  CF_FPOINT = -1
+};
 
 static PetscErrorCode CFSplitting(const PetscInt *s_ai, const PetscInt *s_aj, PetscInt n, PetscInt **CF_out, PetscInt *nC_out)
 {
@@ -305,14 +311,27 @@ static PetscErrorCode BuildProlongation(const PetscInt *ai, const PetscInt *aj, 
         }
       }
       if (cnt == 0) {
-        /* isolated F-point: inject to nearest C (first C-point found) */
-        for (PetscInt c = 0; c < n; c++) {
-          if (CF[c] == CF_CPOINT) {
-            P_aj[pos] = coarse_idx[c];
+        /* isolated F-point: inject to nearest C-neighbor in the matrix connectivity */
+        PetscBool found_c = PETSC_FALSE;
+        for (PetscInt k = ai[i]; k < ai[i + 1]; k++) {
+          if (aj[k] != i && CF[aj[k]] == CF_CPOINT) {
+            P_aj[pos] = coarse_idx[aj[k]];
             P_aa[pos] = 1.0;
+            found_c   = PETSC_TRUE;
             break;
           }
         }
+        if (!found_c) {
+          /* no C-neighbor in matrix row: fall back to globally first C-point */
+          for (PetscInt c = 0; c < n; c++) {
+            if (CF[c] == CF_CPOINT) {
+              P_aj[pos] = coarse_idx[c];
+              P_aa[pos] = 1.0;
+              break;
+            }
+          }
+        }
+        PetscCall(PetscInfo(NULL, "AMG: isolated F-point row %" PetscInt_FMT " with no strong C-neighbors; using fallback injection\n", i));
       }
     }
   }
@@ -818,10 +837,16 @@ PetscErrorCode PCBJKOKKOSDestroyAMG(PC_PCBJKOKKOS *jac)
 
   for (PetscInt g = 0; g < jac->num_unique_grids; g++) {
     AMGHierarchy *hier = &jac->amg_hierarchy[g];
-    /* Null out coarsest aliases BEFORE freeing levels, since Ac_coarsest_ai/aj
-       are aliases of levels[nlevels-1].Ac_ai/aj and will be freed by AMGLevelFreeHost. */
-    hier->Ac_coarsest_ai = nullptr;
-    hier->Ac_coarsest_aj = nullptr;
+    if (hier->nlevels > 0) {
+      /* Null out coarsest aliases BEFORE freeing levels, since Ac_coarsest_ai/aj
+         are aliases of levels[nlevels-1].Ac_ai/aj and will be freed by AMGLevelFreeHost. */
+      hier->Ac_coarsest_ai = nullptr;
+      hier->Ac_coarsest_aj = nullptr;
+    } else {
+      /* nlevels==0: Ac_coarsest_ai/aj were independently allocated in BuildAMGHierarchy */
+      PetscCall(PetscFree(hier->Ac_coarsest_ai));
+      PetscCall(PetscFree(hier->Ac_coarsest_aj));
+    }
     for (PetscInt lev = 0; lev < hier->nlevels; lev++) {
       PetscCall(AMGLevelFreeHost(&hier->levels[lev]));
       PetscCall(AMGLevelFreeDevice(&hier->levels[lev]));

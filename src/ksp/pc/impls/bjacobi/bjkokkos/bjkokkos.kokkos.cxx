@@ -18,11 +18,9 @@
 // PetscLog event handles for PCApply_BJKOKKOS sub-phases
 // Registered once in PCSetUp_BJKOKKOS (guarded by a static flag).
 // -----------------------------------------------------------------------
-extern "C" {
 PetscLogEvent BJKOKKOS_AMG_RAP      = 0;
 PetscLogEvent BJKOKKOS_Krylov_Solve = 0;
 PetscLogEvent BJKOKKOS_Post_solve   = 0;
-}
 
 static PetscErrorCode PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
 {
@@ -49,10 +47,6 @@ static PetscErrorCode PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
   jac->rank_target  = 0;
   jac->nsolves_team = 1;
   jac->ksp->max_it  = 50; // this is really for GMRES w/o restarts
-  // Default rtol for batch linear solves: 5e-3 (looser than KSP default 1e-5,
-  // chosen to reduce inner iteration count while preserving outer SNES convergence
-  // and energy conservation to machine precision).
-  PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -232,7 +226,6 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR_Jac(const team_member
   });
   team.team_barrier();
   PCApply_Diag(team, Nblk, Diag, P, T);
-  team.team_barrier();
   static_cast<void>(MatMult(team, glb_Aai, glb_Aaj, glb_Aaa, r, ic, start, end, T, V));
 
   it = 0;
@@ -1381,8 +1374,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
   if (!A->spptr) Aseq = ((Mat_MPIAIJ *)A->data)->A; // MPI
   PetscCall(MatSeqAIJKokkosSyncDevice(Aseq));
   {
-    PetscInt           maxit = jac->ksp->max_it;
-    const PetscInt     conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0 && PCBJKOKKOS_VEC_SIZE != 1) ? PCBJKOKKOS_TEAM_SIZE : 1;
+    PetscInt       maxit = jac->ksp->max_it;
+    const PetscInt conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0 && PCBJKOKKOS_VEC_SIZE != 1) ? PCBJKOKKOS_TEAM_SIZE : 1;
+    PetscCheck(team_size <= PCBJKOKKOS_TEAM_SIZE, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "team_size %" PetscInt_FMT " exceeds PCBJKOKKOS_TEAM_SIZE %d (AMG spa buffer overflow)", team_size, PCBJKOKKOS_TEAM_SIZE);
     const PetscInt     nwork = jac->nwork, nBlk = jac->nBlocks;
     PetscScalar       *glb_xdata = NULL, *dummy;
     PetscReal          rtol = jac->ksp->rtol, atol = jac->ksp->abstol, dtol = jac->ksp->divtol;
@@ -1939,6 +1933,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
           }
         }
       }
+      // Apply looser default rtol for AMG variants (reduces inner iteration count
+      // while preserving outer SNES convergence and energy conservation).
+      if (use_amg) PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
       PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "Options for Kokkos batch solver", "none");
       PetscCall(PetscOptionsBool("-ksp_converged_reason", "", "bjkokkos.kokkos.cxx.c", jac->reason, &jac->reason, NULL));
       PetscCall(PetscOptionsBool("-ksp_monitor", "", "bjkokkos.kokkos.cxx.c", jac->monitor, &jac->monitor, NULL));

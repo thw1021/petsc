@@ -51,7 +51,7 @@ typedef enum {
 } BJKokkosSmootherType;
 
 // One inter-level transfer: fine grid (nrows_fine) -> coarse grid (nrows_coarse)
-typedef struct {
+struct AMGLevel {
   PetscInt nrows_fine, nrows_coarse;
   // P (prolongation) in CSR -- shared across all blocks on this grid
   PetscInt    *P_ai, *P_aj;
@@ -68,10 +68,10 @@ typedef struct {
   Kokkos::View<PetscInt *>    *d_R_ai, *d_R_aj;
   Kokkos::View<PetscScalar *> *d_R_aa;
   Kokkos::View<PetscInt *>    *d_Ac_ai, *d_Ac_aj;
-} AMGLevel;
+};
 
 // Full AMG hierarchy for one unique grid
-typedef struct {
+struct AMGHierarchy {
   PetscInt nlevels;
   PetscInt grid_size;                         // fine-grid DOF count this hierarchy was built for
   AMGLevel levels[PCBJKOKKOS_MAX_AMG_LEVELS]; // levels[0] = finest->next transition
@@ -89,7 +89,7 @@ typedef struct {
   PetscReal            strong_threshold;
   BJKokkosSmootherType smoother_type;
   PetscScalar          smoother_omega; // damping factor (default 1.0)
-} AMGHierarchy;
+};
 
 // -----------------------------------------------------------------------
 // AMG V-cycle data structures (shared between bjkokkos.kokkos.cxx and
