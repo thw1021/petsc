@@ -51,9 +51,12 @@ typedef enum {
 } BJKokkosSmootherType;
 
 // One inter-level transfer: fine grid (nrows_fine) -> coarse grid (nrows_coarse)
+// P is stored as nrows_fine x nrows_coarse (standard AMG convention):
+//   P_ai has nrows_fine+1 entries, P_aj column indices are in [0, nrows_coarse).
+// R = P^T is stored as nrows_coarse x nrows_fine.
 struct AMGLevel {
   PetscInt nrows_fine, nrows_coarse;
-  // P (prolongation) in CSR -- shared across all blocks on this grid
+  // P (prolongation) in CSR (nrows_fine x nrows_coarse) -- shared across all blocks on this grid
   PetscInt    *P_ai, *P_aj;
   PetscScalar *P_aa;
   // R = P^T in CSR

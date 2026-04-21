@@ -2078,7 +2078,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
             stride += L->nrows_coarse;                        // x
             stride += L->nrows_coarse;                        // b
             stride += L->nrows_coarse;                        // r (scratch for smoother)
-            stride += PCBJKOKKOS_TEAM_SIZE * L->nrows_coarse; // spa (sparse accumulator for NumericRAP)
+            stride += PCBJKOKKOS_TEAM_SIZE * L->nrows_coarse; // spa (sparse accumulator for NumericRAP); must match team_size used in PCApply (guarded by PetscCheck)
           }
           // coarsest solve vectors only (Ac_aa is shared with last inter-level slot above)
           stride += hier->nrows_coarsest; // l1
