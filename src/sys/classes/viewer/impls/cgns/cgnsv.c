@@ -576,3 +576,86 @@ PetscErrorCode PetscViewerCGNSGetSolutionName(PetscViewer viewer, const char *na
   *name = cgv->solution_name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  PetscViewerCGNSGetDescriptors - Get all descriptors set at the base level of the CGNS viewer
+
+  Collective
+
+  Input Parameter:
+. viewer - `PETSCVIEWERCGNS` `PetscViewer` for CGNS input/output to use with the specified file
+
+  Output Parameters:
++ num_descriptors - Number of descriptors set on the file
+. names           - Pointer to store array of descriptor names
+- values          - Pointer to store array of descriptor values
+
+  Level: intermediate
+
+  Note:
+  Caller is responsible for freeing each value of the `names` and `values` arrays, as well as the arrays, with `PetscFree()`
+
+.seealso: `PETSCVIEWERCGNS`, `PetscViewer`, `PetscViewerCGNSSetDescriptor()`, `PetscViewerCGNSSetSolutionIndex()`, `PetscViewerCGNSGetSolutionIndex()`, `PetscViewerCGNSGetSolutionTime()`
+@*/
+PetscErrorCode PetscViewerCGNSGetDescriptors(PetscViewer viewer, PetscInt *num_descriptors, char ***names, char ***values)
+{
+  PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)viewer->data;
+  int               ndesc;
+
+  PetscFunctionBeginUser;
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscAssertPointer(num_descriptors, 2);
+  PetscAssertPointer(names, 3);
+  PetscAssertPointer(values, 4);
+
+  PetscCallCGNS(cg_goto(cgv->file_num, cgv->base, NULL));
+  PetscCallCGNSRead(cg_ndescriptors(&ndesc), viewer, 0);
+  *num_descriptors = ndesc;
+
+  PetscCall(PetscCalloc1(ndesc, values));
+  PetscCall(PetscCalloc1(ndesc, names));
+
+  for (PetscInt i = 1; i <= ndesc; i++) {
+    char  namebuf[PETSC_MAX_OPTION_NAME] = {0};
+    char *desc;
+
+    PetscCallCGNSRead(cg_descriptor_read(i, namebuf, &desc), viewer, 0);
+    if (desc != NULL) {
+      PetscCall(PetscStrallocpy(desc, &(*values)[i - 1]));
+      PetscCallCGNS(cg_free(desc));
+    }
+    PetscCall(PetscStrallocpy(namebuf, &(*names)[i - 1]));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscViewerCGNSSetDescriptor - Set a descriptor at the base level of the CGNS viewer
+
+  Collective
+
+  Input Parameter:
++ viewer - `PETSCVIEWERCGNS` `PetscViewer` for CGNS input/output to use with the specified file
+. name   - Name of descriptor, must be null terminated with length less than `PETSC_MAX_OPTION_NAME`
+- value  - Value of descriptor, must be null terminated
+
+  Level: intermediate
+
+.seealso: `PETSCVIEWERCGNS`, `PetscViewer`, `PetscViewerCGNSGetDescriptors()`, `PetscViewerCGNSSetSolutionIndex()`, `PetscViewerCGNSGetSolutionIndex()`, `PetscViewerCGNSGetSolutionTime()`
+@*/
+PetscErrorCode PetscViewerCGNSSetDescriptor(PetscViewer viewer, const char name[], const char value[])
+{
+  PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)viewer->data;
+  PetscSizeT        name_len;
+
+  PetscFunctionBeginUser;
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscAssertPointer(name, 2);
+
+  PetscCall(PetscStrlen(name, &name_len));
+  PetscCheck(name_len < PETSC_MAX_OPTION_NAME, PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_OUTOFRANGE, "Descriptor name must be shorter than %" PetscInt_FMT, PETSC_MAX_OPTION_NAME);
+
+  PetscCallCGNS(cg_goto(cgv->file_num, cgv->base, NULL));
+  PetscCallCGNSWrite(cg_descriptor_write(name, value), viewer, 0);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
