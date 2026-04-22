@@ -138,6 +138,7 @@ typedef struct {
   PetscInt  nZRefine2;                       /* RE: origin refinement after origin AMR refinement */
   PetscInt  numAMRRefine[LANDAU_MAX_GRIDS];  /* normal AMR - refine from origin */
   PetscInt  postAMRRefine[LANDAU_MAX_GRIDS]; /* uniform refinement of AMR */
+  PetscBool use_dg;                          /* Use discontinuous Galerkin (DG) FE instead of default CG */
   PetscBool simplex;
   char      filename[PETSC_MAX_PATH_LEN];
   PetscReal thermal_speed[LANDAU_MAX_GRIDS];

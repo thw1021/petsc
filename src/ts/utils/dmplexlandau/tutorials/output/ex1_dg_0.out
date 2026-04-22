@@ -1,0 +1,20 @@
+masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  0.000e+00 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
+n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
+thermal T (K): e= 3.481e+06 i= 2.321e+06  0.000e+00. Normalization grid 0: v_0= 7.264e+06 ( 2.423e-02c) n_0= 1.000e+20 t_0= 1.424e-06 1 batched, view batch 0, fe type dg
+Domain radius (AMR levels) grid 0: par= 6.000e+00 perp= 6.000e+00 (0) , 1: par= 8.086e-02 perp= 8.086e-02 (2) 
+0) FormLandau 736 IPs, 46 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=2 Np=16 cdim=2 N=736 nnz= 11776
+0 TS dt 0.01 time 0.005
+step    0) time= 5.000000e-03 temperature (eV): electron: T= 3.5980e+02 T_par= 3.0027e+02 T_perp= 3.8956e+02 ;ion: T= 2.3999e+02 T_par= 1.9988e+02 T_perp= 2.6004e+02 
+  0) species-0: charge density= -1.6018984369998e+01 z-momentum=  9.9234377803927e-04 energy=  1.4051388046968e+04
+  0) species-1: charge density=  1.6027999579396e+01 z-momentum= -9.9233063301372e-04 energy=  5.7711266858853e+03
+	  0) Total: charge density=  9.0152093978375e-03, momentum=  1.3145025544187e-08, energy=  1.9822514732854e+04 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
+    Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 12
+    Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 10
+    Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 10
+  TSAdapt basic arkimex 0:1bee step   0 accepted t=0.005      + 1.000e-02 dt=1.500e-02  wlte=0.204  wltea=   -1 wlter=   -1
+1 TS dt 0.015 time 0.015
+step    1) time= 1.500000e-02 temperature (eV): electron: T= 3.6071e+02 T_par= 3.0186e+02 T_perp= 3.9013e+02 ;ion: T= 2.3999e+02 T_par= 1.9989e+02 T_perp= 2.6004e+02 
+  1) species-0: charge density= -1.6018984369998e+01 z-momentum=  9.9033409937950e-04 energy=  1.4051384368808e+04
+  1) species-1: charge density=  1.6027999579396e+01 z-momentum= -9.9032095435395e-04 energy=  5.7711303640455e+03
+	  1) Total: charge density=  9.0152093978411e-03, momentum=  1.3145025551777e-08, energy=  1.9822514732854e+04 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
