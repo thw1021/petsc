@@ -194,6 +194,21 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
+  /* Fall back to Basic for non-H^1 elements (Hcurl/Hdiv require Piola transforms
+     that the Kokkos path does not implement). */
+  {
+    PetscFE        fe_tmp;
+    PetscDualSpace dsp;
+    PetscInt       k;
+    PetscCall(PetscDSGetDiscretization(ds, field, (PetscObject *)&fe_tmp));
+    PetscCall(PetscFEGetDualSpace(fe_tmp, &dsp));
+    PetscCall(PetscDualSpaceGetDeRahm(dsp, &k));
+    if (k != 0) {
+      PetscCall(PetscFEIntegrateResidual_Basic(ds, key, Ne, cgeom, coefficients, coefficients_t, dsAux, coefficientsAux, t, elemVec));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+
   PetscCall(PetscDSGetDiscretization(ds, field, (PetscObject *)&fe));
   kk = (PetscFE_Kokkos *)fe->data;
 
