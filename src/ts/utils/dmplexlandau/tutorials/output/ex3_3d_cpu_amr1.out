@@ -1,0 +1,4 @@
+  PASS: row sums are near zero (particle conservation)
+  PASS: particle conservation
+  PASS: energy conservation (v^2 in null space of Apitch)
+=== Result: ALL TESTS PASSED ===
