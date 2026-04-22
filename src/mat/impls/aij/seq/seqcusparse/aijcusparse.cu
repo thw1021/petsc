@@ -20,7 +20,7 @@
 #include <thrust/remove.h>
 #include <thrust/sort.h>
 #include <thrust/unique.h>
-#if PETSC_PKG_CUDA_VERSION_GE(12, 9, 0) && !PetscDefined(HAVE_THRUST)
+#if PETSC_PKG_CUDA_VERSION_GE(12, 9, 0)
   #include <cuda/std/functional>
 #endif
 
@@ -744,10 +744,11 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE_Cholesky(Mat A, Vec b, Vec x)
   // Solve diag(D) Z = Y. Actually just do Y = Y*D since D is already inverted in MatCholeskyFactorNumeric_SeqAIJ().
   // It is basically a vector element-wise multiplication, but cublas does not have it!
   #if CCCL_VERSION >= 3001000
-  PetscCallThrust(thrust::transform(thrust::cuda::par.on(PetscDefaultCudaStream), thrust::device_pointer_cast(fs->Y), thrust::device_pointer_cast(fs->Y + m), thrust::device_pointer_cast(fs->diag), thrust::device_pointer_cast(fs->Y), cuda::std::multiplies<PetscScalar>()));
+  using cuda::std::multiplies;
   #else
-  PetscCallThrust(thrust::transform(thrust::cuda::par.on(PetscDefaultCudaStream), thrust::device_pointer_cast(fs->Y), thrust::device_pointer_cast(fs->Y + m), thrust::device_pointer_cast(fs->diag), thrust::device_pointer_cast(fs->Y), thrust::multiplies<PetscScalar>()));
+  using thrust::multiplies;
   #endif
+  PetscCallThrust(thrust::transform(thrust::cuda::par.on(PetscDefaultCudaStream), thrust::device_pointer_cast(fs->Y), thrust::device_pointer_cast(fs->Y + m), thrust::device_pointer_cast(fs->diag), thrust::device_pointer_cast(fs->Y), multiplies<PetscScalar>()));
 
   // Solve U X = Y
   if (fs->cpermIndices) { // if need to permute, we need to use the intermediate buffer X
@@ -4858,7 +4859,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
 #if 0 //Errors on SUMMIT cuda 11.1.0
       PetscCallThrust(thrust::partition_copy(thrust::device,cci,cce,wPerm->begin(),p1,p2,thrust::identity<int>()));
 #else
-  #if PETSC_PKG_CUDA_VERSION_LT(12, 9, 0) || PetscDefined(HAVE_THRUST)
+  #if PETSC_PKG_CUDA_VERSION_LT(12, 9, 0)
       auto pred = thrust::identity<int>();
   #else
       auto pred = cuda::std::identity();
