@@ -75,11 +75,18 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 
   /* Get Nb and totDim from the DS (on the original dm -- DS lives there) */
   PetscCall(DMGetDS(dm, &ds));
+  {
+    PetscInt Nf;
+    PetscCall(PetscDSGetNumFields(ds, &Nf));
+    PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscFEKokkosCreateMaps supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
+  }
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
+  PetscInt Nc;
   {
     PetscTabulation *T;
     PetscCall(PetscDSGetTabulation(ds, &T));
     Nb = T[0]->Nb;
+    Nc = T[0]->Nc;
   }
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
 
@@ -116,18 +123,20 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   maps->geom_cached         = PETSC_FALSE;
 
   /* num_face: number of DOFs on a face edge = degree + 1 for 2D quads.
-   * For tensor-product quads: Nb = (degree+1)^dim, so degree+1 = round(Nb^(1/dim)).
+   * For tensor-product quads: Nb_scalar = (degree+1)^dim, so degree+1 = round(Nb_scalar^(1/dim)).
+   * Nb is the total DOF count (= Nb_scalar * Nc for vector FE), so we divide by Nc first.
    * For simplices or dim==1 we fall back to Nb (no constraint expansion needed).
    * num_face computation assumes tensor-product elements; simplex not yet supported for constraints */
   {
-    PetscInt nf;
+    PetscInt       nf;
+    const PetscInt Nb_scalar = Nb / Nc; /* scalar basis count (strip component multiplier) */
     if (dim >= 2) {
-      /* degree+1 = round(Nb^(1/dim)) via integer search */
+      /* degree+1 = round(Nb_scalar^(1/dim)) via integer search */
       nf = 1;
-      while ((nf + 1) * (nf + 1) <= Nb) ++nf; /* works for dim==2 */
+      while ((nf + 1) * (nf + 1) <= Nb_scalar) ++nf; /* works for dim==2 */
       if (dim == 3) {
-        /* For dim==3: Nb = nf^3, so nf = round(Nb^(1/3)) */
-        nf = (PetscInt)(PetscPowReal((PetscReal)Nb, 1.0 / 3.0) + 0.5);
+        /* For dim==3: Nb_scalar = nf^3, so nf = round(Nb_scalar^(1/3)) */
+        nf = (PetscInt)(PetscPowReal((PetscReal)Nb_scalar, 1.0 / 3.0) + 0.5);
       }
       /* num_face = (degree+1)^(dim-1) */
       PetscInt face_dofs = nf;
@@ -270,14 +279,11 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
       /* If no diagonal found (fully zeroed by constraint), mark as Dirichlet */
       if (!found) maps->h_gIdx[e * Nb + q] = (PetscFEKokkosIdx)(-1);
 
-      /* Restore closure indices; check if elMat was reallocated */
-      PetscInt savedNumIndices = numIndices;
+      /* Restore closure indices.  DMPlexRestoreClosureIndices already frees
+       * any work array it allocated, so we must NOT call DMRestoreWorkArray
+       * again.  Simply reset elMat to the original malloc'd buffer. */
       PetscCall(DMPlexRestoreClosureIndices(plex, section, globalSection, cStart + e, PETSC_TRUE, &numIndices, &indices, NULL, &elMat));
-      if (elMat != valuesOrig) {
-        PetscCall(DMRestoreWorkArray(plex, savedNumIndices * savedNumIndices, MPIU_SCALAR, &elMat));
-        /* Re-allocate for next probe */
-        PetscCall(PetscMalloc1(totDim * totDim, &elMat));
-      }
+      elMat = valuesOrig;
     } /* basis q */
 
     maps->h_fullNb[e] = fullNb;
@@ -444,6 +450,11 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
     PetscInt         Nq_tab, Nb_tab, Nc_tab, dim_tab, qdim, qNc;
 
     PetscCall(DMGetDS(dm, &ds));
+    {
+      PetscInt Nf;
+      PetscCall(PetscDSGetNumFields(ds, &Nf));
+      PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscFEKokkosStageMaps supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
+    }
     PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
     PetscCall(PetscDSGetTabulation(ds, &T));
     PetscCall(PetscFEGetQuadrature(fe, &quad));

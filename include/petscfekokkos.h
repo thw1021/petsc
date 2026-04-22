@@ -382,14 +382,14 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
         if constexpr (has_G1)
           for (PetscInt d = 0; d < dE; ++d) entry += B_b_fc * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
 
-        /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial[gc] */
+        /* G2: phi_grad[d] * g2[fc,gc,d] * B_trial[gc] */
         if constexpr (has_G2)
-          for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_b2_gc;
+          for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * Nc + gc) * dE + d] * B_b2_gc;
 
-        /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
+        /* G3: phi_grad[d] * g3[fc,gc,d,e2] * psi_grad[e2] */
         if constexpr (has_G3)
           for (PetscInt d = 0; d < dE; ++d)
-            for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
+            for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * Nc + gc) * dE + d) * dE + e2] * psi_grad[e2];
 
         Kokkos::atomic_add(&em_e[row * totDim + col], entry * wq);
       }
@@ -420,10 +420,10 @@ static inline void PetscFEKokkosCoordRefToReal(PetscInt dimReal, PetscInt dimRef
   }
 }
 
-static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] -- reference quadrature points */
-                                                         PetscReal *h_invJ,                                                                                    /* [Ne * Nq * dE * dE] -- output */
-                                                         PetscReal *h_detJ,                                                                                    /* [Ne * Nq]            -- output */
-                                                         PetscReal *h_coords                                                                                   /* [Ne * Nq * dE]       -- output */
+static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, const PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] -- reference quadrature points */
+                                                         PetscReal *h_invJ,                                                                                          /* [Ne * Nq * dE * dE] -- output */
+                                                         PetscReal *h_detJ,                                                                                          /* [Ne * Nq]            -- output */
+                                                         PetscReal *h_coords                                                                                         /* [Ne * Nq * dE]       -- output */
 )
 {
   const PetscInt  Np       = cgeom->numPoints;
@@ -511,6 +511,16 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCall(PetscFEGetSpatialDimension(fe, &dim));
 
+  /* Guard: template kernels only support H^1 elements (DeRahm index k=0).
+     Hcurl/Hdiv require Piola transforms that are not implemented here. */
+  {
+    PetscDualSpace dsp;
+    PetscInt       k;
+    PetscCall(PetscFEGetDualSpace(fe, &dsp));
+    PetscCall(PetscDualSpaceGetDeRahm(dsp, &k));
+    PetscCheck(k == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "PetscFEKokkosComputeResidual only supports H^1 elements (DeRahm k=0), got k=%" PetscInt_FMT, k);
+  }
+
   /* T[field]->Nb is the TOTAL number of DOFs per element = Nb_scalar * Nc.
      Pass Nb_total to the kernel so that the loop "b=0..Nb-1" with coeff[b]
      matches PetscFEEvaluateFieldJets_Internal exactly.
@@ -519,6 +529,11 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   Nc = T[field]->Nc;
   Nb = T[field]->Nb; /* total DOFs per element (= Nb_scalar * Nc for vector FE) */
   dE = cgeom->dimEmbed;
+
+  /* Runtime bounds check -- prevent GPU stack overflow on high-order elements */
+  PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", Nc);
+  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", dE);
+  PetscCheck(Nb / Nc <= 125, PETSC_COMM_SELF, PETSC_ERR_SUP, "Scalar basis count Nb/Nc = %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NBS 125", Nb / Nc);
 
   /* Flat array sizes */
   const PetscInt nB      = Nq * Nb * Nc;
@@ -687,9 +702,24 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCall(PetscFEGetSpatialDimension(fe, &dim));
 
+  /* Guard: template kernels only support H^1 elements (DeRahm index k=0).
+     Hcurl/Hdiv require Piola transforms that are not implemented here. */
+  {
+    PetscDualSpace dsp;
+    PetscInt       k;
+    PetscCall(PetscFEGetDualSpace(fe, &dsp));
+    PetscCall(PetscDualSpaceGetDeRahm(dsp, &k));
+    PetscCheck(k == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "PetscFEKokkosComputeJacobian only supports H^1 elements (DeRahm k=0), got k=%" PetscInt_FMT, k);
+  }
+
   Nb = T[field]->Nb;
   Nc = T[field]->Nc;
   dE = cgeom->dimEmbed;
+
+  /* Runtime bounds check -- prevent GPU stack overflow on high-order elements */
+  PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", Nc);
+  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", dE);
+  PetscCheck(Nb / Nc <= 125, PETSC_COMM_SELF, PETSC_ERR_SUP, "Scalar basis count Nb/Nc = %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NBS 125", Nb / Nc);
 
   const PetscInt nB      = Nq * Nb * Nc;
   const PetscInt nD      = Nq * Nb * Nc * dim;
@@ -951,7 +981,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscScalar       *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
   PetscInt           cStart, cEnd, totDim;
   const PetscReal   *quadPoints, *quadWeights;
-  PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
+  PetscInt           Nf, Nq, Nb, Nc, dim, dE, qdim, qNc;
   PetscInt           numConstants;
   const PetscScalar *constants;
 
@@ -960,6 +990,8 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCheck(ctx->geom_cached, PETSC_COMM_SELF, PETSC_ERR_ORDER, "PetscFEKokkosSetUpGeometry must be called before residual evaluation");
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDS(dm, &ds));
+  PetscCall(PetscDSGetNumFields(ds, &Nf));
+  PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS residual path supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   PetscCall(PetscDSGetTabulation(ds, &T));
@@ -1056,7 +1088,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   DeviceUnmanaged             d_F_unmanaged;
   HostUnmanaged               h_F_unmanaged;
 
-  if (locF_memtype == PETSC_MEMTYPE_DEVICE) {
+  if (PetscMemTypeDevice(locF_memtype)) {
     d_F_unmanaged = DeviceUnmanaged(locF_arr, local_dof_with_ghosts);
   } else {
     h_F_unmanaged = HostUnmanaged(locF_arr, local_dof_with_ghosts);
@@ -1102,7 +1134,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   const int res_on_gpu    = !!(res_conc >= 1000);
   const int res_team_size = res_on_gpu ? Nq_ : 1;
 
-  PetscScalar *F_dev = (locF_memtype == PETSC_MEMTYPE_DEVICE) ? d_F_unmanaged.data() : d_F.data();
+  PetscScalar *F_dev = PetscMemTypeDevice(locF_memtype) ? d_F_unmanaged.data() : d_F.data();
 
   /* Fused kernel: integrate residual + scatter to locF in one pass.
    * Eliminates one kernel launch, one fence, and the intermediate d_elemVec
@@ -1165,7 +1197,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * (Nb * Nc * 2.0 + Nb * Nc * (PetscLogDouble)dim * 2.0) + (PetscLogDouble)Ne * Nb * Nc * Nq * (2.0 + dE * (dim * 2.0 + 1.0))));
 
   /* CPU path only: copy d_F back to locF_arr */
-  if (locF_memtype != PETSC_MEMTYPE_DEVICE) Kokkos::deep_copy(h_F_unmanaged, d_F);
+  if (!PetscMemTypeDevice(locF_memtype)) Kokkos::deep_copy(h_F_unmanaged, d_F);
 
   PetscCall(VecRestoreArrayAndMemType(locF, &locF_arr));
 
@@ -1217,7 +1249,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   PetscScalar       *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
   PetscInt           cStart, cEnd, totDim;
   const PetscReal   *quadPoints, *quadWeights;
-  PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
+  PetscInt           Nf, Nq, Nb, Nc, dim, dE, qdim, qNc;
   PetscInt           numConstants;
   const PetscScalar *constants;
 
@@ -1226,6 +1258,8 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   PetscCheck(ctx->geom_cached, PETSC_COMM_SELF, PETSC_ERR_ORDER, "PetscFEKokkosSetUpGeometry must be called before Jacobian evaluation");
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDS(dm, &ds));
+  PetscCall(PetscDSGetNumFields(ds, &Nf));
+  PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS Jacobian path supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   PetscCall(PetscDSGetTabulation(ds, &T));
