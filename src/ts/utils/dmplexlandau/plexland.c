@@ -1400,6 +1400,218 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Build c_maps and gIdx directly from PetscSection constraint data, replacing the probing strategy.
+   Iterates over the original closure (before anchor substitution) using DMPlexGetTransitiveClosure,
+   applies the closure permutation manually, and reads constraint coefficients from cMat. */
+static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_grid, PetscSection section, PetscSection globsection, P4estVertexMaps *maps, pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE], PetscInt MAP_BF_SIZE, LandauIdx *coo_elem_fullNb, LandauIdx *coo_elem_offsets, PetscInt glb_elem_idx_start)
+{
+  PetscSection        aSec, cSec;
+  IS                  aIS;
+  Mat                 cMat;
+  const PetscInt     *anchors;
+  PetscInt            cStart, cEnd, aStart, aEnd, sStart, sEnd;
+  const PetscInt    **fieldPerms[LANDAU_MAX_SPECIES];
+  const PetscScalar **fieldFlips[LANDAU_MAX_SPECIES];
+  PetscInt            fieldFoffs[LANDAU_MAX_SPECIES]; /* running offset per field in natural order */
+  PetscInt            fullNb[LANDAU_MAX_SPECIES];     /* unconstrained DOF count per field for this element */
+  PetscInt            foffs[LANDAU_MAX_SPECIES + 1];  /* cumulative field offsets in natural closure order */
+
+  PetscFunctionBegin;
+  PetscCall(DMGetDefaultConstraints(dm, &cSec, &cMat, NULL));
+  PetscCall(DMPlexGetAnchors(dm, &aSec, &aIS));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  if (aSec) {
+    PetscCall(PetscSectionGetChart(aSec, &aStart, &aEnd));
+    PetscCall(ISGetIndices(aIS, &anchors));
+  } else {
+    aStart = aEnd = 0;
+    anchors       = NULL;
+  }
+  PetscCall(PetscSectionGetChart(section, &sStart, &sEnd));
+  for (PetscInt ej = cStart, eidx = 0; ej < cEnd; ++ej, ++eidx) {
+    PetscInt        glb_elem_idx = glb_elem_idx_start + eidx;
+    PetscInt       *closure      = NULL;
+    PetscInt        closureSize;
+    const PetscInt *clperm = NULL;
+    PetscInt        depth, clTotDof = 0;
+
+    if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
+    /* Get original closure (before anchor substitution) */
+    PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));
+    /* Compute total closure DOFs and per-field offsets in natural order */
+    PetscCall(PetscArrayzero(foffs, Nf_grid + 1));
+    for (PetscInt ci = 0; ci < closureSize; ci++) {
+      PetscInt p = closure[2 * ci];
+      if (p < sStart || p >= sEnd) continue;
+      for (PetscInt f = 0; f < Nf_grid; f++) {
+        PetscInt fdof = 0;
+        PetscCall(PetscSectionGetFieldDof(section, p, f, &fdof));
+        foffs[f + 1] += fdof;
+        clTotDof += fdof;
+      }
+    }
+    /* Convert foffs to cumulative offsets */
+    for (PetscInt f = 0; f < Nf_grid; f++) foffs[f + 1] += foffs[f];
+    /* Get closure inverse permutation (maps natural order -> permuted order); may be NULL */
+    PetscCall(DMPlexGetPointDepth(dm, ej, &depth));
+    PetscCall(PetscSectionGetClosureInversePermutation_Internal(section, (PetscObject)dm, depth, clTotDof, &clperm));
+    /* Get per-field point symmetries (orientation-based DOF permutations) */
+    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f]));
+    PetscCall(PetscArrayzero(fieldFoffs, Nf_grid));
+    PetscCall(PetscArrayzero(fullNb, Nf_grid));
+    /* Iterate over closure points and fill gIdx / c_maps */
+    for (PetscInt ci = 0; ci < closureSize; ci++) {
+      PetscInt p = closure[2 * ci];
+      if (p < sStart || p >= sEnd) continue;
+      for (PetscInt f = 0; f < Nf_grid; f++) {
+        const PetscInt *fcdofs = NULL;
+        const PetscInt *perm   = (fieldPerms[f] && fieldPerms[f][ci]) ? fieldPerms[f][ci] : NULL;
+        PetscInt        fdof = 0, cfdof = 0;
+        PetscInt        pGlobOff         = 0;
+        PetscInt        globFieldInPoint = 0; /* unconstrained DOF offset within point for field f in global section */
+        PetscInt        cind             = 0; /* index into fcdofs[]; advances only on constrained DOFs */
+
+        PetscCall(PetscSectionGetFieldDof(section, p, f, &fdof));
+        if (!fdof) continue;
+        PetscCall(PetscSectionGetFieldConstraintDof(section, p, f, &cfdof));
+        if (cfdof) PetscCall(PetscSectionGetFieldConstraintIndices(section, p, f, &fcdofs));
+        PetscCall(PetscSectionGetOffset(globsection, p, &pGlobOff));
+        /* sum of unconstrained DOFs from earlier fields at this point */
+        for (PetscInt g = 0; g < f; g++) {
+          PetscInt gfdof = 0, gcfdof = 0;
+          PetscCall(PetscSectionGetFieldDof(section, p, g, &gfdof));
+          PetscCall(PetscSectionGetFieldConstraintDof(section, p, g, &gcfdof));
+          globFieldInPoint += gfdof - gcfdof;
+        }
+        for (PetscInt b = 0; b < fdof; b++) {
+          PetscInt  preind = foffs[f] + fieldFoffs[f] + (perm ? perm[b] : b); /* natural order position, with orientation permutation */
+          PetscInt  q      = clperm ? clperm[preind] : preind;                /* permuted position = q index in gIdx */
+          PetscBool isConstrained;
+
+          q -= foffs[f]; /* subtract field base offset to get q within [0, Nb) */
+          isConstrained = (cfdof > 0 && cind < cfdof && b == fcdofs[cind]) ? PETSC_TRUE : PETSC_FALSE;
+          if (isConstrained) {
+            /* constrained DOF: look up constraint coefficients from cMat */
+            PetscInt    cOff, row, bDof = 0, bOff2 = 0;
+            PetscInt    nNonzero = 0;
+            PetscInt    trivGid  = -1;
+            PetscScalar trivVal  = 0;
+
+            PetscCheck(cSec, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Constrained DOF found but constraint section is NULL");
+            PetscCall(PetscSectionGetFieldOffset(cSec, p, f, &cOff));
+            row = cOff + cind;
+            if (aSec && p >= aStart && p < aEnd) {
+              PetscCall(PetscSectionGetDof(aSec, p, &bDof));
+              PetscCall(PetscSectionGetOffset(aSec, p, &bOff2));
+            }
+            PetscCheck(!bDof || anchors, PETSC_COMM_SELF, PETSC_ERR_PLIB, "constrained point has anchors but anchor array is NULL");
+            /* Scan cMat row to count non-zeros and detect trivial (weight-1) constraints */
+            for (PetscInt ai = 0; ai < bDof; ai++) {
+              PetscInt aLocOff, aGlobOff, aDof = 0;
+              PetscInt aGlobFieldInPoint = 0;
+              PetscInt a                 = anchors[bOff2 + ai];
+
+              if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetFieldDof(section, a, f, &aDof));
+              if (!aDof) continue;
+              PetscCall(PetscSectionGetFieldOffset(section, a, f, &aLocOff));
+              PetscCall(PetscSectionGetOffset(globsection, a, &aGlobOff));
+              for (PetscInt g = 0; g < f; g++) {
+                PetscInt agfdof = 0, agcfdof = 0;
+                PetscCall(PetscSectionGetFieldDof(section, a, g, &agfdof));
+                PetscCall(PetscSectionGetFieldConstraintDof(section, a, g, &agcfdof));
+                aGlobFieldInPoint += agfdof - agcfdof;
+              }
+              for (PetscInt e = 0; e < aDof; e++) {
+                PetscScalar val;
+                PetscInt    col = aLocOff + e;
+                PetscCall(MatGetValues(cMat, 1, &row, 1, &col, &val));
+                if (PetscAbs(PetscRealPart(val)) > PETSC_MACHINE_EPSILON) {
+                  nNonzero++;
+                  trivVal = val;
+                  trivGid = aGlobOff + aGlobFieldInPoint + e;
+                }
+              }
+            }
+            if (nNonzero == 1 && PetscAbs(PetscRealPart(trivVal) - 1.0) < PETSC_MACHINE_EPSILON) {
+              /* Trivial constraint: single anchor with weight 1.0 - treat as unconstrained */
+              maps->gIdx[eidx][f][q] = trivGid;
+              fullNb[f]++;
+            } else {
+              /* Non-trivial constraint: build pointMap entry */
+              PetscInt jj = 0;
+
+              maps->gIdx[eidx][f][q] = -(maps->num_reduced + 1);
+              for (PetscInt ai = 0; ai < bDof && jj < maps->num_face; ai++) {
+                PetscInt aLocOff, aGlobOff, aDof = 0;
+                PetscInt aGlobFieldInPoint = 0;
+                PetscInt a                 = anchors[bOff2 + ai];
+
+                if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetFieldDof(section, a, f, &aDof));
+                if (!aDof) continue;
+                PetscCall(PetscSectionGetFieldOffset(section, a, f, &aLocOff));
+                PetscCall(PetscSectionGetOffset(globsection, a, &aGlobOff));
+                for (PetscInt g = 0; g < f; g++) {
+                  PetscInt agfdof = 0, agcfdof = 0;
+                  PetscCall(PetscSectionGetFieldDof(section, a, g, &agfdof));
+                  PetscCall(PetscSectionGetFieldConstraintDof(section, a, g, &agcfdof));
+                  aGlobFieldInPoint += agfdof - agcfdof;
+                }
+                for (PetscInt e = 0; e < aDof && jj < maps->num_face; e++) {
+                  PetscScalar val;
+                  PetscReal   rval;
+                  PetscInt    col = aLocOff + e;
+
+                  PetscCall(MatGetValues(cMat, 1, &row, 1, &col, &val));
+                  rval = PetscRealPart(val);
+                  if (PetscAbs(rval) <= PETSC_MACHINE_EPSILON) rval = 0.0;
+                  pointMaps[maps->num_reduced][jj].scale = rval;
+                  pointMaps[maps->num_reduced][jj].gid   = (rval == 0.0) ? -1 : aGlobOff + aGlobFieldInPoint + e;
+                  if (rval != 0.0) fullNb[f]++;
+                  jj++;
+                }
+              }
+              while (jj < maps->num_face) {
+                pointMaps[maps->num_reduced][jj].scale = 0.0;
+                pointMaps[maps->num_reduced][jj].gid   = -1;
+                jj++;
+              }
+              maps->num_reduced++;
+              PetscCheck(maps->num_reduced < MAP_BF_SIZE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->num_reduced %" PetscInt_FMT " >= MAP_BF_SIZE %" PetscInt_FMT, maps->num_reduced, MAP_BF_SIZE);
+            }
+            cind++;
+          } else {
+            /* unconstrained DOF: compute global index */
+            PetscInt globIdx;
+
+            if (pGlobOff < 0) {
+              /* point is off-process or constrained at global level - use involution */
+              globIdx = -(-(pGlobOff + 1) + globFieldInPoint + b - cind);
+            } else {
+              globIdx = pGlobOff + globFieldInPoint + b - cind;
+            }
+            maps->gIdx[eidx][f][q] = globIdx;
+            fullNb[f]++;
+          }
+        }
+        fieldFoffs[f] += fdof;
+      }
+    }
+    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionRestoreFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f]));
+    PetscCall(DMPlexRestoreTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));
+    if (coo_elem_offsets) {
+      /* accumulate fullNb^2 per species into the COO offset for this element */
+      for (PetscInt f = 0; f < Nf_grid; f++) {
+        coo_elem_offsets[glb_elem_idx + 1] += fullNb[f] * fullNb[f];
+        if (f == 0) {
+          coo_elem_fullNb[glb_elem_idx] = fullNb[f];
+        } else PetscCheck(coo_elem_fullNb[glb_elem_idx] == fullNb[f], PETSC_COMM_SELF, PETSC_ERR_PLIB, "full element size change with species %" PetscInt_FMT " %" PetscInt_FMT, coo_elem_fullNb[glb_elem_idx], fullNb[f]);
+      }
+    }
+  } /* cell */
+  if (aSec) PetscCall(ISRestoreIndices(aIS, &anchors));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], const char prefix[], LandauCtx *ctx)
 {
   PetscSection     section[LANDAU_MAX_GRIDS], globsection[LANDAU_MAX_GRIDS];
@@ -1475,17 +1687,13 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
   /* create GPU assembly data */
   if (ctx->gpu_assembly) { /* we need GPU object with GPU assembly */
     PetscContainer container;
-    PetscScalar   *elemMatrix, *elMat;
     pointInterpolationP4est(*pointMaps)[LANDAU_MAX_Q_FACE];
     P4estVertexMaps *maps;
-    const PetscInt  *plex_batch = NULL, elMatSz = Nb * Nb * ctx->num_species * ctx->num_species;
+    const PetscInt  *plex_batch       = NULL;
     LandauIdx       *coo_elem_offsets = NULL, *coo_elem_fullNb = NULL, (*coo_elem_point_offsets)[LANDAU_MAX_NQND + 1] = NULL;
-    /* create GPU assembly data */
-    PetscCall(PetscInfo(ctx->plex[0], "Make GPU maps %d\n", 1));
     PetscCall(PetscLogEventBegin(ctx->events[2], 0, 0, 0, 0));
     PetscCall(PetscMalloc(sizeof(*maps) * ctx->num_grids, &maps));
     PetscCall(PetscMalloc(sizeof(*pointMaps) * MAP_BF_SIZE, &pointMaps));
-    PetscCall(PetscMalloc(sizeof(*elemMatrix) * elMatSz, &elemMatrix));
 
     {                                                                                                                             // setup COO assembly -- put COO metadata directly in ctx->SData_d
       PetscCall(PetscMalloc3(ncellsTot + 1, &coo_elem_offsets, ncellsTot, &coo_elem_fullNb, ncellsTot, &coo_elem_point_offsets)); // array of integer pointers
@@ -1499,10 +1707,8 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
 
     ctx->SData_d.coo_max_fullnb = 0;
     for (PetscInt grid = 0, glb_elem_idx = 0; grid < ctx->num_grids; grid++) {
-      PetscInt cStart, cEnd, Nfloc = Nf[grid], totDim = Nfloc * Nb;
       if (grid_batch_is_inv[grid]) PetscCall(ISGetIndices(grid_batch_is_inv[grid], &plex_batch));
       PetscCheck(!plex_batch, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_jacobian_field_major_order DEPRECATED");
-      PetscCall(DMPlexGetHeightStratum(ctx->plex[grid], 0, &cStart, &cEnd));
       // make maps
       maps[grid].d_self       = NULL;
       maps[grid].num_elements = numCells[grid];
@@ -1511,94 +1717,12 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
       maps[grid].num_reduced  = 0;
       maps[grid].deviceType   = ctx->deviceType;
       maps[grid].numgrids     = ctx->num_grids;
-      // count reduced and get
       PetscCall(PetscMalloc(maps[grid].num_elements * sizeof(*maps[grid].gIdx), &maps[grid].gIdx));
-      for (PetscInt ej = cStart, eidx = 0; ej < cEnd; ++ej, ++eidx, glb_elem_idx++) {
-        if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx]; // start with last one, then add
-        for (PetscInt fieldA = 0; fieldA < Nf[grid]; fieldA++) {
-          PetscInt fullNb = 0;
-          for (PetscInt q = 0; q < Nb; ++q) {
-            PetscInt     numindices, *indices;
-            PetscScalar *valuesOrig = elMat = elemMatrix;
-            PetscCall(PetscArrayzero(elMat, totDim * totDim));
-            elMat[(fieldA * Nb + q) * totDim + fieldA * Nb + q] = 1;
-            PetscCall(DMPlexGetClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, &elMat));
-            if (ctx->simplex) {
-              PetscCheck(numindices == Nb, ctx->comm, PETSC_ERR_ARG_WRONG, "numindices != Nb numindices=%" PetscInt_FMT " Nb=%" PetscInt_FMT, numindices, Nb);
-              for (PetscInt q = 0; q < numindices; ++q) maps[grid].gIdx[eidx][fieldA][q] = indices[q];
-              fullNb++;
-            } else {
-              for (PetscInt f = 0; f < numindices; ++f) { // look for a non-zero on the diagonal (is this too complicated for simplices?)
-                if (PetscAbs(PetscRealPart(elMat[f * numindices + f])) > PETSC_MACHINE_EPSILON) {
-                  // found it
-                  if (PetscAbs(PetscRealPart(elMat[f * numindices + f] - 1.)) < PETSC_MACHINE_EPSILON) { // normal vertex 1.0
-                    if (plex_batch) {
-                      maps[grid].gIdx[eidx][fieldA][q] = plex_batch[indices[f]];
-                    } else {
-                      maps[grid].gIdx[eidx][fieldA][q] = indices[f];
-                    }
-                    fullNb++;
-                  } else { //found a constraint
-                    PetscInt       jj                = 0;
-                    PetscReal      sum               = 0;
-                    const PetscInt ff                = f;
-                    maps[grid].gIdx[eidx][fieldA][q] = -maps[grid].num_reduced - 1; // store (-)index: id = -(idx+1): idx = -id - 1
-                    PetscCheck(!ctx->simplex, ctx->comm, PETSC_ERR_ARG_WRONG, "No constraints with simplex");
-                    do {                                                                                              // constraints are continuous in Plex - exploit that here
-                      PetscInt ii;                                                                                    // get 'scale'
-                      for (ii = 0, pointMaps[maps[grid].num_reduced][jj].scale = 0; ii < maps[grid].num_face; ii++) { // sum row of outer product to recover vector value
-                        if (ff + ii < numindices) {                                                                   // 3D has Q and Q^2 interps so might run off end. We could test that elMat[f*numindices + ff + ii] > 0, and break if not
-                          pointMaps[maps[grid].num_reduced][jj].scale += PetscRealPart(elMat[f * numindices + ff + ii]);
-                        }
-                      }
-                      sum += pointMaps[maps[grid].num_reduced][jj].scale; // diagnostic
-                      // get 'gid'
-                      if (pointMaps[maps[grid].num_reduced][jj].scale == 0) pointMaps[maps[grid].num_reduced][jj].gid = -1; // 3D has Q and Q^2 interps
-                      else {
-                        if (plex_batch) {
-                          pointMaps[maps[grid].num_reduced][jj].gid = plex_batch[indices[f]];
-                        } else {
-                          pointMaps[maps[grid].num_reduced][jj].gid = indices[f];
-                        }
-                        fullNb++;
-                      }
-                    } while (++jj < maps[grid].num_face && ++f < numindices); // jj is incremented if we hit the end
-                    while (jj < maps[grid].num_face) {
-                      pointMaps[maps[grid].num_reduced][jj].scale = 0;
-                      pointMaps[maps[grid].num_reduced][jj].gid   = -1;
-                      jj++;
-                    }
-                    if (PetscAbs(sum - 1.0) > 10 * PETSC_MACHINE_EPSILON) { // debug
-                      PetscInt  d, f;
-                      PetscReal tmp = 0;
-                      PetscCall(
-                        PetscPrintf(PETSC_COMM_SELF, "\t\t%" PetscInt_FMT ".%" PetscInt_FMT ".%" PetscInt_FMT ") ERROR total I = %22.16e (LANDAU_MAX_Q_FACE=%d, #face=%" PetscInt_FMT ")\n", eidx, q, fieldA, (double)sum, LANDAU_MAX_Q_FACE, maps[grid].num_face));
-                      for (d = 0, tmp = 0; d < numindices; ++d) {
-                        if (tmp != 0 && PetscAbs(tmp - 1.0) > 10 * PETSC_MACHINE_EPSILON) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3" PetscInt_FMT ") %3" PetscInt_FMT ": ", d, indices[d]));
-                        for (f = 0; f < numindices; ++f) tmp += PetscRealPart(elMat[d * numindices + f]);
-                        if (tmp != 0) PetscCall(PetscPrintf(ctx->comm, " | %22.16e\n", (double)tmp));
-                      }
-                    }
-                    maps[grid].num_reduced++;
-                    PetscCheck(maps[grid].num_reduced < MAP_BF_SIZE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps[grid].num_reduced %" PetscInt_FMT " > %" PetscInt_FMT, maps[grid].num_reduced, MAP_BF_SIZE);
-                  }
-                  break;
-                }
-              }
-            } // !simplex
-            // cleanup
-            PetscCall(DMPlexRestoreClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, &elMat));
-            if (elMat != valuesOrig) PetscCall(DMRestoreWorkArray(ctx->plex[grid], numindices * numindices, MPIU_SCALAR, &elMat));
-          }
-          {                                                        // setup COO assembly
-            coo_elem_offsets[glb_elem_idx + 1] += fullNb * fullNb; // one species block, adds a block for each species, on this element in this grid
-            if (fieldA == 0) {                                     // cache full Nb for this element, on this grid per species
-              coo_elem_fullNb[glb_elem_idx] = fullNb;
-              if (fullNb > ctx->SData_d.coo_max_fullnb) ctx->SData_d.coo_max_fullnb = fullNb;
-            } else PetscCheck(coo_elem_fullNb[glb_elem_idx] == fullNb, PETSC_COMM_SELF, PETSC_ERR_PLIB, "full element size change with species %" PetscInt_FMT " %" PetscInt_FMT, coo_elem_fullNb[glb_elem_idx], fullNb);
-          }
-        } // field
-      } // cell
+      PetscCall(LandauBuildConstraintMaps_PetscSection(ctx->plex[grid], Nf[grid], section[grid], globsection[grid], &maps[grid], pointMaps, MAP_BF_SIZE, coo_elem_fullNb, coo_elem_offsets, glb_elem_idx));
+      for (PetscInt ej = 0; ej < numCells[grid]; ej++) {
+        if (coo_elem_fullNb[glb_elem_idx + ej] > ctx->SData_d.coo_max_fullnb) ctx->SData_d.coo_max_fullnb = coo_elem_fullNb[glb_elem_idx + ej];
+      }
+      glb_elem_idx += numCells[grid];
       // allocate and copy point data maps[grid].gIdx[eidx][field][q]
       PetscCall(PetscMalloc(maps[grid].num_reduced * sizeof(*maps[grid].c_maps), &maps[grid].c_maps));
       for (PetscInt ej = 0; ej < maps[grid].num_reduced; ++ej) {
@@ -1690,7 +1814,6 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
       PetscCall(PetscFree2(oor, ooc));
     }
     PetscCall(PetscFree(pointMaps));
-    PetscCall(PetscFree(elemMatrix));
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
     PetscCall(PetscContainerSetPointer(container, (void *)maps));
     PetscCall(PetscContainerSetCtxDestroy(container, LandauGPUMapsDestroy));
