@@ -382,14 +382,14 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
         if constexpr (has_G1)
           for (PetscInt d = 0; d < dE; ++d) entry += B_b_fc * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
 
-        /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial[gc] */
+        /* G2: phi_grad[d] * g2[fc,gc,d] * B_trial[gc] */
         if constexpr (has_G2)
-          for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_b2_gc;
+          for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * Nc + gc) * dE + d] * B_b2_gc;
 
-        /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
+        /* G3: phi_grad[d] * g3[fc,gc,d,e2] * psi_grad[e2] */
         if constexpr (has_G3)
           for (PetscInt d = 0; d < dE; ++d)
-            for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
+            for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * Nc + gc) * dE + d) * dE + e2] * psi_grad[e2];
 
         Kokkos::atomic_add(&em_e[row * totDim + col], entry * wq);
       }
@@ -420,10 +420,10 @@ static inline void PetscFEKokkosCoordRefToReal(PetscInt dimReal, PetscInt dimRef
   }
 }
 
-static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] -- reference quadrature points */
-                                                         PetscReal *h_invJ,                                                                                    /* [Ne * Nq * dE * dE] -- output */
-                                                         PetscReal *h_detJ,                                                                                    /* [Ne * Nq]            -- output */
-                                                         PetscReal *h_coords                                                                                   /* [Ne * Nq * dE]       -- output */
+static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, const PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] -- reference quadrature points */
+                                                         PetscReal *h_invJ,                                                                                          /* [Ne * Nq * dE * dE] -- output */
+                                                         PetscReal *h_detJ,                                                                                          /* [Ne * Nq]            -- output */
+                                                         PetscReal *h_coords                                                                                         /* [Ne * Nq * dE]       -- output */
 )
 {
   const PetscInt  Np       = cgeom->numPoints;
@@ -511,6 +511,16 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCall(PetscFEGetSpatialDimension(fe, &dim));
 
+  /* Guard: template kernels only support H^1 elements (DeRahm index k=0).
+     Hcurl/Hdiv require Piola transforms that are not implemented here. */
+  {
+    PetscDualSpace dsp;
+    PetscInt       k;
+    PetscCall(PetscFEGetDualSpace(fe, &dsp));
+    PetscCall(PetscDualSpaceGetDeRahm(dsp, &k));
+    PetscCheck(k == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "PetscFEKokkosComputeResidual only supports H^1 elements (DeRahm k=0), got k=%" PetscInt_FMT, k);
+  }
+
   /* T[field]->Nb is the TOTAL number of DOFs per element = Nb_scalar * Nc.
      Pass Nb_total to the kernel so that the loop "b=0..Nb-1" with coeff[b]
      matches PetscFEEvaluateFieldJets_Internal exactly.
@@ -519,6 +529,11 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   Nc = T[field]->Nc;
   Nb = T[field]->Nb; /* total DOFs per element (= Nb_scalar * Nc for vector FE) */
   dE = cgeom->dimEmbed;
+
+  /* Runtime bounds check -- prevent GPU stack overflow on high-order elements */
+  PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", Nc);
+  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", dE);
+  PetscCheck(Nb / Nc <= 125, PETSC_COMM_SELF, PETSC_ERR_SUP, "Scalar basis count Nb/Nc = %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NBS 125", Nb / Nc);
 
   /* Flat array sizes */
   const PetscInt nB      = Nq * Nb * Nc;
@@ -687,9 +702,24 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCall(PetscFEGetSpatialDimension(fe, &dim));
 
+  /* Guard: template kernels only support H^1 elements (DeRahm index k=0).
+     Hcurl/Hdiv require Piola transforms that are not implemented here. */
+  {
+    PetscDualSpace dsp;
+    PetscInt       k;
+    PetscCall(PetscFEGetDualSpace(fe, &dsp));
+    PetscCall(PetscDualSpaceGetDeRahm(dsp, &k));
+    PetscCheck(k == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "PetscFEKokkosComputeJacobian only supports H^1 elements (DeRahm k=0), got k=%" PetscInt_FMT, k);
+  }
+
   Nb = T[field]->Nb;
   Nc = T[field]->Nc;
   dE = cgeom->dimEmbed;
+
+  /* Runtime bounds check -- prevent GPU stack overflow on high-order elements */
+  PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", Nc);
+  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", dE);
+  PetscCheck(Nb / Nc <= 125, PETSC_COMM_SELF, PETSC_ERR_SUP, "Scalar basis count Nb/Nc = %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NBS 125", Nb / Nc);
 
   const PetscInt nB      = Nq * Nb * Nc;
   const PetscInt nD      = Nq * Nb * Nc * dim;
