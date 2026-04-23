@@ -1396,6 +1396,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
     MatInfo            info;
 
     PetscCall(MatSeqAIJGetCSRAndMemType(Aseq, &glb_Aai, &glb_Aaj, &dummy, &mtype));
+    PetscCheck(PetscMemTypeDevice(mtype) || Kokkos::DefaultExecutionSpace().concurrency() < 1000, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "MatSeqAIJGetCSRAndMemType returned host memory but Kokkos execution space is a device; PCBJKOKKOS requires a Kokkos-aware (device) matrix");
     jac->max_nits = 0;
     glb_Aaa       = dummy;
     if (jac->rank_target != rank) view_bid = -1; // turn off all but one process
@@ -1935,7 +1936,12 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       }
       // Apply looser default rtol for AMG variants (reduces inner iteration count
       // while preserving outer SNES convergence and energy conservation).
-      if (use_amg) PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
+      // Only override if the user did not explicitly set -ksp_rtol.
+      if (use_amg) {
+        PetscBool rtol_set = PETSC_FALSE;
+        PetscCall(PetscOptionsHasName(NULL, ((PetscObject)jac->ksp)->prefix, "-ksp_rtol", &rtol_set));
+        if (!rtol_set) PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
+      }
       PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "Options for Kokkos batch solver", "none");
       PetscCall(PetscOptionsBool("-ksp_converged_reason", "", "bjkokkos.kokkos.cxx.c", jac->reason, &jac->reason, NULL));
       PetscCall(PetscOptionsBool("-ksp_monitor", "", "bjkokkos.kokkos.cxx.c", jac->monitor, &jac->monitor, NULL));
@@ -2139,13 +2145,16 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
                 for (PetscInt lk = fine_ai_p[rowl]; lk < fine_ai_p[rowl + 1]; lk++) {
                   const PetscInt gcol = d_isicol_p[start + fine_aj_p[lk]];
                   // Binary search: global CSR column indices are sorted within each row.
-                  PetscInt lo = setup_Aai[grow], hi = setup_Aai[grow + 1] - 1, mid_idx = lo;
+                  PetscInt lo = setup_Aai[grow], hi = setup_Aai[grow + 1] - 1, mid_idx = -1;
                   while (lo <= hi) {
-                    mid_idx = (lo + hi) / 2;
-                    if (setup_Aaj[mid_idx] == gcol) break;
-                    else if (setup_Aaj[mid_idx] < gcol) lo = mid_idx + 1;
-                    else hi = mid_idx - 1;
+                    PetscInt m = (lo + hi) / 2;
+                    if (setup_Aaj[m] == gcol) {
+                      mid_idx = m;
+                      break;
+                    } else if (setup_Aaj[m] < gcol) lo = m + 1;
+                    else hi = m - 1;
                   }
+                  if (mid_idx < 0) Kokkos::abort("PCBJKOKKOS: fine_aa_gidx binary search miss -- gcol not found in global CSR row");
                   blk_gidx[lk] = mid_idx;
                 }
               });
@@ -2295,6 +2304,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
     PetscScalar       *d_idiag = jac->d_idiag_k->data(), *dummy;
     PetscMemType       mtype;
     PetscCall(MatSeqAIJGetCSRAndMemType(Aseq, &d_ai, &d_aj, &dummy, &mtype));
+    PetscCheck(PetscMemTypeDevice(mtype) || Kokkos::DefaultExecutionSpace().concurrency() < 1000, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "MatSeqAIJGetCSRAndMemType returned host memory but Kokkos execution space is a device; PCBJKOKKOS requires a Kokkos-aware (device) matrix");
     d_aa = dummy;
     Kokkos::parallel_for(
       "Diag", Kokkos::TeamPolicy<>(jac->nBlocks, team_size, PCBJKOKKOS_VEC_SIZE), KOKKOS_LAMBDA(const team_member team) {

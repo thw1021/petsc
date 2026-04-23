@@ -327,10 +327,12 @@ static PetscErrorCode BuildProlongation(const PetscInt *ai, const PetscInt *aj, 
             if (CF[c] == CF_CPOINT) {
               P_aj[pos] = coarse_idx[c];
               P_aa[pos] = 1.0;
+              found_c   = PETSC_TRUE;
               break;
             }
           }
         }
+        PetscCheck(found_c, PETSC_COMM_SELF, PETSC_ERR_PLIB, "AMG: isolated F-point row %" PetscInt_FMT " with no C-points anywhere (nC=%" PetscInt_FMT ")", i, nC);
         PetscCall(PetscInfo(NULL, "AMG: isolated F-point row %" PetscInt_FMT " with no strong C-neighbors; using fallback injection\n", i));
       }
     }
@@ -586,6 +588,19 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
     /* 3.7 numeric RAP */
     PetscCall(NumericRAP_Host(cur_ai, cur_aj, cur_aa, cur_n, P_ai, P_aj, P_aa, R_ai, R_aj, R_aa, nC, Ac_ai, Ac_aj, &Ac_aa));
 
+    /* 3.8 validate coarse-level diagonal: every row must have a structural diagonal entry.
+       When using Jacobi smoother, the diagonal value must also be non-zero. */
+    for (PetscInt i = 0; i < nC; i++) {
+      PetscBool has_diag = PETSC_FALSE;
+      for (PetscInt k = Ac_ai[i]; k < Ac_ai[i + 1]; k++)
+        if (Ac_aj[k] == i) {
+          has_diag = PETSC_TRUE;
+          PetscCheck(smoother_type != BJKOKKOS_SMOOTH_JACOBI || PetscAbsScalar(Ac_aa[k]) > 0.0, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG level %" PetscInt_FMT ": coarse row %" PetscInt_FMT " has zero diagonal; Jacobi smoother requires non-zero diagonal", lev, i);
+          break;
+        }
+      PetscCheck(has_diag, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG level %" PetscInt_FMT ": coarse row %" PetscInt_FMT " has no structural diagonal entry", lev, i);
+    }
+
     /* store level */
     AMGLevel *L     = &hier->levels[hier->nlevels];
     L->nrows_fine   = cur_n;
@@ -684,6 +699,7 @@ PetscErrorCode PCBJKOKKOSSetupAMG(PC pc, Mat Aseq)
   /* MatSeqAIJGetCSRAndMemType returns device pointers for Kokkos matrices on CUDA.
      We keep them as device pointers and use Kokkos parallel_for for extraction. */
   PetscCall(MatSeqAIJGetCSRAndMemType(Aseq, &d_ai, &d_aj, &dummy, &mtype));
+  PetscCheck(PetscMemTypeDevice(mtype) || Kokkos::DefaultExecutionSpace().concurrency() < 1000, PETSC_COMM_SELF, PETSC_ERR_SUP, "MatSeqAIJGetCSRAndMemType returned host memory but Kokkos execution space is a device; PCBJKOKKOS AMG requires a Kokkos-aware (device) matrix");
   d_aa = dummy;
 
   /* Mirror d_isicol and d_isrow once (shared across all grids) */
@@ -799,6 +815,19 @@ PetscErrorCode PCBJKOKKOSSetupAMG(PC pc, Mat Aseq)
     std::vector<PetscScalar> blk_aa(h_blk_aa_v.data(), h_blk_aa_v.data() + blk_nnz);
 
     PetscCall(PetscInfo(pc, "AMG: building hierarchy for grid %" PetscInt_FMT " (size %" PetscInt_FMT ")\n", g, blk_n));
+
+    /* Validate fine-level diagonal: every row must have a structural diagonal entry.
+       When using Jacobi smoother, the diagonal value must also be non-zero. */
+    for (PetscInt i = 0; i < blk_n; i++) {
+      PetscBool has_diag = PETSC_FALSE;
+      for (PetscInt k = blk_ai[i]; k < blk_ai[i + 1]; k++)
+        if (blk_aj[k] == i) {
+          has_diag = PETSC_TRUE;
+          PetscCheck(jac->amg_smoother_type != BJKOKKOS_SMOOTH_JACOBI || PetscAbsScalar(blk_aa[k]) > 0.0, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG grid %" PetscInt_FMT ": fine row %" PetscInt_FMT " has zero diagonal; Jacobi smoother requires non-zero diagonal", g, i);
+          break;
+        }
+      PetscCheck(has_diag, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG grid %" PetscInt_FMT ": fine row %" PetscInt_FMT " has no structural diagonal entry", g, i);
+    }
 
     PetscCall(BuildAMGHierarchy(blk_ai.data(), blk_aj.data(), blk_aa.data(), blk_n, jac->amg_strong_threshold, jac->amg_max_levels, jac->amg_min_coarse_size, jac->amg_pre_sweeps, jac->amg_post_sweeps, jac->amg_coarse_sweeps, jac->amg_smoother_type,
                                 jac->amg_smoother_omega, &jac->amg_hierarchy[g]));
