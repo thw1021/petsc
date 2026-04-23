@@ -746,7 +746,7 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
     test:
       suffix: kokkos_batch_gmres_amg
-      requires: kokkos_kernels
+      requires: kokkos_kernels !complex
       output_file: output/ex2_kokkos_batch_gmres_amg.out
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type gmres -pc_bjkokkos_pc_type amg
     test:
