@@ -482,7 +482,6 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG_Jac(const team_member 
       Rl[idx] = Rl[idx] + t2 * Zl[idx];
     });
     team.team_barrier();
-    team.team_barrier();
     /*    dp <- r'*r       */
     parallel_reduce(Kokkos::TeamVectorRange(team, Nblk), [=](const int idx, PetscScalar &lsum) { lsum += Rr[idx] * PetscConj(Rr[idx]); }, dpi);
     team.team_barrier();
@@ -947,22 +946,9 @@ done_bicg_amg:
 }
 
 #if !defined(PETSC_USE_COMPLEX)
-// -----------------------------------------------------------------------
-// BJSolve_GMRES_AMG -- Right-preconditioned GMRES(maxit) with AMG V-cycle.
-// No restarts; maxit is the Krylov subspace dimension.
-// Right-preconditioned: solve A M^{-1} y = b, then x = M^{-1} y.
-//
-// Work vectors (all from work_space_global, stride = stride_global):
-//   V[0..maxit]: maxit+1 Krylov basis vectors (Nblk each)
-//   Z:           1 preconditioned vector (Nblk)
-//   XX:          1 solution accumulator (Nblk)
-// Hessenberg matrix H[(maxit+1)*maxit], cs[maxit], sn[maxit], g[maxit+1]
-// are stored in amg_work buffer after the AMG level data (small, O(maxit^2)).
-// Total nwork = maxit + 3.
-// -----------------------------------------------------------------------
 // Native GMRES with diagonal (Jacobi) preconditioning.
 // Right-preconditioned: solves A(D^{-1}y)=b, x = D^{-1}y.
-// -----------------------------------------------------------------------
+// nwork = maxit + 3 (V[0..maxit] + Z + XX).
 static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_Jac(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar *glb_idiag, const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor, PetscScalar *gmres_hwork)
 {
   using Kokkos::parallel_for;
@@ -1640,12 +1626,14 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         }
       }
 
+#if !defined(PETSC_USE_COMPLEX)
       // Allocate per-block Hessenberg work buffer for GMRES_AMG
       // Layout per block: H[(maxit+1)*maxit] | cs[maxit] | sn[maxit] | g[maxit+1]
       PetscInt gmres_hwork_per_blk = (maxit + 1) * maxit + 2 * maxit + (maxit + 1);
       // Use the pre-allocated persistent GMRES Hessenberg buffer (allocated once in PCSetUp).
       auto        &d_gmres_hwork_k = *jac->d_gmres_hwork_k;
       PetscScalar *d_gmres_hwork   = d_gmres_hwork_k.data();
+#endif
 
       // --- Phase: BJKOKKOS_Krylov_Solve ---
       PetscCall(PetscLogEventBegin(BJKOKKOS_Krylov_Solve, pc, 0, 0, 0));
@@ -1916,9 +1904,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       jac->d_idiag_k = new Kokkos::View<PetscScalar *, Kokkos::LayoutRight>("idiag", n);
       // options
       PetscCall(PCBJKOKKOSCreateKSP_BJKOKKOS(pc));
-      // Check if user requested -pc_bjkokkos_pc_type amg.
-      // "amg" is not a registered PETSc PC type, so we intercept it here and
-      // clear it from the options database before KSPSetFromOptions runs.
+      /* Check if user requested -pc_bjkokkos_pc_type amg.
+         "amg" is not a registered PETSc PC type, so we intercept it here and
+         clear it from the options database before KSPSetFromOptions runs. */
       PetscBool use_amg = PETSC_FALSE;
       {
         char      pc_type_str[64] = "";
@@ -1926,11 +1914,11 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "BJKOKKOS batch PC type", "PC");
         PetscCall(PetscOptionsString("-pc_type", "Batch preconditioner type (jacobi or amg)", "PCSetType", "", pc_type_str, sizeof(pc_type_str), &pc_type_set));
         PetscOptionsEnd();
-        if (pc_type_set) {
+        if (pc_type_set == PETSC_TRUE) {
           if (!strcmp(pc_type_str, "amg")) use_amg = PETSC_TRUE;
           else PetscCheck(!strcmp(pc_type_str, "jacobi") || !strcmp(pc_type_str, ""), PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "BJKOKKOS supports only -pc_type jacobi or amg, not \"%s\"", pc_type_str);
         }
-        if (use_amg) {
+        if (use_amg == PETSC_TRUE) {
           // Clear the option so KSPSetFromOptions does not try to register "amg" as a PC type.
           const char *prefix = ((PetscObject)jac->ksp)->prefix;
           char        opt_name[256];
@@ -1970,18 +1958,18 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 #endif
         }
       }
-      // Apply looser default rtol for AMG variants (reduces inner iteration count
-      // while preserving outer SNES convergence and energy conservation).
-      // Only override if the user did not explicitly set -ksp_rtol via the
-      // prefixed option or the unprefixed global option.
-      if (use_amg) {
+      /* Apply looser default rtol for AMG variants (reduces inner iteration count
+         while preserving outer SNES convergence and energy conservation).
+         Only override if the user did not explicitly set -ksp_rtol via the
+         prefixed option or the unprefixed global option. */
+      if (use_amg == PETSC_TRUE) {
         PetscBool rtol_set = PETSC_FALSE;
         PetscCall(PetscOptionsHasName(NULL, ((PetscObject)jac->ksp)->prefix, "-ksp_rtol", &rtol_set));
-        if (!rtol_set) {
+        if (rtol_set == PETSC_FALSE) {
           // Also check the unprefixed global option in case the user set -ksp_rtol globally
           PetscCall(PetscOptionsHasName(NULL, NULL, "-ksp_rtol", &rtol_set));
         }
-        if (!rtol_set) {
+        if (rtol_set == PETSC_FALSE) {
           PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
           PetscCall(PetscInfo(pc, "BJKOKKOS AMG: overriding default rtol to 5e-3 (user did not set -ksp_rtol)\n"));
         }

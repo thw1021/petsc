@@ -489,5 +489,5 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS_AMG(PC, const PetscScalar *,
 #endif
 
 // AMG hierarchy setup -- implemented in bjkokkos_amg.kokkos.cxx
-PETSC_INTERN PetscErrorCode PCBJKOKKOSSetupAMG(PC pc, Mat Aseq);
-PETSC_INTERN PetscErrorCode PCBJKOKKOSDestroyAMG(PC_PCBJKOKKOS *jac);
+PETSC_INTERN PetscErrorCode PCBJKOKKOSSetupAMG(PC, Mat);
+PETSC_INTERN PetscErrorCode PCBJKOKKOSDestroyAMG(PC_PCBJKOKKOS *);
