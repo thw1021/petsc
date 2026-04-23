@@ -152,6 +152,163 @@ struct Functor_TestBatchedTeamVectorGMRES {
   }
 };
 
+// -----------------------------------------------------------------------
+// AMG preconditioner wrapper for KokkosBatched GMRES
+//
+// The KokkosBatched preconditioner concept requires:
+//   apply<ArgTrans, ArgMode, sameXY>(member, X, Y)
+// where X and Y are 2D views (numMatrices x numRows).
+//
+// For AMG, N_team must be 1 (one block per team) because the AMG V-cycle
+// uses team-parallel SpMV/smoothing that requires the full team.
+// With N_team==1, numMatrices==1 in the subviews passed to apply().
+// -----------------------------------------------------------------------
+
+struct BatchedAMGPrec {
+  const AMGFineInfo     *fine_arr;
+  const AMGLevelInfo    *levels_flat;
+  const PetscInt        *level_offsets;
+  const AMGCoarsestInfo *coarsest_arr;
+  const PetscInt        *nlevels_arr;
+  const PetscInt        *block_to_grid;
+  PetscScalar           *amg_work;
+  PetscInt               work_stride;
+  const PetscInt        *bid_eqOffset;
+  PetscInt               league_size; // total number of teams (== nBlocks)
+
+  KOKKOS_INLINE_FUNCTION
+  BatchedAMGPrec(const AMGFineInfo *_fine_arr, const AMGLevelInfo *_levels_flat, const PetscInt *_level_offsets, const AMGCoarsestInfo *_coarsest_arr, const PetscInt *_nlevels_arr, const PetscInt *_block_to_grid, PetscScalar *_amg_work, PetscInt _work_stride, const PetscInt *_bid_eqOffset, PetscInt _league_size) :
+    fine_arr(_fine_arr), levels_flat(_levels_flat), level_offsets(_level_offsets), coarsest_arr(_coarsest_arr), nlevels_arr(_nlevels_arr), block_to_grid(_block_to_grid), amg_work(_amg_work), work_stride(_work_stride), bid_eqOffset(_bid_eqOffset), league_size(_league_size)
+  {
+  }
+
+  KOKKOS_INLINE_FUNCTION void setComputedInverse() { /* no-op for AMG */ }
+
+  template <typename ArgTrans, typename ArgMode, int sameXY, typename MemberType, typename XViewType, typename YViewType>
+  KOKKOS_INLINE_FUNCTION void apply(const MemberType &member, const XViewType &X, const YViewType &Y) const
+  {
+    // With N_team==1, X and Y have shape (1, nrows).
+    // The team's league_rank gives the block ID.
+    // first_matrix is the global block index for this team.
+    const int blkID  = static_cast<int>(member.league_rank());
+    const int gridID = block_to_grid[blkID];
+
+    const AMGFineInfo     &fine     = fine_arr[gridID];
+    const AMGLevelInfo    *levels   = levels_flat + level_offsets[gridID];
+    const PetscInt         nlev     = nlevels_arr[gridID];
+    const AMGCoarsestInfo &coarsest = coarsest_arr[gridID];
+    PetscScalar           *blk_work = amg_work + (PetscInt)blkID * work_stride;
+    const PetscInt         nrows    = fine.nrows;
+
+    // X(0, :) is the input (rhs for preconditioner), Y(0, :) is the output
+    // Copy X into a contiguous buffer (b_fine), call AMGVCycle, copy result to Y
+    PetscScalar *b_tmp = blk_work + fine.off_b; // reuse fine-level b as temp input
+    PetscScalar *x_tmp = blk_work + fine.off_x; // reuse fine-level x as temp output
+
+    // Copy X(0,:) into b_tmp
+    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, nrows), [=](int i) { b_tmp[i] = X(0, i); });
+    member.team_barrier();
+
+    // Run AMG V-cycle: b_tmp -> x_tmp
+    AMGVCycle(member, fine, levels, nlev, coarsest, blk_work, b_tmp, x_tmp);
+
+    // Copy x_tmp into Y(0,:)
+    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, nrows), [=](int i) { Y(0, i) = x_tmp[i]; });
+    member.team_barrier();
+  }
+};
+
+template <typename DeviceType, typename ValuesViewType, typename IntView, typename VectorViewType, typename KrylovHandleType>
+struct Functor_TestBatchedTeamVectorGMRES_AMG {
+  const ValuesViewType _D;
+  const IntView        _r;
+  const IntView        _c;
+  const VectorViewType _X;
+  const VectorViewType _B;
+  const int            _N_team, _team_size, _vector_length;
+  const int            _N_iteration;
+  const double         _tol;
+  const int            _ortho_strategy;
+  const int            _scratch_pad_level;
+  KrylovHandleType     _handle;
+  BatchedAMGPrec       _amg_prec;
+
+  KOKKOS_INLINE_FUNCTION
+  Functor_TestBatchedTeamVectorGMRES_AMG(const ValuesViewType &D, const IntView &r, const IntView &c, const VectorViewType &X, const VectorViewType &B, const int N_team, const int team_size, const int vector_length, const int N_iteration, const double tol, int ortho_strategy, const int scratch_pad_level, KrylovHandleType &handle, const BatchedAMGPrec &amg_prec) :
+    _D(D), _r(r), _c(c), _X(X), _B(B), _N_team(N_team), _team_size(team_size), _vector_length(vector_length), _N_iteration(N_iteration), _tol(tol), _ortho_strategy(ortho_strategy), _scratch_pad_level(scratch_pad_level), _handle(handle), _amg_prec(amg_prec)
+  {
+  }
+
+  template <typename MemberType>
+  KOKKOS_INLINE_FUNCTION void operator()(const MemberType &member) const
+  {
+    const int first_matrix = static_cast<int>(member.league_rank()) * _N_team;
+    const int N            = _D.extent(0);
+    const int last_matrix  = (static_cast<int>(member.league_rank() + 1) * _N_team < N ? static_cast<int>(member.league_rank() + 1) * _N_team : N);
+    const int graphID      = static_cast<int>(member.league_rank());
+    using TeamVectorCopy1D = KokkosBatched::TeamVectorCopy<MemberType, KokkosBatched::Trans::NoTranspose, 1>;
+
+    auto d                         = Kokkos::subview(_D, Kokkos::make_pair(first_matrix, last_matrix), Kokkos::ALL);
+    auto x                         = Kokkos::subview(_X, Kokkos::make_pair(first_matrix, last_matrix), Kokkos::ALL);
+    auto b                         = Kokkos::subview(_B, Kokkos::make_pair(first_matrix, last_matrix), Kokkos::ALL);
+    using ScratchPadIntViewType    = Kokkos::View<typename IntView::non_const_value_type *, typename IntView::array_layout, typename IntView::execution_space::scratch_memory_space>;
+    using ScratchPadValuesViewType = Kokkos::View<typename ValuesViewType::non_const_value_type **, typename ValuesViewType::array_layout, typename ValuesViewType::execution_space::scratch_memory_space>;
+
+    using Operator = KokkosBatched::CrsMatrix<ValuesViewType, ScratchPadIntViewType>;
+    ScratchPadIntViewType r(member.team_scratch(1), _r.extent(1));
+    ScratchPadIntViewType c(member.team_scratch(1), _c.extent(1));
+
+    TeamVectorCopy1D::invoke(member, Kokkos::subview(_r, graphID, Kokkos::ALL), r);
+    TeamVectorCopy1D::invoke(member, Kokkos::subview(_c, graphID, Kokkos::ALL), c);
+    Operator A(d, r, c);
+
+    KokkosBatched::TeamVectorGMRES<MemberType>::template invoke<Operator, VectorViewType, BatchedAMGPrec, KrylovHandleType>(member, A, b, x, _amg_prec, _handle);
+  }
+  inline double run(PC pc)
+  {
+    std::string   name("KokkosBatched::Test::TeamVectorGMRES_AMG");
+    Kokkos::Timer timer;
+    Kokkos::Profiling::pushRegion(name.c_str());
+
+    const int                      league_size = (int)ceil(1. * _D.extent(0) / _N_team);
+    Kokkos::TeamPolicy<DeviceType> policy(league_size, _team_size < 1 ? 1 : _team_size, _vector_length < 1 ? 1 : _vector_length);
+
+    _handle.set_max_iteration(_N_iteration);
+    _handle.set_tolerance(_tol);
+    _handle.set_ortho_strategy(_ortho_strategy);
+    _handle.set_scratch_pad_level(_scratch_pad_level);
+    _handle.set_compute_last_residual(true);
+
+    int maximum_iteration = _handle.get_max_iteration();
+
+    using ScalarType = typename ValuesViewType::non_const_value_type;
+    using Layout     = typename ValuesViewType::array_layout;
+    using EXSP       = typename ValuesViewType::execution_space;
+
+    using ViewType2D    = Kokkos::View<ScalarType **, Layout, EXSP>;
+    using IntViewType1D = Kokkos::View<PetscInt *, Layout, EXSP>;
+
+    size_t bytes_1D      = ViewType2D::shmem_size(_N_team, 1);
+    size_t bytes_row_ptr = IntViewType1D::shmem_size(_r.extent(1));
+    size_t bytes_col_idc = IntViewType1D::shmem_size(_c.extent(1));
+    size_t bytes_2D_1    = ViewType2D::shmem_size(_N_team, _X.extent(1));
+    size_t bytes_2D_2    = ViewType2D::shmem_size(_N_team, maximum_iteration + 1);
+
+    size_t bytes_tmp = 2 * bytes_2D_1 + 2 * bytes_1D + bytes_2D_2;
+
+    policy.set_scratch_size(0, Kokkos::PerTeam(bytes_tmp));
+    policy.set_scratch_size(1, Kokkos::PerTeam(bytes_col_idc + bytes_row_ptr));
+    PetscCall(PetscInfo(pc, "%d scratch memory(0) = %d + %d + %d; %d scratch memory(1); %d maximum_iterations\n", (int)bytes_tmp, 2 * (int)bytes_2D_1, 2 * (int)bytes_1D, (int)bytes_2D_2, (int)(bytes_row_ptr + bytes_col_idc), (int)maximum_iteration));
+    exec_space().fence();
+    timer.reset();
+    Kokkos::parallel_for(name.c_str(), policy, *this);
+    exec_space().fence();
+    double sec = timer.seconds();
+
+    return sec;
+  }
+};
+
 PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, PetscScalar *glb_xdata, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt team_size, MatInfo info, const PetscInt batch_sz, PCFailedReason *pcreason)
 {
   PC_PCBJKOKKOS     *jac   = (PC_PCBJKOKKOS *)pc->data;
@@ -292,7 +449,7 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *gl
     #endif
   #endif
   // return error code, get max it
-  PetscInt count = 0, mbid = 0;
+  PetscInt mbid = 0;
   if (handle.is_converged_host()) {
     *pcreason = PC_NOERROR;
     if (!jac->max_nits) {
@@ -308,17 +465,20 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *gl
     *pcreason = PC_SUBPC_ERROR;
   }
   // output - assume species major order
-  for (int blkID = 0; blkID < nBlk; blkID++) {
-    if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
-      if (jac->batch_target == blkID) {
-        if (batch_sz != 1)
-          PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID % batch_sz, blkID / batch_sz));
-        else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, block %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID));
-      } else if (jac->batch_target == -1 && handle.get_iteration_host(blkID) >= count) {
-        jac->max_nits = count = handle.get_iteration_host(blkID);
-        mbid                  = blkID;
+  {
+    PetscInt count = 0; // tracks max iterations seen when batch_target == -1
+    for (int blkID = 0; blkID < nBlk; blkID++) {
+      if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
+        if (jac->batch_target == blkID) {
+          if (batch_sz != 1)
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID % batch_sz, blkID / batch_sz));
+          else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, block %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID));
+        } else if (jac->batch_target == -1 && handle.get_iteration_host(blkID) >= count) {
+          jac->max_nits = count = handle.get_iteration_host(blkID);
+          mbid                  = blkID;
+        }
+        if (!handle.is_converged_host(blkID)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR species %d, batch %d did not converge with %d iterations\n", (int)(blkID / batch_sz), (int)blkID % batch_sz, handle.get_iteration_host(blkID)));
       }
-      if (!handle.is_converged_host(blkID)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR species %d, batch %d did not converge with %d iterations\n", (int)(blkID / batch_sz), (int)blkID % batch_sz, handle.get_iteration_host(blkID)));
     }
   }
   if (jac->batch_target == -1 && jac->reason) {
@@ -329,7 +489,157 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *gl
   #if defined(PETSC_HAVE_CUDA)
   nvtxRangePop();
   #endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  return PETSC_SUCCESS;
+PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS_AMG(PC pc, const PetscScalar *glb_bdata, PetscScalar *glb_xdata, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt team_size, MatInfo info, const PetscInt batch_sz, PCFailedReason *pcreason, const AMGFineInfo *d_fine_arr, const AMGLevelInfo *d_levels_flat, const PetscInt *d_level_offsets, const PetscInt *d_nlevels_arr, const AMGCoarsestInfo *d_coarsest_arr, const PetscInt *d_block_to_grid, PetscScalar *d_amg_work, PetscInt amg_work_stride)
+{
+  PC_PCBJKOKKOS  *jac   = (PC_PCBJKOKKOS *)pc->data;
+  Mat             A     = pc->pmat;
+  const PetscInt  maxit = jac->ksp->max_it, nBlk = jac->nBlocks;
+  const int       Nsolves        = nBlk;
+  const int       Nsolves_team   = 1; // AMG requires N_team == 1
+  int             fill_idx       = 0;
+  int             Nloc           = jac->const_block_size;
+  const int       nnz            = (int)info.nz_used / Nsolves;
+  PetscReal       rtol           = jac->ksp->rtol;
+  const PetscInt *d_bid_eqOffset = jac->d_bid_eqOffset_k->data();
+  const PetscInt *d_isicol = jac->d_isicol_k->data(), *d_isrow = jac->d_isrow_k->data();
+
+  PetscFunctionBegin;
+  PetscCheck(jac->const_block_size, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Kokkos (GMRES+AMG) solver requires constant block size");
+  PetscCheck(((int)info.nz_used) % Nsolves == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "info.nz_used.mod(Nsolves) != 0: info.nz_used = %g, Nsolves = %d", info.nz_used, Nsolves);
+  #if defined(PETSC_HAVE_CUDA)
+  nvtxRangePushA("gmres-kk-amg");
+  #endif
+  if (!jac->rowOffsets) {
+    jac->rowOffsets   = new IntView("rowOffsets", Nsolves, Nloc + 1);
+    jac->colIndices   = new IntView("colIndices", Nsolves, nnz);
+    jac->batch_b      = new XYType("batch rhs", Nsolves, Nloc);
+    jac->batch_x      = new XYType("batch sol", Nsolves, Nloc);
+    jac->batch_values = new AMatrixValueView("batch values", Nsolves, nnz);
+    fill_idx          = 1;
+    PetscCall(PetscInfo(pc, "Setup indices (AMG) Nloc=%d, nnz=%d\n", Nloc, nnz));
+  }
+  IntView          &rowOffsets   = *jac->rowOffsets;
+  IntView          &colIndices   = *jac->colIndices;
+  XYType           &batch_b      = *jac->batch_b;
+  XYType           &batch_x      = *jac->batch_x;
+  AMatrixValueView &batch_values = *jac->batch_values;
+
+  Kokkos::deep_copy(batch_x, 0.);
+  PetscCall(PetscInfo(pc, "\tGMRES+AMG: jac->n = %d, Nloc = %d, Nsolves = %d, nnz = %d, Nsolves_team = %d, maxit = %d\n", (int)jac->n, Nloc, Nsolves, nnz, Nsolves_team, (int)maxit));
+  Kokkos::parallel_for(
+    "rowOffsets+map_AMG", Kokkos::TeamPolicy<>(Nsolves, team_size, PCBJKOKKOS_VEC_SIZE), KOKKOS_LAMBDA(const team_member team) {
+      const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID + 1];
+      if (fill_idx) {
+        Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](const int rowb) {
+          int rowa                            = d_isicol[rowb];
+          int n                               = glb_Aai[rowa + 1] - glb_Aai[rowa];
+          rowOffsets(blkID, rowb + 1 - start) = n;
+        });
+      }
+      Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
+        int rowa                     = d_isicol[rowb];
+        batch_b(blkID, rowb - start) = glb_bdata[rowa];
+      });
+    });
+  Kokkos::fence();
+  if (fill_idx) {
+    Kokkos::parallel_for(
+      "prefix sum_AMG", Kokkos::TeamPolicy<>(Nsolves, 1, 1), KOKKOS_LAMBDA(const team_member team) {
+        const int graphID      = team.league_rank();
+        rowOffsets(graphID, 0) = 0;
+        for (int i = 0; i < Nloc; ++i) rowOffsets(graphID, i + 1) += rowOffsets(graphID, i);
+      });
+    Kokkos::fence();
+  }
+  Kokkos::parallel_for(
+    "copy matrix_AMG", Kokkos::TeamPolicy<>(Nsolves, team_size, PCBJKOKKOS_VEC_SIZE), KOKKOS_LAMBDA(const team_member team) {
+      const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID + 1], graphID = blkID;
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(team, start, end), [=](const int rowb) {
+        int                rowa = d_isicol[rowb];
+        int                n    = glb_Aai[rowa + 1] - glb_Aai[rowa];
+        const PetscInt    *aj   = glb_Aaj + glb_Aai[rowa];
+        const PetscScalar *aa   = glb_Aaa + glb_Aai[rowa];
+        Kokkos::parallel_for(Kokkos::ThreadVectorRange(team, n), [=](const int &i) {
+          PetscScalar val = aa[i];
+          if (fill_idx) colIndices(graphID, rowOffsets(graphID, rowb - start) + i) = d_isrow[aj[i]] - blkID * Nloc;
+          batch_values(blkID, rowOffsets(graphID, rowb - start) + i) = val;
+        });
+      });
+    });
+  Kokkos::fence();
+  // setup solver
+  using ScalarType                = typename AMatrixValueView::non_const_value_type;
+  using MagnitudeType             = typename Kokkos::Details::ArithTraits<ScalarType>::mag_type;
+  using Norm2DViewType            = Kokkos::View<MagnitudeType **, layout, exec_space>;
+  using Scalar3DViewType          = Kokkos::View<ScalarType ***, layout, exec_space>;
+  using IntViewType               = Kokkos::View<int *, layout, exec_space>;
+  using KrylovHandleType          = KokkosBatched::KrylovHandle<Norm2DViewType, IntViewType, Scalar3DViewType>;
+  const int        n_iterations   = maxit;
+  const int        vector_length  = -1;
+  const double     tol            = rtol;
+  const int        ortho_strategy = 0;
+  KrylovHandleType handle(Nsolves, Nsolves_team, n_iterations, true);
+  handle.Arnoldi_view = Scalar3DViewType("", Nsolves, n_iterations, Nloc + n_iterations + 3);
+
+  // Create AMG preconditioner
+  BatchedAMGPrec amg_prec(d_fine_arr, d_levels_flat, d_level_offsets, d_coarsest_arr, d_nlevels_arr, d_block_to_grid, d_amg_work, amg_work_stride, d_bid_eqOffset, Nsolves);
+
+  // solve
+  Functor_TestBatchedTeamVectorGMRES_AMG<exec_space, AMatrixValueView, IntView, XYType, KrylovHandleType>(batch_values, rowOffsets, colIndices, batch_x, batch_b, Nsolves_team, team_size, vector_length, n_iterations, tol, ortho_strategy, 0, handle, amg_prec)
+    .run(pc);
+  Kokkos::fence();
+  // get data back
+  Kokkos::parallel_for(
+    "map_AMG", Kokkos::TeamPolicy<>(Nsolves, -1, PCBJKOKKOS_VEC_SIZE), KOKKOS_LAMBDA(const team_member team) {
+      const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID + 1];
+      Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
+        int rowa        = d_isicol[rowb];
+        glb_xdata[rowa] = batch_x(blkID, rowb - start);
+      });
+    });
+  // return error code, get max it
+  PetscInt mbid = 0;
+  if (handle.is_converged_host()) {
+    *pcreason = PC_NOERROR;
+    if (!jac->max_nits) {
+      for (int blkID = 0; blkID < nBlk; blkID++) {
+        if (handle.get_iteration_host(blkID) > jac->max_nits) {
+          jac->max_nits = handle.get_iteration_host(blkID);
+          mbid          = blkID;
+        }
+      }
+    }
+  } else {
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "There is at least one system that did not converge (GMRES+AMG).\n"));
+    *pcreason = PC_SUBPC_ERROR;
+  }
+  {
+    PetscInt count = 0; // tracks max iterations seen when batch_target == -1
+    for (int blkID = 0; blkID < nBlk; blkID++) {
+      if (jac->reason) {
+        if (jac->batch_target == blkID) {
+          if (batch_sz != 1)
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID % batch_sz, blkID / batch_sz));
+          else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, block %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID));
+        } else if (jac->batch_target == -1 && handle.get_iteration_host(blkID) >= count) {
+          jac->max_nits = count = handle.get_iteration_host(blkID);
+          mbid                  = blkID;
+        }
+        if (!handle.is_converged_host(blkID)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR species %d, batch %d did not converge with %d iterations (GMRES+AMG)\n", (int)(blkID / batch_sz), (int)blkID % batch_sz, handle.get_iteration_host(blkID)));
+      }
+    }
+  }
+  if (jac->batch_target == -1 && jac->reason) {
+    if (batch_sz != 1)
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid % batch_sz, mbid / batch_sz));
+    else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, block %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid));
+  }
+  #if defined(PETSC_HAVE_CUDA)
+  nvtxRangePop();
+  #endif
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
