@@ -281,7 +281,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR_Jac(const team_member
         goto done;
       }
       if (dpest / r0 < rtol) {
-        metad->reason = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS;
+        metad->reason = KSP_CONVERGED_RTOL;
         goto done;
       }
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
@@ -297,7 +297,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR_Jac(const team_member
       }
 #endif
       if (it + 1 == maxit) {
-        metad->reason = KSP_CONVERGED_ITS;
+        metad->reason = KSP_DIVERGED_ITS;
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
         Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: TFQMR %d:%d it, res=%e, r_0=%e r_res=%e\n", team.league_rank(), it, m, dpest, r0, dpest / r0); });
 #endif
@@ -494,7 +494,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG_Jac(const team_member 
       goto done;
     }
     if (dp / r0 < rtol) {
-      metad->reason = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS;
+      metad->reason = KSP_CONVERGED_RTOL;
       goto done;
     }
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
@@ -510,7 +510,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG_Jac(const team_member 
     }
 #endif
     if (it + 1 == maxit) {
-      metad->reason = KSP_CONVERGED_ITS; // don't worry about hitting max iterations
+      metad->reason = KSP_DIVERGED_ITS;
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
       Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: BICG %d it, res=%e, r_0=%e r_res=%e\n", team.league_rank(), it, dp, r0, dp / r0); });
 #endif
@@ -698,7 +698,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR_AMG(const team_member
         goto done_tfqmr_amg;
       }
       if (dpest / r0 < rtol) {
-        metad->reason = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS;
+        metad->reason = KSP_CONVERGED_RTOL;
         goto done_tfqmr_amg;
       }
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
@@ -714,7 +714,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR_AMG(const team_member
       }
 #endif
       if (it + 1 == maxit) {
-        metad->reason = KSP_CONVERGED_ITS;
+        metad->reason = KSP_DIVERGED_ITS;
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
         Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: TFQMR_AMG %d:%d it, res=%e, r_0=%e r_res=%e\n", team.league_rank(), it, m, dpest, r0, dpest / r0); });
 #endif
@@ -904,7 +904,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG_AMG(const team_member 
       goto done_bicg_amg;
     }
     if (dp / r0 < rtol) {
-      metad->reason = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS;
+      metad->reason = KSP_CONVERGED_RTOL;
       goto done_bicg_amg;
     }
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
@@ -920,7 +920,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG_AMG(const team_member 
     }
 #endif
     if (it + 1 == maxit) {
-      metad->reason = KSP_CONVERGED_ITS;
+      metad->reason = KSP_DIVERGED_ITS;
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
       Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: BICG_AMG %d it, res=%e, r_0=%e r_res=%e\n", team.league_rank(), it, dp, r0, dp / r0); });
 #endif
@@ -946,214 +946,20 @@ done_bicg_amg:
 }
 
 #if !defined(PETSC_USE_COMPLEX)
-// Native GMRES with diagonal (Jacobi) preconditioning.
-// Right-preconditioned: solves A(D^{-1}y)=b, x = D^{-1}y.
-// nwork = maxit + 3 (V[0..maxit] + Z + XX).
-static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_Jac(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar *glb_idiag, const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor, PetscScalar *gmres_hwork)
-{
-  using Kokkos::parallel_for;
-  using Kokkos::parallel_reduce;
-  const int Nblk = end - start;
-  // All work vectors go to global memory (GMRES needs maxit+3 vectors)
-  PetscScalar *ptr = work_space_global;
-  // V[0..maxit] -- Krylov basis vectors
-  PetscScalar *V0 = ptr;
-  ptr += stride_global;
-  // Z -- preconditioned vector (D^{-1} * Vj)
-  PetscScalar *Z = ptr + maxit * stride_global; // after V[1..maxit]
-  // XX -- solution in preconditioned space
-  PetscScalar *XX = Z + stride_global;
-  // Hessenberg matrix H, Givens rotations cs/sn, and g vector stored in gmres_hwork
-  // Layout: H[(maxit+1)*maxit] | cs[maxit] | sn[maxit] | g[maxit+1]
-  PetscScalar *H  = gmres_hwork;
-  PetscScalar *cs = H + (maxit + 1) * maxit;
-  PetscScalar *sn = cs + maxit;
-  PetscScalar *g  = sn + maxit;
-
-  // init: r0 = b - A*x0, but x0 = 0, so r0 = b
-  parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
-    int rowa         = ic[rowb];
-    V0[rowb - start] = glb_b[rowa];
-    XX[rowb - start] = 0;
-  });
-  team.team_barrier();
-
-  // beta = ||r0||
-  PetscScalar dpi;
-  parallel_reduce(Kokkos::TeamVectorRange(team, Nblk), [=](const int i, PetscScalar &lsum) { lsum += V0[i] * PetscConj(V0[i]); }, dpi);
-  team.team_barrier();
-  PetscReal beta = PetscSqrtReal(PetscRealPart(dpi));
-  PetscReal r0   = beta;
-
-  #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
-  if (monitor) Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("%3d KSP Residual norm %14.12e\n", 0, (double)beta); });
-  #endif
-  if (beta < atol) {
-    metad->reason = KSP_CONVERGED_ATOL_NORMAL_EQUATIONS;
-    metad->its    = 0;
-    goto done_gmres_jac;
-  }
-  if (0 == maxit) {
-    metad->reason = KSP_CONVERGED_ITS;
-    metad->its    = 0;
-    goto done_gmres_jac;
-  }
-
-  // V[0] = r0 / beta
-  parallel_for(Kokkos::TeamVectorRange(team, Nblk), [=](int i) { V0[i] /= beta; });
-  team.team_barrier();
-
-  // Initialize g[0] = beta, rest = 0
-  Kokkos::single(Kokkos::PerTeam(team), [=]() {
-    g[0] = beta;
-    for (int j = 1; j <= maxit; j++) g[j] = 0;
-    for (int j = 0; j < (maxit + 1) * maxit; j++) H[j] = 0;
-  });
-  team.team_barrier();
-
-  {
-    int j;
-    for (j = 0; j < maxit; j++) {
-      PetscScalar *Vj   = work_space_global + j * stride_global;
-      PetscScalar *Vjp1 = work_space_global + (j + 1) * stride_global;
-
-      // Z = D^{-1} * V[j]  (diagonal Jacobi right preconditioning)
-      parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) { Z[rowb - start] = glb_idiag[rowb] * Vj[rowb - start]; });
-      team.team_barrier();
-
-      // W = A * Z  (using global permuted CSR)
-      static_cast<void>(MatMult(team, glb_Aai, glb_Aaj, glb_Aaa, r, ic, start, end, Z, Vjp1));
-
-      // Modified Gram-Schmidt orthogonalization
-      for (int i = 0; i <= j; i++) {
-        PetscScalar *Vi = work_space_global + i * stride_global;
-        PetscScalar  hij;
-        parallel_reduce(Kokkos::TeamVectorRange(team, Nblk), [=](const int k, PetscScalar &dot) { dot += Vjp1[k] * PetscConj(Vi[k]); }, hij);
-        team.team_barrier();
-        Kokkos::single(Kokkos::PerTeam(team), [=]() { H[i + j * (maxit + 1)] = hij; });
-        parallel_for(Kokkos::TeamVectorRange(team, Nblk), [=](int k) { Vjp1[k] -= hij * Vi[k]; });
-        team.team_barrier();
-      }
-
-      // h_{j+1,j} = ||V[j+1]||
-      PetscScalar hjp1j_sq;
-      parallel_reduce(Kokkos::TeamVectorRange(team, Nblk), [=](const int k, PetscScalar &lsum) { lsum += Vjp1[k] * PetscConj(Vjp1[k]); }, hjp1j_sq);
-      team.team_barrier();
-      PetscReal hjp1j = PetscSqrtReal(PetscRealPart(hjp1j_sq));
-      Kokkos::single(Kokkos::PerTeam(team), [=]() { H[(j + 1) + j * (maxit + 1)] = hjp1j; });
-
-      // Normalize V[j+1]
-      if (hjp1j > 0) parallel_for(Kokkos::TeamVectorRange(team, Nblk), [=](int k) { Vjp1[k] /= hjp1j; });
-      team.team_barrier();
-
-      // Apply previous Givens rotations to column j of H
-      Kokkos::single(Kokkos::PerTeam(team), [=]() {
-        for (int i = 0; i < j; i++) {
-          PetscScalar temp             = cs[i] * H[i + j * (maxit + 1)] + sn[i] * H[(i + 1) + j * (maxit + 1)];
-          H[(i + 1) + j * (maxit + 1)] = -sn[i] * H[i + j * (maxit + 1)] + cs[i] * H[(i + 1) + j * (maxit + 1)];
-          H[i + j * (maxit + 1)]       = temp;
-        }
-        // Compute new Givens rotation for row j
-        PetscReal a_val = PetscRealPart(H[j + j * (maxit + 1)]);
-        PetscReal b_val = PetscRealPart(H[(j + 1) + j * (maxit + 1)]);
-        PetscReal r_val = PetscSqrtReal(a_val * a_val + b_val * b_val);
-        if (r_val > 0) {
-          cs[j] = a_val / r_val;
-          sn[j] = b_val / r_val;
-        } else {
-          cs[j] = 1.0;
-          sn[j] = 0.0;
-        }
-        H[j + j * (maxit + 1)]       = r_val;
-        H[(j + 1) + j * (maxit + 1)] = 0;
-        // Apply to g
-        PetscScalar temp = cs[j] * g[j] + sn[j] * g[j + 1];
-        g[j + 1]         = -sn[j] * g[j] + cs[j] * g[j + 1];
-        g[j]             = temp;
-      });
-      team.team_barrier();
-
-      PetscReal res = PetscAbsScalar(g[j + 1]);
-  #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
-      if (monitor) Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("%3d KSP Residual norm %14.12e\n", j + 1, (double)res); });
-  #endif
-      if (res < atol) {
-        metad->reason = KSP_CONVERGED_ATOL_NORMAL_EQUATIONS;
-        metad->its    = j + 1;
-        j++;
-        goto solve_gmres_jac;
-      }
-      if (res / r0 < rtol) {
-        metad->reason = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS;
-        metad->its    = j + 1;
-        j++;
-        goto solve_gmres_jac;
-      }
-      if (res / r0 > dtol) {
-        metad->reason = KSP_DIVERGED_DTOL;
-  #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
-        Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: GMRES_JAC %d it, res=%e, r_0=%e\n", team.league_rank(), j + 1, res, r0); });
-  #endif
-        metad->its = j + 1;
-        j++;
-        goto solve_gmres_jac;
-      }
-    }
-    metad->reason = KSP_CONVERGED_ITS;
-    metad->its    = maxit;
-  #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
-    Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d: GMRES_JAC max iterations %d reached\n", team.league_rank(), (int)maxit); });
-  #endif
-
-  solve_gmres_jac:
-    // Back-substitution: solve H * y = g (upper triangular, j equations)
-    {
-      int m = j;
-      Kokkos::single(Kokkos::PerTeam(team), [=]() {
-        for (int i = m - 1; i >= 0; i--) {
-          PetscScalar sum = g[i];
-          for (int k = i + 1; k < m; k++) sum -= H[i + k * (maxit + 1)] * g[k]; // reuse g for y
-          g[i] = sum / H[i + i * (maxit + 1)];
-        }
-      });
-      team.team_barrier();
-
-      // x = D^{-1} * V * y = sum_j y[j] * D^{-1} V[j]
-      // First accumulate V*y into XX, then apply D^{-1}
-      parallel_for(Kokkos::TeamVectorRange(team, Nblk), [=](int k) { XX[k] = 0; });
-      team.team_barrier();
-      for (int i = 0; i < m; i++) {
-        PetscScalar *Vi = work_space_global + i * stride_global;
-        PetscScalar  yi = g[i];
-        parallel_for(Kokkos::TeamVectorRange(team, Nblk), [=](int k) { XX[k] += yi * Vi[k]; });
-        team.team_barrier();
-      }
-      // Apply D^{-1} to get the actual solution (right preconditioning)
-      parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
-        int rowa    = ic[rowb];
-        glb_x[rowa] = glb_idiag[rowb] * XX[rowb - start];
-      });
-    }
-  }
-  {
-    int nnz;
-    parallel_reduce(Kokkos::TeamVectorRange(team, start, end), [=](const int i, int &lsum) { lsum += (glb_Aai[i + 1] - glb_Aai[i]); }, nnz);
-    metad->flops = 2 * (metad->its * (10 * Nblk + 2 * nnz) + 5 * Nblk);
-  }
-  return PETSC_SUCCESS;
-
-done_gmres_jac:
-  // Zero solution (converged at iteration 0)
-  parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
-    int rowa    = ic[rowb];
-    glb_x[rowa] = 0;
-  });
-  metad->flops = 0;
-  return PETSC_SUCCESS;
-}
+// Preconditioner type tag for the unified GMRES template
+enum BatchGMRESPCType {
+  BATCH_GMRES_PC_JACOBI,
+  BATCH_GMRES_PC_AMG
+};
 
 // -----------------------------------------------------------------------
-static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor, const AMGFineInfo amg_fine, const AMGLevelInfo *amg_levels, PetscInt amg_nlevels, const AMGCoarsestInfo amg_coarsest, PetscScalar *amg_work, PetscScalar *gmres_hwork)
+// BJSolve_GMRES -- unified right-preconditioned GMRES.
+//   PCT == BATCH_GMRES_PC_JACOBI: diagonal (Jacobi) preconditioning
+//   PCT == BATCH_GMRES_PC_AMG:    AMG V-cycle preconditioning
+// nwork = maxit + 3 (V[0..maxit] + Z + XX).
+// -----------------------------------------------------------------------
+template <BatchGMRESPCType PCT>
+static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar *glb_idiag, const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor, const AMGFineInfo amg_fine, const AMGLevelInfo *amg_levels, PetscInt amg_nlevels, const AMGCoarsestInfo amg_coarsest, PetscScalar *amg_work, PetscScalar *gmres_hwork)
 {
   using Kokkos::parallel_for;
   using Kokkos::parallel_reduce;
@@ -1161,8 +967,6 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
   // All work vectors go to global memory (GMRES needs maxit+3 vectors)
   PetscScalar *ptr = work_space_global;
   // V[0..maxit] -- Krylov basis vectors
-  // We store pointers to V[j] as offsets: V_j = work_space_global + j * stride_global
-  // V[0] is also the initial residual
   PetscScalar *V0 = ptr;
   ptr += stride_global;
   // Z -- preconditioned vector
@@ -1197,12 +1001,12 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
   if (beta < atol) {
     metad->reason = KSP_CONVERGED_ATOL_NORMAL_EQUATIONS;
     metad->its    = 0;
-    goto done_gmres_amg;
+    goto done_gmres;
   }
   if (0 == maxit) {
     metad->reason = KSP_CONVERGED_ITS;
     metad->its    = 0;
-    goto done_gmres_amg;
+    goto done_gmres;
   }
 
   // V[0] = r0 / beta
@@ -1223,8 +1027,12 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
       PetscScalar *Vj   = work_space_global + j * stride_global;
       PetscScalar *Vjp1 = work_space_global + (j + 1) * stride_global;
 
-      // Z = M^{-1} V[j]  (right preconditioning)
-      AMGVCycle(team, amg_fine, amg_levels, amg_nlevels, amg_coarsest, amg_work, Vj, Z);
+      // Apply right preconditioner: Z = M^{-1} V[j]
+      if constexpr (PCT == BATCH_GMRES_PC_JACOBI) {
+        parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) { Z[rowb - start] = glb_idiag[rowb] * Vj[rowb - start]; });
+      } else {
+        AMGVCycle(team, amg_fine, amg_levels, amg_nlevels, amg_coarsest, amg_work, Vj, Z);
+      }
       team.team_barrier();
 
       // W = A * Z  (using global permuted CSR)
@@ -1287,34 +1095,36 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
         metad->reason = KSP_CONVERGED_ATOL_NORMAL_EQUATIONS;
         metad->its    = j + 1;
         j++;
-        goto solve_gmres_amg;
+        goto solve_gmres;
       }
       if (res / r0 < rtol) {
-        metad->reason = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS;
+        metad->reason = KSP_CONVERGED_RTOL;
         metad->its    = j + 1;
         j++;
-        goto solve_gmres_amg;
+        goto solve_gmres;
       }
       if (res / r0 > dtol) {
         metad->reason = KSP_DIVERGED_DTOL;
   #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
-        Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: GMRES_AMG %d it, res=%e, r_0=%e\n", team.league_rank(), j + 1, res, r0); });
+        if constexpr (PCT == BATCH_GMRES_PC_JACOBI) Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: GMRES_JAC %d it, res=%e, r_0=%e\n", team.league_rank(), j + 1, res, r0); });
+        else Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d diverged: GMRES_AMG %d it, res=%e, r_0=%e\n", team.league_rank(), j + 1, res, r0); });
   #endif
         metad->its = j + 1;
         j++;
-        goto solve_gmres_amg;
+        goto solve_gmres;
       }
     }
-    metad->reason = KSP_CONVERGED_ITS;
+    metad->reason = KSP_DIVERGED_ITS;
     metad->its    = maxit;
   #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
-    Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d: GMRES_AMG max iterations %d reached\n", team.league_rank(), (int)maxit); });
+    if constexpr (PCT == BATCH_GMRES_PC_JACOBI) Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d: GMRES_JAC max iterations %d reached\n", team.league_rank(), (int)maxit); });
+    else Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("WARNING block %d: GMRES_AMG max iterations %d reached\n", team.league_rank(), (int)maxit); });
   #endif
 
-  solve_gmres_amg:
+  solve_gmres:
     // Back-substitution: solve H * y = g (upper triangular, j equations)
     {
-      int m = j; // number of GMRES iterations completed
+      int m = j;
       Kokkos::single(Kokkos::PerTeam(team), [=]() {
         for (int i = m - 1; i >= 0; i--) {
           PetscScalar sum = g[i];
@@ -1324,8 +1134,8 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
       });
       team.team_barrier();
 
-      // x = x0 + M^{-1} * V * y = sum_j y[j] * M^{-1} V[j]
-      // First compute V*y into XX, then apply M^{-1}
+      // x = M^{-1} * V * y
+      // First accumulate V*y into XX, then apply M^{-1}
       parallel_for(Kokkos::TeamVectorRange(team, Nblk), [=](int k) { XX[k] = 0; });
       team.team_barrier();
       for (int i = 0; i < m; i++) {
@@ -1335,13 +1145,19 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
         team.team_barrier();
       }
       // Apply M^{-1} to get the actual solution (right preconditioning)
-      AMGVCycle(team, amg_fine, amg_levels, amg_nlevels, amg_coarsest, amg_work, XX, Z);
-      team.team_barrier();
-      // Copy to output
-      parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
-        int rowa    = ic[rowb];
-        glb_x[rowa] = Z[rowb - start];
-      });
+      if constexpr (PCT == BATCH_GMRES_PC_JACOBI) {
+        parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
+          int rowa    = ic[rowb];
+          glb_x[rowa] = glb_idiag[rowb] * XX[rowb - start];
+        });
+      } else {
+        AMGVCycle(team, amg_fine, amg_levels, amg_nlevels, amg_coarsest, amg_work, XX, Z);
+        team.team_barrier();
+        parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
+          int rowa    = ic[rowb];
+          glb_x[rowa] = Z[rowb - start];
+        });
+      }
     }
   }
   {
@@ -1351,7 +1167,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_GMRES_AMG(const team_member
   }
   return PETSC_SUCCESS;
 
-done_gmres_amg:
+done_gmres:
   // Zero solution (converged at iteration 0)
   parallel_for(Kokkos::TeamVectorRange(team, start, end), [=](int rowb) {
     int rowa    = ic[rowb];
@@ -1666,10 +1482,10 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
           case BATCH_KSP_GMRES_AMG_IDX: {
             const int           gid = d_b2g[blkID];
             const AMGLevelInfo *lev = d_levels_flat + d_level_offs[gid];
-            static_cast<void>(BJSolve_GMRES_AMG(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff_global, stride_global, nShareVec, work_buff_shared, stride_shared, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_bdata, glb_xdata, print, d_fine_arr[gid], lev, d_nlevels_arr[gid], d_coarsest_arr[gid], d_amg_work_ptr + (PetscInt)blkID * amg_work_stride, d_gmres_hwork + (PetscInt)blkID * gmres_hwork_per_blk));
+            static_cast<void>(BJSolve_GMRES<BATCH_GMRES_PC_AMG>(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff_global, stride_global, nShareVec, work_buff_shared, stride_shared, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, nullptr, glb_bdata, glb_xdata, print, d_fine_arr[gid], lev, d_nlevels_arr[gid], d_coarsest_arr[gid], d_amg_work_ptr + (PetscInt)blkID * amg_work_stride, d_gmres_hwork + (PetscInt)blkID * gmres_hwork_per_blk));
           } break;
           case BATCH_KSP_GMRES_JAC_IDX:
-            static_cast<void>(BJSolve_GMRES_Jac(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff_global, stride_global, nShareVec, work_buff_shared, stride_shared, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata, print, d_gmres_hwork + (PetscInt)blkID * gmres_hwork_per_blk));
+            static_cast<void>(BJSolve_GMRES<BATCH_GMRES_PC_JACOBI>(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff_global, stride_global, nShareVec, work_buff_shared, stride_shared, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata, print, AMGFineInfo{}, nullptr, 0, AMGCoarsestInfo{}, nullptr, d_gmres_hwork + (PetscInt)blkID * gmres_hwork_per_blk));
             break;
 #endif
           default:
@@ -1783,6 +1599,31 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
       PetscCall(VecScatterEnd(plex_batch, bvec, xout, INSERT_VALUES, SCATTER_REVERSE));
       PetscCall(VecDestroy(&bvec));
     }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscBool PCBJKOKKOSEventsRegistered = PETSC_FALSE;
+
+static PetscErrorCode PCBJKOKKOSEventsReset(void)
+{
+  PetscFunctionBegin;
+  BJKOKKOS_AMG_RAP           = 0;
+  BJKOKKOS_Krylov_Solve      = 0;
+  BJKOKKOS_Post_solve        = 0;
+  PCBJKOKKOSEventsRegistered = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCBJKOKKOSRegisterEvents(void)
+{
+  PetscFunctionBegin;
+  if (!PCBJKOKKOSEventsRegistered) {
+    PetscCall(PetscLogEventRegister("BJKOKKOS_AMG_RAP", PC_CLASSID, &BJKOKKOS_AMG_RAP));
+    PetscCall(PetscLogEventRegister("BJKOKKOS_Krylov_Solve", PC_CLASSID, &BJKOKKOS_Krylov_Solve));
+    PetscCall(PetscLogEventRegister("BJKOKKOS_Post_solve", PC_CLASSID, &BJKOKKOS_Post_solve));
+    PCBJKOKKOSEventsRegistered = PETSC_TRUE;
+    PetscCall(PetscRegisterFinalize(PCBJKOKKOSEventsReset));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1915,18 +1756,27 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         PetscCall(PetscOptionsString("-pc_type", "Batch preconditioner type (jacobi or amg)", "PCSetType", "", pc_type_str, sizeof(pc_type_str), &pc_type_set));
         PetscOptionsEnd();
         if (pc_type_set == PETSC_TRUE) {
-          if (!strcmp(pc_type_str, "amg")) use_amg = PETSC_TRUE;
-          else PetscCheck(!strcmp(pc_type_str, "jacobi") || !strcmp(pc_type_str, ""), PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "BJKOKKOS supports only -pc_type jacobi or amg, not \"%s\"", pc_type_str);
+          PetscBool match;
+          PetscCall(PetscStrcmp(pc_type_str, "amg", &match));
+          if (match) use_amg = PETSC_TRUE;
+          else {
+            PetscBool match_jac, match_empty;
+            PetscCall(PetscStrcmp(pc_type_str, "jacobi", &match_jac));
+            PetscCall(PetscStrcmp(pc_type_str, "", &match_empty));
+            PetscCheck(match_jac || match_empty, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "BJKOKKOS supports only -pc_type jacobi or amg, not \"%s\"", pc_type_str);
+          }
         }
         if (use_amg == PETSC_TRUE) {
-          // Clear the option so KSPSetFromOptions does not try to register "amg" as a PC type.
+          // Clear the "amg" pc_type option so KSPSetFromOptions does not try to
+          // register "amg" as a PETSc PC type inside the inner KSP.  The option
+          // has already been consumed by PetscOptionsString above.
           const char *prefix = ((PetscObject)jac->ksp)->prefix;
           char        opt_name[256];
           PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", prefix ? prefix : ""));
           PetscCall(PetscOptionsClearValue(NULL, opt_name));
         }
+        PetscCall(KSPSetFromOptions(jac->ksp));
       }
-      PetscCall(KSPSetFromOptions(jac->ksp));
       // Set the inner PC type locally -- do not write to the global options database
       {
         PC innerpc;
@@ -1960,14 +1810,20 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       }
       /* Apply looser default rtol for AMG variants (reduces inner iteration count
          while preserving outer SNES convergence and energy conservation).
-         Only override if the user did not explicitly set -ksp_rtol via the
-         prefixed option or the unprefixed global option. */
+         Only override if the user did not explicitly set rtol via the options
+         database or programmatically via KSPSetTolerances. */
       if (use_amg == PETSC_TRUE) {
         PetscBool rtol_set = PETSC_FALSE;
         PetscCall(PetscOptionsHasName(NULL, ((PetscObject)jac->ksp)->prefix, "-ksp_rtol", &rtol_set));
         if (rtol_set == PETSC_FALSE) {
           // Also check the unprefixed global option in case the user set -ksp_rtol globally
           PetscCall(PetscOptionsHasName(NULL, NULL, "-ksp_rtol", &rtol_set));
+        }
+        if (rtol_set == PETSC_FALSE) {
+          // Also check whether the user set rtol programmatically (non-default value)
+          PetscReal current_rtol;
+          PetscCall(KSPGetTolerances(jac->ksp, &current_rtol, NULL, NULL, NULL));
+          if (current_rtol != PETSC_DEFAULT && current_rtol != (PetscReal)1e-5) rtol_set = PETSC_TRUE;
         }
         if (rtol_set == PETSC_FALSE) {
           PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
@@ -2017,8 +1873,14 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         if (set) jac->amg_coarse_sweeps = mg_coarse_max_it;
         // -pc_bjkokkos_mg_levels_pc_jacobi_type rowl1|diagonal
         PetscCall(PetscOptionsString("-pc_bjkokkos_mg_levels_pc_jacobi_type", "Smoother type: rowl1 or diagonal -- PCMG-style alias", "PCBJKOKKOSSetupAMG", "", jac_type_str, sizeof(jac_type_str), &set));
-        if (set && !strcmp(jac_type_str, "rowl1")) jac->amg_smoother_type = BJKOKKOS_SMOOTH_L1_JACOBI;
-        else if (set && (!strcmp(jac_type_str, "diagonal") || !strcmp(jac_type_str, "diag"))) jac->amg_smoother_type = BJKOKKOS_SMOOTH_JACOBI;
+        if (set) {
+          PetscBool match_rowl1, match_diag, match_diagonal;
+          PetscCall(PetscStrcmp(jac_type_str, "rowl1", &match_rowl1));
+          PetscCall(PetscStrcmp(jac_type_str, "diagonal", &match_diagonal));
+          PetscCall(PetscStrcmp(jac_type_str, "diag", &match_diag));
+          if (match_rowl1) jac->amg_smoother_type = BJKOKKOS_SMOOTH_L1_JACOBI;
+          else if (match_diagonal || match_diag) jac->amg_smoother_type = BJKOKKOS_SMOOTH_JACOBI;
+        }
         // -pc_bjkokkos_mg_levels_pc_jacobi_rowl1_scale (omega/damping)
         PetscCall(PetscOptionsReal("-pc_bjkokkos_mg_levels_pc_jacobi_rowl1_scale", "Smoother damping factor omega -- PCMG-style alias", "PCBJKOKKOSSetupAMG", mg_omega, &mg_omega, &set));
         if (set) jac->amg_smoother_omega = mg_omega;
@@ -2382,16 +2244,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
     }
     PetscCall(PetscInfo(pc, "PCSetUp_BJKOKKOS: pre-allocated workvectors (%" PetscInt_FMT " words) and gmres_hwork (%" PetscInt_FMT " words)\n", global_buff_words, gmres_hwork_total));
   }
-  // Register PCApply_BJKOKKOS sub-phase events once.
-  {
-    static PetscBool events_registered = PETSC_FALSE;
-    if (!events_registered) {
-      PetscCall(PetscLogEventRegister("BJKOKKOS_AMG_RAP", PC_CLASSID, &BJKOKKOS_AMG_RAP));
-      PetscCall(PetscLogEventRegister("BJKOKKOS_Krylov_Solve", PC_CLASSID, &BJKOKKOS_Krylov_Solve));
-      PetscCall(PetscLogEventRegister("BJKOKKOS_Post_solve", PC_CLASSID, &BJKOKKOS_Post_solve));
-      events_registered = PETSC_TRUE;
-    }
-  }
+  // Register PCApply_BJKOKKOS sub-phase events once; reset at PetscFinalize
+  // so that a subsequent PetscInitialize re-registers valid event ids.
+  PetscCall(PCBJKOKKOSRegisterEvents());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
