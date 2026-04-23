@@ -3,6 +3,7 @@
 #include <petsc/private/viewerimpl.h>
 #include <cgnstypes.h>
 #include <cgnslib.h>
+#include <petsc/private/hashtable.h>
 
 PETSC_EXTERN PetscLogEvent PETSC_VIEWER_CGNS_Open, PETSC_VIEWER_CGNS_Close, PETSC_VIEWER_CGNS_ReadMeta, PETSC_VIEWER_CGNS_WriteMeta, PETSC_VIEWER_CGNS_ReadData, PETSC_VIEWER_CGNS_WriteData;
 
@@ -27,6 +28,11 @@ typedef struct {
   int      solution_file_index;         // CGNS file solution index for direct access
   int      solution_file_pointer_index; // CGNS file solution index for FlowSolutionPointers (and other related arrays), index by 1
   char    *solution_name;
+
+  // Descriptor information
+  PetscInt num_descriptors, descriptor_capacity;
+  char   **descriptor_names;
+  char   **descriptor_values;
 } PetscViewer_CGNS;
 
 #define PetscCallCGNS(ierr) \
