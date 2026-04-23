@@ -26,10 +26,10 @@ typedef enum {
   BATCH_KSP_TFQMR_JAC_IDX,
   BATCH_KSP_BICG_AMG_IDX,
   BATCH_KSP_TFQMR_AMG_IDX,
-  BATCH_KSP_GMRES_AMG_IDX,
-  BATCH_KSP_GMRES_JAC_IDX,
-  BATCH_KSP_GMRESKK_JAC_IDX,
-  BATCH_KSP_GMRESKK_AMG_IDX,
+  BATCH_KSP_GMRES_AMG_IDX,   /* native GMRES (real scalars only) */
+  BATCH_KSP_GMRES_JAC_IDX,   /* native GMRES (real scalars only) */
+  BATCH_KSP_GMRESKK_JAC_IDX, /* KokkosKernels batched GMRES -- requires PETSC_HAVE_KOKKOS_KERNELS_BATCH; currently not assigned in PCSetUp */
+  BATCH_KSP_GMRESKK_AMG_IDX, /* KokkosKernels batched GMRES+AMG -- requires PETSC_HAVE_KOKKOS_KERNELS_BATCH; currently not assigned in PCSetUp */
   BATCH_KSP_PREONLY_IDX,
   NUM_BATCH_TYPES
 } KSPIndex;

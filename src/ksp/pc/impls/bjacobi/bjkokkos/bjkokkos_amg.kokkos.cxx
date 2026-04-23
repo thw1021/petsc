@@ -643,20 +643,18 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
     cur_n           = nC;
   }
 
-  /* store coarsest level matrix -- if nlevels==0 the pointers still reference
-     the caller's (possibly stack-allocated) arrays, so we must copy them. */
+  /* Store coarsest level matrix.  Always allocate independent copies so that
+     Ac_coarsest_ai/aj have uniform ownership semantics -- PCBJKOKKOSDestroyAMG
+     can always PetscFree them without worrying about aliasing levels[].Ac_ai. */
   hier->nrows_coarsest  = cur_n;
   hier->Ac_coarsest_nnz = cur_ai[cur_n];
-  if (!own_ai) {
+  {
     PetscInt ai_len = cur_n + 1;
     PetscInt aj_len = cur_ai[cur_n];
     PetscCall(PetscMalloc1(ai_len, &hier->Ac_coarsest_ai));
     PetscCall(PetscMalloc1(aj_len, &hier->Ac_coarsest_aj));
     PetscCall(PetscArraycpy(hier->Ac_coarsest_ai, cur_ai, ai_len));
     PetscCall(PetscArraycpy(hier->Ac_coarsest_aj, cur_aj, aj_len));
-  } else {
-    hier->Ac_coarsest_ai = own_ai;
-    hier->Ac_coarsest_aj = own_aj;
   }
   /* copy coarsest sparsity to device */
   using IntView1D   = Kokkos::View<PetscInt *>;
@@ -877,16 +875,10 @@ PetscErrorCode PCBJKOKKOSDestroyAMG(PC_PCBJKOKKOS *jac)
 
   for (PetscInt g = 0; g < jac->num_unique_grids; g++) {
     AMGHierarchy *hier = &jac->amg_hierarchy[g];
-    if (hier->nlevels > 0) {
-      /* Null out coarsest aliases BEFORE freeing levels, since Ac_coarsest_ai/aj
-         are aliases of levels[nlevels-1].Ac_ai/aj and will be freed by AMGLevelFreeHost. */
-      hier->Ac_coarsest_ai = nullptr;
-      hier->Ac_coarsest_aj = nullptr;
-    } else {
-      /* nlevels==0: Ac_coarsest_ai/aj were independently allocated in BuildAMGHierarchy */
-      PetscCall(PetscFree(hier->Ac_coarsest_ai));
-      PetscCall(PetscFree(hier->Ac_coarsest_aj));
-    }
+    /* Ac_coarsest_ai/aj are always independently allocated copies (never aliases),
+       so we can always PetscFree them regardless of nlevels. */
+    PetscCall(PetscFree(hier->Ac_coarsest_ai));
+    PetscCall(PetscFree(hier->Ac_coarsest_aj));
     for (PetscInt lev = 0; lev < hier->nlevels; lev++) {
       PetscCall(AMGLevelFreeHost(&hier->levels[lev]));
       PetscCall(AMGLevelFreeDevice(&hier->levels[lev]));
