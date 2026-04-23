@@ -1902,8 +1902,8 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       PetscCall(PCBJKOKKOSCreateKSP_BJKOKKOS(pc));
       // Check if user requested -pc_bjkokkos_pc_type amg; intercept before KSPSetFromOptions.
       // Read via PetscOptionsString so PETSc records the option as consumed (for -options_left).
-      // "amg" is not a registered PETSc PC type; override with "jacobi" so KSPSetFromOptions
-      // does not choke, and set use_amg to select the batch AMG code path below.
+      // "amg" is not a registered PETSc PC type; clear it from the database so KSPSetFromOptions
+      // does not choke, then set the inner PC type locally via PCSetType.
       PetscBool use_amg = PETSC_FALSE;
       {
         char      pc_type_str[64] = "";
@@ -1913,13 +1913,19 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         PetscOptionsEnd();
         if (pc_type_set && !strcmp(pc_type_str, "amg")) {
           use_amg = PETSC_TRUE;
-          // Override with jacobi so KSPSetFromOptions sees a valid PC type
+          // Remove from database so KSPSetFromOptions does not try to register "amg" as a PC type
           char opt_name[256];
           PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", ((PetscObject)jac->ksp)->prefix));
-          PetscCall(PetscOptionsSetValue(NULL, opt_name, "jacobi"));
+          PetscCall(PetscOptionsClearValue(NULL, opt_name));
         }
       }
       PetscCall(KSPSetFromOptions(jac->ksp));
+      // Set the inner PC type locally -- do not write to the global options database
+      {
+        PC innerpc;
+        PetscCall(KSPGetPC(jac->ksp, &innerpc));
+        PetscCall(PCSetType(innerpc, PCJACOBI));
+      }
       PetscCall(PetscObjectTypeCompareAny((PetscObject)jac->ksp, &flg, KSPBICG, ""));
       if (flg) {
         jac->ksp_type_idx = use_amg ? BATCH_KSP_BICG_AMG_IDX : BATCH_KSP_BICG_JAC_IDX;

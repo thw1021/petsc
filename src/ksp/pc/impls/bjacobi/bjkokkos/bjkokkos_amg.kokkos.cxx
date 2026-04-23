@@ -532,10 +532,13 @@ static PetscErrorCode AMGLevelCopyToDevice(AMGLevel *lev)
 static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, const PetscScalar *aa, PetscInt nrows, PetscReal strong_threshold, PetscInt max_levels, PetscInt min_coarse_size, PetscInt pre_sweeps, PetscInt post_sweeps, PetscInt coarse_sweeps, BJKokkosSmootherType smoother_type, PetscScalar smoother_omega, AMGHierarchy *hier)
 {
   /* working copies of the current-level matrix (host) */
-  PetscInt    *cur_ai = (PetscInt *)ai, *cur_aj = (PetscInt *)aj;
-  PetscScalar *cur_aa   = (PetscScalar *)aa;
-  PetscInt     cur_n    = nrows;
-  PetscBool    owns_cur = PETSC_FALSE; /* whether we own cur_ai/aj/aa */
+  const PetscInt    *cur_ai = ai;
+  const PetscInt    *cur_aj = aj;
+  const PetscScalar *cur_aa = aa;
+  PetscInt           cur_n  = nrows;
+  /* owned copies (non-NULL only after first coarsening, when we own the memory) */
+  PetscInt    *own_ai = NULL, *own_aj = NULL;
+  PetscScalar *own_aa = NULL;
 
   PetscFunctionBegin;
   hier->nlevels          = 0;
@@ -633,19 +636,18 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
        Do NOT free cur_ai/cur_aj here -- they are stored in levels[prev].Ac_ai/Ac_aj
        and will be freed by AMGLevelFreeHost.  Only free cur_aa (values are not stored
        in the level struct; they are recomputed per-block on the device). */
-    if (owns_cur) PetscCall(PetscFree(cur_aa));
-    cur_ai   = Ac_ai;
-    cur_aj   = Ac_aj;
-    cur_aa   = Ac_aa;
-    cur_n    = nC;
-    owns_cur = PETSC_TRUE;
+    PetscCall(PetscFree(own_aa));
+    cur_ai = own_ai = Ac_ai;
+    cur_aj = own_aj = Ac_aj;
+    cur_aa = own_aa = Ac_aa;
+    cur_n           = nC;
   }
 
   /* store coarsest level matrix -- if nlevels==0 the pointers still reference
      the caller's (possibly stack-allocated) arrays, so we must copy them. */
   hier->nrows_coarsest  = cur_n;
   hier->Ac_coarsest_nnz = cur_ai[cur_n];
-  if (!owns_cur) {
+  if (!own_ai) {
     PetscInt ai_len = cur_n + 1;
     PetscInt aj_len = cur_ai[cur_n];
     PetscCall(PetscMalloc1(ai_len, &hier->Ac_coarsest_ai));
@@ -653,24 +655,21 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
     PetscCall(PetscArraycpy(hier->Ac_coarsest_ai, cur_ai, ai_len));
     PetscCall(PetscArraycpy(hier->Ac_coarsest_aj, cur_aj, aj_len));
   } else {
-    hier->Ac_coarsest_ai = cur_ai;
-    hier->Ac_coarsest_aj = cur_aj;
+    hier->Ac_coarsest_ai = own_ai;
+    hier->Ac_coarsest_aj = own_aj;
   }
   /* copy coarsest sparsity to device */
   using IntView1D   = Kokkos::View<PetscInt *>;
   using HostIntView = Kokkos::View<PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  HostIntView h_cai(cur_ai, cur_n + 1);
-  HostIntView h_caj(cur_aj, hier->Ac_coarsest_nnz);
+  HostIntView h_cai(hier->Ac_coarsest_ai, cur_n + 1);
+  HostIntView h_caj(hier->Ac_coarsest_aj, hier->Ac_coarsest_nnz);
   hier->d_Ac_coarsest_ai = new IntView1D(Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), h_cai));
   hier->d_Ac_coarsest_aj = new IntView1D(Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), h_caj));
   Kokkos::deep_copy(*hier->d_Ac_coarsest_ai, h_cai);
   Kokkos::deep_copy(*hier->d_Ac_coarsest_aj, h_caj);
 
   /* free coarsest values (only structure kept; values recomputed on device) */
-  if (owns_cur) PetscCall(PetscFree(cur_aa));
-  else {
-    /* finest level: cur_aa == aa (caller owns), nothing to free */
-  }
+  PetscCall(PetscFree(own_aa));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

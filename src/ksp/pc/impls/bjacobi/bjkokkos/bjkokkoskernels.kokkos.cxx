@@ -489,8 +489,7 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *gl
   #if defined(PETSC_HAVE_CUDA)
   nvtxRangePop();
   #endif
-
-  return PETSC_SUCCESS;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS_AMG(PC pc, const PetscScalar *glb_bdata, PetscScalar *glb_xdata, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt team_size, MatInfo info, const PetscInt batch_sz, PCFailedReason *pcreason, const AMGFineInfo *d_fine_arr, const AMGLevelInfo *d_levels_flat, const PetscInt *d_level_offsets, const PetscInt *d_nlevels_arr, const AMGCoarsestInfo *d_coarsest_arr, const PetscInt *d_block_to_grid, PetscScalar *d_amg_work, PetscInt amg_work_stride)
@@ -641,7 +640,6 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS_AMG(PC pc, const PetscScalar
   #if defined(PETSC_HAVE_CUDA)
   nvtxRangePop();
   #endif
-
-  return PETSC_SUCCESS;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
