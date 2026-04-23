@@ -1735,7 +1735,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         in[1]         = rank;
         PetscCallMPI(MPIU_Allreduce(in, out, 1, MPI_2INT, MPI_MAXLOC, PetscObjectComm((PetscObject)A)));
         if (0 == rank) {
-          if (batch_sz != 1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "    [%d] %s+%s max iterations %d, block %" PetscInt_FMT " (%s)\n", out[1], ksp_name, pc_name, out[0], mbid, KSPConvergedReasons[h_metadata[mbid].reason]));
+          if (batch_sz != 1)
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "    [%d] %s+%s max iterations %d, species %" PetscInt_FMT ", batch %" PetscInt_FMT " (%s)\n", out[1], ksp_name, pc_name, out[0], mbid / batch_sz, mbid % batch_sz, KSPConvergedReasons[h_metadata[mbid].reason]));
           else PetscCall(PetscPrintf(PETSC_COMM_SELF, "    [%d] %s+%s max iterations %d, block %" PetscInt_FMT " (%s)\n", out[1], ksp_name, pc_name, out[0], mbid, KSPConvergedReasons[h_metadata[mbid].reason]));
         }
       }
@@ -1898,18 +1899,23 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       jac->d_idiag_k = new Kokkos::View<PetscScalar *, Kokkos::LayoutRight>("idiag", n);
       // options
       PetscCall(PCBJKOKKOSCreateKSP_BJKOKKOS(pc));
-      // Check if user requested -pc_bjkokkos_pc_type amg; intercept before KSPSetFromOptions
+      // Check if user requested -pc_bjkokkos_pc_type amg; intercept before KSPSetFromOptions.
+      // Read via PetscOptionsString so PETSc records the option as consumed (for -options_left).
+      // "amg" is not a registered PETSc PC type; override with "jacobi" so KSPSetFromOptions
+      // does not choke, and set use_amg to select the batch AMG code path below.
       PetscBool use_amg = PETSC_FALSE;
       {
         char      pc_type_str[64] = "";
         PetscBool pc_type_set     = PETSC_FALSE;
-        PetscCall(PetscOptionsGetString(NULL, ((PetscObject)jac->ksp)->prefix, "-pc_type", pc_type_str, sizeof(pc_type_str), &pc_type_set));
+        PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "BJKOKKOS batch PC type", "PC");
+        PetscCall(PetscOptionsString("-pc_type", "Batch preconditioner type (jacobi or amg)", "PCSetType", "", pc_type_str, sizeof(pc_type_str), &pc_type_set));
+        PetscOptionsEnd();
         if (pc_type_set && !strcmp(pc_type_str, "amg")) {
           use_amg = PETSC_TRUE;
-          // Temporarily hide from KSPSetFromOptions; "amg" is not a registered PETSc PC type
+          // Override with jacobi so KSPSetFromOptions sees a valid PC type
           char opt_name[256];
-          PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", ((PetscObject)jac->ksp)->prefix ? ((PetscObject)jac->ksp)->prefix : "pc_bjkokkos_"));
-          PetscCall(PetscOptionsClearValue(NULL, opt_name));
+          PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", ((PetscObject)jac->ksp)->prefix));
+          PetscCall(PetscOptionsSetValue(NULL, opt_name, "jacobi"));
         }
       }
       PetscCall(KSPSetFromOptions(jac->ksp));

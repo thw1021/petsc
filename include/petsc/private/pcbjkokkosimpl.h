@@ -283,8 +283,10 @@ KOKKOS_INLINE_FUNCTION void L1JacobiSmooth(const team_member team, const PetscIn
       Kokkos::single(Kokkos::PerThread(team), [=]() { residual[row] = b[row] - sum; });
     });
     team.team_barrier();
-    // x += omega * (1/norms) * residual
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(team, nrows), [=](int i) { x[i] += omega * residual[i] / l1_norms[i]; });
+    // x += omega * (1/norms) * residual  (skip rows with zero norm to avoid NaN)
+    Kokkos::parallel_for(Kokkos::TeamVectorRange(team, nrows), [=](int i) {
+      if (l1_norms[i] != 0.0) x[i] += omega * residual[i] / l1_norms[i];
+    });
     team.team_barrier();
   }
 }

@@ -589,7 +589,8 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
     PetscCall(NumericRAP_Host(cur_ai, cur_aj, cur_aa, cur_n, P_ai, P_aj, P_aa, R_ai, R_aj, R_aa, nC, Ac_ai, Ac_aj, &Ac_aa));
 
     /* 3.8 validate coarse-level diagonal: every row must have a structural diagonal entry.
-       When using Jacobi smoother, the diagonal value must also be non-zero. */
+       When using Jacobi smoother, the diagonal value must also be non-zero.
+       When using L1-Jacobi smoother, the L1 row norm must also be non-zero. */
     for (PetscInt i = 0; i < nC; i++) {
       PetscBool has_diag = PETSC_FALSE;
       for (PetscInt k = Ac_ai[i]; k < Ac_ai[i + 1]; k++)
@@ -599,6 +600,11 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
           break;
         }
       PetscCheck(has_diag, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG level %" PetscInt_FMT ": coarse row %" PetscInt_FMT " has no structural diagonal entry", lev, i);
+      if (smoother_type == BJKOKKOS_SMOOTH_L1_JACOBI) {
+        PetscReal l1 = 0.0;
+        for (PetscInt k = Ac_ai[i]; k < Ac_ai[i + 1]; k++) l1 += PetscAbsScalar(Ac_aa[k]);
+        PetscCheck(l1 > 0.0, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG level %" PetscInt_FMT ": coarse row %" PetscInt_FMT " has zero L1 row norm; L1-Jacobi smoother requires non-zero row norm", lev, i);
+      }
     }
 
     /* store level */
@@ -817,7 +823,8 @@ PetscErrorCode PCBJKOKKOSSetupAMG(PC pc, Mat Aseq)
     PetscCall(PetscInfo(pc, "AMG: building hierarchy for grid %" PetscInt_FMT " (size %" PetscInt_FMT ")\n", g, blk_n));
 
     /* Validate fine-level diagonal: every row must have a structural diagonal entry.
-       When using Jacobi smoother, the diagonal value must also be non-zero. */
+       When using Jacobi smoother, the diagonal value must also be non-zero.
+       When using L1-Jacobi smoother, the L1 row norm must also be non-zero. */
     for (PetscInt i = 0; i < blk_n; i++) {
       PetscBool has_diag = PETSC_FALSE;
       for (PetscInt k = blk_ai[i]; k < blk_ai[i + 1]; k++)
@@ -827,6 +834,11 @@ PetscErrorCode PCBJKOKKOSSetupAMG(PC pc, Mat Aseq)
           break;
         }
       PetscCheck(has_diag, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG grid %" PetscInt_FMT ": fine row %" PetscInt_FMT " has no structural diagonal entry", g, i);
+      if (jac->amg_smoother_type == BJKOKKOS_SMOOTH_L1_JACOBI) {
+        PetscReal l1 = 0.0;
+        for (PetscInt k = blk_ai[i]; k < blk_ai[i + 1]; k++) l1 += PetscAbsScalar(blk_aa[k]);
+        PetscCheck(l1 > 0.0, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "AMG grid %" PetscInt_FMT ": fine row %" PetscInt_FMT " has zero L1 row norm; L1-Jacobi smoother requires non-zero row norm", g, i);
+      }
     }
 
     PetscCall(BuildAMGHierarchy(blk_ai.data(), blk_aj.data(), blk_aa.data(), blk_n, jac->amg_strong_threshold, jac->amg_max_levels, jac->amg_min_coarse_size, jac->amg_pre_sweeps, jac->amg_post_sweeps, jac->amg_coarse_sweeps, jac->amg_smoother_type,
