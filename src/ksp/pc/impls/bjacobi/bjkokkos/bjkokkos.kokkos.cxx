@@ -1916,10 +1916,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       jac->d_idiag_k = new Kokkos::View<PetscScalar *, Kokkos::LayoutRight>("idiag", n);
       // options
       PetscCall(PCBJKOKKOSCreateKSP_BJKOKKOS(pc));
-      // Check if user requested -pc_bjkokkos_pc_type amg via a dedicated option.
-      // We use -pc_bjkokkos_use_amg (a boolean) instead of hijacking -pc_type,
-      // which avoids mutating the global options database and colliding with
-      // KSPSetFromOptions.
+      // Check if user requested -pc_bjkokkos_pc_type amg.
+      // "amg" is not a registered PETSc PC type, so we intercept it here and
+      // clear it from the options database before KSPSetFromOptions runs.
       PetscBool use_amg = PETSC_FALSE;
       {
         char      pc_type_str[64] = "";
@@ -1933,13 +1932,10 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         }
         if (use_amg) {
           // Clear the option so KSPSetFromOptions does not try to register "amg" as a PC type.
-          // Guard against NULL prefix (e.g. when no prefix is set on the KSP).
           const char *prefix = ((PetscObject)jac->ksp)->prefix;
-          if (prefix) {
-            char opt_name[256];
-            PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", prefix));
-            PetscCall(PetscOptionsClearValue(NULL, opt_name));
-          }
+          char        opt_name[256];
+          PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", prefix ? prefix : ""));
+          PetscCall(PetscOptionsClearValue(NULL, opt_name));
         }
       }
       PetscCall(KSPSetFromOptions(jac->ksp));
@@ -1977,13 +1973,17 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       // Apply looser default rtol for AMG variants (reduces inner iteration count
       // while preserving outer SNES convergence and energy conservation).
       // Only override if the user did not explicitly set -ksp_rtol via the
-      // prefixed option or programmatically (check against PETSc default 1e-5).
+      // prefixed option or the unprefixed global option.
       if (use_amg) {
-        PetscReal current_rtol;
-        PetscCall(KSPGetTolerances(jac->ksp, &current_rtol, NULL, NULL, NULL));
-        if (current_rtol == (PetscReal)PETSC_DEFAULT || current_rtol == 1e-5) {
+        PetscBool rtol_set = PETSC_FALSE;
+        PetscCall(PetscOptionsHasName(NULL, ((PetscObject)jac->ksp)->prefix, "-ksp_rtol", &rtol_set));
+        if (!rtol_set) {
+          // Also check the unprefixed global option in case the user set -ksp_rtol globally
+          PetscCall(PetscOptionsHasName(NULL, NULL, "-ksp_rtol", &rtol_set));
+        }
+        if (!rtol_set) {
           PetscCall(KSPSetTolerances(jac->ksp, 5e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
-          PetscCall(PetscInfo(pc, "BJKOKKOS AMG: overriding default rtol from %g to 5e-3\n", (double)current_rtol));
+          PetscCall(PetscInfo(pc, "BJKOKKOS AMG: overriding default rtol to 5e-3 (user did not set -ksp_rtol)\n"));
         }
       }
       PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "Options for Kokkos batch solver", "none");

@@ -216,9 +216,9 @@ typedef Kokkos::TeamPolicy<>::member_type team_member;
 // PetscLog event handles for PCApply_BJKOKKOS sub-phases
 // (registered in PCSetUp_BJKOKKOS; defined in bjkokkos.kokkos.cxx)
 // -----------------------------------------------------------------------
-PETSC_EXTERN PetscLogEvent BJKOKKOS_AMG_RAP;
-PETSC_EXTERN PetscLogEvent BJKOKKOS_Krylov_Solve;
-PETSC_EXTERN PetscLogEvent BJKOKKOS_Post_solve;
+PETSC_INTERN PetscLogEvent BJKOKKOS_AMG_RAP;
+PETSC_INTERN PetscLogEvent BJKOKKOS_Krylov_Solve;
+PETSC_INTERN PetscLogEvent BJKOKKOS_Post_solve;
 
 // -----------------------------------------------------------------------
 // AMG sparse kernels (KOKKOS_INLINE_FUNCTION, shared across TUs)
