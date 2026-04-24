@@ -3,7 +3,6 @@
 #include <petsc/private/viewerimpl.h>
 #include <cgnstypes.h>
 #include <cgnslib.h>
-#include <petsc/private/hashtable.h>
 
 PETSC_EXTERN PetscLogEvent PETSC_VIEWER_CGNS_Open, PETSC_VIEWER_CGNS_Close, PETSC_VIEWER_CGNS_ReadMeta, PETSC_VIEWER_CGNS_WriteMeta, PETSC_VIEWER_CGNS_ReadData, PETSC_VIEWER_CGNS_WriteData;
 

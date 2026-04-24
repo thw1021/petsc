@@ -614,9 +614,9 @@ PetscErrorCode PetscViewerCGNSGetSolutionName(PetscViewer viewer, const char *na
   Level: intermediate
 
   Note:
-  Caller is responsible for freeing each value of the `names` and `values` arrays, as well as the arrays, with `PetscFree()`
+  Memory must be freed via calling `PetscViewerCGNSRestoreDescriptors()`
 
-.seealso: `PETSCVIEWERCGNS`, `PetscViewer`, `PetscViewerCGNSSetDescriptor()`, `PetscViewerCGNSSetSolutionIndex()`, `PetscViewerCGNSGetSolutionIndex()`, `PetscViewerCGNSGetSolutionTime()`
+.seealso: `PETSCVIEWERCGNS`, `PetscViewer`, `PetscViewerCGNSRestoreDescriptors()`, `PetscViewerCGNSSetDescriptor()`, `PetscViewerCGNSSetSolutionIndex()`, `PetscViewerCGNSGetSolutionIndex()`, `PetscViewerCGNSGetSolutionTime()`
 @*/
 PetscErrorCode PetscViewerCGNSGetDescriptors(PetscViewer viewer, PetscInt *num_descriptors, char ***names, char ***values)
 {
@@ -658,6 +658,40 @@ PetscErrorCode PetscViewerCGNSGetDescriptors(PetscViewer viewer, PetscInt *num_d
 }
 
 /*@
+  PetscViewerCGNSRestoreDescriptors - Free memory allocated by `PetscViewerCGNSGetDescriptors()`
+
+  Collective
+
+  Input Parameter:
+. viewer - `PETSCVIEWERCGNS` `PetscViewer` for CGNS input/output to use with the specified file
+
+  Output Parameters:
++ num_descriptors - Number of descriptors set on the file
+. names           - Pointer to store array of descriptor names
+- values          - Pointer to store array of descriptor values
+
+  Level: intermediate
+
+.seealso: `PETSCVIEWERCGNS`, `PetscViewer`, `PetscViewerCGNSGetDescriptors()`, `PetscViewerCGNSSetSolutionIndex()`, `PetscViewerCGNSGetSolutionIndex()`, `PetscViewerCGNSGetSolutionTime()`
+@*/
+PetscErrorCode PetscViewerCGNSRestoreDescriptors(PetscViewer viewer, PetscInt *num_descriptors, char ***names, char ***values)
+{
+  PetscFunctionBeginUser;
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscAssertPointer(num_descriptors, 2);
+  PetscAssertPointer(names, 3);
+  PetscAssertPointer(values, 4);
+  for (PetscInt i = 0; i < *num_descriptors; i++) {
+    PetscCall(PetscFree((*values)[i]));
+    PetscCall(PetscFree((*names)[i]));
+  }
+  PetscCall(PetscFree(*values));
+  PetscCall(PetscFree(*names));
+  *num_descriptors = 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PetscViewerCGNSSetDescriptor - Set a descriptor at the base level of the CGNS viewer
 
   Collective
@@ -681,6 +715,7 @@ PetscErrorCode PetscViewerCGNSSetDescriptor(PetscViewer viewer, const char name[
   PetscFunctionBeginUser;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
   PetscAssertPointer(name, 2);
+  PetscAssertPointer(value, 3);
 
   if (cgv->descriptor_capacity == 0) {
     cgv->descriptor_capacity = 2;

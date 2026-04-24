@@ -75,12 +75,7 @@ static PetscErrorCode TestReadDescriptors(PetscViewer viewer)
   PetscCall(PetscStrcmp(descriptors[2], "This causes a resize operation", &is_same));
   PetscCheck(is_same, PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Wrong value for descriptor 2, expected 'This causes a resize operation' but got '%s'", descriptors[2] ? descriptors[2] : "(null)");
 
-  for (PetscInt i = 0; i < num_descriptors; i++) {
-    PetscCall(PetscFree(descriptors[i]));
-    PetscCall(PetscFree(names[i]));
-  }
-  PetscCall(PetscFree(descriptors));
-  PetscCall(PetscFree(names));
+  PetscCall(PetscViewerCGNSRestoreDescriptors(viewer, &num_descriptors, &names, &descriptors));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -92,13 +87,7 @@ static PetscErrorCode TestReadDescriptorsEmpty(PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscViewerCGNSGetDescriptors(viewer, &num_descriptors, &names, &descriptors));
   PetscCheck(num_descriptors == 0, PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Descriptors should be empty, found %" PetscInt_FMT, num_descriptors);
-
-  for (PetscInt i = 0; i < num_descriptors; i++) {
-    PetscCall(PetscFree(descriptors[i]));
-    PetscCall(PetscFree(names[i]));
-  }
-  PetscCall(PetscFree(descriptors));
-  PetscCall(PetscFree(names));
+  PetscCall(PetscViewerCGNSRestoreDescriptors(viewer, &num_descriptors, &names, &descriptors));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
