@@ -5,7 +5,6 @@
 
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
-#include <petsc/private/vecimpl.h>
 #include <petscdevice_cuda.h>
 #include <cudss.h>
 
@@ -82,7 +81,7 @@ static const char *const MatcuDSSPivotTypes[] = {"col", "row", "none"};
 /* Forward declarations */
 static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
 static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
-static PetscErrorCode MatcuDSSSetFromOptions(Mat);
+static PetscErrorCode MatSetFromOptions_cuDSS(Mat);
 static PetscErrorCode MatFactorSymbolic_cuDSS(Mat, Mat, cudssMatrixType_t, cudssMatrixViewType_t);
 
 static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
@@ -138,7 +137,7 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatcuDSSSetFromOptions(Mat F)
+static PetscErrorCode MatSetFromOptions_cuDSS(Mat F)
 {
   Mat_cuDSS *lu         = (Mat_cuDSS *)F->data;
   PetscInt   reorderAlg = (PetscInt)lu->reorderAlg, pivotType = (PetscInt)lu->pivotType, irNSteps = (PetscInt)lu->irNSteps;
@@ -166,7 +165,7 @@ static PetscErrorCode MatcuDSSSetFromOptions(Mat F)
 /*
    Helper: apply cuDSS config options from the Mat_cuDSS struct to the cudssConfig_t object.
 */
-static PetscErrorCode MatcuDSSApplyConfig(Mat_cuDSS *lu)
+static PetscErrorCode MatApplyConfig_cuDSS(Mat_cuDSS *lu)
 {
   PetscFunctionBegin;
   PetscCallCUDSS(cudssConfigSet, lu->config, CUDSS_CONFIG_REORDERING_ALG, &lu->reorderAlg, sizeof(lu->reorderAlg));
@@ -184,9 +183,10 @@ static PetscErrorCode MatcuDSSApplyConfig(Mat_cuDSS *lu)
    For MATSEQAIJ: copy host arrays to lu->d_row_offsets/d_col_indices/d_values.
    Returns device pointers in d_row, d_col, d_val (not owned by caller).
 */
-static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, PetscInt **d_row, PetscInt **d_col, PetscScalar **d_val)
+static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, PetscInt **d_row, PetscInt **d_col, PetscScalar **d_val)
 {
-  PetscBool isCUSPARSE;
+  PetscBool    isCUSPARSE;
+  cudaStream_t stream;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJCUSPARSE, &isCUSPARSE));
@@ -202,11 +202,12 @@ static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, PetscInt **d_
       *d_val                                       = (PetscScalar *)thrust::raw_pointer_cast(csr->values->data());
     }
   } else {
-    /* MATSEQAIJ: copy host CSR to device */
+    /* MATSEQAIJ: async copy host CSR to device on the cuDSS stream */
     Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
-    PetscCallCUDA(cudaMemcpy(lu->d_row_offsets, a->i, (lu->n + 1) * sizeof(PetscInt), cudaMemcpyHostToDevice));
-    PetscCallCUDA(cudaMemcpy(lu->d_col_indices, a->j, lu->nnz * sizeof(PetscInt), cudaMemcpyHostToDevice));
-    PetscCallCUDA(cudaMemcpy(lu->d_values, a->a, lu->nnz * sizeof(PetscScalar), cudaMemcpyHostToDevice));
+    PetscCall(PetscGetCurrentCUDAStream(&stream));
+    PetscCallCUDA(cudaMemcpyAsync(lu->d_row_offsets, a->i, (lu->n + 1) * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
+    PetscCallCUDA(cudaMemcpyAsync(lu->d_col_indices, a->j, lu->nnz * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
+    PetscCallCUDA(cudaMemcpyAsync(lu->d_values, a->a, lu->nnz * sizeof(PetscScalar), cudaMemcpyHostToDevice, stream));
     *d_row = lu->d_row_offsets;
     *d_col = lu->d_col_indices;
     *d_val = lu->d_values;
@@ -271,16 +272,18 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   n   = A->cmap->n;
   nnz = a->nz;
 
+  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "cuDSS requires a square matrix, got %" PetscInt_FMT "x%" PetscInt_FMT, m, n);
+
   lu->n   = n;
   lu->nnz = nnz;
 
-  PetscCall(MatcuDSSSetFromOptions(F));
+  PetscCall(MatSetFromOptions_cuDSS(F));
 
   /* Initialize cuDSS handle, config, data */
   PetscCallCUDSS(cudssCreate, &lu->handle);
   PetscCallCUDSS(cudssConfigCreate, &lu->config);
   PetscCallCUDSS(cudssDataCreate, lu->handle, &lu->data);
-  PetscCall(MatcuDSSApplyConfig(lu));
+  PetscCall(MatApplyConfig_cuDSS(lu));
 
   /* Determine if input is CUSPARSE; allocate device CSR if needed */
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJCUSPARSE, &isCUSPARSE));
@@ -296,7 +299,7 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscCallCUDSS(cudssSetStream, lu->handle, stream);
 
   /* Ensure CSR data is on device and create sparse matrix descriptor */
-  PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
+  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
   PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
 
   /* Allocate scratch device buffers and create dense RHS/solution descriptors */
@@ -313,6 +316,8 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
 static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
+  /* cuDSS performs its own internal reordering; any PETSc-supplied row/column permutations are ignored */
+  if (r || c) PetscCall(PetscInfo(F, "cuDSS ignores user-supplied row/column permutations; cuDSS will apply its own reordering\n"));
   PetscCall(MatFactorSymbolic_cuDSS(F, A, CUDSS_MTYPE_GENERAL, CUDSS_MVIEW_FULL));
   F->ops->lufactornumeric = MatLUFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -323,6 +328,8 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   cudssMatrixType_t mtype;
 
   PetscFunctionBegin;
+  /* cuDSS performs its own internal reordering; any PETSc-supplied permutation is ignored */
+  if (perm) PetscCall(PetscInfo(F, "cuDSS ignores user-supplied permutation; cuDSS will apply its own reordering\n"));
 #if defined(PETSC_USE_COMPLEX)
   if (A->spd == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HPD;
   else if (A->hermitian == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HERMITIAN;
@@ -360,33 +367,35 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   PetscScalar       *xarray;
   PetscInt           n, nrhs, ldb, ldx;
   cudssMatrix_t      cudss_B = NULL, cudss_X = NULL;
-  Mat                Bcuda   = NULL;
+  Mat                Bcuda = NULL, Xcuda = NULL;
   PetscBool          BisCUDA = PETSC_FALSE, XisCUDA = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompareAny((PetscObject)B, &BisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &XisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
   /* Convert B to a temporary CUDA matrix to avoid mutating the caller's matrix */
-  if (!BisCUDA) {
-    PetscCall(MatConvert(B, MATDENSECUDA, MAT_INITIAL_MATRIX, &Bcuda));
-  } else {
-    Bcuda = B;
-  }
-  if (!XisCUDA) PetscCall(MatConvert(X, MATDENSECUDA, MAT_INPLACE_MATRIX, &X));
+  if (!BisCUDA) PetscCall(MatConvert(B, MATDENSECUDA, MAT_INITIAL_MATRIX, &Bcuda));
+  else Bcuda = B;
+  /* Convert X to a temporary CUDA matrix to avoid mutating the caller's matrix type */
+  if (!XisCUDA) PetscCall(MatConvert(X, MATDENSECUDA, MAT_INITIAL_MATRIX, &Xcuda));
+  else Xcuda = X;
   PetscCall(MatGetSize(Bcuda, &n, &nrhs));
   PetscCall(MatDenseGetLDA(Bcuda, &ldb));
-  PetscCall(MatDenseGetLDA(X, &ldx));
+  PetscCall(MatDenseGetLDA(Xcuda, &ldx));
   PetscCall(MatDenseCUDAGetArrayRead(Bcuda, &barray));
-  PetscCall(MatDenseCUDAGetArrayWrite(X, &xarray));
+  PetscCall(MatDenseCUDAGetArrayWrite(Xcuda, &xarray));
   PetscCallCUDSS(cudssMatrixCreateDn, &cudss_B, n, nrhs, ldb, (void *)barray, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
   PetscCallCUDSS(cudssMatrixCreateDn, &cudss_X, n, nrhs, ldx, xarray, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_SOLVE, lu->config, lu->data, lu->cudss_A, cudss_X, cudss_B);
   PetscCallCUDSS(cudssMatrixDestroy, cudss_B);
   PetscCallCUDSS(cudssMatrixDestroy, cudss_X);
   PetscCall(MatDenseCUDARestoreArrayRead(Bcuda, &barray));
-  PetscCall(MatDenseCUDARestoreArrayWrite(X, &xarray));
+  PetscCall(MatDenseCUDARestoreArrayWrite(Xcuda, &xarray));
   if (!BisCUDA) PetscCall(MatDestroy(&Bcuda));
-  if (!XisCUDA) PetscCall(MatConvert(X, MATDENSE, MAT_INPLACE_MATRIX, &X));
+  if (!XisCUDA) {
+    PetscCall(MatCopy(Xcuda, X, SAME_NONZERO_PATTERN));
+    PetscCall(MatDestroy(&Xcuda));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -398,7 +407,7 @@ static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo
 
   PetscFunctionBegin;
   /* Refresh device CSR values (structure unchanged, values may have changed) */
-  PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
+  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
 
   /* Update the values pointer in the cuDSS matrix descriptor */
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
@@ -419,7 +428,7 @@ static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat F, Mat A, const MatFact
   PetscScalar *d_val = NULL;
 
   PetscFunctionBegin;
-  PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
+  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_FACTORIZATION, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
 
@@ -460,6 +469,16 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
 
   Note:
     `MatSolveTranspose()` is not supported.
+
+    cuDSS performs its own internal reordering during the symbolic phase. Any PETSc-supplied
+    row, column, or Cholesky permutation (`IS r`, `IS c`, `IS perm`) passed to
+    `MatLUFactorSymbolic()` or `MatCholeskyFactorSymbolic()` is silently ignored; cuDSS
+    selects the reordering algorithm via `-mat_cudss_reorder_alg`.
+
+    `MatSolve()` requires CUDA-aware vectors (`VECCUDA` / `VECSEQCUDA`). Using plain host
+    `VECSEQ` vectors with this solver will result in an error. When the input matrix is
+    `MATSEQAIJ`, ensure that the right-hand-side and solution vectors are of type
+    `VECCUDA` (e.g., created with `VecSetType(v, VECCUDA)`).
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`
 M*/
