@@ -68,6 +68,9 @@
 
 ## TS
 
+- Add `DMTSSetIFunctionPre()`
+- Add argument to `TSDiscGradSetImplicitFormulation()`
+- Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 
 ## TAO
 

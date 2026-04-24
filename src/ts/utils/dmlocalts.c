@@ -1,12 +1,13 @@
-#include <petsc/private/dmimpl.h>
 #include <petsc/private/tsimpl.h> /*I "petscts.h" I*/
 
 typedef struct {
   PetscErrorCode (*boundarylocal)(DM, PetscReal, Vec, Vec, void *);
+  PetscErrorCode (*ifunctionpre)(DM, PetscReal, Vec, Vec, void *);
   PetscErrorCode (*ifunctionlocal)(DM, PetscReal, Vec, Vec, Vec, void *);
   PetscErrorCode (*ijacobianlocal)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *);
   PetscErrorCode (*rhsfunctionlocal)(DM, PetscReal, Vec, Vec, void *);
   void *boundarylocalctx;
+  void *ifunctionprectx;
   void *ifunctionlocalctx;
   void *ijacobianlocalctx;
   void *rhsfunctionlocalctx;
@@ -61,6 +62,7 @@ static PetscErrorCode TSComputeIFunction_DMLocal(TS ts, PetscReal time, Vec X, V
   PetscCall(DMGetLocalVector(dm, &locF));
   PetscCall(VecZeroEntries(locX));
   PetscCall(VecZeroEntries(locX_t));
+  if (dmlocalts->ifunctionpre) PetscCall((*dmlocalts->ifunctionpre)(dm, time, X, X_t, dmlocalts->ifunctionprectx));
   if (dmlocalts->boundarylocal) PetscCall((*dmlocalts->boundarylocal)(dm, time, locX, locX_t, dmlocalts->boundarylocalctx));
   PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, locX));
   PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, locX));
@@ -232,6 +234,45 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscRe
 
   dmlocalts->boundarylocal    = func;
   dmlocalts->boundarylocalctx = ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMTSSetIFunctionPre - set the pre-evaluation hook for a local implicit function evaluation. This is called before each IFunction() evaluation.
+
+  Logically Collective
+
+  Input Parameters:
++ dm   - `DM` to associate callback with
+. func - function evaluation
+- ctx  - context for function evaluation
+
+Calling sequence of `func`:
++ dm   - the `DM`
+. time - the current time
+. u    - the solution
+. u_t  - the time derivative
+- ctx  - the user context
+
+  Level: intermediate
+
+  Notes:
+  `func` should perform setup for the implicit function evaluation such as computing auxiliary data using a subsolve
+
+.seealso: [](ch_ts), `DM`, `TS`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
+@*/
+PetscErrorCode DMTSSetIFunctionPre(DM dm, PetscErrorCode (*func)(DM, PetscReal, Vec, Vec, void *), void *ctx)
+{
+  DMTS        tdm;
+  DMTS_Local *dmlocalts;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMTSWrite(dm, &tdm));
+  PetscCall(DMLocalTSGetContext(dm, tdm, &dmlocalts));
+
+  dmlocalts->ifunctionpre    = func;
+  dmlocalts->ifunctionprectx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
