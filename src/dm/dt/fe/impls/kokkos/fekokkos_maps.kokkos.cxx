@@ -46,7 +46,7 @@
 PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 {
   PetscSection section, globalSection;
-  PetscInt     cStart, cEnd, Ne, Nb, totDim, num_dof;
+  PetscInt     cStart, cEnd, Ne, Nb, Nc, totDim, num_dof;
   PetscDS      ds;
   PetscFE      fe;
   PetscInt     dim;
@@ -81,7 +81,6 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
     PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscFEKokkosCreateMaps supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
   }
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
-  PetscInt Nc;
   {
     PetscTabulation *T;
     PetscCall(PetscDSGetTabulation(ds, &T));
@@ -147,8 +146,9 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
        * so this value is unused in the COO scatter. */
       maps->num_face = Nb;
     }
-    /* Clamp to PETSCFE_KOKKOS_MAX_FACE */
-    if (maps->num_face > PETSCFE_KOKKOS_MAX_FACE) maps->num_face = PETSCFE_KOKKOS_MAX_FACE;
+    /* Error if num_face exceeds the compile-time stack array limit */
+    PetscCheck(maps->num_face <= PETSCFE_KOKKOS_MAX_FACE, PETSC_COMM_SELF, PETSC_ERR_SUP, "num_face %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_FACE %d; recompile with -DPETSCFE_KOKKOS_MAX_FACE=%d or reduce polynomial degree", maps->num_face, PETSCFE_KOKKOS_MAX_FACE,
+               (int)maps->num_face);
     if (maps->num_face < 1) maps->num_face = 1;
   }
 
@@ -227,6 +227,8 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
        * but the DOF itself is a hanging node, not Dirichlet.
        */
       PetscBool found = PETSC_FALSE;
+      /* NOTE: f is intentionally advanced inside the constraint branch (do-while)
+       * to skip past expanded constraint entries in the returned element matrix. */
       for (PetscInt f = 0; f < numIndices && !found; ++f) {
         const PetscReal diag = PetscRealPart(elMat[f * numIndices + f]);
         if (PetscAbs(diag) > PETSC_MACHINE_EPSILON) {

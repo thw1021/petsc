@@ -13,6 +13,14 @@
   #include <petscdmplex.h>
   #include <Kokkos_Core.hpp>
 
+/* Helper: detect whether the Kokkos default execution space is a GPU backend.
+   Serial/OpenMP report concurrency < 1000; CUDA/HIP/SYCL report >> 1000.
+   Centralizes the heuristic so it is documented and maintained in one place. */
+static inline int PetscFEKokkosOnGPU(void)
+{
+  return !!(Kokkos::DefaultExecutionSpace().concurrency() >= 1000);
+}
+
 /* Helper: compile-time check whether a function-pointer template parameter is non-null.
    Using (FnPtr != nullptr) triggers GCC -Waddress; using !!FnPtr triggers clang
    -Wnull-conversion.  Specializations for the concrete PetscPointFn* and
@@ -82,6 +90,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
   const PetscInt e = team.league_rank();
 
   /* Constant offset arrays for single-field, no-aux case */
+  const PetscInt Nf_local    = 1;
   const PetscInt uOff_l[1]   = {0};
   const PetscInt uOff_x_l[1] = {0};
 
@@ -183,7 +192,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     constexpr bool has_F0 = PetscPointFnNonNull<F0>::value;
     if constexpr (has_F0) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
-      F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
+      F0(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
       /* Accumulate into elemVec via atomic_add: multiple threads (one per q)
          may write to the same ev_e[b] concurrently.
          Phase 2: val_e[b] += B_q[bc] * f0_s[q*Nc+c] */
@@ -195,7 +204,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     constexpr bool has_F1 = PetscPointFnNonNull<F1>::value;
     if constexpr (has_F1) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
-      F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
+      F1(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
       /* Accumulate: ev_e[b] += all_grad[b_s,d] * f1[c_b,d] * wq  (Opt #3: reuse precomputed grad)
          phys_grad(b,c,d) = all_grad[(b/Nc)*dE+d]  (nonzero only for c == b%Nc)
          Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
@@ -228,6 +237,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
   /* Element index extracted from team league rank */
   const PetscInt e = team.league_rank();
 
+  const PetscInt Nf_local    = 1;
   const PetscInt uOff_l[1]   = {0};
   const PetscInt uOff_x_l[1] = {0};
 
@@ -304,19 +314,19 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     constexpr bool has_G3 = PetscPointJacFnNonNull<G3>::value;
     if constexpr (has_G0) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
-      G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
+      G0(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
     }
     if constexpr (has_G1) {
       for (PetscInt i = 0; i < Nc * Nc * dE; ++i) g1_loc[i] = 0.0;
-      G1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
+      G1(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
     }
     if constexpr (has_G2) {
       for (PetscInt i = 0; i < Nc * dE * Nc; ++i) g2_loc[i] = 0.0;
-      G2(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
+      G2(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
     }
     if constexpr (has_G3) {
       for (PetscInt i = 0; i < Nc * dE * Nc * dE; ++i) g3_loc[i] = 0.0;
-      G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
+      G3(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
 
     /* Precompute physical gradients for all scalar basis functions.
@@ -626,8 +636,7 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   const PetscBool isAffine_res = cgeom->isAffine;
   {
     using tmpl_team_policy_t = Kokkos::TeamPolicy<>;
-    const int tmpl_conc      = Kokkos::DefaultExecutionSpace().concurrency();
-    const int tmpl_on_gpu    = !!(tmpl_conc >= 1000);
+    const int tmpl_on_gpu    = PetscFEKokkosOnGPU();
     const int tmpl_team_size = tmpl_on_gpu ? Nq_ : 1;
     if (isAffine_res)
       Kokkos::parallel_for(
@@ -805,8 +814,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   const PetscBool isAffine_jac = cgeom->isAffine;
   {
     using tmpl_jac_policy_t      = Kokkos::TeamPolicy<>;
-    const int tmpl_jac_conc      = Kokkos::DefaultExecutionSpace().concurrency();
-    const int tmpl_jac_on_gpu    = !!(tmpl_jac_conc >= 1000);
+    const int tmpl_jac_on_gpu    = PetscFEKokkosOnGPU();
     const int tmpl_jac_team_size = tmpl_jac_on_gpu ? Nq_ : 1;
     if (isAffine_jac)
       Kokkos::parallel_for(
@@ -1123,7 +1131,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   const PetscInt  dim_    = dim;
   const PetscInt  dE_     = dE;
   const PetscInt  totDim_ = totDim;
-  const PetscReal t_      = 0.0; /* SNES is steady-state; TS path would pass actual time */
+  const PetscReal t_      = 0.0; /* TODO: pass actual time for TS support */
 
   /* TeamPolicy: one team per element.  On GPU backends, the team size
    * provides hardware threads that can be used for intra-element parallelism
@@ -1132,13 +1140,11 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    * RangePolicy but sets up the infrastructure for TeamThreadRange over
    * quadrature points in a subsequent optimization pass.
    *
-   * conc trick: Serial/OpenMP have concurrency < 1000, GPU >> 1000.
    * team_size = Nq_ on GPU (one thread per quadrature point),
    * team_size = 1   on Serial/OpenMP (avoids Serial team_size > 1 error). */
   using team_policy_t     = Kokkos::TeamPolicy<>;
   using member_type       = team_policy_t::member_type;
-  const int res_conc      = Kokkos::DefaultExecutionSpace().concurrency();
-  const int res_on_gpu    = !!(res_conc >= 1000);
+  const int res_on_gpu    = PetscFEKokkosOnGPU();
   const int res_team_size = res_on_gpu ? Nq_ : 1;
 
   PetscScalar *F_dev = PetscMemTypeDevice(locF_memtype) ? d_F_unmanaged.data() : d_F.data();
@@ -1362,13 +1368,12 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   const PetscInt  dim_      = dim;
   const PetscInt  dE_       = dE;
   const PetscInt  totDim_   = totDim;
-  const PetscReal t_        = 0.0; /* SNES is steady-state; TS path would pass actual time */
-  const PetscReal u_tShift_ = 0.0; /* SNES is steady-state; TS path would pass actual shift */
+  const PetscReal t_        = 0.0; /* TODO: pass actual time for TS support */
+  const PetscReal u_tShift_ = 0.0; /* TODO: pass actual shift for TS support */
 
   using team_policy_t     = Kokkos::TeamPolicy<>;
   using member_type       = team_policy_t::member_type;
-  const int jac_conc      = Kokkos::DefaultExecutionSpace().concurrency();
-  const int jac_on_gpu    = !!(jac_conc >= 1000);
+  const int jac_on_gpu    = PetscFEKokkosOnGPU();
   const int jac_team_size = jac_on_gpu ? Nq_ : 1;
 
   /* Pass 1: integrate Jacobian for all elements into d_elemMat.
