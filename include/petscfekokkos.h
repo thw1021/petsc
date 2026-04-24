@@ -855,7 +855,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
 typedef PetscInt PetscFEKokkosIdx;
 
   #if !defined(PETSCFE_KOKKOS_MAX_FACE)
-    #define PETSCFE_KOKKOS_MAX_FACE 8
+    #define PETSCFE_KOKKOS_MAX_FACE 16
   #endif
 
 /*S
