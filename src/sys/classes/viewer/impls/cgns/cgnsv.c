@@ -52,18 +52,15 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (cgv->num_descriptors > 0) {
-    int       cgns_ier;
-    PetscBool has_base = PETSC_TRUE;
+    int cgns_ier;
 
     cgns_ier = cg_goto(cgv->file_num, cgv->base, NULL);
-    if (cgns_ier == CG_NODE_NOT_FOUND) {
-      has_base = PETSC_FALSE;
-    } else PetscCallCGNS(cgns_ier);
-    if (has_base) {
+    if (cgns_ier == CG_OK) {
       for (PetscInt i = 0; i < cgv->num_descriptors; i++) {
         PetscCallCGNSWrite(cg_descriptor_write(cgv->descriptor_names[i], cgv->descriptor_values[i]), viewer, 0);
       }
-    }
+      // Don't throw error if base isn't written to file
+    } else if (cgns_ier != CG_NODE_NOT_FOUND) PetscCallCGNS(cgns_ier);
   }
 
   if (cgv->output_times) {
@@ -640,8 +637,7 @@ PetscErrorCode PetscViewerCGNSGetDescriptors(PetscViewer viewer, PetscInt *num_d
   PetscCallCGNSRead(cg_ndescriptors(&ndesc), viewer, 0);
   *num_descriptors = ndesc;
 
-  PetscCall(PetscCalloc1(ndesc, values));
-  PetscCall(PetscCalloc1(ndesc, names));
+  PetscCall(PetscCalloc2(ndesc, values, ndesc, names));
 
   for (PetscInt i = 1; i <= ndesc; i++) {
     char  namebuf[PETSC_MAX_OPTION_NAME] = {0};
@@ -685,8 +681,7 @@ PetscErrorCode PetscViewerCGNSRestoreDescriptors(PetscViewer viewer, PetscInt *n
     PetscCall(PetscFree((*values)[i]));
     PetscCall(PetscFree((*names)[i]));
   }
-  PetscCall(PetscFree(*values));
-  PetscCall(PetscFree(*names));
+  PetscCall(PetscFree2(*values, *names));
   *num_descriptors = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
