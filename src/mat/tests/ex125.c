@@ -315,6 +315,23 @@ int main(int argc, char **args)
     ipack                    = 4;
     goto skipoptions;
   }
+  #if defined(PETSC_HAVE_CUDSS)
+  PetscCall(PetscStrcmp(MATSOLVERCUDSS, pack, &match));
+  if (match) {
+    if (chol) {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " cuDSS CHOLESKY:\n"));
+      PetscCall(MatGetFactor(A, MATSOLVERCUDSS, MAT_FACTOR_CHOLESKY, &F));
+    } else {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " cuDSS LU:\n"));
+      PetscCall(MatGetFactor(A, MATSOLVERCUDSS, MAT_FACTOR_LU, &F));
+    }
+    matsolvexx               = PETSC_FALSE; /* cuDSS MatMatSolve does not support B==X (in-place solve) */
+    testMatSolveTranspose    = PETSC_FALSE; /* cuDSS does not support MatSolveTranspose */
+    testMatMatSolveTranspose = PETSC_FALSE;
+    ipack                    = 6;
+    goto skipoptions;
+  }
+  #endif
 #endif
   /* PETSc */
   match = PETSC_TRUE;
@@ -740,6 +757,11 @@ skipoptions:
       suffix: cusparse_2
       requires: cuda
       args: -mat_type aijcusparse -mat_solver_type cusparse -cholesky {{0 1}separate output}
+
+   test:
+      suffix: cudss
+      requires: cuda cudss
+      args: -mat_type aijcusparse -mat_solver_type cudss -cholesky 0
 
    testset:
       nsize: {{1 2}separate output}
