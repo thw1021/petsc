@@ -213,8 +213,8 @@ int main(int argc, char **argv)
   else {
     PetscCall(PetscPrintf(comm, "%" PetscInt_FMT ") N=%12" PetscInt_FMT ", max displ=%9.7e\n", (PetscInt)0, sizes[0], (double)mdisp[0]));
     for (iter = 1; iter < max_conv_its; iter++) {
-      PetscReal rate = PetscLogReal(PetscAbs(mdisp[iter - 1] - mdisp[iter]) / PetscAbs(mdisp[iter] - mdisp[PetscMin(iter + 1, max_conv_its - 1)]));
-      if (iter + 1 < max_conv_its) rate /= PetscLogReal(2.0);
+      PetscReal rate;
+      if (iter + 1 < max_conv_its) rate = PetscLogReal(PetscAbs(mdisp[iter - 1] - mdisp[iter]) / PetscAbs(mdisp[iter] - mdisp[iter + 1])) / PetscLogReal(2.0);
       else rate = 0.0; /* no rate for last level */
       PetscCall(PetscPrintf(comm, "%" PetscInt_FMT ") N=%12" PetscInt_FMT ", max displ=%9.7e, disp diff=%9.2e, rate=%3.2g\n", iter, sizes[iter], (double)mdisp[iter], (double)(mdisp[iter] - mdisp[iter - 1]), (double)rate));
     }
