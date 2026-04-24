@@ -35,33 +35,33 @@ static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
 }
 
 typedef struct {
-  // Tabulation device Views, re-staged when Nq changes
+  /* Tabulation device Views, re-staged when Nq changes */
   Kokkos::View<PetscReal *> d_B;
   Kokkos::View<PetscReal *> d_D;
   Kokkos::View<PetscReal *> d_w;
-  // Host mirrors of tabulation
+  /* Host mirrors of tabulation */
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_B;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_D;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_w;
-  // Cached per-call device Views, reallocated when Ne or totDim changes
+  /* Cached per-call device Views, reallocated when Ne or totDim changes */
   Kokkos::View<PetscReal *>                      d_invJ;
   Kokkos::View<PetscScalar *>                    d_elemVec;
   Kokkos::View<PetscScalar *>                    d_f0_scr;
   Kokkos::View<PetscScalar *>                    d_f1_scr;
   Kokkos::View<PetscScalar *>                    d_val;
   Kokkos::View<PetscScalar *, Kokkos::HostSpace> h_elemVec;
-  // Host scratch: h_f0_buf and h_f1_buf share one contiguous block
+  /* Host scratch: h_f0_buf and h_f1_buf share one contiguous block */
   PetscScalar *h_f0_buf;
   PetscScalar *h_f1_buf;
-  PetscReal   *h_invJ_buf; // expanded invJ [Ne * Nq * dE * dE]
-  PetscScalar *h_u_buf;    // field values at one qp [Nc]
-  PetscScalar *h_ux_buf;   // field gradients at one qp [Nc * dim]
+  PetscReal   *h_invJ_buf; /* expanded invJ [Ne * Nq * dE * dE] */
+  PetscScalar *h_u_buf;    /* field values at one qp [Nc] */
+  PetscScalar *h_ux_buf;   /* field gradients at one qp [Nc * dim] */
   PetscInt     Ne_alloc;
   PetscInt     Nq_alloc;
   PetscInt     totDim_alloc;
-  PetscInt     Nb;  // total DOFs per element
-  PetscInt     Nc;  // field components
-  PetscInt     dim; // spatial dimension
+  PetscInt     Nb;  /* total DOFs per element */
+  PetscInt     Nc;  /* field components */
+  PetscInt     dim; /* spatial dimension */
   PetscBool    setup_done;
 } PetscFE_Kokkos;
 
@@ -628,8 +628,14 @@ static PetscErrorCode PetscFEInitialize_Kokkos(PetscFE fem)
   using Kokkos::parallel_for over cells (TeamPolicy).
 
   The Jacobian integration falls back to the Basic (CPU) implementation.
-  User residual callbacks (f0, f1) must be KOKKOS_INLINE_FUNCTION.
   Auxiliary fields (dsAux) are not supported; falls back to Basic if present.
+
+  Notes:
+  When using the GPU-resident template path (`DMPlexSNESComputeResidualFEM_Kokkos`
+  and `DMPlexSNESComputeJacobianFEM_Kokkos`), user residual and Jacobian callbacks
+  must be declared `KOKKOS_INLINE_FUNCTION` so they can be inlined into device kernels.
+  The fallback `PetscFEOps` path (`PetscFEIntegrateResidual_Kokkos`) calls callbacks as
+  host function pointers and does not require `KOKKOS_INLINE_FUNCTION`.
 
   Level: intermediate
 
