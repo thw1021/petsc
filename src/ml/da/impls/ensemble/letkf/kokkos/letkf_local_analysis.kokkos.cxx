@@ -2,11 +2,6 @@
 #include <petscblaslapack.h>
 #include <Kokkos_Core.hpp>
 #include <KokkosBlas.hpp>
-#include <KokkosBatched_SVD_Decl.hpp>
-#include <KokkosBatched_SVD_Serial_Impl.hpp>
-#include <KokkosBatched_Gemm_Decl.hpp>
-#include <KokkosBatched_Gemm_Serial_Impl.hpp>
-#include <KokkosBatched_Util.hpp>
 
 #if defined(KOKKOS_ENABLE_CUDA)
   #include <cusolverDn.h>
