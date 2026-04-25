@@ -744,6 +744,16 @@ int main(int argc, char **argv)
       suffix: kokkos_batch_tfqmr
       requires: kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG)
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
+    test:
+      suffix: kokkos_batch_gmres_amg
+      requires: kokkos_kernels !complex
+      output_file: output/ex2_kokkos_batch_gmres_amg.out
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type gmres -pc_bjkokkos_pc_type amg
+    test:
+      suffix: kokkos_batch_tfqmr_amg
+      requires: kokkos_kernels
+      output_file: output/ex2_kokkos_batch_tfqmr_amg.out
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type amg
 
   test:
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
@@ -767,11 +777,19 @@ int main(int argc, char **argv)
       requires: kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG) !sycl
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
 
-  test:
+  testset:
     requires: double !defined(PETSC_USE_DMLANDAU_2D)
-    suffix: sphere_3d
     nsize: 1
-    args: -dim 3 -dm_landau_thermal_temps 2 -ts_type beuler -ts_time_step .1 -ts_max_steps 1 -dm_landau_verbose 2 -ksp_type preonly -pc_type lu -dm_landau_device_type cpu -snes_rtol 1.e-14 -snes_stol 1.e-14 -snes_converged_reason \
-     -dm_landau_sphere -ex2_grid_view_idx 0 -ex2_dm_view -dm_landau_domain_radius 6 -dm_landau_sphere_inner_radius_90degree_scale .35 -petscspace_degree 3 -dm_refine 0 # -ex2_dm_view hdf5:my.hdf5:hdf5_viz -ex2_vec_view hdf5:my.hdf5:hdf5_viz:append
+    args: -dim 3 -dm_landau_thermal_temps 2 -ts_type beuler -ts_time_step .1 -ts_max_steps 1 -dm_landau_verbose 2 -snes_rtol 1.e-14 -snes_stol 1.e-14 -snes_converged_reason \
+     -dm_landau_sphere -ex2_grid_view_idx 0 -ex2_dm_view -dm_landau_domain_radius 6 -dm_landau_sphere_inner_radius_90degree_scale .35 -petscspace_degree 3 -dm_refine 0
+    test:
+      suffix: sphere_3d
+      output_file: output/ex2_sphere_3d.out
+      args: -ksp_type preonly -pc_type lu -dm_landau_device_type cpu
+    test:
+      suffix: sphere_3d_kokkos_tfqmr_amg
+      requires: kokkos_kernels
+      output_file: output/ex2_sphere_3d_kokkos_tfqmr_amg.out
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type amg
 
 TEST*/

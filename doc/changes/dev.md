@@ -56,6 +56,11 @@
 
 ## PC
 
+- Add native batched GMRES Krylov solver to `PCBJKOKKOS` (`-pc_bjkokkos_ksp_type gmres`), with both Jacobi and AMG preconditioning variants
+- Add native batched AMG (algebraic multigrid) preconditioner to `PCBJKOKKOS` (`-pc_bjkokkos_pc_type amg`) using classical Ruge-Stüben coarsening with l1-Jacobi smoothing; supports BICG, TFQMR, and GMRES Krylov solvers
+- Change `PCBJKOKKOS` `-pc_bjkokkos_ksp_batch_target -1` to mean "print all batches" instead of raising an error; previously only non-negative values were accepted
+- Fix `PCBJKOKKOS` batch solvers reporting `KSP_CONVERGED_ITS` (converged) when max iterations exhausted without convergence; now correctly reports `KSP_DIVERGED_ITS`
+- Fix `PCBJKOKKOS` batch solvers using `KSP_CONVERGED_RTOL_NORMAL_EQUATIONS` for plain relative-residual convergence; now correctly uses `KSP_CONVERGED_RTOL`
 
 ## KSP
 
