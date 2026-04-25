@@ -133,17 +133,17 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscBool use_kokkos_maps, Pets
 
 int main(int argc, char **argv)
 {
-  DM                dm;
-  SNES              snes;
-  Vec               u;
-  Mat               J;
-  PetscReal         mdisp[8];
-  PetscInt          sizes[8];
-  PetscFEKokkosMaps maps;
-  PetscBool         use_kokkos_maps = PETSC_TRUE;
-  PetscInt          max_conv_its    = 1, iter;
-  PetscReal         mu = 0.4, lambda = 0.4;
-  MPI_Comm          comm;
+  DM                 dm;
+  SNES               snes;
+  Vec                u;
+  Mat                J;
+  PetscReal          mdisp[8];
+  PetscInt           sizes[8];
+  PetscFEKokkosMaps *maps            = NULL;
+  PetscBool          use_kokkos_maps = PETSC_TRUE;
+  PetscInt           max_conv_its    = 1, iter;
+  PetscReal          mu = 0.4, lambda = 0.4;
+  MPI_Comm           comm;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -169,11 +169,12 @@ int main(int argc, char **argv)
       /* GPU-resident template path.
          PetscFEKokkosPreallocateCOO requires MATAIJKOKKOS: pass -dm_mat_type aijkokkos
          and -dm_vec_type kokkos on the command line (or set them in the options file). */
-      PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_elast, f1_elast>, &maps));
+      PetscCall(PetscNew(&maps));
+      PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_elast, f1_elast>, maps));
       PetscCall(SNESSetFromOptions(snes));
       PetscCall(DMCreateMatrix(dm, &J));
-      PetscCall(PetscFEKokkosSetUp(dm, &maps, J));
-      PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_elast, true>), &maps));
+      PetscCall(PetscFEKokkosSetUp(dm, maps, J));
+      PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_elast, true>), maps));
       PetscCall(MatDestroy(&J));
     } else {
       /* Fallback path: standard PETSc FEM assembly via PetscFEOps */
