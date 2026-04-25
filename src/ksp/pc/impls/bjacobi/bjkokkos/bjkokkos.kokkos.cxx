@@ -1652,7 +1652,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         PetscCall(MatGetOrdering(Aseq, rtype, &isrow, &isicol)); // only seems to work for seq matrix
         PetscCall(ISDestroy(&isrow));
         PetscCall(ISInvertPermutation(isicol, PETSC_DECIDE, &isrow)); // THIS IS BACKWARD -- isrow is inverse
-        PetscCall(ISGetIndices(isrow, &rowindices)); // local idx
+        PetscCall(ISGetIndices(isrow, &rowindices));                  // local idx
         PetscCall(ISGetIndices(isicol, &icolindices));
         const Kokkos::View<PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_isrow_k((PetscInt *)rowindices, A->rmap->n);
         const Kokkos::View<PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_isicol_k((PetscInt *)icolindices, A->rmap->n);
@@ -2352,8 +2352,7 @@ static PetscErrorCode PCView_BJKOKKOS(PC pc, PetscViewer viewer)
               PetscViewerASCIIPrintf(viewer, "        Coarsest: %" PetscInt_FMT " DOFs, %" PetscInt_FMT " nnz (avg %.1f nnz/row)\n", hier->nrows_coarsest, hier->Ac_coarsest_nnz, hier->nrows_coarsest > 0 ? (double)hier->Ac_coarsest_nnz / (double)hier->nrows_coarsest : 0.0));
           {
             const char *stype = (hier->smoother_type == BJKOKKOS_SMOOTH_L1_JACOBI) ? "L1-Jacobi (rowl1)" : "Jacobi (diagonal)";
-            PetscCall(
-              PetscViewerASCIIPrintf(viewer, "    Smoother: %s, omega=%.2f, pre=%" PetscInt_FMT ", post=%" PetscInt_FMT ", coarse=%" PetscInt_FMT "\n", stype, (double)hier->smoother_omega, hier->pre_sweeps, hier->post_sweeps, hier->coarse_sweeps));
+            PetscCall(PetscViewerASCIIPrintf(viewer, "    Smoother: %s, omega=%.2f, pre=%" PetscInt_FMT ", post=%" PetscInt_FMT ", coarse=%" PetscInt_FMT "\n", stype, (double)hier->smoother_omega, hier->pre_sweeps, hier->post_sweeps, hier->coarse_sweeps));
           }
           PetscCall(PetscViewerASCIIPrintf(viewer, "    Strong threshold: %g\n", (double)hier->strong_threshold));
         }
