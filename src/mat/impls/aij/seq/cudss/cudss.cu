@@ -348,12 +348,16 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
   Mat_cuDSS         *lu = (Mat_cuDSS *)F->data;
   const PetscScalar *barray;
   PetscScalar       *xarray;
+  cudaStream_t       stream;
 
   PetscFunctionBegin;
   PetscCall(VecCUDAGetArrayRead(b, &barray));
   PetscCall(VecCUDAGetArrayWrite(x, &xarray));
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_b, (void *)barray);
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_x, xarray);
+  /* Ensure cuDSS uses the current PETSc stream for solve */
+  PetscCall(PetscGetCurrentCUDAStream(&stream));
+  PetscCallCUDSS(cudssSetStream, lu->handle, stream);
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_SOLVE, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
   PetscCall(VecCUDARestoreArrayRead(b, &barray));
   PetscCall(VecCUDARestoreArrayWrite(x, &xarray));
@@ -369,6 +373,7 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   cudssMatrix_t      cudss_B = NULL, cudss_X = NULL;
   Mat                Bcuda = NULL, Xcuda = NULL;
   PetscBool          BisCUDA = PETSC_FALSE, XisCUDA = PETSC_FALSE;
+  cudaStream_t       stream;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompareAny((PetscObject)B, &BisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
@@ -386,6 +391,9 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   PetscCall(MatDenseCUDAGetArrayWrite(Xcuda, &xarray));
   PetscCallCUDSS(cudssMatrixCreateDn, &cudss_B, n, nrhs, ldb, (void *)barray, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
   PetscCallCUDSS(cudssMatrixCreateDn, &cudss_X, n, nrhs, ldx, xarray, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
+  /* Ensure cuDSS uses the current PETSc stream for solve */
+  PetscCall(PetscGetCurrentCUDAStream(&stream));
+  PetscCallCUDSS(cudssSetStream, lu->handle, stream);
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_SOLVE, lu->config, lu->data, lu->cudss_A, cudss_X, cudss_B);
   PetscCallCUDSS(cudssMatrixDestroy, cudss_B);
   PetscCallCUDSS(cudssMatrixDestroy, cudss_X);
@@ -404,6 +412,7 @@ static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo
   Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
   PetscInt    *d_row = NULL, *d_col = NULL;
   PetscScalar *d_val = NULL;
+  cudaStream_t stream;
 
   PetscFunctionBegin;
   /* Refresh device CSR values (structure unchanged, values may have changed) */
@@ -411,6 +420,10 @@ static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo
 
   /* Update the values pointer in the cuDSS matrix descriptor */
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
+
+  /* Ensure cuDSS uses the current PETSc stream for factorization */
+  PetscCall(PetscGetCurrentCUDAStream(&stream));
+  PetscCallCUDSS(cudssSetStream, lu->handle, stream);
 
   /* Numeric factorization */
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_FACTORIZATION, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
@@ -426,10 +439,14 @@ static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat F, Mat A, const MatFact
   Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
   PetscInt    *d_row = NULL, *d_col = NULL;
   PetscScalar *d_val = NULL;
+  cudaStream_t stream;
 
   PetscFunctionBegin;
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
+  /* Ensure cuDSS uses the current PETSc stream for factorization */
+  PetscCall(PetscGetCurrentCUDAStream(&stream));
+  PetscCallCUDSS(cudssSetStream, lu->handle, stream);
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_FACTORIZATION, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
 
   F->ops->solve    = MatSolve_cuDSS;
