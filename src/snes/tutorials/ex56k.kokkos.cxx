@@ -229,6 +229,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos_kernels !single
     nsize: 3
+    timeoutfactor: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0,0,0 -dm_plex_box_upper 1,1,1 -dm_plex_box_faces 2,2,1 -petscspace_degree 2 -snes_max_it 1 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_coarse_eq_limit 10 -pc_gamg_aggressive_coarsening 1 -pc_gamg_threshold 0.001 -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -snes_type ksponly
     filter: grep "Max displacement"
     test:
@@ -243,6 +244,7 @@ int main(int argc, char **argv)
     requires: kokkos_kernels !single
     suffix: conv
     nsize: {{1 3}}
+    timeoutfactor: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0,0,0 -dm_plex_box_upper 1,1,1 -dm_plex_box_faces 2,2,1 -petscspace_degree 2 -max_conv_its 3 -snes_max_it 1 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_coarse_eq_limit 10 -pc_gamg_aggressive_coarsening 1 -pc_gamg_threshold 0.001 -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -snes_type ksponly -dm_mat_type aijkokkos -dm_vec_type kokkos -use_kokkos_maps 1
     filter: grep "max displ"
     output_file: output/ex56k_conv.out

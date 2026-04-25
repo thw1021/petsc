@@ -14,11 +14,11 @@
   #include <Kokkos_Core.hpp>
 
 /* Helper: detect whether the Kokkos default execution space is a GPU backend.
-   Serial/OpenMP report concurrency < 1000; CUDA/HIP/SYCL report >> 1000.
-   Centralizes the heuristic so it is documented and maintained in one place. */
+   Uses Kokkos::SpaceAccessibility to check whether the default execution
+   space's memory is host-accessible; if not, we are on a GPU. */
 static inline int PetscFEKokkosOnGPU(void)
 {
-  return !!(Kokkos::DefaultExecutionSpace().concurrency() >= 1000);
+  return !Kokkos::SpaceAccessibility<Kokkos::DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
 }
 
 /* Helper: compile-time check whether a function-pointer template parameter is non-null.
@@ -1011,6 +1011,11 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS residual path supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
+  {
+    PetscBool hasDyn;
+    PetscCall(PetscDSHasDynamicJacobian(ds, &hasDyn));
+    PetscCheck(!hasDyn, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS residual path does not support time-dependent problems (dynamic Jacobian detected); use the standard CPU path via TS");
+  }
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   PetscCall(PetscDSGetTabulation(ds, &T));
@@ -1277,6 +1282,12 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS Jacobian path supports single-field (Nf=1) only, got Nf=%" PetscInt_FMT, Nf);
+  {
+    PetscBool hasDyn;
+    PetscCall(PetscDSHasDynamicJacobian(ds, &hasDyn));
+    PetscCheck(!hasDyn, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS Jacobian path does not support time-dependent problems (dynamic Jacobian detected); use the standard CPU path via TS");
+  }
+  PetscCheck(J == Jp, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS Jacobian path does not support separate preconditioner matrix (J != Jp); pass the same matrix for both");
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   PetscCall(PetscDSGetTabulation(ds, &T));
@@ -1482,9 +1493,6 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   /* Cleanup -- geometry objects owned by ctx->cached_* and freed in PetscFEKokkosMapsDestroy. */
   PetscCall(DMPlexRestoreCellFields(dm, ctx->cached_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
   PetscCall(DMRestoreLocalVector(dm, &locX));
-
-  /* Propagate to preconditioner if different */
-  if (J != Jp) PetscCall(MatCopy(J, Jp, SAME_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
