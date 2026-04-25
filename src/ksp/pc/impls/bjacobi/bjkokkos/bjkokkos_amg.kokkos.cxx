@@ -529,15 +529,16 @@ static PetscErrorCode AMGLevelCopyToDevice(AMGLevel *lev)
    Steps 3.2-3.10: Build one complete AMG hierarchy for a matrix given
    in local CSR (ai, aj, aa, nrows).
    ----------------------------------------------------------------------- */
-static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, const PetscScalar *aa, PetscInt nrows, PetscReal strong_threshold, PetscInt max_levels, PetscInt min_coarse_size, PetscInt pre_sweeps, PetscInt post_sweeps, PetscInt coarse_sweeps, BJKokkosSmootherType smoother_type, PetscScalar smoother_omega, AMGHierarchy *hier)
+static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, const PetscScalar *aa, PetscInt nrows, PetscReal strong_threshold, PetscInt max_levels, PetscInt min_coarse_size, PetscInt pre_sweeps, PetscInt post_sweeps, PetscInt coarse_sweeps, BJKokkosSmootherType smoother_type, PetscReal smoother_omega, AMGHierarchy *hier)
 {
   /* working copies of the current-level matrix (host) */
   const PetscInt    *cur_ai = ai;
   const PetscInt    *cur_aj = aj;
   const PetscScalar *cur_aa = aa;
   PetscInt           cur_n  = nrows;
-  /* owned copies (non-NULL only after first coarsening, when we own the memory) */
-  PetscInt    *own_ai = NULL, *own_aj = NULL;
+  /* owned copy of values (non-NULL only after first coarsening, when we own the memory).
+     cur_ai/cur_aj are NOT freed here -- they are stored in levels[].Ac_ai/Ac_aj
+     and freed by AMGLevelFreeHost. */
   PetscScalar *own_aa = NULL;
 
   PetscFunctionBegin;
@@ -637,10 +638,10 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
        and will be freed by AMGLevelFreeHost.  Only free cur_aa (values are not stored
        in the level struct; they are recomputed per-block on the device). */
     PetscCall(PetscFree(own_aa));
-    cur_ai = own_ai = Ac_ai;
-    cur_aj = own_aj = Ac_aj;
+    cur_ai = Ac_ai;
+    cur_aj = Ac_aj;
     cur_aa = own_aa = Ac_aa;
-    cur_n           = nC;
+    cur_n  = nC;
   }
 
   /* Store coarsest level matrix.  Always allocate independent copies so that
@@ -685,13 +686,7 @@ PetscErrorCode PCBJKOKKOSSetupAMG(PC pc, Mat Aseq)
   PetscMemType       mtype;
 
   PetscFunctionBegin;
-  /* defaults */
-  if (jac->amg_max_levels <= 0) jac->amg_max_levels = PCBJKOKKOS_MAX_AMG_LEVELS;
   PetscCheck(jac->amg_max_levels <= PCBJKOKKOS_MAX_AMG_LEVELS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "amg_max_levels %" PetscInt_FMT " exceeds PCBJKOKKOS_MAX_AMG_LEVELS (%d)", jac->amg_max_levels, PCBJKOKKOS_MAX_AMG_LEVELS);
-  if (jac->amg_strong_threshold <= 0.0) jac->amg_strong_threshold = 0.25;
-  if (jac->amg_pre_sweeps <= 0) jac->amg_pre_sweeps = 1;
-  if (jac->amg_post_sweeps <= 0) jac->amg_post_sweeps = 1;
-  if (jac->amg_coarse_sweeps <= 0) jac->amg_coarse_sweeps = 10;
 
   PetscInt nBlk = jac->nBlocks;
 

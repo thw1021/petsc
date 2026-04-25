@@ -91,7 +91,7 @@ struct AMGHierarchy {
   PetscInt             pre_sweeps, post_sweeps, coarse_sweeps;
   PetscReal            strong_threshold;
   BJKokkosSmootherType smoother_type;
-  PetscScalar          smoother_omega; // damping factor (default 1.0)
+  PetscReal            smoother_omega; // damping factor (default 1.0)
 };
 
 // -----------------------------------------------------------------------
@@ -116,7 +116,7 @@ struct AMGLevelInfo {
   PetscInt off_spa;   // sparse accumulator scratch (team_size * nrows_coarse)
   // smoother params
   PetscInt             pre_sweeps, post_sweeps;
-  PetscScalar          omega;         // damping factor
+  PetscReal            omega;         // damping factor
   BJKokkosSmootherType smoother_type; // smoother type for norm computation
 };
 
@@ -131,7 +131,7 @@ struct AMGFineInfo {
   PetscInt             off_b;             // b vector at fine level
   PetscInt             off_r;             // residual scratch at fine level
   PetscInt             pre_sweeps, post_sweeps;
-  PetscScalar          omega;         // damping factor
+  PetscReal            omega;         // damping factor
   BJKokkosSmootherType smoother_type; // smoother type for norm computation
 };
 
@@ -144,7 +144,7 @@ struct AMGCoarsestInfo {
   PetscInt             off_b;
   PetscInt             off_r;
   PetscInt             coarse_sweeps;
-  PetscScalar          omega;         // damping factor
+  PetscReal            omega;         // damping factor
   BJKokkosSmootherType smoother_type; // smoother type for norm computation
 };
 
@@ -184,7 +184,7 @@ typedef struct {
   PetscReal            amg_strong_threshold;
   PetscInt             amg_pre_sweeps, amg_post_sweeps, amg_coarse_sweeps;
   BJKokkosSmootherType amg_smoother_type;  // default: BJKOKKOS_SMOOTH_L1_JACOBI
-  PetscScalar          amg_smoother_omega; // default: 1.0
+  PetscReal            amg_smoother_omega; // default: 1.0
   // Flat device buffer for per-block AMG work
   // Layout per block: [Ac_aa_lev0 | l1_lev0 | x_lev0 | b_lev0 | r_lev0 | spa_lev0 |
   //                    Ac_aa_lev1 | l1_lev1 | x_lev1 | b_lev1 | r_lev1 | spa_lev1 | ...]
@@ -273,7 +273,7 @@ KOKKOS_INLINE_FUNCTION void ComputeSmootherNorms(const team_member team, const P
 
 // nsweeps of damped Jacobi: x += omega * (1/norms[i]) * (b - A*x)
 // residual[] is a scratch vector of length nrows
-KOKKOS_INLINE_FUNCTION void L1JacobiSmooth(const team_member team, const PetscInt *ai, const PetscInt *aj, const PetscScalar *aa, const PetscScalar *l1_norms, PetscInt nrows, const PetscScalar *b, PetscScalar *x, PetscScalar *residual, PetscInt nsweeps, PetscScalar omega)
+KOKKOS_INLINE_FUNCTION void L1JacobiSmooth(const team_member team, const PetscInt *ai, const PetscInt *aj, const PetscScalar *aa, const PetscScalar *l1_norms, PetscInt nrows, const PetscScalar *b, PetscScalar *x, PetscScalar *residual, PetscInt nsweeps, PetscReal omega)
 {
   for (PetscInt sweep = 0; sweep < nsweeps; sweep++) {
     // residual = b - A*x
@@ -302,7 +302,7 @@ KOKKOS_INLINE_FUNCTION void L1JacobiSmooth(const team_member team, const PetscIn
 KOKKOS_INLINE_FUNCTION void NumericRAP(const team_member team, const PetscInt *A_ai, const PetscInt *A_aj, const PetscScalar *A_aa, PetscInt A_nrows, const PetscInt *P_ai, const PetscInt *P_aj, const PetscScalar *P_aa, PetscInt P_nrows, const PetscInt *R_ai, const PetscInt *R_aj, const PetscScalar *R_aa, PetscInt R_nrows, const PetscInt *Ac_ai, const PetscInt *Ac_aj, PetscScalar *Ac_aa, PetscScalar *spa)
 {
   Kokkos::parallel_for(Kokkos::TeamThreadRange(team, R_nrows), [=](const int I) {
-    PetscScalar *myspa = spa + team.team_rank() * R_nrows;
+    PetscScalar *myspa = spa + team.team_rank() * R_nrows; // spa stride = R_nrows == ncoarse (indexed by coarse column)
     // 1. Zero spa entries for columns in Ac[I,:]
     for (PetscInt jj = Ac_ai[I]; jj < Ac_ai[I + 1]; jj++) myspa[Ac_aj[jj]] = 0.0;
     // 2. Accumulate R[I,i] * A[i,j] * P[j,J] into spa[J]
