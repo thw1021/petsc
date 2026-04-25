@@ -1403,6 +1403,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 /* Build c_maps and gIdx from PetscSection constraint data and cMat, replacing the probing strategy */
 static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_grid, PetscSection section, PetscSection globsection, P4estVertexMaps *maps, pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE], PetscInt MAP_BF_SIZE, LandauIdx *coo_elem_fullNb, LandauIdx *coo_elem_offsets, PetscInt glb_elem_idx_start)
 {
+  PetscDS             ds;
   PetscSection        aSec, cSec;
   IS                  aIS;
   Mat                 cMat;
@@ -1413,9 +1414,16 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
   PetscInt            fieldFoffs[LANDAU_MAX_SPECIES]; /* running offset per field in natural order */
   PetscInt            fullNb[LANDAU_MAX_SPECIES];     /* unconstrained DOF count per field for this element */
   PetscInt            foffs[LANDAU_MAX_SPECIES + 1];  /* cumulative field offsets in natural closure order */
+  PetscInt            clTotDof;                       /* total closure DOFs (same for all cells, from DS) */
 
   PetscFunctionBegin;
   PetscCheck(Nf_grid <= LANDAU_MAX_SPECIES, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Nf_grid %" PetscInt_FMT " > LANDAU_MAX_SPECIES %d", Nf_grid, LANDAU_MAX_SPECIES);
+  PetscCall(DMGetDS(dm, &ds));
+  /* per-field offsets and total DOF count are stored in the DS; no need to recompute per cell */
+  foffs[0] = 0;
+  for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscDSGetFieldOffset(ds, f, &foffs[f]));
+  PetscCall(PetscDSGetTotalDimension(ds, &clTotDof));
+  foffs[Nf_grid] = clTotDof;
   PetscCall(DMGetDefaultConstraints(dm, &cSec, &cMat, NULL));
   PetscCall(DMPlexGetAnchors(dm, &aSec, &aIS));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
@@ -1432,23 +1440,10 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     PetscInt       *closure      = NULL;
     PetscInt        closureSize;
     const PetscInt *clperm = NULL;
-    PetscInt        depth, clTotDof = 0;
+    PetscInt        depth;
 
     if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
     PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure)); /* original closure */
-    /* total closure DOFs and per-field offsets */
-    PetscCall(PetscArrayzero(foffs, LANDAU_MAX_SPECIES + 1));
-    for (PetscInt ci = 0; ci < closureSize; ci++) {
-      PetscInt p = closure[2 * ci];
-      if (p < sStart || p >= sEnd) continue;
-      for (PetscInt f = 0; f < Nf_grid; f++) {
-        PetscInt fdof = 0;
-        PetscCall(PetscSectionGetFieldDof(section, p, f, &fdof));
-        foffs[f + 1] += fdof;
-        clTotDof += fdof;
-      }
-    }
-    for (PetscInt f = 0; f < Nf_grid; f++) foffs[f + 1] += foffs[f]; /* cumulative offsets */
     PetscCall(DMPlexGetPointDepth(dm, ej, &depth));
     PetscCall(PetscSectionGetClosureInversePermutation_Internal(section, (PetscObject)dm, depth, clTotDof, &clperm));                                  /* may be NULL */
     for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f])); /* orientation perms */
