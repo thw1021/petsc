@@ -11,6 +11,7 @@
 */
 #pragma once
 
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosCreateMaps(DM, PetscFEKokkosMaps *);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *, DM);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);

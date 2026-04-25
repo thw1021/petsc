@@ -20,6 +20,67 @@
 #include <Kokkos_Core.hpp>
 
 /*@C
+  PetscFEKokkosMapsCreate - Allocate a `PetscFEKokkosMaps` struct with proper C++ construction
+
+  Not Collective
+
+  Output Parameter:
+. maps - pointer to the newly allocated `PetscFEKokkosMaps`
+
+  Level: intermediate
+
+  Notes:
+  This function must be used instead of `PetscNew()` because `PetscFEKokkosMaps`
+  contains `Kokkos::View` members that require C++ construction.  `PetscNew()`
+  zero-fills memory, which leaves the Views' internal reference-count tracker
+  in an invalid state and causes a segfault on the first assignment.
+
+  The returned struct must be freed with `PetscFEKokkosMapsDestroy()`.
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosMapsDestroy()`, `PetscFEKokkosSetUp()`
+@*/
+PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **maps)
+{
+  PetscFunctionBegin;
+  PetscAssertPointer(maps, 1);
+  *maps = new PetscFEKokkosMaps();
+  /* Zero the POD (non-View) fields that PetscNew would have zeroed */
+  (*maps)->num_elements             = 0;
+  (*maps)->num_dof                  = 0;
+  (*maps)->local_dof                = 0;
+  (*maps)->Nb                       = 0;
+  (*maps)->totDim                   = 0;
+  (*maps)->coo_size                 = 0;
+  (*maps)->h_gIdx                   = NULL;
+  (*maps)->h_lIdx                   = NULL;
+  (*maps)->h_active_idx             = NULL;
+  (*maps)->h_Nb_active              = NULL;
+  (*maps)->h_coo_elem_offsets       = NULL;
+  (*maps)->num_reduced              = 0;
+  (*maps)->num_face                 = 0;
+  (*maps)->h_c_maps_gid             = NULL;
+  (*maps)->h_c_maps_scale           = NULL;
+  (*maps)->h_coo_elem_point_offsets = NULL;
+  (*maps)->h_fullNb                 = NULL;
+  (*maps)->cached_Ne                = -1;
+  (*maps)->cached_Nq                = -1;
+  (*maps)->cached_Nc                = -1;
+  (*maps)->cached_dim               = -1;
+  (*maps)->cached_dE                = -1;
+  (*maps)->cached_totDim            = -1;
+  (*maps)->cached_numConstants      = -1;
+  (*maps)->isAffine                 = PETSC_FALSE;
+  (*maps)->geom_cached              = PETSC_FALSE;
+  (*maps)->cached_dE_geom           = 0;
+  (*maps)->cached_cStart            = 0;
+  (*maps)->cached_cEnd              = 0;
+  (*maps)->cached_fullGeom          = NULL;
+  (*maps)->cached_chunkGeom         = NULL;
+  (*maps)->cached_cellIS            = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   PetscFEKokkosCreateMaps - Build host-side assembly maps (DOF indices, constraint info, COO offsets) for GPU FEM assembly
 
   Not Collective
@@ -369,42 +430,43 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 @*/
 PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
 {
+  PetscFunctionBegin;
+  PetscAssertPointer(maps, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+
   const PetscInt Ne       = maps->num_elements;
   const PetscInt Nb       = maps->Nb;
   const PetscInt num_face = maps->num_face;
 
-  PetscFunctionBegin;
-  PetscAssertPointer(maps, 1);
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
-  /* gIdx */
+  /* gIdx -- h_gIdx is NULL when Ne==0; skip unmanaged View construction in that case */
   maps->d_gIdx = Kokkos::View<PetscFEKokkosIdx *>("fekokkos_coo_gIdx", Ne * Nb);
-  {
+  if (maps->h_gIdx) {
     Kokkos::View<PetscFEKokkosIdx *, Kokkos::HostSpace> hv(maps->h_gIdx, Ne * Nb);
     Kokkos::deep_copy(maps->d_gIdx, hv);
   }
 
   /* lIdx */
   maps->d_lIdx = Kokkos::View<PetscInt *>("fekokkos_coo_lIdx", Ne * Nb);
-  {
+  if (maps->h_lIdx) {
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_lIdx, Ne * Nb);
     Kokkos::deep_copy(maps->d_lIdx, hv);
   }
 
   /* active_idx */
   maps->d_active_idx = Kokkos::View<PetscInt *>("fekokkos_coo_active_idx", Ne * Nb);
-  {
+  if (maps->h_active_idx) {
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_active_idx, Ne * Nb);
     Kokkos::deep_copy(maps->d_active_idx, hv);
   }
 
   /* Nb_active */
   maps->d_Nb_active = Kokkos::View<PetscInt *>("fekokkos_coo_Nb_active", Ne);
-  {
+  if (maps->h_Nb_active) {
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_Nb_active, Ne);
     Kokkos::deep_copy(maps->d_Nb_active, hv);
   }
 
-  /* coo_elem_offsets */
+  /* coo_elem_offsets: size Ne+1, so h_coo_elem_offsets is non-NULL even when Ne==0 */
   maps->d_coo_elem_offsets = Kokkos::View<PetscInt *>("fekokkos_coo_offsets", Ne + 1);
   {
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_coo_elem_offsets, Ne + 1);
@@ -430,16 +492,16 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
     maps->d_c_maps_scale = Kokkos::View<PetscScalar *>("fekokkos_c_maps_scale", 1);
   }
 
-  /* coo_elem_point_offsets */
+  /* coo_elem_point_offsets -- h_coo_elem_point_offsets is NULL when Ne==0 */
   maps->d_coo_elem_point_offsets = Kokkos::View<PetscInt *>("fekokkos_coo_pt_offsets", Ne * (Nb + 1));
-  {
+  if (maps->h_coo_elem_point_offsets) {
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_coo_elem_point_offsets, Ne * (Nb + 1));
     Kokkos::deep_copy(maps->d_coo_elem_point_offsets, hv);
   }
 
   /* fullNb */
   maps->d_fullNb = Kokkos::View<PetscInt *>("fekokkos_fullNb", Ne);
-  {
+  if (maps->h_fullNb) {
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_fullNb, Ne);
     Kokkos::deep_copy(maps->d_fullNb, hv);
   }
@@ -726,7 +788,8 @@ PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **maps)
   (*maps)->d_elemVec   = Kokkos::View<PetscScalar *>();
   (*maps)->d_elemMat   = Kokkos::View<PetscScalar *>();
   (*maps)->d_coo_vals  = Kokkos::View<PetscScalar *>();
-  PetscCall(PetscFree(*maps));
+  delete *maps;
+  *maps = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
