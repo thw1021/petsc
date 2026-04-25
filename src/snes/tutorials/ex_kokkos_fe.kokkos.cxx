@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 
   if (use_kokkos_maps) {
     /* GPU-resident template path */
-    PetscCall(PetscNew(&maps));
+    PetscCall(PetscFEKokkosMapsCreate(&maps));
     PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>, maps));
     PetscCall(SNESSetFromOptions(snes));
     PetscCall(DMCreateMatrix(dm, &J));

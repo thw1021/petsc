@@ -169,7 +169,7 @@ int main(int argc, char **argv)
       /* GPU-resident template path.
          PetscFEKokkosPreallocateCOO requires MATAIJKOKKOS: pass -dm_mat_type aijkokkos
          and -dm_vec_type kokkos on the command line (or set them in the options file). */
-      PetscCall(PetscNew(&maps));
+      PetscCall(PetscFEKokkosMapsCreate(&maps));
       PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_elast, f1_elast>, maps));
       PetscCall(SNESSetFromOptions(snes));
       PetscCall(DMCreateMatrix(dm, &J));
