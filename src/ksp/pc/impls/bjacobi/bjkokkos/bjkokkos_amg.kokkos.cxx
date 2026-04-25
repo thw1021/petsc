@@ -641,7 +641,7 @@ static PetscErrorCode BuildAMGHierarchy(const PetscInt *ai, const PetscInt *aj, 
     cur_ai = Ac_ai;
     cur_aj = Ac_aj;
     cur_aa = own_aa = Ac_aa;
-    cur_n  = nC;
+    cur_n           = nC;
   }
 
   /* Store coarsest level matrix.  Always allocate independent copies so that
