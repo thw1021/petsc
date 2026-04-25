@@ -54,6 +54,8 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   PetscBool    isPlex;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(maps, 2);
   PetscCall(DMGetDimension(dm, &dim));
   maps->local_dof = 0; /* will be set below */
 
@@ -372,6 +374,8 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
   const PetscInt num_face = maps->num_face;
 
   PetscFunctionBegin;
+  PetscAssertPointer(maps, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   /* gIdx */
   maps->d_gIdx = Kokkos::View<PetscFEKokkosIdx *>("fekokkos_coo_gIdx", Ne * Nb);
   {
@@ -569,6 +573,8 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
   PetscInt        *coo_i, *coo_j;
 
   PetscFunctionBegin;
+  PetscAssertPointer(maps, 1);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 2);
   PetscCall(PetscMalloc2(coo_size, &coo_i, coo_size, &coo_j));
   /* Initialize to -1 (unused slots).
    * MatSetPreallocationCOO / MatSetValuesCOO silently ignore entries where
@@ -657,8 +663,9 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
 PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
 {
   PetscFunctionBegin;
+  PetscAssertPointer(maps, 1);
   if (maps->geom_cached) {
-    PetscCall(PetscFEGeomRestoreChunk(maps->cached_fullGeom, 0, maps->num_elements, &maps->cached_chunkGeom));
+    PetscCall(PetscFEGeomRestoreChunk(maps->cached_fullGeom, maps->cached_cStart, maps->cached_cEnd, &maps->cached_chunkGeom));
     PetscCall(PetscFEGeomDestroy(&maps->cached_fullGeom));
     PetscCall(ISDestroy(&maps->cached_cellIS));
     maps->cached_chunkGeom = NULL;
@@ -689,35 +696,37 @@ PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
 
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosResetGeometry()`
 @*/
-PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps)
+PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **maps)
 {
   PetscFunctionBegin;
+  if (!*maps) PetscFunctionReturn(PETSC_SUCCESS);
   /* Release cached geometry objects via the reset function */
-  PetscCall(PetscFEKokkosResetGeometry(maps));
-  PetscCall(PetscFree7(maps->h_gIdx, maps->h_lIdx, maps->h_active_idx, maps->h_Nb_active, maps->h_coo_elem_offsets, maps->h_fullNb, maps->h_coo_elem_point_offsets));
-  PetscCall(PetscFree2(maps->h_c_maps_gid, maps->h_c_maps_scale));
+  PetscCall(PetscFEKokkosResetGeometry(*maps));
+  PetscCall(PetscFree7((*maps)->h_gIdx, (*maps)->h_lIdx, (*maps)->h_active_idx, (*maps)->h_Nb_active, (*maps)->h_coo_elem_offsets, (*maps)->h_fullNb, (*maps)->h_coo_elem_point_offsets));
+  PetscCall(PetscFree2((*maps)->h_c_maps_gid, (*maps)->h_c_maps_scale));
   /* Reset device Views to empty (releases Kokkos reference count) */
-  maps->d_gIdx                   = Kokkos::View<PetscFEKokkosIdx *>();
-  maps->d_lIdx                   = Kokkos::View<PetscInt *>();
-  maps->d_active_idx             = Kokkos::View<PetscInt *>();
-  maps->d_Nb_active              = Kokkos::View<PetscInt *>();
-  maps->d_coo_elem_offsets       = Kokkos::View<PetscInt *>();
-  maps->d_c_maps_gid             = Kokkos::View<PetscInt *>();
-  maps->d_c_maps_scale           = Kokkos::View<PetscScalar *>();
-  maps->d_coo_elem_point_offsets = Kokkos::View<PetscInt *>();
-  maps->d_fullNb                 = Kokkos::View<PetscInt *>();
+  (*maps)->d_gIdx                   = Kokkos::View<PetscFEKokkosIdx *>();
+  (*maps)->d_lIdx                   = Kokkos::View<PetscInt *>();
+  (*maps)->d_active_idx             = Kokkos::View<PetscInt *>();
+  (*maps)->d_Nb_active              = Kokkos::View<PetscInt *>();
+  (*maps)->d_coo_elem_offsets       = Kokkos::View<PetscInt *>();
+  (*maps)->d_c_maps_gid             = Kokkos::View<PetscInt *>();
+  (*maps)->d_c_maps_scale           = Kokkos::View<PetscScalar *>();
+  (*maps)->d_coo_elem_point_offsets = Kokkos::View<PetscInt *>();
+  (*maps)->d_fullNb                 = Kokkos::View<PetscInt *>();
   /* Reset cached device Views (releases Kokkos reference counts) */
-  maps->d_B         = Kokkos::View<PetscReal *>();
-  maps->d_D         = Kokkos::View<PetscReal *>();
-  maps->d_w         = Kokkos::View<PetscReal *>();
-  maps->d_invJ      = Kokkos::View<PetscReal *>();
-  maps->d_detJ      = Kokkos::View<PetscReal *>();
-  maps->d_coords    = Kokkos::View<PetscReal *>();
-  maps->d_coeff     = Kokkos::View<PetscScalar *>();
-  maps->d_constants = Kokkos::View<PetscScalar *>();
-  maps->d_elemVec   = Kokkos::View<PetscScalar *>();
-  maps->d_elemMat   = Kokkos::View<PetscScalar *>();
-  maps->d_coo_vals  = Kokkos::View<PetscScalar *>();
+  (*maps)->d_B         = Kokkos::View<PetscReal *>();
+  (*maps)->d_D         = Kokkos::View<PetscReal *>();
+  (*maps)->d_w         = Kokkos::View<PetscReal *>();
+  (*maps)->d_invJ      = Kokkos::View<PetscReal *>();
+  (*maps)->d_detJ      = Kokkos::View<PetscReal *>();
+  (*maps)->d_coords    = Kokkos::View<PetscReal *>();
+  (*maps)->d_coeff     = Kokkos::View<PetscScalar *>();
+  (*maps)->d_constants = Kokkos::View<PetscScalar *>();
+  (*maps)->d_elemVec   = Kokkos::View<PetscScalar *>();
+  (*maps)->d_elemMat   = Kokkos::View<PetscScalar *>();
+  (*maps)->d_coo_vals  = Kokkos::View<PetscScalar *>();
+  PetscCall(PetscFree(*maps));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -760,6 +769,8 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
   const PetscScalar *constants;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(maps, 2);
   /* Idempotent: skip if geometry already on device */
   if (maps->geom_cached) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -868,8 +879,12 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
     PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
   }
 
-  /* Cache geometry objects and dE for subsequent calls */
+  /* Cache geometry objects, range, and dE for subsequent calls.
+   * cached_cStart / cached_cEnd are passed back symmetrically to
+   * PetscFEGeomRestoreChunk in PetscFEKokkosResetGeometry. */
   maps->cached_dE_geom   = dE;
+  maps->cached_cStart    = cStart;
+  maps->cached_cEnd      = cEnd;
   maps->cached_fullGeom  = fullGeom;
   maps->cached_chunkGeom = chunkGeom;
   maps->cached_cellIS    = cellIS;
@@ -906,6 +921,9 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
 PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(maps, 2);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 3);
   PetscCall(PetscFEKokkosCreateMaps(dm, maps));
   PetscCall(PetscKokkosInitializeCheck());
   PetscCall(PetscFEKokkosStageMaps(maps, dm));

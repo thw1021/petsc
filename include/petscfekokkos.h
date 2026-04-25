@@ -466,8 +466,8 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
         /* Compute physical coords from reference quadrature point.
          * J_e and xi_e must be non-NULL for affine elements (cgeom->J and
          * cgeom->xi are always set when isAffine == PETSC_TRUE by DMFieldCreateFEGeom). */
-        PetscAssert(J_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->J is NULL for affine element %d -- DMFieldCreateFEGeom must provide J", (int)e);
-        PetscAssert(xi_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->xi is NULL for affine element %d -- DMFieldCreateFEGeom must provide xi", (int)e);
+        PetscAssert(J_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->J is NULL for affine element %" PetscInt_FMT " -- DMFieldCreateFEGeom must provide J", e);
+        PetscAssert(xi_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->xi is NULL for affine element %" PetscInt_FMT " -- DMFieldCreateFEGeom must provide xi", e);
         PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], &h_coords[eq * dE]);
       } else {
         /* Non-affine: geometry stored per quadrature point */
@@ -971,9 +971,13 @@ typedef struct {
    * cached_dE_geom stores dimEmbed so dE is available without chunkGeom.
    * cached_fullGeom and cached_cellIS are kept alive until Destroy so that
    * PetscFEGeomRestoreChunk / PetscFEGeomDestroy / ISDestroy can be called
-   * exactly once (in PetscFEKokkosMapsDestroy). */
+   * exactly once (in PetscFEKokkosMapsDestroy).
+   * cached_cStart / cached_cEnd record the range passed to PetscFEGeomGetChunk
+   * so that PetscFEGeomRestoreChunk receives the identical range on teardown. */
   PetscBool    geom_cached;
   PetscInt     cached_dE_geom;
+  PetscInt     cached_cStart;
+  PetscInt     cached_cEnd;
   PetscFEGeom *cached_fullGeom;
   PetscFEGeom *cached_chunkGeom;
   IS           cached_cellIS;

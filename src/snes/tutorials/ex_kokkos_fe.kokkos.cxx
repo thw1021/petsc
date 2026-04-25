@@ -107,13 +107,13 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscBool use_kokkos_maps)
 
 int main(int argc, char **argv)
 {
-  DM                dm;
-  SNES              snes;
-  Vec               u;
-  Mat               J;
-  PetscReal         error;
-  PetscFEKokkosMaps maps;
-  PetscBool         use_kokkos_maps = PETSC_TRUE;
+  DM                 dm;
+  SNES               snes;
+  Vec                u;
+  Mat                J;
+  PetscReal          error;
+  PetscFEKokkosMaps *maps            = NULL;
+  PetscBool          use_kokkos_maps = PETSC_TRUE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -131,11 +131,12 @@ int main(int argc, char **argv)
 
   if (use_kokkos_maps) {
     /* GPU-resident template path */
-    PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>, &maps));
+    PetscCall(PetscNew(&maps));
+    PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>, maps));
     PetscCall(SNESSetFromOptions(snes));
     PetscCall(DMCreateMatrix(dm, &J));
-    PetscCall(PetscFEKokkosSetUp(dm, &maps, J));
-    PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson, true>), &maps));
+    PetscCall(PetscFEKokkosSetUp(dm, maps, J));
+    PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson, true>), maps));
     PetscCall(MatDestroy(&J));
   } else {
     /* Fallback path: standard PETSc FEM assembly via PetscFEOps.

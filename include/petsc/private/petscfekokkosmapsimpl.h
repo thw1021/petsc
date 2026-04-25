@@ -16,6 +16,6 @@ PETSC_EXTERN PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *, DM);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *, Mat);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUpGeometry(DM, PetscFEKokkosMaps *);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUp(DM, PetscFEKokkosMaps *, Mat);
