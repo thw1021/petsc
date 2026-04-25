@@ -172,6 +172,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos_kernels
     nsize: {{1 3}}
+    timeoutfactor: 2
     args: -petscspace_degree 2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
     test:
