@@ -1016,6 +1016,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
     PetscCall(PetscDSHasDynamicJacobian(ds, &hasDyn));
     PetscCheck(!hasDyn, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS residual path does not support time-dependent problems (dynamic Jacobian detected); use the standard CPU path via TS");
   }
+  PetscCheck(ctx->num_reduced == 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS residual scatter does not support hanging-node constraints; use the standard CPU path");
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   PetscCall(PetscDSGetTabulation(ds, &T));
@@ -1288,6 +1289,11 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
     PetscCheck(!hasDyn, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS Jacobian path does not support time-dependent problems (dynamic Jacobian detected); use the standard CPU path via TS");
   }
   PetscCheck(J == Jp, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PETSCFEKOKKOS Jacobian path does not support separate preconditioner matrix (J != Jp); pass the same matrix for both");
+  {
+    PetscBool isKokkosMat;
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)J, &isKokkosMat, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
+    PetscCheck(isKokkosMat, PetscObjectComm((PetscObject)J), PETSC_ERR_SUP, "DMPlexSNESComputeJacobianFEM_Kokkos requires MATAIJKOKKOS; use -dm_mat_type aijkokkos");
+  }
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   PetscCall(PetscDSGetTabulation(ds, &T));
@@ -1477,17 +1483,6 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
      GPU %F in -log_view = gpu_flops / total_flops * 100. */
   PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nc * Nb * Nc * 2.0 * dE * dE));
 
-  /* Set COO values into matrix.
-     ctx_d_coo_vals is a Kokkos::View whose data pointer is passed directly to
-     MatSetValuesCOO.  MATSEQAIJKOKKOS / MATMPIAIJKOKKOS is required because it
-     is the only matrix type that accepts a Kokkos device pointer in MatSetValuesCOO.
-     Note: DMCreateMatrix with -dm_mat_type aijkokkos produces MATSEQAIJKOKKOS (1 rank)
-     or MATMPIAIJKOKKOS (>1 ranks); MATAIJKOKKOS is the alias used in DMSetMatType. */
-  {
-    PetscBool isKokkosMat;
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)J, &isKokkosMat, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
-    PetscCheck(isKokkosMat, PetscObjectComm((PetscObject)J), PETSC_ERR_SUP, "DMPlexSNESComputeJacobianFEM_Kokkos requires MATAIJKOKKOS; use -dm_mat_type aijkokkos");
-  }
   PetscCall(MatSetValuesCOO(J, ctx_d_coo_vals.data(), INSERT_VALUES));
 
   /* Cleanup -- geometry objects owned by ctx->cached_* and freed in PetscFEKokkosMapsDestroy. */
