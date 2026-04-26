@@ -117,11 +117,13 @@ static PetscErrorCode PetscFESetUp_Kokkos(PetscFE fem)
   kk->dim = dim;
 
   /* Allocate per-(e,q) interpolation scratch.
-     u_loc  [Nc]:       field values at one quadrature point (Nc components).
-     ux_loc [Nc * dim]: field gradients at one quadrature point.
+     u_loc  [Nc]:      field values at one quadrature point (Nc components).
+     ux_loc [Nc * 3]:  field gradients at one quadrature point (sized for max dE=3).
      The basis-function loop (b=0..Nb-1) accumulates into these Nc-sized arrays,
-     matching PetscFEEvaluateFieldJets_Internal which uses u[c] and u_x[c*dE+d]. */
-  PetscCall(PetscMalloc2(Nc, &kk->h_u_buf, Nc * dim, &kk->h_ux_buf));
+     matching PetscFEEvaluateFieldJets_Internal which uses u[c] and u_x[c*dE+d].
+     We allocate Nc*3 (not Nc*dim) because the integration loop indexes by dE
+     (embedding dimension), which may exceed dim on manifold meshes. */
+  PetscCall(PetscMalloc2(Nc, &kk->h_u_buf, Nc * 3, &kk->h_ux_buf));
 
   kk->setup_done = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -189,7 +191,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
 
   PetscFunctionBegin;
   /* Fall back to Basic if auxiliary fields are present */
-  if (dsAux) {
+  if (dsAux != NULL) {
     PetscCall(PetscFEIntegrateResidual_Basic(ds, key, Ne, cgeom, coefficients, coefficients_t, dsAux, coefficientsAux, t, elemVec));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -203,7 +205,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
     PetscCall(PetscDSGetDiscretization(ds, field, (PetscObject *)&fe_tmp));
     PetscCall(PetscFEGetDualSpace(fe_tmp, &dsp));
     PetscCall(PetscDualSpaceGetDeRahm(dsp, &k));
-    if (k != 0) {
+    if (k != 0) { /* NOLINT(readability-implicit-bool-conversion) */
       PetscCall(PetscFEIntegrateResidual_Basic(ds, key, Ne, cgeom, coefficients, coefficients_t, dsAux, coefficientsAux, t, elemVec));
       PetscFunctionReturn(PETSC_SUCCESS);
     }
@@ -214,7 +216,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
 
   /* Ensure static data is staged -- inline check avoids a function call on every
      integration when setup is already done (the common case). */
-  if (!kk->setup_done) PetscCall(PetscFESetUp_Kokkos(fe));
+  if (kk->setup_done == PETSC_FALSE) PetscCall(PetscFESetUp_Kokkos(fe));
 
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
@@ -223,7 +225,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   PetscCall(PetscDSGetFieldOffset(ds, field, &fOffset));
   PetscCall(PetscDSGetWeakForm(ds, &wf));
   PetscCall(PetscWeakFormGetResidual(wf, key.label, key.value, key.field, key.part, &n0, &f0_func, &n1, &f1_func));
-  if (!n0 && !n1) PetscFunctionReturn(PETSC_SUCCESS);
+  if (n0 == 0 && n1 == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
 
   /* Fall back to Basic for multi-callback or time-dependent problems */
@@ -337,7 +339,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
 
   /* Heap-allocated per-(e,q) scratch -- supports any polynomial order */
   PetscScalar *u_loc  = kk->h_u_buf;  /* [Nc]       */
-  PetscScalar *ux_loc = kk->h_ux_buf; /* [Nc * dim] */
+  PetscScalar *ux_loc = kk->h_ux_buf; /* [Nc * 3] (max dE) */
 
   /* h_invJ_buf: host buffer [Ne * Nq * dE * dE] for expanded invJ.
      For affine elements, the single per-element invJ is replicated across
@@ -350,6 +352,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   PetscReal *h_invJ_buf = kk->h_invJ_buf;
 
   /* Physical coordinate workspace for affine elements (one point at a time) */
+  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds hard-coded max 3 for v_affine stack array", dE);
   PetscReal v_affine[3] = {0.0, 0.0, 0.0}; /* max dE = 3 */
 
   for (PetscInt e = 0; e < Ne; ++e) {
@@ -437,12 +440,12 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
         }
       }
 
-      if (f0_fn) {
-        f0_fn(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, v_eq, numConstants, constants, &h_f0_scr[(e * Nq + q) * Nc]);
+      if (f0_fn != NULL) {
+        f0_fn(dim, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, v_eq, numConstants, constants, &h_f0_scr[(e * Nq + q) * Nc]);
         for (PetscInt c = 0; c < Nc; ++c) h_f0_scr[(e * Nq + q) * Nc + c] *= detJ_eq * w;
       }
-      if (f1_fn) {
-        f1_fn(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, v_eq, numConstants, constants, &h_f1_scr[(e * Nq + q) * Nc * dE]);
+      if (f1_fn != NULL) {
+        f1_fn(dim, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, v_eq, numConstants, constants, &h_f1_scr[(e * Nq + q) * Nc * dE]);
         for (PetscInt c = 0; c < Nc; ++c)
           for (PetscInt d = 0; d < dE; ++d) h_f1_scr[((e * Nq + q) * Nc + c) * dE + d] *= detJ_eq * w;
       }
