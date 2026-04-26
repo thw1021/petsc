@@ -16,10 +16,10 @@
 */
 
 #include <petsc/private/petscfeimpl.h>
-#include <petscfekokkos.h>
+#include <petsc/private/petscfekokkosimpl.h>
 #include <Kokkos_Core.hpp>
 
-/*@C
+/*@
   PetscFEKokkosMapsCreate - Allocate a `PetscFEKokkosMaps` struct with proper C++ construction
 
   Not Collective
@@ -80,7 +80,7 @@ PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosCreateMaps - Build host-side assembly maps (DOF indices, constraint info, COO offsets) for GPU FEM assembly
 
   Not Collective
@@ -415,7 +415,7 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosStageMaps - Deep-copy host assembly maps to device Kokkos Views
 
   Not Collective
@@ -560,7 +560,7 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosEnsureDynamicViews - Reallocate cached dynamic device Views only when sizes change
 
   Not Collective
@@ -612,7 +612,7 @@ PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosPreallocateCOO - Build COO row/column index arrays and call `MatSetPreallocationCOO()` for GPU Jacobian assembly
 
   Collective
@@ -727,7 +727,7 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosResetGeometry - Release cached element geometry and invalidate device geometry Views
 
   Not Collective
@@ -764,7 +764,7 @@ PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosMapsDestroy - Free host arrays and cached geometry in a `PetscFEKokkosMaps` struct
 
   Not Collective
@@ -819,7 +819,7 @@ PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosSetUpGeometry - Build element geometry on host and upload to device
 
   Not Collective
@@ -981,7 +981,7 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFEKokkosSetUp - Build assembly maps, stage to device, preallocate COO matrix, and build element geometry for GPU FEM assembly
 
   Collective

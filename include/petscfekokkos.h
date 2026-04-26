@@ -994,30 +994,17 @@ typedef struct {
   IS           cached_cellIS;
 } PetscFEKokkosMaps;
 
-/*MC
-  PetscFEKokkosMaps lifecycle functions - Create, populate, stage, and destroy
-  the assembly-map context used by the Kokkos FE integration path.
-
-  These are C++ only (require Kokkos) and have no Fortran bindings.
-
-  Level: intermediate
-
-  Note:
-  Hanging-node constraints are not yet supported by the GPU residual/Jacobian
-  dispatchers (guarded by `PetscCheck(ctx->num_reduced == 0, ...)`).
-  Constraint support is planned for a future release.
-
-.seealso: `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsDestroy()`
-M*/
-PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosCreateMaps(DM, PetscFEKokkosMaps *);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *, DM);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *, Mat);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUpGeometry(DM, PetscFEKokkosMaps *);
-PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUp(DM, PetscFEKokkosMaps *, Mat);
+/* NOTE: The PetscFEKokkosMaps lifecycle function declarations (PetscFEKokkosMapsCreate,
+   PetscFEKokkosCreateMaps, PetscFEKokkosStageMaps, PetscFEKokkosEnsureDynamicViews,
+   PetscFEKokkosPreallocateCOO, PetscFEKokkosResetGeometry, PetscFEKokkosMapsDestroy,
+   PetscFEKokkosSetUpGeometry, PetscFEKokkosSetUp) are intentionally NOT declared here
+   with PETSC_EXTERN.  Placing PETSC_EXTERN declarations in a public include/*.h file
+   causes the Fortran binding generator (generatefortranbindings.py) to create a
+   fekokkos_maps.kokkosf.cxx stub that is compiled with a plain C++ compiler.  That
+   stub includes this header, which pulls in Kokkos_Core.hpp, which requires nvcc/hipcc
+   and fails with a plain C++ compiler.  The declarations live instead in
+   include/petsc/private/petscfekokkosimpl.h, which is only included from .kokkos.cxx
+   translation units compiled with the Kokkos-aware compiler. */
 
 template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
