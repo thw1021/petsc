@@ -15,7 +15,7 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
 #include <petscds.h>
 #include <petscfe.h>
 #include <Kokkos_Core.hpp>
-#include <petscfekokkos.h>
+#include <petsc/private/petscfekokkosimpl.h>
 
 /* Residual and Jacobian callbacks.  KOKKOS_INLINE_FUNCTION marks them __host__ __device__
    so they serve both as template parameters for the GPU-resident path and as plain
