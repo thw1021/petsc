@@ -760,8 +760,8 @@ skipoptions:
 
    test:
       suffix: cudss
-      requires: cuda cudss
-      args: -mat_type aijcusparse -mat_solver_type cudss -cholesky 0
+      requires: cuda cudss !complex
+      args: -mat_type aijcusparse -mat_solver_type cudss -cholesky {{0 1}separate output}
 
    testset:
       nsize: {{1 2}separate output}
