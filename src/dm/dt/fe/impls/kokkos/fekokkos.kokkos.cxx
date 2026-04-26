@@ -11,7 +11,7 @@
 */
 
 #include <petsc/private/petscfeimpl.h>
-#include <petscfekokkos.h>
+#include <petsc/private/petscfekokkosimpl.h>
 #include <Kokkos_Core.hpp>
 #define KOKKOS_SHARED_LEVEL 0
 
