@@ -190,11 +190,7 @@ static PetscErrorCode MatApplyConfig_cuDSS(Mat_cuDSS *lu)
    For MATSEQAIJ: copy host arrays to lu->d_row_offsets/d_col_indices/d_values.
    Returns device pointers in d_row, d_col, d_val (not owned by caller).
 */
-<<<<<<< Updated upstream
-static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, PetscInt **d_row, PetscInt **d_col, PetscScalar **d_val)
-=======
-static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, void **d_row, void **d_col, PetscScalar **d_val)
->>>>>>> Stashed changes
+static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, void **d_row, void **d_col, PetscScalar **d_val)
 {
   PetscBool    isCUSPARSE;
   cudaStream_t stream;
@@ -215,24 +211,14 @@ static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, void **d_row,
       *d_val                                       = (PetscScalar *)thrust::raw_pointer_cast(csr->values->data());
     }
   } else {
-<<<<<<< Updated upstream
-    /* MATSEQAIJ: async copy host CSR to device on the cuDSS stream */
+    /* MATSEQAIJ: async copy host CSR to device on the cuDSS stream (PetscInt-sized indices) */
     Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
     PetscCall(PetscGetCurrentCUDAStream(&stream));
     PetscCallCUDA(cudaMemcpyAsync(lu->d_row_offsets, a->i, (lu->n + 1) * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
     PetscCallCUDA(cudaMemcpyAsync(lu->d_col_indices, a->j, lu->nnz * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
     PetscCallCUDA(cudaMemcpyAsync(lu->d_values, a->a, lu->nnz * sizeof(PetscScalar), cudaMemcpyHostToDevice, stream));
-    *d_row = lu->d_row_offsets;
-    *d_col = lu->d_col_indices;
-=======
-    /* MATSEQAIJ: copy host CSR to device (PetscInt-sized indices) */
-    Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
-    PetscCallCUDA(cudaMemcpy(lu->d_row_offsets, a->i, (lu->n + 1) * sizeof(PetscInt), cudaMemcpyHostToDevice));
-    PetscCallCUDA(cudaMemcpy(lu->d_col_indices, a->j, lu->nnz * sizeof(PetscInt), cudaMemcpyHostToDevice));
-    PetscCallCUDA(cudaMemcpy(lu->d_values, a->a, lu->nnz * sizeof(PetscScalar), cudaMemcpyHostToDevice));
     *d_row = (void *)lu->d_row_offsets;
     *d_col = (void *)lu->d_col_indices;
->>>>>>> Stashed changes
     *d_val = lu->d_values;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -327,13 +313,8 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscCallCUDSS(cudssSetStream, lu->handle, stream);
 
   /* Ensure CSR data is on device and create sparse matrix descriptor */
-<<<<<<< Updated upstream
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
-  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
-=======
-  PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
-  PetscCallcuDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, lu->indexType, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
->>>>>>> Stashed changes
+  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, lu->indexType, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
 
   /* Allocate scratch device buffers and create dense RHS/solution descriptors */
   PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
@@ -402,15 +383,16 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   Mat_cuDSS         *lu = (Mat_cuDSS *)F->data;
   const PetscScalar *barray;
   PetscScalar       *xarray;
-  PetscInt           n, nrhs, ldb, ldx;
+  PetscInt           n, nrhs, nX, nrhsX, ldb, ldx;
   cudssMatrix_t      cudss_B = NULL, cudss_X = NULL;
   Mat                Bcuda = NULL, Xcuda = NULL;
   PetscBool          BisCUDA = PETSC_FALSE, XisCUDA = PETSC_FALSE;
   cudaStream_t       stream;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompareAny((PetscObject)B, &BisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
-  PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &XisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
+  /* cuDSS is a sequential solver; only accept sequential dense CUDA types */
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSECUDA, &BisCUDA));
+  PetscCall(PetscObjectTypeCompare((PetscObject)X, MATSEQDENSECUDA, &XisCUDA));
   /* Convert B to a temporary CUDA matrix to avoid mutating the caller's matrix */
   if (!BisCUDA) PetscCall(MatConvert(B, MATDENSECUDA, MAT_INITIAL_MATRIX, &Bcuda));
   else Bcuda = B;
@@ -418,6 +400,8 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   if (!XisCUDA) PetscCall(MatConvert(X, MATDENSECUDA, MAT_INITIAL_MATRIX, &Xcuda));
   else Xcuda = X;
   PetscCall(MatGetSize(Bcuda, &n, &nrhs));
+  PetscCall(MatGetSize(Xcuda, &nX, &nrhsX));
+  PetscCheck(n == nX && nrhs == nrhsX, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible matrix dimensions: B is %" PetscInt_FMT " x %" PetscInt_FMT ", X is %" PetscInt_FMT " x %" PetscInt_FMT, n, nrhs, nX, nrhsX);
   PetscCall(MatDenseGetLDA(Bcuda, &ldb));
   PetscCall(MatDenseGetLDA(Xcuda, &ldx));
   PetscCall(MatDenseCUDAGetArrayRead(Bcuda, &barray));
