@@ -106,6 +106,12 @@
 
 ## FE/FV
 
+- Add `PETSCFEKOKKOS` type, `PetscFEKokkosMaps` struct, and supporting functions
+  `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`, `PetscFEKokkosPreallocateCOO()`,
+  `PetscFEKokkosMapsDestroy()`, `DMPlexSNESComputeResidualFEM_Kokkos()`, and
+  `DMPlexSNESComputeJacobianFEM_Kokkos()` for GPU-resident finite element residual and
+  Jacobian assembly via Kokkos
+
 
 ## DMNetwork
 
