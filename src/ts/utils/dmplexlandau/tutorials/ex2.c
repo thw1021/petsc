@@ -739,21 +739,21 @@ int main(int argc, char **argv)
     test:
       suffix: kokkos_batch
       requires: kokkos_kernels
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_pc_type jacobi
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_batch_pc jacobi
     test:
       suffix: kokkos_batch_tfqmr
       requires: kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG)
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc jacobi
     test:
       suffix: kokkos_batch_gmres_amg
       requires: kokkos_kernels !complex
       output_file: output/ex2_kokkos_batch_gmres_amg.out
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type gmres -pc_bjkokkos_pc_type amg
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type gmres -pc_bjkokkos_batch_pc amg
     test:
       suffix: kokkos_batch_tfqmr_amg
       requires: kokkos_kernels
       output_file: output/ex2_kokkos_batch_tfqmr_amg.out
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type amg
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc amg
 
   test:
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
@@ -790,6 +790,6 @@ int main(int argc, char **argv)
       suffix: sphere_3d_kokkos_tfqmr_amg
       requires: kokkos_kernels
       output_file: output/ex2_sphere_3d_kokkos_tfqmr_amg.out
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type amg
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc amg
 
 TEST*/

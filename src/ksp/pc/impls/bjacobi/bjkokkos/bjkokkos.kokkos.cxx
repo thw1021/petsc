@@ -1723,15 +1723,13 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       jac->d_idiag_k = new Kokkos::View<PetscScalar *, Kokkos::LayoutRight>("idiag", n);
       // options
       PetscCall(PCBJKOKKOSCreateKSP_BJKOKKOS(pc));
-      /* Check if user requested -pc_bjkokkos_pc_type amg.
-         "amg" is not a registered PETSc PC type, so we intercept it here and
-         clear it from the options database before KSPSetFromOptions runs. */
+      // Check if user requested -pc_bjkokkos_batch_pc amg
       PetscBool use_amg = PETSC_FALSE;
       {
         char      pc_type_str[64] = "";
         PetscBool pc_type_set     = PETSC_FALSE;
         PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "BJKOKKOS batch PC type", "PC");
-        PetscCall(PetscOptionsString("-pc_type", "Batch preconditioner type (jacobi or amg)", "PCSetType", "", pc_type_str, sizeof(pc_type_str), &pc_type_set));
+        PetscCall(PetscOptionsString("-batch_pc", "Batch preconditioner type (jacobi or amg)", "PCSetType", "", pc_type_str, sizeof(pc_type_str), &pc_type_set));
         PetscOptionsEnd();
         if (pc_type_set == PETSC_TRUE) {
           PetscBool match;
@@ -1741,20 +1739,11 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
             PetscBool match_jac, match_empty;
             PetscCall(PetscStrcmp(pc_type_str, "jacobi", &match_jac));
             PetscCall(PetscStrcmp(pc_type_str, "", &match_empty));
-            PetscCheck(match_jac || match_empty, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "BJKOKKOS supports only -pc_type jacobi or amg, not \"%s\"", pc_type_str);
+            PetscCheck(match_jac || match_empty, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "BJKOKKOS supports only -batch_pc jacobi or amg, not \"%s\"", pc_type_str);
           }
         }
-        if (use_amg == PETSC_TRUE) {
-          // Clear the "amg" pc_type option so KSPSetFromOptions does not try to
-          // register "amg" as a PETSc PC type inside the inner KSP.  The option
-          // has already been consumed by PetscOptionsString above.
-          const char *prefix = ((PetscObject)jac->ksp)->prefix;
-          char        opt_name[256];
-          PetscCall(PetscSNPrintf(opt_name, sizeof(opt_name), "-%spc_type", prefix ? prefix : ""));
-          PetscCall(PetscOptionsClearValue(NULL, opt_name));
-        }
-        PetscCall(KSPSetFromOptions(jac->ksp));
       }
+      PetscCall(KSPSetFromOptions(jac->ksp));
       // Set the inner PC type locally -- do not write to the global options database
       {
         PC innerpc;

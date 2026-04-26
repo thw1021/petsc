@@ -204,24 +204,24 @@ int main(int argc, char **args)
     nsize: 4
     test:
       suffix: batch
-      args: -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
+      args: -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
     test:
       suffix: asm
       args: -ksp_type cg -pc_type asm -sub_pc_type jacobi -sub_ksp_type tfqmr -sub_ksp_rtol 1e-3
     test:
       suffix: batch_bicg
-      args: -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
+      args: -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_batch_pc jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
 
   test:
     requires: kokkos_kernels
     nsize: 4
     suffix: no_metis_batch
-    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-6 -m 37 -n 23 -num_local_blocks 4 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
+    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-6 -m 37 -n 23 -num_local_blocks 4 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
 
   test:
     requires: kokkos_kernels
     nsize: 1
     suffix: serial_batch
-    args: -ksp_monitor -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 16 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-6 -mat_type aijkokkos -pc_bjkokkos_ksp_converged_reason
+    args: -ksp_monitor -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 16 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc jacobi -pc_bjkokkos_ksp_rtol 1e-6 -mat_type aijkokkos -pc_bjkokkos_ksp_converged_reason
 
  TEST*/
