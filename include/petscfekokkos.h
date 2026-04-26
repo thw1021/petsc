@@ -124,6 +124,11 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     constexpr PetscInt PETSCFE_KOKKOS_MAX_DE  = 3;
     constexpr PetscInt PETSCFE_KOKKOS_MAX_NBS = 125;
 
+    /* Device-side bounds check (debug builds only) */
+    KOKKOS_ASSERT(Nc <= PETSCFE_KOKKOS_MAX_NC);
+    KOKKOS_ASSERT(dE <= PETSCFE_KOKKOS_MAX_DE);
+    KOKKOS_ASSERT(Nb / Nc <= PETSCFE_KOKKOS_MAX_NBS);
+
     PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];
     PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE];
     PetscScalar f0_loc[PETSCFE_KOKKOS_MAX_NC];
@@ -192,7 +197,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     constexpr bool has_F0 = PetscPointFnNonNull<F0>::value;
     if constexpr (has_F0) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
-      F0(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
+      F0(dim, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
       /* Accumulate into elemVec via atomic_add: multiple threads (one per q)
          may write to the same ev_e[b] concurrently.
          Phase 2: val_e[b] += B_q[bc] * f0_s[q*Nc+c] */
@@ -204,7 +209,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     constexpr bool has_F1 = PetscPointFnNonNull<F1>::value;
     if constexpr (has_F1) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
-      F1(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
+      F1(dim, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
       /* Accumulate: ev_e[b] += all_grad[b_s,d] * f1[c_b,d] * wq  (Opt #3: reuse precomputed grad)
          phys_grad(b,c,d) = all_grad[(b/Nc)*dE+d]  (nonzero only for c == b%Nc)
          Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
@@ -260,6 +265,11 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     constexpr PetscInt PETSCFE_KOKKOS_MAX_NCD = PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE;
     constexpr PetscInt PETSCFE_KOKKOS_MAX_NBS = 125;
 
+    /* Device-side bounds check (debug builds only) */
+    KOKKOS_ASSERT(Nc <= PETSCFE_KOKKOS_MAX_NC);
+    KOKKOS_ASSERT(dE <= PETSCFE_KOKKOS_MAX_DE);
+    KOKKOS_ASSERT(Nb / Nc <= PETSCFE_KOKKOS_MAX_NBS);
+
     PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];
     PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NCD];
     /* Jacobian output tensors -- g0[Nc*Nc], g1[Nc*Nc*dE], g2[Nc*dE*Nc], g3[Nc*dE*Nc*dE] */
@@ -314,19 +324,19 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     constexpr bool has_G3 = PetscPointJacFnNonNull<G3>::value;
     if constexpr (has_G0) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
-      G0(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
+      G0(dim, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
     }
     if constexpr (has_G1) {
       for (PetscInt i = 0; i < Nc * Nc * dE; ++i) g1_loc[i] = 0.0;
-      G1(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
+      G1(dim, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
     }
     if constexpr (has_G2) {
       for (PetscInt i = 0; i < Nc * dE * Nc; ++i) g2_loc[i] = 0.0;
-      G2(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
+      G2(dim, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
     }
     if constexpr (has_G3) {
       for (PetscInt i = 0; i < Nc * dE * Nc * dE; ++i) g3_loc[i] = 0.0;
-      G3(dE, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
+      G3(dim, Nf_local, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
 
     /* Precompute physical gradients for all scalar basis functions.
@@ -839,8 +849,9 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
        G0 term:            2 flops (B_test * g0 * B_trial)
        G1/G2 terms:        2*dE flops each (grad-value contractions)
      Simplified to the G3-dominant count:
-       Ne * Nq * Nb * Nc * Nb * Nc * 2 * dE * dE */
-  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nc * Nb * Nc * 2.0 * dE * dE));
+       Ne * Nq * Nb * Nb * 2 * dE * dE
+     (Nb already includes the Nc multiplier for vector FE) */
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nb * 2.0 * dE * dE));
 
   /* Copy result back and accumulate */
   {
@@ -874,7 +885,7 @@ S*/
 typedef struct {
   /* Phase 1.C fields */
   PetscInt   num_elements; /* Ne -- number of owned cells */
-  PetscInt   num_dof;      /* total global DOFs (for bounds checking) */
+  PetscInt   num_dof;      /* local DOFs in global Vec (for bounds checking) */
   PetscInt   local_dof;    /* local DOFs including ghosts (local Vec size) */
   PetscInt   Nb;           /* basis functions per element (single field) */
   PetscInt   totDim;       /* total DOFs per element across all fields */
@@ -983,9 +994,30 @@ typedef struct {
   IS           cached_cellIS;
 } PetscFEKokkosMaps;
 
-  /* Lifecycle function declarations live in a private header so the Fortran
-   binding generator (which greps include/ *.h) does not create stubs. */
-  #include <petsc/private/petscfekokkosmapsimpl.h>
+/*MC
+  PetscFEKokkosMaps lifecycle functions - Create, populate, stage, and destroy
+  the assembly-map context used by the Kokkos FE integration path.
+
+  These are C++ only (require Kokkos) and have no Fortran bindings.
+
+  Level: intermediate
+
+  Note:
+  Hanging-node constraints are not yet supported by the GPU residual/Jacobian
+  dispatchers (guarded by `PetscCheck(ctx->num_reduced == 0, ...)`).
+  Constraint support is planned for a future release.
+
+.seealso: `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsDestroy()`
+M*/
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosCreateMaps(DM, PetscFEKokkosMaps *);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *, DM);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *, Mat);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUpGeometry(DM, PetscFEKokkosMaps *);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUp(DM, PetscFEKokkosMaps *, Mat);
 
 template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
@@ -1049,9 +1081,12 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   /* Get local solution with BCs */
   PetscCall(DMGetLocalVector(dm, &locX));
   PetscCall(DMGlobalToLocal(dm, X, INSERT_VALUES, locX));
-  /* Force device->host sync if locX is a device Vec: DMPlexInsertBoundaryValues
-   * calls VecGetArray(locX) internally which requires host-authoritative data.
-   * DMPlex/PetscFE do not support GPU Vecs. */
+  /* FRAGILE: Force device->host sync if locX is a device Vec.
+   * DMPlexInsertBoundaryValues calls VecGetArray(locX) internally which
+   * requires host-authoritative data.  This workaround relies on the
+   * internal VecKokkos semantics that VecGetArray triggers D->H sync.
+   * TODO: Replace with VecCopyAsync or the Kokkos-Vec sync helper when
+   * a public API for explicit host/device sync is available. */
   {
     PetscScalar *tmp;
     PetscMemType mtype;
@@ -1141,7 +1176,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   const PetscInt  dim_    = dim;
   const PetscInt  dE_     = dE;
   const PetscInt  totDim_ = totDim;
-  const PetscReal t_      = 0.0; /* TODO: pass actual time for TS support */
+  const PetscReal t_      = 0.0; /* autonomous problems only; guarded by PetscCheck below */
 
   /* TeamPolicy: one team per element.  On GPU backends, the team size
    * provides hardware threads that can be used for intra-element parallelism
@@ -1323,15 +1358,20 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   /* Get local solution with BCs */
   PetscCall(DMGetLocalVector(dm, &locX));
   PetscCall(DMGlobalToLocal(dm, X, INSERT_VALUES, locX));
-  /* Force device->host sync if locX is a device Vec */
+  /* FRAGILE: Force device->host sync if locX is a device Vec.
+   * DMPlexInsertBoundaryValues calls VecGetArray(locX) internally which
+   * requires host-authoritative data.  This workaround relies on the
+   * internal VecKokkos semantics that VecGetArray triggers D->H sync.
+   * TODO: Replace with VecCopyAsync or the Kokkos-Vec sync helper when
+   * a public API for explicit host/device sync is available. */
   {
     PetscScalar *tmp;
     PetscMemType mtype;
     PetscCall(VecGetArrayAndMemType(locX, &tmp, &mtype));
     PetscCall(VecRestoreArrayAndMemType(locX, &tmp));
     if (PetscMemTypeDevice(mtype)) {
-      PetscCall(VecGetArray(locX, &tmp));
-      PetscCall(VecRestoreArray(locX, &tmp));
+      PetscCall(VecGetArray(locX, &tmp));     /* KokkosDualViewSyncHost: device->host */
+      PetscCall(VecRestoreArray(locX, &tmp)); /* marks host modified */
     }
   }
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
@@ -1389,8 +1429,8 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   const PetscInt  dim_      = dim;
   const PetscInt  dE_       = dE;
   const PetscInt  totDim_   = totDim;
-  const PetscReal t_        = 0.0; /* TODO: pass actual time for TS support */
-  const PetscReal u_tShift_ = 0.0; /* TODO: pass actual shift for TS support */
+  const PetscReal t_        = 0.0; /* autonomous problems only; guarded by PetscCheck above */
+  const PetscReal u_tShift_ = 0.0; /* autonomous problems only; guarded by PetscCheck above */
 
   using team_policy_t     = Kokkos::TeamPolicy<>;
   using member_type       = team_policy_t::member_type;
@@ -1460,6 +1500,9 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
           if (nc == 0) continue;
           const PetscInt pt_off_b2 = d_coo_elem_point_offsets[e * (Nb_ + 1) + b2];
 
+          /* NOTE: This COO index formula is correct only when num_reduced == 0
+           * (no hanging-node constraints).  See PetscFEKokkosPreallocateCOO for
+           * the matching host-side formula and detailed explanation. */
           const PetscInt    idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
           const PetscScalar Aij  = ctx_d_elemMat[e * totDim_ * totDim_ + b * totDim_ + b2];
 
@@ -1477,11 +1520,12 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   Kokkos::fence();
 
   /* Log GPU flops for the Jacobian integration + scatter kernels.
-     Formula matches PetscFEKokkosComputeJacobian (line ~863):
-       Ne * Nq * Nb * Nc * Nb * Nc * 2 * dE * dE
+     Per element, per quad point, per (test DOF b, trial DOF b2):
+       G3 term (dominant): 2*dE*dE flops (phi_grad * g3 * psi_grad)
+     Nb already includes the Nc multiplier for vector FE.
      PetscLogGpuFlops also increments the total PetscLogFlops counter.
      GPU %F in -log_view = gpu_flops / total_flops * 100. */
-  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nc * Nb * Nc * 2.0 * dE * dE));
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nb * 2.0 * dE * dE));
 
   PetscCall(MatSetValuesCOO(J, ctx_d_coo_vals.data(), INSERT_VALUES));
 

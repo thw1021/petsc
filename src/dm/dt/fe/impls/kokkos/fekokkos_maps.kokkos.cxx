@@ -152,12 +152,14 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   }
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
 
-  /* Get total global DOFs for bounds checking */
+  /* Get local DOF count for the global Vec (used for bounds checking).
+   * VecGetLocalSize returns the per-rank portion of the global Vec,
+   * which is the correct bound for local row/column indices. */
   num_dof = 0;
   {
     Vec gvec;
     PetscCall(DMGetGlobalVector(dm, &gvec));
-    PetscCall(VecGetSize(gvec, &num_dof));
+    PetscCall(VecGetLocalSize(gvec, &num_dof));
     PetscCall(DMRestoreGlobalVector(dm, &gvec));
   }
 
@@ -344,9 +346,15 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
       /* If no diagonal found (fully zeroed by constraint), mark as Dirichlet */
       if (!found) maps->h_gIdx[e * Nb + q] = (PetscFEKokkosIdx)(-1);
 
-      /* Restore closure indices.  DMPlexRestoreClosureIndices already frees
-       * any work array it allocated, so we must NOT call DMRestoreWorkArray
-       * again.  Simply reset elMat to the original malloc'd buffer. */
+      /* Restore closure indices.
+       * FRAGILE: DMPlexRestoreClosureIndices may reallocate elMat internally
+       * (when expanding for constraints).  After Restore, elMat may point to
+       * freed memory.  We reset it to valuesOrig (our PetscMalloc'd buffer)
+       * which is guaranteed to remain valid.  This relies on the DMPlex
+       * contract that RestoreClosureIndices does NOT free the user's original
+       * buffer -- only its own internal work array.  If this contract ever
+       * changes, this code will double-free.  A safer approach would be to
+       * PetscMemcpy into a stable buffer rather than swapping pointers. */
       PetscCall(DMPlexRestoreClosureIndices(plex, section, globalSection, cStart + e, PETSC_TRUE, &numIndices, &indices, NULL, &elMat));
       elMat = valuesOrig;
     } /* basis q */
@@ -637,6 +645,11 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
   PetscFunctionBegin;
   PetscAssertPointer(maps, 1);
   PetscValidHeaderSpecific(J, MAT_CLASSID, 2);
+  {
+    PetscBool isKokkosMat;
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)J, &isKokkosMat, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
+    PetscCheck(isKokkosMat, PetscObjectComm((PetscObject)J), PETSC_ERR_SUP, "PetscFEKokkosPreallocateCOO requires MATAIJKOKKOS; use -dm_mat_type aijkokkos");
+  }
   PetscCall(PetscMalloc2(coo_size, &coo_i, coo_size, &coo_j));
   /* Initialize to -1 (unused slots).
    * MatSetPreallocationCOO / MatSetValuesCOO silently ignore entries where
@@ -683,7 +696,20 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
 
         /* COO base offset for this (b, b2) pair.
          * Formula:
-         *   idx0 = off + fullNb * pt_off_b + nr * pt_off_b2 */
+         *   idx0 = off + fullNb * pt_off_b + nr * pt_off_b2
+         *
+         * NOTE: This formula is correct ONLY when num_reduced == 0
+         * (no hanging-node constraints), because in that case every DOF
+         * has nr == 1 and nc == 1, so the formula reduces to simple
+         * row-major indexing into a fullNb x fullNb block.  For meshes
+         * with constrained DOFs (nr or nc > 1 and varying across DOFs),
+         * the column stride nr*pt_off_b2 is dimensionally inconsistent
+         * and would scatter into wrong matrix entries.  Constraint
+         * support is not yet implemented; the residual/Jacobian
+         * dispatchers guard against it with PetscCheck(num_reduced==0).
+         * When constraint support is added, this index formula must be
+         * revised to use a consistent stride (e.g., fullNb * pt_off_b2
+         * or a per-element prefix-sum table). */
         const PetscInt idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
 
         for (PetscInt p = 0; p < nr; ++p) {
