@@ -1456,7 +1456,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     const PetscInt *clperm = clperm_arr;
 
     if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
-    PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure)); /* original closure */
+    PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));                                                                 /* original closure */
     for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f])); /* orientation perms */
     PetscCall(PetscArrayzero(fieldFoffs, LANDAU_MAX_SPECIES));
     PetscCall(PetscArrayzero(fullNb, LANDAU_MAX_SPECIES));
