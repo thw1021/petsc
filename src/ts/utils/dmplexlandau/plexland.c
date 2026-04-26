@@ -1405,9 +1405,10 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
 {
   PetscDS             ds;
   PetscSection        aSec, cSec;
-  IS                  aIS;
+  IS                  aIS, clpermIS = NULL;
   Mat                 cMat;
   const PetscInt     *anchors;
+  const PetscInt     *clperm_arr = NULL;
   PetscInt            cStart, cEnd, aStart, aEnd, sStart, sEnd;
   const PetscInt    **fieldPerms[LANDAU_MAX_SPECIES];
   const PetscScalar **fieldFlips[LANDAU_MAX_SPECIES];
@@ -1435,17 +1436,27 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     anchors       = NULL;
   }
   PetscCall(PetscSectionGetChart(section, &sStart, &sEnd));
+  /* Query the closure inverse permutation once before the cell loop.
+     All height-0 cells share the same depth, so the permutation is identical for every cell.
+     Use the public API to avoid cross-library use of _Internal symbols. */
+  if (cStart < cEnd) {
+    PetscSection clSec = NULL;
+    PetscCall(PetscSectionGetClosureIndex(section, (PetscObject)dm, &clSec, NULL));
+    if (clSec) { /* closure permutation exists */
+      PetscInt depth0;
+      PetscCall(DMPlexGetPointDepth(dm, cStart, &depth0));
+      PetscCall(PetscSectionGetClosureInversePermutation(section, (PetscObject)dm, depth0, clTotDof, &clpermIS));
+      PetscCall(ISGetIndices(clpermIS, &clperm_arr));
+    }
+  }
   for (PetscInt ej = cStart, eidx = 0; ej < cEnd; ++ej, ++eidx) {
     PetscInt        glb_elem_idx = glb_elem_idx_start + eidx;
     PetscInt       *closure      = NULL;
     PetscInt        closureSize;
-    const PetscInt *clperm = NULL;
-    PetscInt        depth;
+    const PetscInt *clperm = clperm_arr;
 
     if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
     PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure)); /* original closure */
-    PetscCall(DMPlexGetPointDepth(dm, ej, &depth));
-    PetscCall(PetscSectionGetClosureInversePermutation_Internal(section, (PetscObject)dm, depth, clTotDof, &clperm));                                  /* may be NULL */
     for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f])); /* orientation perms */
     PetscCall(PetscArrayzero(fieldFoffs, LANDAU_MAX_SPECIES));
     PetscCall(PetscArrayzero(fullNb, LANDAU_MAX_SPECIES));
@@ -1589,6 +1600,10 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
       }
     }
   } /* cell */
+  if (clpermIS) {
+    PetscCall(ISRestoreIndices(clpermIS, &clperm_arr));
+    PetscCall(ISDestroy(&clpermIS));
+  }
   if (aSec) PetscCall(ISRestoreIndices(aIS, &anchors));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
