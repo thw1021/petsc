@@ -1006,7 +1006,8 @@ typedef struct {
    include/petsc/private/petscfekokkosimpl.h, which is only included from .kokkos.cxx
    translation units compiled with the Kokkos-aware compiler.
    PetscFEKokkosEnsureDynamicViews is declared below with PETSC_INTERN (not PETSC_EXTERN)
-   because the template functions in this header call it directly. */
+   because the template functions in this header call it directly; PETSC_EXTERN would
+   cause the Fortran binding generator to create a stub for it. */
 
 PETSC_INTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
 
