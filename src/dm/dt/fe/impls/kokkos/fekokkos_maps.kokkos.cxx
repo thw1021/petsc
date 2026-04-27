@@ -39,7 +39,7 @@
 
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosMapsDestroy()`, `PetscFEKokkosSetUp()`
 @*/
-PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **maps)
+PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **maps) PeNS
 {
   PetscFunctionBegin;
   PetscAssertPointer(maps, 1);
@@ -104,7 +104,7 @@ PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **maps)
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosStageMaps()`, `PetscFEKokkosPreallocateCOO()`,
           `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosMapsDestroy()`
 @*/
-PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
+PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps) PeNS
 {
   PetscSection section, globalSection;
   PetscInt     cStart, cEnd, Ne, Nb, Nc, totDim, num_dof;
@@ -436,7 +436,7 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosPreallocateCOO()`,
           `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosMapsDestroy()`
 @*/
-PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
+PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm) PeNS
 {
   PetscFunctionBegin;
   PetscAssertPointer(maps, 1);
@@ -582,7 +582,7 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
 
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`
 @*/
-PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt Ne, PetscInt Nq, PetscInt dE, PetscInt totDim, PetscInt numConstants)
+PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt Ne, PetscInt Nq, PetscInt dE, PetscInt totDim, PetscInt numConstants) PeNS
 {
   PetscFunctionBegin;
   if (Ne != maps->cached_Ne || Nq != maps->cached_Nq || dE != maps->cached_dE || totDim != maps->cached_totDim) {
@@ -634,7 +634,7 @@ PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`,
           `PetscFEKokkosMapsDestroy()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
-PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
+PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J) PeNS
 {
   const PetscInt   Ne       = maps->num_elements;
   const PetscInt   Nb       = maps->Nb;
@@ -748,7 +748,7 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
 
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsDestroy()`
 @*/
-PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
+PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps) PeNS
 {
   PetscFunctionBegin;
   PetscAssertPointer(maps, 1);
@@ -784,7 +784,7 @@ PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
 
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosResetGeometry()`
 @*/
-PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **maps)
+PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **maps) PeNS
 {
   PetscFunctionBegin;
   if (!*maps) PetscFunctionReturn(PETSC_SUCCESS);
@@ -841,7 +841,7 @@ PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **maps)
 
 .seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosResetGeometry()`, `PetscFEKokkosMapsDestroy()`
 @*/
-PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
+PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps) PeNS
 {
   PetscDS            ds;
   PetscFE            fe;
@@ -1007,7 +1007,7 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
           `PetscFEKokkosPreallocateCOO()`, `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosResetGeometry()`,
           `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
-PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J)
+PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J) PeNS
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
