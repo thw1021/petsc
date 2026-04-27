@@ -240,6 +240,23 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre);
 
+/*S
+  TaoTermMappedHessianFn - A prototype of a function to directly compute a mapped Hessian
+  for a term in a `TAOTERMSUM`, bypassing the standard unmapped Hessian + PtAP flow
+
+  Calling Sequence:
++ x      - the solution vector in the outer (sum) solution space
+. params - the parameters vector for this term
+. H      - output, the mapped Hessian matrix
+. Hpre   - output, the mapped preconditioner matrix
+- ctx    - user context
+
+  Level: advanced
+
+.seealso: [](sec_tao_term), `TaoTermSumSetTermMappedHessianFn()`, `TAOTERMSUM`, `TaoTermHessianFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermMappedHessianFn)(Vec x, Vec params, Mat H, Mat Hpre, void *ctx);
+
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjective(TaoTerm, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
@@ -271,6 +288,9 @@ PETSC_EXTERN PetscErrorCode TaoTermSumGetTermHessianMatrices(TaoTerm, PetscInt, 
 PETSC_EXTERN PetscErrorCode TaoTermSumSetTermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMask(TaoTerm, PetscInt, TaoTermMask *);
 PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMask(TaoTerm, PetscInt, TaoTermMask);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMappedHessianFn(TaoTerm, PetscInt, TaoTermMappedHessianFn *, void *, PetscCtxDestroyFn *);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMappedHessianFn(TaoTerm, PetscInt, TaoTermMappedHessianFn **, void **);
+PETSC_EXTERN PetscErrorCode TaoTermSumFlatten(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetLastTermObjectives(TaoTerm, const PetscReal *[]);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
