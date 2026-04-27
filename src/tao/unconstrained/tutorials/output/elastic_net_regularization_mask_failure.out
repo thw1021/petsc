@@ -1,13 +1,13 @@
-iter =   0, Function value 153.545, Residual: 132.41
-iter =   1, Function value 19.5801, Residual: 1.83082
-iter =   2, Function value 19.5516, Residual: 0.0449057
-iter =   3, Function value 19.5515, Residual: 0.00639275
-iter =   4, Function value 19.5515, Residual: 0.000967751
-iter =   5, Function value 19.5515, Residual: 0.000147493
-iter =   6, Function value 19.5515, Residual: 2.25016e-05
-iter =   7, Function value 19.5515, Residual: 3.43352e-06
-iter =   8, Function value 19.5515, Residual: < 1.0e-6
-iter =   9, Function value 19.5515, Residual: < 1.0e-6
+iter =   0, Function value 153.545, Residual: 132.41 
+iter =   1, Function value 19.5801, Residual: 1.83082 
+iter =   2, Function value 19.5516, Residual: 0.0449057 
+iter =   3, Function value 19.5515, Residual: 0.00639275 
+iter =   4, Function value 19.5515, Residual: 0.000967751 
+iter =   5, Function value 19.5515, Residual: 0.000147493 
+iter =   6, Function value 19.5515, Residual: 2.25016e-05 
+iter =   7, Function value 19.5515, Residual: 3.43352e-06 
+iter =   8, Function value 19.5515, Residual: < 1.0e-6 
+iter =   9, Function value 19.5515, Residual: < 1.0e-6 
 Tao Object: 1 MPI process
   type: nls
     Newton steps: 9
@@ -27,7 +27,8 @@ Tao Object: 1 MPI process
         type: sum
         solution vector space: N = 20 [VecType standard (tao_term_solution_vec_type)]
         parameter vector space: (optional) K = 130 [VecType nest (tao_term_parameters_vec_type)]
-        Hessian MatType (tao_term_hessian_mat_type): aij
+        Hessian MatType (tao_term_hessian_mat_type): shell
+        Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
         Sum of 3 terms:
           Summand 0:
             Scale (tao_term_sum_data_scale): 1.
@@ -45,7 +46,7 @@ Tao Object: 1 MPI process
                       length=100
                 total number of function evaluations=5
                 total number of function/gradient evaluations=10
-                total number of Hessian evaluations=9
+                total number of Hessian evaluations=18
             Map:
               Mat Object: (Amat_) 1 MPI process
                 type: seqdense
@@ -61,7 +62,7 @@ Tao Object: 1 MPI process
                 parameter vector space: (optional) K = 20 [VecType standard (tao_term_parameters_vec_type)]
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
                 total number of gradient evaluations=10
-                total number of Hessian evaluations=9
+                total number of Hessian evaluations=18
             Map: unmapped
             Mask (tao_term_sum_ridge_mask): objective
           Summand 2:
@@ -74,7 +75,7 @@ Tao Object: 1 MPI process
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
                 epsilon (tao_term_l1_epsilon): 0.1
                 total number of function evaluations=15
-                total number of Hessian evaluations=9
+                total number of Hessian evaluations=18
             Map:
               Mat Object: (Dmat_) 1 MPI process
                 type: seqdense
@@ -114,7 +115,10 @@ Tao Object: 1 MPI process
             package used to perform factorization: petsc
             total: nonzeros=400, allocated nonzeros=400
               using I-node routines: found 4 nodes, limit used is 5
-    linear system matrix, which is also used to construct the preconditioner:
+    linear system matrix, followed by the matrix used to construct the preconditioner:
+    Mat Object: 1 MPI process
+      type: shell
+      rows=20, cols=20
     Mat Object: 1 MPI process
       type: seqaij
       rows=20, cols=20

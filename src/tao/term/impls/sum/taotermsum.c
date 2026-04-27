@@ -57,6 +57,61 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermSumHessCacheGetHessians(TaoTerm term, Vec x, Vec params, TaoTermSumHessCache *cache, Mat **hessians, Vec **Axs)
+{
+  TaoTerm_Sum     *sum = (TaoTerm_Sum *)term->data;
+  PetscObjectId    x_id, p_id       = 0;
+  PetscObjectState x_state, p_state = 0;
+
+  PetscFunctionBegin;
+  if (sum->n_terms != cache->n_terms) PetscCall(TaoTermSumHessCacheReset(cache));
+  if (!cache->n_terms) {
+    cache->n_terms = sum->n_terms;
+    PetscCall(PetscCalloc1(sum->n_terms, &cache->hessians));
+    PetscCall(PetscCalloc1(sum->n_terms, &cache->Axs));
+    for (PetscInt i = 0; i < sum->n_terms; i++) {
+      TaoTermMapping *summand = &sum->terms[i];
+
+      if (summand->_unmapped_H) {
+        PetscCall(PetscObjectReference((PetscObject)summand->_unmapped_H));
+        cache->hessians[i] = summand->_unmapped_H;
+      } else PetscCall(TaoTermCreateHessianMatrices(summand->term, &cache->hessians[i], NULL));
+      if (summand->map) PetscCall(MatCreateVecs(summand->map, NULL, &cache->Axs[i]));
+    }
+  }
+  PetscCall(PetscObjectGetId((PetscObject)x, &x_id));
+  PetscCall(PetscObjectStateGet((PetscObject)x, &x_state));
+  if (params) {
+    PetscCall(PetscObjectGetId((PetscObject)params, &p_id));
+    PetscCall(PetscObjectStateGet((PetscObject)params, &p_state));
+  }
+  if (x_id != cache->x_id || x_state != cache->x_state || p_id != cache->p_id || p_state != cache->p_state) {
+    Vec       *sub_params = NULL;
+    PetscBool *is_dummy   = NULL;
+
+    cache->x_id    = x_id;
+    cache->x_state = x_state;
+    cache->p_id    = p_id;
+    cache->p_state = p_state;
+    if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
+    for (PetscInt i = 0; i < sum->n_terms; i++) {
+      TaoTermMapping *summand   = &sum->terms[i];
+      Vec             sub_param = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
+      Vec             Ax        = x;
+
+      if (summand->map) {
+        PetscCall(MatMult(summand->map, x, cache->Axs[i]));
+        Ax = cache->Axs[i];
+      }
+      PetscCall(TaoTermComputeHessian(summand->term, Ax, sub_param, cache->hessians[i], NULL));
+    }
+    if (params) PetscCall(TaoTermSumVecNestRestoreSubVecsRead(params, NULL, &sub_params, &is_dummy));
+  }
+  *hessians = cache->hessians;
+  *Axs      = cache->Axs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermSumIsDummyDestroy(PetscCtxRt ctx)
 {
   PetscFunctionBegin;
@@ -1084,25 +1139,49 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
   PetscBool   *is_dummy   = NULL;
 
   PetscFunctionBegin;
-  if (H == NULL && Hpre == NULL) PetscFunctionReturn(PETSC_SUCCESS);
-  if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
-  // If mattype dense, then after zero entries, H->assembled = true.
-  // But for aij, H->assembled is still false.
-  if (H) {
-    PetscCall(MatZeroEntries(H));
-    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  }
-  if (Hpre && (Hpre != H)) {
+  PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
+  if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!H && Hpre) {
+    // H was MATSHELL (now NULL); Hpre needs assembly via ADD_VALUES from per-sub-term matrices.
+    // Ensure Hpre is initialized so MatAXPY can insert entries.
+    PetscBool assembled;
+
+    PetscCall(MatAssembled(Hpre, &assembled));
+    if (!assembled) {
+      PetscCall(MatSetUp(Hpre));
+      PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
+    }
     PetscCall(MatZeroEntries(Hpre));
-    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
   }
+  if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    TaoTermMapping *summand   = &sum->terms[i];
+    Vec             sub_param = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
+    InsertMode      mode      = (i == 0 && H) ? INSERT_VALUES : ADD_VALUES;
+
+    PetscCall(TaoTermMappingComputeHessian(summand, x, sub_param, mode, H, Hpre == H ? NULL : Hpre));
+  }
+  if (params) PetscCall(TaoTermSumVecNestRestoreSubVecsRead(params, NULL, &sub_params, &is_dummy));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermComputeHessianMult_Sum(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  TaoTerm_Sum *sum        = (TaoTerm_Sum *)term->data;
+  Vec         *sub_params = NULL;
+  Mat         *hessians   = NULL;
+  Vec         *Axs        = NULL;
+  PetscBool   *is_dummy   = NULL;
+
+  PetscFunctionBegin;
+  if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
+  PetscCall(TaoTermSumHessCacheGetHessians(term, x, params, &sum->hessian_cache, &hessians, &Axs));
   for (PetscInt i = 0; i < sum->n_terms; i++) {
     TaoTermMapping *summand   = &sum->terms[i];
     Vec             sub_param = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
 
-    PetscCall(TaoTermMappingComputeHessian(summand, x, sub_param, ADD_VALUES, H, Hpre == H ? NULL : Hpre));
+    PetscCall(TaoTermMappingComputeHessianMult(summand, Axs[i] ? Axs[i] : x, sub_param, hessians[i], v, i == 0 ? INSERT_VALUES : ADD_VALUES, Hv));
   }
   if (params) PetscCall(TaoTermSumVecNestRestoreSubVecsRead(params, NULL, &sub_params, &is_dummy));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1275,9 +1354,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   PetscCall(PetscFree(term->H_mattype));
   PetscCall(PetscFree(term->Hpre_mattype));
 
-  PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->H_mattype));
-  PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->Hpre_mattype));
-  term->Hpre_is_H = PETSC_TRUE;
+  if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->H_mattype));
+  if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->Hpre_mattype));
+  term->Hpre_is_H = PETSC_FALSE;
 
   term->ops->destroy               = TaoTermDestroy_Sum;
   term->ops->view                  = TaoTermView_Sum;
@@ -1286,6 +1365,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   term->ops->gradient              = TaoTermComputeGradient_Sum;
   term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_Sum;
   term->ops->hessian               = TaoTermComputeHessian_Sum;
+  term->ops->hessianmult           = TaoTermComputeHessianMult_Sum;
   term->ops->setup                 = TaoTermSetUp_Sum;
   term->ops->createsolutionvec     = TaoTermCreateSolutionVec_Sum;
   term->ops->createparametersvec   = TaoTermCreateParametersVec_Sum;

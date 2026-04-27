@@ -291,9 +291,11 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
 {
   PetscFunctionBegin;
   if (mt->map) {
-    // currently only implements Gauss-Newton Hessian approximation
     if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H, mt->_mapped_H_work));
-    if (mapped_Hpre && (mapped_Hpre != mapped_H)) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, mt->_mapped_Hpre_work));
+    if (mapped_Hpre && (mapped_Hpre != mapped_H)) {
+      Mat work = mt->_mapped_Hpre_work ? mt->_mapped_Hpre_work : mt->_mapped_H_work;
+      PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, work));
+    }
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -351,6 +353,24 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
   PetscCall(TaoTermMappingGetHessians(mt, mode, H, Hpre, &mapped_H, &mapped_Hpre, &unmapped_H, &unmapped_Hpre));
   PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, unmapped_Hpre));
   PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mapped_H, mapped_Hpre, unmapped_H, unmapped_Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *mt, Vec Ax, Vec params, Mat unmapped_H, Vec v, InsertMode mode, Vec Hv)
+{
+  Vec mapped_Hv, unmapped_Hv = NULL, Av;
+
+  PetscFunctionBegin;
+  TaoTermMappingCheckInsertMode(mt, mode);
+  if (TaoTermHessianMasked(mt->mask)) {
+    if (mode == INSERT_VALUES) PetscCall(VecZeroEntries(Hv));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(TaoTermMappingMap(mt, v, &Av));
+  PetscCall(TaoTermMappingGetGradients(mt, mode, Hv, &mapped_Hv, &unmapped_Hv));
+  if (unmapped_H) PetscCall(MatMult(unmapped_H, Av, unmapped_Hv));
+  else PetscCall(TaoTermComputeHessianMult(mt->term, Ax, params, Av, unmapped_Hv));
+  PetscCall(TaoTermMappingSetGradients(mt, mode, Hv, mapped_Hv, unmapped_Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

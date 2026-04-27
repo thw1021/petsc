@@ -240,10 +240,34 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre);
 
+/*S
+  TaoTermHessianMultFn - A prototype of a `TaoTerm` function that would be passed to `TaoTermShellSetHessianMult()`
+
+  Calling Sequence:
++ term   - a `TaoTerm`
+. x      - the solution vector
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
+. v      - a variation vector
+- Hv     - output, the product of the Hessian with `v`
+
+  Level: intermediate
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TAOTERMSHELL`,
+          `TaoTermShellSetHessianMult()`,
+          `TaoTermObjectiveFn`,
+          `TaoTermObjectiveAndGradientFn`,
+          `TaoTermGradientFn`,
+          `TaoTermHessianFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianMultFn)(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv);
+
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjective(TaoTerm, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessian(TaoTerm, Vec, Vec, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, PetscCtx, PetscCtxDestroyFn *, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, PetscCtx);
@@ -253,6 +277,7 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetObjective(TaoTerm, TaoTermObjectiveFn
 PETSC_EXTERN PetscErrorCode TaoTermShellSetGradient(TaoTerm, TaoTermGradientFn *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetObjectiveAndGradient(TaoTerm, TaoTermObjectiveAndGradientFn *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetHessian(TaoTerm, TaoTermHessianFn *);
+PETSC_EXTERN PetscErrorCode TaoTermShellSetHessianMult(TaoTerm, TaoTermHessianMultFn *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetView(TaoTerm, PetscErrorCode (*)(TaoTerm, PetscViewer));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateSolutionVec(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateParametersVec(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *));
@@ -300,3 +325,7 @@ PETSC_EXTERN PetscErrorCode TaoTermComputeHessianSetUseFD(TaoTerm, PetscBool);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianGetUseFD(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm, Vec, Vec, Mat, Mat);
+
+PETSC_EXTERN PetscErrorCode TaoTermCreateHessianShell(TaoTerm, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianShell(TaoTerm, Mat, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianShells(TaoTerm, Vec, Vec, Mat *, Mat *);
