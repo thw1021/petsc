@@ -28,7 +28,7 @@ static char help[] = "3D linear elasticity (Nc=3) with Kokkos GPU-resident FEM a
 #include <petscds.h>
 #include <petscfe.h>
 #include <Kokkos_Core.hpp>
-#include <petsc/private/petscfekokkosimpl.h>
+#include <petscfekokkos.h>
 
 /* Material constants are passed to device callbacks via the PetscDS constants
    array (constants[0] = mu, constants[1] = lambda).  This avoids static host
