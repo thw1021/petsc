@@ -139,3 +139,47 @@ DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, &user);
 DMTSSetIFunctionLocal(dm, DMPlexTSComputeIFunctionFEM, &user);
 DMTSSetIJacobianLocal(dm, DMPlexTSComputeIJacobianFEM, &user);
 ```
+
+## GPU-Resident FEM Assembly with PetscFEKokkos
+
+For GPUs the `PETSCFEKOKKOS` type and the routines `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsDestroy()`, `DMPlexSNESComputeResidualFEM_Kokkos()`, and `DMPlexSNESComputeJacobianFEM_Kokkos()` should be used for efficient finite element assembly instead of the host callback path (`DMPlexSetSNESLocalFEM()`).
+
+Standard `PetscDS` residual and Jacobian callbacks are host function pointers that cannot be called from GPU kernels. The `PETSCFEKOKKOS` path replaces them with `KOKKOS_INLINE_FUNCTION` callbacks passed as C++ template parameters, enabling device inlining at compile time. The Jacobian is assembled via `MatSetPreallocationCOO()` and `MatSetValuesCOO()` with device pointers.
+
+Source files must use the `.kokkos.cxx` extension for compilation with `nvcc_wrapper`. The command line must include `-dm_mat_type aijkokkos -dm_vec_type kokkos`.
+
+### Performance
+
+The following table shows warm-solve performance for a 3D hexahedral Poisson
+problem (32x32x32 elements, Q3, ~0.9M DOFs, GAMG preconditioner) on 4 NVIDIA A100
+GPUs (Perlmutter, NERSC).  The warm solve reuses all GAMG setup from the first
+(cold) solve and times only the second `SNESSolve()`.
+
+| Phase | Time (s) | GPU GFlop/s | % of A100 peak | % of warm solve |
+|---|---|---|---|---|
+| `SNESSolve` | 1.06 | 351 | 3.6% FP64 | 100 |
+| `SNESJacobianEval` | 0.40 | 769 | 7.9% FP64 | 38 |
+| `SNESFunctionEval` | 0.37 | 34 | -- | 35 |
+| `MatMult` (SpMV) | 0.07 | 629 | ~47% HBM BW | 7 |
+| `KSPSolve` | 0.15 | 282 | 2.9% FP64 | 15 |
+| `PCApply` (GAMG V-cycle) | 0.11 | 316 | 3.3% FP64 | 10 |
+
+The Jacobian assembly kernel (`SNESJacobianEval`) is compute-bound at Q3,
+reaching 769 GPU GFlop/s (7.9% of A100 FP64 peak of 9.7 TFlop/s).  The SpMV
+kernel (`MatMult`) is bandwidth-bound, achieving an effective memory bandwidth
+of approximately 940 GB/s per GPU (~47% of the 2.0 TB/s A100 HBM peak).
+
+The cold solve (19.5 s) includes mesh distribution, GAMG graph coarsening,
+prolongation construction, and COO preallocation.  The warm solve eliminates
+these one-time costs, giving an **18.5x cold-to-warm speedup**.
+
+Reproduce with `ex_kokkos_fe`:
+
+```
+mpiexec -n 4 ./ex_kokkos_fe -dm_plex_dim 3 -dm_plex_simplex 0 \
+  -dm_plex_box_faces 32,32,32 -petscspace_degree 3 \
+  -dm_mat_type aijkokkos -dm_vec_type kokkos \
+  -ksp_type cg -pc_type gamg -log_view
+```
+
+See <a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tutorials/ex_kokkos_fe.kokkos.cxx.html">SNES Tutorial ex_kokkos_fe</a> for a complete example.
