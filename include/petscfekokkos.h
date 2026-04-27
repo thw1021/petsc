@@ -994,22 +994,19 @@ typedef struct {
   IS           cached_cellIS;
 } PetscFEKokkosMaps;
 
-/* NOTE: The PetscFEKokkosMaps lifecycle function declarations (PetscFEKokkosMapsCreate,
-   PetscFEKokkosCreateMaps, PetscFEKokkosStageMaps, PetscFEKokkosEnsureDynamicViews,
-   PetscFEKokkosPreallocateCOO, PetscFEKokkosResetGeometry, PetscFEKokkosMapsDestroy,
-   PetscFEKokkosSetUpGeometry, PetscFEKokkosSetUp) are intentionally NOT declared here
-   with PETSC_EXTERN.  Placing PETSC_EXTERN declarations in a public include/ header
-   causes the Fortran binding generator (generatefortranbindings.py) to create a
-   fekokkos_maps.kokkosf.cxx stub that is compiled with a plain C++ compiler.  That
-   stub includes this header, which pulls in Kokkos_Core.hpp, which requires nvcc/hipcc
-   and fails with a plain C++ compiler.  The declarations live instead in
+/* NOTE: The internal PetscFEKokkosMaps lifecycle function declarations
+   (PetscFEKokkosCreateMaps, PetscFEKokkosStageMaps, PetscFEKokkosPreallocateCOO,
+   PetscFEKokkosResetGeometry, PetscFEKokkosSetUpGeometry) live in
    include/petsc/private/petscfekokkosimpl.h, which is only included from .kokkos.cxx
    translation units compiled with the Kokkos-aware compiler.
-   PetscFEKokkosEnsureDynamicViews is declared below with PETSC_INTERN (not PETSC_EXTERN)
-   because the template functions in this header call it directly; PETSC_EXTERN would
-   cause the Fortran binding generator to create a stub for it. */
+   The user-facing functions (PetscFEKokkosMapsCreate, PetscFEKokkosMapsDestroy,
+   PetscFEKokkosSetUp, PetscFEKokkosEnsureDynamicViews) are declared here with
+   PETSC_EXTERN so that example/test code can use them without private headers. */
 
-PETSC_INTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsCreate(PetscFEKokkosMaps **);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUp(DM, PetscFEKokkosMaps *, Mat);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
 
 template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
