@@ -72,17 +72,7 @@ static PetscErrorCode gamma_m1_f(PetscInt dim, PetscReal time, const PetscReal x
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
- LandauFormJacobian_Internal - Evaluates Jacobian matrix.
-
- Input Parameters:
- .  globX - input vector
- .  actx - optional user-defined context
- .  dim - dimension
-
- Output Parameter:
- .  J0acP - Jacobian matrix filled, not created
- */
+/* Evaluates Jacobian matrix; fills JacP, does not create it */
 static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim, PetscReal shift, void *a_ctx)
 {
   LandauCtx         *ctx = (LandauCtx *)a_ctx;
@@ -802,7 +792,7 @@ typedef struct {
 static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
 {
   MaxwellianCtx *mctx = (MaxwellianCtx *)actx;
-  PetscInt       i;
+  PetscInt       i    = 0;
   PetscReal      v2 = 0, theta = 2 * mctx->kT_m / (mctx->v_0 * mctx->v_0), shift; /* theta = 2kT/mc^2 */
 
   PetscFunctionBegin;
@@ -870,25 +860,7 @@ PetscErrorCode DMPlexLandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
- LandauSetInitialCondition - Adds Maxwellians with context
-
- Collective
-
- Input Parameters:
- .   dm - The mesh
- -   grid - index into current grid - just used for offset into temp and ns
- .   b_id - batch index
- -   n_batch - number of batches
- +   actx - Landau context with T and n
-
- Output Parameter:
- .   X  - The state
-
- Level: beginner
-
-.seealso: `DMPlexLandauCreateVelocitySpace()`, `DMPlexLandauAddMaxwellians()`
- */
+/* Adds Maxwellians to X for the given grid and batch using temperatures and densities from actx */
 static PetscErrorCode LandauSetInitialCondition(DM dm, Vec X, PetscInt grid, PetscInt b_id, PetscInt n_batch, void *actx)
 {
   LandauCtx *ctx = (LandauCtx *)actx;
@@ -1407,8 +1379,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
   PetscSection        aSec, cSec;
   IS                  aIS, clpermIS = NULL;
   Mat                 cMat;
-  const PetscInt     *anchors;
-  const PetscInt     *clperm_arr = NULL;
+  const PetscInt     *anchors = NULL, *clperm_arr = NULL;
   PetscInt            cStart, cEnd, aStart, aEnd, sStart, sEnd;
   const PetscInt    **fieldPerms[LANDAU_MAX_SPECIES];
   const PetscScalar **fieldFlips[LANDAU_MAX_SPECIES];
@@ -1436,9 +1407,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     anchors       = NULL;
   }
   PetscCall(PetscSectionGetChart(section, &sStart, &sEnd));
-  /* Query the closure inverse permutation once before the cell loop.
-     All height-0 cells share the same depth, so the permutation is identical for every cell.
-     Use the public API to avoid cross-library use of _Internal symbols. */
+  /* Query closure inverse permutation once; identical for all height-0 cells. */
   if (cStart < cEnd) {
     PetscSection clSec = NULL;
     PetscCall(PetscSectionGetClosureIndex(section, (PetscObject)dm, &clSec, NULL));
@@ -1483,12 +1452,11 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
           globFieldInPoint += gfdof - gcfdof;
         }
         for (PetscInt b = 0; b < fdof; b++) {
-          PetscInt  preind = foffs[f] + fieldFoffs[f] + (perm ? perm[b] : b); /* natural order position */
-          PetscInt  q      = clperm ? clperm[preind] : preind;                /* permuted position */
-          PetscBool isConstrained;
+          PetscInt  preind        = foffs[f] + fieldFoffs[f] + (perm ? perm[b] : b); /* natural order position */
+          PetscInt  q             = clperm ? clperm[preind] : preind;                /* permuted position */
+          PetscBool isConstrained = (cfdof > 0 && cind < cfdof && b == fcdofs[cind]) ? PETSC_TRUE : PETSC_FALSE;
 
-          q -= foffs[f]; /* subtract field base offset to get q within [0, Nb) */
-          isConstrained = (cfdof > 0 && cind < cfdof && b == fcdofs[cind]) ? PETSC_TRUE : PETSC_FALSE;
+          q -= foffs[f];       /* subtract field base offset to get q within [0, Nb) */
           if (isConstrained) { /* constrained DOF */
             PetscInt    cOff, row, bDof = 0, bOff2 = 0;
             PetscInt    nNonzero = 0;
@@ -1988,11 +1956,7 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[
   g0[0] = 2. * PETSC_PI * x[0];
 }
 
-/*
- LandauCreateJacobianMatrix - creates ctx->J with without real data. Hard to keep sparse.
-  - Like DMPlexLandauCreateMassMatrix. Should remove one and combine
-  - has old support for field major ordering
- */
+/* Creates ctx->J sparsity pattern without real data; supports field-major ordering */
 static PetscErrorCode LandauCreateJacobianMatrix(MPI_Comm comm, Vec X, IS grid_batch_is_inv[LANDAU_MAX_GRIDS], LandauCtx *ctx)
 {
   PetscInt *idxs = NULL;
@@ -2095,7 +2059,7 @@ static PetscErrorCode LandauCreateJacobianMatrix(MPI_Comm comm, Vec X, IS grid_b
 static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
 {
   PetscReal u_max = 0, u_norm = 0, scale, square_inner_radius = PetscRealPart(constants[0]), square_radius = PetscRealPart(constants[1]);
-  PetscInt  d;
+  PetscInt  d = 0;
 
   for (d = 0; d < dim; ++d) {
     PetscReal val = PetscAbsReal(PetscRealPart(u[d]));
@@ -2109,14 +2073,8 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
     return;
   }
 
-  /*
-    A outer cube has corners at |u| = square_radius.
-    u_1 is the intersection of the ray with the outer cube face.
-    R_max = square_radius * sqrt(3) is radius of sphere we want points on outer cube mapped to.
-    u_0 is the intersection of the ray with the inner cube face.
-    The cube has corners at |u| = square_inner_radius.
-    scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
-  */
+  /* Map rays linearly from inner cube (|u|=square_inner_radius) to outer cube (|u|=square_radius),
+     projecting outer-cube points onto the sphere of radius square_radius*sqrt(3). */
   if (u_max > square_radius + 1e-5) (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius);
   /*  if (PetscAbsReal(u_max - square_inner_radius) < 1e-5 || PetscAbsReal(u_max - square_radius) < 1e-5) {
     (void)PetscPrintf(PETSC_COMM_SELF, "Warning: Point near corner of inner and outer cube: u_max %g, inner %g, outer %g\n", (double)u_max, (double)square_inner_radius, (double)square_radius);
