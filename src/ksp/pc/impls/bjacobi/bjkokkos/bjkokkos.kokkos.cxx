@@ -1775,19 +1775,11 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 #endif
         }
       }
-      /* Apply looser default rtol for AMG variants (reduces inner iteration count
-         while preserving outer SNES convergence and energy conservation).
-         Only override if the user did not explicitly set rtol via the options
-         database or programmatically via KSPSetTolerances. */
+      /* Apply looser default rtol for AMG variants if the user did not explicitly set rtol via the options database or programmatically via KSPSetTolerances. */
       if (use_amg == PETSC_TRUE) {
         PetscBool rtol_set = PETSC_FALSE;
         PetscCall(PetscOptionsHasName(NULL, ((PetscObject)jac->ksp)->prefix, "-ksp_rtol", &rtol_set));
         if (rtol_set == PETSC_FALSE) {
-          // Also check the unprefixed global option in case the user set -ksp_rtol globally
-          PetscCall(PetscOptionsHasName(NULL, NULL, "-ksp_rtol", &rtol_set));
-        }
-        if (rtol_set == PETSC_FALSE) {
-          // Also check whether the user set rtol programmatically (non-default value)
           PetscReal current_rtol;
           PetscCall(KSPGetTolerances(jac->ksp, &current_rtol, NULL, NULL, NULL));
           if (current_rtol != PETSC_DEFAULT && current_rtol != (PetscReal)1e-5) rtol_set = PETSC_TRUE;
