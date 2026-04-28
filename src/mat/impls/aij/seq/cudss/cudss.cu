@@ -35,10 +35,10 @@ typedef struct {
 
   cudssAlgType_t   reorderAlg;
   cudssPivotType_t pivotType;
-  PetscReal        pivotThreshold;
-  PetscReal        pivotEpsilon;
-  PetscBool        useMatching;
-  PetscInt         irNSteps;
+  double           pivotThreshold; /* cuDSS expects double for CUDSS_CONFIG_PIVOT_THRESHOLD */
+  double           pivotEpsilon;   /* cuDSS expects double for CUDSS_CONFIG_PIVOT_EPSILON */
+  int              useMatching;    /* cuDSS expects int for CUDSS_CONFIG_USE_MATCHING */
+  int              irNSteps;       /* cuDSS expects int for CUDSS_CONFIG_IR_N_STEPS */
 } Mat_cuDSS;
 
 /* Map PetscScalar to the cuDSS data type */
@@ -91,8 +91,8 @@ static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "cuDSS run parameters:\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Reorder algorithm: %s\n", reorderName));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot type: %s\n", pivotName));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot threshold: %g\n", lu->pivotThreshold));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot epsilon: %g\n", lu->pivotEpsilon));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot threshold: %g\n", (double)lu->pivotThreshold));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot epsilon: %g\n", (double)lu->pivotEpsilon));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Use matching: %s\n", lu->useMatching ? "true" : "false"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  IR steps: %d\n", lu->irNSteps));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -137,9 +137,9 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
 static PetscErrorCode MatSetFromOptions_cuDSS(Mat F)
 {
   Mat_cuDSS *lu         = (Mat_cuDSS *)F->data;
-  PetscInt   reorderAlg = (PetscInt)lu->reorderAlg, pivotType = (PetscInt)lu->pivotType, irNSteps = lu->irNSteps;
-  PetscReal  pivotThreshold = lu->pivotThreshold, pivotEpsilon = lu->pivotEpsilon;
-  PetscBool  useMatching = lu->useMatching;
+  PetscInt   reorderAlg = (PetscInt)lu->reorderAlg, pivotType = (PetscInt)lu->pivotType, irNSteps = (PetscInt)lu->irNSteps;
+  PetscReal  pivotThreshold = (PetscReal)lu->pivotThreshold, pivotEpsilon = (PetscReal)lu->pivotEpsilon;
+  PetscBool  useMatching = (PetscBool)lu->useMatching;
 
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
@@ -148,13 +148,13 @@ static PetscErrorCode MatSetFromOptions_cuDSS(Mat F)
   PetscCall(PetscOptionsEList("-mat_cudss_pivot_type", "Pivot type", "None", MatcuDSSPivotTypes, PETSC_STATIC_ARRAY_LENGTH(MatcuDSSPivotTypes), MatcuDSSPivotTypes[pivotType], &pivotType, NULL));
   lu->pivotType = (cudssPivotType_t)pivotType;
   PetscCall(PetscOptionsReal("-mat_cudss_pivot_threshold", "Pivot threshold", "None", pivotThreshold, &pivotThreshold, NULL));
-  lu->pivotThreshold = pivotThreshold;
+  lu->pivotThreshold = (double)pivotThreshold;
   PetscCall(PetscOptionsReal("-mat_cudss_pivot_epsilon", "Pivot epsilon", "None", pivotEpsilon, &pivotEpsilon, NULL));
-  lu->pivotEpsilon = pivotEpsilon;
+  lu->pivotEpsilon = (double)pivotEpsilon;
   PetscCall(PetscOptionsBool("-mat_cudss_use_matching", "Enable matching", "None", useMatching, &useMatching, NULL));
-  lu->useMatching = useMatching;
+  lu->useMatching = (int)useMatching;
   PetscCall(PetscOptionsInt("-mat_cudss_ir_n_steps", "Number of iterative refinement steps", "None", irNSteps, &irNSteps, NULL));
-  lu->irNSteps = irNSteps;
+  lu->irNSteps = (int)irNSteps;
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
