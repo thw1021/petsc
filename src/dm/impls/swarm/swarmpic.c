@@ -4,6 +4,8 @@
 #include <petscdmplex.h>
 #include <petscdt.h>
 #include "../src/dm/impls/swarm/data_bucket.h"
+#include "petscsys.h"
+#include "petscsystypes.h"
 
 #include <petsc/private/petscfeimpl.h> /* For CoordinatesRefToReal() */
 
@@ -966,7 +968,7 @@ PetscErrorCode DMSwarmSetVelocityFunction(DM sw, PetscSimplePointFn *velFunc)
 }
 
 /*@C
-  DMSwarmComputeLocalSize - Compute the local number and distribution of particles based upon a density function
+  DMSwarmComputeLocalSize - Compute the local number and spatial distribution of particles based upon a density function
 
   Not Collective
 
@@ -1047,8 +1049,122 @@ PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFn *density)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  InitializeParticles_Centroid - Initialize a regular grid of particles in configuration space.
+
+  Input Parameter:
+. sw - The `DMSWARM`
+
+  Notes:
+  This functions sets the species, cellid, spatial coordinate, and velocity fields for all particles.
+
+  It places one particle in the centroid of each cell in the implicit tensor product of the spatial
+  and velocity meshes.
+*/
+static PetscErrorCode InitializeParticles_Centroid(DM sw)
+{
+  DM_Swarm      *swarm = (DM_Swarm *)sw->data;
+  const PetscInt debug = swarm->printCoords;
+  DMSwarmCellDM  celldm;
+  DM             xdm, vdm;
+  PetscReal     *x, *v;
+  PetscInt      *species, *cellid;
+  PetscInt       dim, xcStart, xcEnd, vcStart, vcEnd, Ns, Np, Npc;
+  MPI_Comm       comm;
+  const char    *cellidname;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
+  PetscCall(DMSwarmGetNumSpecies(sw, &Ns));
+  PetscCall(DMGetDimension(sw, &dim));
+
+  PetscCall(DMSwarmGetCellDM(sw, &xdm));
+  PetscCall(DMPlexGetHeightStratum(xdm, 0, &xcStart, &xcEnd));
+  PetscCall(DMSwarmGetCellDMByName(sw, "velocity", &celldm));
+  PetscCheck(celldm, comm, PETSC_ERR_ARG_WRONGSTATE, "Must define a velocity cellDM to use the centroid layout");
+  PetscCall(DMSwarmCellDMGetDM(celldm, &vdm));
+  PetscCall(DMPlexGetHeightStratum(vdm, 0, &vcStart, &vcEnd));
+
+  // One particle per centroid on the tensor product grid
+  Npc = (vcEnd - vcStart) * Ns;
+  Np  = (xcEnd - xcStart) * Npc;
+  PetscCall(DMSwarmSetLocalSizes(sw, Np, 0));
+  if (debug) {
+    PetscInt gNp, gNc, Nc = xcEnd - xcStart;
+
+    PetscCallMPI(MPIU_Allreduce(&Np, &gNp, 1, MPIU_INT, MPIU_SUM, comm));
+    PetscCall(PetscPrintf(comm, "Global Np = %" PetscInt_FMT "\n", gNp));
+    PetscCallMPI(MPIU_Allreduce(&Nc, &gNc, 1, MPIU_INT, MPIU_SUM, comm));
+    PetscCall(PetscPrintf(comm, "Global X-cells = %" PetscInt_FMT "\n", gNc));
+    PetscCall(PetscPrintf(comm, "Global V-cells = %" PetscInt_FMT "\n", vcEnd - vcStart));
+  }
+
+  // Set species and cellid
+  PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
+  PetscCall(DMSwarmCellDMGetCellID(celldm, &cellidname));
+  PetscCall(DMSwarmGetField(sw, "species", NULL, NULL, (void **)&species));
+  PetscCall(DMSwarmGetField(sw, cellidname, NULL, NULL, (void **)&cellid));
+  for (PetscInt c = 0, p = 0; c < xcEnd - xcStart; ++c) {
+    for (PetscInt s = 0; s < Ns; ++s) {
+      for (PetscInt q = 0; q < Npc / Ns; ++q, ++p) {
+        species[p] = s;
+        cellid[p]  = c;
+      }
+    }
+  }
+  PetscCall(DMSwarmRestoreField(sw, "species", NULL, NULL, (void **)&species));
+  PetscCall(DMSwarmRestoreField(sw, cellidname, NULL, NULL, (void **)&cellid));
+
+  // Set particle coordinates
+  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
+  PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&v));
+  PetscCall(DMSwarmSortGetAccess(sw));
+  PetscCall(DMGetCoordinatesLocalSetUp(xdm));
+  PetscCall(DMGetCoordinatesLocalSetUp(vdm));
+  for (PetscInt c = 0; c < xcEnd - xcStart; ++c) {
+    const PetscInt xcell = c + xcStart;
+    PetscInt      *pidx, Npc;
+    PetscReal      xcentroid[3], xvolume;
+
+    PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
+    PetscCall(DMPlexComputeCellGeometryFVM(xdm, xcell, &xvolume, xcentroid, NULL));
+    for (PetscInt s = 0; s < Ns; ++s) {
+      for (PetscInt q = 0; q < Npc / Ns; ++q) {
+        const PetscInt p     = pidx[q * Ns + s];
+        const PetscInt vcell = q + vcStart;
+        PetscReal      vcentroid[3], vvolume;
+
+        PetscCall(DMPlexComputeCellGeometryFVM(vdm, vcell, &vvolume, vcentroid, NULL));
+        for (PetscInt d = 0; d < dim; ++d) {
+          x[p * dim + d] = xcentroid[d];
+          v[p * dim + d] = vcentroid[d];
+        }
+        if (debug > 1) {
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "Particle %4" PetscInt_FMT " ", p));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "  x: ("));
+          for (PetscInt d = 0; d < dim; ++d) {
+            if (d > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ", "));
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "%g", x[p * dim + d]));
+          }
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, ") v:("));
+          for (PetscInt d = 0; d < dim; ++d) {
+            if (d > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ", "));
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "%g", v[p * dim + d]));
+          }
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, ")\n"));
+        }
+      }
+    }
+    PetscCall(DMSwarmSortRestorePointsPerCell(sw, c, &Npc, &pidx));
+  }
+  PetscCall(DMSwarmSortRestoreAccess(sw));
+  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
+  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
-  DMSwarmComputeLocalSizeFromOptions - Compute the local number and distribution of particles based upon a density function determined by options
+  DMSwarmComputeLocalSizeFromOptions - Compute the local number and spatial distribution of particles based upon a density function determined by options
 
   Not Collective
 
@@ -1057,36 +1173,61 @@ PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFn *density)
 
   Level: advanced
 
+  Options Database Keys:
++ -dm_swarm_num_particles N0,N1,Np   - Specify the number of particles on each rank
+. -dm_swarm_centroid_layout          - Place a particle at each centroid
+. -dm_swarm_num_species Ns           - Set the number of particle species
+. -dm_swarm_coordinate_function name - Specify function to determine particle coordinates
+. -dm_swarm_coordinate_density name  - Specify spatial distribution function for particles
+. -dm_swarm_print_coords             - Debug level for coordinate output
+- -dm_swarm_print_weights            - Debug level for weight output
+
+  Notes:
+  There are three main particle layouts available. First, using -dm_swarm_centroid_layout, and an auxiliary "velocity" `DMSwarmCellDM`, you can place a particle at the centroid of each cell in the tensor-product grid describing configuration space.
+
+  Second, using -dm_swarm_num_particles and -dm_swarm_coordinate_function, you can specify a number of particles for each rank, and a function to assign coordinates to each particle. The enclosing cell will be determined using point location.
+
+  Third, using -dm_swarm_num_particles and -dm_swarm_coordinate_density, you can specify a number of particles for each rank, and a distribution function for particles. The enclosing cell will be determined using point location.
+
 .seealso: `DMSWARM`, `DMSwarmComputeLocalSize()`
 @*/
 PetscErrorCode DMSwarmComputeLocalSizeFromOptions(DM sw)
 {
+  DM_Swarm    *swarm = (DM_Swarm *)sw->data;
   PetscProbFn *pdf;
   const char  *prefix;
   char         funcname[PETSC_MAX_PATH_LEN];
   PetscInt    *N, Ns, dim, n;
-  PetscBool    flg;
+  PetscBool    centroid = PETSC_FALSE, partNum = PETSC_FALSE, coordFunc = PETSC_FALSE, flg;
+  MPI_Comm     comm;
   PetscMPIInt  size, rank;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sw), &size));
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)sw), &rank));
+  PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCall(PetscCalloc1(size, &N));
-  PetscOptionsBegin(PetscObjectComm((PetscObject)sw), "", "DMSwarm Options", "DMSWARM");
+  PetscOptionsBegin(comm, "", "DMSwarm Options", "DMSWARM");
   n = size;
-  PetscCall(PetscOptionsIntArray("-dm_swarm_num_particles", "The target number of particles", "", N, &n, NULL));
+  PetscCall(PetscOptionsIntArray("-dm_swarm_num_particles", "The target number of particles", "", N, &n, &partNum));
+  if (partNum) PetscCheck(n == size, comm, PETSC_ERR_ARG_WRONG, "Must specify a number of particles for each rank with -dm_swarm_num_particles");
+  PetscCall(PetscOptionsBool("-dm_swarm_centroid_layout", "Place a particle at each cell centroid", "DMSwarmSetNumSpecies", centroid, &centroid, &flg));
+  PetscCheck(!(partNum && centroid), comm, PETSC_ERR_ARG_WRONG, "Can use -dm_swarm_num_particles and -dm_swarm_centroid_layout together");
   PetscCall(DMSwarmGetNumSpecies(sw, &Ns));
   PetscCall(PetscOptionsInt("-dm_swarm_num_species", "The number of species", "DMSwarmSetNumSpecies", Ns, &Ns, &flg));
   if (flg) PetscCall(DMSwarmSetNumSpecies(sw, Ns));
-  PetscCall(PetscOptionsString("-dm_swarm_coordinate_function", "Function to determine particle coordinates", "DMSwarmSetCoordinateFunction", funcname, funcname, sizeof(funcname), &flg));
+  PetscCall(PetscOptionsString("-dm_swarm_coordinate_function", "Function to determine particle coordinates", "DMSwarmSetCoordinateFunction", funcname, funcname, sizeof(funcname), &coordFunc));
+  PetscCall(PetscOptionsBoundedInt("-dm_swarm_print_coords", "Debug output level for particle coordinate computations", "InitializeParticles", 0, &swarm->printCoords, NULL, 0));
+  PetscCall(PetscOptionsBoundedInt("-dm_swarm_print_weights", "Debug output level for particle weight computations", "InitializeWeights", 0, &swarm->printWeights, NULL, 0));
   PetscOptionsEnd();
-  if (flg) {
+  if (centroid) {
+    PetscCall(InitializeParticles_Centroid(sw));
+  } else if (coordFunc) {
     PetscSimplePointFn *coordFunc;
 
     PetscCall(DMSwarmGetNumSpecies(sw, &Ns));
     PetscCall(PetscDLSym(NULL, funcname, (void **)&coordFunc));
     PetscCheck(coordFunc, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_WRONG, "Could not locate function %s", funcname);
-    PetscCall(DMSwarmGetNumSpecies(sw, &Ns));
     PetscCall(DMSwarmSetLocalSizes(sw, N[rank] * Ns, 0));
     PetscCall(DMSwarmSetCoordinateFunction(sw, coordFunc));
   } else {
