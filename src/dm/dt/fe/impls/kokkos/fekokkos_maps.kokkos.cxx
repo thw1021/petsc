@@ -113,6 +113,10 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps) PeNS
   PetscInt     dim;
   DM           plex; /* adapted DMPlex view (may == dm for plain DMPlex) */
   PetscBool    isPlex;
+  PetscInt     max_reduced, num_face;
+  PetscInt    *tmp_c_gid;
+  PetscScalar *tmp_c_scale;
+  PetscScalar *elMat;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -241,10 +245,8 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps) PeNS
   }
 
   /* Temporary storage for constraint maps (upper bound: Ne*Nb constraints) */
-  const PetscInt max_reduced = Ne * Nb;
-  const PetscInt num_face    = maps->num_face;
-  PetscInt      *tmp_c_gid;
-  PetscScalar   *tmp_c_scale;
+  max_reduced = Ne * Nb;
+  num_face    = maps->num_face;
   PetscCall(PetscMalloc2(max_reduced * num_face, &tmp_c_gid, max_reduced * num_face, &tmp_c_scale));
   /* Initialize to -1 / 0 */
   for (PetscInt i = 0; i < max_reduced * num_face; ++i) {
@@ -253,7 +255,6 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps) PeNS
   }
 
   /* Allocate probing element matrix (totDim x totDim) */
-  PetscScalar *elMat;
   PetscCall(PetscMalloc1(totDim * totDim, &elMat));
 
   /* Probing loop: for each element e and basis function q,
@@ -438,13 +439,15 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps) PeNS
 @*/
 PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm) PeNS
 {
+  PetscInt Ne, Nb, num_face;
+
   PetscFunctionBegin;
   PetscAssertPointer(maps, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
 
-  const PetscInt Ne       = maps->num_elements;
-  const PetscInt Nb       = maps->Nb;
-  const PetscInt num_face = maps->num_face;
+  Ne       = maps->num_elements;
+  Nb       = maps->Nb;
+  num_face = maps->num_face;
 
   /* gIdx -- h_gIdx is NULL when Ne==0; skip unmanaged View construction in that case */
   maps->d_gIdx = Kokkos::View<PetscFEKokkosIdx *>("fekokkos_coo_gIdx", Ne * Nb);
@@ -851,7 +854,7 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps) PeNS
   IS                 cellIS;
   PetscFEGeom       *fullGeom  = NULL;
   PetscFEGeom       *chunkGeom = NULL;
-  PetscInt           depth, cStart, cEnd, totDim;
+  PetscInt           depth, cStart, cEnd, totDim, Ne;
   const PetscReal   *quadPoints, *quadWeights;
   PetscInt           Nq, Nc, dim, dE, qdim, qNc;
   PetscInt           numConstants;
@@ -877,7 +880,7 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps) PeNS
   PetscCall(DMPlexGetDepth(dm, &depth));
   PetscCall(DMGetStratumIS(dm, "depth", depth, &cellIS));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  const PetscInt Ne = cEnd - cStart;
+  Ne = cEnd - cStart;
 
   /* Build element geometry on host */
   PetscCall(DMGetCoordinateField(dm, &coordField));
@@ -1021,25 +1024,7 @@ PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J) PeNS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>
-
-   GPU-resident SNES residual callback.  Drop-in replacement for
-   DMPlexSNESComputeResidualFEM (the CPU path) when using COO assembly.
-
-   Template parameters:
-     f0 -- KOKKOS_INLINE_FUNCTION void(PETSC_POINT_ARGS, PetscScalar[])
-          source term (zeroth-order residual)
-     f1 -- KOKKOS_INLINE_FUNCTION void(PETSC_POINT_ARGS, PetscScalar[])
-          flux term (first-order residual)
-
-   ctx_ptr must point to a PetscFEKokkosMaps with maps already staged
-   (i.e. PetscFEKokkosSetUp has been called).
-
-   Algorithm:
-     1. Zero F.
-     2. Get local solution with BCs applied (host-sync guard for device Vecs).
-     3. Get element geometry and coefficients.
-     4. Stage tabulation, geometry, coefficients, and DS constants to device.
-     5. Pass 1: PetscFEKokkosIntegrateResidualCell<f0,f1> -> d_elemVec.
-     6. Pass 2: scatter d_elemVec -> locF via Kokkos::atomic_add (local indices).
-     7. DMLocalToGlobal(locF, ADD_VALUES, F) -- MPI reduction for ghost DOFs. */
+/* Note: DMPlexSNESComputeResidualFEM_Kokkos and DMPlexSNESComputeJacobianFEM_Kokkos
+   are template functions defined in <petscfekokkos.h> (the public header).
+   They are placed there so that user code can instantiate them with
+   application-specific KOKKOS_INLINE_FUNCTION callbacks at compile time. */
