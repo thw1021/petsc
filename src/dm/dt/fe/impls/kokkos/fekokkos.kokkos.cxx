@@ -188,6 +188,10 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   PetscInt           numConstants;
   const PetscScalar *constants;
   const PetscInt     field = key.field;
+  PetscInt           Nb, Nc, dim, dE, Np;
+  PetscBool          isAffine;
+  PetscInt           Nq;
+  const PetscReal   *quadPoints, *quadWeights;
 
   PetscFunctionBegin;
   /* Fall back to Basic if auxiliary fields are present */
@@ -240,19 +244,16 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
      Always use feNq (from PetscFEGetQuadrature) as the loop count -- this matches
      the DS tabulation (T[field]->Np == feNq) and the quadrature weights array.
      cgeom->numPoints is only the geometry stride, not the quadrature count. */
-  const PetscInt  Nb       = kk->Nb;
-  const PetscInt  Nc       = kk->Nc;
-  const PetscInt  dim      = kk->dim;
-  const PetscInt  dE       = cgeom->dimEmbed;
-  const PetscInt  Np       = cgeom->numPoints; /* geometry stride per element */
-  const PetscBool isAffine = cgeom->isAffine;
+  Nb       = kk->Nb;
+  Nc       = kk->Nc;
+  dim      = kk->dim;
+  dE       = cgeom->dimEmbed;
+  Np       = cgeom->numPoints; /* geometry stride per element */
+  isAffine = cgeom->isAffine;
 
   /* Get the FE quadrature -- Nq and quadPoints/quadWeights come from here.
      The DS tabulation T[field]->Np == Nq (they are evaluated at the same points).
      Re-stage B/D/w to device only when Nq changes (e.g., first call or degree change). */
-  PetscInt         Nq;
-  const PetscReal *quadPoints;
-  const PetscReal *quadWeights;
   {
     PetscTabulation *T;
     PetscQuadrature  quad;
@@ -647,21 +648,23 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PetscFECreate_Kokkos(PetscFE fem)
 {
+  PetscFE_Kokkos *kk;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
   /* Use C++ new so that Kokkos::View members are default-constructed (empty,
      ref-count = null).  PetscNew uses PetscMalloc which skips constructors. */
-  PetscFE_Kokkos *kk = new PetscFE_Kokkos();
-  kk->setup_done     = PETSC_FALSE;
-  kk->Ne_alloc       = -1;
-  kk->Nq_alloc       = -1;
-  kk->totDim_alloc   = -1;
-  kk->h_f0_buf       = nullptr;
-  kk->h_f1_buf       = nullptr;
-  kk->h_invJ_buf     = nullptr;
-  kk->h_u_buf        = nullptr;
-  kk->h_ux_buf       = nullptr;
-  fem->data          = kk;
+  kk               = new PetscFE_Kokkos();
+  kk->setup_done   = PETSC_FALSE;
+  kk->Ne_alloc     = -1;
+  kk->Nq_alloc     = -1;
+  kk->totDim_alloc = -1;
+  kk->h_f0_buf     = nullptr;
+  kk->h_f1_buf     = nullptr;
+  kk->h_invJ_buf   = nullptr;
+  kk->h_u_buf      = nullptr;
+  kk->h_ux_buf     = nullptr;
+  fem->data        = kk;
 
   PetscCall(PetscFEInitialize_Kokkos(fem));
   PetscFunctionReturn(PETSC_SUCCESS);

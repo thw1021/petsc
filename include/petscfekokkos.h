@@ -13,12 +13,25 @@
   #include <petscdmplex.h>
   #include <Kokkos_Core.hpp>
 
-/* Helper: detect whether the Kokkos default execution space is a GPU backend.
-   Uses Kokkos::SpaceAccessibility to check whether the default execution
-   space's memory is host-accessible; if not, we are on a GPU. */
-static inline int PetscFEKokkosOnGPU(void)
+/*@C
+  PetscFEKokkosOnGPU - Detect whether the Kokkos default execution space is a GPU backend
+
+  Not Collective
+
+  Output Parameter:
+. (return value) - `PETSC_TRUE` if the default execution space is GPU-resident, `PETSC_FALSE` otherwise
+
+  Level: intermediate
+
+  Note:
+  Uses `Kokkos::SpaceAccessibility` to check whether the default execution
+  space's memory is host-accessible; if not, we are on a GPU.
+
+.seealso: `PetscFE`, `PETSCFEKOKKOS`, `PetscFEKokkosComputeResidual()`, `PetscFEKokkosComputeJacobian()`
+@*/
+static inline PetscBool PetscFEKokkosOnGPU(void)
 {
-  return !Kokkos::SpaceAccessibility<Kokkos::DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
+  return (PetscBool)!Kokkos::SpaceAccessibility<Kokkos::DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
 }
 
 /* Helper: compile-time check whether a function-pointer template parameter is non-null.
@@ -35,7 +48,7 @@ struct PetscPointJacFnNonNull : std::true_type { };
 template <>
 struct PetscPointJacFnNonNull<nullptr> : std::false_type { };
 
-/*MC
+  /*MC
   PETSC_POINT_ARGS - Argument list for `KOKKOS_INLINE_FUNCTION` residual callbacks, matching `PetscPointFn`
 
   Synopsis:
@@ -54,7 +67,7 @@ MC*/
   #define PETSC_POINT_ARGS \
     PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
-/*MC
+  /*MC
   PETSC_JAC_POINT_ARGS - Argument list for `KOKKOS_INLINE_FUNCTION` Jacobian callbacks, matching `PetscPointJacFn`
 
   Synopsis:
@@ -490,26 +503,20 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosComputeResidual<F0, F1>
+/* PetscFEKokkosComputeResidual<F0, F1> -- internal helper, not part of the public API.
 
    Host convenience function: extracts all data from PetscDS / PetscFEGeom,
    stages to device, launches PetscFEKokkosIntegrateResidualCell<F0,F1>
    via Kokkos::parallel_for, and copies results back.
 
-   This replaces the two-phase path in PetscFEIntegrateResidual_Kokkos for
-   users who have written KOKKOS_INLINE_FUNCTION callbacks.
+   Called internally by PetscFEIntegrateResidual_Kokkos (the PetscFEOps path)
+   and by DMPlexSNESComputeResidualFEM_Kokkos (the COO assembly path).
 
-   Signature matches PetscFEIntegrateResidual_Kokkos
-   so it can be called from the same context.
-
-   Restrictions (Phase 1.B):
+   Restrictions:
      - dsAux == NULL (no auxiliary fields)
      - Single field (Nf == 1)
      - n0 <= 1, n1 <= 1 (at most one callback per term)
-     - coefficients_t == NULL (no time derivative)
-
-   Returns PETSC_SUCCESS on success; falls back gracefully if restrictions
-   are violated (caller should use the Basic path in that case). */
+     - coefficients_t == NULL (no time derivative) */
 template <PetscPointFn *F0, PetscPointFn *F1>
 static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, const PetscScalar *coefficients_t, PetscReal t, PetscScalar *elemVec /* [Ne * totDim] -- accumulated */
 )
@@ -645,9 +652,9 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
      team_size = Nq_ on GPU (one thread per q-point), 1 on Serial/OpenMP. */
   const PetscBool isAffine_res = cgeom->isAffine;
   {
-    using tmpl_team_policy_t = Kokkos::TeamPolicy<>;
-    const int tmpl_on_gpu    = PetscFEKokkosOnGPU();
-    const int tmpl_team_size = tmpl_on_gpu ? Nq_ : 1;
+    using tmpl_team_policy_t       = Kokkos::TeamPolicy<>;
+    const PetscBool tmpl_on_gpu    = PetscFEKokkosOnGPU();
+    const int       tmpl_team_size = tmpl_on_gpu ? Nq_ : 1;
     if (isAffine_res)
       Kokkos::parallel_for(
         "PetscFEKokkosComputeResidual", tmpl_team_policy_t(Ne, tmpl_team_size), KOKKOS_LAMBDA(const tmpl_team_policy_t::member_type &team) {
@@ -686,17 +693,14 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosComputeJacobian<G0, G1, G2, G3>
+/* PetscFEKokkosComputeJacobian<G0, G1, G2, G3> -- internal helper, not part of the public API.
 
    Host convenience function: stages data, launches
    PetscFEKokkosIntegrateJacobianCell<G0,G1,G2,G3>, copies back.
 
-   Any of G0-G3 may be nullptr to skip that Jacobian term.
+   Called internally by DMPlexSNESComputeJacobianFEM_Kokkos (the COO assembly path).
 
-   Arguments:
-     ds, key, Ne, cgeom, coefficients -- same as ComputeResidual
-     t, u_tShift                      -- time and time-derivative shift
-     elemMat[Ne * totDim * totDim]    -- output element matrix (accumulated) */
+   Any of G0-G3 may be nullptr to skip that Jacobian term. */
 template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsLinear = false>
 static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, PetscReal t, PetscReal u_tShift, PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
 )
@@ -823,9 +827,9 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
      TeamThreadRange over quadrature points internally. */
   const PetscBool isAffine_jac = cgeom->isAffine;
   {
-    using tmpl_jac_policy_t      = Kokkos::TeamPolicy<>;
-    const int tmpl_jac_on_gpu    = PetscFEKokkosOnGPU();
-    const int tmpl_jac_team_size = tmpl_jac_on_gpu ? Nq_ : 1;
+    using tmpl_jac_policy_t            = Kokkos::TeamPolicy<>;
+    const PetscBool tmpl_jac_on_gpu    = PetscFEKokkosOnGPU();
+    const int       tmpl_jac_team_size = tmpl_jac_on_gpu ? Nq_ : 1;
     if (isAffine_jac)
       Kokkos::parallel_for(
         "PetscFEKokkosComputeJacobian", tmpl_jac_policy_t(Ne, tmpl_jac_team_size), KOKKOS_LAMBDA(const tmpl_jac_policy_t::member_type &team) {
@@ -863,6 +867,17 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*T
+  PetscFEKokkosIdx - Integer type used for COO assembly index arrays in `PetscFEKokkosMaps`
+
+  Level: developer
+
+  Note:
+  Currently an alias for `PetscInt`. Defined as a separate typedef so that the index
+  type can be narrowed (e.g., to `int32_t`) in the future for memory savings on GPU.
+
+.seealso: `PetscFEKokkosMaps`, `PetscFE`, `PETSCFEKOKKOS`
+T*/
 typedef PetscInt PetscFEKokkosIdx;
 
   #if !defined(PETSCFE_KOKKOS_MAX_FACE)
@@ -1008,6 +1023,35 @@ PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps **);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUp(DM, PetscFEKokkosMaps *, Mat);
 PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt);
 
+/*@C
+  DMPlexSNESComputeResidualFEM_Kokkos - GPU-resident SNES residual callback using Kokkos COO assembly
+
+  Collective
+
+  Input Parameters:
++ snes    - the `SNES` context
+. X       - the global solution vector
+- ctx_ptr - pointer to a `PetscFEKokkosMaps` with maps already staged via `PetscFEKokkosSetUp()`
+
+  Output Parameter:
+. F - the global residual vector
+
+  Template Parameters:
++ f0 - `KOKKOS_INLINE_FUNCTION` residual source term matching `PetscPointFn`, or `nullptr` to skip
+- f1 - `KOKKOS_INLINE_FUNCTION` residual flux term matching `PetscPointFn`, or `nullptr` to skip
+
+  Level: intermediate
+
+  Notes:
+  Drop-in replacement for `DMPlexSNESComputeResidualFEM()` (the CPU path) when using
+  Kokkos COO assembly. The template parameters must be `KOKKOS_INLINE_FUNCTION` device
+  callbacks; they are compiled into the GPU kernel at instantiation time.
+
+  This is a C++ template function and cannot have auto-generated Fortran bindings.
+
+.seealso: [](ch_fe), `PetscFE`, `PETSCFEKOKKOS`, `DMPlexSNESComputeJacobianFEM_Kokkos()`,
+          `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsCreate()`, `PETSC_POINT_ARGS`
+@*/
 template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
 {
@@ -1019,7 +1063,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscQuadrature    quad;
   Vec                locX;
   PetscScalar       *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
-  PetscInt           cStart, cEnd, totDim;
+  PetscInt           cStart, cEnd, totDim, Ne, nCoeff;
   const PetscReal   *quadPoints, *quadWeights;
   PetscInt           Nf, Nq, Nb, Nc, dim, dE, qdim, qNc;
   PetscInt           numConstants;
@@ -1050,7 +1094,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   Nc = T[0]->Nc;
 
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  const PetscInt Ne = cEnd - cStart;
+  Ne = cEnd - cStart;
 
   /* Retrieve cached geometry -- geometry was built once in PetscFEKokkosSetUpGeometry.
    * d_invJ, d_detJ, d_coords already hold valid device data. */
@@ -1089,7 +1133,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
 
   /* Get element coefficients (always needed -- solution changes every call). */
-  const PetscInt nCoeff = Ne * totDim;
+  nCoeff = Ne * totDim;
   {
     PetscCall(DMPlexGetCellFields(dm, ctx->cached_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
   }
@@ -1176,10 +1220,10 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    *
    * team_size = Nq_ on GPU (one thread per quadrature point),
    * team_size = 1   on Serial/OpenMP (avoids Serial team_size > 1 error). */
-  using team_policy_t     = Kokkos::TeamPolicy<>;
-  using member_type       = team_policy_t::member_type;
-  const int res_on_gpu    = PetscFEKokkosOnGPU();
-  const int res_team_size = res_on_gpu ? Nq_ : 1;
+  using team_policy_t           = Kokkos::TeamPolicy<>;
+  using member_type             = team_policy_t::member_type;
+  const PetscBool res_on_gpu    = PetscFEKokkosOnGPU();
+  const int       res_team_size = res_on_gpu ? Nq_ : 1;
 
   PetscScalar *F_dev = PetscMemTypeDevice(locF_memtype) ? d_F_unmanaged.data() : d_F.data();
 
@@ -1258,31 +1302,39 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>
+/*@C
+  DMPlexSNESComputeJacobianFEM_Kokkos - GPU-resident SNES Jacobian callback using Kokkos COO assembly
 
-   GPU-resident SNES Jacobian callback.  Drop-in replacement for
-   DMPlexSNESComputeJacobianFEM (the CPU path) when using COO assembly.
+  Collective
 
-   Template parameters (all four Jacobian callbacks):
-     G0 -- KOKKOS_INLINE_FUNCTION void(PETSC_JAC_POINT_ARGS, PetscScalar[])
-          g0 term (u*v coupling)
-     G1 -- g1 term (u*gradv coupling)
-     G2 -- g2 term (gradu*v coupling)
-     G3 -- g3 term (gradu*gradv coupling, dominant for elliptic problems)
+  Input Parameters:
++ snes    - the `SNES` context
+. X       - the global solution vector
+- ctx_ptr - pointer to a `PetscFEKokkosMaps` with maps already staged via `PetscFEKokkosSetUp()`
 
-   Pass nullptr for unused callbacks (e.g. G0=nullptr, G1=nullptr, G2=nullptr
-   for a pure Laplacian where only G3 is non-zero).
+  Output Parameters:
++ J  - the Jacobian matrix
+- Jp - the preconditioner matrix (must equal `J` for this implementation)
 
-   ctx_ptr must point to a PetscFEKokkosMaps with maps already staged.
+  Template Parameters:
++ G0 - `KOKKOS_INLINE_FUNCTION` g0 Jacobian term (u*v coupling), or `nullptr`
+. G1 - g1 term (u*gradv coupling), or `nullptr`
+. G2 - g2 term (gradu*v coupling), or `nullptr`
+. G3 - g3 term (gradu*gradv coupling), or `nullptr`
+- IsLinear - if `true`, skip coefficient staging on repeated calls (default `false`)
 
-   Algorithm:
-     1. Get local solution with BCs applied (host-sync guard for device Vecs).
-     2. Get element geometry and coefficients.
-     3. Stage tabulation, geometry, coefficients, and DS constants to device.
-     4. Allocate d_coo_vals[coo_size], zero it.
-     5. Pass 1: PetscFEKokkosIntegrateJacobianCell<G0,G1,G2,G3> -> d_elemMat.
-     6. Pass 2: scatter d_elemMat -> d_coo_vals (constraint-aware).
-     7. MatSetValuesCOO(J, d_coo_vals.data(), INSERT_VALUES). */
+  Level: intermediate
+
+  Notes:
+  Drop-in replacement for `DMPlexSNESComputeJacobianFEM()` (the CPU path) when using
+  Kokkos COO assembly. Pass `nullptr` for unused callbacks (e.g., `G0=nullptr`,
+  `G1=nullptr`, `G2=nullptr` for a pure Laplacian where only `G3` is non-zero).
+
+  This is a C++ template function and cannot have auto-generated Fortran bindings.
+
+.seealso: [](ch_fe), `PetscFE`, `PETSCFEKOKKOS`, `DMPlexSNESComputeResidualFEM_Kokkos()`,
+          `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsCreate()`, `PETSC_JAC_POINT_ARGS`
+@*/
 template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsLinear = false>
 static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat J, Mat Jp, void *ctx_ptr)
 {
@@ -1294,7 +1346,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   PetscQuadrature    quad;
   Vec                locX;
   PetscScalar       *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
-  PetscInt           cStart, cEnd, totDim;
+  PetscInt           cStart, cEnd, totDim, Ne, nCoeff;
   const PetscReal   *quadPoints, *quadWeights;
   PetscInt           Nf, Nq, Nb, Nc, dim, dE, qdim, qNc;
   PetscInt           numConstants;
@@ -1330,7 +1382,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   Nc = T[0]->Nc;
 
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  const PetscInt Ne = cEnd - cStart;
+  Ne = cEnd - cStart;
 
   /* Retrieve cached geometry -- geometry was built once in PetscFEKokkosSetUpGeometry.
    * d_invJ, d_detJ, d_coords already hold valid device data. */
@@ -1366,7 +1418,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
 
   /* Get element coefficients (always needed -- solution changes every call). */
-  const PetscInt nCoeff = Ne * totDim;
+  nCoeff = Ne * totDim;
   {
     PetscCall(DMPlexGetCellFields(dm, ctx->cached_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
   }
@@ -1421,10 +1473,10 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   const PetscReal t_        = 0.0; /* autonomous problems only; guarded by PetscCheck above */
   const PetscReal u_tShift_ = 0.0; /* autonomous problems only; guarded by PetscCheck above */
 
-  using team_policy_t     = Kokkos::TeamPolicy<>;
-  using member_type       = team_policy_t::member_type;
-  const int jac_on_gpu    = PetscFEKokkosOnGPU();
-  const int jac_team_size = jac_on_gpu ? Nq_ : 1;
+  using team_policy_t           = Kokkos::TeamPolicy<>;
+  using member_type             = team_policy_t::member_type;
+  const PetscBool jac_on_gpu    = PetscFEKokkosOnGPU();
+  const int       jac_team_size = jac_on_gpu ? Nq_ : 1;
 
   /* Pass 1: integrate Jacobian for all elements into d_elemMat.
      d_elemMat was zeroed above via Kokkos::deep_copy before this kernel.
