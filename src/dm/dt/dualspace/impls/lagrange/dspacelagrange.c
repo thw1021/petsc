@@ -2719,6 +2719,7 @@ static PetscErrorCode PetscDualSpaceGetSymmetries_Lagrange(PetscDualSpace sp, co
         PetscInt    *perm;
         PetscScalar *flips;
         PetscInt     i;
+        PetscBool    failed = PETSC_FALSE;
 
         if (!ornt) continue;
         PetscCall(PetscMalloc1(spintdim, &perm));
@@ -2735,11 +2736,23 @@ static PetscErrorCode PetscDualSpaceGetSymmetries_Lagrange(PetscDualSpace sp, co
           PetscCall(MatGetRow(symMat, i, &ncols, &cols, &vals));
           for (j = 0; j < ncols; j++) {
             if (PetscAbsScalar(vals[j]) > PETSC_SMALL) {
-              PetscCheck(!nz_seen, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "This dual space has symmetries that can't be described as a permutation + sign flips");
+              if (nz_seen) {
+                failed = PETSC_TRUE;
+                break;
+              }
               nz_seen = PETSC_TRUE;
-              PetscCheck(PetscAbsReal(PetscAbsScalar(vals[j]) - PetscRealConstant(1.)) <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "This dual space has symmetries that can't be described as a permutation + sign flips");
-              PetscCheck(PetscAbsReal(PetscImaginaryPart(vals[j])) <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "This dual space has symmetries that can't be described as a permutation + sign flips");
-              PetscCheck(perm[cols[j] * nCopies] < 0, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "This dual space has symmetries that can't be described as a permutation + sign flips");
+              if (PetscAbsReal(PetscAbsScalar(vals[j]) - PetscRealConstant(1.)) > PETSC_SMALL) {
+                failed = PETSC_TRUE;
+                break;
+              }
+              if (PetscAbsReal(PetscImaginaryPart(vals[j])) > PETSC_SMALL) {
+                failed = PETSC_TRUE;
+                break;
+              }
+              if (perm[cols[j] * nCopies] >= 0) {
+                failed = PETSC_TRUE;
+                break;
+              }
               for (k = 0; k < nCopies; k++) perm[cols[j] * nCopies + k] = i * nCopies + k;
               if (PetscRealPart(vals[j]) < 0.) {
                 for (k = 0; k < nCopies; k++) flips[i * nCopies + k] = -1.;
@@ -2749,21 +2762,37 @@ static PetscErrorCode PetscDualSpaceGetSymmetries_Lagrange(PetscDualSpace sp, co
             }
           }
           PetscCall(MatRestoreRow(symMat, i, &ncols, &cols, &vals));
+          if (failed) break;
         }
         PetscCall(MatDestroy(&symMat));
-        /* if there were no sign flips, keep NULL */
-        for (i = 0; i < spintdim; i++)
-          if (flips[i] != 1.) break;
-        if (i == spintdim) {
+        if (failed) {
           PetscCall(PetscFree(flips));
-          flips = NULL;
-        }
-        /* if the permutation is identity, keep NULL */
-        for (i = 0; i < spintdim; i++)
-          if (perm[i] != i) break;
-        if (i == spintdim) {
           PetscCall(PetscFree(perm));
-          perm = NULL;
+          if (!PetscGlobalRank) {
+            const char *name;
+            PetscCall(PetscObjectGetName((PetscObject)sp, &name));
+            // clang-format off
+            PetscCall(PetscInfo(NULL,
+                  "The symmetry for PetscDualSpace %s, dimension %" PetscInt_FMT ", orientation %" PetscInt_FMT " is not monomial and cannot be represented with permutations and sign flips.\n"
+                  "It is not implemented, and if this orientation occurs in a mesh then finite element restriction will not be computed correctly.",
+                  name, dim, ornt));
+            // clang-format on
+          }
+        } else {
+          /* if there were no sign flips, keep NULL */
+          for (i = 0; i < spintdim; i++)
+            if (flips[i] != 1.) break;
+          if (i == spintdim) {
+            PetscCall(PetscFree(flips));
+            flips = NULL;
+          }
+          /* if the permutation is identity, keep NULL */
+          for (i = 0; i < spintdim; i++)
+            if (perm[i] != i) break;
+          if (i == spintdim) {
+            PetscCall(PetscFree(perm));
+            perm = NULL;
+          }
         }
         symperms[0][ornt] = perm;
         symflips[0][ornt] = flips;
