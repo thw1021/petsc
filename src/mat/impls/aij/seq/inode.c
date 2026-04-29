@@ -2429,7 +2429,8 @@ static PetscErrorCode MatInvertDiagonalForSOR_SeqAIJ_Inode(Mat A, PetscScalar om
   const PetscInt  *sizes          = a->inode.size_csr, *diag;
 
   PetscFunctionBegin;
-  if (a->idiagState == ((PetscObject)A)->state) PetscFunctionReturn(PETSC_SUCCESS);
+  if (a->inode.ibdiagState == ((PetscObject)A)->state) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscInfo(A, "Computing inode block-diagonal inverse for SOR\n"));
   PetscCall(MatGetDiagonalMarkers_SeqAIJ(A, &diag, NULL));
   if (!a->inode.ibdiag) {
     /* calculate space needed for diagonal blocks */
