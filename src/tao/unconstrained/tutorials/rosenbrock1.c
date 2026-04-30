@@ -14,6 +14,7 @@ or the chained Rosenbrock function:\n\
 /* -------------- User-defined routines ---------- */
 static PetscErrorCode FormFunctionGradient(Tao, Vec, PetscReal *, Vec, void *);
 static PetscErrorCode FormHessian(Tao, Vec, Mat, Mat, void *);
+static PetscErrorCode FormHessianMult(Tao, Vec, Vec, Vec, void *);
 
 int main(int argc, char **argv)
 {
@@ -50,9 +51,10 @@ int main(int argc, char **argv)
   PetscCall(VecZeroEntries(x));
   PetscCall(TaoSetSolution(tao, x));
 
-  /* Set routines for function, gradient, hessian evaluation */
+  /* Set routines for function, gradient, hessian, and Hessian-vector product evaluation */
   PetscCall(TaoSetObjectiveAndGradient(tao, NULL, FormFunctionGradient, &user));
   PetscCall(TaoSetHessian(tao, H, Hpre, FormHessian, &user));
+  PetscCall(TaoSetHessianMult(tao, FormHessianMult, &user));
 
   /* Check for TAO command line options */
   PetscCall(TaoSetFromOptions(tao));
@@ -128,6 +130,27 @@ static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
     PetscCall(MatDiagonalSet(Hpre, v, INSERT_VALUES));
     PetscCall(VecDestroy(&v));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  FormHessianMult - Evaluates the matrix-free Hessian-vector product HV = H(X) V.
+
+  Input Parameters:
++ tao - the Tao context
+. X   - input vector
+. V   - vector to multiply by the Hessian
+- ptr - optional user-defined context, as set by TaoSetHessianMult()
+
+  Output Parameter:
+. HV - the Hessian-vector product
+*/
+static PetscErrorCode FormHessianMult(Tao tao, Vec X, Vec V, Vec HV, void *ptr)
+{
+  AppCtx *user = (AppCtx *)ptr;
+
+  PetscFunctionBeginUser;
+  PetscCall(AppCtxFormHessianMult(user, X, V, HV));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
