@@ -40,8 +40,8 @@ typedef struct {
   int              useMatching;    /* cuDSS expects int for CUDSS_CONFIG_USE_MATCHING */
   int              irNSteps;       /* cuDSS expects int for CUDSS_CONFIG_IR_N_STEPS */
 
-  MatStructure matstruc;  /* tracks whether symbolic factorization can be reused */
-  PetscBool    factored;  /* true after first successful numeric factorization */
+  MatStructure matstruc; /* tracks whether symbolic factorization can be reused */
+  PetscBool    factored; /* true after first successful numeric factorization */
 } Mat_cuDSS;
 
 /* Map PetscScalar to the cuDSS data type */
