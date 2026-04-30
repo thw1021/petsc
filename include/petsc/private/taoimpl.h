@@ -66,6 +66,7 @@ struct _n_TaoTermMapping {
   PetscReal   scale;
   Mat         map;
   Vec         _map_output;
+  Vec         _map_direction;
   Vec         _unmapped_gradient;
   Vec         _mapped_gradient;
   Mat         _unmapped_H;
@@ -326,6 +327,8 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjective(TaoTermMapping *, Vec
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeGradient(TaoTermMapping *, Vec, Vec, InsertMode, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMapping *, Vec, Vec, InsertMode, PetscReal *, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *, Vec, Vec, InsertMode, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *, Vec, Vec, Mat, Vec, InsertMode, Vec);
+PETSC_INTERN PetscErrorCode TaoTermMappingComputeUnmappedHessian(TaoTermMapping *, Vec, Vec, Mat);
 PETSC_INTERN PetscErrorCode TaoTermMappingSetUp(TaoTermMapping *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateSolutionVec(TaoTermMapping *, Vec *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateParametersVec(TaoTermMapping *, Vec *);
@@ -335,3 +338,5 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec, Vec *);
 
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);
+
+PETSC_INTERN PetscErrorCode TaoTermPreprocessHessianShells(TaoTerm, Vec, Vec, Mat *, Mat *);

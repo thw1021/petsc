@@ -24,7 +24,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char
   PetscCall(TaoTermDestroy(&mt->term));
   mt->term  = term;
   mt->scale = scale;
-  if (map != mt->map) PetscCall(VecDestroy(&mt->_map_output));
+  if (map != mt->map) {
+    PetscCall(VecDestroy(&mt->_map_output));
+    PetscCall(VecDestroy(&mt->_map_direction));
+  }
   PetscCall(PetscObjectReference((PetscObject)map));
   PetscCall(MatDestroy(&mt->map));
   mt->map = map;
@@ -35,6 +38,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermMappingSetData(mt, NULL, 0.0, NULL, NULL));
+  PetscCall(VecDestroy(&mt->_map_direction));
   PetscCall(VecDestroy(&mt->_mapped_gradient));
   PetscCall(MatDestroy(&mt->_unmapped_H));
   PetscCall(MatDestroy(&mt->_unmapped_Hpre));
@@ -70,6 +74,18 @@ static PetscErrorCode TaoTermMappingMap(TaoTermMapping *mt, Vec x, Vec *Ax)
     if (!mt->_map_output) PetscCall(MatCreateVecs(mt->map, NULL, &mt->_map_output));
     PetscCall(MatMult(mt->map, x, mt->_map_output));
     *Ax = mt->_map_output;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermMappingMapDirection(TaoTermMapping *mt, Vec v, Vec *Av)
+{
+  PetscFunctionBegin;
+  *Av = v;
+  if (mt->map) {
+    if (!mt->_map_direction) PetscCall(MatCreateVecs(mt->map, NULL, &mt->_map_direction));
+    PetscCall(MatMult(mt->map, v, mt->_map_direction));
+    *Av = mt->_map_direction;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -291,9 +307,11 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
 {
   PetscFunctionBegin;
   if (mt->map) {
-    // currently only implements Gauss-Newton Hessian approximation
     if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H, mt->_mapped_H_work));
-    if (mapped_Hpre && (mapped_Hpre != mapped_H)) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, mt->_mapped_Hpre_work));
+    if (mapped_Hpre && (mapped_Hpre != mapped_H)) {
+      Mat work = mt->_mapped_Hpre_work ? mt->_mapped_Hpre_work : mt->_mapped_H_work;
+      PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, work));
+    }
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -351,6 +369,36 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
   PetscCall(TaoTermMappingGetHessians(mt, mode, H, Hpre, &mapped_H, &mapped_Hpre, &unmapped_H, &unmapped_Hpre));
   PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, unmapped_Hpre));
   PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mapped_H, mapped_Hpre, unmapped_H, unmapped_Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermMappingComputeUnmappedHessian(TaoTermMapping *mt, Vec x, Vec params, Mat unmapped_H)
+{
+  Vec Ax;
+
+  PetscFunctionBegin;
+  TaoTermMappingCheckInsertMode(mt, INSERT_VALUES);
+  PetscCall(TaoTermMappingMap(mt, x, &Ax));
+  PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *mt, Vec x, Vec params, Mat unmapped_H, Vec v, InsertMode mode, Vec Hv)
+{
+  Vec Ax, mapped_Hv, unmapped_Hv = NULL, Av;
+
+  PetscFunctionBegin;
+  TaoTermMappingCheckInsertMode(mt, mode);
+  if (TaoTermHessianMasked(mt->mask)) {
+    if (mode == INSERT_VALUES) PetscCall(VecZeroEntries(Hv));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(TaoTermMappingMap(mt, x, &Ax));
+  PetscCall(TaoTermMappingMapDirection(mt, v, &Av));
+  PetscCall(TaoTermMappingGetGradients(mt, mode, Hv, &mapped_Hv, &unmapped_Hv));
+  if (unmapped_H) PetscCall(MatMult(unmapped_H, Av, unmapped_Hv));
+  else PetscCall(TaoTermComputeHessianMult(mt->term, Ax, params, Av, unmapped_Hv));
+  PetscCall(TaoTermMappingSetGradients(mt, mode, Hv, mapped_Hv, unmapped_Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

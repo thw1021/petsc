@@ -23,12 +23,15 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTerm term, Mat *H, Mat *Hpre, PetscBool Hpre_is_H, MatType H_mattype)
 {
   Mat       Htemp;
-  PetscBool is_mffd = PETSC_FALSE;
+  PetscBool is_mffd = PETSC_FALSE, is_shell = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(H_mattype, MATMFFD, &is_mffd));
+  if (!is_mffd) PetscCall(PetscStrcmp(H_mattype, MATSHELL, &is_shell));
   if (is_mffd) {
     PetscCall(TaoTermCreateHessianMFFD(term, &Htemp));
+  } else if (is_shell) {
+    PetscCall(TaoTermCreateHessianShell(term, &Htemp));
   } else {
     PetscLayout sol_layout;
     VecType     sol_vec_type;
