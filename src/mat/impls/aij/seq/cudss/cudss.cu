@@ -39,6 +39,8 @@ typedef struct {
   double           pivotEpsilon;   /* cuDSS expects double for CUDSS_CONFIG_PIVOT_EPSILON */
   int              useMatching;    /* cuDSS expects int for CUDSS_CONFIG_USE_MATCHING */
   int              irNSteps;       /* cuDSS expects int for CUDSS_CONFIG_IR_N_STEPS */
+
+  MatStructure matstruc; /* tracks whether symbolic factorization can be reused */
 } Mat_cuDSS;
 
 /* Map PetscScalar to the cuDSS data type */
@@ -95,6 +97,7 @@ static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot epsilon: %g\n", (double)lu->pivotEpsilon));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Use matching: %s\n", lu->useMatching ? "true" : "false"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  IR steps: %d\n", lu->irNSteps));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Symbolic reuse: %s\n", lu->matstruc == SAME_NONZERO_PATTERN ? "true (analysis reused)" : "false (fresh analysis)"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -212,6 +215,14 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   cudaStream_t stream;
 
   PetscFunctionBegin;
+  /* If the sparsity pattern has not changed, skip the symbolic phase entirely.
+     The subsequent numeric factorization will use CUDSS_PHASE_REFACTORIZATION
+     to reuse the existing symbolic analysis. This mirrors the MUMPS approach. */
+  if (lu->matstruc == SAME_NONZERO_PATTERN) {
+    PetscCall(PetscInfo(F, "cuDSS: reusing previous symbolic factorization (same nonzero pattern)\n"));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   if (lu->cudss_x) {
     PetscCallCUDSS(cudssMatrixDestroy, lu->cudss_x);
     lu->cudss_x = NULL;
@@ -292,6 +303,8 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscCallCUDSS(cudssMatrixCreateDn, &lu->cudss_x, n, 1, n, lu->d_x, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
 
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
+
+  lu->matstruc = SAME_NONZERO_PATTERN;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -385,19 +398,35 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
+static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A)
 {
-  Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
-  void        *d_row = NULL, *d_col = NULL;
-  PetscScalar *d_val = NULL;
-  cudaStream_t stream;
+  Mat_cuDSS    *lu    = (Mat_cuDSS *)F->data;
+  void         *d_row = NULL, *d_col = NULL;
+  PetscScalar  *d_val = NULL;
+  cudaStream_t  stream;
+  cudssStatus_t status;
+  cudssPhase_t  phase;
 
   PetscFunctionBegin;
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
   PetscCall(PetscGetCurrentCUDAStream(&stream));
   PetscCallCUDSS(cudssSetStream, lu->handle, stream);
-  PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_FACTORIZATION, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
+
+  /* Use CUDSS_PHASE_REFACTORIZATION when reusing a previous symbolic analysis,
+     otherwise use CUDSS_PHASE_FACTORIZATION for the first numeric factorization */
+  if (F->assembled) phase = CUDSS_PHASE_REFACTORIZATION;
+  else phase = CUDSS_PHASE_FACTORIZATION;
+  PetscCall(PetscInfo(F, "cuDSS: using %s phase\n", phase == CUDSS_PHASE_REFACTORIZATION ? "REFACTORIZATION" : "FACTORIZATION"));
+
+  status = cudssExecute(lu->handle, phase, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
+  if (status != CUDSS_STATUS_SUCCESS) {
+    PetscCall(PetscInfo(F, "cuDSS numerical factorization failed with status %d\n", (int)status));
+    if (status == CUDSS_STATUS_INVALID_VALUE || status == CUDSS_STATUS_EXECUTION_FAILED) F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    else if (status == CUDSS_STATUS_ALLOC_FAILED) F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+    else F->factorerrortype = MAT_FACTOR_OTHER;
+    if (A->erroriffailure) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "cuDSS error in numerical factorization: status %d", (int)status);
+  } else F->factorerrortype = MAT_FACTOR_NOERROR;
 
   F->ops->solve    = MatSolve_cuDSS;
   F->ops->matsolve = MatMatSolve_cuDSS;
@@ -405,23 +434,17 @@ static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(MatFactorNumeric_cuDSS(F, A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
-  void        *d_row = NULL, *d_col = NULL;
-  PetscScalar *d_val = NULL;
-  cudaStream_t stream;
-
   PetscFunctionBegin;
-  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
-  PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
-  PetscCall(PetscGetCurrentCUDAStream(&stream));
-  PetscCallCUDSS(cudssSetStream, lu->handle, stream);
-  PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_FACTORIZATION, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
-
-  F->ops->solve    = MatSolve_cuDSS;
-  F->ops->matsolve = MatMatSolve_cuDSS;
-  F->assembled     = PETSC_TRUE;
+  PetscCall(MatFactorNumeric_cuDSS(F, A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -499,6 +522,7 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
   lu->pivotEpsilon   = 0.0;
   lu->useMatching    = PETSC_FALSE;
   lu->irNSteps       = 0;
+  lu->matstruc       = DIFFERENT_NONZERO_PATTERN;
   B->data            = lu;
 
   *F = B;
