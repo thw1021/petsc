@@ -47,6 +47,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
   PetscCall(MatDestroy(&mt->_mapped_H_work));
   PetscCall(MatDestroy(&mt->_mapped_Hpre_work));
   mt->mask = TAOTERM_MASK_NONE;
+  if (mt->mapped_hessian_ctx_destroy && mt->mapped_hessian_ctx) PetscCall((*mt->mapped_hessian_ctx_destroy)(&mt->mapped_hessian_ctx));
+  mt->mapped_hessian_fn          = NULL;
+  mt->mapped_hessian_ctx         = NULL;
+  mt->mapped_hessian_ctx_destroy = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -87,6 +91,22 @@ static PetscErrorCode TaoTermMappingMapDirection(TaoTermMapping *mt, Vec v, Vec 
     PetscCall(MatMult(mt->map, v, mt->_map_direction));
     *Av = mt->_map_direction;
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermMappingZeroMat(Mat M)
+{
+  PetscBool assembled;
+
+  PetscFunctionBegin;
+  if (!M) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(MatAssembled(M, &assembled));
+  if (!assembled) {
+    PetscCall(MatSetUp(M));
+    PetscCall(MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY));
+  }
+  PetscCall(MatZeroEntries(M));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -365,6 +385,29 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
     }
     PetscFunctionReturn(PETSC_SUCCESS);
   }
+  if (mt->mapped_hessian_fn) {
+    Mat target_H = H, target_Hpre = Hpre && Hpre != H ? Hpre : NULL;
+
+    if (H && target_H == H && mt->_mapped_H) target_H = mt->_mapped_H;
+    if (Hpre && Hpre != H && target_Hpre == Hpre && mt->_mapped_Hpre) target_Hpre = mt->_mapped_Hpre;
+    if (mode == ADD_VALUES) {
+      if (H && !mt->_mapped_H) PetscCall(MatDuplicate(H, MAT_DO_NOT_COPY_VALUES, &mt->_mapped_H));
+      if (Hpre && Hpre != H && !mt->_mapped_Hpre) PetscCall(MatDuplicate(Hpre, MAT_DO_NOT_COPY_VALUES, &mt->_mapped_Hpre));
+      if (H) target_H = mt->_mapped_H;
+      if (Hpre && Hpre != H) target_Hpre = mt->_mapped_Hpre;
+    }
+    PetscCall(TaoTermMappingZeroMat(target_H));
+    PetscCall(TaoTermMappingZeroMat(target_Hpre));
+    PetscCall((*mt->mapped_hessian_fn)(x, params, target_H, target_Hpre, mt->mapped_hessian_ctx));
+    if (mode == ADD_VALUES) {
+      if (H) PetscCall(MatAXPY(H, mt->scale, target_H, UNKNOWN_NONZERO_PATTERN));
+      if (Hpre && Hpre != H) PetscCall(MatAXPY(Hpre, mt->scale, target_Hpre, UNKNOWN_NONZERO_PATTERN));
+    } else if (mt->scale != 1.0) {
+      if (H) PetscCall(MatScale(H, mt->scale));
+      if (Hpre && Hpre != H) PetscCall(MatScale(Hpre, mt->scale));
+    }
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(TaoTermMappingMap(mt, x, &Ax));
   PetscCall(TaoTermMappingGetHessians(mt, mode, H, Hpre, &mapped_H, &mapped_Hpre, &unmapped_H, &unmapped_Hpre));
   PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, unmapped_Hpre));
@@ -535,6 +578,14 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
   if (is_sum && mt->map) PetscCall(PetscInfo(mt->term, "%s: TaoTermType is TAOTERMSUM, but Map is given. Ignoring it.\n", ((PetscObject)mt->term)->prefix));
   PetscCheck(H, PetscObjectComm((PetscObject)mt->term), PETSC_ERR_SUP, "TaoTermMappingCreateHessianMatrices does not take NULL input for H");
   PetscCheck(Hpre, PetscObjectComm((PetscObject)mt->term), PETSC_ERR_SUP, "TaoTermMappingCreateHessianMatrices does not take NULL input Hpre");
+  if (mt->mapped_hessian_fn) {
+    PetscCheck(mt->_mapped_H, PetscObjectComm((PetscObject)mt->term), PETSC_ERR_USER, "When using a mapped Hessian callback, set mapped Hessian matrices via TaoTermSumSetTermHessianMatrices() first");
+    if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
+    *H = mt->_mapped_H;
+    if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
+    *Hpre = mt->_mapped_Hpre;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   if (!mt->map) {
     // mt->_unmapped_{H,Hpre} == mt->_unmapped_{H,Hpre}
     if (uH && mH) PetscCheck(uH == mH, PetscObjectComm((PetscObject)mt->term), PETSC_ERR_USER, "For unmapped TaoTerm, mapped Hessian and unmapped Hessian must be same");

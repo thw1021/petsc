@@ -304,6 +304,8 @@ static PetscErrorCode TaoTermDestroy_Sum(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermHessianMatrices_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetTermMask_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermMask_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermMappedHessianFn_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetTermMappedHessianFn_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetLastTermObjectives_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -919,6 +921,105 @@ static PetscErrorCode TaoTermSumSetTermMask_Sum(TaoTerm term, PetscInt index, Ta
 }
 
 /*@
+  TaoTermSumSetTermMappedHessianFn - Set a callback to directly compute the mapped Hessian for a term in a `TAOTERMSUM`,
+  bypassing the standard unmapped Hessian + PtAP transformation
+
+  Logically collective
+
+  Input Parameters:
++ term        - a `TaoTerm` of type `TAOTERMSUM`
+. index       - the index for the term from `TaoTermSumSetTerm()` or `TaoTermSumAddTerm()`
+. fn          - the callback function, or `NULL` to clear
+. ctx         - user context passed to `fn`
+- ctx_destroy - (optional) destroy function for `ctx`
+
+  Level: advanced
+
+  Notes:
+  When set, the standard Hessian computation flow (compute unmapped Hessian, then apply $A^T H A$ via PtAP)
+  is bypassed entirely for this term. The callback receives the solution vector `x` in the outer (sum)
+  solution space and must fill the mapped Hessian matrices directly.
+
+  The mapped Hessian matrices must be set beforehand via `TaoTermSumSetTermHessianMatrices()`.
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TAOTERMSUM`,
+          `TaoTermMappedHessianFn`,
+          `TaoTermSumGetTermMappedHessianFn()`,
+          `TaoTermSumSetTermHessianMatrices()`
+@*/
+PetscErrorCode TaoTermSumSetTermMappedHessianFn(TaoTerm term, PetscInt index, TaoTermMappedHessianFn *fn, PetscCtx ctx, PetscCtxDestroyFn *ctx_destroy)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(term, index, 2);
+  PetscTryMethod(term, "TaoTermSumSetTermMappedHessianFn_C", (TaoTerm, PetscInt, TaoTermMappedHessianFn *, PetscCtx, PetscCtxDestroyFn *), (term, index, fn, ctx, ctx_destroy));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSumSetTermMappedHessianFn_Sum(TaoTerm term, PetscInt index, TaoTermMappedHessianFn *fn, PetscCtx ctx, PetscCtxDestroyFn *ctx_destroy)
+{
+  TaoTerm_Sum    *sum = (TaoTerm_Sum *)term->data;
+  TaoTermMapping *summand;
+
+  PetscFunctionBegin;
+  PetscCheck(index >= 0 && index < sum->n_terms, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", index, sum->n_terms);
+  summand = &sum->terms[index];
+  if (summand->mapped_hessian_ctx_destroy && summand->mapped_hessian_ctx) PetscCall((*summand->mapped_hessian_ctx_destroy)(&summand->mapped_hessian_ctx));
+  summand->mapped_hessian_fn          = fn;
+  summand->mapped_hessian_ctx         = ctx;
+  summand->mapped_hessian_ctx_destroy = ctx_destroy;
+  PetscCall(TaoTermSumHessCacheReset(&sum->hessian_cache));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermSumGetTermMappedHessianFn - Get the mapped Hessian callback set with `TaoTermSumSetTermMappedHessianFn()`
+
+  Not collective
+
+  Input Parameters:
++ term  - a `TaoTerm` of type `TAOTERMSUM`
+- index - the index for the term from `TaoTermSumSetTerm()` or `TaoTermSumAddTerm()`
+
+  Output Parameters:
++ fn  - (optional) the callback function
+- ctx - (optional) the user context
+
+  Level: advanced
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TAOTERMSUM`,
+          `TaoTermMappedHessianFn`,
+          `TaoTermSumSetTermMappedHessianFn()`
+@*/
+PetscErrorCode TaoTermSumGetTermMappedHessianFn(TaoTerm term, PetscInt index, TaoTermMappedHessianFn **fn, PetscCtxRt ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(term, index, 2);
+  if (fn) PetscAssertPointer(fn, 3);
+  if (ctx) PetscAssertPointer(ctx, 4);
+  PetscUseMethod(term, "TaoTermSumGetTermMappedHessianFn_C", (TaoTerm, PetscInt, TaoTermMappedHessianFn **, PetscCtxRt), (term, index, fn, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSumGetTermMappedHessianFn_Sum(TaoTerm term, PetscInt index, TaoTermMappedHessianFn **fn, PetscCtxRt ctx)
+{
+  TaoTerm_Sum    *sum = (TaoTerm_Sum *)term->data;
+  TaoTermMapping *summand;
+
+  PetscFunctionBegin;
+  PetscCheck(index >= 0 && index < sum->n_terms, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", index, sum->n_terms);
+  summand = &sum->terms[index];
+  if (fn) *fn = summand->mapped_hessian_fn;
+  if (ctx) *(void **)ctx = summand->mapped_hessian_ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoTermSumAddTerm - Append a term to the terms being summed
 
   Collective
@@ -1284,6 +1385,11 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
       sub_Hpre_is_H = PETSC_TRUE;
       continue;
     }
+    if (summand->mapped_hessian_fn && !summand->_mapped_H && !summand->_mapped_Hpre) {
+      sub_Hpre_is_H = term->Hpre_is_H;
+      Hpre_is_H     = (Hpre_is_H && sub_Hpre_is_H) ? PETSC_TRUE : PETSC_FALSE;
+      continue;
+    }
     PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMCALLBACKS, &is_callback));
     if (is_callback) {
       Mat c_H;
@@ -1362,6 +1468,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermHessianMatrices_C", TaoTermSumSetTermHessianMatrices_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetTermMask_C", TaoTermSumGetTermMask_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermMask_C", TaoTermSumSetTermMask_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermMappedHessianFn_C", TaoTermSumSetTermMappedHessianFn_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetTermMappedHessianFn_C", TaoTermSumGetTermMappedHessianFn_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetLastTermObjectives_C", TaoTermSumGetLastTermObjectives_Sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
