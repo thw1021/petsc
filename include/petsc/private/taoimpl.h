@@ -231,6 +231,7 @@ PETSC_INTERN PetscLogEvent TAOTERM_ObjectiveEval;
 PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
 PETSC_INTERN PetscLogEvent TAOTERM_ObjGradEval;
 PETSC_INTERN PetscLogEvent TAOTERM_HessianEval;
+PETSC_INTERN PetscLogEvent TAOTERM_HessianMultEval;
 
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {
@@ -264,11 +265,13 @@ struct _TaoTermOps {
   TaoTermObjectiveAndGradientFn *objectiveandgradient;
   TaoTermGradientFn             *gradient;
   TaoTermHessianFn              *hessian;
+  TaoTermHessianMultFn          *hessianmult;
 
   PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*ishessianmultdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*iscreatehessianmatricesdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*iscomputehessianfdpossible)(TaoTerm, PetscBool3 *);
 
@@ -311,11 +314,13 @@ PETSC_INTERN PetscErrorCode TaoTermCallbacksSetObjective(TaoTerm, PetscErrorCode
 PETSC_INTERN PetscErrorCode TaoTermCallbacksSetGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, PetscCtx), PetscCtx);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksSetObjectiveAndGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, PetscCtx), PetscCtx);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksSetHessian(TaoTerm, PetscErrorCode (*)(Tao, Vec, Mat, Mat, PetscCtx), PetscCtx);
+PETSC_INTERN PetscErrorCode TaoTermCallbacksSetHessianMult(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, Vec, PetscCtx), PetscCtx);
 
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetObjective(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, PetscCtx), PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, PetscCtx), PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetObjectiveAndGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, PetscCtx), PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessian(TaoTerm, PetscErrorCode (**)(Tao, Vec, Mat, Mat, PetscCtx), PetscCtxRt);
+PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessianMult(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, Vec, PetscCtx), PetscCtxRt);
 
 PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *, const char *, PetscReal, TaoTerm, Mat);
 PETSC_INTERN PetscErrorCode TaoTermMappingGetData(TaoTermMapping *, const char **, PetscReal *, TaoTerm *, Mat *);

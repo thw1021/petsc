@@ -73,6 +73,13 @@ static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, V
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermComputeHessianMult_Halfl2squared(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCopy(v, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermCreateHessianMatrices_Halfl2squared(TaoTerm term, Mat *H, Mat *Hpre)
 {
   PetscBool is_hdiag, is_hprediag;
@@ -141,6 +148,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   term->ops->gradient                   = TaoTermComputeGradient_Halfl2squared;
   term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_Halfl2squared;
   term->ops->hessian                    = TaoTermComputeHessian_Halfl2squared;
+  term->ops->hessianmult                = TaoTermComputeHessianMult_Halfl2squared;
   term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_Halfl2squared;
   term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_Halfl2squared;
   PetscFunctionReturn(PETSC_SUCCESS);

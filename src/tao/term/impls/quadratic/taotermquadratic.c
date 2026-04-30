@@ -119,6 +119,16 @@ static PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm term, Vec x, Vec p
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermComputeHessianMult_Quadratic(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
+
+  PetscFunctionBegin;
+  PetscCheck(quad->A, PetscObjectComm((PetscObject)term), PETSC_ERR_ORDER, "Quadratic matrix not set, call TaoTermQuadraticSetMat() first");
+  PetscCall(MatMult(quad->A, v, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermCreateHessianMatrices_Quadratic(TaoTerm term, Mat *H, Mat *Hpre)
 {
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
@@ -280,6 +290,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
   term->ops->gradient                   = TaoTermComputeGradient_Quadratic;
   term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_Quadratic;
   term->ops->hessian                    = TaoTermComputeHessian_Quadratic;
+  term->ops->hessianmult                = TaoTermComputeHessianMult_Quadratic;
   term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_Quadratic;
   term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_Quadratic;
 
