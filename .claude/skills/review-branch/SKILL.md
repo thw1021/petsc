@@ -19,3 +19,6 @@ If `origin/main` doesn't resolve (`git rev-parse --verify -q origin/main` exits 
 State `DEST`, then run `git diff --stat <DEST>...<SRC> -- ':(exclude)*.out'` to size the change, and `git diff <DEST>...<SRC> -- ':(exclude)*.out' > /tmp/review.diff` to capture it. Read `/tmp/review.diff` (use `offset`/`limit` if large) — do **not** re-run `git diff` per file; the captured diff already contains every file. Any options (e.g. `--stat`) must precede the revision args, not follow the pathspec.
 
 Then follow @../review-mr/review-procedure.md (Sections 4–6) to classify, verify, and report findings.
+State `DEST`, then run `git diff --stat <DEST>...<SRC> -- ':(exclude)*.out'` to size the change, and `git diff <DEST>...<SRC> -- ':(exclude)*.out' > /tmp/review.diff` to capture it. Read `/tmp/review.diff` (use `offset`/`limit` if large) — do **not** re-run `git diff` per file; the captured diff already contains every file. Then follow Sections 4–6 of @.claude/commands/review-mr.md. Any options (e.g. `--stat`) must precede the revision args, not follow the pathspec.
+
+Number each finding so users may easily request that you fix certain findings.
