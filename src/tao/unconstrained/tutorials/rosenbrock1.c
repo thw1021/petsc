@@ -295,6 +295,19 @@ static PetscErrorCode FormHessianMult(Tao tao, Vec X, Vec V, Vec HV, void *ptr)
      args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type l1 -reg_tao_term_l1_epsilon 0.4 -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail
 
    test:
+     suffix: sum_shell_hessian
+     args: -tao_type nls -tao_add_terms reg1_,reg2_ -reg1_tao_term_type halfl2squared -reg2_tao_term_type halfl2squared
+     args: -tao_term_sum_reg1_scale 1.0 -tao_term_sum_reg2_scale -1.0 -tao_term_hessian_mat_type shell -tao_monitor_short -tao_gatol 1.e-4
+     args: -tao_view ::ascii_info_detail
+
+   test:
+     suffix: sum_shell_hessian_sep_pre
+     args: -tao_type nls -tao_add_terms reg1_,reg2_ -reg1_tao_term_type halfl2squared -reg2_tao_term_type halfl2squared
+     args: -tao_term_sum_reg1_scale 1.0 -tao_term_sum_reg2_scale -1.0 -tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type shell -tao_term_hessian_pre_is_hessian false -tao_term_hessian_pre_mat_type aij
+     args: -tao_monitor_short
+
+   test:
      suffix: hpre_is_not_h
      args: -tao_type nls -jacobi_pc 1 -tao_view ::ascii_info_detail -n 10
 
