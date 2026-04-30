@@ -7,6 +7,7 @@ PetscLogEvent TAOTERM_ObjectiveEval;
 PetscLogEvent TAOTERM_GradientEval;
 PetscLogEvent TAOTERM_ObjGradEval;
 PetscLogEvent TAOTERM_HessianEval;
+PetscLogEvent TAOTERM_HessianMultEval;
 
 const char *const TaoTermParametersModes[] = {"optional", "none", "required", "TaoTermParametersMode", "TAOTERM_PARAMETERS_", NULL};
 
@@ -746,6 +747,59 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
   }
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   term->nhess++;
+  if (params) PetscCall(VecLockReadPop(params));
+  PetscCall(VecLockReadPop(x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermComputeHessianMult - Compute the Hessian-vector product of a `TaoTerm`
+
+  Collective
+
+  Input Parameters:
++ term   - a `TaoTerm`
+. x      - a solution vector
+. params - a parameters vector (may be `NULL`, see `TaoTermGetParametersMode()`)
+- v      - a variation vector
+
+  Output Parameter:
+. Hv - the Hessian-vector product
+
+  Level: developer
+
+  Note:
+  This is the matrix-free analog of `TaoTermComputeHessian()`. Instead of assembling the full
+  Hessian matrix, it computes only the product of the Hessian with a given vector `v`.
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermComputeHessian()`,
+          `TaoTermShellSetHessianMult()`,
+          `TaoTermCreateHessianShell()`
+@*/
+PetscErrorCode TaoTermComputeHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscCheckSameComm(term, 1, x, 2);
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+    PetscCheckSameComm(term, 1, params, 3);
+  }
+  PetscValidHeaderSpecific(v, VEC_CLASSID, 4);
+  PetscCheckSameComm(term, 1, v, 4);
+  PetscValidHeaderSpecific(Hv, VEC_CLASSID, 5);
+  PetscCheckSameComm(term, 1, Hv, 5);
+  PetscCall(VecLockReadPush(x));
+  if (params) PetscCall(VecLockReadPush(params));
+  PetscCall(VecLockReadPush(v));
+  PetscCall(PetscLogEventBegin(TAOTERM_HessianMultEval, term, NULL, NULL, NULL));
+  PetscCheck(term->ops->hessianmult, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessianMult routine");
+  PetscUseTypeMethod(term, hessianmult, x, params, v, Hv);
+  PetscCall(PetscLogEventEnd(TAOTERM_HessianMultEval, term, NULL, NULL, NULL));
+  PetscCall(VecLockReadPop(v));
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);

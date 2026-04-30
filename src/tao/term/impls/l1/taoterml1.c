@@ -209,6 +209,22 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermComputeHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  TaoTerm_L1 *l1  = (TaoTerm_L1 *)term->data;
+  Vec         diag = NULL; /* Appease -Wmaybe-uninitialized */
+
+  PetscFunctionBegin;
+  if (l1->epsilon == 0.0) {
+    PetscCall(TaoTermL1DerivativeCheck(term));
+    PetscCall(VecZeroEntries(Hv));
+  } else {
+    PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
+    PetscCall(VecPointwiseMult(Hv, v, diag));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat *Hpre)
 {
   PetscBool is_hdiag, is_hprediag;
@@ -395,6 +411,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->gradient                   = TaoTermComputeGradient_L1;
   term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_L1;
   term->ops->hessian                    = TaoTermComputeHessian_L1;
+  term->ops->hessianmult                = TaoTermComputeHessianMult_L1;
   term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_L1;
   term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_L1;
 
