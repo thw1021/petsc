@@ -26,35 +26,64 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
   return val > PETSC_SMALL ? val : 0.0;
 }
 
-/*@
-  PetscDALETKFGetLocalizationMatrix - Compute localization weight matrix for LETKF using radius-based Gaspari-Cohn weighting
+/* Gaussian kernel exp(-d^2 / (2 r^2)), truncated at d = 2 r (value ~ exp(-2) ~ 0.135). */
+KOKKOS_INLINE_FUNCTION
+static PetscReal Gaussian(PetscReal distance, PetscReal radius)
+{
+  if (radius <= 0.0) return 0.0;
+  const PetscReal r = distance / radius;
+  if (r >= 2.0) return 0.0;
+  return Kokkos::exp(-0.5 * r * r);
+}
 
-  Collective
+/* Boxcar kernel: 1 inside the radius, 0 outside. */
+KOKKOS_INLINE_FUNCTION
+static PetscReal Boxcar(PetscReal distance, PetscReal radius)
+{
+  if (radius <= 0.0) return 0.0;
+  return distance < radius ? 1.0 : 0.0;
+}
 
-  Input Parameters:
-+ radius  - Gaspari-Cohn cutoff half-width (must be positive; observations beyond 2*radius get zero weight)
-. Vecxyz  - Array of vectors containing the vertex coordinates (one per spatial dimension)
-. bd      - Array of domain extents per dimension (used for periodic wrapping; 0 = non-periodic)
-- H       - Observation operator matrix
+/* Squared cutoff distance beyond which a kernel is guaranteed to return zero. */
+static inline PetscReal LocalizationCutoffSquared(PetscDALETKFLocalizationType type, PetscReal radius)
+{
+  switch (type) {
+  case PETSCDA_LETKF_LOC_GASPARI_COHN:
+  case PETSCDA_LETKF_LOC_GAUSSIAN:
+    return 4.0 * radius * radius; /* (2*radius)^2 */
+  case PETSCDA_LETKF_LOC_BOXCAR:
+    return radius * radius;
+  default:
+    return 0.0;
+  }
+}
 
-  Output Parameter:
-. Q - Localization weight matrix (sparse, AIJ format)
+KOKKOS_INLINE_FUNCTION
+static PetscReal LocalizationKernelEval(PetscDALETKFLocalizationType type, PetscReal distance, PetscReal radius)
+{
+  switch (type) {
+  case PETSCDA_LETKF_LOC_GASPARI_COHN:
+    return GaspariCohn(distance, radius);
+  case PETSCDA_LETKF_LOC_GAUSSIAN:
+    return Gaussian(distance, radius);
+  case PETSCDA_LETKF_LOC_BOXCAR:
+    return Boxcar(distance, radius);
+  default:
+    return 0.0;
+  }
+}
 
-  Level: intermediate
+/*
+  PetscDALETKFBuildLocalizationMatrix_Internal - Compute the localization weight matrix `Q` from a built-in kernel.
 
-  Notes:
-  The output matrix Q has dimensions (n_vert_global x n_obs_global). Each row contains
-  a variable number of non-zero entries corresponding to observations within the cutoff
-  distance 2*radius, weighted by the Gaspari-Cohn fifth-order piecewise rational function.
+  Internal helper used by the lazy Q construction inside `PetscDAEnsembleAnalysis_LETKF` when the user has set a
+  built-in kernel via `PetscDALETKFSetLocalizationType()` and supplied coordinates via
+  `PetscDALETKFSetLocalizationCoordinates()`.
 
-  For effectively no localization, use a radius larger than the domain diameter so that
-  all observations fall within the cutoff and receive weight close to 1.0.
-
-  Kokkos is required for this routine.
-
-.seealso: [](ch_da), `PetscDALETKFSetLocalization()`, `PetscDALETKFSetLocalizationRadius()`
-@*/
-PetscErrorCode PetscDALETKFGetLocalizationMatrix(PetscReal radius, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
+  `type` must be one of `PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_GAUSSIAN`, `PETSCDA_LETKF_LOC_BOXCAR`.
+  `PETSCDA_LETKF_LOC_NONE` is a caller error.
+*/
+PETSC_INTERN PetscErrorCode PetscDALETKFBuildLocalizationMatrix_Internal(PetscDALETKFLocalizationType type, PetscReal radius, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
 {
   PetscInt    dim = 0, n_vert_local, d, n_obs_global, n_obs_local;
   PetscInt    rstart, cstart, cend;
@@ -64,14 +93,15 @@ PetscErrorCode PetscDALETKFGetLocalizationMatrix(PetscReal radius, Vec Vecxyz[3]
   PetscLayout cmap;
 
   PetscFunctionBegin;
-  PetscAssertPointer(Vecxyz, 2);
-  PetscAssertPointer(bd, 3);
-  PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
-  PetscAssertPointer(Q, 5);
+  PetscAssertPointer(Vecxyz, 3);
+  PetscAssertPointer(bd, 4);
+  PetscValidHeaderSpecific(H, MAT_CLASSID, 5);
+  PetscAssertPointer(Q, 6);
 
   PetscCall(PetscKokkosInitializeCheck());
   PetscCall(PetscObjectGetComm((PetscObject)H, &comm));
-  PetscCheck(radius > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "Localization radius must be positive, got %g. Use a large radius for effectively no localization.", (double)radius);
+  PetscCheck(type == PETSCDA_LETKF_LOC_GASPARI_COHN || type == PETSCDA_LETKF_LOC_GAUSSIAN || type == PETSCDA_LETKF_LOC_BOXCAR, comm, PETSC_ERR_ARG_WRONG, "Built-in kernel required, got localization type %d.", (int)type);
+  PetscCheck(radius > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "Localization radius must be positive, got %g.", (double)radius);
   PetscCall(MatGetLocalSize(H, &n_obs_local, NULL));
   PetscCall(MatGetSize(H, &n_obs_global, NULL));
   for (d = 0; d < 3; ++d) {
@@ -134,9 +164,11 @@ PetscErrorCode PetscDALETKFGetLocalizationMatrix(PetscReal radius, Vec Vecxyz[3]
     Kokkos::deep_copy(bd_dev, bd_host);
   }
 
-  PetscReal cutoff2 = 4.0 * radius * radius; /* (2*radius)^2 */
+  const PetscReal                    cutoff2   = LocalizationCutoffSquared(type, radius);
+  const PetscDALETKFLocalizationType kern_type = type;
+  const PetscReal                    kern_r    = radius;
 
-  /* Pass 1: Count nnz per row (only entries with positive Gaspari-Cohn weight) */
+  /* Pass 1: Count nnz per row (only entries with positive kernel weight) */
   Kokkos::View<PetscInt *, Kokkos::LayoutLeft, MemSpace> row_counts_dev("row_counts", n_vert_local);
 
   Kokkos::parallel_for(
@@ -156,7 +188,7 @@ PetscErrorCode PetscDALETKFGetLocalizationMatrix(PetscReal radius, Vec Vecxyz[3]
           }
           dist2 += diff * diff;
         }
-        if (dist2 < cutoff2 && GaspariCohn(Kokkos::sqrt(dist2), radius) > 0.0) count++;
+        if (dist2 < cutoff2 && LocalizationKernelEval(kern_type, Kokkos::sqrt(dist2), kern_r) > 0.0) count++;
       }
       row_counts_dev(i) = count;
     });
@@ -201,7 +233,7 @@ PetscErrorCode PetscDALETKFGetLocalizationMatrix(PetscReal radius, Vec Vecxyz[3]
           dist2 += diff * diff;
         }
         if (dist2 < cutoff2) {
-          PetscReal w = GaspariCohn(Kokkos::sqrt(dist2), radius);
+          PetscReal w = LocalizationKernelEval(kern_type, Kokkos::sqrt(dist2), kern_r);
           if (w > 0.0) {
             col_indices_dev(offset + pos) = j;
             values_dev(offset + pos)      = w;
@@ -264,7 +296,7 @@ PetscErrorCode PetscDALETKFGetLocalizationMatrix(PetscReal radius, Vec Vecxyz[3]
     if (row_counts_host(i) < local_min) local_min = row_counts_host(i);
     if (row_counts_host(i) > local_max) local_max = row_counts_host(i);
   }
-  PetscCall(PetscInfo((PetscObject)*Q, "LETKF localization (radius=%g): %" PetscInt_FMT " vertices, %" PetscInt_FMT " obs, nnz/row min=%" PetscInt_FMT " max=%" PetscInt_FMT "\n", (double)radius, n_vert_local, n_obs_global, local_min, local_max));
+  PetscCall(PetscInfo((PetscObject)*Q, "LETKF localization (type=%d, radius=%g): %" PetscInt_FMT " vertices, %" PetscInt_FMT " obs, nnz/row min=%" PetscInt_FMT " max=%" PetscInt_FMT "\n", (int)type, (double)radius, n_vert_local, n_obs_global, local_min, local_max));
 
   /* Cleanup */
   for (d = 0; d < dim; ++d) PetscCall(VecDestroy(&obs_vecs[d]));
