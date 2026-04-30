@@ -98,7 +98,7 @@ DMSetVecType(DM dm, VecType vt)
 
 or by calling `DMSetFromOptions(DM dm)` and using the option `-dm_vec_type (standard|cuda|kokkos|hip)`.
 
-One can create appropriate sized vectors from `Mat` with `MatCreateVecs()`. One can also create appropriate sized vectors with
+One can create appropriately sized vectors from `Mat` with `MatCreateVecs()`. One can also create appropriately sized vectors with
 `KSPCreateVecs()`.
 
 Regardless of how PETSc vectors are created all of their entries are initially zero until a routine such as `VecSet()`, `VecSetRandom()`,
