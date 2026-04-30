@@ -98,6 +98,14 @@ static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Use matching: %s\n", lu->useMatching ? "true" : "false"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  IR steps: %d\n", lu->irNSteps));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Symbolic reuse: %s\n", lu->matstruc == SAME_NONZERO_PATTERN ? "true (analysis reused)" : "false (fresh analysis)"));
+  /* Query factorization statistics if available */
+  if (lu->handle && lu->data) {
+    int64_t lu_nnz  = 0;
+    int     npivots = 0;
+    size_t  written = 0;
+    if (cudssDataGet(lu->handle, lu->data, CUDSS_DATA_LU_NNZ, &lu_nnz, sizeof(lu_nnz), &written) == CUDSS_STATUS_SUCCESS && written > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "  LU factor nnz: %" PetscInt64_FMT "\n", (PetscInt64)lu_nnz));
+    if (cudssDataGet(lu->handle, lu->data, CUDSS_DATA_NPIVOTS, &npivots, sizeof(npivots), &written) == CUDSS_STATUS_SUCCESS && written > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of pivots: %d\n", npivots));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -317,6 +325,23 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if !defined(PETSC_USE_COMPLEX)
+static PetscErrorCode MatGetInertia_cuDSS(Mat F, PetscInt *nneg, PetscInt *nzero, PetscInt *npos)
+{
+  Mat_cuDSS *lu         = (Mat_cuDSS *)F->data;
+  int        inertia[3] = {0, 0, 0}; /* positive, negative, zero */
+  size_t     written    = 0;
+
+  PetscFunctionBegin;
+  PetscCheck(lu->handle && lu->data, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "cuDSS factorization has not been performed");
+  PetscCallCUDSS(cudssDataGet, lu->handle, lu->data, CUDSS_DATA_INERTIA, inertia, sizeof(inertia), &written);
+  if (npos) *npos = inertia[0];
+  if (nneg) *nneg = inertia[1];
+  if (nzero) *nzero = inertia[2];
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
 static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, const MatFactorInfo *info)
 {
   cudssMatrixType_t mtype;
@@ -333,6 +358,9 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
 #endif
   PetscCall(MatFactorSymbolic_cuDSS(F, A, mtype, CUDSS_MVIEW_UPPER));
   F->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_cuDSS;
+#if !defined(PETSC_USE_COMPLEX)
+  F->ops->getinertia = MatGetInertia_cuDSS;
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
