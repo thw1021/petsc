@@ -2,6 +2,23 @@ const char help[] = "Demonstration of elastic net regularization (https://en.wik
 
 #include <petsctao.h>
 
+/* Context for the data term's mapped-Hessian callback registered with
+   TaoTermSumSetTermMappedHessianFn(): the constant mapped Hessian A^T W A
+   is pre-supplied to the summand via TaoTermSumSetTermHessianMatrices(),
+   so the callback itself is a no-op and only records that it was reached. */
+typedef struct {
+  PetscInt call_count;
+} DataMappedHessianCtx;
+
+static PetscErrorCode DataMappedHessian(Vec x, Vec params, Mat H, Mat Hpre, PetscCtx ctx)
+{
+  DataMappedHessianCtx *m = (DataMappedHessianCtx *)ctx;
+
+  PetscFunctionBeginUser;
+  m->call_count++;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   /*
@@ -21,17 +38,19 @@ int main(int argc, char **argv)
   PetscInt    m          = 100; // data size
   PetscInt    n          = 20;  // model size
   PetscInt    k          = 10;  // dictionary size
-  PetscBool   set_prefix = PETSC_TRUE;
-  PetscBool   set_name   = PETSC_FALSE;
-  PetscBool   check_eps  = PETSC_FALSE;
-  TaoTerm     data_term;
-  TaoTerm     l2_reg_term;
-  TaoTerm     l1_reg_term;
-  TaoTerm     full_objective;
-  PetscRandom rand;
-  PetscReal   lambda_1 = 0.1;
-  PetscReal   lambda_2 = 0.1;
-  Tao         tao;
+  PetscBool             set_prefix                  = PETSC_TRUE;
+  PetscBool             set_name                    = PETSC_FALSE;
+  PetscBool             check_eps                   = PETSC_FALSE;
+  PetscBool             test_mapping_hessian_setter = PETSC_FALSE;
+  TaoTerm               data_term;
+  TaoTerm               l2_reg_term;
+  TaoTerm               l1_reg_term;
+  TaoTerm               full_objective;
+  PetscRandom           rand;
+  PetscReal             lambda_1        = 0.1;
+  PetscReal             lambda_2        = 0.1;
+  Tao                   tao;
+  DataMappedHessianCtx *mapped_hess_ctx = NULL;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -44,6 +63,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBool("-set_term_prefix", "Set prefix to terms", NULL, set_prefix, &set_prefix, NULL));
   PetscCall(PetscOptionsBool("-set_term_name", "Set name to terms", NULL, set_name, &set_name, NULL));
   PetscCall(PetscOptionsBool("-check_l1_eps", "Check epsilon of L1 term", NULL, check_eps, &check_eps, NULL));
+  PetscCall(PetscOptionsBool("-test_mapping_hessian_setter", "Register a TaoTermSumSetTermMappedHessianFn callback for the data term", NULL, test_mapping_hessian_setter, &test_mapping_hessian_setter, NULL));
   PetscOptionsEnd();
 
   PetscCall(TaoCreate(comm, &tao));
@@ -100,11 +120,36 @@ int main(int argc, char **argv)
   PetscCall(TaoTermDestroy(&l1_reg_term));
 
   PetscCall(TaoGetTerm(tao, NULL, &full_objective, NULL, NULL));
+  if (test_mapping_hessian_setter) {
+    Vec w_diag;
+    Mat work, AtWA;
+
+    /* Precompute the constant mapped Hessian A^T W A once using the same
+       operation sequence the standard PtAP path takes when the inner Hessian
+       is MATDIAGONAL (see the is_uH_diag branch in TaoTermMappingMatPtAP()),
+       so the result is bitwise identical to the default path. Pre-supply it
+       as the data term's _mapped_H so the registered callback can no-op:
+       TaoTermMappingComputeHessian() forwards _mapped_H to the outer Hessian
+       via MatCopy() (INSERT_VALUES branch) without re-running PtAP each
+       Newton step. */
+    PetscCall(PetscNew(&mapped_hess_ctx));
+    PetscCall(MatDiagonalGetDiagonal(W, &w_diag));
+    PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &work));
+    PetscCall(MatDiagonalScale(work, w_diag, NULL));
+    PetscCall(MatDiagonalRestoreDiagonal(W, &w_diag));
+    PetscCall(MatTransposeMatMult(A, work, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &AtWA));
+    PetscCall(MatDestroy(&work));
+    PetscCall(TaoTermSumSetTermHessianMatrices(full_objective, 0, NULL, NULL, AtWA, AtWA));
+    PetscCall(MatDestroy(&AtWA));
+    PetscCall(TaoTermSumSetTermMappedHessianFn(full_objective, 0, DataMappedHessian, mapped_hess_ctx, PetscCtxDestroyDefault));
+  }
   PetscCall(TaoTermCreateSolutionVec(full_objective, &x));
   PetscCall(VecSetRandom(x, rand));
   PetscCall(TaoSetSolution(tao, x));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
+
+  if (test_mapping_hessian_setter) PetscCheck(mapped_hess_ctx->call_count > 0, comm, PETSC_ERR_PLIB, "data-term mapped-Hessian callback was never invoked");
 
   {
     PetscReal scale_get;
@@ -229,5 +274,13 @@ int main(int argc, char **argv)
   test:
     suffix: shell_hessian
     args: -tao_type nls -tao_term_hessian_mat_type shell -lasso_tao_term_l1_epsilon 0.1 -tao_monitor_short
+
+  # Exercises TaoTermSumSetTermMappedHessianFn(): the data term's mapped
+  # Hessian A^T W A is supplied by a user callback that bypasses the standard
+  # PtAP assembly. Output mirrors test 0 except the data term reports zero
+  # internal Hessian evaluations (its TaoTermComputeHessian is never invoked).
+  test:
+    suffix: mapping_hessian_setter
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -check_l1_eps 1 -test_mapping_hessian_setter
 
 TEST*/

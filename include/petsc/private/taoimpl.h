@@ -61,20 +61,23 @@ typedef struct _n_TaoTermMapping TaoTermMapping;
 .seealso: [](ch_tao), `Tao`, `TaoAddTerm()`, `TAOTERMSUM`,
 S*/
 struct _n_TaoTermMapping {
-  char       *prefix;
-  TaoTerm     term;
-  PetscReal   scale;
-  Mat         map;
-  Vec         _map_output;
-  Vec         _unmapped_vec_work;
-  Vec         _mapped_vec_work;
-  Mat         _unmapped_H;
-  Mat         _unmapped_Hpre;
-  Mat         _mapped_H;
-  Mat         _mapped_Hpre;
-  Mat         _mapped_H_work; /* Temporary work matrices for PtAP for diagonal A */
-  Mat         _mapped_Hpre_work;
-  TaoTermMask mask;
+  char                   *prefix;
+  TaoTerm                 term;
+  PetscReal               scale;
+  Mat                     map;
+  Vec                     _map_output;
+  Vec                     _unmapped_vec_work;
+  Vec                     _mapped_vec_work;
+  Mat                     _unmapped_H;
+  Mat                     _unmapped_Hpre;
+  Mat                     _mapped_H;
+  Mat                     _mapped_Hpre;
+  Mat                     _mapped_H_work; /* Temporary work matrices for PtAP for diagonal A */
+  Mat                     _mapped_Hpre_work;
+  TaoTermMask             mask;
+  TaoTermMappedHessianFn *mapped_hessian_fn;
+  PetscCtx                mapped_hessian_ctx;
+  PetscCtxDestroyFn      *mapped_hessian_ctx_destroy;
 };
 
 #define TaoTermObjectiveMasked(a) ((a) & TAOTERM_MASK_OBJECTIVE)
