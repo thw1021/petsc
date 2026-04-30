@@ -1,11 +1,11 @@
-static char help[] = "Regression test for the MatSOR_SeqAIJ_Inode block-diagonal cache.\n\n\
-   This test catches the typo in MatInvertDiagonalForSOR_SeqAIJ_Inode introduced\n\
+static char help[] = "Regression test for the MatSOR_SeqAIJ_Inode() block-diagonal cache.\n\n\
+   This test catches the typo in MatInvertDiagonalForSOR_SeqAIJ_Inode() introduced\n\
    in MR !8797 where the cache validity check at inode.c:2432 reads a->idiagState\n\
    (the point-SOR cache token) instead of a->inode.ibdiagState (the inode block-SOR\n\
    cache token).  With the bug, the inverted block diagonal is recomputed on every\n\
-   MatSOR call, producing a runtime regression but not a correctness failure --\n\
+   MatSOR() call, producing a runtime regression but not a correctness failure --\n\
    so we observe the cache invariant directly by poisoning the cached buffer and\n\
-   checking whether it survives a second MatSOR call on an unchanged matrix.\n\n";
+   checking whether it survives a second MatSOR() call on an unchanged matrix.\n\n";
 
 #include <petscmat.h>
 
@@ -34,7 +34,7 @@ int main(int argc, char **args)
   /* Block-tridiagonal matrix: each row has one diagonal entry of value 4.0
      and -1.0 entries at every other column in its own block and the two
      neighbouring blocks.  All `blocksize` rows of a block share the same column
-     pattern, so MatSeqAIJCheckInode forms `nblock` inodes of size `blocksize`. */
+     pattern, so MatSeqAIJCheckInode() forms `nblock` inodes of size `blocksize`. */
   for (PetscInt Ib = 0; Ib < nblock; Ib++) {
     PetscInt    Jlo = PetscMax(Ib - 1, 0), Jhi = PetscMin(Ib + 1, nblock - 1);
     PetscInt    ncols = (Jhi - Jlo + 1) * blocksize, cols[9];
@@ -59,7 +59,7 @@ int main(int argc, char **args)
   PetscCall(VecSet(x_pristine, 0.0));
   PetscCall(VecSet(x_poisoned, 0.0));
 
-  /* First MatSOR call: triggers MatInvertDiagonalForSOR_SeqAIJ_Inode and
+  /* First MatSOR() call: triggers MatInvertDiagonalForSOR_SeqAIJ_Inode() and
      populates a->inode.ibdiag with correctly inverted blocks. */
   PetscCall(MatSOR(A, b, 1.0, SOR_FORWARD_SWEEP, 0.0, 1, 1, x_pristine));
 
@@ -71,7 +71,7 @@ int main(int argc, char **args)
 
   /* Poison the cached inverted block diagonal.  A is unchanged, so its
      PetscObject state does not advance and the cache *should* be honoured by
-     the next MatSOR call.  A buggy implementation that rebuilds ibdiag on
+     the next MatSOR() call.  A buggy implementation that rebuilds ibdiag on
      every call will overwrite our zeros with the correct inverse and recover
      x_pristine.  A correct implementation will use the zeros and produce a
      materially different x_poisoned. */
@@ -80,9 +80,7 @@ int main(int argc, char **args)
   PetscCall(MatSOR(A, b, 1.0, SOR_FORWARD_SWEEP, 0.0, 1, 1, x_poisoned));
 
   PetscCall(VecEqual(x_pristine, x_poisoned, &same));
-  PetscCheck(!same, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatSOR_SeqAIJ_Inode rebuilt its cached block diagonal despite an unchanged matrix state. The cache validity check in MatInvertDiagonalForSOR_SeqAIJ_Inode is comparing the wrong PetscObjectState field (regression of MR !8797).");
-
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "MatSOR_SeqAIJ_Inode block-diagonal cache invariant holds.\n"));
+  PetscCheck(!same, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatSOR_SeqAIJ_Inode() rebuilt its cached block diagonal despite an unchanged matrix state. The cache validity check in MatInvertDiagonalForSOR_SeqAIJ_Inode() is comparing the wrong PetscObjectState field (regression of MR !8797).");
 
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&b));
@@ -96,7 +94,7 @@ int main(int argc, char **args)
 
    test:
      suffix: 0
+     args: -mat_no_inode false
      output_file: output/empty.out
-     filter: grep -v "block-diagonal cache invariant holds"
 
 TEST*/
