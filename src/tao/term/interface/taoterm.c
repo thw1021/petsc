@@ -729,10 +729,14 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
     PetscCheckSameComm(term, 1, Hpre, 5);
   }
+  if (H && !Hpre) Hpre = H;
+  PetscCall(TaoTermPreprocessHessianShells(term, x, params, &H, &Hpre));
   if (H) PetscCall(PetscObjectTypeCompare((PetscObject)H, MATMFFD, &is_mffd));
   PetscCall(TaoTermIsComputeHessianFDPossible(term, &is_fdpossible));
   PetscCall(PetscLogEventBegin(TAOTERM_HessianEval, term, NULL, NULL, NULL));
-  if (is_fdpossible == PETSC_BOOL3_FALSE) {
+  if (!H && !Hpre) {
+    /* All requested matrices were shells and have been updated; nothing left to assemble. */
+  } else if (is_fdpossible == PETSC_BOOL3_FALSE) {
     PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
   } else if (term->fd_hessian) {
     if (is_fdpossible == PETSC_BOOL3_UNKNOWN) PetscCall(PetscInfo(term, "%s: Whether TaoTermComputeHessianFD is possible is unknown. Trying anyway.\n", ((PetscObject)term)->prefix));
