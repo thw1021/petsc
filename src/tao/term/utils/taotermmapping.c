@@ -20,6 +20,22 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char
     PetscCall(MatDestroy(&mt->_mapped_H_work));
     PetscCall(MatDestroy(&mt->_mapped_Hpre_work));
   }
+  /*
+    Mapped Hessian callbacks are bound to a specific (term, map) pair: the
+    callback writes the mapped Hessian for `term` viewed through `map`.
+    Replacing either of them invalidates the callbacks, so clear them and
+    invoke any user-supplied destructors before swapping.
+  */
+  if (term != mt->term || map != mt->map) {
+    if (mt->mapped_hessian_ctx_destroy && mt->mapped_hessian_ctx) PetscCall((*mt->mapped_hessian_ctx_destroy)(&mt->mapped_hessian_ctx));
+    mt->mapped_hessian_fn          = NULL;
+    mt->mapped_hessian_ctx         = NULL;
+    mt->mapped_hessian_ctx_destroy = NULL;
+    if (mt->mapped_hessian_mult_ctx_destroy && mt->mapped_hessian_mult_ctx) PetscCall((*mt->mapped_hessian_mult_ctx_destroy)(&mt->mapped_hessian_mult_ctx));
+    mt->mapped_hessian_mult_fn          = NULL;
+    mt->mapped_hessian_mult_ctx         = NULL;
+    mt->mapped_hessian_mult_ctx_destroy = NULL;
+  }
   PetscCall(PetscObjectReference((PetscObject)term));
   PetscCall(TaoTermDestroy(&mt->term));
   mt->term  = term;
@@ -47,6 +63,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
   mt->mapped_hessian_fn          = NULL;
   mt->mapped_hessian_ctx         = NULL;
   mt->mapped_hessian_ctx_destroy = NULL;
+  if (mt->mapped_hessian_mult_ctx_destroy && mt->mapped_hessian_mult_ctx) PetscCall((*mt->mapped_hessian_mult_ctx_destroy)(&mt->mapped_hessian_mult_ctx));
+  mt->mapped_hessian_mult_fn          = NULL;
+  mt->mapped_hessian_mult_ctx         = NULL;
+  mt->mapped_hessian_mult_ctx_destroy = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -547,6 +567,16 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *mt,
   TaoTermMappingCheckInsertMode(mt, mode);
   if (TaoTermHessianMasked(mt->mask)) {
     if (mode == INSERT_VALUES) PetscCall(VecZeroEntries(Hv));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (mt->mapped_hessian_mult_fn) {
+    PetscCall(TaoTermMappingGetWorkVecs(mt, mode, Hv, &mapped_Hv, &unmapped_Hv));
+    PetscCall((*mt->mapped_hessian_mult_fn)(x, params, v, mapped_Hv, mt->mapped_hessian_mult_ctx));
+    if (mode == ADD_VALUES) PetscCall(VecAXPY(Hv, mt->scale, mapped_Hv));
+    else {
+      PetscAssert(mapped_Hv == Hv, PETSC_COMM_SELF, PETSC_ERR_PLIB, "mapped Hessian product not written to the right place");
+      if (mt->scale != 1.0) PetscCall(VecScale(Hv, mt->scale));
+    }
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(TaoTermMappingMap(mt, v, &Av));

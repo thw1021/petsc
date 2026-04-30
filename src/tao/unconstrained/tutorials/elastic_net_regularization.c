@@ -19,6 +19,45 @@ static PetscErrorCode DataMappedHessian(Vec x, Vec params, Mat H, Mat Hpre, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Context for the data term's mapped Hessian-vector callback registered with
+   TaoTermSumSetTermMappedHessianMultFn(): owns the data matrix and weight, plus
+   an m-sized work vector for the intermediate A v.  The action is the constant
+   (A^T W A) v computed directly without ever assembling the n x n mapped
+   Hessian.  Owning references are released in the destroy callback. */
+typedef struct {
+  Mat      A;
+  Mat      W;
+  Vec      work_m;
+  PetscInt call_count;
+} DataMappedHessianMultCtx;
+
+static PetscErrorCode DataMappedHessianMult(Vec x, Vec params, Vec v, Vec Hv, PetscCtx ctx)
+{
+  DataMappedHessianMultCtx *m = (DataMappedHessianMultCtx *)ctx;
+  Vec                       w_diag;
+
+  PetscFunctionBeginUser;
+  m->call_count++;
+  PetscCall(MatMult(m->A, v, m->work_m));
+  PetscCall(MatDiagonalGetDiagonal(m->W, &w_diag));
+  PetscCall(VecPointwiseMult(m->work_m, w_diag, m->work_m));
+  PetscCall(MatDiagonalRestoreDiagonal(m->W, &w_diag));
+  PetscCall(MatMultTranspose(m->A, m->work_m, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DataMappedHessianMultCtxDestroy(PetscCtxRt ctx_rt)
+{
+  DataMappedHessianMultCtx **m = (DataMappedHessianMultCtx **)ctx_rt;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatDestroy(&(*m)->A));
+  PetscCall(MatDestroy(&(*m)->W));
+  PetscCall(VecDestroy(&(*m)->work_m));
+  PetscCall(PetscFree(*m));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   /*
@@ -38,19 +77,21 @@ int main(int argc, char **argv)
   PetscInt    m          = 100; // data size
   PetscInt    n          = 20;  // model size
   PetscInt    k          = 10;  // dictionary size
-  PetscBool             set_prefix                  = PETSC_TRUE;
-  PetscBool             set_name                    = PETSC_FALSE;
-  PetscBool             check_eps                   = PETSC_FALSE;
-  PetscBool             test_mapping_hessian_setter = PETSC_FALSE;
-  TaoTerm               data_term;
-  TaoTerm               l2_reg_term;
-  TaoTerm               l1_reg_term;
-  TaoTerm               full_objective;
-  PetscRandom           rand;
-  PetscReal             lambda_1        = 0.1;
-  PetscReal             lambda_2        = 0.1;
-  Tao                   tao;
-  DataMappedHessianCtx *mapped_hess_ctx = NULL;
+  PetscBool                 set_prefix                      = PETSC_TRUE;
+  PetscBool                 set_name                        = PETSC_FALSE;
+  PetscBool                 check_eps                       = PETSC_FALSE;
+  PetscBool                 test_mapping_hessian_setter     = PETSC_FALSE;
+  PetscBool                 test_mapping_hessianmult_setter = PETSC_FALSE;
+  TaoTerm                   data_term;
+  TaoTerm                   l2_reg_term;
+  TaoTerm                   l1_reg_term;
+  TaoTerm                   full_objective;
+  PetscRandom               rand;
+  PetscReal                 lambda_1             = 0.1;
+  PetscReal                 lambda_2             = 0.1;
+  Tao                       tao;
+  DataMappedHessianCtx     *mapped_hess_ctx      = NULL;
+  DataMappedHessianMultCtx *mapped_hess_mult_ctx = NULL;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -64,6 +105,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBool("-set_term_name", "Set name to terms", NULL, set_name, &set_name, NULL));
   PetscCall(PetscOptionsBool("-check_l1_eps", "Check epsilon of L1 term", NULL, check_eps, &check_eps, NULL));
   PetscCall(PetscOptionsBool("-test_mapping_hessian_setter", "Register a TaoTermSumSetTermMappedHessianFn callback for the data term", NULL, test_mapping_hessian_setter, &test_mapping_hessian_setter, NULL));
+  PetscCall(PetscOptionsBool("-test_mapping_hessianmult_setter", "Register a TaoTermSumSetTermMappedHessianMultFn callback for the data term", NULL, test_mapping_hessianmult_setter, &test_mapping_hessianmult_setter, NULL));
   PetscOptionsEnd();
 
   PetscCall(TaoCreate(comm, &tao));
@@ -143,6 +185,19 @@ int main(int argc, char **argv)
     PetscCall(MatDestroy(&AtWA));
     PetscCall(TaoTermSumSetTermMappedHessianFn(full_objective, 0, DataMappedHessian, mapped_hess_ctx, PetscCtxDestroyDefault));
   }
+  if (test_mapping_hessianmult_setter) {
+    /* Register a mapped HessianMult callback for the data term that computes
+       Hv = A^T W A v directly, bypassing the framework's cache + assembled
+       MatMult fallback. Only exercised when the outer Hessian is a MATSHELL
+       (otherwise the assembled outer Hessian fields the MatMult). */
+    PetscCall(PetscNew(&mapped_hess_mult_ctx));
+    PetscCall(PetscObjectReference((PetscObject)A));
+    PetscCall(PetscObjectReference((PetscObject)W));
+    mapped_hess_mult_ctx->A = A;
+    mapped_hess_mult_ctx->W = W;
+    PetscCall(MatCreateVecs(A, NULL, &mapped_hess_mult_ctx->work_m));
+    PetscCall(TaoTermSumSetTermMappedHessianMultFn(full_objective, 0, DataMappedHessianMult, mapped_hess_mult_ctx, DataMappedHessianMultCtxDestroy));
+  }
   PetscCall(TaoTermCreateSolutionVec(full_objective, &x));
   PetscCall(VecSetRandom(x, rand));
   PetscCall(TaoSetSolution(tao, x));
@@ -150,6 +205,7 @@ int main(int argc, char **argv)
   PetscCall(TaoSolve(tao));
 
   if (test_mapping_hessian_setter) PetscCheck(mapped_hess_ctx->call_count > 0, comm, PETSC_ERR_PLIB, "data-term mapped-Hessian callback was never invoked");
+  if (test_mapping_hessianmult_setter) PetscCheck(mapped_hess_mult_ctx->call_count > 0, comm, PETSC_ERR_PLIB, "data-term mapped-HessianMult callback was never invoked");
 
   {
     PetscReal scale_get;
@@ -282,5 +338,15 @@ int main(int argc, char **argv)
   test:
     suffix: mapping_hessian_setter
     args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -check_l1_eps 1 -test_mapping_hessian_setter
+
+  # Exercises TaoTermSumSetTermMappedHessianMultFn(): the data term's mapped
+  # Hessian-vector action Hv = A^T W A v is supplied by a user callback that
+  # bypasses the framework's cache + assembled-MatMult fallback. Requires the
+  # outer Hessian to be a MATSHELL so per-summand HessianMult is dispatched.
+  # Solution matches shell_hessian bitwise, so reuse its output file.
+  test:
+    suffix: mapping_hessianmult_setter
+    args: -tao_type nls -tao_term_hessian_mat_type shell -lasso_tao_term_l1_epsilon 0.1 -tao_monitor_short -test_mapping_hessianmult_setter
+    output_file: output/elastic_net_regularization_shell_hessian.out
 
 TEST*/
