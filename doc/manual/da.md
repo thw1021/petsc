@@ -311,9 +311,19 @@ configuration:
 PetscDALETKFSetObsPerVertex(PetscDA da, PetscInt n_obs_vertex);
 PetscDALETKFGetObsPerVertex(PetscDA da, PetscInt *n_obs_vertex);
 
-/* Localization weight matrix Q (N x P) and observation operator matrix H (P x N) */
-PetscDALETKFSetLocalization(PetscDA da, Mat Q, Mat H);
+/* Distance-based localization: pick a kernel, set the radius, supply
+   per-dimension state coordinates and the observation operator H.
+   The localization matrix Q is built lazily on the first analysis. */
+PetscDALETKFSetLocalizationType(PetscDA da, PetscDALETKFLocalizationType type);
+PetscDALETKFSetLocalizationRadius(PetscDA da, PetscReal radius);
+PetscDALETKFSetLocalizationCoordinates(PetscDA da, Vec Vecxyz[3], PetscReal bd[3], Mat H);
 ```
+
+Built-in kernels (`gaspari_cohn`, `gaussian`, `boxcar`) require the
+Kokkos Kernels backend (`--download-kokkos-kernels`); the `none` type
+disables localization and is mathematically equivalent to global ETKF.
+Select the kernel at runtime with
+`-petscda_letkf_localization_type {none,gaspari_cohn,gaussian,boxcar}`.
 
 Set the observation count at runtime with
 `-petscda_letkf_obs_per_vertex <n>` (default: `9`).
