@@ -44,6 +44,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTe
     else PetscCall(MatSetVecType(Htemp, sol_vec_type));
     PetscCall(MatSetOption(Htemp, MAT_SYMMETRIC, PETSC_TRUE));
     PetscCall(MatSetOption(Htemp, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+    PetscCall(MatSetUp(Htemp));
+    PetscCall(MatAssemblyBegin(Htemp, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Htemp, MAT_FINAL_ASSEMBLY));
   }
 
   if (H) {
@@ -79,6 +82,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(Ta
     else PetscCall(MatSetVecType(Hpretemp, sol_vec_type));
     PetscCall(MatSetOption(Hpretemp, MAT_SYMMETRIC, PETSC_TRUE));
     PetscCall(MatSetOption(Hpretemp, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+    PetscCall(MatSetUp(Hpretemp));
+    PetscCall(MatAssemblyBegin(Hpretemp, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Hpretemp, MAT_FINAL_ASSEMBLY));
   }
   *Hpre = Hpretemp;
   PetscFunctionReturn(PETSC_SUCCESS);
