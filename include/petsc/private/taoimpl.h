@@ -73,12 +73,15 @@ struct _n_TaoTermMapping {
   Mat         _unmapped_Hpre;
   Mat         _mapped_H;
   Mat         _mapped_Hpre;
-  Mat                    _mapped_H_work; /* Temporary work matrices for PtAP for diagonal A */
-  Mat                    _mapped_Hpre_work;
-  TaoTermMask            mask;
+  Mat                     _mapped_H_work; /* Temporary work matrices for PtAP for diagonal A */
+  Mat                     _mapped_Hpre_work;
+  TaoTermMask             mask;
   TaoTermMappedHessianFn *mapped_hessian_fn;
-  PetscCtx               mapped_hessian_ctx;
+  PetscCtx                mapped_hessian_ctx;
   PetscCtxDestroyFn      *mapped_hessian_ctx_destroy;
+  TaoTermMappedHessianMultFn *mapped_hessian_mult_fn;
+  PetscCtx                    mapped_hessian_mult_ctx;
+  PetscCtxDestroyFn          *mapped_hessian_mult_ctx_destroy;
 };
 
 #define TaoTermObjectiveMasked(a) ((a) & TAOTERM_MASK_OBJECTIVE)

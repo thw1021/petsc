@@ -258,6 +258,23 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermMappedHessianFn)(Vec x, Vec params, Mat H, Mat Hpre, PetscCtx ctx);
 
 /*S
+  TaoTermMappedHessianMultFn - A prototype of a function to directly compute a mapped Hessian-vector product
+  for a term in a `TAOTERMSUM`, bypassing the internal routines of `TAOTERMSUM` for applying $A^T H A$
+
+  Calling Sequence:
++ x      - the solution vector in the outer (sum) solution space
+. params - the parameters vector for this term
+. v      - the input vector in the outer (sum) solution space
+. Hv     - output, the mapped Hessian-vector product in the outer (sum) solution space
+- ctx    - user context
+
+  Level: advanced
+
+.seealso: [](sec_tao_term), `TaoTermSumSetTermMappedHessianMultFn()`, `TaoTermMappedHessianFn`, `TAOTERMSUM`, `TaoTermHessianMultFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermMappedHessianMultFn)(Vec x, Vec params, Vec v, Vec Hv, PetscCtx ctx);
+
+/*S
   TaoTermHessianMultFn - A prototype of a `TaoTerm` function that would be passed to `TaoTermShellSetHessianMult()`
 
   Calling Sequence:
@@ -315,6 +332,8 @@ PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMask(TaoTerm, PetscInt, TaoTermMask
 PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMask(TaoTerm, PetscInt, TaoTermMask);
 PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMappedHessianFn(TaoTerm, PetscInt, TaoTermMappedHessianFn *, PetscCtx, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMappedHessianFn(TaoTerm, PetscInt, TaoTermMappedHessianFn **, PetscCtxRt);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMappedHessianMultFn(TaoTerm, PetscInt, TaoTermMappedHessianMultFn *, PetscCtx, PetscCtxDestroyFn *);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMappedHessianMultFn(TaoTerm, PetscInt, TaoTermMappedHessianMultFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetLastTermObjectives(TaoTerm, const PetscReal *[]);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
