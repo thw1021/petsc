@@ -40,7 +40,8 @@ typedef struct {
   int              useMatching;    /* cuDSS expects int for CUDSS_CONFIG_USE_MATCHING */
   int              irNSteps;       /* cuDSS expects int for CUDSS_CONFIG_IR_N_STEPS */
 
-  MatStructure matstruc; /* tracks whether symbolic factorization can be reused */
+  MatStructure matstruc;  /* tracks whether symbolic factorization can be reused */
+  PetscBool    factored;  /* true after first successful numeric factorization */
 } Mat_cuDSS;
 
 /* Map PetscScalar to the cuDSS data type */
@@ -443,7 +444,7 @@ static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A)
 
   /* Use CUDSS_PHASE_REFACTORIZATION when reusing a previous symbolic analysis,
      otherwise use CUDSS_PHASE_FACTORIZATION for the first numeric factorization */
-  if (F->assembled) phase = CUDSS_PHASE_REFACTORIZATION;
+  if (lu->factored) phase = CUDSS_PHASE_REFACTORIZATION;
   else phase = CUDSS_PHASE_FACTORIZATION;
   PetscCall(PetscInfo(F, "cuDSS: using %s phase\n", phase == CUDSS_PHASE_REFACTORIZATION ? "REFACTORIZATION" : "FACTORIZATION"));
 
@@ -459,6 +460,7 @@ static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A)
   F->ops->solve    = MatSolve_cuDSS;
   F->ops->matsolve = MatMatSolve_cuDSS;
   F->assembled     = PETSC_TRUE;
+  lu->factored     = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
