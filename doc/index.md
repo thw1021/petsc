@@ -76,6 +76,9 @@ miscellaneous/index
 - [DUNE-FEM](https://dune-project.org/sphinx/content/sphinx/dune-fem/) Python and C++-based finite element simulation package
 - [FEniCS](https://fenicsproject.org/) Python-based finite
   element simulation package
+- [Feel++](https://docs.feelpp.org) C++ framework for scalable Galerkin-based
+  finite element and reduced-order simulations, with single- and multiphysics
+  toolboxes
 - [Firedrake](https://www.firedrakeproject.org/) Python-based
   finite element simulation package
 - [Fluidity](https://fluidityproject.github.io/) a finite
