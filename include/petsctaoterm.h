@@ -334,6 +334,7 @@ PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMappedHessianFn(TaoTerm, PetscInt, 
 PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMappedHessianFn(TaoTerm, PetscInt, TaoTermMappedHessianFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMappedHessianMultFn(TaoTerm, PetscInt, TaoTermMappedHessianMultFn *, PetscCtx, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMappedHessianMultFn(TaoTerm, PetscInt, TaoTermMappedHessianMultFn **, PetscCtxRt);
+PETSC_EXTERN PetscErrorCode TaoTermSumFlatten(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetLastTermObjectives(TaoTerm, const PetscReal *[]);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);

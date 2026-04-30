@@ -3063,9 +3063,12 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
   size); when a mapping matrix $A$ is used, the parameter space may depend on either the row
   or column space of $A$.  See the documentation for each `TaoTermType`.
 
+  If `term` is of type `TAOTERMSUM`, it is added as a single summand. To flatten
+  nested sums into a single level, call `TaoTermSumFlatten()` on the resulting objective term.
+
   Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`)
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`, `TaoTermSumFlatten()`
 @*/
 PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
 {
@@ -3090,8 +3093,6 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   // If user is using TaoAddTerm, before setting any terms or callbacks,
   // then tao->objective_term.term is empty callback, which we want to remove.
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
-  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
-  PetscCheck(!is_sum, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "TaoAddTerm does not support adding TAOTERMSUM");
   if (is_callback) {
     PetscBool is_obj, is_objgrad, is_grad;
 
