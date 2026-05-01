@@ -25,6 +25,9 @@ PC Object: 1 MPI process
               Pivot epsilon: 0.
               Use matching: false
               IR steps: 0
+              Symbolic reuse: true (analysis reused)
+              LU factor nnz: 497409939
+              Number of pivots: 0
   linear system matrix, which is also used to construct the preconditioner:
   Mat Object: 1 MPI process
     type: seqaijcusparse
