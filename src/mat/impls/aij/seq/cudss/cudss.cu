@@ -29,6 +29,7 @@ typedef struct {
   PetscInt  n; /* matrix dimension */
   PetscInt  nnz;
   PetscBool ownDeviceCSR;
+  int64_t   lu_nnz; /* cached LU factor nnz for flop logging */
 
   /* cuDSS index type: CUDA_R_32I for MATSEQAIJCUSPARSE, PETSCINT_CUDSS_INDEX_TYPE for MATSEQAIJ */
   cudaDataType indexType;
@@ -385,6 +386,7 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
   PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_SOLVE, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
   PetscCall(VecCUDARestoreArrayRead(b, &barray));
   PetscCall(VecCUDARestoreArrayWrite(x, &xarray));
+  PetscCall(PetscLogGpuFlops(2.0 * lu->lu_nnz));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -427,6 +429,7 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
     PetscCall(MatCopy(Xcuda, X, SAME_NONZERO_PATTERN));
     PetscCall(MatDestroy(&Xcuda));
   }
+  PetscCall(PetscLogGpuFlops(2.0 * nrhs * lu->lu_nnz));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -459,11 +462,15 @@ static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A)
     else F->factorerrortype = MAT_FACTOR_OTHER;
     PetscCheck(!A->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuDSS error in numerical factorization: status %d", (int)status);
   } else {
+    size_t written     = 0;
     F->factorerrortype = MAT_FACTOR_NOERROR;
     F->ops->solve      = MatSolve_cuDSS;
     F->ops->matsolve   = MatMatSolve_cuDSS;
     F->assembled       = PETSC_TRUE;
     lu->factored       = PETSC_TRUE;
+    /* Cache LU factor nnz for flop logging */
+    if (cudssDataGet(lu->handle, lu->data, CUDSS_DATA_LU_NNZ, &lu->lu_nnz, sizeof(lu->lu_nnz), &written) != CUDSS_STATUS_SUCCESS || written == 0) lu->lu_nnz = 0;
+    PetscCall(PetscLogGpuFlops(lu->lu_nnz));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
