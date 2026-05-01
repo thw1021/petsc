@@ -457,11 +457,11 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -petscda_letkf_localization_radius 5.0
 
     test:
-      suffix: etkf
-      args: -petscda_type etkf -petscda_ensemble_sqrt_type eigen
+      suffix: letkf_loc_none_eigen
+      args: -petscda_type letkf -petscda_letkf_localization_type none -petscda_ensemble_sqrt_type eigen
 
     test:
-      suffix: etkf2
-      args: -petscda_type etkf -petscda_ensemble_sqrt_type cholesky
+      suffix: letkf_loc_none_chol
+      args: -petscda_type letkf -petscda_letkf_localization_type none -petscda_ensemble_sqrt_type cholesky
 
   TEST*/
