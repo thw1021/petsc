@@ -19,6 +19,7 @@ if __name__ == '__main__':
     '--download-hdf5',
     '--download-metis',
     '--download-superlu',
+    '--download-cudss',
     '--download-mumps',
     '--download-p4est=1',
     '--with-zlib=1',
