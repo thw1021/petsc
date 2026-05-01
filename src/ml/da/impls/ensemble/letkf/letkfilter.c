@@ -22,7 +22,7 @@ static PetscErrorCode PetscDALETKFClearCoordinates(PetscDA_LETKF *impl)
 
 /*
   BroadcastWeightVector_LETKF - replicate weight vector w across all columns of w_ones (m x m dense).
-  Local copy of the ETKF-side helper; used only by the NONE fast-path.
+  Used only by the LOC_NONE fast path.
 */
 static PetscErrorCode BroadcastWeightVector_LETKF(Vec w, PetscInt m, Mat w_ones)
 {
@@ -45,7 +45,7 @@ static PetscErrorCode BroadcastWeightVector_LETKF(Vec w, PetscInt m, Mat w_ones)
 
 /*
   UpdateEnsembleWithTransform_LETKF - E = mean*1' + X*G.
-  Local copy of the ETKF-side helper; used only by the NONE fast-path.
+  Used only by the LOC_NONE fast path.
 */
 static PetscErrorCode UpdateEnsembleWithTransform_LETKF(Vec mean, Mat X, Mat G, PetscInt m, Mat ensemble)
 {
@@ -723,8 +723,6 @@ static PetscErrorCode PetscDALETKFSetLocalizationCoordinates_LETKF(PetscDA da, c
     PetscCall(PetscObjectReference((PetscObject)H));
     impl->coord_H = H;
   }
-  /* If the user previously selected NONE (no Q needed), default to Gaspari-Cohn now that coordinates are available. */
-  if (impl->type == PETSCDA_LETKF_LOC_NONE) impl->type = PETSCDA_LETKF_LOC_GASPARI_COHN;
   impl->Q_dirty = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -843,11 +841,11 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
    domains by avoiding the global ensemble covariance matrix.
 
    Options Database Keys:
-+  -petscda_type letkf                           - set the `PetscDAType` to `PETSCDALETKF`
-.  -petscda_ensemble_size <size>                 - number of ensemble members
-.  -petscda_ensemble_sqrt_type <cholesky, eigen> - the square root of the matrix to use
-.  -petscda_letkf_batch_size <batch_size>        - set the batch size for GPU processing
--  -petscda_letkf_localization_radius <radius>    - localization cutoff radius for the built-in kernels (must be positive)
++  -petscda_type letkf                          - set the `PetscDAType` to `PETSCDALETKF`
+.  -petscda_ensemble_size size                  - number of ensemble members
+.  -petscda_ensemble_sqrt_type (cholesky|eigen) - the square root of the matrix to use
+.  -petscda_letkf_batch_size batch_size         - set the batch size for GPU processing
+-  -petscda_letkf_localization_radius radius    - localization cutoff radius for the built-in kernels (must be positive)
 
    Level: beginner
 
@@ -863,7 +861,7 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
    the Kokkos backend). For multi-rank runs configure PETSc with `--download-kokkos-kernels` and
    use a localized kernel; otherwise restrict the run to a single MPI rank.
 
-.seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PETSCDAETKF`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
+.seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
           `PetscDALETKFSetLocalizationCoordinates()`, `PetscDAEnsembleSetSize()`, `PetscDASetSizes()`, `PetscDAEnsembleSetSqrtType()`, `PetscDAEnsembleSetInflation()`,
           `PetscDAEnsembleComputeMean()`, `PetscDAEnsembleComputeAnomalies()`, `PetscDAEnsembleAnalysis()`, `PetscDAEnsembleForecast()`
 M*/
@@ -876,6 +874,7 @@ PETSC_INTERN PetscErrorCode PetscDACreate_LETKF(PetscDA da)
   PetscCall(PetscNew(&impl));
   da->data = impl;
   PetscCall(PetscDACreate_Ensemble(da));
+  da->ops->setup          = PetscDASetUp_Ensemble;
   da->ops->destroy        = PetscDADestroy_LETKF;
   da->ops->view           = PetscDAView_LETKF;
   da->ops->setfromoptions = PetscDASetFromOptions_LETKF;
@@ -959,8 +958,8 @@ PetscErrorCode PetscDALETKFGetLocalizationRadius(PetscDA da, PetscReal *radius)
 
   Notes:
   Use `PETSCDA_LETKF_LOC_NONE` to bypass localization entirely; the analysis is then mathematically
-  equivalent to `PETSCDAETKF` and dispatches through a single global eigensolve and `MatMatMult`
-  instead of the per-vertex local loop.
+  equivalent to the global ETKF and dispatches through a single global eigensolve plus a dense
+  `BLASgemm` weight transform reduced across ranks, instead of the per-vertex local loop.
 
   For the built-in distance-based kernels (`PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_GAUSSIAN`,
   `PETSCDA_LETKF_LOC_BOXCAR`) you must also call `PetscDALETKFSetLocalizationRadius()` and
@@ -1021,19 +1020,24 @@ PetscErrorCode PetscDALETKFGetLocalizationType(PetscDA da, PetscDALETKFLocalizat
   Collective
 
   Input Parameters:
-+ da     - the `PetscDA` context
-. xyz - array of up to three coordinate vectors (one per spatial dimension); pass `NULL`
-           for unused dimensions
-. bd     - array of three periodic-domain extents (use 0 for non-periodic dimensions)
-- H      - the observation operator (used to map state-space coordinates to observation locations)
++ da  - the `PetscDA` context
+. xyz - length-3 array of coordinate vectors, one per spatial dimension; set unused trailing
+        slots to `NULL` (the spatial dimension is taken to be the index of the first `NULL`,
+        so `{x, y, NULL}` is 2D and `{x, NULL, NULL}` is 1D)
+. bd  - length-3 array of periodic-domain extents (use 0 for non-periodic dimensions); pass
+        `NULL` to mean fully non-periodic
+- H   - the observation operator (used to map state-space coordinates to observation locations)
 
   Notes:
-  The localization matrix `Q` is built on first analysis (or whenever the type, radius or
-  coordinates change) using the kernel selected by `PetscDALETKFSetLocalizationType()`. Calling
-  this routine on a context whose type is `PETSCDA_LETKF_LOC_NONE` switches the type to
-  `PETSCDA_LETKF_LOC_GASPARI_COHN` so that the cached coordinates are used.
+  The `xyz` array must always have three slots even in 1D or 2D; trailing slots are set to `NULL`.
+  This matches the internal cached layout `coord_xyz[3]` and the layout used by both Q backends.
 
-  References on `xyz` and `H` are increased; the caller may destroy them afterwards.
+  The localization matrix `Q` is built on first analysis (or whenever the type, radius or
+  coordinates change) using the kernel selected by `PetscDALETKFSetLocalizationType()`. If the
+  current type is `PETSCDA_LETKF_LOC_NONE`, the coordinates are cached but the analysis continues
+  to run the NONE fast path; switch to a distance-based kernel via
+  `PetscDALETKFSetLocalizationType()` for the cached coordinates to take effect.
+  The reference counts on `xyz` and `H` are increased; the caller may destroy them afterwards.
 
   Level: intermediate
 
