@@ -150,4 +150,9 @@ int main(int argc, char **args)
       args: -mat_solver_type cusparse -mat_type aijcusparse -mat_factor_type {{lu cholesky ilu icc}separate output}
       requires: cuda
 
+   test:
+      suffix: 5
+      args: -mat_solver_type cudss -mat_type aijcusparse -mat_factor_type {{lu cholesky}separate output}
+      requires: cuda cudss !complex
+
 TEST*/
