@@ -102,7 +102,7 @@ One can create appropriately sized vectors from `Mat` with `MatCreateVecs()`. On
 `KSPCreateVecs()`.
 
 Regardless of how PETSc vectors are created all of their entries are initially zero until a routine such as `VecSet()`, `VecSetRandom()`,
-`VecSetValues()` or similar routines are called to change the entries. Thus it is wasteful and unnecessary to call `VecZeroEntries()`
+`VecSetValues()` or similar routines are called to change the entries. Thus, it is wasteful and unnecessary to call `VecZeroEntries()`
 on a newly created `Vec`.
 
 (sec_struct)=
