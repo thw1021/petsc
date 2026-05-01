@@ -391,30 +391,7 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  CreateLocalizationMatrix - Create and initialize localization matrix Q for shallow water
-
-  Q is a (num_vert x obs_size) matrix that specifies which observations affect each state variable.
-  For no localization (global assimilation), each state variable uses all observations.
-*/
-static PetscErrorCode CreateLocalizationMatrix(PetscInt num_vert, PetscInt obs_size, Mat *Q)
-{
-  PetscInt i, j;
-
-  PetscFunctionBeginUser;
-  /* Create Q matrix (num_vert x obs_size)
-     Each row will have obs_size non-zeros (all observations affect each state variable) */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, num_vert, obs_size, obs_size, NULL, 0, NULL, Q));
-  PetscCall(MatSetFromOptions(*Q));
-
-  /* Initialize with no localization (global): each state variable uses all observations */
-  for (i = 0; i < num_vert; i++) {
-    for (j = 0; j < obs_size; j++) PetscCall(MatSetValue(*Q, i, j, 1.0, INSERT_VALUES));
-  }
-  PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+/* !PETSC_HAVE_KOKKOS_KERNELS */
 
 /*
   ValidateParameters - Validate input parameters and apply constraints
@@ -493,23 +470,21 @@ static PetscErrorCode Ex3TestFinalizePackage(void)
 int main(int argc, char **argv)
 {
   /* Configuration parameters */
-  const PetscInt ndof                    = 2; /* Degrees of freedom per grid point: h and hu */
-  PetscInt       n_vert                  = DEFAULT_N;
-  PetscInt       steps                   = DEFAULT_STEPS;
-  PetscInt       obs_freq                = DEFAULT_OBS_FREQ;
-  PetscInt       random_seed             = DEFAULT_RANDOM_SEED;
-  PetscInt       ensemble_size           = DEFAULT_ENSEMBLE_SIZE;
-  PetscInt       n_spin                  = SPINUP_STEPS;
-  PetscInt       progress_freq           = DEFAULT_PROGRESS_FREQ;
-  PetscReal      g                       = DEFAULT_G;
-  PetscReal      dt                      = DEFAULT_DT;
-  PetscReal      obs_error_std           = DEFAULT_OBS_ERROR_STD;
-  PetscBool      use_fake_localization   = PETSC_FALSE;
-  PetscInt       num_observations_vertex = 7;
-  PetscReal      L                       = (PetscReal)DEFAULT_N; /* Domain length */
-  PetscReal      bd[3]                   = {L, 0, 0};
-  Ex3TestType    test_type               = EX3_TEST_DAM;     /* Default to dam-break */
-  Ex3FluxType    flux_type               = EX3_FLUX_RUSANOV; /* Default to first-order Rusanov */
+  const PetscInt ndof                = 2; /* Degrees of freedom per grid point: h and hu */
+  PetscInt       n_vert              = DEFAULT_N;
+  PetscInt       steps               = DEFAULT_STEPS;
+  PetscInt       obs_freq            = DEFAULT_OBS_FREQ;
+  PetscInt       random_seed         = DEFAULT_RANDOM_SEED;
+  PetscInt       ensemble_size       = DEFAULT_ENSEMBLE_SIZE;
+  PetscInt       n_spin              = SPINUP_STEPS;
+  PetscInt       progress_freq       = DEFAULT_PROGRESS_FREQ;
+  PetscReal      g                   = DEFAULT_G;
+  PetscReal      dt                  = DEFAULT_DT;
+  PetscReal      obs_error_std       = DEFAULT_OBS_ERROR_STD;
+  PetscReal      localization_radius = 100.0;                /* Large value = effectively no localization for domain size 80 */
+  PetscReal      L                   = (PetscReal)DEFAULT_N; /* Domain length */
+  Ex3TestType    test_type           = EX3_TEST_DAM;         /* Default to dam-break */
+  Ex3FluxType    flux_type           = EX3_FLUX_RUSANOV;     /* Default to first-order Rusanov */
   char           output_file[PETSC_MAX_PATH_LEN];
   PetscBool      output_enabled = PETSC_FALSE;
   FILE          *fp             = NULL;
@@ -522,7 +497,6 @@ int main(int argc, char **argv)
   Vec              truth_state, rmse_work;
   Vec              observation, obs_noise, obs_error_var;
   PetscRandom      rng;
-  Mat              Q = NULL;            /* Localization matrix */
   Mat              H = NULL, H1 = NULL; /* Observation operator matrix (h at every other grid point) and scalar version */
 
   /* Statistics tracking */
@@ -548,13 +522,10 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-dt", "Time step size", "", dt, &dt, NULL));
   PetscCall(PetscOptionsReal("-obs_error", "Observation error standard deviation", "", obs_error_std, &obs_error_std, NULL));
   PetscCall(PetscOptionsReal("-L", "Domain length", "", L, &L, NULL));
-  bd[0] = L;
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscCall(PetscOptionsInt("-progress_freq", "Print progress every N steps (0 = only first/last)", "", progress_freq, &progress_freq, NULL));
   PetscCall(PetscOptionsString("-output_file", "Output file for visualization data", "", "", output_file, sizeof(output_file), &output_enabled));
-  PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
-  if (!use_fake_localization) PetscCall(PetscOptionsInt("-petscda_letkf_obs_per_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
-  else num_observations_vertex = n_vert;
+  PetscCall(PetscOptionsReal("-petscda_letkf_localization_radius", "Gaspari-Cohn localization cutoff radius (must be positive)", "", localization_radius, &localization_radius, NULL));
   /* Parse test type option */
   {
     char        testTypeName[256];
@@ -576,8 +547,9 @@ int main(int argc, char **argv)
   n_spin = 0; /* No spinup needed for either test - dam evolves naturally, wave is already smooth */
   PetscOptionsEnd();
 
-  /* LETKF constraint: nobs = n_vert/2, observe every other point */
-  PetscInt nobs = n_vert / 2;
+  /* LETKF constraint: nobs = n_vert/obs_stride, observe every obs_stride-th point */
+  PetscInt obs_stride = 2;
+  PetscInt nobs       = n_vert / obs_stride;
 
   /* Validate and constrain parameters */
   PetscCall(ValidateParameters(&n_vert, &nobs, &steps, &obs_freq, &ensemble_size, &dt, &g, &obs_error_std));
@@ -678,21 +650,20 @@ int main(int argc, char **argv)
   /* Set observation error variance */
   PetscCall(PetscDASetObsErrorVariance(da, obs_error_var));
 
-  /* Create and set localization matrix Q */
+  /* Configure localization for LETKF (Q is built lazily on first analysis). */
   {
     PetscBool isletkf;
     PetscCall(PetscObjectTypeCompare((PetscObject)da, PETSCDALETKF, &isletkf));
 
-    if (!use_fake_localization && isletkf) {
+    if (isletkf) {
       Vec          Vecxyz[3] = {NULL, NULL, NULL};
       Vec          coord;
       DM           cda;
       PetscScalar *x_coord;
       PetscInt     xs, xm, i;
+      PetscReal    bd[3] = {L, 0, 0};
 
-      /* Ensure coordinates are set */
       PetscCall(DMDASetUniformCoordinates(da_state, 0.0, L, 0.0, 0.0, 0.0, 0.0));
-      /* Update coordinates to match cell centers as used in initial condition */
       PetscCall(DMGetCoordinateDM(da_state, &cda));
       PetscCall(DMGetCoordinates(da_state, &coord));
       PetscCall(DMDAGetCorners(cda, &xs, NULL, NULL, &xm, NULL, NULL));
@@ -700,26 +671,15 @@ int main(int argc, char **argv)
       for (i = xs; i < xs + xm; i++) x_coord[i] = ((PetscReal)i + 0.5) * L / n_vert;
       PetscCall(DMDAVecRestoreArray(cda, coord, &x_coord));
 
-      /* Create Vecxyz[0] */
       PetscCall(DMCreateGlobalVector(cda, &Vecxyz[0]));
       PetscCall(VecSetFromOptions(Vecxyz[0]));
       PetscCall(PetscObjectSetName((PetscObject)Vecxyz[0], "x_coordinate"));
       PetscCall(VecCopy(coord, Vecxyz[0]));
 
-      PetscCall(PetscDALETKFGetLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H1, &Q));
+      PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
+      PetscCall(PetscDALETKFSetLocalizationCoordinates(da, Vecxyz, bd, H1));
       PetscCall(VecDestroy(&Vecxyz[0]));
-      PetscCall(PetscDALETKFSetObsPerVertex(da, num_observations_vertex));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created using PetscDALETKFGetLocalizationMatrix\n"));
-    } else {
-      PetscCall(CreateLocalizationMatrix(n_vert, nobs, &Q));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", (int)n_vert, (int)nobs));
-      if (isletkf) {
-        PetscCall(PetscDALETKFSetObsPerVertex(da, num_observations_vertex)); // fully observed
-      }
     }
-    PetscCall(PetscDALETKFSetLocalization(da, Q, H));
-    PetscCall(MatViewFromOptions(Q, NULL, "-Q_view"));
-    PetscCall(MatDestroy(&Q));
   }
 
   /* Initialize ensemble members with perturbations around spun-up state
@@ -747,8 +707,8 @@ int main(int argc, char **argv)
                           "  Observation frequency : %" PetscInt_FMT "\n"
                           "  Observation noise std : %.3f\n"
                           "  Random seed           : %" PetscInt_FMT "\n"
-                          "  Localization          : None/Global (%d obs per vertex)\n\n",
-                          test_name, flux_name, n_vert * ndof, n_vert, (int)ndof, nobs, ensemble_size, (double)L, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed, num_observations_vertex));
+                          "  Localization radius   : %g\n\n",
+                          test_name, flux_name, n_vert * ndof, n_vert, (int)ndof, nobs, ensemble_size, (double)L, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed, (double)localization_radius));
   }
 
   /* Open output file if requested */
@@ -939,12 +899,12 @@ int main(int argc, char **argv)
 
     test:
       suffix: etkf_dam
-      args: -petscda_ensemble_sqrt_type cholesky -petscda_type etkf
+      args: -petscda_ensemble_sqrt_type cholesky -petscda_type letkf -petscda_letkf_localization_type none
 
     test:
       nsize: 3
       suffix: kokkos_dam
-      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_ensemble_size 5 -petscda_letkf_obs_per_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_ensemble_size 5 -petscda_letkf_localization_radius 10.0
 
   testset:
     requires: kokkos_kernels !complex
@@ -958,10 +918,10 @@ int main(int argc, char **argv)
     test:
       nsize: 3
       suffix: kokkos_wave
-      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_ensemble_size 5 -petscda_letkf_obs_per_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_ensemble_size 5 -petscda_letkf_localization_radius 10.0
 
     test:
       suffix: wave_mc
-      args: -ex3_flux mc -petscda_type etkf
+      args: -ex3_flux mc -petscda_type letkf -petscda_letkf_localization_type none
 
 TEST*/
