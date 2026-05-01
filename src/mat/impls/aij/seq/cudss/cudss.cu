@@ -439,6 +439,7 @@ static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A)
   PetscFunctionBegin;
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_A, d_val);
+  PetscCall(MatApplyConfig_cuDSS(lu));
   PetscCall(PetscGetCurrentCUDAStream(&stream));
   PetscCallCUDSS(cudssSetStream, lu->handle, stream);
 
@@ -451,16 +452,16 @@ static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A)
   status = cudssExecute(lu->handle, phase, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
   if (status != CUDSS_STATUS_SUCCESS) {
     PetscCall(PetscInfo(F, "cuDSS numerical factorization failed with status %d\n", (int)status));
-    if (status == CUDSS_STATUS_INVALID_VALUE || status == CUDSS_STATUS_EXECUTION_FAILED) F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
-    else if (status == CUDSS_STATUS_ALLOC_FAILED) F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+    if (status == CUDSS_STATUS_ALLOC_FAILED) F->factorerrortype = MAT_FACTOR_OUTMEMORY;
     else F->factorerrortype = MAT_FACTOR_OTHER;
     PetscCheck(!A->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuDSS error in numerical factorization: status %d", (int)status);
-  } else F->factorerrortype = MAT_FACTOR_NOERROR;
-
-  F->ops->solve    = MatSolve_cuDSS;
-  F->ops->matsolve = MatMatSolve_cuDSS;
-  F->assembled     = PETSC_TRUE;
-  lu->factored     = PETSC_TRUE;
+  } else {
+    F->factorerrortype = MAT_FACTOR_NOERROR;
+    F->ops->solve      = MatSolve_cuDSS;
+    F->ops->matsolve   = MatMatSolve_cuDSS;
+    F->assembled       = PETSC_TRUE;
+    lu->factored       = PETSC_TRUE;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
