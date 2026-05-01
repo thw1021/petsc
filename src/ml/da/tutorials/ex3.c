@@ -899,7 +899,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: etkf_dam
-      args: -petscda_ensemble_sqrt_type cholesky -petscda_type etkf
+      args: -petscda_ensemble_sqrt_type cholesky -petscda_type letkf -petscda_letkf_localization_type none
 
     test:
       nsize: 3
@@ -922,6 +922,6 @@ int main(int argc, char **argv)
 
     test:
       suffix: wave_mc
-      args: -ex3_flux mc -petscda_type etkf
+      args: -ex3_flux mc -petscda_type letkf -petscda_letkf_localization_type none
 
 TEST*/

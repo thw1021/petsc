@@ -79,6 +79,7 @@
 
 ## PetscDA
 
+- Remove `PETSCDAETKF`; use `PETSCDALETKF` with `PetscDALETKFSetLocalizationType(da, PETSCDA_LETKF_LOC_NONE)` for identical behavior
 
 ## DM
 

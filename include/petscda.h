@@ -15,9 +15,9 @@
 
    Some planned work for `PetscDA` is available as GitLab Issue #1882
 
-   Currently we supply two ensemble-based assimilators: `PETSCDAETKF` and `PETSCDALETKF`
+   Currently we supply one ensemble-based assimilator: `PETSCDALETKF`
 
-.seealso: [](ch_da), `PetscDAType`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDASqrtType`, `PetscDACreate()`, `PetscDASetType()`,
+.seealso: [](ch_da), `PetscDAType`, `PETSCDALETKF`, `PetscDASqrtType`, `PetscDACreate()`, `PetscDASetType()`,
           `PetscDASetSizes()`, `PetscDAEnsembleSetSize()`, `PetscDAEnsembleAnalysis()`, `PetscDAEnsembleForecast()`,
           `PetscDADestroy()`, `PetscDAView()`
 S*/
@@ -47,7 +47,7 @@ typedef enum {
 
   Values:
 +  `PETSCDA_LETKF_LOC_NONE`         - No localization. Each vertex sees every observation with weight one;
-                                      the per-vertex loop is replaced by a single global analysis equivalent to `PETSCDAETKF`.
+                                      the per-vertex loop reduces to a single global analysis (the classic ETKF).
 .  `PETSCDA_LETKF_LOC_GASPARI_COHN` - Gaspari-Cohn fifth-order piecewise rational kernel with compact support at twice the radius
 .  `PETSCDA_LETKF_LOC_GAUSSIAN`     - Gaussian kernel exp(-d^2 / (2 r^2)) truncated at twice the radius
 -  `PETSCDA_LETKF_LOC_BOXCAR`       - Uniform weight one inside the radius, zero outside
@@ -72,10 +72,9 @@ typedef enum {
 
   Level: beginner
 
-.seealso: [](ch_da), `PetscDA`, `PetscDASetType()`, `PETSCDAETKF`, `PETSCDALETKF`
+.seealso: [](ch_da), `PetscDA`, `PetscDASetType()`, `PETSCDALETKF`
 J*/
 typedef const char *PetscDAType;
-#define PETSCDAETKF  "etkf"
 #define PETSCDALETKF "letkf"
 
 PETSC_EXTERN PetscErrorCode PetscDAInitializePackage(void);
