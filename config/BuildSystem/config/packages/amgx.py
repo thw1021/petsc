@@ -24,6 +24,30 @@ class Configure(config.package.CMakePackage):
     self.deps           = [self.mpi,self.cuda]
     return
 
+  def updateControlFiles(self):
+    '''Patch AMGx sources for CUDA 12+ where nvToolsExt was removed in favor of nvtx3'''
+    import os
+    # Patch CMakeLists.txt: replace CUDA::nvToolsExt with CUDA::nvtx3
+    cmakefile = os.path.join(self.packageDir, 'CMakeLists.txt')
+    if os.path.isfile(cmakefile):
+      with open(cmakefile, 'r') as f:
+        contents = f.read()
+      if 'CUDA::nvToolsExt' in contents:
+        self.logPrint('Patching AMGx CMakeLists.txt: replacing CUDA::nvToolsExt with CUDA::nvtx3')
+        contents = contents.replace('CUDA::nvToolsExt', 'CUDA::nvtx3')
+        with open(cmakefile, 'w') as f:
+          f.write(contents)
+    # Patch amgx_timer.h: replace #include "nvToolsExt.h" with #include "nvtx3/nvToolsExt.h"
+    timerfile = os.path.join(self.packageDir, 'include', 'amgx_timer.h')
+    if os.path.isfile(timerfile):
+      with open(timerfile, 'r') as f:
+        contents = f.read()
+      if '#include "nvToolsExt.h"' in contents:
+        self.logPrint('Patching AMGx amgx_timer.h: replacing nvToolsExt.h with nvtx3/nvToolsExt.h')
+        contents = contents.replace('#include "nvToolsExt.h"', '#include "nvtx3/nvToolsExt.h"')
+        with open(timerfile, 'w') as f:
+          f.write(contents)
+
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     if self.compilerFlags.debugging:
