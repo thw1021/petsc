@@ -915,7 +915,6 @@ static PetscErrorCode TSAdjointReset_Theta(TS ts)
 static PetscErrorCode TSDestroy_Theta(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_Theta(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSTheta, DMRestrictHook_TSTheta, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSTheta, DMSubDomainRestrictHook_TSTheta, ts));

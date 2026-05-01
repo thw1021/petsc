@@ -217,7 +217,6 @@ static PetscErrorCode TSReset_Pseudo(TS ts)
 static PetscErrorCode TSDestroy_Pseudo(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_Pseudo(ts));
   PetscCall(PetscFree(ts->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSPseudoSetVerifyTimeStep_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSPseudoSetTimeStepIncrement_C", NULL));

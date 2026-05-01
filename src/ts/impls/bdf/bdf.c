@@ -423,7 +423,6 @@ static PetscErrorCode TSReset_BDF(TS ts)
 static PetscErrorCode TSDestroy_BDF(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_BDF(ts));
   PetscCall(PetscFree(ts->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSBDFSetOrder_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSBDFGetOrder_C", NULL));

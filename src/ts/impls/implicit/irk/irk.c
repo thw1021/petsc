@@ -807,7 +807,6 @@ static PetscErrorCode TSIRKGetNumStages_IRK(TS ts, PetscInt *nstages)
 static PetscErrorCode TSDestroy_IRK(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_IRK(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSIRK, DMRestrictHook_TSIRK, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSIRK, DMSubDomainRestrictHook_TSIRK, ts));

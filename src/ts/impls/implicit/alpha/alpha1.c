@@ -334,7 +334,6 @@ static PetscErrorCode TSReset_Alpha(TS ts)
 static PetscErrorCode TSDestroy_Alpha(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_Alpha(ts));
   PetscCall(PetscFree(ts->data));
 
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSAlphaSetRadius_C", NULL));

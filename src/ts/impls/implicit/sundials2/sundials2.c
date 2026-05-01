@@ -258,7 +258,6 @@ static PetscErrorCode TSDestroy_Sundials2(TS ts)
   TS_Sundials2 *cvode = (TS_Sundials2 *)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(TSReset_Sundials2(ts));
   PetscCallMPI(MPI_Comm_free(&cvode->comm_sundials));
   PetscCall(PetscFree(ts->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSSundials2SetType_C", NULL));
