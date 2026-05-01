@@ -458,10 +458,10 @@ int main(int argc, char **argv)
 
     test:
       suffix: etkf
-      args: -petscda_type etkf -petscda_ensemble_sqrt_type eigen
+      args: -petscda_type letkf -petscda_letkf_localization_type none -petscda_ensemble_sqrt_type eigen
 
     test:
       suffix: etkf2
-      args: -petscda_type etkf -petscda_ensemble_sqrt_type cholesky
+      args: -petscda_type letkf -petscda_letkf_localization_type none -petscda_ensemble_sqrt_type cholesky
 
   TEST*/

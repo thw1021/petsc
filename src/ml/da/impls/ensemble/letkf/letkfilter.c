@@ -701,8 +701,6 @@ static PetscErrorCode PetscDALETKFSetLocalizationCoordinates_LETKF(PetscDA da, V
     PetscCall(PetscObjectReference((PetscObject)H));
     impl->coord_H = H;
   }
-  /* If the user previously selected NONE (no Q needed), default to Gaspari-Cohn now that coordinates are available. */
-  if (impl->type == PETSCDA_LETKF_LOC_NONE) impl->type = PETSCDA_LETKF_LOC_GASPARI_COHN;
   impl->Q_dirty = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -869,7 +867,7 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
 
    Level: beginner
 
-.seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PETSCDAETKF`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
+.seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
           `PetscDALETKFSetLocalizationCoordinates()`, `PetscDAEnsembleSetSize()`, `PetscDASetSizes()`, `PetscDAEnsembleSetSqrtType()`, `PetscDAEnsembleSetInflation()`,
           `PetscDAEnsembleComputeMean()`, `PetscDAEnsembleComputeAnomalies()`, `PetscDAEnsembleAnalysis()`, `PetscDAEnsembleForecast()`
 M*/
@@ -882,6 +880,7 @@ PETSC_INTERN PetscErrorCode PetscDACreate_LETKF(PetscDA da)
   PetscCall(PetscNew(&impl));
   da->data = impl;
   PetscCall(PetscDACreate_Ensemble(da));
+  da->ops->setup          = PetscDASetUp_Ensemble;
   da->ops->destroy        = PetscDADestroy_LETKF;
   da->ops->view           = PetscDAView_LETKF;
   da->ops->setfromoptions = PetscDASetFromOptions_LETKF;
@@ -965,7 +964,7 @@ PetscErrorCode PetscDALETKFGetLocalizationRadius(PetscDA da, PetscReal *radius)
 
   Notes:
   Use `PETSCDA_LETKF_LOC_NONE` to bypass localization entirely; the analysis is then mathematically
-  equivalent to `PETSCDAETKF` and dispatches through a single global eigensolve and `MatMatMult`
+  equivalent to the global ETKF and dispatches through a single global eigensolve and `MatMatMult`
   instead of the per-vertex local loop.
 
   For the built-in distance-based kernels (`PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_GAUSSIAN`,
@@ -1025,9 +1024,10 @@ PetscErrorCode PetscDALETKFGetLocalizationType(PetscDA da, PetscDALETKFLocalizat
 
   Notes:
   The localization matrix `Q` is built on first analysis (or whenever the type, radius or
-  coordinates change) using the kernel selected by `PetscDALETKFSetLocalizationType()`. Calling
-  this routine on a context whose type is `PETSCDA_LETKF_LOC_NONE` switches the type to
-  `PETSCDA_LETKF_LOC_GASPARI_COHN` so that the cached coordinates are used.
+  coordinates change) using the kernel selected by `PetscDALETKFSetLocalizationType()`. If the
+  current type is `PETSCDA_LETKF_LOC_NONE`, the coordinates are cached but the analysis continues
+  to run the NONE fast path; switch to a distance-based kernel via
+  `PetscDALETKFSetLocalizationType()` for the cached coordinates to take effect.
 
   References on `Vecxyz` and `H` are increased; the caller may destroy them afterwards.
 
