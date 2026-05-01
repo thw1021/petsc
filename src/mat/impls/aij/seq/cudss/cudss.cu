@@ -371,8 +371,11 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
   const PetscScalar *barray;
   PetscScalar       *xarray;
   cudaStream_t       stream;
+  PetscBool          iscuda;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)b, &iscuda, VECSEQCUDA, VECMPICUDA, VECCUDA, ""));
+  PetscCheck(iscuda, PetscObjectComm((PetscObject)b), PETSC_ERR_ARG_WRONG, "cuDSS requires CUDA vectors (VECCUDA). Use -vec_type cuda or call MatCreateVecs() to create vectors from the matrix");
   PetscCall(VecCUDAGetArrayRead(b, &barray));
   PetscCall(VecCUDAGetArrayWrite(x, &xarray));
   PetscCallCUDSS(cudssMatrixSetValues, lu->cudss_b, (void *)barray);
