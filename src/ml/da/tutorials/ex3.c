@@ -894,8 +894,8 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -petscda_ensemble_size 7
 
     test:
-      suffix: etkf_dam
-      args: -petscda_ensemble_sqrt_type cholesky -petscda_type etkf
+      suffix: letkf_dam_loc_none
+      args: -petscda_ensemble_sqrt_type cholesky -petscda_type letkf -petscda_letkf_localization_type none
 
     test:
       nsize: 3
@@ -917,7 +917,7 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_ensemble_size 5 -petscda_letkf_localization_radius 10.0
 
     test:
-      suffix: wave_mc
-      args: -ex3_flux mc -petscda_type etkf
+      suffix: letkf_wave_mc
+      args: -ex3_flux mc -petscda_type letkf -petscda_letkf_localization_type none
 
 TEST*/
