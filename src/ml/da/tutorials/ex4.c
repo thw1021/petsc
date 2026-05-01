@@ -626,6 +626,13 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -petscda_ensemble_size 7
 
     test:
+      suffix: kokkos_wave2d_serial
+      requires: kokkos_kernels
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_ensemble_size 7
+      output_file: output/ex4_letkf_wave2d.out
+      filter: sed -e "s/Local analysis: Kokkos/Local analysis: CPU/"
+
+    test:
       nsize: 3
       suffix: kokkos_wave2d
       requires: kokkos_kernels
