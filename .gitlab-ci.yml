@@ -433,7 +433,7 @@ linux-cuda-double-64idx:
     - cuda12
   variables:
     TEST_ARCH: arch-ci-linux-cuda-double-64idx
-    TEST_OPTS: -j3 query=requires queryval=cuda
+    TEST_OPTS: -j3 query='requires,requires' queryval='cuda,kokkos_kernels'
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
 
 # Set env vars for 'Kokkos + OpenMP' tests, so that they won't give warnings
