@@ -1,12 +1,13 @@
-Localization matrix Q created: 80x40, no localization/global (all weights = 1.0)
 PetscDA Object: 1 MPI process
-  type: etkf
+  type: letkf
   State size: 160
   Observation size: 40
   Ensemble size: 10
   Assembled: true
   Inflation: 1.
   Square root type: cholesky
+  Local analysis: CPU
+  Localization type: none (global ETKF)
 Shallow Water [L]ETKF Example
 ============================
   Test case             : Dam-break
@@ -21,7 +22,7 @@ Shallow Water [L]ETKF Example
   Observation frequency : 2
   Observation noise std : 0.030
   Random seed           : 12345
-  Localization          : None/Global (7 obs per vertex)
+  Localization radius   : 100.
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
 Step    1, time  0.020  RMSE_forecast 0.00002  RMSE_analysis 0.00002

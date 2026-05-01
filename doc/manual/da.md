@@ -10,10 +10,10 @@ Some planned work for `PetscDA` is available as GitLab Issue #1882
 
 ## Ensemble-based Data Assimilation
 
-Currently `PetscDA` only supports ensemble-based data assimilation with two `PetscDAType`: `PETSCDAETKF` and `PETSCDALETKF`. These
-focus on ensemble transform Kalman filter (ETKF)-style updates but are extensible to other assimilation techniques.
+Currently `PetscDA` supports one ensemble-based assimilator: `PETSCDALETKF`. It implements the Local Ensemble
+Transform Kalman Filter, with a `none`-localization mode that reduces to the classic global ETKF.
+The framework is extensible to other assimilation techniques.
 
-- {any}`sec_da_etkf`
 - {any}`sec_da_letkf`
 
 These centralize ensemble storage, observational metadata, and user-defined forecast/analysis operators so that algorithms can run independently of the MPI layout or the vector/matrix backends.
@@ -53,7 +53,7 @@ Create, configure, and destroy a `PetscDA` object with the standard PETSc object
 ```c
 PetscDA da;
 PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da));
-PetscCall(PetscDASetType(da, PETSCDAETKF));
+PetscCall(PetscDASetType(da, PETSCDALETKF));
 PetscCall(PetscDASetSizes(da, state_size, obs_size));
 PetscCall(PetscDAEnsembleSetSize(da, ensemble_size));
 PetscCall(PetscDASetFromOptions(da));
@@ -256,23 +256,23 @@ with `-petscda_type <name>`.
    * - Method
      - PetscDAType
      - Options Name
-   * - Ensemble Transform Kalman Filter
-     - ``PETSCDAETKF``
-     - ``etkf``
    * - Local Ensemble Transform Kalman Filter
      - ``PETSCDALETKF``
      - ``letkf``
 ```
 
-(sec_da_etkf)=
+(sec_da_letkf)=
 
-### ETKF
+### LETKF
 
-The built-in square-root ETKF (`PETSCDAETKF`, `-petscda_type etkf`) is the
-default implementation. It implements Algorithm 6.4 in {cite}`da2016` using a
-deterministic square-root update that avoids stochastic perturbations.
+The Local ETKF (`PETSCDALETKF`, `-petscda_type letkf`) is the default implementation.
+It performs the analysis update locally around each grid point, enabling scalable
+assimilation on large domains by avoiding the global ensemble covariance matrix.
+With `-petscda_letkf_localization_type none` it reduces to the classic global ETKF
+(Algorithm 6.4 in {cite}`da2016`), a deterministic square-root update that avoids
+stochastic perturbations.
 
-The ETKF supports two factorization strategies for the reduced-space T-matrix:
+LETKF supports two factorization strategies for the reduced-space T-matrix:
 
 ```c
 PetscDAEnsembleSetSqrtType(PetscDA da, PetscDASqrtType type);
@@ -280,7 +280,7 @@ PetscDAEnsembleGetSqrtType(PetscDA da, PetscDASqrtType *type);
 ```
 
 ```{eval-rst}
-.. list-table:: ETKF square-root types
+.. list-table:: T-matrix square-root types
    :name: tab-dasqrttypes
    :header-rows: 1
 
@@ -297,23 +297,26 @@ PetscDAEnsembleGetSqrtType(PetscDA da, PetscDASqrtType *type);
 
 Select at runtime with `-petscda_ensemble_sqrt_type {cholesky,eigen}` (default: `eigen`).
 
-(sec_da_letkf)=
-
-### LETKF
-
-The Local ETKF (`PETSCDALETKF`, `-petscda_type letkf`) performs the analysis
-update locally around each grid point, enabling scalable assimilation on large
-domains by avoiding the global ensemble covariance matrix. LETKF-specific
-configuration:
+LETKF-specific configuration:
 
 ```c
 /* Number of observations associated with each grid vertex (default: 9) */
 PetscDALETKFSetObsPerVertex(PetscDA da, PetscInt n_obs_vertex);
 PetscDALETKFGetObsPerVertex(PetscDA da, PetscInt *n_obs_vertex);
 
-/* Localization weight matrix Q (N x P) and observation operator matrix H (P x N) */
-PetscDALETKFSetLocalization(PetscDA da, Mat Q, Mat H);
+/* Distance-based localization: pick a kernel, set the radius, supply
+   per-dimension state coordinates and the observation operator H.
+   The localization matrix Q is built lazily on the first analysis. */
+PetscDALETKFSetLocalizationType(PetscDA da, PetscDALETKFLocalizationType type);
+PetscDALETKFSetLocalizationRadius(PetscDA da, PetscReal radius);
+PetscDALETKFSetLocalizationCoordinates(PetscDA da, Vec Vecxyz[3], PetscReal bd[3], Mat H);
 ```
+
+Built-in kernels (`gaspari_cohn`, `gaussian`, `boxcar`) require the
+Kokkos Kernels backend (`--download-kokkos-kernels`); the `none` type
+disables localization and is mathematically equivalent to global ETKF.
+Select the kernel at runtime with
+`-petscda_letkf_localization_type {none,gaspari_cohn,gaussian,boxcar}`.
 
 Set the observation count at runtime with
 `-petscda_letkf_obs_per_vertex <n>` (default: `9`).
@@ -324,9 +327,9 @@ Set the observation count at runtime with
 
 The `PetscDA` object obeys standard PETSc options parsing. Commonly used switches include:
 
-- `-petscda_type <name>`                         – select a registered `PetscDA` implementation (`etkf`, `letkf`).
+- `-petscda_type <name>`                         – select a registered `PetscDA` implementation (`letkf`).
 - `-petscda_ensemble_inflation <value>`          – set the covariance inflation factor (default: `1.0`).
-- `-petscda_ensemble_sqrt_type {cholesky,eigen}` – select the T-matrix square-root algorithm for ETKF (default: `eigen`).
+- `-petscda_ensemble_sqrt_type {cholesky,eigen}` – select the T-matrix square-root algorithm (default: `eigen`).
 - `-petscda_letkf_obs_per_vertex <n>`            – set the number of observations per grid vertex for LETKF (default: `9`).
 - `-petscda_view`                                – inspect ensemble metadata and internal sizes.
 
