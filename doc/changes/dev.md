@@ -92,6 +92,10 @@
 
 ## PetscDA
 
+- Remove `PETSCDAETKF`; use `PETSCDALETKF` with `PetscDALETKFSetLocalizationType(da, PETSCDA_LETKF_LOC_NONE)` for identical behavior
+- Remove `PetscDALETKFSetLocalization()`; use the distance-based API `PetscDALETKFSetLocalizationType()`, `PetscDALETKFSetLocalizationRadius()`, and `PetscDALETKFSetLocalizationCoordinates()` instead
+- Remove `PetscDALETKFSetObsPerVertex()` and `PetscDALETKFGetObsPerVertex()`; per-vertex observation counts are now derived from the distance-based localization kernel
+- Remove `PetscDALETKFGetLocalizationMatrix()`; the localization matrix is an internal cached object built lazily on the first analysis
 
 ## DM
 
