@@ -4,7 +4,7 @@
 #include <petsc/private/daensembleimpl.h>
 
 /*
-     Code that is shared between multiple PetscDA ensemble methods including PETSCDAETKF and PETSCDALETKF
+     Code that is shared by PETSCDALETKF (and any future ensemble methods).
 
 */
 /*  T-Matrix Factorization and Application Methods [Alg 6.4 line 7] */
@@ -197,7 +197,7 @@ static PetscErrorCode PetscDAEnsembleTFactor_Eigen(PetscDA da)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleApplyTInverse()`, `PetscDAEnsembleApplySqrtTInverse()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleApplyTInverse()`, `PetscDAEnsembleApplySqrtTInverse()`
 @*/
 PetscErrorCode PetscDAEnsembleTFactor(PetscDA da, Mat S)
 {
@@ -343,7 +343,7 @@ static PetscErrorCode ApplyTInverse_Eigen(PetscDA da, Vec sdel, Vec w)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleTFactor()`, `PetscDAEnsembleApplySqrtTInverse()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleTFactor()`, `PetscDAEnsembleApplySqrtTInverse()`
 @*/
 PetscErrorCode PetscDAEnsembleApplyTInverse(PetscDA da, Vec sdel, Vec w)
 {
@@ -528,7 +528,7 @@ static PetscErrorCode ApplySqrtTInverse_Eigen(PetscDA da, Mat U, Mat Y)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleTFactor()`, `PetscDAEnsembleApplyTInverse()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleTFactor()`, `PetscDAEnsembleApplyTInverse()`
 @*/
 PetscErrorCode PetscDAEnsembleApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
 {
@@ -596,7 +596,7 @@ PetscErrorCode PetscDAEnsembleApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDASqrtType`, `PetscDAEnsembleGetSqrtType()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDASqrtType`, `PetscDAEnsembleGetSqrtType()`
 @*/
 PetscErrorCode PetscDAEnsembleSetSqrtType(PetscDA da, PetscDASqrtType type)
 {
@@ -623,7 +623,7 @@ PetscErrorCode PetscDAEnsembleSetSqrtType(PetscDA da, PetscDASqrtType type)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleSetSqrtType()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleSetSqrtType()`
 @*/
 PetscErrorCode PetscDAEnsembleGetSqrtType(PetscDA da, PetscDASqrtType *type)
 {
@@ -647,7 +647,7 @@ PetscErrorCode PetscDAEnsembleGetSqrtType(PetscDA da, PetscDASqrtType *type)
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleGetInflation()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleGetInflation()`
 @*/
 PetscErrorCode PetscDAEnsembleSetInflation(PetscDA da, PetscReal inflation)
 {
@@ -674,7 +674,7 @@ PetscErrorCode PetscDAEnsembleSetInflation(PetscDA da, PetscReal inflation)
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleSetInflation()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleSetInflation()`
 @*/
 PetscErrorCode PetscDAEnsembleGetInflation(PetscDA da, PetscReal *inflation)
 {
@@ -701,7 +701,7 @@ PetscErrorCode PetscDAEnsembleGetInflation(PetscDA da, PetscReal *inflation)
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleRestoreMember()`, `PetscDAEnsembleSetMember()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleRestoreMember()`, `PetscDAEnsembleSetMember()`
 @*/
 PetscErrorCode PetscDAEnsembleGetMember(PetscDA da, PetscInt member_idx, Vec *member)
 {
@@ -729,7 +729,7 @@ PetscErrorCode PetscDAEnsembleGetMember(PetscDA da, PetscInt member_idx, Vec *me
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleGetMember()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleGetMember()`
 @*/
 PetscErrorCode PetscDAEnsembleRestoreMember(PetscDA da, PetscInt member_idx, Vec *member)
 {
@@ -756,7 +756,7 @@ PetscErrorCode PetscDAEnsembleRestoreMember(PetscDA da, PetscInt member_idx, Vec
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleGetMember()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleGetMember()`
 @*/
 PetscErrorCode PetscDAEnsembleSetMember(PetscDA da, PetscInt member_idx, Vec member)
 {
@@ -788,7 +788,7 @@ PetscErrorCode PetscDAEnsembleSetMember(PetscDA da, PetscInt member_idx, Vec mem
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleComputeAnomalies()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleComputeAnomalies()`
 @*/
 PetscErrorCode PetscDAEnsembleComputeMean(PetscDA da, Vec mean)
 {
@@ -823,7 +823,7 @@ PetscErrorCode PetscDAEnsembleComputeMean(PetscDA da, Vec mean)
   Notes:
   Each ensemble member is initialized as x0 + Gaussian(0, obs_error_std)
 
-.seealso: [](ch_da), `PETSCDAETKF`, `PETSCDALETKF`, `PetscDA`
+.seealso: [](ch_da), `PETSCDALETKF`, `PetscDA`
 @*/
 PetscErrorCode PetscDAEnsembleInitialize(PetscDA da, Vec x0, PetscReal obs_error_std, PetscRandom rng)
 {
@@ -888,7 +888,7 @@ PetscErrorCode PetscDAEnsembleInitialize(PetscDA da, Vec x0, PetscReal obs_error
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleComputeMean()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleComputeMean()`
 @*/
 PetscErrorCode PetscDAEnsembleComputeAnomalies(PetscDA da, Vec mean_in, Mat *anomalies_out)
 {
@@ -985,7 +985,7 @@ PetscErrorCode PetscDAEnsembleComputeAnomalies(PetscDA da, Vec mean_in, Mat *ano
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleForecast()`, `PetscDASetObsErrorVariance()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleForecast()`, `PetscDASetObsErrorVariance()`
 @*/
 PetscErrorCode PetscDAEnsembleAnalysis(PetscDA da, Vec observation, Mat H)
 {
@@ -1021,7 +1021,7 @@ PetscErrorCode PetscDAEnsembleAnalysis(PetscDA da, Vec observation, Mat H)
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAEnsembleAnalysis()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleAnalysis()`
 @*/
 PetscErrorCode PetscDAEnsembleForecast(PetscDA da, PetscErrorCode (*model)(Vec, Vec, PetscCtx), PetscCtx ctx)
 {
@@ -1089,7 +1089,7 @@ PetscErrorCode PetscDASetUp_Ensemble(PetscDA da)
   Note:
   The size must be greater than or equal to two. See the scale factor in `PetscDAEnsembleInitialize()` and `PetscDALETKFLocalAnalysis()`
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDAGetSizes()`, `PetscDASetSizes()`, `PetscDASetUp()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAGetSizes()`, `PetscDASetSizes()`, `PetscDASetUp()`
 @*/
 PetscErrorCode PetscDAEnsembleSetSize(PetscDA da, PetscInt ensemble_size)
 {
@@ -1117,7 +1117,7 @@ PetscErrorCode PetscDAEnsembleSetSize(PetscDA da, PetscInt ensemble_size)
 
   Level: beginner
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDASetSizes()`, `PetscDAGetSizes()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDASetSizes()`, `PetscDAGetSizes()`
 @*/
 PetscErrorCode PetscDAEnsembleGetSize(PetscDA da, PetscInt *ensemble_size)
 {
@@ -1220,7 +1220,7 @@ PetscErrorCode PetscDACreate_Ensemble(PetscDA da)
 
   Level: developer
 
-.seealso: [](ch_da), `PetscDA`, `PETSCDAETKF`, `PETSCDALETKF`, `PetscDASetSizes()`, `PetscDAGetSizes()`
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDASetSizes()`, `PetscDAGetSizes()`
 @*/
 PetscErrorCode PetscDAEnsembleComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r_inv_sqrt, PetscInt m, PetscScalar scale, Mat S)
 {
@@ -1296,7 +1296,6 @@ PETSC_INTERN PetscErrorCode PetscDAEnsembleForecast_Ensemble(PetscDA da, PetscEr
     PetscCall(VecCopy(temp, col_out));
     PetscCall(MatDenseRestoreColumnVecWrite(en->ensemble, i, &col_out));
   }
-
   PetscCall(VecDestroy(&temp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
