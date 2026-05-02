@@ -27,6 +27,7 @@ if __name__ == '__main__':
     '--download-metis',
     '--download-parmetis',
     '--download-hypre',
+    '--download-sundials',
     '--with-strict-petscerrorcode',
   ]
   configure.petsc_configure(configure_options)

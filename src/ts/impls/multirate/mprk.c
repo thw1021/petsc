@@ -1232,7 +1232,6 @@ static PetscErrorCode TSGetStages_MPRK(TS ts, PetscInt *ns, Vec **Y)
 static PetscErrorCode TSDestroy_MPRK(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_MPRK(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSMPRK, DMRestrictHook_TSMPRK, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSMPRK, DMSubDomainRestrictHook_TSMPRK, ts));

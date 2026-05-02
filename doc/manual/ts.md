@@ -214,7 +214,7 @@ TSSetType(TS ts,TSType type);
 ```
 
 Some of the currently supported types are `TSEULER`, `TSRK` (Runge-Kutta), `TSBEULER`, `TSCN` (Crank-Nicolson), `TSTHETA`, `TSGLLE` (generalized linear), and `TSPSEUDO`.
-They can also be set with the options database option `-ts_type euler, rk, beuler, cn, theta, gl, pseudo, sundials, eimex, arkimex, rosw`.
+They can also be set with the options database option `-ts_type (euler|rk|beuler|cn|theta|gl|bdf|cvodebdf|cvodeadams|sundials2|eimex|arkimex|rosw)`.
 A list of available methods is given in {any}`integrator_table`.
 
 Set the initial time with the command
@@ -1370,70 +1370,178 @@ Some other useful options are listed below.
 
 (sec_sundials)=
 
-## Using Sundials from PETSc
+## Using SUNDIALS from PETSc
 
-Sundials is a parallel ODE solver developed by Hindmarsh et al. at LLNL.
+PETSc `TS` provides access to the most recent SUNDIALS version CVode BDF and Adams integrators using types `TSCVODEBDF` and `TSCVODEADAMS`.
+These must be used with the `snes_mf` option for the linear solves.
+
+`TSCVodeSetOrder()` (or `-ts_cvode_order n`) may be used to set the maximum order of the integrator that should be used.
+
+`TSCVodeSetConstraints()` is available to provide known constraints on the variables that may be violated by the nonlinear solver solutions due
+to round off.
+
+PETSc must be configured with the option `--download-sundials` to access `TSCVODEBDF` and `TSCVODEADAMS`.
+
+(sec_convergence_study)=
+
+## A Convergence study for src/ts/tutorials/ex7.c
+
+```
+$ ./ex7 -ts_max_time 1   -ts_monitor -snes_monitor -ts_type bdf  -ksp_monitor -snes_converged_reason -ksp_converged_reason   -pc_type none  -ts_exact_final_time matchstep -snes_rtol 1e-10 -ksp_rtol 1e-10  -snes_mf  -da_refine 4 -ts_view -ts_atol 1e-4 -ts_rtol 1e-4
+```
+
+
+| TSType     | Order/Type | Tolerance    | Time steps | Norm
+| :--------- | :-------:  | :----------: | ---------: | :-----
+| BDF        | 1          | $10^{-4}$    |    75      | 0.000220463
+|            |            | $10^{-6}$    |   631      | 0.00018829
+|            |            | $10^{-8}$    |   6160     | 0.000182719
+|            |            |              |            |
+|            | 2          | $10^{-4}$    | 47         | 0.000153909
+|            |            | $10^{-6}$    |  169       | 0.000179164
+|            |            | $10^{-8}$    |  723       | 0.000181826
+|            |            |              |            |
+|            | 3          | $10^{-4}$    |  44        | 0.000202589
+|            |            | $10^{-6}$    |  109       | 0.000183718
+|            |            | $10^{-8}$    |  304       | 0.000182073
+|            |            |              |            |
+|            | 4          | $10^{-4}$    |  47        | 0.000175878
+|            |            | $10^{-6}$    |  95        | 0.000180864
+|            |            | $10^{-8}$    |  207       | 0.000181947
+|            |            |              |            |
+|            | 5          | $10^{-4}$    |  79        | 0.000175336
+|            |            | $10^{-6}$    |  99        | 0.000182192
+|            |            | $10^{-8}$    |SNES failed |
+|            |            |              |            |
+| CVodeBDF   | 1          | $10^{-4}$    | 181        | 0.000204037
+|            |            | $10^{-6}$    | 1744       | 0.000185282
+|            |            | $10^{-8}$    | 17363      | 0.000182268
+|            |            |              |            |
+|            | 2          | $10^{-4}$    | 79         | 0.000166905
+|            |            | $10^{-6}$    | 318        | 0.000181082
+|            |            | $10^{-8}$    | 1397       | 0.000181946
+|            |            |              |            |
+|            | 3          | $10^{-4}$    |  66        | 0.000162657
+|            |            | $10^{-6}$    | 177        | 0.00018252
+|            |            | $10^{-8}$    | 509        | 0.000182015
+|            |            |              |            |
+|            | 4          | $10^{-4}$    |  60        | 0.000167818
+|            |            | $10^{-6}$    |  134       | 0.000181244
+|            |            | $10^{-8}$    |  310       | 0.000181982
+|            |            |              |            |
+|            | 5          | $10^{-4}$    |  60        | 0.000167818
+|            |            | $10^{-6}$    |  119       | 0.000181042
+|            |            | $10^{-8}$    |  232       | 0.000181967
+|            |            |              |            |
+| CVodeAdams | 1          | $10^{-4}$    |  181       | 0.000204037
+|            |            | $10^{-6}$    | 1744       | 0.000184652
+|            |            | $10^{-8}$    | 17363      | 0.000182268
+|            |            |              |            |
+|            | 2          | $10^{-4}$    | 59         | 0.000177863
+|            |            | $10^{-6}$    | 233        | 0.000181611
+|            |            | $10^{-8}$    | 1032       | 0.000181972
+|            |            |              |            |
+|            | 3          | $10^{-4}$    |  52        | 0.000177643
+|            |            | $10^{-6}$    |   132      | 0.000182133
+|            |            | $10^{-8}$    | 379        | 0.000182002
+|            |            |              |            |
+|            | 4          | $10^{-4}$    | 52         | 0.000177643
+|            |            | $10^{-6}$    | 108        | 0.000181919
+|            |            | $10^{-8}$    | 238        | 0.000181991
+|            |            |              |            |
+|            | 5          | $10^{-4}$    | 52         | 0.000177643
+|            |            | $10^{-6}$    | 112        | 0.00018214
+|            |            | $10^{-8}$    |  189       | 0.000181996
+|            |            |              |            |
+| ARKIMEX    | 1bee       | $10^{-4}$    |  49        | 0.000210229
+|            |            | $10^{-6}$    |  457       | 0.000186709
+|            |            | $10^{-8}$    | 4538       | 0.000182509
+|            |            |              |            |
+|            | 2e         | $10^{-4}$    |  26        | 0.00016423
+|            |            | $10^{-6}$    |  197       | 0.000181372
+|            |            | $10^{-8}$    |  1888      | 0.000181984
+|            |            |              |            |
+|            | 3          | $10^{-4}$    |  16        | 0.000175674
+|            |            | $10^{-6}$    |  99        | 0.000182192
+|            |            | $10^{-8}$    |  219       | 0.000181975
+|            |            |              |            |
+|            | 4          | $10^{-4}$    |  11        | 0.000182613
+|            |            | $10^{-6}$    |  19        | 0.000182228
+|            |            | $10^{-8}$    |  43        | 0.000182004
+|            |            |              |            |
+|            | 5          | $10^{-4}$    | 11         | 0.000181789
+|            |            | $10^{-6}$    | 18         | 0.000181974
+|            |            | $10^{-8}$    | 32         | 0.000181991
+
+For the CVode methods the order is the maximum order it will use but it may select a lower order hence a few entries in the table are identical
+for different CVode orders.
+
+(sec_sundials2)=
+
+## Using SUNDIALS version 2 from PETSc
+
+SUNDIALS is a parallel ODE solver developed by Hindmarsh et al. at LLNL.
 The `TS` library provides an interface to use the CVODE component of
-Sundials directly from PETSc. (To configure PETSc to use Sundials, see
+SUNDIALS directly from PETSc. (To configure PETSc to use SUNDIALS, see
 the installation guide, `installation/index.htm`.)
 
-To use the Sundials integrators, call
+To use the SUNDIALS integrators, call
 
 ```
-TSSetType(TS ts,TSType TSSUNDIALS);
+TSSetType(TS ts,TSType TSSUNDIALS2);
 ```
 
-or use the command line option `-ts_type` `sundials`.
+or use the command line option `-ts_type` `sundials2`.
 
-Sundials’ CVODE solver comes with two main integrator families, Adams
+SUNDIALS CVODE solver comes with two main integrator families, Adams
 and BDF (backward differentiation formula). One can select these with
 
 ```
-TSSundialsSetType(TS ts,TSSundialsLmmType [SUNDIALS_ADAMS,SUNDIALS_BDF]);
+TSSundials2SetType(TS ts,TSSundials2LmmType [SUNDIALS2_ADAMS,SUNDIALS2_BDF]);
 ```
 
-or the command line option `-ts_sundials_type <adams,bdf>`. BDF is the
+or the command line option `-ts_sundials2_type <adams,bdf>`. BDF is the
 default.
 
-Sundials does not use the `SNES` library within PETSc for its
+SUNDIALS does not use the `SNES` library within PETSc for its
 nonlinear solvers, so one cannot change the nonlinear solver options via
-`SNES`. Rather, Sundials uses the preconditioners within the `PC`
+`SNES`. Rather, SUNDIALS uses the preconditioners within the `PC`
 package of PETSc, which can be accessed via
 
 ```
-TSSundialsGetPC(TS ts,PC *pc);
+TSSundials2GetPC(TS ts,PC *pc);
 ```
 
 The user can then directly set preconditioner options; alternatively,
 the usual runtime options can be employed via `-pc_xxx`.
 
-Finally, one can set the Sundials tolerances via
+Finally, one can set the SUNDIALS tolerances via
 
 ```
-TSSundialsSetTolerance(TS ts,double abs,double rel);
+TSSundials2SetTolerance(TS ts,double abs,double rel);
 ```
 
 where `abs` denotes the absolute tolerance and `rel` the relative
 tolerance.
 
-Other PETSc-Sundials options include
+Other PETSc-SUNDIALS options include
 
 ```
-TSSundialsSetGramSchmidtType(TS ts,TSSundialsGramSchmidtType type);
+TSSundials2SetGramSchmidtType(TS ts,TSSundials2GramSchmidtType type);
 ```
 
-where `type` is either `SUNDIALS_MODIFIED_GS` or
-`SUNDIALS_UNMODIFIED_GS`. This may be set via the options data base
-with `-ts_sundials_gramschmidt_type <modifed,unmodified>`.
+where `type` is either `SUNDIALS2_MODIFIED_GS` or
+`SUNDIALS2_UNMODIFIED_GS`. This may be set via the options data base
+with `-ts_sundials2_gramschmidt_type <modified,unmodified>`.
 
 The routine
 
 ```
-TSSundialsSetMaxl(TS ts,PetscInt restart);
+TSSundials2SetMaxl(TS ts,PetscInt restart);
 ```
 
 sets the number of vectors in the Krylov subpspace used by GMRES. This
-may be set in the options database with `-ts_sundials_maxl` `maxl`.
+may be set in the options database with `-ts_sundials2_maxl` `maxl`.
 
 ## Using TChem from PETSc
 

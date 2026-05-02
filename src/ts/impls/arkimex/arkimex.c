@@ -2323,7 +2323,6 @@ static PetscErrorCode TSARKIMEXGetFullyImplicit_ARKIMEX(TS ts, PetscBool *flg)
 static PetscErrorCode TSDestroy_ARKIMEX(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_ARKIMEX(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSARKIMEX, DMRestrictHook_TSARKIMEX, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSARKIMEX, DMSubDomainRestrictHook_TSARKIMEX, ts));

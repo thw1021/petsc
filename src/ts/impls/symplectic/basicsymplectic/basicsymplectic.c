@@ -313,7 +313,6 @@ static PetscErrorCode TSReset_BasicSymplectic(TS ts)
 static PetscErrorCode TSDestroy_BasicSymplectic(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_BasicSymplectic(ts));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSBasicSymplecticSetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSBasicSymplecticGetType_C", NULL));
   PetscCall(PetscFree(ts->data));

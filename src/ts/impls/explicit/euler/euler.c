@@ -66,7 +66,6 @@ static PetscErrorCode TSReset_Euler(TS ts)
 static PetscErrorCode TSDestroy_Euler(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_Euler(ts));
   PetscCall(PetscFree(ts->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

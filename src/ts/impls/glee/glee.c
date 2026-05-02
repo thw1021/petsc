@@ -994,7 +994,6 @@ static PetscErrorCode TSSetTimeError_GLEE(TS ts, Vec X)
 static PetscErrorCode TSDestroy_GLEE(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_GLEE(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSGLEE, DMRestrictHook_TSGLEE, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSGLEE, DMSubDomainRestrictHook_TSGLEE, ts));

@@ -269,7 +269,6 @@ static PetscErrorCode TSReset_Mimex(TS ts)
 static PetscErrorCode TSDestroy_Mimex(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_Mimex(ts));
   PetscCall(PetscFree(ts->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
