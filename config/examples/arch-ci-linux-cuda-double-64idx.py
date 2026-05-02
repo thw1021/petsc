@@ -13,6 +13,7 @@ if __name__ == '__main__':
     '--with-make-test-np=2',
     '--download-openmpi=1',
     '--download-hypre=1',
+    '--download-sundials',
     '--download-hwloc=1',
     '--download-kokkos=1',
     '--download-kokkos-commit=1557870d70d5ac0a636d3e8873d5b4ce1bb0375b', # develop as of 5/1/2026

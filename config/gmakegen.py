@@ -152,7 +152,7 @@ class Petsc(object):
         """Return dict {lang: list_of_source_files}"""
         source = dict()
         for lang, sourcelang in LANGS.items():
-            source[lang] = [f for f in files if f.endswith('.'+lang.replace('_','.'))]
+            source[lang] = [f for f in files if f.endswith('.'+lang.replace('_','.')) and not f.startswith('.#')]
             files = [f for f in files if not f.endswith('.'+lang.replace('_','.'))]
         return source
 

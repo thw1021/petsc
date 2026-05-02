@@ -1358,7 +1358,6 @@ static PetscErrorCode TSGetStages_RK(TS ts, PetscInt *ns, Vec **Y)
 static PetscErrorCode TSDestroy_RK(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_RK(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSRK, DMRestrictHook_TSRK, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSRK, DMSubDomainRestrictHook_TSRK, ts));

@@ -1691,7 +1691,6 @@ static PetscErrorCode TSRosWSetRecomputeJacobian_RosW(TS ts, PetscBool flg)
 static PetscErrorCode TSDestroy_RosW(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_RosW(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSRosW, DMRestrictHook_TSRosW, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSRosW, DMSubDomainRestrictHook_TSRosW, ts));

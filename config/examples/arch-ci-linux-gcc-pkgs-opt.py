@@ -30,6 +30,7 @@ configure_options = [
   '--download-cmake',
   '--download-amrex',
   '--download-hypre',
+  '--download-sundials',
   '--download-ks',
   '--download-sprng',
   '--with-ssl=1',

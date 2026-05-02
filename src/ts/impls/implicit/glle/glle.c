@@ -1028,7 +1028,6 @@ static PetscErrorCode TSDestroy_GLLE(TS ts)
   TS_GLLE *gl = (TS_GLLE *)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(TSReset_GLLE(ts));
   if (ts->dm) {
     PetscCall(DMCoarsenHookRemove(ts->dm, DMCoarsenHook_TSGLLE, DMRestrictHook_TSGLLE, ts));
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSGLLE, DMSubDomainRestrictHook_TSGLLE, ts));

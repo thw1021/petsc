@@ -227,7 +227,6 @@ static PetscErrorCode TSDestroy_SSP(TS ts)
   TS_SSP *ssp = (TS_SSP *)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(TSReset_SSP(ts));
   PetscCall(PetscFree(ssp->type_name));
   PetscCall(PetscFree(ts->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSSSPGetType_C", NULL));

@@ -261,7 +261,6 @@ static PetscErrorCode TSDestroy_DiscGrad(TS ts)
   DM dm;
 
   PetscFunctionBegin;
-  PetscCall(TSReset_DiscGrad(ts));
   PetscCall(TSGetDM(ts, &dm));
   if (dm) {
     PetscCall(DMCoarsenHookRemove(dm, DMCoarsenHook_TSDiscGrad, DMRestrictHook_TSDiscGrad, ts));

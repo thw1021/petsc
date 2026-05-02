@@ -192,7 +192,6 @@ static PetscErrorCode TSReset_EIMEX(TS ts)
 static PetscErrorCode TSDestroy_EIMEX(TS ts)
 {
   PetscFunctionBegin;
-  PetscCall(TSReset_EIMEX(ts));
   PetscCall(PetscFree(ts->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSEIMEXSetMaxRows_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSEIMEXSetRowCol_C", NULL));
