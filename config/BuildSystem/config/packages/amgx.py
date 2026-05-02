@@ -55,6 +55,11 @@ class Configure(config.package.CMakePackage):
     #args.append('-DCMAKE_CXX_FLAGS="-O3"')
     #args.append('-DCMAKE_C_FLAGS="-O3"')
     args.extend(self.cuda.getCmakeCUDAArchFlag())
+    # AMGx uses its own CUDA_ARCH variable (not CMAKE_CUDA_ARCHITECTURES).
+    # Without this, AMGx defaults to building for ALL supported architectures
+    # (e.g. 60;70;80;90 for CUDA 12+), which makes the build extremely slow.
+    if hasattr(self.cuda, 'cudaArch'):
+      args.append('-DCUDA_ARCH=' + self.cuda.cudaArch.replace(',', ';'))
     if not hasattr(self.cuda, 'cudaDir'):
       raise RuntimeError('CUDA directory not detected! Mail configure.log to petsc-maint@mcs.anl.gov.')
     args.append('-DCUDAToolkit_ROOT=' + self.cuda.cudaDir)
