@@ -24,6 +24,30 @@ class Configure(config.package.CMakePackage):
     self.deps           = [self.mpi,self.cuda]
     return
 
+  def updateControlFiles(self):
+    '''Patch AMGx sources for CUDA 12+ where nvToolsExt was removed in favor of nvtx3'''
+    import os
+    # Patch CMakeLists.txt: replace CUDA::nvToolsExt with CUDA::nvtx3
+    cmakefile = os.path.join(self.packageDir, 'CMakeLists.txt')
+    if os.path.isfile(cmakefile):
+      with open(cmakefile, 'r') as f:
+        contents = f.read()
+      if 'CUDA::nvToolsExt' in contents:
+        self.logPrint('Patching AMGx CMakeLists.txt: replacing CUDA::nvToolsExt with CUDA::nvtx3')
+        contents = contents.replace('CUDA::nvToolsExt', 'CUDA::nvtx3')
+        with open(cmakefile, 'w') as f:
+          f.write(contents)
+    # Patch amgx_timer.h: replace #include "nvToolsExt.h" with #include "nvtx3/nvToolsExt.h"
+    timerfile = os.path.join(self.packageDir, 'include', 'amgx_timer.h')
+    if os.path.isfile(timerfile):
+      with open(timerfile, 'r') as f:
+        contents = f.read()
+      if '#include "nvToolsExt.h"' in contents:
+        self.logPrint('Patching AMGx amgx_timer.h: replacing nvToolsExt.h with nvtx3/nvToolsExt.h')
+        contents = contents.replace('#include "nvToolsExt.h"', '#include "nvtx3/nvToolsExt.h"')
+        with open(timerfile, 'w') as f:
+          f.write(contents)
+
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     if self.compilerFlags.debugging:
@@ -31,6 +55,11 @@ class Configure(config.package.CMakePackage):
     #args.append('-DCMAKE_CXX_FLAGS="-O3"')
     #args.append('-DCMAKE_C_FLAGS="-O3"')
     args.extend(self.cuda.getCmakeCUDAArchFlag())
+    # AMGx uses its own CUDA_ARCH variable (not CMAKE_CUDA_ARCHITECTURES).
+    # Without this, AMGx defaults to building for ALL supported architectures
+    # (e.g. 60;70;80;90 for CUDA 12+), which makes the build extremely slow.
+    if hasattr(self.cuda, 'cudaArch'):
+      args.append('-DCUDA_ARCH=' + self.cuda.cudaArch.replace(',', ';'))
     if not hasattr(self.cuda, 'cudaDir'):
       raise RuntimeError('CUDA directory not detected! Mail configure.log to petsc-maint@mcs.anl.gov.')
     args.append('-DCUDAToolkit_ROOT=' + self.cuda.cudaDir)
