@@ -17,30 +17,11 @@
 
    Currently we supply one ensemble-based assimilator: `PETSCDALETKF`
 
-.seealso: [](ch_da), `PetscDAType`, `PETSCDALETKF`, `PetscDASqrtType`, `PetscDACreate()`, `PetscDASetType()`,
+.seealso: [](ch_da), `PetscDAType`, `PETSCDALETKF`, `PetscDACreate()`, `PetscDASetType()`,
           `PetscDASetSizes()`, `PetscDAEnsembleSetSize()`, `PetscDAEnsembleAnalysis()`, `PetscDAEnsembleForecast()`,
           `PetscDADestroy()`, `PetscDAView()`
 S*/
 typedef struct _p_PetscDA *PetscDA;
-
-/*E
-  PetscDASqrtType - Type of square root of matrices to use the data assimilation algorithms
-
-  Values:
-+  `PETSCDA_SQRT_CHOLESKY` - Use the Cholesky factorization
--  `PETSCDA_SQRT_EIGEN`    - Use the eigenvalue decomposition
-
-  Option Database Key:
-. -petscda_ensemble_sqrt_type <cholesky, eigen> - select the square root type at run time
-
-  Level: intermediate
-
-.seealso: [](ch_da), `PetscDA`, `PetscDAEnsembleSetSqrtType()`, `PetscDAEnsembleGetSqrtType()`
-E*/
-typedef enum {
-  PETSCDA_SQRT_CHOLESKY = 0,
-  PETSCDA_SQRT_EIGEN    = 1
-} PetscDASqrtType;
 
 /*E
   PetscDALETKFLocalizationType - Type of localization kernel used by `PETSCDALETKF`
@@ -121,8 +102,6 @@ PETSC_EXTERN PetscErrorCode PetscDAEnsembleForecast(PetscDA, PetscErrorCode (*)(
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleInitialize(PetscDA, Vec, PetscReal, PetscRandom);
 
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleComputeNormalizedInnovationMatrix(Mat, Vec, Vec, PetscInt, PetscScalar, Mat);
-PETSC_EXTERN PetscErrorCode PetscDAEnsembleSetSqrtType(PetscDA, PetscDASqrtType);
-PETSC_EXTERN PetscErrorCode PetscDAEnsembleGetSqrtType(PetscDA, PetscDASqrtType *);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleTFactor(PetscDA, Mat);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleApplyTInverse(PetscDA, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleApplySqrtTInverse(PetscDA, Mat, Mat);
