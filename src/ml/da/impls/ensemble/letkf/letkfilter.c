@@ -419,12 +419,8 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
     impl->Q_dirty = PETSC_FALSE;
   }
 
-  /* For non-NONE kernels: Cholesky sqrt produces an asymmetric T^{-1/2} = L^{-T}, which is
-     incorrect for the local perturbation update. LETKF requires the symmetric square root
-     T^{-1/2} = V * D^{-1/2} * V^T. The NONE fast path is mathematically ETKF, where
-     Cholesky is fine. The eigendecomposition of T = I + S^T*S (m x m) also requires each
-     vertex to see at least m local observations or T is rank-deficient. */
-  PetscCheck(impl->type == PETSCDA_LETKF_LOC_NONE || impl->en.sqrt_type != PETSCDA_SQRT_CHOLESKY, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Cholesky sqrt type produces asymmetric T^{-1/2}, which is incorrect for LETKF. Use -petscda_ensemble_sqrt_type eigen or PetscDAEnsembleSetSqrtType(da, PETSCDA_SQRT_EIGEN) instead.");
+  /* The eigendecomposition of T = I + S^T*S (m x m) requires each vertex to see at least
+     m local observations or T is rank-deficient. */
   PetscCheck(impl->type == PETSCDA_LETKF_LOC_NONE || impl->Q, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Localization matrix Q not set. Call PetscDALETKFSetLocalizationCoordinates() first.");
   PetscCheck(impl->type == PETSCDA_LETKF_LOC_NONE || m <= impl->min_nnz_per_row, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Ensemble size (%" PetscInt_FMT ") must be <= minimum local observations per vertex (%" PetscInt_FMT "). Increase localization radius or decrease ensemble size", m,
              impl->min_nnz_per_row);
@@ -584,17 +580,12 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   /* Perform local analysis for all vertices */
 
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  /* Use GPU version only if:
-     1. sqrt_type is eigen (GPU version only implements eigen/SVD, not cholesky)
-     2. H matrix is a Kokkos type (aijkokkos) */
+  /* Use GPU version only if H matrix is a Kokkos type (aijkokkos) */
   {
     PetscBool use_gpu = PETSC_FALSE;
-    if (impl->en.sqrt_type == PETSCDA_SQRT_EIGEN) {
   #if !defined(PETSC_USE_COMPLEX)
-      /* Check if H matrix is a Kokkos type */
-      PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
   #endif
-    }
 
     /* Scatter global vectors to local work vectors if available */
     if (impl->obs_scat) {
@@ -679,7 +670,6 @@ static PetscErrorCode PetscDALETKFSetLocalizationType_LETKF(PetscDA da, PetscDAL
 
   PetscFunctionBegin;
   PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
-  PetscCheck(type == PETSCDA_LETKF_LOC_NONE || impl->en.sqrt_type != PETSCDA_SQRT_CHOLESKY, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Cholesky sqrt type produces an asymmetric T^{-1/2} that is incorrect for localized LETKF; call PetscDAEnsembleSetSqrtType(da, PETSCDA_SQRT_EIGEN) before selecting a non-NONE localization kernel.");
   if (impl->type != type) {
     impl->type    = type;
     impl->Q_dirty = PETSC_TRUE;
@@ -828,11 +818,10 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
    domains by avoiding the global ensemble covariance matrix.
 
    Options Database Keys:
-+  -petscda_type letkf                          - set the `PetscDAType` to `PETSCDALETKF`
-.  -petscda_ensemble_size size                  - number of ensemble members
-.  -petscda_ensemble_sqrt_type (cholesky|eigen) - the square root of the matrix to use
-.  -petscda_letkf_batch_size batch_size         - set the batch size for GPU processing
--  -petscda_letkf_localization_radius radius    - localization cutoff radius for the built-in kernels (must be positive)
++  -petscda_type letkf                       - set the `PetscDAType` to `PETSCDALETKF`
+.  -petscda_ensemble_size size               - number of ensemble members
+.  -petscda_letkf_batch_size batch_size      - set the batch size for GPU processing
+-  -petscda_letkf_localization_radius radius - localization cutoff radius for the built-in kernels (must be positive)
 
    Level: beginner
 
@@ -849,7 +838,7 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
    use a localized kernel; otherwise restrict the run to a single MPI rank.
 
 .seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
-          `PetscDALETKFSetLocalizationCoordinates()`, `PetscDAEnsembleSetSize()`, `PetscDASetSizes()`, `PetscDAEnsembleSetSqrtType()`, `PetscDAEnsembleSetInflation()`,
+          `PetscDALETKFSetLocalizationCoordinates()`, `PetscDAEnsembleSetSize()`, `PetscDASetSizes()`, `PetscDAEnsembleSetInflation()`,
           `PetscDAEnsembleComputeMean()`, `PetscDAEnsembleComputeAnomalies()`, `PetscDAEnsembleAnalysis()`, `PetscDAEnsembleForecast()`
 M*/
 

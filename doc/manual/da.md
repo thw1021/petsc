@@ -76,7 +76,7 @@ To choose an implementation type, call
 PetscDASetType(PetscDA da, PetscDAType type);
 ```
 
-or use the command-line option `-petscda_type <name>`; details regarding the
+or use the command-line option `-petscda_type name`; details regarding the
 available implementations are presented in {any}`sec_da_impls`.
 
 `PetscDASetSizes()` records the global state dimension and the number of observations:
@@ -238,7 +238,7 @@ PetscDAEnsembleSetInflation(PetscDA da, PetscReal inflation);
 PetscDAEnsembleGetInflation(PetscDA da, PetscReal *inflation);
 ```
 
-or at runtime with `-petscda_ensemble_inflation <value>` (default: `1.0`, i.e. no inflation).
+or at runtime with `-petscda_ensemble_inflation value` (default: `1.0`, i.e. no inflation).
 
 (sec_da_impls)=
 
@@ -246,7 +246,7 @@ or at runtime with `-petscda_ensemble_inflation <value>` (default: `1.0`, i.e. n
 
 The available `PetscDA` implementations are listed in Table {any}`tab-dadefaults`.
 Custom types can be registered with `PetscDARegister()` and selected at runtime
-with `-petscda_type <name>`.
+with `-petscda_type name`.
 
 ```{eval-rst}
 .. list-table:: PETSc Data Assimilation Methods
@@ -272,30 +272,11 @@ With `-petscda_letkf_localization_type none` it reduces to the classic global ET
 (Algorithm 6.4 in {cite}`da2016`), a deterministic square-root update that avoids
 stochastic perturbations.
 
-LETKF supports two factorization strategies for the reduced-space T-matrix:
-
-```c
-PetscDAEnsembleSetSqrtType(PetscDA da, PetscDASqrtType type);
-PetscDAEnsembleGetSqrtType(PetscDA da, PetscDASqrtType *type);
-```
-
-```{eval-rst}
-.. list-table:: T-matrix square-root types
-   :name: tab-dasqrttypes
-   :header-rows: 1
-
-   * - ``PetscDASqrtType``
-     - Options string
-     - Notes
-   * - ``PETSCDA_SQRT_CHOLESKY``
-     - ``cholesky``
-     - O(n³/3); preferred when the reduced-space matrix is positive definite
-   * - ``PETSCDA_SQRT_EIGEN``
-     - ``eigen``
-     - More robust for semi-definite matrices; handles small negative eigenvalues from round-off
-```
-
-Select at runtime with `-petscda_ensemble_sqrt_type {cholesky,eigen}` (default: `eigen`).
+The reduced-space T-matrix is factored via a symmetric eigendecomposition
+$T = V D V^T$, so the square root used in the ensemble transform is the symmetric
+$T^{-1/2} = V D^{-1/2} V^T$. The symmetric form minimizes the rotation of the prior
+ensemble (preserving member continuity across analysis cycles) and is the only square
+root that is consistent across overlapping local domains under localization.
 
 LETKF-specific configuration:
 
@@ -308,13 +289,13 @@ PetscDALETKFSetLocalizationRadius(PetscDA da, PetscReal radius);
 PetscDALETKFSetLocalizationCoordinates(PetscDA da, Vec xyz[], PetscReal bd[], Mat H);
 ```
 
-The built-in `-petscda_letkf_localization_type`s `gaspari_cohn`, `gaussian`, and `boxcar` are available in
+The built-in `-petscda_letkf_localization_type` values `gaspari_cohn`, `gaussian`, and `boxcar` are available in
 every PETSc build; the `none` type disables localization and is mathematically
 equivalent to global ETKF. The localization matrix Q is built on the device
 matching the observation operator `H`: a Kokkos backend is used when `H` has
 type `MATAIJKOKKOS`, otherwise a CPU analysis path is used. Select the
 kernel at runtime with
-`-petscda_letkf_localization_type {none,gaspari_cohn,gaussian,boxcar}`.
+`-petscda_letkf_localization_type (none|gaspari_cohn|gaussian|boxcar)`.
 
 ```{note}
 The CPU analysis path is currently single-rank only. The unlocalized fast path
@@ -331,10 +312,9 @@ localized kernel; otherwise restrict the run to a single MPI rank.
 
 The `PetscDA` object obeys standard PETSc options parsing. Commonly used switches include:
 
-- `-petscda_type <name>`                         – select a registered `PetscDA` implementation (`letkf`).
-- `-petscda_ensemble_inflation <value>`          – set the covariance inflation factor (default: `1.0`).
-- `-petscda_ensemble_sqrt_type {cholesky,eigen}` – select the T-matrix square-root algorithm (default: `eigen`).
-- `-petscda_view`                                – inspect ensemble metadata and internal sizes.
+- `-petscda_type name`                – select a registered `PetscDA` implementation (`letkf`).
+- `-petscda_ensemble_inflation value` – set the covariance inflation factor (default: `1.0`).
+- `-petscda_view`                     – inspect ensemble metadata and internal sizes.
 
 Because `PetscDA` participates in the PETSc object registry, any prefix applied with `PetscDASetOptionsPrefix()` scopes these options.
 

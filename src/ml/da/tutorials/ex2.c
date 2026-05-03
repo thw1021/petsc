@@ -242,7 +242,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-obs_error", "Observation error standard deviation", "", obs_error_std, &obs_error_std, NULL));
   PetscCall(PetscOptionsReal("-ensemble_init_std", "Initial ensemble spread standard deviation", "", ensemble_init_std, &ensemble_init_std, NULL));
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
-  PetscCall(PetscOptionsReal("-petscda_letkf_localization_radius", "Gaspari-Cohn localization cutoff radius (must be positive)", "", localization_radius, &localization_radius, NULL));
+  PetscCall(PetscOptionsReal("-petscda_letkf_localization_radius", "localization cutoff radius for the built-in kernels (must be positive)", "", localization_radius, &localization_radius, NULL));
   PetscOptionsEnd();
 
   if (ensemble_init_std < 0) ensemble_init_std = obs_error_std;
@@ -349,7 +349,7 @@ int main(int argc, char **argv)
                         "  Ensemble init std      : %.3f\n"
                         "  Random seed            : %" PetscInt_FMT "\n"
                         "  Localization radius    : %g\n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, (double)localization_radius));
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, (PetscInt)SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, (double)localization_radius));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -448,8 +448,8 @@ int main(int argc, char **argv)
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5
 
     test:
-      suffix: chol
-      args: -petscda_type letkf -petscda_ensemble_sqrt_type eigen
+      suffix: letkf_serial
+      args: -petscda_type letkf
 
     test:
       nsize: 3
@@ -457,11 +457,7 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -petscda_letkf_localization_radius 5.0
 
     test:
-      suffix: letkf_loc_none_eigen
-      args: -petscda_type letkf -petscda_letkf_localization_type none -petscda_ensemble_sqrt_type eigen
-
-    test:
-      suffix: letkf_loc_none_chol
-      args: -petscda_type letkf -petscda_letkf_localization_type none -petscda_ensemble_sqrt_type cholesky
+      suffix: letkf_loc_none
+      args: -petscda_type letkf -petscda_letkf_localization_type none
 
   TEST*/

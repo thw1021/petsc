@@ -102,9 +102,4 @@ int main(int argc, char **argv)
     requires: !complex
     args: -petscda_view
 
-  test:
-    suffix: chol
-    requires: !complex
-    args: -petscda_view -petscda_ensemble_sqrt_type cholesky
-
 TEST*/

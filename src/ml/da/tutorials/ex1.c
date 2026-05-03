@@ -576,10 +576,5 @@ int main(int argc, char **argv)
     test:
       requires: !complex
       suffix: eigen
-      args: -petscda_ensemble_sqrt_type eigen
-
-    test:
-      suffix: chol
-      args: -petscda_ensemble_sqrt_type cholesky
 
 TEST*/
