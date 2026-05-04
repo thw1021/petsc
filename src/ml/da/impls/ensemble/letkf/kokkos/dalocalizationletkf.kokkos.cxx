@@ -6,17 +6,15 @@
 #include <../src/ml/da/impls/ensemble/letkf/letkf_kernels.h>
 
 /*
-  PetscDALETKFBuildLocalizationMatrix_Kokkos - Kokkos-backed build of the localization weight matrix `Q`.
+  PetscDALETKFCreateLocalizationMat_Kokkos - Kokkos (`MATAIJKOKKOS`) implementation of the localization
+  weight Mat `Q`.
 
-  Used by the lazy Q construction inside `PetscDAEnsembleAnalysis_LETKF()` when the observation operator is a
-  Kokkos matrix type. The CPU counterpart `PetscDALETKFBuildLocalizationMatrix()` produces a numerically
-  identical Q for the polynomial kernels (`PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_BOXCAR`) and a
-  bit-comparable Q for `PETSCDA_LETKF_LOC_GAUSSIAN` modulo `exp()` rounding.
-
-  `type` must be one of `PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_GAUSSIAN`, `PETSCDA_LETKF_LOC_BOXCAR`.
-  `PETSCDA_LETKF_LOC_NONE` is a caller error.
+  Selected by the `PetscDALETKFCreateLocalizationMat()` dispatcher when `H` is a Kokkos matrix type. The
+  host counterpart `PetscDALETKFCreateLocalizationMat_AIJ()` produces a numerically identical Q for the
+  polynomial kernels (`PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_BOXCAR`) and a bit-comparable
+  Q for `PETSCDA_LETKF_LOC_GAUSSIAN` modulo `exp()` rounding.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFBuildLocalizationMatrix_Kokkos(PetscDALETKFLocalizationType type, PetscReal radius, Vec xyz[], PetscReal bd[], Mat H, Mat *Q)
+PETSC_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat_Kokkos(PetscDALETKFLocalizationType type, PetscReal radius, Vec xyz[], PetscReal bd[], Mat H, Mat *Q)
 {
   PetscInt                           dim = 0, n_vert_local, d, n_obs_global, n_obs_local;
   PetscInt                           rstart, cstart, cend;
