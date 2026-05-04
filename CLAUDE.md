@@ -54,9 +54,7 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 - Formatting is controlled by `.clang-format`. Use `make clangformat` when needed.
 - CI also checks source rules with `make checkbadSource`.
 - Header prototypes should not include parameter names, but function typedef declarations should.
-- Group local variables by type. Do not mix pointer arities on the same declaration line.
-- Initialize local variables in the declaration when practical.
-- In PETSc routines, place exactly one blank line between local declarations and `PetscFunctionBegin`.
+- The local-declaration block is one contiguous group at the top of the routine: variables grouped by type (all `PetscInt`s adjacent, all `PetscReal`s adjacent, etc.), no mixed pointer arities on a single line, no blank lines or section comments splitting the block. Initialize in the declaration when practical. Exactly one blank line separates the block from `PetscFunctionBegin`/`PetscFunctionBeginUser`.
 - PETSc example functions, including `main()`, should begin with `PetscFunctionBeginUser` after declarations.
 - Functions that begin with `PetscFunctionBegin` must return with `PetscFunctionReturn(...)` or `PetscFunctionReturnVoid()`, not raw `return`.
 - For `PetscErrorCode` functions, return `PetscFunctionReturn(PETSC_SUCCESS)` on success.
