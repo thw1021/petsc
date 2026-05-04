@@ -1108,7 +1108,7 @@ int main(int argc, char **argv)
       suffix: kokkos
       # failed on Sunspot@ALCF with sycl
       requires: kokkos_kernels !openmp !sycl
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc jacobi
 
   testset:
     requires: double !defined(PETSC_USE_DMLANDAU_2D)
@@ -1126,7 +1126,7 @@ int main(int argc, char **argv)
     test:
       suffix: kokkos_3d
       requires: kokkos_kernels !openmp
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc jacobi
 
   test:
     suffix: conserve
