@@ -71,6 +71,7 @@
 - Add `DMTSSetIFunctionPre()`
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
+- Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
 
 ## TAO
 
