@@ -24,7 +24,7 @@ struct EigenWorkspace {
   /* Tracking for reuse */
   PetscInt max_chunk_size;
   PetscInt m;
-  PetscInt n_obs_vertex;
+  PetscInt max_nnz;
 
   /* Persistent Kokkos Views */
   using exec_space = Kokkos::DefaultExecutionSpace;
@@ -80,7 +80,7 @@ struct EigenWorkspace {
   #endif
 #endif
 
-  EigenWorkspace() : max_chunk_size(0), m(0), n_obs_vertex(0), all_v(nullptr), all_lambda(nullptr), all_work(nullptr)
+  EigenWorkspace() : max_chunk_size(0), m(0), max_nnz(0), all_v(nullptr), all_lambda(nullptr), all_work(nullptr)
   {
 #if defined(PETSC_USE_COMPLEX)
     all_rwork = nullptr;
@@ -440,28 +440,33 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *impl, Mat H)
   PetscCheck(impl->Q, PETSC_COMM_SELF, PETSC_ERR_LIB, "impl->Q = 0");
   PetscCall(PetscKokkosInitializeCheck());
 
-  /* Get CSR data */
-  PetscInt rstart, rend, i, nnz;
+  PetscInt rstart, rend, i, nnz, total_nnz;
+  MatInfo  info;
+
   PetscCall(MatGetOwnershipRange(impl->Q, &rstart, &rend));
-  nrows = rend - rstart;
+  PetscCall(MatGetInfo(impl->Q, MAT_LOCAL, &info));
+  nrows     = rend - rstart;
+  total_nnz = (PetscInt)info.nz_used;
 
   /* Create IS for local observations needed by this process */
   /* We need to find all unique column indices in the local rows of Q */
   {
     PetscInt     *obs_indices;
     PetscInt      n_obs_local_total = 0;
-    PetscInt      max_obs           = nrows * impl->n_obs_vertex;
     PetscInt      count             = 0;
     PetscHMapI    ht;
     PetscHashIter iter;
     PetscBool     missing;
 
     PetscCall(PetscHMapICreate(&ht));
-    PetscCall(PetscMalloc1(max_obs, &obs_indices));
+
+    /* Allocate obs_indices large enough for the worst case (no duplicate columns across rows). */
+    PetscCall(PetscMalloc1(total_nnz, &obs_indices));
 
     for (i = 0; i < nrows; i++) {
       const PetscInt    *cols;
       const PetscScalar *vals;
+
       PetscCall(MatGetRow(impl->Q, rstart + i, &nnz, &cols, &vals));
       for (PetscInt k = 0; k < nnz; k++) {
         PetscCall(PetscHMapIPut(ht, cols[k], &iter, &missing));
@@ -513,10 +518,10 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *impl, Mat H)
   using view_1d_int    = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
   using view_1d_scalar = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
 
-  /* Allocate device views */
+  /* Allocate device views using actual total nnz from Q */
   view_1d_int    *d_Q_i = new view_1d_int("Q_i", nrows + 1);
-  view_1d_int    *d_Q_j = new view_1d_int("Q_j", nrows * impl->n_obs_vertex);
-  view_1d_scalar *d_Q_a = new view_1d_scalar("Q_a", nrows * impl->n_obs_vertex);
+  view_1d_int    *d_Q_j = new view_1d_int("Q_j", total_nnz);
+  view_1d_scalar *d_Q_a = new view_1d_scalar("Q_a", total_nnz);
 
   /* Create host mirrors */
   auto h_Q_i = Kokkos::create_mirror_view(*d_Q_i);
@@ -556,6 +561,7 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *impl, Mat H)
 PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *impl)
 {
   PetscFunctionBegin;
+  PetscCall(ISDestroy(&impl->obs_is_local));
   PetscCall(VecDestroy(&impl->obs_work));
   PetscCall(VecDestroy(&impl->y_mean_work));
   PetscCall(VecDestroy(&impl->r_inv_sqrt_work));
@@ -822,14 +828,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
   view_1d_unmanaged       mean_view(mean_ptr, lda_x);
   view_2d_unmanaged_write E_view(e_ptr, lda_e, m);
 
+  /* Use cached max nnz per row; compute total nnz for flop counting */
+  MatInfo  info;
+  PetscInt max_nnz_per_row = impl->max_nnz_per_row;
+  PetscInt total_nnz_local;
+
+  PetscCall(MatGetInfo(impl->Q, MAT_LOCAL, &info));
+  total_nnz_local = (PetscInt)info.nz_used;
+
   /* Determine chunk size to avoid OOM on large grids */
   PetscInt chunk_size;
   if (impl->batch_size > 0) {
     chunk_size = impl->batch_size;
   } else {
     /* Target ~2GB workspace. Approx memory per point: m*m*8 (T) + p*m*8 (Z) */
-    /* With reuse: m*m*8 + p*m*8 */
-    PetscInt mem_per_point = sizeof(PetscScalar) * (m * m + impl->n_obs_vertex * m);
+    PetscInt mem_per_point = sizeof(PetscScalar) * (m * m + max_nnz_per_row * m);
     chunk_size             = (PetscInt)(2.0 * 1024 * 1024 * 1024 / mem_per_point);
     /* Clamp to reasonable max to avoid huge allocations even if memory allows */
     if (chunk_size > 32768) chunk_size = 32768;
@@ -874,7 +887,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
   /* OPTIMIZATION: Hoist allocations outside the chunk loop                */
   /* ===================================================================== */
   /* Allocate Kokkos Views once for the maximum chunk size */
-  PetscInt n_obs_vertex_copy = impl->n_obs_vertex;
+  PetscInt max_nnz_copy = max_nnz_per_row;
 
   EigenWorkspace *eigen_work = static_cast<EigenWorkspace *>(impl->eigen_work);
   if (!eigen_work) {
@@ -883,7 +896,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
   }
 
   /* Check if reallocation is needed */
-  if (eigen_work->max_chunk_size < chunk_size || eigen_work->m != m || eigen_work->n_obs_vertex != n_obs_vertex_copy) {
+  if (eigen_work->max_chunk_size < chunk_size || eigen_work->m != m || eigen_work->max_nnz < max_nnz_copy) {
     /* Free old device workspace if exists */
 #if defined(KOKKOS_ENABLE_CUDA)
     PetscCallCUDA(cudaFree(eigen_work->d_work));
@@ -915,20 +928,20 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
     /* Update dimensions */
     eigen_work->max_chunk_size = chunk_size;
     eigen_work->m              = m;
-    eigen_work->n_obs_vertex   = n_obs_vertex_copy;
+    eigen_work->max_nnz        = max_nnz_copy;
 
     /* Allocate Kokkos Views */
-    eigen_work->Z_batch               = view_3d("Z_batch", chunk_size, n_obs_vertex_copy, m);
+    eigen_work->Z_batch               = view_3d("Z_batch", chunk_size, max_nnz_copy, m);
     eigen_work->S_batch               = eigen_work->Z_batch;
     eigen_work->T_batch               = view_3d("T_batch", chunk_size, m, m);
     eigen_work->V_batch               = eigen_work->T_batch;
     eigen_work->Lambda_batch          = view_2d("Lambda_batch", chunk_size, m);
     eigen_work->T_sqrt_batch          = view_3d("T_sqrt_batch", chunk_size, m, m);
     eigen_work->w_batch               = view_2d("w_batch", chunk_size, m);
-    eigen_work->delta_batch           = view_2d("delta_batch", chunk_size, n_obs_vertex_copy);
-    eigen_work->y_batch               = view_2d("y_batch", chunk_size, n_obs_vertex_copy);
-    eigen_work->y_mean_batch          = view_2d("y_mean_batch", chunk_size, n_obs_vertex_copy);
-    eigen_work->r_inv_sqrt_batch      = view_2d("r_inv_sqrt_batch", chunk_size, n_obs_vertex_copy);
+    eigen_work->delta_batch           = view_2d("delta_batch", chunk_size, max_nnz_copy);
+    eigen_work->y_batch               = view_2d("y_batch", chunk_size, max_nnz_copy);
+    eigen_work->y_mean_batch          = view_2d("y_mean_batch", chunk_size, max_nnz_copy);
+    eigen_work->r_inv_sqrt_batch      = view_2d("r_inv_sqrt_batch", chunk_size, max_nnz_copy);
     eigen_work->temp1_batch           = view_2d("temp1_batch", chunk_size, m);
     eigen_work->temp2_batch           = view_2d("temp2_batch", chunk_size, m);
     eigen_work->inv_sqrt_lambda_batch = view_2d("inv_sqrt_lambda_batch", chunk_size, m);
@@ -1035,42 +1048,33 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
 #endif
   }
 
-  /* Create aliases for current function use */
-  view_3d Z_batch_alloc               = eigen_work->Z_batch;
-  view_3d S_batch_alloc               = eigen_work->S_batch;
-  view_3d T_batch_alloc               = eigen_work->T_batch;
-  view_3d V_batch_alloc               = eigen_work->V_batch;
-  view_2d Lambda_batch_alloc          = eigen_work->Lambda_batch;
-  view_3d T_sqrt_batch_alloc          = eigen_work->T_sqrt_batch;
-  view_2d w_batch_alloc               = eigen_work->w_batch;
-  view_2d delta_batch_alloc           = eigen_work->delta_batch;
-  view_2d y_batch_alloc               = eigen_work->y_batch;
-  view_2d y_mean_batch_alloc          = eigen_work->y_mean_batch;
-  view_2d r_inv_sqrt_batch_alloc      = eigen_work->r_inv_sqrt_batch;
-  view_2d temp1_batch_alloc           = eigen_work->temp1_batch;
-  view_2d temp2_batch_alloc           = eigen_work->temp2_batch;
-  view_2d inv_sqrt_lambda_batch_alloc = eigen_work->inv_sqrt_lambda_batch;
+  /* Local aliases so KOKKOS_LAMBDAs capture views by value, not via eigen_work-> */
+  view_3d Z_batch               = eigen_work->Z_batch;
+  view_3d S_batch               = eigen_work->S_batch;
+  view_3d T_batch               = eigen_work->T_batch;
+  view_3d V_batch               = eigen_work->V_batch;
+  view_2d Lambda_batch          = eigen_work->Lambda_batch;
+  view_3d T_sqrt_batch          = eigen_work->T_sqrt_batch;
+  view_2d w_batch               = eigen_work->w_batch;
+  view_2d delta_batch           = eigen_work->delta_batch;
+  view_2d y_batch               = eigen_work->y_batch;
+  view_2d y_mean_batch          = eigen_work->y_mean_batch;
+  view_2d r_inv_sqrt_batch      = eigen_work->r_inv_sqrt_batch;
+  view_2d temp1_batch           = eigen_work->temp1_batch;
+  view_2d temp2_batch           = eigen_work->temp2_batch;
+  view_2d inv_sqrt_lambda_batch = eigen_work->inv_sqrt_lambda_batch;
 
   /* Loop over chunks */
   for (PetscInt chunk_start = 0; chunk_start < n_vertices; chunk_start += chunk_size) {
     PetscInt chunk_end       = (chunk_start + chunk_size > n_vertices) ? n_vertices : chunk_start + chunk_size;
     PetscInt n_batch_current = chunk_end - chunk_start;
 
-    /* Create subviews for current batch size */
-    auto Z_batch               = Kokkos::subview(Z_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL(), Kokkos::ALL());
-    auto S_batch               = Kokkos::subview(S_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL(), Kokkos::ALL());
-    auto T_batch               = Kokkos::subview(T_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL(), Kokkos::ALL());
-    auto V_batch               = Kokkos::subview(V_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL(), Kokkos::ALL());
-    auto Lambda_batch          = Kokkos::subview(Lambda_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto T_sqrt_batch          = Kokkos::subview(T_sqrt_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL(), Kokkos::ALL());
-    auto w_batch               = Kokkos::subview(w_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto delta_batch           = Kokkos::subview(delta_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto y_batch               = Kokkos::subview(y_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto y_mean_batch          = Kokkos::subview(y_mean_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto r_inv_sqrt_batch      = Kokkos::subview(r_inv_sqrt_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto temp1_batch           = Kokkos::subview(temp1_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto temp2_batch           = Kokkos::subview(temp2_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
-    auto inv_sqrt_lambda_batch = Kokkos::subview(inv_sqrt_lambda_batch_alloc, Kokkos::make_pair(0, (int)n_batch_current), Kokkos::ALL());
+    /* Zero batch views to ensure clean padding beyond each row's ncols */
+    Kokkos::deep_copy(S_batch, 0.0);
+    Kokkos::deep_copy(delta_batch, 0.0);
+    Kokkos::deep_copy(y_batch, 0.0);
+    Kokkos::deep_copy(y_mean_batch, 0.0);
+    Kokkos::deep_copy(r_inv_sqrt_batch, 0.0);
 
     /* ===================================================================== */
     /* Step 2.1.2: Fused observation extraction and S/Delta computation     */
@@ -1120,7 +1124,9 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
       Kokkos::parallel_reduce(
         "CheckS", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
         KOKKOS_LAMBDA(const int i, PetscInt &l_count) {
-          for (int j = 0; j < n_obs_vertex_copy; j++) {
+          PetscInt i_global = chunk_start + i;
+          PetscInt ncols    = Q_i_view(i_global + 1) - Q_i_view(i_global);
+          for (PetscInt j = 0; j < ncols; j++) {
             for (int k = 0; k < m; k++) {
               if (S_batch(i, j, k) != S_batch(i, j, k)) l_count++;
             }
@@ -1138,15 +1144,17 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
     /* This reduces operations by ~50% */
     Kokkos::parallel_for(
       "ComputeAllTMatrices", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i) {
-        auto S_i = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
-        auto T_i = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
+        PetscInt i_global = chunk_start + i;
+        PetscInt ncols    = Q_i_view(i_global + 1) - Q_i_view(i_global);
+        auto     S_i      = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
+        auto     T_i      = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
 
         /* Compute upper triangle of T_i = (1/rho)I + S_i^T * S_i */
         /* T_i(j,k) = (1/rho)*delta_jk + sum_p S_i(p,j) * S_i(p,k) for j <= k */
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
             PetscScalar sum = (j == k) ? inflation_inv : 0.0;
-            for (int p = 0; p < n_obs_vertex_copy; p++) sum += S_i(p, j) * S_i(p, k);
+            for (PetscInt p = 0; p < ncols; p++) sum += S_i(p, j) * S_i(p, k);
             T_i(j, k) = sum;
           }
         }
@@ -1205,14 +1213,16 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
     /* Precompute 1/sqrt(Lambda) for use in ensemble update */
     Kokkos::parallel_for(
       "ComputeWeightsAndInvSqrtLambda", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i) {
-        auto S_i               = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
-        auto V_i               = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
-        auto Lambda_i          = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
-        auto delta_i           = Kokkos::subview(delta_batch, i, Kokkos::ALL());
-        auto w_i               = Kokkos::subview(w_batch, i, Kokkos::ALL());
-        auto inv_sqrt_lambda_i = Kokkos::subview(inv_sqrt_lambda_batch, i, Kokkos::ALL());
-        auto temp1             = Kokkos::subview(temp1_batch, i, Kokkos::ALL());
-        auto temp2             = Kokkos::subview(temp2_batch, i, Kokkos::ALL());
+        PetscInt i_global          = chunk_start + i;
+        PetscInt ncols             = Q_i_view(i_global + 1) - Q_i_view(i_global);
+        auto     S_i               = Kokkos::subview(S_batch, i, Kokkos::make_pair((PetscInt)0, ncols), Kokkos::ALL());
+        auto     V_i               = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
+        auto     Lambda_i          = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
+        auto     delta_i           = Kokkos::subview(delta_batch, i, Kokkos::make_pair((PetscInt)0, ncols));
+        auto     w_i               = Kokkos::subview(w_batch, i, Kokkos::ALL());
+        auto     inv_sqrt_lambda_i = Kokkos::subview(inv_sqrt_lambda_batch, i, Kokkos::ALL());
+        auto     temp1             = Kokkos::subview(temp1_batch, i, Kokkos::ALL());
+        auto     temp2             = Kokkos::subview(temp2_batch, i, Kokkos::ALL());
 
         /* 1. Compute w_i = V * L^-1 * V^T * S^T * delta */
         /* Step 1a: temp1 = S^T * delta using KokkosBlas::gemv for better vectorization */
@@ -1331,10 +1341,10 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
     flops += n_obs_total * (2.0 + 2.0 * m);
 
     /* Step 2.1.4: Optimized T matrix formation */
-    flops += (PetscReal)n_vertices * m * (m + 1) * impl->n_obs_vertex;
+    flops += (PetscReal)total_nnz_local * m * (m + 1);
 
     /* Step 3.1.2: Precompute w and inv_sqrt_lambda */
-    flops += (PetscReal)n_vertices * (2.0 * m * impl->n_obs_vertex + 4.0 * m * m + 3.0 * m);
+    flops += (PetscReal)total_nnz_local * 2.0 * m + (PetscReal)n_vertices * (4.0 * m * m + 3.0 * m);
 
     /* Step 3.1.3: Fused G computation and ensemble update */
     /* T_sqrt: 1.5*m^3 + 1.5*m^2 */
