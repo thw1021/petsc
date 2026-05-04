@@ -16,7 +16,7 @@ The framework is extensible to other assimilation techniques.
 
 - {any}`sec_da_letkf`
 
-These centralize ensemble storage, observational metadata, and user-defined forecast/analysis operators so that algorithms can run independently of the MPI layout or the vector/matrix backends.
+The `PetscDA` object owns the ensemble `Mat`, the observation operator, and the registered forecast/analysis callbacks, so assimilation algorithms work against a single API regardless of how the ensemble is partitioned across MPI ranks or which `Mat`/`Vec` backend stores it.
 
 (sec_da_ensemble_lifecycle)=
 
