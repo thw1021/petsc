@@ -627,7 +627,10 @@ static inline void PetscSparseDensePlusDot_AVX512_Private(PetscScalar *sum, cons
   __m256i  vec_idx;
   PetscInt j;
 
-  vec_y = _mm512_setzero_pd();
+  vec_y    = _mm512_setzero_pd();
+  vec_x    = _mm512_setzero_pd();
+  vec_idx  = _mm256_setzero_si256();
+  vec_vals = _mm512_setzero_pd();
   for (j = 0; j < (n >> 3); j++) {
     vec_idx  = _mm256_loadu_si256((__m256i const *)aj);
     vec_vals = _mm512_loadu_pd(aa);

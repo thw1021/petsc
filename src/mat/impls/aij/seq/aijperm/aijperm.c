@@ -323,6 +323,10 @@ static PetscErrorCode MatMult_SeqAIJPERM(Mat A, Vec xx, Vec yy)
   xgroup  = aijperm->xgroup;
   nzgroup = aijperm->nzgroup;
 
+  #if defined(PETSC_USE_AVX512_KERNELS) && defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
+  vec_x = _mm512_setzero_pd();
+  #endif
+
   for (igroup = 0; igroup < ngroup; igroup++) {
     jstart = xgroup[igroup];
     jend   = xgroup[igroup + 1] - 1;
