@@ -758,20 +758,25 @@ PetscErrorCode PetscDAEnsembleAnalysis(PetscDA da, Vec observation, Mat H)
 }
 
 /*@C
-  PetscDAEnsembleForecast - Advances every ensemble member through the user-supplied forecast model.
+  PetscDAEnsembleForecast - Advances the entire ensemble through the user-supplied forecast model.
 
   Collective
 
   Input Parameters:
 + da    - the `PetscDA` context
-. model - routine that evaluates the model map `f(input, output; ctx)`
+. model - routine that evaluates the model map `f(input, output; ctx)` on the ensemble matrix; if the model
+          can only advance one state at a time (e.g. a `TS`-driven step), it must loop over columns itself
 - ctx   - optional context for `model`
 
   Level: intermediate
 
+  Note:
+  `model` is called with the same `Mat` for `input` and `output`, so it is free to advance the ensemble
+  in place. The columns of the ensemble matrix are the individual members.
+
 .seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleAnalysis()`
 @*/
-PetscErrorCode PetscDAEnsembleForecast(PetscDA da, PetscErrorCode (*model)(Vec, Vec, PetscCtx), PetscCtx ctx)
+PetscErrorCode PetscDAEnsembleForecast(PetscDA da, PetscErrorCode (*model)(Mat, Mat, PetscCtx), PetscCtx ctx)
 {
   PetscDA_Ensemble *en = (PetscDA_Ensemble *)da->data;
 
@@ -1002,27 +1007,12 @@ PetscErrorCode PetscDAEnsembleComputeNormalizedInnovationMatrix(Mat Z, Vec y_mea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscDAEnsembleForecast_Ensemble(PetscDA da, PetscErrorCode (*model)(Vec, Vec, PetscCtx), PetscCtx ctx)
+PETSC_INTERN PetscErrorCode PetscDAEnsembleForecast_Ensemble(PetscDA da, PetscErrorCode (*model)(Mat, Mat, PetscCtx), PetscCtx ctx)
 {
   PetscDA_Ensemble *en = (PetscDA_Ensemble *)da->data;
-  Vec               col_in, col_out, temp;
-  PetscInt          i;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-
-  /* Create temp vector from ensemble matrix (right vector = state space) */
-  PetscCall(MatCreateVecs(en->ensemble, NULL, &temp));
-
-  for (i = 0; i < en->size; i++) {
-    PetscCall(MatDenseGetColumnVecRead(en->ensemble, i, &col_in));
-    PetscCall(model(col_in, temp, ctx));
-    PetscCall(MatDenseRestoreColumnVecRead(en->ensemble, i, &col_in));
-
-    PetscCall(MatDenseGetColumnVecWrite(en->ensemble, i, &col_out));
-    PetscCall(VecCopy(temp, col_out));
-    PetscCall(MatDenseRestoreColumnVecWrite(en->ensemble, i, &col_out));
-  }
-  PetscCall(VecDestroy(&temp));
+  PetscCall((*model)(en->ensemble, en->ensemble, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
