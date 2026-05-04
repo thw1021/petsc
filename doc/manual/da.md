@@ -202,27 +202,40 @@ gain computations, and posterior updates.
 
 ## Forecast step
 
-`PetscDAEnsembleForecast()` wraps the forecast step. The user supplies a function that advances a single ensemble member:
+`PetscDAEnsembleForecast()` wraps the forecast step. The user supplies a function that advances the entire ensemble matrix in one call:
 
 Calling sequence for model:
 
-- `input` - the vector to be evolved, forecasted, time-stepped, or otherwise advanced
-- `output` - the forecast, evolved, or time-stepped result
+- `input` - the ensemble matrix whose columns are the states to be evolved, forecasted, time-stepped, or otherwise advanced
+- `output` - the ensemble matrix that will hold the advanced states (the framework passes the same `Mat` for `input` and `output`, so the model may operate in place)
 - `ctx` - the context for the model function
 
+A model that can advance the whole ensemble at once (e.g. a vectorized RHS, a Kokkos-resident propagator, or a single time integrator over a stacked state) writes directly to `output`. A model that can only advance one state at a time, such as a `TS`-driven step, loops over the columns itself:
+
 ```c
-/* Prototype for model forecast M(x) */
-PetscErrorCode ModelForecast(Vec input, Vec output, PetscCtx ctx) {
-  /* Advance input by dt to produce output */
-  /* (e.g., step a TS object) */
-  return PETSC_SUCCESS;
+/* Prototype for model forecast M(X) */
+PetscErrorCode ModelForecast(Mat input, Mat output, PetscCtx ctx) {
+  PetscInt n, j;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetSize(input, NULL, &n));
+  for (j = 0; j < n; j++) {
+    Vec col_in, col_out;
+
+    PetscCall(MatDenseGetColumnVecRead(input, j, &col_in));
+    PetscCall(MatDenseGetColumnVecWrite(output, j, &col_out));
+    if (col_in != col_out) PetscCall(VecCopy(col_in, col_out));
+    /* Advance col_out by dt (e.g., step a TS object) */
+    PetscCall(MatDenseRestoreColumnVecWrite(output, j, &col_out));
+    PetscCall(MatDenseRestoreColumnVecRead(input, j, &col_in));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscCall(PetscDAEnsembleForecast(da, ModelForecast, ctx));
 ```
 
 `ModelForecast` can call PETSc time integrators ({any}`ch_ts`), nonlinear solvers ({any}`ch_snes`), or bespoke device kernels.
-The `PetscDA` layer orchestrates calls across the entire ensemble, issuing them in rank-local loops while ensuring that ownership and recycling semantics remain correct.
 
 (sec_da_inflation)=
 

@@ -263,18 +263,34 @@ static inline PetscErrorCode ShallowWater2DContextDestroy(ShallowWater2DCtx **ct
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode ShallowWaterStep2D(Vec input, Vec output, PetscCtx ctx)
+/* Advance a single state vector one TS step. Used by the truth trajectory and as the per-column kernel of ShallowWaterStep2D(). */
+static inline PetscErrorCode ShallowWaterStep2DVec(ShallowWater2DCtx *sw, Vec x)
 {
-  ShallowWater2DCtx *sw = (ShallowWater2DCtx *)ctx;
-
   PetscFunctionBeginUser;
-  if (input != output) PetscCall(VecCopy(input, output));
   PetscCall(TSSetTime(sw->ts, 0.0));
   PetscCall(TSSetStepNumber(sw->ts, 0));
   PetscCall(TSSetTimeStep(sw->ts, sw->dt));
   PetscCall(TSSetMaxSteps(sw->ts, 1));
   PetscCall(TSSetMaxTime(sw->ts, sw->dt));
-  PetscCall(TSSolve(sw->ts, output));
+  PetscCall(TSSolve(sw->ts, x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode ShallowWaterStep2D(Mat input, Mat output, PetscCtx ctx)
+{
+  ShallowWater2DCtx *sw = (ShallowWater2DCtx *)ctx;
+  PetscInt           n, j;
+
+  PetscFunctionBeginUser;
+  PetscCheck(input == output, PetscObjectComm((PetscObject)input), PETSC_ERR_SUP, "In-place forecast only: input and output must be the same Mat");
+  PetscCall(MatGetSize(input, NULL, &n));
+  for (j = 0; j < n; j++) {
+    Vec col;
+
+    PetscCall(MatDenseGetColumnVecWrite(output, j, &col));
+    PetscCall(ShallowWaterStep2DVec(sw, col));
+    PetscCall(MatDenseRestoreColumnVecWrite(output, j, &col));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
