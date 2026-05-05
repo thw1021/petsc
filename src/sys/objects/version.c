@@ -72,7 +72,7 @@ PetscErrorCode PetscGetVersionNumber(PetscInt *major, PetscInt *minor, PetscInt 
 
 .seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`
 @*/
-PetscErrorCode PetscGetConfiguration(const char **configuration)
+PetscErrorCode PetscGetConfiguration(const char *configuration[])
 {
   PetscFunctionBegin;
   *configuration = petscconfigureoptions;
