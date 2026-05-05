@@ -5,7 +5,7 @@
 #include <petscts.h>
 #include <petscvec.h>
 
-static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
+static char help[] = "Deterministic LETKF (NONE-localization) example for the Lorenz-96 model. See "
                      "Algorithm 6.4 of \n"
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n"
@@ -162,27 +162,43 @@ static PetscErrorCode Lorenz96ContextDestroy(Lorenz96Ctx **ctx)
 }
 
 /*
-  Lorenz96Step - Advance state vector one time step using Lorenz-96 dynamics
+  Lorenz96Step - Advance every column of the ensemble matrix one time step using Lorenz-96 dynamics.
 
   Input Parameters:
-+ input - state vector to be advanced
++ input - ensemble matrix whose columns are the states to be advanced
 - ctx   - Lorenz96 context (contains reusable TS)
 
   Output Parameter:
-. output - state vector after one time step
+. output - ensemble matrix whose columns hold the advanced states
 
   Notes:
-  Uses a single explicit RK4 step with the pre-configured TS object for efficiency.
+  TS only advances one state at a time, so loop over the columns here. Uses a single explicit RK4 step
+  with the pre-configured TS object for efficiency.
 */
-static PetscErrorCode Lorenz96Step(Vec input, Vec output, PetscCtx ctx)
+/* Advance a single state vector one TS step. Used by the truth trajectory and as the per-column kernel of Lorenz96Step(). */
+static PetscErrorCode Lorenz96StepVec(Lorenz96Ctx *l95, Vec x)
+{
+  PetscFunctionBeginUser;
+  PetscCall(TSSetTime(l95->ts, 0.0));
+  PetscCall(TSSolve(l95->ts, x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Lorenz96Step(Mat input, Mat output, PetscCtx ctx)
 {
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
+  PetscInt     n, j;
 
   PetscFunctionBeginUser;
-  /* Reset the TS time for each integration */
-  PetscCall(TSSetTime(l95->ts, 0.0));
-  if (input != output) PetscCall(VecCopy(input, output));
-  PetscCall(TSSolve(l95->ts, output));
+  PetscCheck(input == output, PetscObjectComm((PetscObject)input), PETSC_ERR_SUP, "In-place forecast only: input and output must be the same Mat");
+  PetscCall(MatGetSize(input, NULL, &n));
+  for (j = 0; j < n; j++) {
+    Vec col;
+
+    PetscCall(MatDenseGetColumnVecWrite(output, j, &col));
+    PetscCall(Lorenz96StepVec(l95, col));
+    PetscCall(MatDenseRestoreColumnVecWrite(output, j, &col));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -280,40 +296,27 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
 
 int main(int argc, char **argv)
 {
-  /* Configuration parameters */
-  PetscInt  n                 = DEFAULT_N;
-  PetscInt  steps             = DEFAULT_STEPS;
-  PetscInt  burn              = DEFAULT_BURN;
-  PetscInt  obs_freq          = DEFAULT_OBS_FREQ;
-  PetscInt  random_seed       = DEFAULT_RANDOM_SEED;
-  PetscInt  ensemble_size     = DEFAULT_ENSEMBLE_SIZE;
-  PetscReal F                 = DEFAULT_F;
-  PetscReal dt                = DEFAULT_DT;
-  PetscReal obs_error_std     = DEFAULT_OBS_ERROR_STD;
-  PetscReal ensemble_init_std = 1; /* Initial ensemble spread */
-
-  /* PETSc objects */
   Lorenz96Ctx *l95_ctx = NULL, *truth_ctx = NULL;
   DM           da_state;
   PetscDA      da;
   Vec          x0, x_mean, x_forecast;
   Vec          truth_state, rmse_work;
   Vec          observation, obs_noise, obs_error_var;
-  PetscRandom  rng;
   Mat          H = NULL; /* Observation operator matrix */
-
-  /* Statistics tracking */
-  PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0;
-  PetscReal sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
-  PetscInt  n_stat_steps = 0;
-  PetscInt  obs_count    = 0;
-  PetscInt  step, progress_interval;
+  PetscRandom  rng;
+  PetscInt     n = DEFAULT_N, steps = DEFAULT_STEPS, burn = DEFAULT_BURN, obs_freq = DEFAULT_OBS_FREQ;
+  PetscInt     random_seed = DEFAULT_RANDOM_SEED, ensemble_size = DEFAULT_ENSEMBLE_SIZE;
+  PetscInt     n_stat_steps = 0, obs_count = 0, step, progress_interval;
+  PetscReal    F = DEFAULT_F, dt = DEFAULT_DT, obs_error_std = DEFAULT_OBS_ERROR_STD;
+  PetscReal    ensemble_init_std = 1; /* Initial ensemble spread */
+  PetscReal    rmse_forecast = 0.0, rmse_analysis = 0.0;
+  PetscReal    sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   /* Parse command-line options */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 ETKF Quick Example", NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 LETKF Quick Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
@@ -360,7 +363,7 @@ int main(int argc, char **argv)
 
   /* Spin up truth to get onto attractor */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %" PetscInt_FMT " steps...\n", (PetscInt)SPINUP_STEPS));
-  for (PetscInt k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, truth_ctx));
+  for (PetscInt k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96StepVec(truth_ctx, truth_state));
 
   /* Initialize observation vectors */
   PetscCall(VecDuplicate(x0, &observation));
@@ -377,7 +380,8 @@ int main(int argc, char **argv)
 
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da));
-  PetscCall(PetscDASetType(da, PETSCDAETKF)); /* Set ETKF type */
+  PetscCall(PetscDASetType(da, PETSCDALETKF));
+  PetscCall(PetscDALETKFSetLocalizationType(da, PETSCDA_LETKF_LOC_NONE));
   PetscCall(PetscDASetSizes(da, n, n));
   PetscCall(PetscDAEnsembleSetSize(da, ensemble_size));
   PetscCall(PetscDASetFromOptions(da));
@@ -390,7 +394,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDAEnsembleInitialize(da, truth_state, ensemble_init_std, rng));
 
   /* Print configuration summary */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 ETKF Example\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "======================\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                         "  State dimension       : %" PetscInt_FMT "\n"
@@ -445,7 +449,7 @@ int main(int argc, char **argv)
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
       PetscCall(PetscDAEnsembleForecast(da, Lorenz96Step, l95_ctx));
-      PetscCall(Lorenz96Step(truth_state, truth_state, truth_ctx));
+      PetscCall(Lorenz96StepVec(truth_ctx, truth_state));
     }
   }
 
@@ -575,10 +579,5 @@ int main(int argc, char **argv)
     test:
       requires: !complex
       suffix: eigen
-      args: -petscda_ensemble_sqrt_type eigen
-
-    test:
-      suffix: chol
-      args: -petscda_ensemble_sqrt_type cholesky
 
 TEST*/

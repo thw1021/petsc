@@ -85,6 +85,8 @@
 
 ## PetscDA
 
+- Remove `PETSCDAETKF`; use `PETSCDALETKF` with `PetscDALETKFSetLocalizationType(da, PETSCDA_LETKF_LOC_NONE)` for identical behavior
+- Remove `PetscDAEnsembleSetSqrtType()` and the `-petscda_ensemble_sqrt_type` option; the symmetric-eigendecomposition square root is now the only path
 
 ## DM
 

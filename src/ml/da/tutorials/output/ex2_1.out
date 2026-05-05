@@ -5,7 +5,6 @@ PetscDA Object: 1 MPI process
   Ensemble size: 30
   Assembled: true
   Inflation: 1.
-  Square root type: eigen
   Local observations per vertex: 40
   Localization matrix: not set
 Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
