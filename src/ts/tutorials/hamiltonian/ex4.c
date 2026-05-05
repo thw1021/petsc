@@ -95,6 +95,7 @@ static char help[] = "Two-level system for Landau Damping using Vlasov-Poisson e
 
 PETSC_EXTERN PetscErrorCode stream(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
 PETSC_EXTERN PetscErrorCode line(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
+static PetscErrorCode ComputeFieldAtParticles(SNES, DM);
 
 const char *EMTypes[] = {"primal", "mixed", "coulomb", "none", "EMType", "EM_", NULL};
 typedef enum {
@@ -155,6 +156,7 @@ typedef struct {
   PetscBool    moment_field_monitor; // Flag to show moment field monitor
   PetscBool    positions_monitor;    // Flag to show particle positins at each time step
   PetscBool    poisson_monitor;      // Flag to display charge, E field, and potential at each solve
+  PetscBool    energy_monitor;       // Flag to print KE, field energy, total energy at each step
   PetscBool    initial_monitor;      // Flag to monitor the initial conditions
   PetscInt     velocity_monitor;     // Cell to monitor the velocity distribution for
   PetscBool    perturbed_weights;    // Uniformly sample x,v space with gaussian weights
@@ -232,6 +234,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->initial_monitor        = PETSC_FALSE;
   options->perturbed_weights      = PETSC_FALSE;
   options->poisson_monitor        = PETSC_FALSE;
+  options->energy_monitor         = PETSC_FALSE;
   options->positions_monitor      = PETSC_FALSE;
   options->velocity_monitor       = -1;
   options->ostep                  = 100;
@@ -298,6 +301,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-ics_monitor", "Flag to show initial condition histograms", __FILE__, options->initial_monitor, &options->initial_monitor, NULL));
   PetscCall(PetscOptionsBool("-positions_monitor", "The flag to show particle positions", __FILE__, options->positions_monitor, &options->positions_monitor, NULL));
   PetscCall(PetscOptionsBool("-poisson_monitor", "The flag to show charges, Efield and potential solve", __FILE__, options->poisson_monitor, &options->poisson_monitor, NULL));
+  PetscCall(PetscOptionsBool("-energy_monitor", "Print KE, field energy, total energy at each step", __FILE__, options->energy_monitor, &options->energy_monitor, NULL));
   PetscCall(PetscOptionsInt("-velocity_monitor", "Cell to show velocity histograms", __FILE__, options->velocity_monitor, &options->velocity_monitor, NULL));
   PetscCall(PetscOptionsBool("-twostream", "Run two stream instability", __FILE__, options->twostream, &options->twostream, NULL));
   PetscCall(PetscOptionsBool("-perturbed_weights", "Flag to run uniform sampling with perturbed weights", __FILE__, options->perturbed_weights, &options->perturbed_weights, NULL));
@@ -740,6 +744,52 @@ static PetscErrorCode ComputeLogEmaxJacobian(Tao tao, Vec x, Mat J, Mat Jpre, vo
   }
   PetscCall(MatDenseRestoreArray(J, &jac));
   PetscCall(MatViewFromOptions(J, NULL, "-emax_jac_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MonitorEnergy(TS ts, PetscInt step, PetscReal t, Vec U, void *Ctx)
+{
+  AppCtx            *ctx = (AppCtx *)Ctx;
+  DM                 sw;
+  Vec                phi;
+  const PetscScalar *u, *weight;
+  PetscScalar        fieldEnergy = 0.;
+  PetscReal          KE = 0., *coords;
+  PetscInt           dim, Np;
+
+  PetscFunctionBeginUser;
+  if (step < 0) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
+  PetscCall(DMSwarmGetLocalSize(sw, &Np));
+
+  /* Copy current positions from U into swarm and recompute phi */
+  PetscCall(VecGetArrayRead(U, &u));
+  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+  for (PetscInt p = 0; p < Np; ++p)
+    for (PetscInt d = 0; d < dim; ++d) coords[p * dim + d] = PetscRealPart(u[(p * 2 + 0) * dim + d]);
+  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+  PetscCall(VecRestoreArrayRead(U, &u));
+  PetscCall(ComputeFieldAtParticles(ctx->snes, sw));
+
+  /* Field energy from freshly computed phi */
+  PetscCall(DMGetNamedGlobalVector(ctx->dmPot, "phi", &phi));
+  PetscCall(computeFieldEnergy(ctx->dmPot, phi, &fieldEnergy));
+  PetscCall(DMRestoreNamedGlobalVector(ctx->dmPot, "phi", &phi));
+
+  /* Kinetic energy with weights */
+  PetscCall(VecGetArrayRead(U, &u));
+  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
+  for (PetscInt p = 0; p < Np; ++p) {
+    const PetscReal w  = PetscRealPart(weight[p]);
+    PetscReal       v2 = 0.;
+    for (PetscInt d = 0; d < dim; ++d) v2 += PetscSqr(PetscRealPart(u[(p * 2 + 1) * dim + d]));
+    KE += 0.5 * w * v2;
+  }
+  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
+  PetscCall(VecRestoreArrayRead(U, &u));
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Energy step %4" PetscInt_FMT " t=%20.15e  KE=%20.15e  Field=%20.15e  Total=%20.15e\n", step, (double)t, (double)KE, (double)PetscRealPart(fieldEnergy), (double)(KE + PetscRealPart(fieldEnergy))));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2644,23 +2694,37 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
 {
   AppCtx            *ctx = (AppCtx *)Ctx;
   DM                 sw;
+  SNES               snes = ctx->snes;
   Vec                phi;
   const PetscScalar *u;
+  PetscScalar       *weight;
   PetscInt           dim, Np, cStart, cEnd;
-  PetscReal         *vel, *coords, m_p = 1.;
+  PetscReal         *coords, m_p = 1.;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMPlexGetHeightStratum(ctx->dmPot, 0, &cStart, &cEnd));
+  PetscCall(DMSwarmGetLocalSize(sw, &Np));
+
+  /* Copy trial positions from U into swarm coordinates so that the Poisson
+     solve uses the trial state, not the stale swarm positions */
+  PetscCall(VecGetArrayRead(U, &u));
+  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+  for (PetscInt p = 0; p < Np; ++p)
+    for (PetscInt d = 0; d < dim; ++d) coords[p * dim + d] = PetscRealPart(u[(p * 2 + 0) * dim + d]);
+  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+  PetscCall(VecRestoreArrayRead(U, &u));
+
+  /* Recompute E field and phi at trial positions */
+  PetscCall(ComputeFieldAtParticles(snes, sw));
 
   PetscCall(DMGetNamedGlobalVector(ctx->dmPot, "phi", &phi));
   PetscCall(VecViewFromOptions(phi, NULL, "-phi_view_dg"));
   PetscCall(computeFieldEnergy(ctx->dmPot, phi, F));
   PetscCall(DMRestoreNamedGlobalVector(ctx->dmPot, "phi", &phi));
 
-  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
+  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetLocalSize(U, &Np));
@@ -2674,25 +2738,25 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
       const PetscInt  p  = points[cp];
       const PetscReal v2 = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
 
-      *F += 0.5 * m_p * v2;
+      *F += 0.5 * m_p * PetscRealPart(weight[p]) * v2;
     }
     PetscCall(DMSwarmSortRestorePointsPerCell(sw, c, &Ncp, &points));
   }
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(DMSwarmSortRestoreAccess(sw));
-  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&vel));
+  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* dF/dx = q E   dF/dv = v */
+/* dF/dx = w_p * q E   dF/dv = w_p * v */
 PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
 {
   DM                 sw;
   SNES               snes = ((AppCtx *)ctx)->snes;
-  const PetscReal   *coords, *vel, *E;
-  const PetscScalar *u;
+  const PetscReal   *E;
+  const PetscScalar *u, *weight;
   PetscScalar       *g;
+  PetscReal         *coords;
   PetscReal          m_p = 1., q_p = -1.;
   PetscInt           dim, d, Np, p;
 
@@ -2701,25 +2765,28 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
   PetscCall(VecGetArrayRead(U, &u));
-  PetscCall(VecGetArray(G, &g));
 
-  PetscLogEvent COMPUTEFIELD;
-  PetscCall(PetscLogEventRegister("COMPFIELDATPART", TS_CLASSID, &COMPUTEFIELD));
-  PetscCall(PetscLogEventBegin(COMPUTEFIELD, 0, 0, 0, 0));
-  PetscCall(ComputeFieldAtParticles(snes, sw));
-  PetscCall(PetscLogEventEnd(COMPUTEFIELD, 0, 0, 0, 0));
+  /* Copy trial positions from U into swarm coordinates so that the Poisson
+     solve uses the trial state, not the stale swarm positions */
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
+  for (p = 0; p < Np; ++p)
+    for (d = 0; d < dim; ++d) coords[p * dim + d] = PetscRealPart(u[(p * 2 + 0) * dim + d]);
+  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+
+  PetscCall(ComputeFieldAtParticles(snes, sw));
+
+  PetscCall(VecGetArray(G, &g));
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
+  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
   for (p = 0; p < Np; ++p) {
+    const PetscReal w = PetscRealPart(weight[p]);
     for (d = 0; d < dim; ++d) {
-      g[(p * 2 + 0) * dim + d] = -(q_p / m_p) * E[p * dim + d];
-      g[(p * 2 + 1) * dim + d] = m_p * u[(p * 2 + 1) * dim + d];
+      g[(p * 2 + 0) * dim + d] = -(q_p / m_p) * w * E[p * dim + d];
+      g[(p * 2 + 1) * dim + d] = m_p * w * u[(p * 2 + 1) * dim + d];
     }
   }
+  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
-  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&vel));
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(VecRestoreArray(G, &g));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3029,6 +3096,7 @@ int main(int argc, char **argv)
   if (ctx.positions_monitor) PetscCall(TSMonitorSet(ts, MonitorPositions_2D, &ctx, NULL));
   if (ctx.poisson_monitor) PetscCall(TSMonitorSet(ts, MonitorPoisson, &ctx, NULL));
   if (ctx.velocity_monitor >= 0) PetscCall(TSMonitorSet(ts, MonitorVelocity, &ctx, NULL));
+  if (ctx.energy_monitor) PetscCall(TSMonitorSet(ts, MonitorEnergy, &ctx, NULL));
 
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSGetTimeStep(ts, &dt));
