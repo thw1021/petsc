@@ -133,6 +133,7 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
   }
   PetscCallCUDA(cudaFree(lu->d_b));
   PetscCallCUDA(cudaFree(lu->d_x));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   PetscCall(PetscFree(A->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -265,8 +266,6 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   lu->n   = n;
   lu->nnz = nnz;
 
-  PetscCall(MatSetFromOptions_cuDSS(F));
-
   PetscCallCUDSS(cudssCreate, &lu->handle);
   PetscCallCUDSS(cudssConfigCreate, &lu->config);
   PetscCallCUDSS(cudssDataCreate, lu->handle, &lu->data);
@@ -365,12 +364,15 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
     PetscCall(MatConvert(B, MATDENSECUDA, MAT_INITIAL_MATRIX, &Bcuda));
   } else Bcuda = B;
   if (!XisCUDA) {
-    PetscCall(PetscInfo(F, "Converting X from host to MATDENSECUDA; consider using MATSEQDENSECUDA for better performance\n"));
-    PetscCall(MatConvert(X, MATDENSECUDA, MAT_INITIAL_MATRIX, &Xcuda));
+    PetscInt m_x, N_x;
+    PetscCall(PetscInfo(F, "Creating empty MATDENSECUDA for X (output only, no host-to-device copy needed)\n"));
+    PetscCall(MatGetSize(X, &m_x, &N_x));
+    PetscCall(MatCreateDenseCUDA(PETSC_COMM_SELF, m_x, N_x, m_x, N_x, NULL, &Xcuda));
   } else Xcuda = X;
   PetscCall(MatGetSize(Bcuda, &n, &nrhs));
   PetscCall(MatGetSize(Xcuda, &nX, &nrhsX));
   PetscCheck(n == nX && nrhs == nrhsX, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible matrix dimensions: B is %" PetscInt_FMT " x %" PetscInt_FMT ", X is %" PetscInt_FMT " x %" PetscInt_FMT, n, nrhs, nX, nrhsX);
+  PetscCheck(n == lu->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "B row count %" PetscInt_FMT " does not match factored matrix size %" PetscInt_FMT, n, lu->n);
   PetscCall(MatDenseGetLDA(Bcuda, &ldb));
   PetscCall(MatDenseGetLDA(Xcuda, &ldx));
   PetscCall(MatDenseCUDAGetArrayRead(Bcuda, &barray));
@@ -485,9 +487,10 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
 
   if (ftype == MAT_FACTOR_LU) B->ops->lufactorsymbolic = MatLUFactorSymbolic_cuDSS;
   else B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_cuDSS;
-  B->ops->destroy = MatDestroy_cuDSS;
-  B->ops->view    = MatView_cuDSS;
-  B->ops->getinfo = MatGetInfo_External;
+  B->ops->destroy        = MatDestroy_cuDSS;
+  B->ops->view           = MatView_cuDSS;
+  B->ops->getinfo        = MatGetInfo_External;
+  B->ops->setfromoptions = MatSetFromOptions_cuDSS;
 
   PetscCall(PetscFree(B->solvertype));
   PetscCall(PetscStrallocpy(MATSOLVERCUDSS, &B->solvertype));
