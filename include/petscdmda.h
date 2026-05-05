@@ -120,6 +120,8 @@ PETSC_EXTERN PetscErrorCode DMDAGetStencilWidth(DM, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMDAMapMatStencilToGlobal(DM, PetscInt, const MatStencil[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMDASetOwnershipRanges(DM, const PetscInt[], const PetscInt[], const PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMDAGetOwnershipRanges(DM, const PetscInt *[], const PetscInt *[], const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode DMDAGetGhostOwnershipRanges(DM, const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode DMDARestoreGhostOwnershipRanges(DM, const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[]);
 PETSC_EXTERN PetscErrorCode DMDASetNumProcs(DM, PetscInt, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode DMDASetStencilType(DM, DMDAStencilType);
 PETSC_EXTERN PetscErrorCode DMDAGetStencilType(DM, DMDAStencilType *);
@@ -142,6 +144,8 @@ PETSC_EXTERN PetscErrorCode DMDAVecGetArrayDOFWrite(DM, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMDAVecRestoreArrayDOFWrite(DM, Vec, void *);
 
 PETSC_EXTERN PetscErrorCode DMDACreatePatchIS(DM, MatStencil *, MatStencil *, IS *, PetscBool);
+
+PETSC_EXTERN PetscErrorCode DMDASetPointBC(DM, PetscInt, IS[], IS[]);
 
 /*MC
       DMDACoor2d - Structure for holding 2d (x and y) coordinates when working with `DMDA`

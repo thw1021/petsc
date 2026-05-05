@@ -11,18 +11,23 @@ PetscErrorCode DMCreateGlobalVector_DA(DM da, Vec *g)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DM_CLASSID, 1);
   PetscAssertPointer(g, 2);
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da), g));
-  PetscCall(VecSetSizes(*g, dd->Nlocal, PETSC_DETERMINE));
-  PetscCall(VecSetBlockSize(*g, dd->w));
-  PetscCall(VecSetType(*g, da->vectype));
-  if (dd->Nlocal < da->bind_below) {
-    PetscCall(VecSetBindingPropagates(*g, PETSC_TRUE));
-    PetscCall(VecBindToCPU(*g, PETSC_TRUE));
+
+  if (dd->useSection) {
+    PetscCall(DMCreateGlobalVector_Section_Private(da, g));
+  } else {
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)da), g));
+    PetscCall(VecSetSizes(*g, dd->Nlocal, PETSC_DETERMINE));
+    PetscCall(VecSetBlockSize(*g, dd->w));
+    PetscCall(VecSetType(*g, da->vectype));
+    if (dd->Nlocal < da->bind_below) {
+      PetscCall(VecSetBindingPropagates(*g, PETSC_TRUE));
+      PetscCall(VecBindToCPU(*g, PETSC_TRUE));
+    }
+    PetscCall(VecSetDM(*g, da));
+    PetscCall(VecSetLocalToGlobalMapping(*g, da->ltogmap));
   }
-  PetscCall(VecSetDM(*g, da));
-  PetscCall(VecSetLocalToGlobalMapping(*g, da->ltogmap));
-  PetscCall(VecSetOperation(*g, VECOP_VIEW, (PetscErrorCodeFn *)VecView_MPI_DA));
-  PetscCall(VecSetOperation(*g, VECOP_LOAD, (PetscErrorCodeFn *)VecLoad_Default_DA));
+  PetscCall(VecSetOperation(*g, VECOP_VIEW, (void (*)(void))VecView_MPI_DA));
+  PetscCall(VecSetOperation(*g, VECOP_LOAD, (void (*)(void))VecLoad_Default_DA));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

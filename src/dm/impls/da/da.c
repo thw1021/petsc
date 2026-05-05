@@ -757,6 +757,125 @@ PetscErrorCode DMDAGetOwnershipRanges(DM da, PeOp const PetscInt *lx[], PeOp con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  DMDAGetGhostOwnershipRanges - Gets the number of indices in the x, y and z direction that are owned or ghosted by each process in that direction
+
+  Not Collective
+
+  Input Parameter:
+. da - the `DMDA` object
+
+  Output Parameters:
++ glx  - ownership along x direction (optional), its length is `m` the number of processes in the x-direction
+. glxs - each starting vertex along x direction (optional), its length is `m` the number of processes in the x-direction
+. gly  - ownership along y direction (optional), its length is `n` the number of processes in the y-direction
+. glys - each starting vertex along y direction (optional), its length is `n` the number of processes in the y-direction
+. glz  - ownership along z direction (optional), its length is `p` the number of processes in the z-direction
+- glzs - each starting vertex along z direction (optional), its length is `p` the number of processes in the z-direction
+
+  Level: intermediate
+
+  Notes:
+  These numbers are NOT multiplied by the number of dof per node.
+
+  The meaning of these is different than that returned by `VecGetOwnerShipRanges()`
+
+  Fortran Notes:
+  Pass `PETSC_NULL_INT_POINTER` for any array not needed.
+
+  Use `DMDARestoreGhostOwershipRange()` to return the arrays when no longer needed
+
+.seealso: [](sec_struct), `DM`, `DMDA`, `DMDARestoreGhostOwnershipRanges()`, `DMDAGetOwnershipRanges()`, `DMDAGetCorners()`, `DMDAGetGhostCorners()`, `DMDACreate()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `VecGetOwnershipRanges()`
+@*/
+PetscErrorCode DMDAGetGhostOwnershipRanges(DM da, PeOp const PetscInt *glx[], PeOp const PetscInt *glxs[], PeOp const PetscInt *gly[], PeOp const PetscInt *glys[], PeOp const PetscInt *glz[], PeOp const PetscInt *glzs[])
+{
+  MPI_Comm    comm, xcomm, ycomm, zcomm;
+  PetscMPIInt rank;
+  PetscInt    dim, pm, pn, pp, gx, gy, gz, gm, gn, gp;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(da, DM_CLASSID, 1, DMDA);
+  if (glx) *glx = NULL;
+  if (glxs) *glxs = NULL;
+  if (gly) *gly = NULL;
+  if (glys) *glys = NULL;
+  if (glz) *glz = NULL;
+  if (glzs) *glzs = NULL;
+  PetscCall(PetscObjectGetComm((PetscObject)da, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(DMDAGetInfo(da, &dim, NULL, NULL, NULL, &pm, &pn, &pp, NULL, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetGhostCorners(da, &gx, &gy, &gz, &gm, &gn, &gp));
+  if (dim > 0 && (glx || glxs)) {
+    // Subset: rows along x
+    // Rank: x index
+    PetscCallMPI(MPI_Comm_split(comm, rank / pm, rank % pm, &xcomm));
+    if (glx) {
+      PetscCall(PetscMalloc1(pm, glx));
+      PetscCallMPI(MPI_Allgather(&gm, 1, MPIU_INT, *glx, 1, MPIU_INT, xcomm));
+    }
+    if (glxs) {
+      PetscCall(PetscMalloc1(pm, glxs));
+      PetscCallMPI(MPI_Allgather(&gx, 1, MPIU_INT, *glxs, 1, MPIU_INT, xcomm));
+    }
+    PetscCallMPI(MPI_Comm_free(&xcomm));
+  }
+  if (dim > 1 && (gly || glys)) {
+    // Subset: columns along y
+    // Rank: y index
+    PetscCallMPI(MPI_Comm_split(comm, rank % pm, rank / pm, &ycomm));
+    if (gly) {
+      PetscCall(PetscMalloc1(pn, gly));
+      PetscCallMPI(MPI_Allgather(&gn, 1, MPIU_INT, *gly, 1, MPIU_INT, ycomm));
+    }
+    if (glys) {
+      PetscCall(PetscMalloc1(pn, glys));
+      PetscCallMPI(MPI_Allgather(&gy, 1, MPIU_INT, *glys, 1, MPIU_INT, ycomm));
+    }
+    PetscCallMPI(MPI_Comm_free(&ycomm));
+  }
+  PetscCheck(dim < 3, comm, PETSC_ERR_SUP, "3D is currently unsupported");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMDARestoreGhostOwnershipRanges - Restores the number of indices in the x, y and z direction that are owned or ghosted by each process in that direction
+
+  Not Collective
+
+  Input Parameters:
++ da   - the `DMDA` object
+. glx  - ownership along x direction (optional), its length is `m` the number of processes in the x-direction
+. glxs - each starting vertex along x direction (optional), its length is `m` the number of processes in the x-direction
+. gly  - ownership along y direction (optional), its length is `n` the number of processes in the y-direction
+. glys - each starting vertex along y direction (optional), its length is `n` the number of processes in the y-direction
+. glz  - ownership along z direction (optional), its length is `p` the number of processes in the z-direction
+- glzs - each starting vertex along z direction (optional), its length is `p` the number of processes in the z-direction
+
+  Level: intermediate
+
+  Notes:
+  These numbers are NOT multiplied by the number of dof per node.
+
+  The meaning of these is different than that returned by `VecGetOwnerShipRanges()`
+
+  Fortran Notes:
+  Pass `PETSC_NULL_INT_POINTER` for any array not needed.
+
+.seealso: [](sec_struct), `DM`, `DMDA`, `DMDAGetGhostOwnershipRanges()`, `DMDAGetOwnershipRanges()`, `DMDAGetCorners()`, `DMDAGetGhostCorners()`, `DMDACreate()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `VecGetOwnershipRanges()`
+@*/
+PetscErrorCode DMDARestoreGhostOwnershipRanges(DM da, PeOp const PetscInt *glx[], PeOp const PetscInt *glxs[], PeOp const PetscInt *gly[], PeOp const PetscInt *glys[], PeOp const PetscInt *glz[], PeOp const PetscInt *glzs[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(da, DM_CLASSID, 1, DMDA);
+  PetscCall(PetscFree(*glx));
+  PetscCall(PetscFree(*glxs));
+  PetscCall(PetscFree(*gly));
+  PetscCall(PetscFree(*glys));
+  PetscCall(PetscFree(*glz));
+  PetscCall(PetscFree(*glzs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMDASetRefinementFactor - Set the ratios that the `DMDA` grid is refined
 

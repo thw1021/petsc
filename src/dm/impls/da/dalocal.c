@@ -49,13 +49,18 @@ PetscErrorCode DMCreateLocalVector_DA(DM da, Vec *g)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DM_CLASSID, 1);
   PetscAssertPointer(g, 2);
-  PetscCall(VecCreate(PETSC_COMM_SELF, g));
-  PetscCall(VecSetSizes(*g, dd->nlocal, PETSC_DETERMINE));
-  PetscCall(VecSetBlockSize(*g, dd->w));
-  PetscCall(VecSetType(*g, da->vectype));
-  if (dd->nlocal < da->bind_below) {
-    PetscCall(VecSetBindingPropagates(*g, PETSC_TRUE));
-    PetscCall(VecBindToCPU(*g, PETSC_TRUE));
+
+  if (dd->useSection) {
+    PetscCall(DMCreateLocalVector_Section_Private(da, g));
+  } else {
+    PetscCall(VecCreate(PETSC_COMM_SELF, g));
+    PetscCall(VecSetSizes(*g, dd->nlocal, PETSC_DETERMINE));
+    PetscCall(VecSetBlockSize(*g, dd->w));
+    PetscCall(VecSetType(*g, da->vectype));
+    if (dd->nlocal < da->bind_below) {
+      PetscCall(VecSetBindingPropagates(*g, PETSC_TRUE));
+      PetscCall(VecBindToCPU(*g, PETSC_TRUE));
+    }
   }
   PetscCall(VecSetDM(*g, da));
 #if defined(PETSC_HAVE_MATLAB)

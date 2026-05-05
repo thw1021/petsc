@@ -620,6 +620,24 @@ PetscErrorCode DMCreateMatrix_DA(DM da, Mat *J)
   PetscCall(MatInitializePackage());
   mtype = da->mattype;
 
+  if (dd->useSection) {
+    PetscSection gsection;
+    PetscInt     localSize;
+    PetscBool    isShell;
+
+    PetscCall(PetscStrcmp(mtype, MATSHELL, &isShell));
+    PetscCheck(isShell, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DMDA with PetscSections currently requires MatType MATSHELL");
+
+    PetscCall(DMGetGlobalSection(da, &gsection));
+    PetscCall(PetscSectionGetConstrainedStorageSize(gsection, &localSize));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)da), J));
+
+    PetscCall(MatSetSizes(*J, localSize, localSize, PETSC_DETERMINE, PETSC_DETERMINE));
+    PetscCall(MatSetType(*J, mtype));
+    PetscCall(MatSetDM(*J, da));
+    PetscCall(MatSetFromOptions(*J));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   /*
                                   m
           ------------------------------------------------------
