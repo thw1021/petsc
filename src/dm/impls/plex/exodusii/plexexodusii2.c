@@ -766,7 +766,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   DMLabel         csLabel;
   IS              csIS;
   const PetscInt *csIdx;
-  PetscInt        num_cs, cs;
+  PetscInt        num_cs;
   enum ElemType  *type;
   PetscBool       hasLabel;
   /* Coordinate Variables */
@@ -867,7 +867,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerExodusIIGetOrder(viewer, &degree));
     if (degree == 2) numNodes += numEdges;
     cellsNotInConnectivity = numCells;
-    for (cs = 0; cs < num_cs; ++cs) {
+    for (PetscInt cs = 0; cs < num_cs; ++cs) {
       IS              stratumIS;
       const PetscInt *cells;
       PetscScalar    *xyz = NULL;
@@ -931,7 +931,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     }
     if (num_cs) PetscCallExternal(ex_put_init, exo->exoid, dmName, dim, numNodes, numCells, num_cs, num_vs, num_fs);
     /* --- Connectivity --- */
-    for (cs = 0; cs < num_cs; ++cs) {
+    for (PetscInt cs = 0; cs < num_cs; ++cs) {
       IS              stratumIS;
       const PetscInt *cells;
       PetscInt       *connect, off = 0;
@@ -1080,7 +1080,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         for (p = pStart; p < pEnd; ++p) PetscCall(PetscSectionSetDof(coordSection, p, nodes[0][d] > 0));
       }
     }
-    for (cs = 0; cs < num_cs; ++cs) {
+    for (PetscInt cs = 0; cs < num_cs; ++cs) {
       IS              stratumIS;
       const PetscInt *cells;
       PetscInt        csSize, c;

@@ -119,8 +119,7 @@ static PetscErrorCode MatPreallocateWithMats_Private(Mat B, PetscInt nm, Mat X[]
 
 PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
 {
-  Mat      B;
-  PetscInt r;
+  Mat B;
 
   PetscFunctionBegin;
   if (reuse != MAT_REUSE_MATRIX) {
@@ -148,7 +147,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, Ma
   }
 
   PetscCall(MatGetRowUpperTriangular(A));
-  for (r = A->rmap->rstart; r < A->rmap->rend; r++) {
+  for (PetscInt r = A->rmap->rstart; r < A->rmap->rend; r++) {
     PetscInt           ncols;
     const PetscInt    *row;
     const PetscScalar *vals;
@@ -2164,8 +2163,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocationCSR_MPISBAIJ(Mat B, PetscInt bs
       const PetscScalar *svals = values + (V ? (bs * bs * ii[i]) : 0);
       PetscCall(MatSetValuesBlocked_MPISBAIJ(B, 1, &row, ncols, icols, svals, INSERT_VALUES));
     } else { /* block ordering does not match so we can only insert one block at a time. */
-      PetscInt j;
-      for (j = 0; j < ncols; j++) {
+      for (PetscInt j = 0; j < ncols; j++) {
         const PetscScalar *svals = values + (V ? (bs * bs * (ii[i] + j)) : 0);
         PetscCall(MatSetValuesBlocked_MPISBAIJ(B, 1, &row, 1, &icols[j], svals, INSERT_VALUES));
       }

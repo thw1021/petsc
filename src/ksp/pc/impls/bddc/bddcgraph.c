@@ -856,9 +856,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     PetscCall(ISGetBlockSize(ISForDofs[i], &bs));
     PetscCall(ISGetIndices(ISForDofs[i], &is_indices));
     for (j = 0; j < is_size / bs; j++) {
-      PetscInt b;
-
-      for (b = 0; b < bs; b++) {
+      for (PetscInt b = 0; b < bs; b++) {
         PetscInt jj = bs * j + b;
 
         if (is_indices[jj] > -1 && is_indices[jj] < nvtxs) { /* out of bounds indices (if any) are skipped */

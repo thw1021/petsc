@@ -495,12 +495,12 @@ PetscErrorCode DMPlexOrient(DM dm)
   if (flg2) PetscCall(PetscViewerASCIIPushSynchronized(viewer));
   PetscCall(PetscViewerGetSubViewer(viewer, PETSC_COMM_SELF, &selfviewer));
   for (comp = 0; comp < numComponents; ++comp) {
-    PetscInt l, n;
+    PetscInt n;
 
     numNeighbors[comp] = 0;
     PetscCall(PetscMalloc1(PetscMax(numLeaves, 0), &neighbors[comp]));
     /* I know this is p^2 time in general, but for bounded degree its alright */
-    for (l = 0; l < numLeaves; ++l) {
+    for (PetscInt l = 0; l < numLeaves; ++l) {
       const PetscInt face = lpoints ? lpoints[l] : l;
 
       /* Find a representative face (edge) separating pairs of procs */
