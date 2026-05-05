@@ -2068,7 +2068,7 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
   u_norm = PetscSqrtReal(u_norm);
 
   if (u_max < square_inner_radius) {
-    for (d = 0; d < dim; ++d) f[d] = u[d];
+    for (PetscInt d = 0; d < dim; ++d) f[d] = u[d];
     return;
   }
 
@@ -2085,7 +2085,7 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
     PetscReal rho_prime = (1.0 - t) * u_0_norm + t * R_max;
     scale               = rho_prime / u_norm;
   }
-  for (d = 0; d < dim; ++d) f[d] = u[d] * scale;
+  for (PetscInt d = 0; d < dim; ++d) f[d] = u[d] * scale;
 }
 
 static PetscErrorCode LandauSphereMesh(DM dm, PetscReal inner, PetscReal radius)
