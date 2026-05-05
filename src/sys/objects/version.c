@@ -1,4 +1,5 @@
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
+#include <petscconfiginfo.h>
 
 /*@C
   PetscGetVersion - Gets the PETSc version information in a string.
@@ -58,6 +59,26 @@ PetscErrorCode PetscGetVersionNumber(PetscInt *major, PetscInt *minor, PetscInt 
   if (release) *release = PETSC_VERSION_RELEASE;
   return PETSC_SUCCESS;
 }
+
+/*@C
+  PetscGetConfiguration - Gets the PETSc configuration information in a string.
+
+  Not Collective
+
+  Output Parameter:
+. configuration - configuration string
+
+  Level: developer
+
+.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`
+@*/
+PetscErrorCode PetscGetConfiguration(const char **configuration)
+{
+  PetscFunctionBegin;
+  *configuration = petscconfigureoptions;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #if defined(PETSC_HAVE_BLI_THREAD_SET_NUM_THREADS)
 EXTERN_C_BEGIN
 void bli_thread_set_num_threads(int);
