@@ -2785,6 +2785,10 @@ PetscErrorCode TSSetSNES(TS ts, SNES snes)
   the `snes` exists but is not used. Use `TSIsImplicit()` to determine if the
   method is implicit and uses `snes`.
 
+  Developer Note:
+  `TS` manages the life-cycle of the `SNES` object for all `TSType` for the life-time of the `TS` object,
+  even explicit methods that do not use `SNES`. This is so that `SNES` options are retained between changes to the `TSType` with `TSSetType()`.
+
 .seealso: [](ch_ts), `TS`, `SNES`, `TSCreate()`, `TSSetUp()`, `TSSolve()`, `TSGetKSP()`, `TSIsImplicit()`
 @*/
 PetscErrorCode TSGetSNES(TS ts, SNES *snes)
