@@ -300,7 +300,7 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
 static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  if (r || c) PetscCall(PetscInfo(F, "cuDSS ignores user-supplied row/column permutations; cuDSS will apply its own reordering\n"));
+  PetscCheck(!r && !c, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuDSS does not support user-supplied row/column permutations");
   PetscCall(MatFactorSymbolic_cuDSS(F, A, CUDSS_MTYPE_GENERAL, CUDSS_MVIEW_FULL));
   F->ops->lufactornumeric = MatLUFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -311,7 +311,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   cudssMatrixType_t mtype;
 
   PetscFunctionBegin;
-  if (perm) PetscCall(PetscInfo(F, "cuDSS ignores user-supplied permutation; cuDSS will apply its own reordering\n"));
+  PetscCheck(!perm, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuDSS does not support user-supplied permutations");
 #if defined(PETSC_USE_COMPLEX)
   if (A->spd == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HPD;
   else if (A->hermitian == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HERMITIAN;
@@ -454,9 +454,8 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   Notes:
     `MatSolveTranspose()` is not supported.
 
-    cuDSS performs its own internal reordering during the symbolic phase. Do not pass any
-    row, column, or Cholesky permutation (`IS r`, `IS c`, `IS perm`) to
-    `MatLUFactorSymbolic()` or `MatCholeskyFactorSymbolic()`.
+    cuDSS performs its own internal reordering during the symbolic phase; user-supplied
+    row, column, or Cholesky permutations are not supported and will result in an error.
     Select the reordering algorithm via `-mat_cudss_reorder_alg`.
 
     `MatSolve()` requires CUDA-aware vectors (`VECCUDA` / `VECSEQCUDA`). Using plain host
@@ -479,8 +478,9 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
   PetscCall(MatSetSizes(B, m, n, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(PetscStrallocpy("cudss", &((PetscObject)B)->type_name));
   PetscCall(MatSetUp(B));
-  B->trivialsymbolic = PETSC_FALSE;
-  B->factortype      = ftype;
+  B->trivialsymbolic  = PETSC_FALSE;
+  B->factortype       = ftype;
+  B->canuseordering   = PETSC_FALSE;
   B->assembled       = PETSC_TRUE;
   B->preallocated    = PETSC_TRUE;
 
