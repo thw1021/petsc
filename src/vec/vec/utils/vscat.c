@@ -1061,7 +1061,7 @@ PetscErrorCode VecScatterCreate(Vec x, IS ix, Vec y, IS iy, VecScatter *newsf)
      In SF's view, xx contains the roots (i.e., the remote) and iremote[].rank are ranks in xx's comm.
      yy contains leaves, which are local and can be thought as part of PETSC_COMM_SELF. */
   PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)xx), &sf));
-  sf->allow_multi_leaves = PETSC_TRUE;
+  sf->allow_multi_leaves = PETSC_FALSE;
   PetscCall(PetscSFSetFromOptions(sf));
   PetscCall(VecGetLocalSize(xx, &nroots));
   PetscCall(PetscSFSetGraph(sf, nroots, nleaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER)); /* Give ilocal/iremote to PETSc and no need to free them here */
