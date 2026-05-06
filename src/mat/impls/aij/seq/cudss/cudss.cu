@@ -81,7 +81,7 @@ static const char *const MatcuDSSPivotTypes[]  = {"col", "row", "none"};
 static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
 static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
 static PetscErrorCode MatFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
-static PetscErrorCode MatSetFromOptions_cuDSS(Mat);
+static PetscErrorCode MatSetFromOptions_cuDSS(Mat, PetscOptionItems);
 static PetscErrorCode MatFactorSymbolic_cuDSS(Mat, Mat, cudssMatrixType_t, cudssMatrixViewType_t);
 
 static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
@@ -138,7 +138,7 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSetFromOptions_cuDSS(Mat F)
+static PetscErrorCode MatSetFromOptions_cuDSS(Mat F, PetscOptionItems PetscOptionsObject)
 {
   Mat_cuDSS *lu         = (Mat_cuDSS *)F->data;
   PetscInt   reorderAlg = (PetscInt)lu->reorderAlg, pivotType = (PetscInt)lu->pivotType, irNSteps = (PetscInt)lu->irNSteps;
@@ -478,9 +478,9 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
   PetscCall(MatSetSizes(B, m, n, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(PetscStrallocpy("cudss", &((PetscObject)B)->type_name));
   PetscCall(MatSetUp(B));
-  B->trivialsymbolic  = PETSC_FALSE;
-  B->factortype       = ftype;
-  B->canuseordering   = PETSC_FALSE;
+  B->trivialsymbolic = PETSC_FALSE;
+  B->factortype      = ftype;
+  B->canuseordering  = PETSC_FALSE;
   B->assembled       = PETSC_TRUE;
   B->preallocated    = PETSC_TRUE;
 

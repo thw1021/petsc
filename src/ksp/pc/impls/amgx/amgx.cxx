@@ -10,6 +10,7 @@
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 #include <petscdevice_cuda.h>
 #include <amgx_c.h>
+#include <algorithm>
 #include <limits>
 #include <map>
 
