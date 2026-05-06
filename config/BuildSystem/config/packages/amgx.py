@@ -39,7 +39,7 @@ class Configure(config.package.CMakePackage):
       with open(cmakeLists, 'w') as fd:
         fd.write(patched)
 
- def applyPatches(self):
+  def applyPatches(self):
     # Patch include/amgx_timer.h: replace #include "nvToolsExt.h" -> #include "nvtx3/nvToolsExt.h"
     timerHeader = os.path.join(self.packageDir, 'include', 'amgx_timer.h')
     if os.path.isfile(timerHeader):
