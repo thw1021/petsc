@@ -50,31 +50,6 @@ class Configure(config.package.CMakePackage):
         self.logPrint('AMGX: patching include/amgx_timer.h: replacing nvToolsExt.h with nvtx3/nvToolsExt.h')
         with open(timerHeader, 'w') as fd:
           fd.write(patched)
-    # Patch include/amgx_config.h: cast enum operands in AMGX_ASSEMBLE_MODE to int to
-    # suppress -Werror=deprecated-enum-enum-conversion with GCC >= 13.
-    configHeader = os.path.join(self.packageDir, 'include', 'amgx_config.h')
-    if os.path.isfile(configHeader):
-      with open(configHeader, 'r') as fd:
-        content = fd.read()
-      old_macro = (
-        '#define AMGX_ASSEMBLE_MODE(memSpace, vecPrec, matPrec, indPrec) \\\n'
-        '  memSpace  * AMGX_MemorySpaceBase  \\\n'
-        '  + vecPrec * AMGX_VecPrecisionBase \\\n'
-        '  + matPrec * AMGX_MatPrecisionBase \\\n'
-        '  + indPrec * AMGX_IndPrecisionBase'
-      )
-      new_macro = (
-        '#define AMGX_ASSEMBLE_MODE(memSpace, vecPrec, matPrec, indPrec) \\\n'
-        '  (AMGX_Mode)((int)(memSpace)  * (int)AMGX_MemorySpaceBase  \\\n'
-        '  + (int)(vecPrec) * (int)AMGX_VecPrecisionBase \\\n'
-        '  + (int)(matPrec) * (int)AMGX_MatPrecisionBase \\\n'
-        '  + (int)(indPrec) * (int)AMGX_IndPrecisionBase)'
-      )
-      patched = content.replace(old_macro, new_macro)
-      if patched != content:
-        self.logPrint('AMGX: patching include/amgx_config.h: casting enum operands in AMGX_ASSEMBLE_MODE to int')
-        with open(configHeader, 'w') as fd:
-          fd.write(patched)
     return
 
   def formCMakeConfigureArgs(self):
