@@ -452,7 +452,7 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
   When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
 
-  Note:
+  Notes:
     `MatSolveTranspose()` is not supported.
 
     cuDSS performs its own internal reordering during the symbolic phase. Any PETSc-supplied
