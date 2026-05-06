@@ -8,8 +8,6 @@ class Configure(config.package.Package):
     self.versionname      = 'CUDSS_VERSION'
     self.versioninclude   = 'cudss.h'
     self.download         = ['https://developer.download.nvidia.com/compute/cudss/redist/libcudss/linux-x86_64/libcudss-linux-x86_64-0.7.1.4_cuda12-archive.tar.xz']
-    # download_aarch64 is a local attribute (not part of the Package framework interface);
-    # configure() selects between self.download and self.download_aarch64 based on platform.machine().
     self.download_aarch64 = ['https://developer.download.nvidia.com/compute/cudss/redist/libcudss/linux-sbsa/libcudss-linux-sbsa-0.7.1.4_cuda12-archive.tar.xz']
     self.functions        = ['cudssCreate']
     self.includes         = ['cudss.h']
@@ -32,18 +30,6 @@ class Configure(config.package.Package):
     if hasattr(self.cuda, 'cudaDir') and self.cuda.cudaDir not in dirs:
       dirs.append(self.cuda.cudaDir)
     return dirs
-
-  def configure(self):
-    '''Select the correct platform-specific download URL before configuring'''
-    import platform
-    machine = platform.machine()
-    if machine == 'aarch64':
-      self.download = self.download_aarch64
-    elif machine != 'x86_64' and self.argDB.get('download-cudss', 0):
-      raise RuntimeError('--download-cudss is not supported on ' + machine
-                         + '. Use --with-cudss-dir to point to a manual installation.')
-    config.package.Package.configure(self)
-    return
 
   def Install(self):
     import shutil
