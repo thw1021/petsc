@@ -931,7 +931,7 @@ def getFunctions(mansec, functiontoinclude, filename):
               arg = Argument()
               if i.find('**') > -1 and not i.strip().startswith('void'):
                 if i.strip().startswith('const char **') and i.find('***') == -1 and i.find('[]') == -1:
-                  print('Argument declaration error in function declaration: Use const char *[] not const char ** for arguments that return character strings')
+                  print('Argument declaration error in function declaration: use const char *[] not const char ** for arguments that return character strings')
                   print(fun)
                 # eventually also check for other types besides char
                 fun.opaque = True
