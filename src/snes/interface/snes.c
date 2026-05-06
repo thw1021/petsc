@@ -4399,7 +4399,7 @@ PetscErrorCode SNESGetConvergedReason(SNES snes, SNESConvergedReason *reason)
 
 .seealso: [](ch_snes), `SNES`, `SNESGetConvergedReason()`
 @*/
-PetscErrorCode SNESGetConvergedReasonString(SNES snes, const char **strreason)
+PetscErrorCode SNESGetConvergedReasonString(SNES snes, const char *strreason[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
