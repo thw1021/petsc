@@ -28,12 +28,16 @@ extern PetscReal solz(PetscReal);
 
 int main(int argc, char **argv)
 {
-  PetscInt  time_steps = 100, steps;
-  Vec       global;
-  PetscReal dt, ftime;
-  TS        ts;
-  Mat       A, S;
-  PetscBool nest = PETSC_FALSE;
+  PetscInt     time_steps = 100, steps;
+  Vec          global;
+  PetscReal    dt, ftime;
+  TS           ts;
+  Mat          A, S;
+  PetscBool    nest = PETSC_FALSE;
+  TSType       tstype;
+  const char **types;
+  int          ntypes;
+  char         ststype[16];
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -90,6 +94,21 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxSteps(ts, time_steps));
   PetscCall(TSSetMaxTime(ts, 1));
   PetscCall(TSSetSolution(ts, global));
+
+  PetscCall(TSSetUp(ts));
+  PetscCall(TSGetType(ts, &tstype));
+  PetscCall(PetscStrncpy(ststype, tstype, sizeof(ststype)));
+  PetscCall(PetscFunctionListGet(TSList, &types, &ntypes));
+  for (PetscInt i = 0; i < ntypes; i++) {
+    PetscBool reject;
+
+    PetscCall(TSSetType(ts, types[i]));
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)ts, &reject, TSIRK, TSBASICSYMPLECTIC, TSMPRK, ""));
+    if (!reject) PetscCall(TSSetUp(ts));
+  }
+  PetscCall(PetscFree(types));
+  PetscCall(TSSetType(ts, ststype));
+  PetscCall(TSSetFromOptions(ts));
 
   PetscCall(TSSolve(ts, global));
   PetscCall(TSGetSolveTime(ts, &ftime));
