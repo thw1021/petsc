@@ -9,7 +9,17 @@
 
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 #include <petscdevice_cuda.h>
+/* amgx_config.h performs arithmetic between different enum types (AMGX_ASSEMBLE_MODE
+   macro and AMGX_modeRange initializer), which GCC >= 13 rejects under
+   -Werror=deprecated-enum-enum-conversion.  Suppress the warning around the include. */
+#if defined(__GNUC__) && !defined(__clang__)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
+#endif
 #include <amgx_c.h>
+#if defined(__GNUC__) && !defined(__clang__)
+  #pragma GCC diagnostic pop
+#endif
 #include <algorithm>
 #include <limits>
 #include <map>
