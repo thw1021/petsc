@@ -51,7 +51,7 @@
 
 ## Mat
 
-- Add `MATSOLVERCUDSS`, a new sparse direct solver type backed by the NVIDIA cuDSS library, supporting LU and Cholesky factorization for sequential matrices on CUDA devices; registered for both `MATSEQAIJ` and `MATSEQAIJCUSPARSE`
+- Add `MATSOLVERCUDSS`, a sparse direct solver type backed by the NVIDIA cuDSS library, supporting LU and Cholesky factorization for sequential matrices on CUDA devices; registered for both `MATSEQAIJ` and `MATSEQAIJCUSPARSE`
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL`
 
 ## MatCoarsen

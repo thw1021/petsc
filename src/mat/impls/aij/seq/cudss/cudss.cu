@@ -440,13 +440,12 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   sequential sparse matrices via the NVIDIA cuDSS GPU-accelerated sparse direct solver library.
 
   Options Database Keys:
-+ -mat_cudss_reorder_alg default    - (choose one of) `default`, `alg1`, `alg2`, `alg3`, `alg4`, `alg5`
-. -mat_cudss_pivot_type col         - (choose one of) `col`, `row`, `none`
-. -mat_cudss_pivot_threshold 1.0    - Pivot threshold
-. -mat_cudss_pivot_epsilon 0.0      - Pivot epsilon
-. -mat_cudss_use_matching false     - Enable matching
-- -mat_cudss_ir_n_steps 0           - Number of iterative refinement steps
-
++ -mat_cudss_reorder_alg (default|alg1|alg2|alg3|alg4|alg5) - reordering algorithm
+. -mat_cudss_pivot_type (col|row|none)                      - pivoting type
+. -mat_cudss_pivot_threshold threshold                      - Pivot threshold, default is 1.0
+. -mat_cudss_pivot_epsilon epsilon                          - Pivot epsilon, default is 0.0
+. -mat_cudss_use_matching flag                              - Enable matching, default is false
+- -mat_cudss_ir_n_steps nsteps                              - Number of iterative refinement steps, default is 0
   Level: beginner
 
   Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
@@ -455,10 +454,10 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   Notes:
     `MatSolveTranspose()` is not supported.
 
-    cuDSS performs its own internal reordering during the symbolic phase. Any PETSc-supplied
-    row, column, or Cholesky permutation (`IS r`, `IS c`, `IS perm`) passed to
-    `MatLUFactorSymbolic()` or `MatCholeskyFactorSymbolic()` is silently ignored; cuDSS
-    selects the reordering algorithm via `-mat_cudss_reorder_alg`.
+    cuDSS performs its own internal reordering during the symbolic phase. Do not pass any
+    row, column, or Cholesky permutation (`IS r`, `IS c`, `IS perm`) to
+    `MatLUFactorSymbolic()` or `MatCholeskyFactorSymbolic()`.
+    Select the reordering algorithm via `-mat_cudss_reorder_alg`.
 
     `MatSolve()` requires CUDA-aware vectors (`VECCUDA` / `VECSEQCUDA`). Using plain host
     `VECSEQ` vectors with this solver will result in an error. When the input matrix is

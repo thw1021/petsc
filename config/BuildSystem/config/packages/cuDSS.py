@@ -29,21 +29,8 @@ class Configure(config.package.Package):
   def getSearchDirectories(self):
     '''Also search the CUDA toolkit directory for cuDSS'''
     dirs = config.package.Package.getSearchDirectories(self)
-    self.pushLanguage('CUDA')
-    popped = False
-    try:
-      nvcc = self.getCompiler()
-      self.popLanguage()
-      popped = True
-      self.getExecutable(nvcc, getFullPath=1, resultName='systemNvcc', setMakeMacro=0)
-      if hasattr(self, 'systemNvcc'):
-        nvccDir = os.path.dirname(self.systemNvcc)
-        cudaDir = os.path.split(nvccDir)[0]
-        if cudaDir not in dirs:
-          dirs.append(cudaDir)
-    except Exception:
-      if not popped:
-        self.popLanguage()
+    if hasattr(self.cuda, 'cudaDir') and self.cuda.cudaDir not in dirs:
+      dirs.append(self.cuda.cudaDir)
     return dirs
 
   def configure(self):
