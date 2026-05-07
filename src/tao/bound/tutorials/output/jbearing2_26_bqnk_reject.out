@@ -1,0 +1,1 @@
+[0]PETSC ERROR: bqnls does not support TaoAddTerm() (the LMVM Hessian aliased into tao->hessian bypasses the TaoTermSum assembly path)

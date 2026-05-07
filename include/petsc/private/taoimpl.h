@@ -348,3 +348,4 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(Ta
 
 PETSC_INTERN PetscErrorCode TaoTermPreprocessHessianShells(TaoTerm, Vec, Vec, Mat *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianShell(TaoTermMapping *, Mat *);
+PETSC_INTERN PetscErrorCode TaoTermSumCheckHessianAssembleable_Private(TaoTerm, PetscInt *, const char **);

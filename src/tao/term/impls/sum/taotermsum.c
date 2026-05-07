@@ -1051,6 +1051,64 @@ static PetscErrorCode TaoTermSumSetTermMask_Sum(TaoTerm term, PetscInt index, Ta
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  TaoTermSumCheckHessianAssembleable_Private - Verify that every active summand
+  in `sum` contributes its Hessian via assembled matrix routines (rather than
+  via a matrix-free `HessianMult`-only path).  Used by solvers such as `TAOBNK`
+  and `TAOTRON` that require an assembled `tao->hessian`.
+
+  Collective
+
+  Input Parameter:
+. sum - a `TaoTerm` of type `TAOTERMSUM`
+
+  Output Parameters:
++ bad_idx - the index of the first summand that fails the check, or -1 if all summands are assembleable
+- reason  - a static string describing the failure (set only when `*bad_idx >= 0`)
+
+  A summand is considered assembleable when any of the following holds:
+  - the summand's Hessian is masked (`TAOTERM_MASK_HESSIAN`);
+  - the summand has a mapped Hessian callback set via
+    `TaoTermSumSetTermMappedHessianFn()`, which writes an assembled mapped
+    Hessian directly;
+  - the underlying `TaoTerm` defines both `TaoTermComputeHessian()` and
+    `TaoTermCreateHessianMatrices()`.
+*/
+PETSC_INTERN PetscErrorCode TaoTermSumCheckHessianAssembleable_Private(TaoTerm sum, PetscInt *bad_idx, const char **reason)
+{
+  TaoTerm_Sum *sum_data;
+  PetscInt     n_terms;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sum, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(bad_idx, 2);
+  PetscAssertPointer(reason, 3);
+  *bad_idx = -1;
+  *reason  = NULL;
+  sum_data = (TaoTerm_Sum *)sum->data;
+  PetscCall(TaoTermSumGetNumberTerms(sum, &n_terms));
+  for (PetscInt i = 0; i < n_terms; i++) {
+    TaoTermMapping *summand = &sum_data->terms[i];
+    PetscBool       create_defined, hessian_defined;
+
+    if (TaoTermHessianMasked(summand->mask)) continue;
+    if (summand->mapped_hessian_fn) continue;
+    PetscCall(TaoTermIsCreateHessianMatricesDefined(summand->term, &create_defined));
+    if (!create_defined) {
+      *bad_idx = i;
+      *reason  = "term cannot create Hessian matrices (TaoTermCreateHessianMatrices is undefined)";
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+    PetscCall(TaoTermIsHessianDefined(summand->term, &hessian_defined));
+    if (!hessian_defined) {
+      *bad_idx = i;
+      *reason  = "term has no assembled Hessian routine (only HessianMult or none)";
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermSumSetTermMappedHessianFn - Set a callback to directly compute the mapped Hessian for a term in a `TAOTERMSUM`,
   bypassing the standard unmapped Hessian + PtAP transformation

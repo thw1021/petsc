@@ -3065,7 +3065,8 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
   If `term` is of type `TAOTERMSUM`, it is added as a single summand. To flatten
   nested sums into a single level, call `TaoTermSumFlatten()` on the resulting objective term.
 
-  Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`)
+  Currently, `TaoAddTerm()` does not support `TAOBQNK` (the LMVM matrix it aliases into `tao->hessian` bypasses the `TAOTERMSUM` Hessian assembly path).
+  All other bounded solvers (`TAOBLMVM`, `TAOBNK`, `TAOBNLS`, `TAOBNTL`, `TAOBNTR`, `TAOTRON`) require every summand to define an assembled Hessian routine; non-assembleable summands (e.g. `HessianMult`-only terms) are rejected at `TaoSetUp()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`, `TaoTermSumFlatten()`
 @*/

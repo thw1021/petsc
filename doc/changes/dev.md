@@ -79,6 +79,7 @@
 ## TAO
 
 - Add `TaoGetDM()` and `TaoSetDM()`
+- Allow `TaoAddTerm()` on the bounded solvers `TAOBLMVM`, `TAOBNK`, `TAOBNLS`, `TAOBNTL`, `TAOBNTR`, and `TAOTRON`; every summand must define an assembled Hessian (`TAOBQNK` remains unsupported)
 
 ## TaoTerm
 

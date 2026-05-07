@@ -560,4 +560,43 @@ PetscErrorCode ConvergenceTest(Tao tao, PetscCtx ctx)
       suffix: 21
       args: -tao_monitor_short -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5 -tao_mf_hessian
       requires: !single
+
+   # TaoTermSum coverage on bounded solvers. The two `halfl2squared` summands
+   # added below have opposite scales (+1.1 and -1.1), so their contribution to
+   # objective, gradient, and Hessian cancels in IEEE arithmetic. This wraps the
+   # callback objective in a TAOTERMSUM and exercises the assembled-Hessian
+   # gating in TaoSetUp_BNK()/TaoSetUp_TRON() without altering the iterate
+   # trajectory, so each row reuses its no-regulariser baseline output file.
+   test:
+      suffix: 22_taoterm
+      args: -tao_monitor_short -mx 8 -my 12 -tao_type bnls -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      output_file: output/jbearing2_7.out
+      requires: !single
+
+   test:
+      suffix: 23_taoterm
+      args: -tao_monitor_short -mx 8 -my 12 -tao_type bntr -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      output_file: output/jbearing2_8.out
+      requires: !single
+
+   test:
+      suffix: 24_taoterm
+      args: -tao_monitor_short -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      output_file: output/jbearing2_9.out
+      requires: !single
+
+   test:
+      suffix: 25_taoterm
+      args: -tao_monitor_short -mx 8 -my 12 -tao_type tron -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      output_file: output/jbearing2_1.out
+      requires: !single
+
+   # Negative coverage: TAOBQNK family must reject TaoAddTerm() because its
+   # MATLMVM is aliased into tao->hessian and bypasses the TaoTermSum assembly
+   # path. Filtered to the single PetscCheck() error line for portability.
+   test:
+      suffix: 26_bqnk_reject
+      args: -mx 8 -my 12 -tao_type bqnls -tao_add_terms reg_ -reg_tao_term_type halfl2squared -tao_term_sum_reg_scale 1.0 -petsc_ci_portable_error_output -error_output_stdout
+      filter: grep "does not support TaoAddTerm"
+      requires: !single defined(PETSC_USE_DEBUG) !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
 TEST*/
