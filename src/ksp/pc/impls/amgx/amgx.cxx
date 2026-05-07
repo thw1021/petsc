@@ -169,8 +169,7 @@ static PetscInt s_count = 0;
 
 /* Buffer of messages from AmgX.
    This global is required because the AMGX_register_print_callback API does not
-   support a user-data pointer, so the callback cannot capture per-PC state.
-   Not thread-safe; acceptable because PETSc is single-threaded at the PC level. */
+   support a user-data pointer, so the callback cannot capture per-PC state. */
 static std::string amgx_output{};
 
 // A print callback that allows AmgX to return status messages
