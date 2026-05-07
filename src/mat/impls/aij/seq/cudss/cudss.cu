@@ -53,13 +53,6 @@ typedef struct {
   #endif
 #endif
 
-/* Map PetscInt to the cuDSS index type (for owned CSR buffers sized as PetscInt) */
-#if defined(PETSC_USE_64BIT_INDICES)
-  #define PETSCINT_CUDSS_INDEX_TYPE CUDA_R_64I
-#else
-  #define PETSCINT_CUDSS_INDEX_TYPE CUDA_R_32I
-#endif
-
 /* Custom macro: cuDSS returns cudssStatus_t, not a PetscErrorCode, so
    PetscCallExternal() cannot be used here. */
 #define PetscCallCUDSS(func, ...) \
@@ -277,14 +270,14 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscCallCUDSS(cudssSetStream, lu->handle, stream);
 
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
-  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, isCUSPARSE ? CUDA_R_32I : PETSCINT_CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
+  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, isCUSPARSE ? CUDA_R_32I : PetscDefined(USE_64BIT_INDICES) ? CUDA_R_64I : CUDA_R_32I, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
 
   PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
   PetscCallCUDA(cudaMalloc((void **)&lu->d_x, n * sizeof(PetscScalar)));
   PetscCallCUDSS(cudssMatrixCreateDn, &lu->cudss_b, n, 1, n, lu->d_b, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
   PetscCallCUDSS(cudssMatrixCreateDn, &lu->cudss_x, n, 1, n, lu->d_x, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
 
-  PetscCallCUDSS(cudssExecute, lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
+  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, isCUSPARSE ? CUDA_R_32I : PetscDefined(USE_64BIT_INDICES) ? CUDA_R_64I : CUDA_R_32I, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
