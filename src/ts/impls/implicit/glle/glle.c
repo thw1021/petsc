@@ -611,7 +611,7 @@ static PetscErrorCode TSGLLECreate_IRKS(TS ts)
 
   Input Parameters:
 + ts   - the `TS` context
-- type - a method, currently on `TSGLLE_IRKS` is available
+- type - a method, currently only `TSGLLE_IRKS` is available
 
   Options Database Key:
 . -ts_gl_type (irks) - sets the method
