@@ -30,9 +30,6 @@ typedef struct {
   PetscInt  nnz;
   PetscBool ownDeviceCSR;
 
-  /* cuDSS index type: CUDA_R_32I for MATSEQAIJCUSPARSE, PETSCINT_CUDSS_INDEX_TYPE for MATSEQAIJ */
-  cudaDataType indexType;
-
   cudssAlgType_t   reorderAlg;
   cudssPivotType_t pivotType;
   double           pivotThreshold; /* cuDSS expects double for CUDSS_CONFIG_PIVOT_THRESHOLD */
@@ -62,9 +59,6 @@ typedef struct {
 #else
   #define PETSCINT_CUDSS_INDEX_TYPE CUDA_R_32I
 #endif
-
-/* cuSPARSE CsrMatrix always stores row_offsets/column_indices as 32-bit int */
-#define CUSPARSE_CSR_INDEX_TYPE CUDA_R_32I
 
 /* Custom macro: cuDSS returns cudssStatus_t, not a PetscErrorCode, so
    PetscCallExternal() cannot be used here. */
@@ -273,10 +267,7 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
 
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJCUSPARSE, &isCUSPARSE));
   lu->ownDeviceCSR = (PetscBool)(!isCUSPARSE);
-  if (isCUSPARSE) {
-    lu->indexType = CUSPARSE_CSR_INDEX_TYPE;
-  } else {
-    lu->indexType = PETSCINT_CUDSS_INDEX_TYPE;
+  if (!isCUSPARSE) {
     PetscCallCUDA(cudaMalloc((void **)&lu->d_row_offsets, (m + 1) * sizeof(PetscInt)));
     PetscCallCUDA(cudaMalloc((void **)&lu->d_col_indices, nnz * sizeof(PetscInt)));
     PetscCallCUDA(cudaMalloc((void **)&lu->d_values, nnz * sizeof(PetscScalar)));
@@ -286,7 +277,7 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscCallCUDSS(cudssSetStream, lu->handle, stream);
 
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
-  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, lu->indexType, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
+  PetscCallCUDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, isCUSPARSE ? CUDA_R_32I : PETSCINT_CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
 
   PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
   PetscCallCUDA(cudaMalloc((void **)&lu->d_x, n * sizeof(PetscScalar)));
