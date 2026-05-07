@@ -53,27 +53,30 @@ static PetscErrorCode TaoView_TRON(Tao tao, PetscViewer viewer)
 static PetscErrorCode TaoSetup_TRON(Tao tao)
 {
   TAO_TRON *tron = (TAO_TRON *)tao->data;
-  PetscBool is_sum, has_submat, has_diag, has_dup, has_zrc;
+  PetscBool is_sum;
   MPI_Comm  comm;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  /* See TaoSetUp_BNK(): the MatHasOperation() gates only fire on the TaoAddTerm path so that
+     legacy users supplying their own Hessian (including matrix-free) are not preemptively rejected. */
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
   if (is_sum) {
     PetscInt    bad_idx;
     const char *reason;
+    PetscBool   has_submat, has_diag, has_dup, has_zrc;
 
     PetscCall(TaoTermSumCheckHessianAssembleable_Private(tao->objective_term.term, &bad_idx, &reason));
     PetscCheck(bad_idx < 0, comm, PETSC_ERR_SUP, "TAOTRON requires every TaoTermSum summand to have an assembled Hessian; summand %" PetscInt_FMT ": %s", bad_idx, reason);
+    PetscCall(MatHasOperation(tao->hessian, MATOP_CREATE_SUBMATRIX, &has_submat));
+    PetscCall(MatHasOperation(tao->hessian, MATOP_GET_DIAGONAL, &has_diag));
+    PetscCall(MatHasOperation(tao->hessian, MATOP_DUPLICATE, &has_dup));
+    PetscCall(MatHasOperation(tao->hessian, MATOP_ZERO_ROWS_COLUMNS, &has_zrc));
+    PetscCheck(has_submat, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatCreateSubMatrix()");
+    PetscCheck(has_diag, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatGetDiagonal()");
+    PetscCheck(has_dup, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatDuplicate()");
+    PetscCheck(has_zrc, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatZeroRowsColumns()");
   }
-  PetscCall(MatHasOperation(tao->hessian, MATOP_CREATE_SUBMATRIX, &has_submat));
-  PetscCall(MatHasOperation(tao->hessian, MATOP_GET_DIAGONAL, &has_diag));
-  PetscCall(MatHasOperation(tao->hessian, MATOP_DUPLICATE, &has_dup));
-  PetscCall(MatHasOperation(tao->hessian, MATOP_ZERO_ROWS_COLUMNS, &has_zrc));
-  PetscCheck(has_submat, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatCreateSubMatrix()");
-  PetscCheck(has_diag, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatGetDiagonal()");
-  PetscCheck(has_dup, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatDuplicate()");
-  PetscCheck(has_zrc, comm, PETSC_ERR_SUP, "TAOTRON requires the Hessian matrix to support MatZeroRowsColumns()");
   /* Allocate some arrays */
   PetscCall(VecDuplicate(tao->solution, &tron->diag));
   PetscCall(VecDuplicate(tao->solution, &tron->X_New));
