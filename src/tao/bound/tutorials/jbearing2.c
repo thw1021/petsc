@@ -560,4 +560,9 @@ PetscErrorCode ConvergenceTest(Tao tao, PetscCtx ctx)
       suffix: 21
       args: -tao_monitor_short -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5 -tao_mf_hessian
       requires: !single
+
+   test:
+      suffix: 22
+      args: -tao_monitor_short -mx 8 -my 12 -tao_type bnls -tao_gatol 1e-5 -tao_add_terms reg_ -reg_tao_term_type halfl2squared -tao_term_sum_reg_scale 1e-6
+      requires: !single
 TEST*/
