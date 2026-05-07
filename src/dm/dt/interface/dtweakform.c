@@ -1,3 +1,4 @@
+#include "petscsys.h"
 #include <petsc/private/petscdsimpl.h> /*I "petscds.h" I*/
 
 PetscClassId PETSCWEAKFORM_CLASSID = 0;
@@ -977,7 +978,7 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
       PetscCall(PetscSortStrWithPermutation(Nk, names, idx2));
       // If the field sort is stable, it will be sorted correctly overall
       for (PetscInt k = 0; k < Nk; ++k) {
-        fields[k] = keys[idx2[idx1[k]]].field;
+        fields[k] = keys[idx1[idx2[k]]].field;
         idx3[k]   = k;
       }
       PetscCall(PetscSortIntWithPermutation(Nk, fields, idx3));
@@ -1014,7 +1015,7 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
         if (fname) {
           /* Eliminate argument types */
           PetscCall(PetscStrlen(fname, &len));
-          for (PetscInt l = 0; l < len; ++l)
+          for (PetscInt l = 0; l < (PetscInt)len; ++l)
             if (fname[l] == '(') {
               fname[l] = '\0';
               break;
