@@ -437,12 +437,11 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
 . -mat_cudss_pivot_epsilon epsilon                          - Pivot epsilon, default is 0.0
 . -mat_cudss_use_matching flag                              - Enable matching, default is false
 - -mat_cudss_ir_n_steps nsteps                              - Number of iterative refinement steps, default is 0
-  Level: beginner
-
-  Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
-  When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
 
   Notes:
+    Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
+    When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
+
     `MatSolveTranspose()` is not supported.
 
     cuDSS performs its own internal reordering during the symbolic phase; user-supplied
@@ -453,6 +452,8 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
     `VECSEQ` vectors with this solver will result in an error. When the input matrix is
     `MATSEQAIJ`, ensure that the right-hand-side and solution vectors are of type
     `VECCUDA` (e.g., created with `VecSetType(v, VECCUDA)`).
+
+  Level: beginner
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`
 M*/
