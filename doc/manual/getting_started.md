@@ -589,7 +589,12 @@ directly in PETSc C/C++ code, as in [MatMult_SeqSELL](https://petsc.org/main/src
 
 ## CPU OpenMP parallelism
 
-OpenMP parallelism is thread parallelism. Multiple threads (independent streams of instructions) process data and perform computations on different
+**Compute nodes** are the building blocks of HPC systems. A compute node may consist of one or more physical CPUs, it may also be called a shared memory node. It consists of collections of cores that have
+access to the same physical memory units. OS threads (independent streams of instructions) and processes can freely migrate, unless constrained, between cores within a compute node. Parallel HPC systems
+consist of multple compute nodes connected together via a network. Except for unconventional exotic systems, OS threads and processes cannot migrate between different
+compute nodes.
+
+OpenMP parallelism is thread parallelism within a compute node. Multiple threads process data and perform computations on different
 parts of memory that is
 shared (accessible) to all of the threads. The OpenMP model is based on inserting pragmas into code, indicating that a series of instructions
 (often within a loop) can be run in parallel. This is also called a fork-join model of parallelism since much of the code remains sequential and only the
@@ -600,7 +605,7 @@ POSIX threads (pthreads) is a library that may be called from C/C++. The library
 synchronizations between threads. Pthreads is rarely used directly in numerical libraries and applications. Sometimes OpenMP is implemented on top of pthreads.
 
 If one adds
-OpenMP parallelism to an MPI code, one must not over-subscribe the hardware resources. For example, if MPI already has one MPI process (rank)
+OpenMP parallelism to an MPI code, one must not **over-subscribe** the hardware resources. For example, if MPI already has one MPI process (rank)
 per hardware core, then
 using four OpenMP threads per MPI process will slow the code down since now one core must switch back and forth between four OpenMP threads.
 
@@ -620,8 +625,8 @@ is useful when one has many small systems (or sets of ODEs) that must be integra
 "embarrassingly parallel" fashion on multicore systems.
 
 The ./configure option `--with-openmp-kernels` causes some PETSc numerical kernels to be compiled using OpenMP pragmas to take advantage of multiple cores.
-One must be careful to ensure the number of threads used by each MPI process **times** the number of MPI processes is less than the number of
-cores on the system; otherwise the code will slow down dramatically.
+One must be careful to ensure the number of threads used by each MPI process **times** the number of MPI processes on each compute node is less than the number of
+cores on each compute node; otherwise the code will slow down dramatically due to over-subscription.
 
 PETSc's MPI-based linear solvers may be accessed from a sequential or non-MPI OpenMP program, see {any}`sec_pcmpi`.
 
