@@ -324,7 +324,7 @@ ai-review-optional:
         REVIEW_CMD="/review-mr"
       fi
       set -o pipefail
-      claude -p "${REVIEW_CMD} ${CI_MERGE_REQUEST_IID}" --dangerously-skip-permissions --max-turns 30 | tee ai-review.md
+      claude -p "${REVIEW_CMD} ${CI_MERGE_REQUEST_IID}" --dangerously-skip-permissions --max-turns 60 | tee ai-review.md
     - |
       if test -s ai-review.md; then
         pandoc --from=markdown --to=html --standalone --metadata title="AI Review" ai-review.md --output ai-review.html
