@@ -85,9 +85,14 @@ PetscErrorCode TaoSetUp_BQNK(Tao tao)
   TAO_BNK  *bnk  = (TAO_BNK *)tao->data;
   TAO_BQNK *bqnk = (TAO_BQNK *)bnk->ctx;
   PetscInt  n, N;
-  PetscBool is_lmvm, is_set, is_sym;
+  PetscBool is_lmvm, is_set, is_sym, is_sum;
 
   PetscFunctionBegin;
+  /* TODO: TAOBQNK overrides tao->hessian to point to its own MATLMVM matrix in TaoBQNKComputeHessian(),
+     so the assembled-Hessian path used by TaoTermSum cannot reach the LMVM update.
+     Lifting this restriction will require a different design (e.g. only allowing summands that contribute to gradient). */
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+  PetscCheck(!is_sum, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "%s does not support TaoAddTerm() (the LMVM Hessian aliased into tao->hessian bypasses the TaoTermSum assembly path)", ((PetscObject)tao)->type_name);
   PetscCall(TaoSetUp_BNK(tao));
   PetscCall(VecGetLocalSize(tao->solution, &n));
   PetscCall(VecGetSize(tao->solution, &N));

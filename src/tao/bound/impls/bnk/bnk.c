@@ -977,8 +977,30 @@ PetscErrorCode TaoBNKAddStepCounts(Tao tao, PetscInt stepType)
 PetscErrorCode TaoSetUp_BNK(Tao tao)
 {
   TAO_BNK *bnk = (TAO_BNK *)tao->data;
+  MPI_Comm comm;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  /* TODO: TAOBQNK overrides tao->hessian with its own MATLMVM and sets uses_hessian_matrices to false; skip these checks there.
+     When TAOBQNK gains TaoAddTerm support, it will need a different rule (e.g. summands must contribute only to gradient). */
+  if (tao->uses_hessian_matrices) {
+    PetscBool is_sum, has_submat, has_diag, has_shift;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+    if (is_sum) {
+      PetscInt    bad_idx;
+      const char *reason;
+
+      PetscCall(TaoTermSumCheckHessianAssembleable_Private(tao->objective_term.term, &bad_idx, &reason));
+      PetscCheck(bad_idx < 0, comm, PETSC_ERR_SUP, "%s requires every TaoTermSum summand to have an assembled Hessian; summand %" PetscInt_FMT ": %s", ((PetscObject)tao)->type_name, bad_idx, reason);
+    }
+    PetscCall(MatHasOperation(tao->hessian, MATOP_CREATE_SUBMATRIX, &has_submat));
+    PetscCall(MatHasOperation(tao->hessian, MATOP_GET_DIAGONAL, &has_diag));
+    PetscCall(MatHasOperation(tao->hessian, MATOP_SHIFT, &has_shift));
+    PetscCheck(has_submat, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatCreateSubMatrix()", ((PetscObject)tao)->type_name);
+    PetscCheck(has_diag, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatGetDiagonal()", ((PetscObject)tao)->type_name);
+    PetscCheck(has_shift, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatShift()", ((PetscObject)tao)->type_name);
+  }
   if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (!tao->stepdirection) PetscCall(VecDuplicate(tao->solution, &tao->stepdirection));
   if (!bnk->W) PetscCall(VecDuplicate(tao->solution, &bnk->W));

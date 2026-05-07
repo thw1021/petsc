@@ -3063,7 +3063,8 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
   size); when a mapping matrix $A$ is used, the parameter space may depend on either the row
   or column space of $A$.  See the documentation for each `TaoTermType`.
 
-  Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`)
+  Currently, `TaoAddTerm()` does not support `TAOBQNK` (the LMVM matrix it aliases into `tao->hessian` bypasses the `TAOTERMSUM` Hessian assembly path).
+  All other bounded solvers (`TAOBLMVM`, `TAOBNK`, `TAOBNLS`, `TAOBNTL`, `TAOBNTR`, `TAOTRON`) require every summand to define an assembled Hessian routine; non-assembleable summands (e.g. `HessianMult`-only terms) are rejected at `TaoSetUp()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`
 @*/
