@@ -1074,7 +1074,7 @@ subdomains. The `runex62_2D_*` examples illustrate the use of
 
 PETSc has a native algebraic multigrid preconditioner `PCGAMG` –
 *gamg* – and interfaces to three external AMG packages: *hypre*, *ML*
-and *AMGx* (CUDA platforms only) that can be downloaded in the
+and *AmgX* (CUDA platforms only) that can be downloaded in the
 configuration phase (e.g., `--download-hypre` ) and used by
 specifying that command line parameter (e.g., `-pc_type hypre`).
 *Hypre* is relatively monolithic in that a PETSc matrix is converted into a hypre
@@ -1277,7 +1277,7 @@ MatSetOption(mat,MAT_STRUCTURAL_SYMMETRY_ETERNAL,PETSC_TRUE (or PETSC_FALSE)).
 
 Using this information allows the algorithm to skip unnecessary computations.
 
-**Troubleshooting algebraic multigrid methods:** If `PCGAMG`, *ML*, *AMGx* or
+**Troubleshooting algebraic multigrid methods:** If `PCGAMG`, *ML*, *AmgX* or
 *hypre* does not perform well; the first thing to try is one of the other
 methods. Often, the default parameters or just the strengths of different
 algorithms can fix performance problems or provide useful information to
