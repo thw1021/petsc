@@ -616,7 +616,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
 }
 
 /*@C
-  PCAmgXGetResources - get AMGx's internal resource object
+  PCAmgXGetResources - get AmgX's internal resource object
 
   Not Collective, No Fortran Support
 
@@ -624,7 +624,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
 . pc - the PC
 
   Output Parameter:
-. rsrc_out - pointer to the AMGx resource object
+. rsrc_out - pointer to the AmgX resource object
 
   Level: advanced
 
