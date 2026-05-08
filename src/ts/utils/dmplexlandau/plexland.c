@@ -792,7 +792,7 @@ typedef struct {
 static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
 {
   MaxwellianCtx *mctx = (MaxwellianCtx *)actx;
-  PetscInt       i    = 0;
+  PetscInt       i;
   PetscReal      v2 = 0, theta = 2 * mctx->kT_m / (mctx->v_0 * mctx->v_0), shift; /* theta = 2kT/mc^2 */
 
   PetscFunctionBegin;
@@ -1426,7 +1426,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
 
     if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
     PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));                                                                 /* original closure */
-    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f])); /* orientation perms */
+    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f])); /* orientation perms; flips affect sign only, not index assignment */
     PetscCall(PetscArrayzero(fieldFoffs, LANDAU_MAX_SPECIES));
     PetscCall(PetscArrayzero(fullNb, LANDAU_MAX_SPECIES));
     for (PetscInt ci = 0; ci < closureSize; ci++) { /* fill gIdx / c_maps */
@@ -1497,6 +1497,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
                 }
               }
             }
+            PetscCheck(nNonzero > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "constrained DOF (cell %" PetscInt_FMT " field %" PetscInt_FMT ") has no anchor non-zeros in cMat", eidx, f);
             if (nNonzero == 1 && PetscAbs(PetscRealPart(trivVal) - 1.0) < 10 * PETSC_MACHINE_EPSILON) { /* trivial constraint */
               maps->gIdx[eidx][f][q] = trivGid;
               fullNb[f]++;
@@ -1543,14 +1544,8 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
             }
             cind++;
           } else { /* unconstrained DOF */
-            PetscInt globIdx;
-
-            if (pGlobOff < 0) { /* off-process */
-              globIdx = -(-(pGlobOff + 1) + globFieldInPoint + b - cind);
-            } else {
-              globIdx = pGlobOff + globFieldInPoint + b - cind;
-            }
-            maps->gIdx[eidx][f][q] = globIdx;
+            PetscCheck(pGlobOff >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Landau per-grid plex must be on PETSC_COMM_SELF; got off-process global offset");
+            maps->gIdx[eidx][f][q] = pGlobOff + globFieldInPoint + b - cind;
             fullNb[f]++;
           }
         }
@@ -1562,9 +1557,8 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     if (coo_elem_offsets) { /* COO offsets */
       for (PetscInt f = 0; f < Nf_grid; f++) {
         coo_elem_offsets[glb_elem_idx + 1] += fullNb[f] * fullNb[f];
-        if (f == 0) {
-          coo_elem_fullNb[glb_elem_idx] = fullNb[f];
-        } else PetscCheck(coo_elem_fullNb[glb_elem_idx] == fullNb[f], PETSC_COMM_SELF, PETSC_ERR_PLIB, "full element size change with species %" PetscInt_FMT " %" PetscInt_FMT, coo_elem_fullNb[glb_elem_idx], fullNb[f]);
+        if (f == 0) coo_elem_fullNb[glb_elem_idx] = fullNb[f];
+        else PetscCheck(coo_elem_fullNb[glb_elem_idx] == fullNb[f], PETSC_COMM_SELF, PETSC_ERR_PLIB, "full element size change with species %" PetscInt_FMT " %" PetscInt_FMT, coo_elem_fullNb[glb_elem_idx], fullNb[f]);
       }
     }
   } /* cell */
