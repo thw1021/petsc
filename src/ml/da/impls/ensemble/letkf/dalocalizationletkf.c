@@ -21,17 +21,10 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
   PetscReal   *vertex_coords, *obs_coords;
   Vec         *obs_vecs;
   MPI_Comm     comm;
-  PetscMPIInt  size;
   PetscReal    cutoff2;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)H, &comm));
-  /* Defense-in-depth: PetscDAEnsembleAnalysis_LETKF() already gates the host path to size == 1, but
-     this routine uses VecScatterCreateToAll, which would balloon to n_obs_global * dim per rank at
-     scale. Re-check here so the assumption stays load-bearing if the caller-side gate is ever
-     relaxed without porting to a neighbor-only obs exchange. */
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheck(size == 1, comm, PETSC_ERR_SUP, "Host (MATAIJ) localization Mat build is single-rank only; multi-rank requires the Kokkos backend.");
   PetscCall(MatGetLocalSize(H, &n_obs_local, NULL));
   PetscCall(MatGetSize(H, &n_obs_global, NULL));
   for (d = 0; d < 3; ++d) {
@@ -184,10 +177,9 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
     if (row_counts[i] < local_min) local_min = row_counts[i];
     if (row_counts[i] > local_max) local_max = row_counts[i];
   }
-  /* min/max are rank-local; the upstream PetscCheck() above gates this routine to a single rank,
-     so they are also the global values today. If the gate is ever relaxed, reduce these via
-     MPIU_Allreduce(MIN/MAX) before the PetscInfo. */
-  PetscCall(PetscInfo((PetscObject)*Q, "LETKF localization (type=%d, radius=%g): %" PetscInt_FMT " vertices, %" PetscInt_FMT " obs, nnz/row min=%" PetscInt_FMT " max=%" PetscInt_FMT "\n", (int)type, (double)radius, n_vert_local, n_obs_global, local_min, local_max));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &local_min, 1, MPIU_INT, MPI_MIN, comm));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &local_max, 1, MPIU_INT, MPI_MAX, comm));
+  PetscCall(PetscInfo((PetscObject)*Q, "LETKF localization (type=%s, radius=%g): %" PetscInt_FMT " vertices, %" PetscInt_FMT " obs, nnz/row min=%" PetscInt_FMT " max=%" PetscInt_FMT "\n", PetscDALETKFLocalizationTypes[type], (double)radius, n_vert_local, n_obs_global, local_min, local_max));
 
   for (d = 0; d < dim; ++d) PetscCall(VecDestroy(&obs_vecs[d]));
   PetscCall(PetscFree(obs_vecs));
