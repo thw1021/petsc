@@ -5,19 +5,26 @@ Adhere to @CLAUDE.md while reviewing.
 ## Steps
 
 ### 1. Identify the MR
+Run each command below as a separate Bash call (do **not** combine commands with `$(...)` or pipes — each must be statically analyzable to run without a permission prompt).
+
 - If an MR number is given (e.g. `8786`), use it directly.
-- If a diff file path is given, read it and find the MR via `glab mr list --source-branch <branch>`.
-- If nothing is given, use the current branch: `glab mr list --source-branch $(git branch --show-current)`.
+- If a diff file path is given, read it, then run `glab mr list --source-branch <branch>`.
+- If nothing is given, first get the current branch with `git branch --show-current`, then run `glab mr list --source-branch <branch-from-prior-step>` substituting the literal branch name.
 
 ### 2. Get MR metadata
-Run these to collect the SHAs and file list:
-```
-glab api "projects/:id/merge_requests/<MR_IID>/versions" # get base_sha, head_sha, start_sha from latest version
-glab api "projects/:id/merge_requests/<MR_IID>/changes"   # get changed file paths
-```
+Run each command below as a separate Bash call (same rule as Section 1 — do not combine).
+
+1.  Get base/head/start SHAs from the latest version:
+    ```
+    glab api "projects/:id/merge_requests/<MR_IID>/versions"
+    ```
+2.  Get the changed file list and per-file diffs:
+    ```
+    glab api "projects/:id/merge_requests/<MR_IID>/changes"
+    ```
 
 ### 3. Read and review the diff
-- Use `glab api "projects/:id/merge_requests/<MR_IID>/changes"` or read a local diff file.
+- Use the `changes` payload from Section 2 (or read a local diff file if one was provided).
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
