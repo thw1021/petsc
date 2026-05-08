@@ -21,7 +21,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS          1000 /* Spin up truth to Lorenz-96 attractor (~200 steps sufficient, 1000 for safety) */
+#define SPINUP_STEPS          300 /* Spin up truth to Lorenz-96 attractor (~200 steps sufficient, 300 for safety) */
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
 
   /* Spin up truth to get onto attractor */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %" PetscInt_FMT " steps...\n", (PetscInt)SPINUP_STEPS));
-  for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96StepVec(truth_ctx, truth_state));
+  for (PetscInt k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96StepVec(truth_ctx, truth_state));
 
   /* Initialize observation vectors */
   PetscCall(VecDuplicate(x0, &observation));
@@ -318,8 +318,9 @@ int main(int argc, char **argv)
 
   /* Configure localization for LETKF (Q is built lazily on first analysis). */
   if (isletkf) {
-    Vec xyz[3] = {NULL, NULL, NULL};
-    Vec coord;
+    Vec                          xyz[3] = {NULL, NULL, NULL};
+    Vec                          coord;
+    PetscDALETKFLocalizationType loc_type;
 
     PetscCall(DMGetCoordinates(da_state, &coord));
     PetscCall(DMCreateGlobalVector(da_state, &xyz[0]));
@@ -328,7 +329,9 @@ int main(int argc, char **argv)
     PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
     PetscCall(PetscDALETKFSetLocalizationCoordinates(da, xyz, bd, H));
     PetscCall(VecDestroy(&xyz[0]));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization configured: %" PetscInt_FMT " vertices, radius=%g\n", n, (double)localization_radius));
+    PetscCall(PetscDALETKFGetLocalizationType(da, &loc_type));
+    if (loc_type != PETSCDA_LETKF_LOC_NONE) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization configured: %" PetscInt_FMT " vertices, radius=%g\n", n, (double)localization_radius));
+    else PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization disabled (LETKF NONE; equivalent to global ETKF)\n"));
   }
 
   /* Initialize ensemble members from spun-up truth state */
@@ -350,9 +353,15 @@ int main(int argc, char **argv)
                         "  Observation frequency  : %" PetscInt_FMT "\n"
                         "  Observation noise std  : %.3f\n"
                         "  Ensemble init std      : %.3f\n"
-                        "  Random seed            : %" PetscInt_FMT "\n"
-                        "  Localization radius    : %g\n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, (PetscInt)SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, (double)localization_radius));
+                        "  Random seed            : %" PetscInt_FMT "\n",
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, (PetscInt)SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed));
+  if (isletkf) {
+    PetscDALETKFLocalizationType loc_type;
+
+    PetscCall(PetscDALETKFGetLocalizationType(da, &loc_type));
+    if (loc_type != PETSCDA_LETKF_LOC_NONE) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Localization radius    : %g\n", (double)localization_radius));
+  }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -448,7 +457,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: kokkos_kernels !complex
-    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5
+    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5
 
     test:
       suffix: letkf_serial
@@ -462,5 +471,28 @@ int main(int argc, char **argv)
     test:
       suffix: letkf_loc_none
       args: -petscda_type letkf -petscda_letkf_localization_type none
+
+    test:
+      suffix: letkf_loc_none_kokkos
+      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -petscda_letkf_localization_type none
+
+    test:
+      nsize: 3
+      suffix: letkf_loc_none_kokkos_3rank
+      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -petscda_letkf_localization_type none
+
+  testset:
+    requires: !complex
+    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5 -petscda_type letkf
+
+    test:
+      nsize: 2
+      suffix: letkf_cpu_2rank
+      args: -petscda_letkf_localization_radius 5.0
+
+    test:
+      nsize: 2
+      suffix: letkf_loc_none_2rank
+      args: -petscda_letkf_localization_type none
 
   TEST*/
