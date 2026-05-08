@@ -3,6 +3,23 @@
 #include <../src/ml/da/impls/ensemble/letkf/letkf.h>
 
 /*
+  PetscDALETKFDestroyObsScatter - Release the IS, hash, scatter context, and local work vectors
+  built by PetscDALETKFSetupObsScatter(). Idempotent; safe to call when nothing has been set up.
+*/
+PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsScatter(PetscDA_LETKF *impl)
+{
+  PetscFunctionBegin;
+  PetscCall(ISDestroy(&impl->obs_is_local));
+  PetscCall(VecScatterDestroy(&impl->obs_scat));
+  PetscCall(VecDestroy(&impl->obs_work));
+  PetscCall(VecDestroy(&impl->y_mean_work));
+  PetscCall(VecDestroy(&impl->r_inv_sqrt_work));
+  PetscCall(MatDestroy(&impl->Z_work));
+  PetscCall(PetscHMapIDestroy(&impl->obs_g2l));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   PetscDALETKFSetupObsScatter - Build the IS, global-to-local hash, scatter context, and local
   work vectors needed by the per-vertex CPU and Kokkos analysis paths.
 
@@ -52,14 +69,10 @@ PETSC_INTERN PetscErrorCode PetscDALETKFSetupObsScatter(PetscDA_LETKF *impl, Mat
 
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n_obs_local_total, obs_indices, PETSC_COPY_VALUES, &impl->obs_is_local));
 
-  /* Second pass: rebind each global index in obs_g2l to its sorted-local position so the
-     per-vertex extractor can translate column indices on the fly. Clear-and-refill is simpler
-     than tracking iterators alongside the sort. */
+  /* Repopulate obs_g2l with sorted-position values: each global index maps to its slot in obs_work
+     after the scatter. */
   PetscCall(PetscHMapIClear(impl->obs_g2l));
-  for (PetscInt i = 0; i < n_obs_local_total; i++) {
-    PetscCall(PetscHMapIPut(impl->obs_g2l, obs_indices[i], &iter, &missing));
-    PetscCall(PetscHMapIIterSet(impl->obs_g2l, iter, i));
-  }
+  for (PetscInt i = 0; i < n_obs_local_total; i++) PetscCall(PetscHMapISet(impl->obs_g2l, obs_indices[i], i));
 
   PetscCall(PetscFree(obs_indices));
 
