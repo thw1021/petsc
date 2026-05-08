@@ -99,7 +99,26 @@ PETSC_EXTERN PetscErrorCode PetscDAEnsembleSetMember(PetscDA, PetscInt, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleComputeMean(PetscDA, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleComputeAnomalies(PetscDA, Vec, Mat *);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleAnalysis(PetscDA, Vec, Mat);
-PETSC_EXTERN PetscErrorCode PetscDAEnsembleForecast(PetscDA, PetscErrorCode (*)(Mat, PetscCtx), PetscCtx);
+
+/*S
+  PetscDAEnsembleForecastFn - A prototype of an ensemble forecast model callback passed to `PetscDAEnsembleForecast()`
+
+  Calling Sequence:
++ ensemble - ensemble matrix advanced in place; on entry its columns are the current members, on
+             return its columns are the members at the next time
+- ctx      - [optional] user-defined model context
+
+  Level: intermediate
+
+  Note:
+  Per-member integrators should iterate over columns with `MatDenseGetColumnVecRead()` /
+  `MatDenseGetColumnVecWrite()`.
+
+.seealso: [](ch_da), `PetscDA`, `PETSCDALETKF`, `PetscDAEnsembleForecast()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscDAEnsembleForecastFn(Mat ensemble, PetscCtx ctx);
+
+PETSC_EXTERN PetscErrorCode PetscDAEnsembleForecast(PetscDA, PetscDAEnsembleForecastFn *, PetscCtx);
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleInitialize(PetscDA, Vec, PetscReal, PetscRandom);
 
 PETSC_EXTERN PetscErrorCode PetscDAEnsembleComputeNormalizedInnovationMatrix(Mat, Vec, Vec, PetscInt, PetscScalar, Mat);
