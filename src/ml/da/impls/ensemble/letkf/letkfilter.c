@@ -733,6 +733,15 @@ static PetscErrorCode PetscDALETKFInstallQ(PetscDA da, Mat Q)
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   if (impl->Q) PetscCall(PetscDALETKFDestroyLocalization_Kokkos(impl));
 #endif
+  /* Tear down the previous obs-scatter / IS / hash so SetupObsScatter() can rebuild them
+     for the new Q footprint. */
+  PetscCall(ISDestroy(&impl->obs_is_local));
+  PetscCall(VecScatterDestroy(&impl->obs_scat));
+  PetscCall(VecDestroy(&impl->obs_work));
+  PetscCall(VecDestroy(&impl->y_mean_work));
+  PetscCall(VecDestroy(&impl->r_inv_sqrt_work));
+  PetscCall(MatDestroy(&impl->Z_work));
+  PetscCall(PetscHMapIDestroy(&impl->obs_g2l));
 
   PetscCall(MatDestroy(&impl->Q));
   PetscCall(PetscObjectReference((PetscObject)Q));
@@ -755,8 +764,10 @@ static PetscErrorCode PetscDALETKFInstallQ(PetscDA da, Mat Q)
   impl->max_nnz_per_row = mm[0];
   impl->min_nnz_per_row = -mm[1];
 
+  /* The obs-scatter is needed by both the CPU and Kokkos per-vertex paths whenever Q exists. */
+  PetscCall(PetscDALETKFSetupObsScatter(impl, impl->coord_H));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  PetscCall(PetscDALETKFSetupLocalization_Kokkos(impl, impl->coord_H));
+  PetscCall(PetscDALETKFSetupLocalization_Kokkos(impl));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
