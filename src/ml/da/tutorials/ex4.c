@@ -583,6 +583,11 @@ int main(int argc, char **argv)
       args: -petscda_ensemble_size 7
 
     test:
+      nsize: 3
+      suffix: letkf_wave2d_mpi
+      args: -petscda_ensemble_size 5 -petscda_letkf_localization_radius 10.0
+
+    test:
       suffix: kokkos_wave2d_serial
       requires: kokkos_kernels
       args: -mat_type aijkokkos -vec_type kokkos -petscda_ensemble_size 7
