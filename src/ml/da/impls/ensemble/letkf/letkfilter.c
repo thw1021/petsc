@@ -6,7 +6,7 @@
 static PetscErrorCode PetscDALETKFInstallQ(PetscDA, Mat);
 
 /* Names must match the PetscDALETKFLocalizationType enum order in include/petscda.h. */
-static const char *const PetscDALETKFLocalizationTypes[] = {"none", "gaspari_cohn", "gaussian", "boxcar", "PetscDALETKFLocalizationType", "PETSCDA_LETKF_LOC_", NULL};
+const char *const PetscDALETKFLocalizationTypes[] = {"none", "gaspari_cohn", "gaussian", "boxcar", "PetscDALETKFLocalizationType", "PETSCDA_LETKF_LOC_", NULL};
 
 /* Free cached coordinate inputs (used only for built-in kernels). */
 static PetscErrorCode PetscDALETKFClearCoordinates(PetscDA_LETKF *impl)

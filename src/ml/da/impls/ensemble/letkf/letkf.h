@@ -48,6 +48,8 @@ typedef struct {
   void *eigen_work;    // EigenWorkspace*
 } PetscDA_LETKF;
 
+PETSC_INTERN const char *const PetscDALETKFLocalizationTypes[];
+
 PETSC_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat(PetscDALETKFLocalizationType, PetscReal, Vec[], PetscReal[], Mat, Mat *);
 PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA, PetscDA_LETKF *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
