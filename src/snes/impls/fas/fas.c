@@ -554,12 +554,9 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new
   Mat                 restrct, interpolate;
   SNES_FAS           *fasc;
 
-  /*Variables needed for linesearch*/
-  PetscReal            xnorm, ynorm;
   SNESLineSearchReason lsresult;
   Vec                  Xhat;
-  Xhat = snes->work[1];
-  PetscCall(VecCopy(X, Xhat));
+  PetscReal            fnorm_pre, xhat_norm, step;
 
   PetscFunctionBegin;
   PetscCall(SNESFASCycleGetCorrection(snes, &next));
@@ -573,6 +570,7 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new
     Xo_c = next->work[0];
     F_c  = next->vec_func;
     B_c  = next->vec_rhs;
+    Xhat = snes->work[1];
 
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));
     PetscCall(SNESFASRestrict(snes, X, Xo_c));
@@ -618,25 +616,32 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new
       PetscFunctionReturn(PETSC_SUCCESS);
     }
     /* correct as x <- x + I(x^c - Rx)*/
-    /*          X_c <- -1.0*Xo_c + X_c   */
     PetscCall(VecAXPY(X_c, -1.0, Xo_c));
-    /* X_c is correction from the coarse level need to compute alpha */
-    /*if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));*/
+    if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));
     PetscCall(MatInterpolate(interpolate, X_c, Xhat));
-
-    PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &fnorm, Xhat));
-    PetscCall(SNESLineSearchGetReason(snes->linesearch, &lsresult));
-    PetscCall(SNESLineSearchGetNorms(snes->linesearch, &xnorm, &snes->norm, &ynorm));
-    PetscCall(VecCopy(X, X_new));
-
-    if (lsresult) {
-      if (++snes->numFailures >= snes->maxFailures) {
-        snes->reason = SNES_DIVERGED_LINE_SEARCH;
-        PetscFunctionReturn(PETSC_SUCCESS);
-      }
-    }
-
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
+    if (monitorCorrection) {
+      PetscCall(VecNorm(Xhat, NORM_2, &xhat_norm));
+      fnorm_pre = *fnorm;
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes), "  FAS coarse correction: ||F_fine|| before = %g, ||I(x^c - Rx)|| = %g\n", (double)fnorm_pre, (double)xhat_norm));
+    }
+    if (snes->linesearch) {
+      PetscCall(SNESLineSearchApply(snes->linesearch, X, F, fnorm, Xhat));
+      PetscCall(SNESLineSearchGetReason(snes->linesearch, &lsresult));
+      PetscCall(SNESLineSearchGetNorms(snes->linesearch, NULL, &snes->norm, NULL));
+      PetscCall(SNESLineSearchGetLambda(snes->linesearch, &step));
+      PetscCall(VecCopy(X, X_new));
+      if (monitorCorrection) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes), "  FAS coarse correction: linesearch alpha = %g, ||F_fine|| after = %g\n", (double)step, (double)snes->norm));
+      if (lsresult) {
+        if (++snes->numFailures >= snes->maxFailures) {
+          snes->reason = SNES_DIVERGED_LINE_SEARCH;
+          PetscFunctionReturn(PETSC_SUCCESS);
+        }
+      }
+    } else {
+      /* no linesearch: apply the full correction x_new = x + I(x^c - Rx) */
+      PetscCall(MatInterpolateAdd(interpolate, X_c, X, X_new));
+    }
     if (monitorCorrection) {
       PetscReal xnorm, xonorm, inorm;
 

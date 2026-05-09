@@ -876,6 +876,16 @@ int main(int argc, char **argv)
      args: -fas_coarse_snes_max_it 1 -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_monitor_short -snes_type fas -fas_coarse_ksp_type richardson -da_refine 6 -snes_fas_type additive -snes_max_it 50 -snes_linesearch_maxlambda 2.0
 
    test:
+     # Demonstrates that multiplicative FAS requires a linesearch on the coarse correction
+     # at high nonlinearity (par=6.5, near bifurcation at 6.81).  Without the secant
+     # linesearch the full interpolated coarse correction I*(x^c - Rx) overshoots and the
+     # residual grows; with -snes_fas_type multiplicative the linesearch is now set up by
+     # default (SNESSetFromOptions_FAS) and SNESFASCoarseCorrection scales the step.
+     suffix: 5_fas_multiplicative_linesearch
+     args: -par 6.5 -snes_type fas -snes_fas_type multiplicative -da_refine 3 -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_max_it 1 -fas_levels_snes_type newtonls -fas_levels_pc_type lu -fas_levels_ksp_type preonly -snes_monitor_short -snes_converged_reason -snes_max_it 20
+     requires: !single
+
+   test:
      suffix: 5_fas_monitor
      args: -da_refine 1 -snes_type fas -snes_fas_monitor
      requires: !single
