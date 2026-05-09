@@ -4,16 +4,16 @@
 #include <petsc/private/daensembleimpl.h>
 
 typedef struct {
-  PetscDA_Ensemble             en;
-  Vec                          mean;
-  Vec                          y_mean;
-  Vec                          delta_scaled;
-  Vec                          w;
-  Vec                          r_inv_sqrt;
-  Mat                          Z;
-  Mat                          S;
-  Mat                          T_sqrt;
-  Mat                          w_ones;
+  PetscDA_Ensemble en;
+  Vec              mean;
+  Vec              y_mean;
+  Vec              delta_scaled;
+  Vec              w;
+  Vec              r_inv_sqrt;
+  Mat              Z;
+  Mat              S;
+  Mat              T_sqrt;
+  Mat              w_ones;
   /* Localization matrix (n_grid x n_observations_total), variable nnz per row;
      built lazily on first analysis and refreshed when Q_dirty is set. */
   Mat                          Q;
@@ -39,6 +39,17 @@ typedef struct {
   Vec        r_inv_sqrt_work; /* Local work vector for r_inv_sqrt */
   Mat        Z_work;          /* Local work matrix for Z (SeqDense) */
   PetscHMapI obs_g2l;         /* Map global observation index to local index in obs_work */
+
+  /* Cached H-compatible work vecs to bridge MATAIJKOKKOS H with possibly-different impl->Z type
+     during the per-column Z = H*E and the y_mean = H*x_mean products. Built lazily on first
+     analysis and rebuilt when H's row/col layout or vec type changes. H_vec_type stores the
+     `MatGetVecType(H)` string snapshot used to build the temps; compared against the live
+     `MatGetVecType(H)` to detect H switching between e.g. AIJ and AIJKOKKOS. We cache the
+     mat-side string (umbrella name like "kokkos") rather than `VecGetType(H_temp_in)` (concrete
+     name like "seqkokkos") so a fresh `MatGetVecType` lookup matches without normalization. */
+  Vec   H_temp_in;
+  Vec   H_temp_out;
+  char *H_vec_type;
 
   /* Device-side CSR view of Q (Kokkos Views cast to void*; backend reinterprets) */
   void *Q_device_i; /* Row pointers (length n_grid + 1) */
