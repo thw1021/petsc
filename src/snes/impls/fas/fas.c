@@ -257,10 +257,14 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
       PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
     }
   }
-  /* Create a linesearch object so that -snes_linesearch_* options are processed.
-     Default is basic (alpha=1); override with -snes_linesearch_type to enable damping. */
-  if (fas->fastype == SNES_FAS_MULTIPLICATIVE) {
-    if (!snes->linesearch) {
+  /* For multiplicative FAS, create a linesearch object only when the user explicitly requests
+     one via -snes_linesearch_type, so that SNESSetFromOptions() can update it from options. */
+  if (fas->fastype == SNES_FAS_MULTIPLICATIVE && !snes->linesearch) {
+    const char *optionsprefix;
+    PetscBool   lsRequested;
+    PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
+    PetscCall(PetscOptionsHasName(((PetscObject)snes)->options, optionsprefix, "-snes_linesearch_type", &lsRequested));
+    if (lsRequested) {
       PetscCall(SNESGetLineSearch(snes, &linesearch));
       PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
     }
@@ -619,28 +623,23 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new
       snes->reason = SNES_DIVERGED_INNER;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
-    /* correct as x <- x + I(x^c - Rx)*/
-    PetscCall(VecAXPY(X_c, -1.0, Xo_c));
-    if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));
-    PetscCall(MatInterpolate(interpolate, X_c, Xhat));
-    if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
+    /* correct as x <- x + I(x^c - Rx) */
     if (snes->linesearch) {
-      SNESLineSearchReason lsresult;
-
-      /* Negate Xhat so the linesearch convention X - lambda*Y gives X + lambda*I*(x^c-Rx) */
-      PetscCall(VecScale(Xhat, -1.0));
+      /* VecAYPX gives Xo_c - X_c = Rx - x^c; interpolation then yields -(x^c - Rx),
+         matching the linesearch convention X_new = X - lambda*Y */
+      PetscCall(VecAYPX(X_c, -1.0, Xo_c));
+      if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));
+      PetscCall(MatInterpolate(interpolate, X_c, Xhat));
+      if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
       PetscCall(SNESLineSearchApply(snes->linesearch, X, F, fnorm, Xhat));
-      PetscCall(SNESLineSearchGetReason(snes->linesearch, &lsresult));
       PetscCall(SNESLineSearchGetNorms(snes->linesearch, NULL, &snes->norm, NULL));
       PetscCall(VecCopy(X, X_new));
-      if (lsresult)
-        if (++snes->numFailures >= snes->maxFailures) {
-          snes->reason = SNES_DIVERGED_LINE_SEARCH;
-          PetscFunctionReturn(PETSC_SUCCESS);
-        }
+      SNESCheckLineSearchFailure(snes);
     } else {
-      /* no linesearch: apply the full correction x_new = x + I(x^c - Rx) */
+      PetscCall(VecAXPY(X_c, -1.0, Xo_c));
+      if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));
       PetscCall(MatInterpolateAdd(interpolate, X_c, X, X_new));
+      if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
     }
     if (monitorCorrection) {
       PetscReal xnorm, xonorm, inorm;
