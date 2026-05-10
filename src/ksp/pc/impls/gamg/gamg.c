@@ -33,7 +33,6 @@ static PetscErrorCode PCReset_GAMG(PC pc)
   pc_gamg->data_sz = 0;
   PetscCall(PetscFree(pc_gamg->orig_data));
   for (PetscInt level = 0; level < PETSC_MG_MAXLEVELS; level++) {
-    mg->min_eigen_DinvA[level] = 0;
     mg->max_eigen_DinvA[level] = 0;
   }
   pc_gamg->emin = 0;
@@ -927,13 +926,12 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           if (mg->max_eigen_DinvA[level] > 0) {
             // SA uses Jacobi for P; we use SA estimates if the smoother is also Jacobi or if the user explicitly requested it.
             // TODO: This should test whether it's the same Jacobi variant (DIAG, ROWSUM, etc.)
-            PetscReal emax, emin;
-
-            emin = mg->min_eigen_DinvA[level];
-            emax = mg->max_eigen_DinvA[level];
-            PetscCall(PetscInfo(pc, "%s: PCSetUp_GAMG: call KSPChebyshevSetEigenvalues on level %" PetscInt_FMT " (N=%" PetscInt_FMT ") with emax = %g emin = %g\n", ((PetscObject)pc)->prefix, level, Aarr[level]->rmap->N, (double)emax, (double)emin));
-            cheb->emin_provided = emin;
+            PetscReal emax;
+            emax                = mg->max_eigen_DinvA[level];
+            cheb->emin_provided = emax / 20; /* not clear what this should be, but MG is not too sensitive to low estimate */
             cheb->emax_provided = emax;
+            PetscCall(PetscInfo(pc, "%s: PCSetUp_GAMG: call KSPChebyshevSetEigenvalues on level %" PetscInt_FMT " (N=%" PetscInt_FMT ") with emax = %g emin = %g\n", ((PetscObject)pc)->prefix, level, Aarr[level]->rmap->N, (double)cheb->emax_provided,
+                                (double)cheb->emin_provided));
           }
         }
       }
