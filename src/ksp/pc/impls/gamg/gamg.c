@@ -932,7 +932,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
             emin = mg->min_eigen_DinvA[level];
             emax = mg->max_eigen_DinvA[level];
             PetscCall(PetscInfo(pc, "%s: PCSetUp_GAMG: call KSPChebyshevSetEigenvalues on level %" PetscInt_FMT " (N=%" PetscInt_FMT ") with emax = %g emin = %g\n", ((PetscObject)pc)->prefix, level, Aarr[level]->rmap->N, (double)emax, (double)emin));
-            cheb->emin_provided = emin;
+            cheb->emin_provided = emax / 20; /* this should be 3^D but we do not have dim */
             cheb->emax_provided = emax;
           }
         }
