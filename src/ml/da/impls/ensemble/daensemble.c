@@ -97,7 +97,7 @@ PETSC_INTERN PetscErrorCode PetscDAEnsembleTFactor_Eigen(PetscDA da)
 #else
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info));
 #endif
-  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV work query: info=%d", (int)info);
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV work query: info=%" PetscInt_FMT, (PetscInt)info);
 
   /* Allocate workspace */
   lwork = (PetscBLASInt)PetscRealPart(work[0]);
@@ -111,7 +111,7 @@ PETSC_INTERN PetscErrorCode PetscDAEnsembleTFactor_Eigen(PetscDA da)
 #else
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info));
 #endif
-  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV: info=%d", (int)info);
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV: info=%" PetscInt_FMT, (PetscInt)info);
 
   /* Cleanup */
   PetscCall(PetscFree(work));
