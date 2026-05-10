@@ -320,17 +320,17 @@ int main(int argc, char **argv)
     Vec                          xyz[3] = {NULL, NULL, NULL};
     Vec                          coord;
     PetscDALETKFLocalizationType loc_type;
+    PetscBool                    radius_set;
+    const char                  *da_prefix;
 
     PetscCall(DMGetCoordinates(da_state, &coord));
     PetscCall(DMCreateGlobalVector(da_state, &xyz[0]));
     PetscCall(PetscObjectSetName((PetscObject)xyz[0], "x_coordinate"));
     PetscCall(VecStrideGather(coord, 0, xyz[0], INSERT_VALUES));
-    {
-      PetscReal r;
-      PetscCall(PetscDALETKFGetLocalizationRadius(da, &r));
-      if (r <= 0.0) PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
-      PetscCall(PetscDALETKFGetLocalizationRadius(da, &localization_radius));
-    }
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)da, &da_prefix));
+    PetscCall(PetscOptionsHasName(NULL, da_prefix, "-petscda_letkf_localization_radius", &radius_set));
+    if (!radius_set) PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
+    PetscCall(PetscDALETKFGetLocalizationRadius(da, &localization_radius));
     PetscCall(PetscDALETKFSetLocalizationCoordinates(da, xyz, bd, H));
     PetscCall(VecDestroy(&xyz[0]));
     PetscCall(PetscDALETKFGetLocalizationType(da, &loc_type));
