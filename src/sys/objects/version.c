@@ -17,7 +17,7 @@
   Note:
   For doing runtime checking of supported versions we recommend using `PetscGetVersionNumber()` instead of this routine.
 
-.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`
+.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`, `PetscGetConfiguration()`
 @*/
 PetscErrorCode PetscGetVersion(char version[], size_t len)
 {
@@ -70,7 +70,7 @@ PetscErrorCode PetscGetVersionNumber(PetscInt *major, PetscInt *minor, PetscInt 
 
   Level: developer
 
-.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`
+.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`, `PetscGetVersion()`
 @*/
 PetscErrorCode PetscGetConfiguration(const char *configuration[])
 {
