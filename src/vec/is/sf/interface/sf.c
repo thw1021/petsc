@@ -331,7 +331,7 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
 . -sf_use_stream_aware_mpi         - Assume the underlying MPI is CUDA-stream aware and `PetscSF` won't sync streams for send/recv buffers passed to MPI (default: false).
                                      If true, this option only works with `-use_gpu_aware_mpi 1`.
 - -sf_backend (cuda|hip|kokkos)    - Select the device backend `PetscSF` uses. On CUDA (HIP) devices, one can choose `cuda` (`hip`) or `kokkos` with the default being `kokkos`.
-                                     On other devices, the only available is kokkos.
+                                     On other devices, the only available is `kokkos`.
 
   Level: intermediate
 
