@@ -415,12 +415,12 @@ PetscErrorCode TSRKFinalizePackage(void)
 + name    - identifier for method
 . order   - approximation order of method
 . s       - number of stages, this is the dimension of the matrices below
-. A       - stage coefficients (dimension s*s, row-major)
-. b       - step completion table (dimension s; NULL to use last row of A)
-. c       - abscissa (dimension s; NULL to use row sums of A)
-. bembed  - completion table for embedded method (dimension s; NULL if not available)
-. p       - Order of the interpolation scheme, equal to the number of columns of binterp
-- binterp - Coefficients of the interpolation formula (dimension s*p; NULL to reuse b with p=1)
+. A       - stage coefficients (dimension `s*s`, row-major)
+. b       - step completion table (dimension `s`; `NULL` to use last row of `A`)
+. c       - abscissa (dimension `s`; `NULL` to use row sums of `A`)
+. bembed  - completion table for embedded method (dimension `s`; `NULL` if not available)
+. p       - Order of the interpolation scheme, equal to the number of columns of `binterp`
+- binterp - Coefficients of the interpolation formula (dimension `s*p`; `NULL` to reuse `b` with $p=1$)
 
   Level: advanced
 
@@ -509,12 +509,12 @@ static PetscErrorCode TSRKGetTableau_RK(TS ts, PetscInt *s, const PetscReal *A[]
 
   Output Parameters:
 + s       - number of stages, this is the dimension of the matrices below
-. A       - stage coefficients (dimension s*s, row-major)
-. b       - step completion table (dimension s)
-. c       - abscissa (dimension s)
-. bembed  - completion table for embedded method (dimension s; NULL if not available)
-. p       - Order of the interpolation scheme, equal to the number of columns of binterp
-. binterp - Coefficients of the interpolation formula (dimension s*p)
+. A       - stage coefficients (dimension `s*s`, row-major)
+. b       - step completion table (dimension `s`)
+. c       - abscissa (dimension `s`)
+. bembed  - completion table for embedded method (dimension `s`; `NULL` if not available)
+. p       - Order of the interpolation scheme, equal to the number of columns of `binterp`
+. binterp - Coefficients of the interpolation formula (dimension `s*p`)
 - FSAL    - whether or not the scheme has the First Same As Last property
 
   Level: developer
@@ -1265,7 +1265,7 @@ PetscErrorCode TSRKGetOrder(TS ts, PetscInt *order)
 - rktype - type of `TSRK` scheme
 
   Options Database Key:
-. -ts_rk_type - <1fe,2a,3,3bs,4,5f,5dp,5bs>
+. -ts_rk_type (1fe|2a|3|3bs|4|5f|5dp|5bs) - the type
 
   Level: intermediate
 
@@ -1417,7 +1417,7 @@ static PetscErrorCode SNESTSFormJacobian_RK(SNES snes, Vec x, Mat A, Mat B, TS t
 
   Input Parameters:
 + ts            - timestepping context
-- use_multirate - `PETSC_TRUE` enables the multirate `TSRK` method, sets the basic method to be RK2A and sets the ratio between slow stepsize and fast stepsize to be 2
+- use_multirate - `PETSC_TRUE` enables the multirate `TSRK` method, sets the basic method to be `TSRK2A` and sets the ratio between slow stepsize and fast stepsize to be 2
 
   Options Database Key:
 . -ts_rk_multirate (true|false) - enable the multirate RK method
@@ -1459,7 +1459,7 @@ PetscErrorCode TSRKGetMultirate(TS ts, PetscBool *use_multirate)
 }
 
 /*MC
-      TSRK - ODE and DAE solver using Runge-Kutta schemes
+  TSRK - ODE and DAE solver using Runge-Kutta schemes
 
   The user should provide the right-hand side of the equation
   using `TSSetRHSFunction()`.
@@ -1467,7 +1467,7 @@ PetscErrorCode TSRKGetMultirate(TS ts, PetscBool *use_multirate)
   Level: beginner
 
   Notes:
-  The default is `TSRK3BS`, it can be changed with `TSRKSetType()` or -ts_rk_type
+  The default is `TSRK3BS`, it can be changed with `TSRKSetType()` or `-ts_rk_type`
 
 .seealso: [](ch_ts), `TSCreate()`, `TS`, `TSRK`, `TSSetType()`, `TSRKSetType()`, `TSRKGetType()`, `TSRK2D`, `TSRK2E`, `TSRK3`,
           `TSRK4`, `TSRK5`, `TSRKPRSSP2`, `TSRKBPR3`, `TSRKType`, `TSRKRegister()`, `TSRKSetMultirate()`, `TSRKGetMultirate()`, `TSType`
