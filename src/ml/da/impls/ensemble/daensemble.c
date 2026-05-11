@@ -69,11 +69,8 @@ PETSC_INTERN PetscErrorCode PetscDAEnsembleTFactor_Eigen(PetscDA da)
 
   PetscFunctionBegin;
   /* Initialize or update V matrix */
-  if (!en->V) {
-    PetscCall(MatDuplicate(en->I_StS, MAT_COPY_VALUES, &en->V));
-  } else {
-    PetscCall(MatCopy(en->I_StS, en->V, SAME_NONZERO_PATTERN));
-  }
+  if (!en->V) PetscCall(MatDuplicate(en->I_StS, MAT_COPY_VALUES, &en->V));
+  else PetscCall(MatCopy(en->I_StS, en->V, SAME_NONZERO_PATTERN));
 
   /* Initialize or update eigenvalue vector */
   if (!en->sqrt_eigen_vals) PetscCall(MatCreateVecs(en->I_StS, &en->sqrt_eigen_vals, NULL));
@@ -100,7 +97,7 @@ PETSC_INTERN PetscErrorCode PetscDAEnsembleTFactor_Eigen(PetscDA da)
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV work query: info=%" PetscInt_FMT, (PetscInt)info);
 
   /* Allocate workspace */
-  lwork = (PetscBLASInt)PetscRealPart(work[0]);
+  PetscCall(PetscBLASIntCast((PetscInt)PetscRealPart(work[0]), &lwork));
   PetscCall(PetscFree(work));
   PetscCall(PetscMalloc1(lwork, &work));
 
@@ -117,6 +114,18 @@ PETSC_INTERN PetscErrorCode PetscDAEnsembleTFactor_Eigen(PetscDA da)
   PetscCall(PetscFree(work));
   PetscCall(VecRestoreArrayWrite(en->sqrt_eigen_vals, &eig_array));
   PetscCall(MatDenseRestoreArrayWrite(en->V, &a_array));
+
+  /* T = (1/rho)*I + S^T*S is SPD by construction (rho >= 1, S^T*S is PSD), so a strongly negative
+     eigenvalue means the decomposition went wrong upstream. Catch in debug builds before
+     VecSqrtAbs() rewrites the sign and the analysis silently uses garbage T^{-1/2}. The tolerance
+     is scaled by ||T||_F so the test stays meaningful across problem scales. */
+  if (PetscDefined(USE_DEBUG)) {
+    PetscReal lambda_min, norm_T;
+
+    PetscCall(VecMin(en->sqrt_eigen_vals, NULL, &lambda_min));
+    PetscCall(MatNorm(en->I_StS, NORM_FROBENIUS, &norm_T));
+    PetscCheck(lambda_min >= -MATRIX_SQRT_TOLERANCE_FACTOR * norm_T, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "T = (1/rho)I + S^T*S has eigenvalue %g; expected >= -%g * ||T|| (tol = %g, ||T|| = %g)", (double)lambda_min, (double)MATRIX_SQRT_TOLERANCE_FACTOR, (double)(MATRIX_SQRT_TOLERANCE_FACTOR * norm_T), (double)norm_T);
+  }
 
   /* Compute sqrt(eigenvalues) */
   PetscCall(VecSqrtAbs(en->sqrt_eigen_vals));
