@@ -1407,6 +1407,22 @@ static PetscErrorCode MatSeqAIJCUSPARSEFormExplicitTranspose(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  Returns the explicit-transpose Mat_SeqAIJCUSPARSEMultStruct for A, refreshing it first
+  if A's values changed since the last refresh. Callers in MatProduct/MatMultTranspose
+  paths should use this instead of reading cusp->matTranspose directly so that a cached
+  transpose is never consumed with stale values. The refresh is cheap (a single
+  thrust permutation through the cached csr2csc_i) when the sparsity pattern is unchanged;
+  only a fresh nonzero state forces a full csr2csc rebuild via MatSeqAIJCUSPARSECopyToGPU().
+*/
+static PetscErrorCode MatSeqAIJCUSPARSEGetMultStructTranspose(Mat A, Mat_SeqAIJCUSPARSEMultStruct **multstructT)
+{
+  PetscFunctionBegin;
+  PetscCall(MatSeqAIJCUSPARSEFormExplicitTranspose(A));
+  *multstructT = ((Mat_SeqAIJCUSPARSE *)A->spptr)->matTranspose;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #if PETSC_PKG_CUDA_VERSION_GE(11, 4, 0)
 static PetscErrorCode MatSolve_SeqAIJCUSPARSE_LU(Mat A, Vec b, Vec x)
 {
@@ -2657,7 +2673,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   const PetscScalar            *barray;
   PetscScalar                  *carray;
   MatProductCtx_MatMatCusparse *mmdata;
-  Mat_SeqAIJCUSPARSEMultStruct *mat;
+  Mat_SeqAIJCUSPARSEMultStruct *mat = NULL;
   CsrMatrix                    *csrmat;
 
   PetscFunctionBegin;
@@ -2686,8 +2702,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
       mat = cusp->mat;
       opA = CUSPARSE_OPERATION_TRANSPOSE;
     } else {
-      PetscCall(MatSeqAIJCUSPARSEFormExplicitTranspose(A));
-      mat = cusp->matTranspose;
+      PetscCall(MatSeqAIJCUSPARSEGetMultStructTranspose(A, &mat));
       opA = CUSPARSE_OPERATION_NON_TRANSPOSE;
     }
     m = A->cmap->n;
@@ -2906,8 +2921,8 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   Mat_Product                  *product = C->product;
   Mat                           A, B;
   Mat_SeqAIJCUSPARSE           *Acusp, *Bcusp, *Ccusp;
-  Mat_SeqAIJ                   *c = (Mat_SeqAIJ *)C->data;
-  Mat_SeqAIJCUSPARSEMultStruct *Amat, *Bmat, *Cmat;
+  Mat_SeqAIJ                   *c    = (Mat_SeqAIJ *)C->data;
+  Mat_SeqAIJCUSPARSEMultStruct *Amat = NULL, *Bmat = NULL, *Cmat;
   CsrMatrix                    *Acsr, *Bcsr, *Ccsr;
   PetscBool                     flg;
   cusparseStatus_t              stat;
@@ -2967,12 +2982,12 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
     Bmat = Bcusp->mat;
     break;
   case MATPRODUCT_AtB:
-    Amat = Acusp->matTranspose;
+    PetscCall(MatSeqAIJCUSPARSEGetMultStructTranspose(A, &Amat));
     Bmat = Bcusp->mat;
     break;
   case MATPRODUCT_ABt:
     Amat = Acusp->mat;
-    Bmat = Bcusp->matTranspose;
+    PetscCall(MatSeqAIJCUSPARSEGetMultStructTranspose(B, &Bmat));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_GPU, "Unsupported product type %s", MatProductTypes[product->type]);
@@ -3028,7 +3043,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   Mat                           A, B;
   Mat_SeqAIJCUSPARSE           *Acusp, *Bcusp, *Ccusp;
   Mat_SeqAIJ                   *a, *b, *c;
-  Mat_SeqAIJCUSPARSEMultStruct *Amat, *Bmat, *Cmat;
+  Mat_SeqAIJCUSPARSEMultStruct *Amat = NULL, *Bmat = NULL, *Cmat;
   CsrMatrix                    *Acsr, *Bcsr, *Ccsr;
   PetscInt                      i, j, m, n, k;
   PetscBool                     flg;
@@ -3093,18 +3108,16 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
     m = A->cmap->n;
     n = B->cmap->n;
     k = A->rmap->n;
-    PetscCall(MatSeqAIJCUSPARSEFormExplicitTranspose(A));
-    Amat = Acusp->matTranspose;
+    PetscCall(MatSeqAIJCUSPARSEGetMultStructTranspose(A, &Amat));
     Bmat = Bcusp->mat;
     if (b->compressedrow.use) biscompressed = PETSC_TRUE;
     break;
   case MATPRODUCT_ABt:
-    m = A->rmap->n;
-    n = B->rmap->n;
-    k = A->cmap->n;
-    PetscCall(MatSeqAIJCUSPARSEFormExplicitTranspose(B));
+    m    = A->rmap->n;
+    n    = B->rmap->n;
+    k    = A->cmap->n;
     Amat = Acusp->mat;
-    Bmat = Bcusp->matTranspose;
+    PetscCall(MatSeqAIJCUSPARSEGetMultStructTranspose(B, &Bmat));
     if (a->compressedrow.use) ciscompressed = PETSC_TRUE;
     break;
   default:
@@ -3557,7 +3570,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec
 {
   Mat_SeqAIJ                   *a              = (Mat_SeqAIJ *)A->data;
   Mat_SeqAIJCUSPARSE           *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
-  Mat_SeqAIJCUSPARSEMultStruct *matstruct;
+  Mat_SeqAIJCUSPARSEMultStruct *matstruct      = NULL;
   PetscScalar                  *xarray, *zarray, *dptr, *beta, *xptr;
   cusparseOperation_t           opA = CUSPARSE_OPERATION_NON_TRANSPOSE;
   PetscBool                     compressed;
@@ -3582,8 +3595,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec
       opA       = herm ? CUSPARSE_OPERATION_CONJUGATE_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
       matstruct = (Mat_SeqAIJCUSPARSEMultStruct *)cusparsestruct->mat;
     } else {
-      if (!cusparsestruct->matTranspose) PetscCall(MatSeqAIJCUSPARSEFormExplicitTranspose(A));
-      matstruct = (Mat_SeqAIJCUSPARSEMultStruct *)cusparsestruct->matTranspose;
+      PetscCall(MatSeqAIJCUSPARSEGetMultStructTranspose(A, &matstruct));
     }
   }
   /* Does the matrix use compressed rows (i.e., drop zero rows)? */
