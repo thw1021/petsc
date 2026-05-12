@@ -1372,18 +1372,17 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 /* Build c_maps and gIdx from PetscSection constraint data and cMat, replacing the probing strategy */
 static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_grid, PetscSection section, PetscSection globsection, P4estVertexMaps *maps, pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE], PetscInt MAP_BF_SIZE, LandauIdx *coo_elem_fullNb, LandauIdx *coo_elem_offsets, PetscInt glb_elem_idx_start)
 {
-  PetscDS             ds;
-  PetscSection        aSec, cSec;
-  IS                  aIS, clpermIS = NULL;
-  Mat                 cMat;
-  const PetscInt     *anchors = NULL, *clperm_arr = NULL;
-  PetscInt            cStart, cEnd, aStart, aEnd, sStart, sEnd;
-  const PetscInt    **fieldPerms[LANDAU_MAX_SPECIES];
-  const PetscScalar **fieldFlips[LANDAU_MAX_SPECIES];
-  PetscInt            fieldFoffs[LANDAU_MAX_SPECIES]; /* running offset per field in natural order */
-  PetscInt            fullNb[LANDAU_MAX_SPECIES];     /* unconstrained DOF count per field for this element */
-  PetscInt            foffs[LANDAU_MAX_SPECIES + 1];  /* cumulative field offsets in natural closure order */
-  PetscInt            clTotDof;                       /* total closure DOFs (same for all cells, from DS) */
+  PetscDS          ds;
+  PetscSection     aSec, cSec;
+  IS               aIS, clpermIS = NULL;
+  Mat              cMat;
+  const PetscInt  *anchors = NULL, *clperm_arr = NULL;
+  PetscInt         cStart, cEnd, aStart, aEnd, sStart, sEnd;
+  const PetscInt **fieldPerms[LANDAU_MAX_SPECIES];
+  PetscInt         fieldFoffs[LANDAU_MAX_SPECIES]; /* running offset per field in natural order */
+  PetscInt         fullNb[LANDAU_MAX_SPECIES];     /* unconstrained DOF count per field for this element */
+  PetscInt         foffs[LANDAU_MAX_SPECIES + 1];  /* cumulative field offsets in natural closure order */
+  PetscInt         clTotDof;                       /* total closure DOFs (same for all cells, from DS) */
 
   PetscFunctionBegin;
   PetscCheck(Nf_grid <= LANDAU_MAX_SPECIES, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Nf_grid %" PetscInt_FMT " > LANDAU_MAX_SPECIES %d", Nf_grid, LANDAU_MAX_SPECIES);
@@ -1420,8 +1419,8 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     PetscInt  closureSize;
 
     if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
-    PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));                                                                 /* original closure */
-    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f])); /* orientation perms; flips affect sign only, not index assignment */
+    PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));                                                       /* original closure */
+    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionGetFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], NULL)); /* orientation perms; flips affect sign only and are not needed for index assignment */
     PetscCall(PetscArrayzero(fieldFoffs, LANDAU_MAX_SPECIES));
     PetscCall(PetscArrayzero(fullNb, LANDAU_MAX_SPECIES));
     for (PetscInt ci = 0; ci < closureSize; ci++) { /* fill gIdx / c_maps */
@@ -1547,7 +1546,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
         fieldFoffs[f] += fdof;
       }
     }
-    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionRestoreFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], &fieldFlips[f]));
+    for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscSectionRestoreFieldPointSyms(section, f, closureSize, closure, &fieldPerms[f], NULL));
     PetscCall(DMPlexRestoreTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));
     if (coo_elem_offsets) { /* COO offsets */
       for (PetscInt f = 0; f < Nf_grid; f++) {
