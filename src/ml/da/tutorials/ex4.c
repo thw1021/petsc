@@ -340,10 +340,9 @@ int main(int argc, char **argv)
      Gaussian, boxcar) are wired through SetLocalizationCoordinates and the matrix Q
      is built lazily on the first analysis; the NONE kernel needs no setup. */
   PetscCall(PetscDALETKFGetLocalizationType(da, &loc_type));
-  if (loc_type == PETSCDA_LETKF_LOC_NONE) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization disabled (LETKF NONE; equivalent to global ETKF)\n"));
-  } else {
-    Vec         Vecxyz[3] = {NULL, NULL, NULL};
+  if (loc_type == PETSCDA_LETKF_LOC_NONE) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization disabled (LETKF NONE; equivalent to global ETKF)\n"));
+  else {
+    Vec         xyz[3] = {NULL, NULL, NULL};
     Vec         coord;
     DM          cda;
     PetscReal   bd[3] = {Lx, Ly, 0};
@@ -353,22 +352,22 @@ int main(int argc, char **argv)
     PetscCall(DMGetCoordinateDM(da_state, &cda));
     PetscCall(DMGetCoordinates(da_state, &coord));
 
-    /* Vecxyz must share the DMDA per-grid-point partition so that VecStrideGather from
+    /* xyz must share the DMDA per-grid-point partition so that VecStrideGather from
        the (block-2) coordinate vector lands in matching local rows. */
     for (PetscInt d = 0; d < 2; d++) {
-      PetscCall(VecCreate(PETSC_COMM_WORLD, &Vecxyz[d]));
-      PetscCall(VecSetSizes(Vecxyz[d], local_state_size / ndof, nx * ny));
-      PetscCall(VecSetFromOptions(Vecxyz[d]));
-      PetscCall(PetscObjectSetName((PetscObject)Vecxyz[d], d == 0 ? "x_coordinate" : "y_coordinate"));
-      PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
+      PetscCall(VecCreate(PETSC_COMM_WORLD, &xyz[d]));
+      PetscCall(VecSetSizes(xyz[d], local_state_size / ndof, nx * ny));
+      PetscCall(VecSetFromOptions(xyz[d]));
+      PetscCall(PetscObjectSetName((PetscObject)xyz[d], d == 0 ? "x_coordinate" : "y_coordinate"));
+      PetscCall(VecStrideGather(coord, d, xyz[d], INSERT_VALUES));
     }
 
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)da, &da_prefix));
     PetscCall(PetscOptionsHasName(NULL, da_prefix, "-petscda_letkf_localization_radius", &radius_set));
     if (!radius_set) PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
     PetscCall(PetscDALETKFGetLocalizationRadius(da, &localization_radius));
-    PetscCall(PetscDALETKFSetLocalizationCoordinates(da, Vecxyz, bd, H1));
-    for (PetscInt d = 0; d < 3; d++) PetscCall(VecDestroy(&Vecxyz[d]));
+    PetscCall(PetscDALETKFSetLocalizationCoordinates(da, xyz, bd, H1));
+    for (PetscInt d = 0; d < 2; d++) PetscCall(VecDestroy(&xyz[d]));
 
     switch (loc_type) {
     case PETSCDA_LETKF_LOC_GASPARI_COHN:
@@ -388,7 +387,6 @@ int main(int argc, char **argv)
 
   /* Initialize ensemble members with perturbations */
   PetscCall(InitializeBalancedEnsemble(da, da_state, sw_ctx, random_seed, ensemble_size, init_perturb_amplitude, init_h_bias));
-  PetscCall(PetscDAViewFromOptions(da, NULL, "-petscda_view"));
 
   /* Print configuration summary */
   dx  = Lx / nx;
