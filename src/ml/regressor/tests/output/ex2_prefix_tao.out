@@ -1,7 +1,6 @@
 PetscRegressor Object: 1 MPI process
   type: linear
     PetscRegressor Linear Type: ols
-    Intercept=0.0857143
   Tao Object: (regressor_linear_) 1 MPI process
     type: brgn
       Regularizer weight: 0.
@@ -57,13 +56,39 @@ PetscRegressor Object: 1 MPI process
         Objective function:
           Scale (tao_objective_scale): 1.
           Function:
-            TaoTerm Object: (tao_brgn_subsolver_callbacks_) 1 MPI process
-              type: callbacks
+            TaoTerm Object: (tao_brgn_subsolver_) 1 MPI process
+              type: sum
               solution vector space: N = 2 [VecType seq (tao_term_solution_vec_type)]
-              parameter vector space: (none)
-              Hessian MatType (tao_term_hessian_mat_type): (undefined)
-              attached to Tao [name omitted] (tao_brgn_subsolver_)
-              total number of function/gradient evaluations=3
+              parameter vector space: (optional) K = 2 [VecType nest (tao_term_parameters_vec_type)]
+              Hessian MatType (tao_term_hessian_mat_type): aij
+              Sum of 2 terms:
+                Summand 0:
+                  Scale (tao_term_sum_regressor_linear_brgn_gauss_newton_scale): 1.
+                  Term:
+                    TaoTerm Object: BRGN Gauss-Newton term (regressor_linear_brgn_gauss_newton_) 1 MPI process
+                      type: gaussnewton
+                      solution vector space: N = 2 [VecType seq (tao_term_solution_vec_type)]
+                      parameter vector space: (none)
+                      Hessian MatType (tao_term_hessian_mat_type): aij
+                      Gauss-Newton term wrapping a Tao residual
+                      total number of function evaluations=1
+                      total number of function/gradient evaluations=2
+                      total number of Hessian evaluations=1
+                  Map: unmapped
+                Summand 1:
+                  Scale (tao_term_sum_regularizer_scale): 0.
+                  Term:
+                    TaoTerm Object: (regressor_linear_brgn_regularizer_) 1 MPI process
+                      type: halfl2squared
+                      solution vector space: N = 2 [VecType standard (tao_term_solution_vec_type)]
+                      parameter vector space: (optional) K = 2 [VecType standard (tao_term_parameters_vec_type)]
+                      Hessian MatType (tao_term_hessian_mat_type): diagonal
+                      total number of function evaluations=1
+                      total number of function/gradient evaluations=2
+                      total number of Hessian evaluations=1
+                  Map: unmapped
+              total number of function evaluations=1
+              total number of function/gradient evaluations=2
               total number of Hessian evaluations=1
           Map: unmapped
         TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
@@ -102,17 +127,19 @@ PetscRegressor Object: 1 MPI process
               Rescale convex factor: theta=0.125
           linear system matrix, which is also used to construct the preconditioner:
           Mat Object: 1 MPI process
-            type: shell
+            type: seqaij
             rows=2, cols=2
+            total: nonzeros=4, allocated nonzeros=4
+            total number of mallocs used during MatSetValues calls=0
+              using I-node routines: found 1 nodes, limit used is 5
         total KSP iterations: 2
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=1.00074e-16
-        Objective value=0.0571429
+        Residual in Function/Gradient:=3.05627e-16
+        Objective value=0.0647059
         total number of iterations=1,                                (max: 10000)
-        total number of function/gradient evaluations=3,            (max: unlimited)
-        total number of residual evaluations=3
+        total number of function evaluations=1,                        (max: unlimited)
+        total number of function/gradient evaluations=2,            (max: unlimited)
         total number of Hessian evaluations=1
-        total number of Jacobian evaluations=4
         Solution converged:          ||g(X)|| <= gatol
     Objective function:
       Scale (tao_objective_scale): 1.
@@ -123,28 +150,30 @@ PetscRegressor Object: 1 MPI process
           parameter vector space: (none)
           Hessian MatType (tao_term_hessian_mat_type): (undefined)
           attached to Tao [name omitted] (regressor_linear_)
-          total number of function/gradient evaluations=3
+          total number of function evaluations=1
+          total number of function/gradient evaluations=2
           total number of Hessian evaluations=1
       Map: unmapped
     convergence tolerances: gatol=1e-08,     grtol=1e-08,     steptol=0.,     gttol=0.
     Residual in Function/Gradient:=0.
-    Objective value=1.15
+    Objective value=2.75
     total number of iterations=1,                            (max: 10000)
-    total number of function/gradient evaluations=3,        (max: unlimited)
-    total number of residual evaluations=3
+    total number of function evaluations=1,                    (max: unlimited)
+    total number of function/gradient evaluations=2,        (max: unlimited)
     total number of Hessian evaluations=1
+    total number of Jacobian evaluations=1
     Solution converged:      ||g(X)|| <= gatol
-Intercept is 0.085714
+Intercept is 0.000000
 Coefficients are
 Vec Object: 1 MPI process
   type: seq
 0.4
-1.42857
+1.52941
 Predicted values are
 Vec Object: 1 MPI process
   type: seq
-1.11429
-0.242857
-0.0857143
-0.642857
-1.91429
+1.12941
+0.182353
+0.
+0.582353
+1.92941

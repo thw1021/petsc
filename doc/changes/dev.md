@@ -80,8 +80,11 @@
 
 - Add `TaoGetDM()` and `TaoSetDM()`
 - Allow `TaoAddTerm()` on the bounded solvers `TAOBLMVM`, `TAOBNK`, `TAOBNLS`, `TAOBNTL`, `TAOBNTR`, and `TAOTRON`; every summand must define an assembled Hessian (`TAOBQNK` remains unsupported)
+- Refactor `TAOBRGN` onto `TaoTerm` composition: the subsolver now holds two summands, a `TAOTERMGAUSSNEWTON` for $\tfrac{1}{2}\|R(x)\|_2^2$ and a regularizer term scaled by $\lambda$. Add `TaoBRGNSetRegularizerTerm()` and `TaoBRGNGetRegularizerTerm()` so users can install an arbitrary `TaoTerm` regularizer; the legacy `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and `TaoBRGNSetRegularizerHessianRoutine()` setters become callback shims around a `TAOTERMSHELL`. Remove `-tao_brgn_mat_explicit`; control the Gauss-Newton Hessian assembly via `-<prefix>brgn_gauss_newton_tao_term_hessian_mat_type` instead. The new path requires the residual Jacobian to support `MatProduct` AtB, so `TAOBRGN` no longer accepts unassembleable Jacobians (e.g. `MATCOMPOSITE`); workflows that previously relied on the matrix-free Gauss-Newton Hessian must either materialize their Jacobian or wait for shell-mode support to land
 
 ## TaoTerm
+
+- Add `TAOTERMGAUSSNEWTON`: a `TaoTerm` that wraps the residual machinery of a `Tao` (set with `TaoSetResidualRoutine()` and `TaoSetJacobianResidualRoutine()`) as the smooth least-squares term $\tfrac{1}{2}\|R(x)\|_2^2$ with Gauss-Newton Hessian $J^T J$. The residual Jacobian is cached by `(x_id, x_state)` so successive evaluations at the same iterate do not redundantly invoke the user's Jacobian. New API: `TaoTermCreateGaussNewton()`, `TaoTermGaussNewtonSetTao()`, `TaoTermGaussNewtonGetTao()`, `TaoTermGaussNewtonGetJacobian()`
 
 
 ## PetscRegressor

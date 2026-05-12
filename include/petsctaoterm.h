@@ -39,6 +39,7 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMHALFL2SQUARED` - $\tfrac{1}{2}\|x - p\|_2^2$
 . `TAOTERML1`            - $\|x - p\|_1$
 . `TAOTERMQUADRATIC`     - a quadratic form $\tfrac{1}{2}(x - p)^T A (x - p)$
+. `TAOTERMGAUSSNEWTON`   - $\tfrac{1}{2}\|R(x)\|_2^2$ where $R$ is the residual of a `Tao` (see `TaoTermCreateGaussNewton()`)
 - `TAOTERMCALLBACKS`     - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
 
   Level: intermediate
@@ -52,6 +53,7 @@ typedef const char *TaoTermType;
 #define TAOTERMHALFL2SQUARED "halfl2squared"
 #define TAOTERML1            "l1"
 #define TAOTERMQUADRATIC     "quadratic"
+#define TAOTERMGAUSSNEWTON   "gaussnewton"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -346,6 +348,11 @@ PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateQuadratic(Mat, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticGetMat(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticSetMat(TaoTerm, Mat);
+
+PETSC_EXTERN PetscErrorCode TaoTermCreateGaussNewton(Tao, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermGaussNewtonSetTao(TaoTerm, Tao);
+PETSC_EXTERN PetscErrorCode TaoTermGaussNewtonGetTao(TaoTerm, Tao *);
+PETSC_EXTERN PetscErrorCode TaoTermGaussNewtonGetJacobian(TaoTerm, Vec, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);

@@ -43,6 +43,31 @@ PetscRegressor Object: 1 MPI process
             dtol: 0
             iter: 0
             othr: 0
+        Objective function:
+          TaoTerm Object: (tao_brgn_subsolver_) 1 MPI process
+            type: sum
+            solution vector space: N = 10
+            parameter vector space: (optional) K = 10
+            Sum of 2 terms: f_{BRGN Gauss-Newton term}(x) + 0. f_{regressor_linear_brgn_regularizer_}(x; [p_1])
+            f_{BRGN Gauss-Newton term}:
+              TaoTerm Object: BRGN Gauss-Newton term (regressor_linear_brgn_gauss_newton_) 1 MPI process
+                type: gaussnewton
+                solution vector space: N = 10
+                Gauss-Newton term wrapping a Tao residual
+                total number of function evaluations=1
+                total number of function/gradient evaluations=2
+                total number of Hessian evaluations=1
+            f_{regressor_linear_brgn_regularizer_}:
+              TaoTerm Object: (regressor_linear_brgn_regularizer_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 10
+                parameter vector space: (optional) K = 10
+                total number of function evaluations=1
+                total number of function/gradient evaluations=2
+                total number of Hessian evaluations=1
+            total number of function evaluations=1
+            total number of function/gradient evaluations=2
+            total number of Hessian evaluations=1
         TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
           type: more-thuente
           maximum function evaluations=30
@@ -79,23 +104,26 @@ PetscRegressor Object: 1 MPI process
               Rescale convex factor: theta=0.125
           linear system matrix, which is also used to construct the preconditioner:
           Mat Object: 1 MPI process
-            type: shell
+            type: seqaij
             rows=10, cols=10
+            total: nonzeros=10, allocated nonzeros=10
+            total number of mallocs used during MatSetValues calls=0
+              not using I-node routines
         total KSP iterations: 1
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
         Residual in Function/Gradient:=0.
         Objective value=0.
         total number of iterations=1,                                (max: 10000)
-        total number of function/gradient evaluations=3,            (max: unlimited)
-        total number of residual evaluations=3
+        total number of function evaluations=1,                        (max: unlimited)
+        total number of function/gradient evaluations=2,            (max: unlimited)
         total number of Hessian evaluations=1
-        total number of Jacobian evaluations=4
         Solution converged:          ||g(X)|| <= gatol
     convergence tolerances: gatol=1e-08,     grtol=1e-08,     steptol=0.,     gttol=0.
     Residual in Function/Gradient:=0.
     Objective value=41.25
     total number of iterations=1,                            (max: 10000)
-    total number of function/gradient evaluations=3,        (max: unlimited)
-    total number of residual evaluations=3
+    total number of function evaluations=1,                    (max: unlimited)
+    total number of function/gradient evaluations=2,        (max: unlimited)
     total number of Hessian evaluations=1
+    total number of Jacobian evaluations=1
     Solution converged:      ||g(X)|| <= gatol

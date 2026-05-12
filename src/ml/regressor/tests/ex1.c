@@ -74,7 +74,9 @@ int main(int argc, char **args)
 
   test:
     suffix: prefix_tao
-    args: -regressor_view ::ascii_info_detail
+    # -regressor_linear_fit_intercept false: avoid the MATCOMPOSITE Jacobian path; TAOBRGN no longer
+    # supports unassembleable Jacobians (J^T J is now assembled via TAOTERMGAUSSNEWTON).
+    args: -regressor_view ::ascii_info_detail -regressor_linear_fit_intercept false
 
   test:
     suffix: prefix_ksp

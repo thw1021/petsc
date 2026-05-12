@@ -509,6 +509,8 @@ PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerWeight(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetL1SmoothEpsilon(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetDictionaryMatrix(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoBRGNGetDampingVector(Tao, Vec *);
+PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerTerm(Tao, PetscReal, TaoTerm, Vec, Mat);
+PETSC_EXTERN PetscErrorCode TaoBRGNGetRegularizerTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoBNCGSetType(Tao, TaoBNCGType);
 PETSC_EXTERN PetscErrorCode TaoBNCGGetType(Tao, TaoBNCGType *);

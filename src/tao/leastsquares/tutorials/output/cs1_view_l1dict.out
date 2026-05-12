@@ -29,18 +29,50 @@ Tao Object: 1 MPI process
           Solver never run
         Rejected BFGS updates: 0
         CG steps: 0
-        Newton steps: 18
+        Newton steps: 15
         BFGS steps: 1
         Scaled gradient steps: 0
         Gradient steps: 0
         KSP termination reasons:
           atol: 0
           rtol: 5
-          ctol: 13
+          ctol: 11
           negc: 0
           dtol: 0
-          iter: 1
+          iter: 0
           othr: 0
+      Objective function:
+        TaoTerm Object: (tao_brgn_subsolver_) 1 MPI process
+          type: sum
+          solution vector space: N = 5
+          parameter vector space: (optional) K = 4
+          Sum of 2 terms: f_{BRGN Gauss-Newton term}(x) + 0.0001 f_{brgn_regularizer_}(A_1 x; [p_1])
+          f_{BRGN Gauss-Newton term}:
+            TaoTerm Object: BRGN Gauss-Newton term (brgn_gauss_newton_) 1 MPI process
+              type: gaussnewton
+              solution vector space: N = 5
+              Gauss-Newton term wrapping a Tao residual
+              total number of function evaluations=16
+              total number of function/gradient evaluations=70
+              total number of Hessian evaluations=16
+          f_{brgn_regularizer_}:
+            TaoTerm Object: (brgn_regularizer_) 1 MPI process
+              type: l1
+              solution vector space: N = 4
+              parameter vector space: (optional) K = 4
+              epsilon (tao_term_l1_epsilon): 1e-06
+              total number of function evaluations=16
+              total number of function/gradient evaluations=70
+              total number of Hessian evaluations=16
+          A_1:
+            Mat Object: 1 MPI process
+              type: seqdense
+              rows=4, cols=5
+              total: nonzeros=20, allocated nonzeros=20
+              total number of mallocs used during MatSetValues calls=0
+          total number of function evaluations=16
+          total number of function/gradient evaluations=70
+          total number of Hessian evaluations=16
       TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -62,7 +94,7 @@ Tao Object: 1 MPI process
           rows=5, cols=5
             Max. storage: 5
             Used storage: 5
-            Number of updates: 18
+            Number of updates: 15
             Number of rejects: 0
             Number of resets: 0
             J0:
@@ -77,23 +109,26 @@ Tao Object: 1 MPI process
             Rescale convex factor: theta=0.125
         linear system matrix, which is also used to construct the preconditioner:
         Mat Object: 1 MPI process
-          type: shell
+          type: seqaij
           rows=5, cols=5
-      total KSP iterations: 60
+          total: nonzeros=25, allocated nonzeros=25
+          total number of mallocs used during MatSetValues calls=0
+            using I-node routines: found 1 nodes, limit used is 5
+      total KSP iterations: 48
       convergence tolerances: gatol=1e-06,       grtol=1e-08,       steptol=0.,       gttol=0.
-      Residual in Function/Gradient:=7.45232e-07
+      Residual in Function/Gradient:=1.81649e-07
       Objective value=0.000199924
-      total number of iterations=19,                              (max: 10000)
-      total number of function/gradient evaluations=96,          (max: unlimited)
-      total number of residual evaluations=96
-      total number of Hessian evaluations=19
-      total number of Jacobian evaluations=115
+      total number of iterations=16,                              (max: 10000)
+      total number of function evaluations=16,                      (max: unlimited)
+      total number of function/gradient evaluations=70,          (max: unlimited)
+      total number of Hessian evaluations=16
       Solution converged:        ||g(X)|| <= gatol
   convergence tolerances: gatol=1e-06,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=0.
   Objective value=0.000199924
-  total number of iterations=19,                          (max: 10000)
-  total number of function/gradient evaluations=96,      (max: unlimited)
-  total number of residual evaluations=96
-  total number of Hessian evaluations=19
+  total number of iterations=16,                          (max: 10000)
+  total number of function evaluations=16,                  (max: unlimited)
+  total number of function/gradient evaluations=70,      (max: unlimited)
+  total number of Hessian evaluations=16
+  total number of Jacobian evaluations=84
   Solution converged:    ||g(X)|| <= gatol

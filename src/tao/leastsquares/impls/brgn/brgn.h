@@ -1,35 +1,43 @@
 /*
 Context for Bounded Regularized Gauss-Newton algorithm.
-Extended with L1-regularizer with a linear transformation matrix D:
-0.5*||Ax-b||^2 + lambda*||D*x||_1
-When D is an identity matrix, we have the classic lasso, aka basis pursuit denoising in compressive sensing problem.
+
+TAOBRGN is a thin wrapper around TAOBNLS that composes two TaoTerms on the
+subsolver via TaoAddTerm():
+
+  subterm 0: TAOTERMGAUSSNEWTON over the parent Tao  (scale 1.0)
+             -- contributes (1/2) ||R(x)||^2 with Gauss-Newton Hessian J^T J
+  subterm 1: regularizer  (scale = lambda)
+             -- one of L2PURE, L2PROX, L1DICT (with optional dictionary D),
+                LM (Levenberg-Marquardt diag(J^T J) damping), or a user term
+
+Backward-compat callback setters (TaoBRGNSetRegularizerObjectiveAndGradientRoutine,
+TaoBRGNSetRegularizerHessianRoutine) are adapted by building a TAOTERMSHELL
+that wraps the user's callbacks.
 */
 
 #pragma once
 
-#include <../src/tao/bound/impls/bnk/bnk.h> /* BNLS, a sub-type of BNK, is used in brgn solver */
 #include <petsc/private/taoimpl.h>
-
-#define BRGN_REGULARIZATION_USER   0
-#define BRGN_REGULARIZATION_L2PROX 1
-#define BRGN_REGULARIZATION_L2PURE 2
-#define BRGN_REGULARIZATION_L1DICT 3
-#define BRGN_REGULARIZATION_LM     4
-#define BRGN_REGULARIZATION_TYPES  5
+#include <petsctaoterm.h>
 
 typedef struct {
-  PetscErrorCode (*regularizerobjandgrad)(Tao, Vec, PetscReal *, Vec, void *);
-  PetscErrorCode (*regularizerhessian)(Tao, Vec, Mat, void *);
-  void                     *reg_obj_ctx;
-  void                     *reg_hess_ctx;
-  Mat                       H, Hreg, D;                             /* Hessian, Hessian for regulization part, and Dictionary matrix have size N*N, and K*N respectively. (Jacobian M*N not used here) */
-  Vec                       x_old, x_work, r_work, diag, y, y_work; /* x, r=J*x, and y=D*x have size N, M, and K respectively. */
-  Vec                       damping;                                /* Optional diagonal damping matrix. */
-  Tao                       subsolver, parent;
-  PetscReal                 lambda, epsilon, fc_old;                      /* lambda is regularizer weight for both L2-norm Gaussian-Newton and L1-norm, ||x||_1 is approximated with sum(sqrt(x.^2+epsilon^2)-epsilon)*/
-  PetscReal                 downhill_lambda_change, uphill_lambda_change; /* With the lm regularizer lambda diag(J^T J),
-                                                                 lambda = downhill_lambda_change * lambda on steps that decrease the objective.
-                                                                 lambda = uphill_lambda_change * lambda on steps that increase the objective. */
+  Mat       D;       /* L1DICT dictionary (optional, may be NULL) */
+  Vec       damping; /* stable Vec returned by TaoBRGNGetDampingVector() */
+  Tao       subsolver, parent;
+  PetscReal lambda;  /* current regularizer weight (cached so we can rebuild subterms) */
+  PetscReal epsilon; /* L1 smoothing parameter (cached so it survives type swaps) */
+  PetscReal fc_old;  /* for LM uphill/downhill detection */
+  PetscReal downhill_lambda_change, uphill_lambda_change;
+
   TaoBRGNRegularizationType reg_type;
-  PetscBool                 mat_explicit;
+
+  /* USER regularizer state (set by legacy callback APIs); used to build a TAOTERMSHELL */
+  PetscErrorCode (*user_objgrad)(Tao, Vec, PetscReal *, Vec, PetscCtx);
+  PetscCtx user_objgrad_ctx;
+  PetscErrorCode (*user_hessian)(Tao, Vec, Mat, PetscCtx);
+  PetscCtx user_hessian_ctx;
+  Mat      user_hessian_mat; /* matrix the user passed to TaoBRGNSetRegularizerHessianRoutine() */
 } TAO_BRGN;
+
+PETSC_INTERN PetscErrorCode TaoTermCreateBRGNLMDamping(TaoTerm gn, TaoTerm *lm);
+PETSC_INTERN PetscErrorCode TaoTermBRGNLMDampingCopyDiagonal(TaoTerm lm, Vec dst);

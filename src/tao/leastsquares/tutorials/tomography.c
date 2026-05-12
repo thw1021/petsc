@@ -86,12 +86,16 @@ int main(int argc, char **argv)
 
   /* User set the regularizer objective, gradient, and hessian. Set it the same as using l2prox choice, for testing purpose.  */
   PetscCall(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(tao, EvaluateRegularizerObjectiveAndGradient, (void *)&user));
-  /* User defined regularizer Hessian setup, here is identity shell matrix */
+  /* User defined regularizer Hessian setup: identity matrix.  TAOBRGN now requires
+     an assembled Hessian matrix (the previous MATSHELL path was removed when BRGN
+     was refactored onto TaoTerm composition). */
   PetscCall(MatCreate(PETSC_COMM_SELF, &Hreg));
   PetscCall(MatSetSizes(Hreg, PETSC_DECIDE, PETSC_DECIDE, user.N, user.N));
-  PetscCall(MatSetType(Hreg, MATSHELL));
-  PetscCall(MatSetUp(Hreg));
-  PetscCall(MatShellSetOperation(Hreg, MATOP_MULT, (PetscErrorCodeFn *)EvaluateRegularizerHessianProd));
+  PetscCall(MatSetType(Hreg, MATAIJ));
+  PetscCall(MatSeqAIJSetPreallocation(Hreg, 1, NULL));
+  PetscCall(MatAssemblyBegin(Hreg, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(Hreg, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatShift(Hreg, 1.0));
   PetscCall(TaoBRGNSetRegularizerHessianRoutine(tao, Hreg, EvaluateRegularizerHessian, (void *)&user));
 
   /* Check for any TAO command line arguments */
