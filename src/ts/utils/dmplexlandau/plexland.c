@@ -1389,7 +1389,6 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
   PetscCheck(Nf_grid <= LANDAU_MAX_SPECIES, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Nf_grid %" PetscInt_FMT " > LANDAU_MAX_SPECIES %d", Nf_grid, LANDAU_MAX_SPECIES);
   PetscCall(DMGetDS(dm, &ds));
   /* per-field offsets and total DOF count are stored in the DS; no need to recompute per cell */
-  foffs[0] = 0;
   for (PetscInt f = 0; f < Nf_grid; f++) PetscCall(PetscDSGetFieldOffset(ds, f, &foffs[f]));
   PetscCall(PetscDSGetTotalDimension(ds, &clTotDof));
   foffs[Nf_grid] = clTotDof;
@@ -1416,10 +1415,9 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
     }
   }
   for (PetscInt ej = cStart, eidx = 0; ej < cEnd; ++ej, ++eidx) {
-    PetscInt        glb_elem_idx = glb_elem_idx_start + eidx;
-    PetscInt       *closure      = NULL;
-    PetscInt        closureSize;
-    const PetscInt *clperm = clperm_arr;
+    PetscInt  glb_elem_idx = glb_elem_idx_start + eidx;
+    PetscInt *closure      = NULL;
+    PetscInt  closureSize;
 
     if (coo_elem_offsets) coo_elem_offsets[glb_elem_idx + 1] = coo_elem_offsets[glb_elem_idx];
     PetscCall(DMPlexGetTransitiveClosure(dm, ej, PETSC_TRUE, &closureSize, &closure));                                                                 /* original closure */
