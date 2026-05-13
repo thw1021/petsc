@@ -1675,6 +1675,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
           else {
             PetscInt g = -1;
             PetscCall(PetscHMapIGet(ghost_gid_to_lid, cols[j], &g));
+            PetscCheck(g >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of Prol not in garray", cols[j]);
             ghosted_idx[j] = nloc + g;
           }
         }
