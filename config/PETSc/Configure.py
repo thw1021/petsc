@@ -490,9 +490,9 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_DM_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_KSP_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_SNES_LIB','${PETSC_WITH_EXTERNAL_LIB}')
-      self.addMakeMacro('PETSC_TS_LIB','${PETSC_WITH_EXTERNAL_LIB}')
-      self.addMakeMacro('PETSC_TAO_LIB','${PETSC_WITH_EXTERNAL_LIB}')
-      self.addMakeMacro('PETSC_ML_LIB','${PETSC_WITH_EXTERNAL_LIB}')
+      self.addMakeMacro('PETSC_TS_LIB','${PETSCSUNDIALS_LIB} ${SUNDIALS_LIB} ${PETSC_WITH_EXTERNAL_LIB}')
+      self.addMakeMacro('PETSC_TAO_LIB','${PETSCSUNDIALS_LIB} ${SUNDIALS_LIB} ${PETSC_WITH_EXTERNAL_LIB}')
+      self.addMakeMacro('PETSC_ML_LIB','${PETSCSUNDIALS_LIB} ${SUNDIALS_LIB} ${PETSC_WITH_EXTERNAL_LIB}')
     else:
       pkgs = ['ml', 'tao', 'ts', 'snes', 'ksp', 'dm', 'mat', 'vec', 'sys']
       def liblist_basic(libs):
@@ -506,9 +506,9 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_DM_LIB',  liblist(pkgs[-4:]))
       self.addMakeMacro('PETSC_KSP_LIB', liblist(pkgs[-5:]))
       self.addMakeMacro('PETSC_SNES_LIB',liblist(pkgs[-6:]))
-      self.addMakeMacro('PETSC_TS_LIB',  liblist(pkgs[-7:]))
-      self.addMakeMacro('PETSC_TAO_LIB', liblist(pkgs[-8:]))
-      self.addMakeMacro('PETSC_ML_LIB', liblist(pkgs[-9:]))
+      self.addMakeMacro('PETSC_TS_LIB',  '${PETSCSUNDIALS_LIB} ${SUNDIALS_LIB} ' + liblist(pkgs[-7:]))
+      self.addMakeMacro('PETSC_TAO_LIB', '${PETSCSUNDIALS_LIB} ${SUNDIALS_LIB} ' + liblist(pkgs[-8:]))
+      self.addMakeMacro('PETSC_ML_LIB', '${PETSCSUNDIALS_LIB} ${SUNDIALS_LIB} ' + liblist(pkgs[-9:]))
     self.addMakeMacro('PETSC_LIB','${PETSC_ML_LIB}')
     self.addMakeMacro('PETSC_LIB_BASIC',self.petsclib)
 
@@ -1416,8 +1416,9 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       self.installdir.petscDir = self.petscdir.dir
       self.petscDir = self.petscdir.dir
       self.petscArch = self.arch.arch
-      self.addMakeMacro('PREFIXDIR',self.dir)
       self.confDir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
+    elif 'prefix' in self.argDB:
+      self.addMakeMacro('PREFIXDIR',self.framework.argDB['prefix'])
 
     if not os.path.samefile(self.petscdir.dir, os.getcwd()):
       raise RuntimeError('Wrong PETSC_DIR option specified: '+str(self.petscdir.dir) + '\n  Configure invoked in: '+os.path.realpath(os.getcwd()))
