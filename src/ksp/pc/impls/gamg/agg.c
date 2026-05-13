@@ -1643,86 +1643,107 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       x      = rhs + nSAvec;
       bc_col = x + nSAvec;
 
-      /* find max row width for pre-allocation */
-      for (PetscInt row = 0; row < nrows; row++) {
-        PetscInt ncols;
-        PetscCall(MatGetRow(Prol, rStart + row, &ncols, NULL, NULL));
-        if (ncols > max_ncols) max_ncols = ncols;
-        PetscCall(MatRestoreRow(Prol, rStart + row, &ncols, NULL, NULL));
+      /* find max row width and total nnz for pre-allocation */
+      {
+        PetscInt total_nnz = 0;
+        for (PetscInt row = 0; row < nrows; row++) {
+          PetscInt ncols;
+          PetscCall(MatGetRow(Prol, rStart + row, &ncols, NULL, NULL));
+          if (ncols > max_ncols) max_ncols = ncols;
+          total_nnz += ncols;
+          PetscCall(MatRestoreRow(Prol, rStart + row, &ncols, NULL, NULL));
+        }
+        /* allocate flat CSR-like buffers to store all corrections before applying */
+        PetscCall(PetscMalloc1(total_nnz, &new_vals));
+        PetscCall(PetscMalloc1(total_nnz, &col_buf));
       }
       PetscCall(PetscMalloc1(max_ncols, &ghosted_idx));
-      PetscCall(PetscMalloc1(max_ncols, &new_vals));
-      PetscCall(PetscMalloc1(max_ncols, &col_buf));
-      PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
 
-      for (PetscInt row = 0; row < nrows; row++) {
-        PetscInt           ncols;
-        const PetscInt    *cols;
-        const PetscScalar *vals;
-        PetscInt           grow = rStart + row;
-        PetscBLASInt       NRHS = 1, LDA = N_b, LDB = N_b, INFO;
+      /* Pass 1: read rows, compute corrections, store in flat buffers */
+      {
+        PetscInt *row_offsets;
+        PetscInt  offset = 0;
 
-        PetscCall(MatGetRow(Prol, grow, &ncols, &cols, &vals));
-        if (ncols == 0) {
-          PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
-          continue;
-        }
+        PetscCall(PetscMalloc1(nrows + 1, &row_offsets));
+        PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
 
-        /* map global column indices to ghosted array indices and save cols for MatSetValues */
-        for (PetscInt j = 0; j < ncols; j++) {
-          col_buf[j] = cols[j];
-          if (cols[j] >= cStart && cols[j] < cEnd) ghosted_idx[j] = cols[j] - cStart;
-          else {
-            PetscInt g = -1;
-            PetscCall(PetscHMapIGet(ghost_gid_to_lid, cols[j], &g));
-            PetscCheck(g >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of Prol not in garray", cols[j]);
-            ghosted_idx[j] = nloc + g;
+        for (PetscInt row = 0; row < nrows; row++) {
+          PetscInt           ncols;
+          const PetscInt    *cols;
+          const PetscScalar *vals;
+          PetscInt           grow = rStart + row;
+          PetscBLASInt       NRHS = 1, LDA = N_b, LDB = N_b, INFO;
+
+          row_offsets[row] = offset;
+          PetscCall(MatGetRow(Prol, grow, &ncols, &cols, &vals));
+          if (ncols == 0) {
+            PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
+            continue;
           }
-        }
 
-        for (PetscInt i = 0; i < nSAvec * nSAvec; i++) G[i] = 0.0;
+          /* map global column indices to ghosted array indices and save cols */
+          for (PetscInt j = 0; j < ncols; j++) {
+            col_buf[offset + j] = cols[j];
+            if (cols[j] >= cStart && cols[j] < cEnd) ghosted_idx[j] = cols[j] - cStart;
+            else {
+              PetscInt g = -1;
+              PetscCall(PetscHMapIGet(ghost_gid_to_lid, cols[j], &g));
+              ghosted_idx[j] = nloc + g;
+            }
+          }
 
-        /* rhs[k] = B[row,k] - sum_j P[row,j] * Bc[ghosted_idx[j], k] */
-        for (PetscInt k = 0; k < nSAvec; k++) {
-          PetscScalar dot = 0.0;
-          for (PetscInt j = 0; j < ncols; j++) dot += vals[j] * (PetscScalar)Bc_ghosted_ro[k * ghost_stride + ghosted_idx[j]];
-          rhs[k] = B_arrays[k][row] - dot;
-        }
+          for (PetscInt i = 0; i < nSAvec * nSAvec; i++) G[i] = 0.0;
 
-        /* G[k1,k2] = sum_j Bc[j,k1] * Bc[j,k2] using pre-gathered bc_col to reduce indexing */
-        for (PetscInt j = 0; j < ncols; j++) {
-          PetscInt gidx = ghosted_idx[j];
-          for (PetscInt k = 0; k < nSAvec; k++) bc_col[k] = (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx];
-          for (PetscInt k1 = 0; k1 < nSAvec; k1++)
-            for (PetscInt k2 = k1; k2 < nSAvec; k2++) G[k1 * nSAvec + k2] += bc_col[k1] * bc_col[k2];
-        }
-        /* fill lower triangle from upper (G is symmetric) */
-        for (PetscInt k1 = 1; k1 < nSAvec; k1++)
-          for (PetscInt k2 = 0; k2 < k1; k2++) G[k1 * nSAvec + k2] = G[k2 * nSAvec + k1];
+          /* rhs[k] = B[row,k] - sum_j P[row,j] * Bc[ghosted_idx[j], k] */
+          for (PetscInt k = 0; k < nSAvec; k++) {
+            PetscScalar dot = 0.0;
+            for (PetscInt j = 0; j < ncols; j++) dot += vals[j] * (PetscScalar)Bc_ghosted_ro[k * ghost_stride + ghosted_idx[j]];
+            rhs[k] = B_arrays[k][row] - dot;
+          }
 
-        /* solve G * x = rhs */
-        for (PetscInt i = 0; i < nSAvec; i++) x[i] = rhs[i];
-        PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&N_b, &NRHS, G, &LDA, ipiv, x, &LDB, &INFO));
-        if (INFO != 0) {
-          /* G is singular; skip correction for this row */
-          PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
-          continue;
-        }
+          /* G[k1,k2] = sum_j Bc[j,k1] * Bc[j,k2] using pre-gathered bc_col */
+          for (PetscInt j = 0; j < ncols; j++) {
+            PetscInt gidx = ghosted_idx[j];
+            for (PetscInt k = 0; k < nSAvec; k++) bc_col[k] = (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx];
+            for (PetscInt k1 = 0; k1 < nSAvec; k1++)
+              for (PetscInt k2 = k1; k2 < nSAvec; k2++) G[k1 * nSAvec + k2] += bc_col[k1] * bc_col[k2];
+          }
+          /* fill lower triangle from upper (G is symmetric) */
+          for (PetscInt k1 = 1; k1 < nSAvec; k1++)
+            for (PetscInt k2 = 0; k2 < k1; k2++) G[k1 * nSAvec + k2] = G[k2 * nSAvec + k1];
 
-        /* new_vals[j] = vals[j] + sum_k Bc[ghosted_idx[j],k] * x[k] */
-        {
-          PetscInt nc = ncols;
-          for (PetscInt j = 0; j < nc; j++) {
+          /* solve G * x = rhs */
+          for (PetscInt i = 0; i < nSAvec; i++) x[i] = rhs[i];
+          PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&N_b, &NRHS, G, &LDA, ipiv, x, &LDB, &INFO));
+          if (INFO != 0) {
+            /* G is singular; store original values (no correction) */
+            for (PetscInt j = 0; j < ncols; j++) new_vals[offset + j] = vals[j];
+            offset += ncols;
+            PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
+            continue;
+          }
+
+          /* new_vals[j] = vals[j] + sum_k Bc[ghosted_idx[j],k] * x[k] */
+          for (PetscInt j = 0; j < ncols; j++) {
             PetscScalar delta = 0.0;
             PetscInt    gidx  = ghosted_idx[j];
             for (PetscInt k = 0; k < nSAvec; k++) delta += (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx] * x[k];
-            new_vals[j] = vals[j] + delta;
+            new_vals[offset + j] = vals[j] + delta;
           }
+          offset += ncols;
           PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
-          PetscCall(MatSetValues(Prol, 1, &grow, nc, col_buf, new_vals, INSERT_VALUES));
         }
+        row_offsets[nrows] = offset;
+        PetscCall(PetscFPTrapPop());
+
+        /* Pass 2: apply all corrections at once */
+        for (PetscInt row = 0; row < nrows; row++) {
+          PetscInt grow = rStart + row;
+          PetscInt nc   = row_offsets[row + 1] - row_offsets[row];
+          if (nc > 0) PetscCall(MatSetValues(Prol, 1, &grow, nc, col_buf + row_offsets[row], new_vals + row_offsets[row], INSERT_VALUES));
+        }
+        PetscCall(PetscFree(row_offsets));
       }
-      PetscCall(PetscFPTrapPop());
 
       for (PetscInt k = 0; k < nSAvec; k++) PetscCall(VecRestoreArrayRead(B_vecs[k], &B_arrays[k]));
       PetscCall(PetscFree(B_arrays));
