@@ -374,7 +374,7 @@ PETSC_EXTERN PetscErrorCode PCGAMGASMSetHEM(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCGAMGSetLowMemoryFilter(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetGraphSymmetrize(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetProlongatorFilterThreshold(PC, PetscReal);
-PETSC_EXTERN PetscErrorCode PCGAMGGetFilterThreshold(PC, PetscReal *);
+PETSC_EXTERN PetscErrorCode PCGAMGGetProlongatorFilterThreshold(PC, PetscReal *);
 PETSC_EXTERN PetscErrorCode PCGAMGSetInjectionIndex(PC, PetscInt, PetscInt[]);
 
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalSetType(PC, PCGAMGClassicalType);
