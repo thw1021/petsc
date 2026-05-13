@@ -233,7 +233,7 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 - thr - threshold value; entries with absolute value below this are dropped (0 disables filtering)
 
   Options Database Key:
-. -pc_gamg_agg_filter_threshold <0> - threshold for filtering small entries from smoothed prolongator (0=disabled, ~0.05=recommended)
+. -pc_gamg_agg_filter_threshold <0> - threshold for filtering small entries from smoothed prolongator (0=disabled, 0.025=typical)
 
   Level: intermediate
 
@@ -1512,7 +1512,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
   PetscCall(MatGetOwnershipRange(Prol, &rStart, &rEnd));
   PetscCall(MatGetOwnershipRangeColumn(Prol, &cStart, &cEnd));
 
-  /* --- Step 1: build coarse null-space vectors and compute B = P_original * B_c --- */
+  /* Step 1: build coarse null-space vectors and compute B = P_original * B_c */
   PetscCall(PetscMalloc1(nSAvec, &Bc_vecs));
   PetscCall(PetscMalloc1(nSAvec, &B_vecs));
 
@@ -1529,7 +1529,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     }
   }
 
-  /* --- Step 2: apply the threshold filter --- */
+  /* Step 2: apply the threshold filter */
   {
     MatInfo info0, info1;
     PetscCall(MatGetInfo(Prol, MAT_GLOBAL_SUM, &info0));
@@ -1538,7 +1538,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     PetscCall(PetscInfo(pc, "Prolongator filter: nnz before=%g after=%g reduction=%g%%\n", info0.nz_used, info1.nz_used, (info0.nz_used > 0) ? 100.0 * (info0.nz_used - info1.nz_used) / info0.nz_used : 0.0));
   }
 
-  /* --- Step 3: correct rows to restore P_filtered * B_c = B --- */
+  /* Step 3: correct rows to restore P_filtered * B_c = B */
   if (nSAvec == 1) {
     /*
       Scalar case: use MatMult + element-wise scaling + MatDiagonalScale.
@@ -1572,16 +1572,13 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       then build a hash map from global ghost column index to local ghost index
       so that MatGetRow global column indices can be mapped to the ghosted array.
     */
-    PetscInt   nloc = cEnd - cStart;
-    PetscInt   ghost_stride, max_ncols = 0;
-    PetscReal *Bc_ghosted = NULL;
-    PetscBool  isMPIAIJ;
-    PetscHMapI ghost_gid_to_lid; /* global ghost col index -> local ghost index (0-based) */
-    PetscInt   num_ghosts = 0;
-    MatInfo    prol_info;
-
-    PetscCall(MatGetInfo(Prol, MAT_LOCAL, &prol_info));
-    max_ncols = (PetscInt)prol_info.nz_used; /* upper bound; refine below */
+    PetscInt         nloc = cEnd - cStart;
+    PetscInt         ghost_stride;
+    PetscReal       *Bc_ghosted    = NULL;
+    const PetscReal *Bc_ghosted_ro = NULL; /* read-only alias for sequential case */
+    PetscBool        isMPIAIJ;
+    PetscHMapI       ghost_gid_to_lid; /* global ghost col index -> local ghost index (0-based) */
+    PetscInt         num_ghosts = 0;
 
     PetscCall(PetscObjectBaseTypeCompare((PetscObject)Prol, MATMPIAIJ, &isMPIAIJ));
     if (isMPIAIJ) {
@@ -1620,14 +1617,16 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       PetscCall(PetscHMapICreateWithSize(2 * num_ghosts + 1, &ghost_gid_to_lid));
       for (PetscInt g = 0; g < num_ghosts; g++) PetscCall(PetscHMapISet(ghost_gid_to_lid, mpimat->garray[g], g));
     } else {
-      /* sequential: no ghosts, ghost_stride == nloc, Bc_ghosted == Bc_data (cast) */
-      ghost_stride = nloc;
-      Bc_ghosted   = (PetscReal *)Bc_data;
+      /* sequential: no ghosts, ghost_stride == nloc, use Bc_data directly (read-only) */
+      ghost_stride  = nloc;
+      Bc_ghosted_ro = Bc_data;
       PetscCall(PetscHMapICreateWithSize(1, &ghost_gid_to_lid));
     }
+    /* unify read access: Bc_ghosted_ro points to the data for both cases */
+    if (Bc_ghosted != NULL) Bc_ghosted_ro = Bc_ghosted;
 
     {
-      PetscInt            nrows = rEnd - rStart;
+      PetscInt            nrows = rEnd - rStart, max_ncols = 0;
       const PetscScalar **B_arrays;
       PetscScalar        *work, *new_vals, *G, *rhs, *x;
       PetscInt           *ghosted_idx;
@@ -1644,7 +1643,6 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       x   = rhs + nSAvec;
 
       /* find max row width for pre-allocation */
-      max_ncols = 0;
       for (PetscInt row = 0; row < nrows; row++) {
         PetscInt ncols;
         PetscCall(MatGetRow(Prol, rStart + row, &ncols, NULL, NULL));
@@ -1687,16 +1685,16 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         /* rhs[k] = B[row,k] - sum_j P[row,j] * Bc[ghosted_idx[j], k] */
         for (PetscInt k = 0; k < nSAvec; k++) {
           PetscScalar dot = 0.0;
-          for (PetscInt j = 0; j < ncols; j++) dot += vals[j] * (PetscScalar)Bc_ghosted[k * ghost_stride + ghosted_idx[j]];
+          for (PetscInt j = 0; j < ncols; j++) dot += vals[j] * (PetscScalar)Bc_ghosted_ro[k * ghost_stride + ghosted_idx[j]];
           rhs[k] = B_arrays[k][row] - dot;
         }
 
         /* G[k1,k2] = sum_j Bc[ghosted_idx[j],k1] * Bc[ghosted_idx[j],k2] */
         for (PetscInt j = 0; j < ncols; j++) {
           for (PetscInt k1 = 0; k1 < nSAvec; k1++) {
-            PetscScalar c1 = (PetscScalar)Bc_ghosted[k1 * ghost_stride + ghosted_idx[j]];
+            PetscScalar c1 = (PetscScalar)Bc_ghosted_ro[k1 * ghost_stride + ghosted_idx[j]];
             for (PetscInt k2 = 0; k2 < nSAvec; k2++) {
-              PetscScalar c2 = (PetscScalar)Bc_ghosted[k2 * ghost_stride + ghosted_idx[j]];
+              PetscScalar c2 = (PetscScalar)Bc_ghosted_ro[k2 * ghost_stride + ghosted_idx[j]];
               G[k1 * nSAvec + k2] += c1 * c2;
             }
           }
@@ -1716,7 +1714,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         /* new_vals[j] = vals[j] + sum_k Bc[ghosted_idx[j],k] * x[k] */
         for (PetscInt j = 0; j < ncols; j++) {
           PetscScalar delta = 0.0;
-          for (PetscInt k = 0; k < nSAvec; k++) delta += (PetscScalar)Bc_ghosted[k * ghost_stride + ghosted_idx[j]] * x[k];
+          for (PetscInt k = 0; k < nSAvec; k++) delta += (PetscScalar)Bc_ghosted_ro[k * ghost_stride + ghosted_idx[j]] * x[k];
           new_vals[j] = vals[j] + delta;
         }
         PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
