@@ -10,6 +10,7 @@ PetscDA Object: 2 MPI processes
   Local analysis: CPU
   Localization type: gaspari_cohn
   Localization radius: 5.
+  Localization matrix: not set
 Lorenz-96 LETKF Example
 ======================
   State dimension        : 40
