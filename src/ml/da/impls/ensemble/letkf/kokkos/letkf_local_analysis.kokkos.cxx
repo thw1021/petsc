@@ -15,6 +15,16 @@
   #include <sycl/sycl.hpp>
 #endif
 
+/* Shared device-View aliases used throughout the BatchedEigenSolve* dispatch chain. */
+using LETKFExecSpace = Kokkos::DefaultExecutionSpace;
+using LETKFView3D    = Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, LETKFExecSpace>;
+using LETKFView2D    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, LETKFExecSpace>;
+
+/* Eigenvalue regularization epsilon for LETKF analysis. Added to eigenvalues
+   before division/sqrt to avoid blow-up on near-zero eigenvalues that arise
+   when local observations are degenerate. */
+static constexpr PetscReal LETKF_EIGEN_EPS = 1.0e-14;
+
 /* ========================================================================== */
 /*                    Batched Eigendecomposition for LETKF                    */
 /* ========================================================================== */
@@ -122,7 +132,7 @@ struct EigenWorkspace {
 */
 #if !defined(KOKKOS_ENABLE_CUDA) && !defined(KOKKOS_ENABLE_HIP) && !defined(KOKKOS_ENABLE_SYCL)
   #include <petscblaslapack.h>
-static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve_Host(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
 {
   PetscFunctionBegin;
   /* Create host mirrors and copy data in one operation */
@@ -208,8 +218,15 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 */
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
   #if defined(KOKKOS_ENABLE_CUDA)
-static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve_Device(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH, EigenWorkspace *work)
 {
+  PetscFunctionBegin;
+    #if defined(PETSC_USE_COMPLEX)
+  /* cuSOLVER's *syevjBatched is real-only (Ssyevj/Dsyevj); under complex the call would type-error.
+     The dispatcher gates the Kokkos path off when PETSC_USE_COMPLEX is set, so this is unreachable
+     in practice; SETERRQ here as defense-in-depth in case that gate ever changes. */
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Complex numbers not supported on CUDA backend for LETKF");
+    #else
   cusolverStatus_t cusolver_status;
   syevjInfo_t      syevj_params = work->syevj_params;
   PetscScalar     *d_work       = work->d_work;
@@ -218,9 +235,6 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   PetscScalar     *d_W_contig   = work->d_W_contig;
   int              lwork        = work->lwork_device;
   int             *h_info       = nullptr;
-
-  PetscFunctionBegin;
-
   /* Copy T_batch to contiguous layout for cuSOLVER */
   Kokkos::parallel_for(
     "ReorganizeForCuSOLVER", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
@@ -254,18 +268,32 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
       }
     });
   Kokkos::fence();
+    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
   #elif defined(KOKKOS_ENABLE_HIP)
-static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle rocblasH, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve_Device(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle rocblasH, EigenWorkspace *work)
 {
+  PetscFunctionBegin;
+    #if defined(PETSC_USE_COMPLEX)
+  /* Bail out before any kernel launch: the workspace setup leaves d_A_contig/d_W_contig/d_work/d_info
+     as nullptr in complex mode (rocsolver_*syevd has no complex variant we wrap), so the
+     ReorganizeForRocSOLVER parallel_for below would do a null device write before this error fired. */
+  (void)T_batch;
+  (void)Lambda_batch;
+  (void)V_batch;
+  (void)n_batch;
+  (void)n_size;
+  (void)rocblasH;
+  (void)work;
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Complex numbers not supported on HIP backend for LETKF");
+    #else
   PetscScalar *d_work     = work->d_work;
   int         *d_info     = work->d_info;
   PetscScalar *d_A_contig = work->d_A_contig;
   PetscScalar *d_W_contig = work->d_W_contig;
   int         *h_info     = nullptr;
 
-  PetscFunctionBegin;
   /* Copy T_batch to contiguous layout for rocSOLVER */
   Kokkos::parallel_for(
     "ReorganizeForRocSOLVER", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
@@ -275,11 +303,8 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
     });
   Kokkos::fence();
 
-    /* rocSOLVER doesn't have a native batched syevj, so we loop over batch */
-    /* Use rocsolver_dsyevd which is more efficient than calling syev in a loop */
-    #if defined(PETSC_USE_COMPLEX)
-  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Complex numbers not supported on HIP backend for LETKF");
-    #else
+  /* rocSOLVER doesn't have a native batched syevj, so we loop over batch.
+     Use rocsolver_*syevd which is more efficient than calling syev in a loop. */
   for (int i = 0; i < n_batch; i++) {
     PetscScalar   *A_ptr    = d_A_contig + i * n_size * n_size;
     PetscScalar   *W_ptr    = d_W_contig + i * n_size;
@@ -293,7 +318,6 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
       #endif
     PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocsolver_*syevd failed for batch %" PetscInt_FMT, i);
   }
-    #endif
 
   /* Check info */
   PetscCall(PetscMalloc1(n_batch, &h_info));
@@ -310,12 +334,19 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
       }
     });
   Kokkos::fence();
+    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
   #elif defined(KOKKOS_ENABLE_SYCL)
-static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, sycl::queue *q, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve_Device(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, sycl::queue *q, EigenWorkspace *work)
 {
   PetscFunctionBegin;
+    #if defined(PETSC_USE_COMPLEX)
+  /* oneMKL's syevd USM overload targets real symmetric matrices; the complex analogue is heevd.
+     The dispatcher gates the Kokkos path off when PETSC_USE_COMPLEX is set, so this is unreachable
+     in practice; SETERRQ here as defense-in-depth in case that gate ever changes. */
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Complex numbers not supported on SYCL backend for LETKF");
+    #else
   /* Use pre-allocated workspace */
   PetscScalar *d_work     = work->d_work;
   PetscScalar *d_A_contig = work->d_A_contig;
@@ -352,6 +383,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
       }
     });
   Kokkos::fence();
+    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
   #endif
@@ -376,21 +408,21 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
 */
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
   #if defined(KOKKOS_ENABLE_CUDA)
-static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t device_handle, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t device_handle, EigenWorkspace *work)
 {
   PetscFunctionBegin;
   PetscCall(BatchedEigenSolve_Device(T_batch, Lambda_batch, V_batch, n_batch, n_size, device_handle, work));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
   #elif defined(KOKKOS_ENABLE_HIP)
-static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle device_handle, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle device_handle, EigenWorkspace *work)
 {
   PetscFunctionBegin;
   PetscCall(BatchedEigenSolve_Device(T_batch, Lambda_batch, V_batch, n_batch, n_size, device_handle, work));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
   #elif defined(KOKKOS_ENABLE_SYCL)
-static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, sycl::queue *device_handle, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, sycl::queue *device_handle, EigenWorkspace *work)
 {
   PetscFunctionBegin;
   PetscCall(BatchedEigenSolve_Device(T_batch, Lambda_batch, V_batch, n_batch, n_size, device_handle, work));
@@ -398,7 +430,7 @@ static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::La
 }
   #endif
 #else
-static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
+static PetscErrorCode BatchedEigenSolve(LETKFView3D T_batch, LETKFView2D Lambda_batch, LETKFView3D V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
 {
   PetscFunctionBegin;
   PetscCall(BatchedEigenSolve_Host(T_batch, Lambda_batch, V_batch, n_batch, n_size, work));
@@ -524,6 +556,9 @@ PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *impl)
     PetscCallCUDA(cudaFree(work->d_W_contig));
     PetscCallCUDA(cudaFree(work->d_work));
     PetscCallCUDA(cudaFree(work->d_info));
+    /* Destroy returns ignored: teardown may race with Kokkos/CUDA context shutdown when the
+       enclosing PetscDA outlives PetscFinalize() handlers; raising here would mask the real
+       teardown order issue. */
     if (work->syevj_params) cusolverDnDestroySyevjInfo(work->syevj_params);
   #elif defined(KOKKOS_ENABLE_HIP)
     PetscCallHIP(hipFree(work->d_A_contig));
@@ -552,6 +587,8 @@ PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *impl)
   }
 
   if (impl->solver_handle) {
+    /* Destroy returns ignored: see comment above on teardown-time race with Kokkos/CUDA
+       context shutdown. */
 #if defined(KOKKOS_ENABLE_CUDA)
     cusolverDnDestroy(static_cast<cusolverDnHandle_t>(impl->solver_handle));
 #elif defined(KOKKOS_ENABLE_HIP)
@@ -806,7 +843,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl,
   if (impl->solver_handle) {
     device_handle = static_cast<sycl::queue *>(impl->solver_handle);
   } else {
-    device_handle       = new sycl::queue(sycl::gpu_selector_v);
+    PetscCallCXX(device_handle = new sycl::queue(sycl::gpu_selector_v));
     impl->solver_handle = static_cast<void *>(device_handle);
   }
 #endif
@@ -885,9 +922,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl,
       PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreateSyevjInfo failed");
 
       /* Set default params */
-      cusolverDnXsyevjSetTolerance(eigen_work->syevj_params, 1e-7);
-      cusolverDnXsyevjSetMaxSweeps(eigen_work->syevj_params, 100);
-      cusolverDnXsyevjSetSortEig(eigen_work->syevj_params, 1); /* Sort eigenvalues */
+      cusolver_status = cusolverDnXsyevjSetTolerance(eigen_work->syevj_params, 1e-7);
+      PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnXsyevjSetTolerance failed");
+      cusolver_status = cusolverDnXsyevjSetMaxSweeps(eigen_work->syevj_params, 100);
+      PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnXsyevjSetMaxSweeps failed");
+      cusolver_status = cusolverDnXsyevjSetSortEig(eigen_work->syevj_params, 1); /* Sort eigenvalues */
+      PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnXsyevjSetSortEig failed");
 
       /* Query workspace size */
       PetscScalar *d_A = eigen_work->T_batch.data();
@@ -1152,13 +1192,13 @@ PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl,
         KokkosBlas::SerialGemv<KokkosBlas::Trans::Transpose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp1, 0.0, temp2);
 
         /* Step 1c: temp2 = temp2 / Lambda */
-        for (int j = 0; j < m; j++) temp2(j) /= (Lambda_i(j) + 1.0e-14);
+        for (int j = 0; j < m; j++) temp2(j) /= (Lambda_i(j) + LETKF_EIGEN_EPS);
 
         /* Step 1d: w = V * temp2 using KokkosBlas::gemv for better vectorization */
         KokkosBlas::SerialGemv<KokkosBlas::Trans::NoTranspose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp2, 0.0, w_i);
 
         /* 2. Precompute 1/sqrt(Lambda) for ensemble update */
-        for (int p = 0; p < m; p++) inv_sqrt_lambda_i(p) = 1.0 / Kokkos::sqrt(PetscRealPart(Lambda_i(p)) + 1.0e-14);
+        for (int p = 0; p < m; p++) inv_sqrt_lambda_i(p) = 1.0 / Kokkos::sqrt(PetscRealPart(Lambda_i(p)) + LETKF_EIGEN_EPS);
       });
     Kokkos::fence();
 
@@ -1240,10 +1280,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl,
   PetscCall(VecRestoreArrayReadAndMemType(y_mean_global, &y_mean_global_array));
   PetscCall(VecRestoreArrayReadAndMemType(observation, &y_global_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(Z_global, &z_global_array));
-
-  /* Ensemble has been updated in batched form above */
-  PetscCall(MatAssemblyBegin(en->ensemble, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(en->ensemble, MAT_FINAL_ASSEMBLY));
 
   /* impl->Q is required to reach this function (gated by the PetscCheck at the start of
      PetscDAEnsembleAnalysis_LETKF for non-LOC_NONE), so MatGetInfo is unconditional. */
