@@ -224,7 +224,7 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 }
 
 /*@
-  PCGAMGSetFilterThreshold - Set threshold for filtering small entries from the smoothed prolongator
+  PCGAMGSetProlongatorFilterThreshold - Set threshold for filtering small entries from the smoothed prolongator
 
   Logically Collective
 
@@ -233,42 +233,42 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 - thr - threshold value; entries with absolute value below this are dropped (0 disables filtering)
 
   Options Database Key:
-. -pc_gamg_agg_filter_threshold <0> - threshold for filtering small entries from smoothed prolongator (0=disabled, 0.025=typical)
+. -pc_gamg_agg_filter_threshold <thr> - threshold for filtering small entries from smoothed prolongator (0=disabled, 0.025=typical)
 
   Level: intermediate
 
-.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetFilterThreshold()`, `PCGAMGSetThreshold()`, `PCGAMGSetLowMemoryFilter()`
+.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilterThreshold()`, `PCGAMGSetThreshold()`, `PCGAMGSetLowMemoryFilter()`
 @*/
-PetscErrorCode PCGAMGSetFilterThreshold(PC pc, PetscReal thr)
+PetscErrorCode PCGAMGSetProlongatorFilterThreshold(PC pc, PetscReal thr)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveReal(pc, thr, 2);
-  PetscTryMethod(pc, "PCGAMGSetFilterThreshold_C", (PC, PetscReal), (pc, thr));
+  PetscTryMethod(pc, "PCGAMGSetProlongatorFilterThreshold_C", (PC, PetscReal), (pc, thr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PCGAMGGetFilterThreshold - Get threshold for filtering small entries from the smoothed prolongator
+  PCGAMGGetProlongatorFilterThreshold - Get threshold for filtering small entries from the smoothed prolongator
 
   Not Collective
 
   Input Parameter:
-. pc  - the preconditioner context
+. pc - the preconditioner context
 
   Output Parameter:
 . thr - threshold value; entries with absolute value below this are dropped (0 disables filtering)
 
   Level: intermediate
 
-.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetFilterThreshold()`, `PCGAMGSetThreshold()`, `PCGAMGSetLowMemoryFilter()`
+.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilterThreshold()`, `PCGAMGSetThreshold()`, `PCGAMGSetLowMemoryFilter()`
 @*/
-PetscErrorCode PCGAMGGetFilterThreshold(PC pc, PetscReal *thr)
+PetscErrorCode PCGAMGGetProlongatorFilterThreshold(PC pc, PetscReal *thr)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscAssertPointer(thr, 2);
-  PetscUseMethod(pc, "PCGAMGGetFilterThreshold_C", (PC, PetscReal *), (pc, thr));
+  PetscUseMethod(pc, "PCGAMGGetProlongatorFilterThreshold_C", (PC, PetscReal *), (pc, thr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -338,7 +338,7 @@ static PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGSetFilterThreshold_AGG(PC pc, PetscReal thr)
+static PetscErrorCode PCGAMGSetProlongatorFilterThreshold_AGG(PC pc, PetscReal thr)
 {
   PC_MG       *mg          = (PC_MG *)pc->data;
   PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
@@ -349,7 +349,7 @@ static PetscErrorCode PCGAMGSetFilterThreshold_AGG(PC pc, PetscReal thr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGGetFilterThreshold_AGG(PC pc, PetscReal *thr)
+static PetscErrorCode PCGAMGGetProlongatorFilterThreshold_AGG(PC pc, PetscReal *thr)
 {
   PC_MG       *mg          = (PC_MG *)pc->data;
   PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
@@ -386,7 +386,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   PetscCall(PetscOptionsBool("-pc_gamg_graph_symmetrize", "Symmetrize graph for coarsening", "PCGAMGSetGraphSymmetrize", pc_gamg_agg->graph_symmetrize, &pc_gamg_agg->graph_symmetrize, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_agg_filter_threshold", "Threshold for filtering small entries from smoothed prolongator (0=disabled)", "PCGAMGSetFilterThreshold", pc_gamg_agg->filter_threshold, &pc_gamg_agg->filter_threshold, NULL));
+  PetscCall(PetscOptionsReal("-pc_gamg_agg_filter_threshold", "Threshold for filtering small entries from smoothed prolongator (0=disabled)", "PCGAMGSetProlongatorFilterThreshold", pc_gamg_agg->filter_threshold, &pc_gamg_agg->filter_threshold, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -407,8 +407,8 @@ static PetscErrorCode PCDestroy_GAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetLowMemoryFilter_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetGraphSymmetrize_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetFilterThreshold_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetFilterThreshold_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilterThreshold_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilterThreshold_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1936,8 +1936,8 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetLowMemoryFilter_C", PCGAMGSetLowMemoryFilter_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", PCGAMGMISkSetAggressive_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetGraphSymmetrize_C", PCGAMGSetGraphSymmetrize_AGG));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetFilterThreshold_C", PCGAMGSetFilterThreshold_AGG));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetFilterThreshold_C", PCGAMGGetFilterThreshold_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilterThreshold_C", PCGAMGSetProlongatorFilterThreshold_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilterThreshold_C", PCGAMGGetProlongatorFilterThreshold_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
