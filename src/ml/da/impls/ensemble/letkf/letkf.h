@@ -70,6 +70,10 @@ PETSC_INTERN const char *const PetscDALETKFLocalizationTypes[];
 
 PETSC_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat(PetscDALETKFLocalizationType, PetscReal, Vec[], PetscReal[], Mat, Mat *);
 PETSC_INTERN PetscErrorCode PetscDALETKFGatherObsBbox(PetscInt, Vec[], PetscReal[], PetscReal, Mat, Vec[], PetscInt *, PetscInt **, PetscReal **);
+PETSC_INTERN PetscErrorCode PetscDALETKFComputeObsCoords(Mat, Vec[], PetscInt *, Vec **);
+PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsCoords(PetscInt, Vec **);
+PETSC_INTERN PetscErrorCode PetscDALETKFAssembleQFromCSR(Mat, PetscInt, PetscInt, PetscInt, MatType, const PetscInt[], const PetscInt[], const PetscInt[], const PetscScalar[], Mat *);
+PETSC_INTERN PetscErrorCode PetscDALETKFLogQStats(Mat, PetscDALETKFLocalizationType, PetscReal, PetscInt, PetscInt, const PetscInt[]);
 PETSC_INTERN PetscErrorCode PetscDALETKFCoalesceNnzMinMax(MPI_Comm, PetscInt *, PetscInt *);
 PETSC_INTERN PetscErrorCode PetscDALETKFSetupObsScatter(PetscDA_LETKF *, Mat);
 PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsScatter(PetscDA_LETKF *);
