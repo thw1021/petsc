@@ -628,6 +628,7 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
       PetscCall(PetscDALETKFResetLocalization_LETKF(da));
     }
   }
+  /* Separate guard (not else): the block above may have just nulled H_temp_in via VecDestroy. */
   if (!impl->H_temp_in) {
     VecType want_type;
 
