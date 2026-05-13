@@ -194,7 +194,7 @@ int main(int argc, char **args)
   KSP           ksp;
   MPI_Comm      comm;
   PetscMPIInt   rank;
-  PetscLogStage stage[17];
+  PetscLogStage stage[17], wstage;
   PetscBool     test_nonzero_cols = PETSC_FALSE, use_nearnullspace = PETSC_TRUE, attach_nearnullspace = PETSC_FALSE;
   Vec           xx, bb;
   PetscInt      iter, i, N, dim = 3, max_conv_its, sizes[7], run_type = 1, Ncomp = dim;
@@ -222,6 +222,7 @@ int main(int argc, char **args)
   }
   PetscOptionsEnd();
   PetscCall(PetscLogStageRegister("Mesh Setup", &stage[16]));
+  PetscCall(PetscLogStageRegister("WarmSolve", &wstage));
   for (iter = 0; iter < max_conv_its; iter++) {
     char str[] = "Solve 0";
     str[6] += iter;
@@ -396,6 +397,11 @@ int main(int argc, char **args)
     PetscCall(SNESComputeJacobian(snes, xx, Amat, Amat));
     PetscCall(MatViewFromOptions(Amat, NULL, "-my_mat_view"));
     PetscCall(PetscLogStagePush(stage[iter]));
+    PetscCall(SNESSolve(snes, bb, xx));
+    PetscCall(PetscLogStagePop());
+    /* warm solve stage */
+    PetscCall(PetscLogStagePush(wstage));
+    PetscCall(VecZeroEntries(xx));
     PetscCall(SNESSolve(snes, bb, xx));
     PetscCall(PetscLogStagePop());
     PetscCall(VecNorm(xx, NORM_INFINITY, &mdisp[iter]));
