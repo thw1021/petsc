@@ -591,7 +591,7 @@ directly in PETSc C/C++ code, as in [MatMult_SeqSELL](https://petsc.org/main/src
 
 **Compute nodes** are the building blocks of HPC systems. A compute node (sometimes called a shared-memory node) may consist of one or more physical CPUs. A compute node contains multiple cores that have
 access to a common memory. OS threads (independent streams of instructions) and processes can freely migrate, unless constrained, between cores within a compute node. Parallel HPC systems
-consist of multiple compute nodes connected via a network. Except for unconventional systems, OS threads and processes cannot migrate between
+consist of multiple compute nodes connected via a network. On conventional clusters, OS threads and processes cannot migrate between
 compute nodes.
 
 OpenMP parallelism is thread parallelism within a compute node. Multiple threads process data and perform computations on different
