@@ -9,6 +9,7 @@ PetscDA Object: 1 MPI process
   Local analysis: CPU
   Localization type: boxcar
   Localization radius: 15.
+  Localization matrix: not set
 2D Shallow Water LETKF Example
 ==============================
   Mode                  : Data Assimilation
