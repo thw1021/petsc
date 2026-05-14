@@ -345,6 +345,7 @@ static PetscErrorCode PCGAMGSetProlongatorFilterThreshold_AGG(PC pc, PetscReal t
   PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
 
   PetscFunctionBegin;
+  PetscCheck(thr >= 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Filter threshold %g must be non-negative", (double)thr);
   pc_gamg_agg->filter_threshold = thr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1662,7 +1663,8 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       /* Pass 1: read rows, compute corrections, store in flat buffers */
       {
         PetscInt *row_offsets;
-        PetscInt  offset = 0;
+        PetscInt  offset = 0, n_singular = 0, n_zero_rows = 0, n_corrected = 0, n_underdetermined = 0;
+        PetscReal max_xnorm = 0.0;
 
         PetscCall(PetscMalloc1(nrows + 1, &row_offsets));
         PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
@@ -1677,6 +1679,23 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
           row_offsets[row] = offset;
           PetscCall(MatGetRow(Prol, grow, &ncols, &cols, &vals));
           if (ncols == 0) {
+            n_zero_rows++;
+            PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
+            continue;
+          }
+
+          /* When ncols < nSAvec the Gram matrix G is rank-deficient by construction;
+             skip correction for this row (keep filtered values as-is).
+             Note: the near-null space constraint P*Bc = B is NOT enforced for these rows.
+             This typically occurs at boundary or isolated nodes where few coarse neighbors
+             remain after filtering; the impact on convergence is generally small. */
+          if (ncols < nSAvec) {
+            n_underdetermined++;
+            for (PetscInt j = 0; j < ncols; j++) {
+              col_buf[offset + j]  = cols[j];
+              new_vals[offset + j] = vals[j];
+            }
+            offset += ncols;
             PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
             continue;
           }
@@ -1716,12 +1735,22 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
           for (PetscInt i = 0; i < nSAvec; i++) x[i] = rhs[i];
           PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&N_b, &NRHS, G, &LDA, ipiv, x, &LDB, &INFO));
           if (INFO != 0) {
-            /* G is singular; store original values (no correction) */
+            /* G is singular despite ncols >= nSAvec (Bc columns linearly dependent);
+               keep filtered values as-is (near-null space constraint not enforced for this row) */
+            n_singular++;
             for (PetscInt j = 0; j < ncols; j++) new_vals[offset + j] = vals[j];
             offset += ncols;
             PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
             continue;
           }
+
+          /* track ||x||^2 */
+          {
+            PetscReal xnorm2 = 0.0;
+            for (PetscInt k = 0; k < nSAvec; k++) xnorm2 += PetscSqr(PetscAbsScalar(x[k]));
+            if (xnorm2 > max_xnorm) max_xnorm = xnorm2;
+          }
+          n_corrected++;
 
           /* new_vals[j] = vals[j] + sum_k Bc[ghosted_idx[j],k] * x[k] */
           for (PetscInt j = 0; j < ncols; j++) {
@@ -1735,6 +1764,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         }
         row_offsets[nrows] = offset;
         PetscCall(PetscFPTrapPop());
+        PetscCall(PetscInfo(pc, "PCGAMGKernelPreservingFilter_AGG: nrows=%" PetscInt_FMT " corrected=%" PetscInt_FMT " zero_rows=%" PetscInt_FMT " underdetermined(ncols<nSAvec)=%" PetscInt_FMT " singular_G=%" PetscInt_FMT " max_xnorm2=%g\n", (PetscInt)nrows, (PetscInt)n_corrected, (PetscInt)n_zero_rows, (PetscInt)n_underdetermined, (PetscInt)n_singular, (double)max_xnorm));
 
         /* Pass 2: apply all corrections at once */
         for (PetscInt row = 0; row < nrows; row++) {
