@@ -364,6 +364,6 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X)
    test:
       suffix: 11_linesearch
       requires: !single
-      args: -da_refine 2 -snes_monitor_short -snes_type fas -snes_fas_type multiplicative -fas_coarse_snes_type newtonls -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_rtol 1.e-5 -snes_linesearch_type secant -snes_linesearch_maxlambda 1 -snes_converged_reason
+      args: -da_refine 2 -snes_monitor_short -snes_type fas -snes_fas_type multiplicative -fas_coarse_snes_type newtonls -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_rtol 1.e-5 -snes_fas_coarse_correction_linesearch_type secant -snes_converged_reason
 
 TEST*/
