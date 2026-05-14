@@ -2396,15 +2396,15 @@ PetscErrorCode TSSetTimeError(TS ts, Vec v)
   Input Parameters:
 + ts   - The `TS`
 - type - One of `TS_LINEAR`, `TS_NONLINEAR` where these types refer to problems of the forms
-.vb
-         U_t - A U = 0      (linear)
-         U_t - A(t) U = 0   (linear)
+$$
+         U_t - A U = 0      (linear),
+         U_t - A(t) U = 0   (linear),
          F(t,U,U_t) = 0     (nonlinear)
-.ve
+$$
 
   Level: beginner
 
-.seealso: [](ch_ts), `TSSetUp()`, `TSProblemType`, `TS`
+.seealso: [](ch_ts), `TSSetUp()`, `TSGetProblemType()`, `TSProblemType`, `TS`
 @*/
 PetscErrorCode TSSetProblemType(TS ts, TSProblemType type)
 {
@@ -2429,15 +2429,15 @@ PetscErrorCode TSSetProblemType(TS ts, TSProblemType type)
 
   Output Parameter:
 . type - One of `TS_LINEAR`, `TS_NONLINEAR` where these types refer to problems of the forms
-.vb
-         M U_t = A U
-         M(t) U_t = A(t) U
-         F(t,U,U_t)
-.ve
+$$
+         U_t - A U = 0      (linear),
+         U_t - A(t) U = 0   (linear),
+         F(t,U,U_t) = 0     (nonlinear)
+$$
 
   Level: beginner
 
-.seealso: [](ch_ts), `TSSetUp()`, `TSProblemType`, `TS`
+.seealso: [](ch_ts), `TSSetProblemType()`, `TSSetUp()`, `TSProblemType`, `TS`
 @*/
 PetscErrorCode TSGetProblemType(TS ts, TSProblemType *type)
 {
