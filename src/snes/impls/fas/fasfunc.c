@@ -1179,11 +1179,9 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
   Notes:
   In standard FAS the coarse correction X += I(x^c - Rx) is applied with a unit step.
   Setting a line search here enables the MG-Opt damping strategy {cite}`nash2000mgopt`,
-  which finds a step length lambda in (0, 1] such that the corrected residual decreases.
-  This is useful for non-convex problems where the full coarse correction can overshoot
-  and cause divergence.
-  On smooth problems the line search typically accepts lambda = 1 and has no effect on the
-  iteration count.
+  which is useful when monotonic decrease in the residual norm or energy functional is desired
+  (e.g., non-convex problems where the full coarse correction may overshoot without an explicit
+  convergence control strategy).
 
   The line search can also be set from the options database via `-snes_fas_coarse_correction_linesearch_type`.
 

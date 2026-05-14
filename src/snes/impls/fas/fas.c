@@ -974,11 +974,11 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
    The cycle `SNES` instance may be used for monitoring convergence on a particular level.
 
    The original FAS applies the coarse correction X += I(x^c - Rx) with a unit step.
-   MG-Opt {cite}`nash2000mgopt` generalizes this by damping the correction with a line search,
-   which can prevent divergence when the coarse correction overshoots — for example in
-   non-convex problems where the coarse grid correction may point outside the basin of attraction.
-   This behaviour is disabled by default (to preserve the standard FAS convergence rate on
-   smooth problems) and must be enabled explicitly via `-snes_fas_coarse_correction_linesearch_type`
+   MG-Opt {cite}`nash2000mgopt` generalizes this by applying a line search to the coarse correction,
+   which is useful when monotonic decrease in the residual norm or energy functional is desired
+   (e.g., non-convex problems where the full coarse correction may overshoot without an explicit
+   convergence control strategy).
+   This is disabled by default and must be enabled explicitly via `-snes_fas_coarse_correction_linesearch_type`
    or `SNESFASSetCoarseCorrectionLineSearch()`.
 
 .seealso: [](ch_snes), `PCMG`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESType`, `SNESFASSetRestriction()`, `SNESFASSetInjection()`,
