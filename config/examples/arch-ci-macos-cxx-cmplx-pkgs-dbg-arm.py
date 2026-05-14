@@ -44,6 +44,7 @@ configure_options = [
   '--download-elemental=1',
   #'--download-sundials2=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-suitesparse=1',
   '--download-chaco=1',
   #'--download-spai=1',

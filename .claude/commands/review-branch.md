@@ -10,3 +10,5 @@ Resolve target branch (`release` or `main`). Run each as a separate Bash call wi
 4. `git merge-base --is-ancestor <BASE_MAIN> origin/release` — exit 0 → `DEST=origin/release`; exit 1 → `DEST=origin/main`; any other exit code → abort and report the failure, do not guess `DEST`.
 
 State `DEST`, then `git diff <DEST>...<SRC>` and follow Sections 4–5 of @.claude/commands/review-mr.md.
+
+Number each finding so users may easily request that you fix certain findings.
