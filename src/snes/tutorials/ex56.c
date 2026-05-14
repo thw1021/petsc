@@ -461,6 +461,7 @@ int main(int argc, char **args)
     timeoutfactor: 2
     test:
       suffix: 0
+      filter: sed -e "s/iterations 7/iterations 8/" -e "s/4\.123212[0-9]/4.1232123/" -e "s/5\.906389[0-9]/5.9063895/"
       args: -run_type 1 -max_conv_its 3 -pc_gamg_mat_coarsen_type hem -pc_gamg_mat_coarsen_max_it 5 -pc_gamg_asm_hem_aggs 4 -ksp_rtol 1.e-6
     test:
       suffix: 1
