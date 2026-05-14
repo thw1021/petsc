@@ -1122,7 +1122,7 @@ constructor (or the `-mat_type` from the command line). For instance,
   >   generally, one or more is best. For some strongly nonsymmetric problems, 0 may be best. See `PCGAMGSetNSmooths()`.
   > - `-pc_gamg_agg_prolongation_filter thr` Filter small entries from the smoothed prolongator while preserving the near-null space.
   >   Entries with absolute value below `thr` are dropped, then each row is corrected to maintain the constraint $P B_c = B$.
-  >   A value of 0 disables filtering (default). Typical values are 0.01-0.025. This can reduce operator complexity and
+  >   A value of 0 disables filtering (default). Typical values are 0.001-0.0025. This can reduce operator complexity and
   >   improve solve time with minimal impact on convergence. See `PCGAMGSetProlongatorFilterThreshold()`.
 
 - Control the amount of parallelism on the levels
