@@ -1574,8 +1574,8 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     */
     PetscInt         nloc = cEnd - cStart;
     PetscInt         ghost_stride;
-    PetscReal       *Bc_ghosted    = NULL;
-    const PetscReal *Bc_ghosted_ro = NULL; /* read-only alias for sequential case */
+    PetscReal       *Bc_ghosted = NULL;
+    const PetscReal *Bc_ghosted_ro;
     PetscBool        isMPIAIJ;
     PetscHMapI       ghost_gid_to_lid; /* global ghost col index -> local ghost index (0-based) */
     PetscInt         num_ghosts = 0;
@@ -1613,6 +1613,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         PetscCall(VecRestoreArray(mpimat->lvec, &data_arr));
       }
       PetscCall(VecDestroy(&tmp_vec));
+      Bc_ghosted_ro = Bc_ghosted;
       /* build hash: global ghost col index -> local ghost index (0-based into ghost portion) */
       PetscCall(PetscHMapICreateWithSize(2 * num_ghosts + 1, &ghost_gid_to_lid));
       for (PetscInt g = 0; g < num_ghosts; g++) PetscCall(PetscHMapISet(ghost_gid_to_lid, mpimat->garray[g], g));
@@ -1622,15 +1623,14 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       Bc_ghosted_ro = Bc_data;
       PetscCall(PetscHMapICreateWithSize(1, &ghost_gid_to_lid));
     }
-    /* unify read access: Bc_ghosted_ro points to the data for both cases */
-    if (Bc_ghosted != NULL) Bc_ghosted_ro = Bc_ghosted;
 
     {
       PetscInt            nrows = rEnd - rStart, max_ncols = 0;
       const PetscScalar **B_arrays;
       PetscScalar        *work, *new_vals, *G, *rhs, *x, *bc_col;
       PetscInt           *ghosted_idx, *col_buf;
-      PetscBLASInt       *ipiv, N_b;
+      PetscBLASInt       *ipiv;
+      PetscBLASInt        N_b;
 
       PetscCall(PetscMalloc1(nSAvec, &B_arrays));
       for (PetscInt k = 0; k < nSAvec; k++) PetscCall(VecGetArrayRead(B_vecs[k], &B_arrays[k]));
