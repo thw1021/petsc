@@ -1577,12 +1577,12 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     PetscInt         ghost_stride;
     PetscReal       *Bc_ghosted = NULL;
     const PetscReal *Bc_ghosted_ro;
-    PetscBool        isMPIAIJ;
+    PetscMPIInt      comm_size;
     PetscHMapI       ghost_gid_to_lid; /* global ghost col index -> local ghost index (0-based) */
     PetscInt         num_ghosts = 0;
 
-    PetscCall(PetscObjectBaseTypeCompare((PetscObject)Prol, MATMPIAIJ, &isMPIAIJ));
-    if (isMPIAIJ) {
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)Prol), &comm_size));
+    if (comm_size > 1) {
       Mat_MPIAIJ  *mpimat = (Mat_MPIAIJ *)Prol->data;
       Vec          tmp_vec;
       PetscScalar *data_arr;
@@ -1785,7 +1785,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     }
 
     PetscCall(PetscHMapIDestroy(&ghost_gid_to_lid));
-    if (isMPIAIJ) PetscCall(PetscFree(Bc_ghosted));
+    if (comm_size > 1) PetscCall(PetscFree(Bc_ghosted));
   }
 
   PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
