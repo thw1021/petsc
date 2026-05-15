@@ -54,6 +54,7 @@ typedef const char *TSType;
 #define TSMPRK            "mprk"
 #define TSDISCGRAD        "discgrad"
 #define TSIRK             "irk"
+#define TSRKS             "rks"
 #define TSDIRK            "dirk"
 
 /*E
