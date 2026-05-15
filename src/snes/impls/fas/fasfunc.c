@@ -1172,18 +1172,20 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
 
   Input Parameters:
 + snes - the `SNESFAS` nonlinear multigrid context
-- ls   - the `SNESLineSearch` object to apply to the correction; pass `NULL` to disable
+- ls   - the `SNESLineSearch` object to apply to the correction
 
   Level: advanced
 
   Notes:
-  In standard FAS the coarse correction X += I(x^c - Rx) is applied with a unit step.
-  Setting a line search here enables the MG-Opt damping strategy {cite}`nash2000mgopt`,
+  The coarse correction line search defaults to `SNESLINESEARCHNONE` (unit step, lambda=1),
+  which is equivalent to the original FAS correction X += I(x^c - Rx).
+  Setting a non-trivial type enables the MG-Opt damping strategy {cite}`nash2000mgopt`,
   which is useful when monotonic decrease in the residual norm or energy functional is desired
   (e.g., non-convex problems where the full coarse correction may overshoot without an explicit
   convergence control strategy).
+  Passing `NULL` resets the line search to `SNESLINESEARCHNONE`.
 
-  The line search can also be set from the options database via `-snes_fas_coarse_correction_linesearch_type`.
+  The line search type can also be changed from the options database via `-snes_fas_coarse_correction_linesearch_type`.
 
 .seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `SNESGetLineSearch()`
 @*/
@@ -1194,7 +1196,12 @@ PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch ls
   if (ls) PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)ls));
   PetscCall(SNESLineSearchDestroy(&snes->linesearch));
-  snes->linesearch = ls;
+  if (ls) {
+    snes->linesearch = ls;
+  } else {
+    PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
+    PetscCall(SNESLineSearchSetType(snes->linesearch, SNESLINESEARCHNONE));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1207,7 +1214,7 @@ PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch ls
 . snes - the `SNESFAS` nonlinear multigrid context
 
   Output Parameter:
-. ls - the `SNESLineSearch` object, or `NULL` if none is set
+. ls - the `SNESLineSearch` object (defaults to `SNESLINESEARCHNONE`)
 
   Level: advanced
 
