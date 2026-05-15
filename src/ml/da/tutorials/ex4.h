@@ -125,6 +125,7 @@ static PetscErrorCode ShallowWaterRHS2D(TS ts, PetscReal t, Vec X, Vec F_vec, Pe
   PetscInt             xs, ys, xm, ym;
 
   PetscFunctionBeginUser;
+  (void)ts;
   PetscCall(DMDAGetCorners(sw->da, &xs, &ys, NULL, &xm, &ym, NULL));
   PetscCall(DMGetLocalVector(sw->da, &X_local));
   PetscCall(DMGlobalToLocalBegin(sw->da, X, INSERT_VALUES, X_local));
