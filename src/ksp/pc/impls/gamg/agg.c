@@ -1626,182 +1626,182 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     }
 
     {
-        PetscInt            nrows = rEnd - rStart, max_ncols = 0;
-        const PetscScalar **B_arrays;
-        PetscScalar        *work, *new_vals, *G, *rhs, *x, *bc_col;
-        PetscInt           *ghosted_idx, *col_buf;
-        PetscBLASInt       *ipiv;
-        PetscBLASInt        N_b;
+      PetscInt            nrows = rEnd - rStart, max_ncols = 0;
+      const PetscScalar **B_arrays;
+      PetscScalar        *work, *new_vals, *G, *rhs, *x, *bc_col;
+      PetscInt           *ghosted_idx, *col_buf;
+      PetscBLASInt       *ipiv;
+      PetscBLASInt        N_b;
 
-        PetscCall(PetscMalloc1(nSAvec, &B_arrays));
-        for (PetscInt k = 0; k < nSAvec; k++) PetscCall(VecGetArrayRead(B_vecs[k], &B_arrays[k]));
-        /* work: nSAvec*nSAvec Gram + nSAvec rhs + nSAvec solution + nSAvec bc_col scratch */
-        PetscCall(PetscMalloc1(nSAvec * nSAvec + 3 * nSAvec, &work));
-        PetscCall(PetscMalloc1(nSAvec, &ipiv));
-        PetscCall(PetscBLASIntCast(nSAvec, &N_b));
-        G      = work;
-        rhs    = work + nSAvec * nSAvec;
-        x      = rhs + nSAvec;
-        bc_col = x + nSAvec;
+      PetscCall(PetscMalloc1(nSAvec, &B_arrays));
+      for (PetscInt k = 0; k < nSAvec; k++) PetscCall(VecGetArrayRead(B_vecs[k], &B_arrays[k]));
+      /* work: nSAvec*nSAvec Gram + nSAvec rhs + nSAvec solution + nSAvec bc_col scratch */
+      PetscCall(PetscMalloc1(nSAvec * nSAvec + 3 * nSAvec, &work));
+      PetscCall(PetscMalloc1(nSAvec, &ipiv));
+      PetscCall(PetscBLASIntCast(nSAvec, &N_b));
+      G      = work;
+      rhs    = work + nSAvec * nSAvec;
+      x      = rhs + nSAvec;
+      bc_col = x + nSAvec;
 
-        /* find max row width and total nnz for pre-allocation */
-        {
-          PetscInt total_nnz = 0;
-          for (PetscInt row = 0; row < nrows; row++) {
-            PetscInt ncols;
-            PetscCall(MatGetRow(Prol, rStart + row, &ncols, NULL, NULL));
-            if (ncols > max_ncols) max_ncols = ncols;
-            total_nnz += ncols;
-            PetscCall(MatRestoreRow(Prol, rStart + row, &ncols, NULL, NULL));
-          }
-          /* allocate flat CSR-like buffers to store all corrections before applying */
-          PetscCall(PetscMalloc1(total_nnz, &new_vals));
-          PetscCall(PetscMalloc1(total_nnz, &col_buf));
+      /* find max row width and total nnz for pre-allocation */
+      {
+        PetscInt total_nnz = 0;
+        for (PetscInt row = 0; row < nrows; row++) {
+          PetscInt ncols;
+          PetscCall(MatGetRow(Prol, rStart + row, &ncols, NULL, NULL));
+          if (ncols > max_ncols) max_ncols = ncols;
+          total_nnz += ncols;
+          PetscCall(MatRestoreRow(Prol, rStart + row, &ncols, NULL, NULL));
         }
-        PetscCall(PetscMalloc1(max_ncols, &ghosted_idx));
+        /* allocate flat CSR-like buffers to store all corrections before applying */
+        PetscCall(PetscMalloc1(total_nnz, &new_vals));
+        PetscCall(PetscMalloc1(total_nnz, &col_buf));
+      }
+      PetscCall(PetscMalloc1(max_ncols, &ghosted_idx));
 
-        /* Pass 1: read rows, compute corrections, store in flat buffers */
-        {
-          PetscInt *row_offsets;
-          PetscInt  offset = 0, n_singular = 0, n_zero_rows = 0, n_corrected = 0, n_underdetermined = 0;
-          PetscReal max_xnorm = 0.0;
+      /* Pass 1: read rows, compute corrections, store in flat buffers */
+      {
+        PetscInt *row_offsets;
+        PetscInt  offset = 0, n_singular = 0, n_zero_rows = 0, n_corrected = 0, n_underdetermined = 0;
+        PetscReal max_xnorm = 0.0;
 
-          PetscCall(PetscMalloc1(nrows + 1, &row_offsets));
-          PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+        PetscCall(PetscMalloc1(nrows + 1, &row_offsets));
+        PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
 
-          for (PetscInt row = 0; row < nrows; row++) {
-            PetscInt           ncols;
-            const PetscInt    *cols;
-            const PetscScalar *vals;
-            PetscInt           grow = rStart + row;
-            PetscBLASInt       NRHS = 1, LDA = N_b, LDB = N_b, INFO;
+        for (PetscInt row = 0; row < nrows; row++) {
+          PetscInt           ncols;
+          const PetscInt    *cols;
+          const PetscScalar *vals;
+          PetscInt           grow = rStart + row;
+          PetscBLASInt       NRHS = 1, LDA = N_b, LDB = N_b, INFO;
 
-            row_offsets[row] = offset;
-            PetscCall(MatGetRow(Prol, grow, &ncols, &cols, &vals));
-            if (ncols == 0) {
-              n_zero_rows++;
-              PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
-              continue;
-            }
+          row_offsets[row] = offset;
+          PetscCall(MatGetRow(Prol, grow, &ncols, &cols, &vals));
+          if (ncols == 0) {
+            n_zero_rows++;
+            PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
+            continue;
+          }
 
-            /* When ncols < nSAvec the Gram matrix G is rank-deficient by construction;
+          /* When ncols < nSAvec the Gram matrix G is rank-deficient by construction;
              skip correction for this row (keep filtered values as-is).
              Note: the near-null space constraint P*Bc = B is NOT enforced for these rows.
              This typically occurs at boundary or isolated nodes where few coarse neighbors
              remain after filtering; the impact on convergence is generally small. */
-            if (ncols < nSAvec) {
-              n_underdetermined++;
-              for (PetscInt j = 0; j < ncols; j++) {
-                col_buf[offset + j]  = cols[j];
-                new_vals[offset + j] = vals[j];
-              }
-              offset += ncols;
-              PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
-              continue;
-            }
-
-            /* map global column indices to ghosted array indices and save cols */
+          if (ncols < nSAvec) {
+            n_underdetermined++;
             for (PetscInt j = 0; j < ncols; j++) {
-              col_buf[offset + j] = cols[j];
-              if (cols[j] >= cStart && cols[j] < cEnd) ghosted_idx[j] = cols[j] - cStart;
-              else {
-                PetscInt g = -1;
-                PetscCall(PetscHMapIGet(ghost_gid_to_lid, cols[j], &g));
-                PetscCheck(g >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Off-diagonal column %" PetscInt_FMT " not found in ghost map for prolongator filter", cols[j]);
-                ghosted_idx[j] = nloc + g;
-              }
-            }
-
-            for (PetscInt i = 0; i < nSAvec * nSAvec; i++) G[i] = 0.0;
-
-            /* rhs[k] = B[row,k] - sum_j P[row,j] * Bc[ghosted_idx[j], k] */
-            for (PetscInt k = 0; k < nSAvec; k++) {
-              PetscScalar dot = 0.0;
-              for (PetscInt j = 0; j < ncols; j++) dot += vals[j] * (PetscScalar)Bc_ghosted_ro[k * ghost_stride + ghosted_idx[j]];
-              rhs[k] = B_arrays[k][row] - dot;
-            }
-
-            /* G[k1,k2] = sum_j Bc[j,k1] * Bc[j,k2] using pre-gathered bc_col */
-            for (PetscInt j = 0; j < ncols; j++) {
-              PetscInt gidx = ghosted_idx[j];
-              for (PetscInt k = 0; k < nSAvec; k++) bc_col[k] = (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx];
-              for (PetscInt k1 = 0; k1 < nSAvec; k1++)
-                for (PetscInt k2 = k1; k2 < nSAvec; k2++) G[k1 * nSAvec + k2] += bc_col[k1] * bc_col[k2];
-            }
-            /* fill lower triangle from upper (G is symmetric) */
-            for (PetscInt k1 = 1; k1 < nSAvec; k1++)
-              for (PetscInt k2 = 0; k2 < k1; k2++) G[k1 * nSAvec + k2] = G[k2 * nSAvec + k1];
-
-            /* solve G * x = rhs */
-            for (PetscInt i = 0; i < nSAvec; i++) x[i] = rhs[i];
-            PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&N_b, &NRHS, G, &LDA, ipiv, x, &LDB, &INFO));
-            if (INFO != 0) {
-              /* G is singular despite ncols >= nSAvec (Bc columns linearly dependent);
-               keep filtered values as-is (near-null space constraint not enforced for this row) */
-              n_singular++;
-              for (PetscInt j = 0; j < ncols; j++) new_vals[offset + j] = vals[j];
-              offset += ncols;
-              PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
-              continue;
-            }
-
-            /* track ||x||^2 */
-            {
-              PetscReal xnorm2 = 0.0;
-              for (PetscInt k = 0; k < nSAvec; k++) xnorm2 += PetscSqr(PetscAbsScalar(x[k]));
-              if (xnorm2 > max_xnorm) max_xnorm = xnorm2;
-            }
-            n_corrected++;
-
-            /* new_vals[j] = vals[j] + sum_k Bc[ghosted_idx[j],k] * x[k] */
-            for (PetscInt j = 0; j < ncols; j++) {
-              PetscScalar delta = 0.0;
-              PetscInt    gidx  = ghosted_idx[j];
-              for (PetscInt k = 0; k < nSAvec; k++) delta += (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx] * x[k];
-              new_vals[offset + j] = vals[j] + delta;
+              col_buf[offset + j]  = cols[j];
+              new_vals[offset + j] = vals[j];
             }
             offset += ncols;
             PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
+            continue;
           }
-          row_offsets[nrows] = offset;
-          PetscCall(PetscFPTrapPop());
-          PetscCall(PetscInfo(pc, "PCGAMGKernelPreservingFilter_AGG: nrows=%" PetscInt_FMT " corrected=%" PetscInt_FMT " zero_rows=%" PetscInt_FMT " underdetermined(ncols<nSAvec)=%" PetscInt_FMT " singular_G=%" PetscInt_FMT " max_xnorm2=%g\n", nrows, n_corrected, n_zero_rows, n_underdetermined, n_singular, (double)max_xnorm));
 
-          /* Pass 2: apply all corrections at once */
-          for (PetscInt row = 0; row < nrows; row++) {
-            PetscInt grow = rStart + row;
-            PetscInt nc   = row_offsets[row + 1] - row_offsets[row];
-            if (nc > 0) PetscCall(MatSetValues(Prol, 1, &grow, nc, col_buf + row_offsets[row], new_vals + row_offsets[row], INSERT_VALUES));
+          /* map global column indices to ghosted array indices and save cols */
+          for (PetscInt j = 0; j < ncols; j++) {
+            col_buf[offset + j] = cols[j];
+            if (cols[j] >= cStart && cols[j] < cEnd) ghosted_idx[j] = cols[j] - cStart;
+            else {
+              PetscInt g = -1;
+              PetscCall(PetscHMapIGet(ghost_gid_to_lid, cols[j], &g));
+              PetscCheck(g >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Off-diagonal column %" PetscInt_FMT " not found in ghost map for prolongator filter", cols[j]);
+              ghosted_idx[j] = nloc + g;
+            }
           }
-          PetscCall(PetscFree(row_offsets));
+
+          for (PetscInt i = 0; i < nSAvec * nSAvec; i++) G[i] = 0.0;
+
+          /* rhs[k] = B[row,k] - sum_j P[row,j] * Bc[ghosted_idx[j], k] */
+          for (PetscInt k = 0; k < nSAvec; k++) {
+            PetscScalar dot = 0.0;
+            for (PetscInt j = 0; j < ncols; j++) dot += vals[j] * (PetscScalar)Bc_ghosted_ro[k * ghost_stride + ghosted_idx[j]];
+            rhs[k] = B_arrays[k][row] - dot;
+          }
+
+          /* G[k1,k2] = sum_j Bc[j,k1] * Bc[j,k2] using pre-gathered bc_col */
+          for (PetscInt j = 0; j < ncols; j++) {
+            PetscInt gidx = ghosted_idx[j];
+            for (PetscInt k = 0; k < nSAvec; k++) bc_col[k] = (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx];
+            for (PetscInt k1 = 0; k1 < nSAvec; k1++)
+              for (PetscInt k2 = k1; k2 < nSAvec; k2++) G[k1 * nSAvec + k2] += bc_col[k1] * bc_col[k2];
+          }
+          /* fill lower triangle from upper (G is symmetric) */
+          for (PetscInt k1 = 1; k1 < nSAvec; k1++)
+            for (PetscInt k2 = 0; k2 < k1; k2++) G[k1 * nSAvec + k2] = G[k2 * nSAvec + k1];
+
+          /* solve G * x = rhs */
+          for (PetscInt i = 0; i < nSAvec; i++) x[i] = rhs[i];
+          PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&N_b, &NRHS, G, &LDA, ipiv, x, &LDB, &INFO));
+          if (INFO != 0) {
+            /* G is singular despite ncols >= nSAvec (Bc columns linearly dependent);
+               keep filtered values as-is (near-null space constraint not enforced for this row) */
+            n_singular++;
+            for (PetscInt j = 0; j < ncols; j++) new_vals[offset + j] = vals[j];
+            offset += ncols;
+            PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
+            continue;
+          }
+
+          /* track ||x||^2 */
+          {
+            PetscReal xnorm2 = 0.0;
+            for (PetscInt k = 0; k < nSAvec; k++) xnorm2 += PetscSqr(PetscAbsScalar(x[k]));
+            if (xnorm2 > max_xnorm) max_xnorm = xnorm2;
+          }
+          n_corrected++;
+
+          /* new_vals[j] = vals[j] + sum_k Bc[ghosted_idx[j],k] * x[k] */
+          for (PetscInt j = 0; j < ncols; j++) {
+            PetscScalar delta = 0.0;
+            PetscInt    gidx  = ghosted_idx[j];
+            for (PetscInt k = 0; k < nSAvec; k++) delta += (PetscScalar)Bc_ghosted_ro[k * ghost_stride + gidx] * x[k];
+            new_vals[offset + j] = vals[j] + delta;
+          }
+          offset += ncols;
+          PetscCall(MatRestoreRow(Prol, grow, &ncols, &cols, &vals));
         }
+        row_offsets[nrows] = offset;
+        PetscCall(PetscFPTrapPop());
+        PetscCall(PetscInfo(pc, "PCGAMGKernelPreservingFilter_AGG: nrows=%" PetscInt_FMT " corrected=%" PetscInt_FMT " zero_rows=%" PetscInt_FMT " underdetermined(ncols<nSAvec)=%" PetscInt_FMT " singular_G=%" PetscInt_FMT " max_xnorm2=%g\n", nrows, n_corrected, n_zero_rows, n_underdetermined, n_singular, (double)max_xnorm));
 
-        for (PetscInt k = 0; k < nSAvec; k++) PetscCall(VecRestoreArrayRead(B_vecs[k], &B_arrays[k]));
-        PetscCall(PetscFree(B_arrays));
-        PetscCall(PetscFree(work));
-        PetscCall(PetscFree(ipiv));
-        PetscCall(PetscFree(ghosted_idx));
-        PetscCall(PetscFree(new_vals));
-        PetscCall(PetscFree(col_buf));
+        /* Pass 2: apply all corrections at once */
+        for (PetscInt row = 0; row < nrows; row++) {
+          PetscInt grow = rStart + row;
+          PetscInt nc   = row_offsets[row + 1] - row_offsets[row];
+          if (nc > 0) PetscCall(MatSetValues(Prol, 1, &grow, nc, col_buf + row_offsets[row], new_vals + row_offsets[row], INSERT_VALUES));
+        }
+        PetscCall(PetscFree(row_offsets));
       }
 
-      PetscCall(PetscHMapIDestroy(&ghost_gid_to_lid));
-      if (comm_size > 1) PetscCall(PetscFree(Bc_ghosted));
+      for (PetscInt k = 0; k < nSAvec; k++) PetscCall(VecRestoreArrayRead(B_vecs[k], &B_arrays[k]));
+      PetscCall(PetscFree(B_arrays));
+      PetscCall(PetscFree(work));
+      PetscCall(PetscFree(ipiv));
+      PetscCall(PetscFree(ghosted_idx));
+      PetscCall(PetscFree(new_vals));
+      PetscCall(PetscFree(col_buf));
     }
 
-    PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Prol, MAT_FINAL_ASSEMBLY));
-
-    for (PetscInt k = 0; k < nSAvec; k++) {
-      PetscCall(VecDestroy(&Bc_vecs[k]));
-      PetscCall(VecDestroy(&B_vecs[k]));
-    }
-    PetscCall(PetscFree(Bc_vecs));
-    PetscCall(PetscFree(B_vecs));
-    PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(PetscHMapIDestroy(&ghost_gid_to_lid));
+    if (comm_size > 1) PetscCall(PetscFree(Bc_ghosted));
   }
 
-  /*
+  PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(Prol, MAT_FINAL_ASSEMBLY));
+
+  for (PetscInt k = 0; k < nSAvec; k++) {
+    PetscCall(VecDestroy(&Bc_vecs[k]));
+    PetscCall(VecDestroy(&B_vecs[k]));
+  }
+  PetscCall(PetscFree(Bc_vecs));
+  PetscCall(PetscFree(B_vecs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
    PCGAMGOptimizeProlongator_AGG - given the initial prolongator optimizes it by smoothed aggregation pc_gamg_agg->nsmooths times
 
   Input Parameter:
@@ -1810,129 +1810,129 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
  In/Output Parameter:
    . a_P - prolongation operator to the next level
 */
-  static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat * a_P)
-  {
-    PC_MG       *mg          = (PC_MG *)pc->data;
-    PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
-    PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
-    Mat          Prol        = *a_P;
-    MPI_Comm     comm;
-    KSP          eksp;
-    Vec          bb, xx;
-    PC           epc;
-    PetscReal    alpha, emax, emin;
+static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  Mat          Prol        = *a_P;
+  MPI_Comm     comm;
+  KSP          eksp;
+  Vec          bb, xx;
+  PC           epc;
+  PetscReal    alpha, emax, emin;
 
-    PetscFunctionBegin;
-    PetscCall(PetscObjectGetComm((PetscObject)Amat, &comm));
-    PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)Amat, &comm));
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
 
-    /* compute maximum singular value of operator to be used in smoother */
-    if (0 < pc_gamg_agg->nsmooths) {
-      /* get eigen estimates */
-      if (pc_gamg->emax > 0) {
-        emin = pc_gamg->emin;
-        emax = pc_gamg->emax;
-      } else {
-        const char *prefix;
+  /* compute maximum singular value of operator to be used in smoother */
+  if (0 < pc_gamg_agg->nsmooths) {
+    /* get eigen estimates */
+    if (pc_gamg->emax > 0) {
+      emin = pc_gamg->emin;
+      emax = pc_gamg->emax;
+    } else {
+      const char *prefix;
 
-        PetscCall(MatCreateVecs(Amat, &bb, NULL));
-        PetscCall(MatCreateVecs(Amat, &xx, NULL));
-        PetscCall(KSPSetNoisy_Private(Amat, bb));
+      PetscCall(MatCreateVecs(Amat, &bb, NULL));
+      PetscCall(MatCreateVecs(Amat, &xx, NULL));
+      PetscCall(KSPSetNoisy_Private(Amat, bb));
 
-        PetscCall(KSPCreate(comm, &eksp));
-        PetscCall(KSPSetNestLevel(eksp, pc->kspnestlevel));
-        PetscCall(PCGetOptionsPrefix(pc, &prefix));
-        PetscCall(KSPSetOptionsPrefix(eksp, prefix));
-        PetscCall(KSPAppendOptionsPrefix(eksp, "pc_gamg_esteig_"));
-        {
-          PetscBool isset, sflg;
+      PetscCall(KSPCreate(comm, &eksp));
+      PetscCall(KSPSetNestLevel(eksp, pc->kspnestlevel));
+      PetscCall(PCGetOptionsPrefix(pc, &prefix));
+      PetscCall(KSPSetOptionsPrefix(eksp, prefix));
+      PetscCall(KSPAppendOptionsPrefix(eksp, "pc_gamg_esteig_"));
+      {
+        PetscBool isset, sflg;
 
-          PetscCall(MatIsSPDKnown(Amat, &isset, &sflg));
-          if (isset && sflg) PetscCall(KSPSetType(eksp, KSPCG));
-        }
-        PetscCall(KSPSetErrorIfNotConverged(eksp, pc->erroriffailure));
-        PetscCall(KSPSetNormType(eksp, KSP_NORM_NONE));
-
-        PetscCall(KSPSetInitialGuessNonzero(eksp, PETSC_FALSE));
-        PetscCall(KSPSetOperators(eksp, Amat, Amat));
-
-        PetscCall(KSPGetPC(eksp, &epc));
-        PetscCall(PCSetType(epc, PCJACOBI)); /* smoother in smoothed agg. */
-
-        PetscCall(KSPSetTolerances(eksp, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT, 10)); // 10 is safer, but 5 is often fine, can override with -pc_gamg_esteig_ksp_max_it -mg_levels_ksp_chebyshev_esteig 0,0.25,0,1.2
-
-        PetscCall(KSPSetFromOptions(eksp));
-        PetscCall(KSPSetComputeSingularValues(eksp, PETSC_TRUE));
-        PetscCall(KSPSolve(eksp, bb, xx));
-        PetscCall(KSPCheckSolve(eksp, pc, xx));
-
-        PetscCall(KSPComputeExtremeSingularValues(eksp, &emax, &emin));
-        if (emax <= 0.0) {
-          /* dstev failed to converge (e.g., ILP64 OpenBLAS); use safe fallback for Jacobi-preconditioned spectral radius */
-          emax = 2.0;
-          emin = 1.e-5;
-          PetscCall(PetscInfo(pc, "%s: Smooth P0: eigenvalue estimation failed, using fallback emax=%e emin=%e\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin));
-        } else PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
-        PetscCall(VecDestroy(&xx));
-        PetscCall(VecDestroy(&bb));
-        PetscCall(KSPDestroy(&eksp));
+        PetscCall(MatIsSPDKnown(Amat, &isset, &sflg));
+        if (isset && sflg) PetscCall(KSPSetType(eksp, KSPCG));
       }
-      if (pc_gamg->use_sa_esteig) {
-        mg->min_eigen_DinvA[pc_gamg->current_level] = emin;
-        mg->max_eigen_DinvA[pc_gamg->current_level] = emax;
-        PetscCall(PetscInfo(pc, "%s: Smooth P0: level %" PetscInt_FMT ", cache spectra %g %g\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)emin, (double)emax));
-      } else {
-        mg->min_eigen_DinvA[pc_gamg->current_level] = 0;
-        mg->max_eigen_DinvA[pc_gamg->current_level] = 0;
-      }
+      PetscCall(KSPSetErrorIfNotConverged(eksp, pc->erroriffailure));
+      PetscCall(KSPSetNormType(eksp, KSP_NORM_NONE));
+
+      PetscCall(KSPSetInitialGuessNonzero(eksp, PETSC_FALSE));
+      PetscCall(KSPSetOperators(eksp, Amat, Amat));
+
+      PetscCall(KSPGetPC(eksp, &epc));
+      PetscCall(PCSetType(epc, PCJACOBI)); /* smoother in smoothed agg. */
+
+      PetscCall(KSPSetTolerances(eksp, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT, 10)); // 10 is safer, but 5 is often fine, can override with -pc_gamg_esteig_ksp_max_it -mg_levels_ksp_chebyshev_esteig 0,0.25,0,1.2
+
+      PetscCall(KSPSetFromOptions(eksp));
+      PetscCall(KSPSetComputeSingularValues(eksp, PETSC_TRUE));
+      PetscCall(KSPSolve(eksp, bb, xx));
+      PetscCall(KSPCheckSolve(eksp, pc, xx));
+
+      PetscCall(KSPComputeExtremeSingularValues(eksp, &emax, &emin));
+      if (emax <= 0.0) {
+        /* dstev failed to converge (e.g., ILP64 OpenBLAS); use safe fallback for Jacobi-preconditioned spectral radius */
+        emax = 2.0;
+        emin = 1.e-5;
+        PetscCall(PetscInfo(pc, "%s: Smooth P0: eigenvalue estimation failed, using fallback emax=%e emin=%e\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin));
+      } else PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
+      PetscCall(VecDestroy(&xx));
+      PetscCall(VecDestroy(&bb));
+      PetscCall(KSPDestroy(&eksp));
+    }
+    if (pc_gamg->use_sa_esteig) {
+      mg->min_eigen_DinvA[pc_gamg->current_level] = emin;
+      mg->max_eigen_DinvA[pc_gamg->current_level] = emax;
+      PetscCall(PetscInfo(pc, "%s: Smooth P0: level %" PetscInt_FMT ", cache spectra %g %g\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)emin, (double)emax));
     } else {
       mg->min_eigen_DinvA[pc_gamg->current_level] = 0;
       mg->max_eigen_DinvA[pc_gamg->current_level] = 0;
     }
+  } else {
+    mg->min_eigen_DinvA[pc_gamg->current_level] = 0;
+    mg->max_eigen_DinvA[pc_gamg->current_level] = 0;
+  }
 
-    /* smooth P0 */
-    if (pc_gamg_agg->nsmooths > 0) {
-      Vec diag;
+  /* smooth P0 */
+  if (pc_gamg_agg->nsmooths > 0) {
+    Vec diag;
 
-      /* TODO: Set a PCFailedReason and exit the building of the AMG preconditioner */
-      PetscCheck(emax != 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Computed maximum singular value as zero");
+    /* TODO: Set a PCFailedReason and exit the building of the AMG preconditioner */
+    PetscCheck(emax != 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Computed maximum singular value as zero");
 
-      PetscCall(MatCreateVecs(Amat, &diag, NULL));
-      PetscCall(MatGetDiagonal(Amat, diag)); /* effectively PCJACOBI */
-      PetscCall(VecReciprocal(diag));
+    PetscCall(MatCreateVecs(Amat, &diag, NULL));
+    PetscCall(MatGetDiagonal(Amat, diag)); /* effectively PCJACOBI */
+    PetscCall(VecReciprocal(diag));
 
-      for (PetscInt jj = 0; jj < pc_gamg_agg->nsmooths; jj++) {
-        Mat tMat;
+    for (PetscInt jj = 0; jj < pc_gamg_agg->nsmooths; jj++) {
+      Mat tMat;
 
-        PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_OPTSM], 0, 0, 0, 0));
-        /*
+      PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_OPTSM], 0, 0, 0, 0));
+      /*
         Smooth aggregation on the prolongator
 
         P_{i} := (I - 1.4/emax D^{-1}A) P_i\{i-1}
       */
-        PetscCall(PetscLogEventBegin(petsc_gamg_setup_matmat_events[pc_gamg->current_level][2], 0, 0, 0, 0));
-        PetscCall(MatMatMult(Amat, Prol, MAT_INITIAL_MATRIX, PETSC_CURRENT, &tMat));
-        PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[pc_gamg->current_level][2], 0, 0, 0, 0));
-        PetscCall(MatProductClear(tMat));
-        PetscCall(MatDiagonalScale(tMat, diag, NULL));
+      PetscCall(PetscLogEventBegin(petsc_gamg_setup_matmat_events[pc_gamg->current_level][2], 0, 0, 0, 0));
+      PetscCall(MatMatMult(Amat, Prol, MAT_INITIAL_MATRIX, PETSC_CURRENT, &tMat));
+      PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[pc_gamg->current_level][2], 0, 0, 0, 0));
+      PetscCall(MatProductClear(tMat));
+      PetscCall(MatDiagonalScale(tMat, diag, NULL));
 
-        /* TODO: Document the 1.4 and don't hardwire it in this routine */
-        alpha = -1.4 / emax;
-        PetscCall(MatAYPX(tMat, alpha, Prol, SUBSET_NONZERO_PATTERN));
-        PetscCall(MatDestroy(&Prol));
-        Prol = tMat;
-        PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPTSM], 0, 0, 0, 0));
-      }
-      PetscCall(VecDestroy(&diag));
+      /* TODO: Document the 1.4 and don't hardwire it in this routine */
+      alpha = -1.4 / emax;
+      PetscCall(MatAYPX(tMat, alpha, Prol, SUBSET_NONZERO_PATTERN));
+      PetscCall(MatDestroy(&Prol));
+      Prol = tMat;
+      PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPTSM], 0, 0, 0, 0));
     }
-    if (pc_gamg_agg->prolongation_filter > 0.0) PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pc_gamg_agg->prolongation_filter));
-    PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
-    PetscCall(MatViewFromOptions(Prol, NULL, "-pc_gamg_agg_view_prolongation"));
-    *a_P = Prol;
-    PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(VecDestroy(&diag));
   }
+  if (pc_gamg_agg->prolongation_filter > 0.0) PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pc_gamg_agg->prolongation_filter));
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
+  PetscCall(MatViewFromOptions(Prol, NULL, "-pc_gamg_agg_view_prolongation"));
+  *a_P = Prol;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  /*MC
+/*MC
   PCGAMGAGG - Smooth aggregation, {cite}`vanek1996algebraic`, {cite}`vanek2001convergence`, variant of PETSc's algebraic multigrid (`PCGAMG`) preconditioner
 
   Options Database Keys:
@@ -1959,47 +1959,47 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
           `PCGAMGSetReuseInterpolation()`, `PCGAMGASMSetUseAggs()`, `PCGAMGSetParallelCoarseGridSolve()`, `PCGAMGSetNlevels()`, `PCGAMGSetThreshold()`,
           `PCGAMGGetType()`, `PCGAMGSetUseSAEstEig()`
 M*/
-  PetscErrorCode PCCreateGAMG_AGG(PC pc)
-  {
-    PC_MG       *mg      = (PC_MG *)pc->data;
-    PC_GAMG     *pc_gamg = (PC_GAMG *)mg->innerctx;
-    PC_GAMG_AGG *pc_gamg_agg;
+PetscErrorCode PCCreateGAMG_AGG(PC pc)
+{
+  PC_MG       *mg      = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg;
 
-    PetscFunctionBegin;
-    /* create sub context for SA */
-    PetscCall(PetscNew(&pc_gamg_agg));
-    pc_gamg->subctx = pc_gamg_agg;
+  PetscFunctionBegin;
+  /* create sub context for SA */
+  PetscCall(PetscNew(&pc_gamg_agg));
+  pc_gamg->subctx = pc_gamg_agg;
 
-    pc_gamg->ops->setfromoptions = PCSetFromOptions_GAMG_AGG;
-    pc_gamg->ops->destroy        = PCDestroy_GAMG_AGG;
-    /* reset does not do anything; setup not virtual */
+  pc_gamg->ops->setfromoptions = PCSetFromOptions_GAMG_AGG;
+  pc_gamg->ops->destroy        = PCDestroy_GAMG_AGG;
+  /* reset does not do anything; setup not virtual */
 
-    /* set internal function pointers */
-    pc_gamg->ops->creategraph       = PCGAMGCreateGraph_AGG;
-    pc_gamg->ops->coarsen           = PCGAMGCoarsen_AGG;
-    pc_gamg->ops->prolongator       = PCGAMGConstructProlongator_AGG;
-    pc_gamg->ops->optprolongator    = PCGAMGOptimizeProlongator_AGG;
-    pc_gamg->ops->createdefaultdata = PCSetData_AGG;
-    pc_gamg->ops->view              = PCView_GAMG_AGG;
+  /* set internal function pointers */
+  pc_gamg->ops->creategraph       = PCGAMGCreateGraph_AGG;
+  pc_gamg->ops->coarsen           = PCGAMGCoarsen_AGG;
+  pc_gamg->ops->prolongator       = PCGAMGConstructProlongator_AGG;
+  pc_gamg->ops->optprolongator    = PCGAMGOptimizeProlongator_AGG;
+  pc_gamg->ops->createdefaultdata = PCSetData_AGG;
+  pc_gamg->ops->view              = PCView_GAMG_AGG;
 
-    pc_gamg_agg->nsmooths                     = 1;
-    pc_gamg_agg->aggressive_coarsening_levels = 1;
-    pc_gamg_agg->use_aggressive_square_graph  = PETSC_TRUE;
-    pc_gamg_agg->use_minimum_degree_ordering  = PETSC_FALSE;
-    pc_gamg_agg->use_low_mem_filter           = PETSC_FALSE;
-    pc_gamg_agg->aggressive_mis_k             = 2;
-    pc_gamg_agg->graph_symmetrize             = PETSC_TRUE;
-    pc_gamg_agg->prolongation_filter          = 0.0;
+  pc_gamg_agg->nsmooths                     = 1;
+  pc_gamg_agg->aggressive_coarsening_levels = 1;
+  pc_gamg_agg->use_aggressive_square_graph  = PETSC_TRUE;
+  pc_gamg_agg->use_minimum_degree_ordering  = PETSC_FALSE;
+  pc_gamg_agg->use_low_mem_filter           = PETSC_FALSE;
+  pc_gamg_agg->aggressive_mis_k             = 2;
+  pc_gamg_agg->graph_symmetrize             = PETSC_TRUE;
+  pc_gamg_agg->prolongation_filter          = 0.0;
 
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", PCGAMGSetNSmooths_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", PCGAMGSetAggressiveLevels_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", PCGAMGSetAggressiveSquareGraph_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetMinDegreeOrdering_C", PCGAMGMISkSetMinDegreeOrdering_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetLowMemoryFilter_C", PCGAMGSetLowMemoryFilter_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", PCGAMGMISkSetAggressive_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetGraphSymmetrize_C", PCGAMGSetGraphSymmetrize_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilterThreshold_C", PCGAMGSetProlongatorFilterThreshold_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilterThreshold_C", PCGAMGGetProlongatorFilterThreshold_AGG));
-    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", PCGAMGSetNSmooths_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", PCGAMGSetAggressiveLevels_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", PCGAMGSetAggressiveSquareGraph_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetMinDegreeOrdering_C", PCGAMGMISkSetMinDegreeOrdering_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetLowMemoryFilter_C", PCGAMGSetLowMemoryFilter_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", PCGAMGMISkSetAggressive_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetGraphSymmetrize_C", PCGAMGSetGraphSymmetrize_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilterThreshold_C", PCGAMGSetProlongatorFilterThreshold_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilterThreshold_C", PCGAMGGetProlongatorFilterThreshold_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
