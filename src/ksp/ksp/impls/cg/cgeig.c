@@ -33,7 +33,13 @@ PetscErrorCode KSPComputeEigenvalues_CG(KSP ksp, PetscInt nmax, PetscReal *r, Pe
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
+  if (lierr) {
+    PetscCall(PetscFPTrapPop());
+    /* TEMPORARY DEBUG: print tridiagonal matrix on failure (use original d,e since r,ee are overwritten) */
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF, stderr, "[%d] KSPComputeEigenvalues_CG: xSTEV FAILED info=%" PetscBLASInt_FMT " n=%" PetscInt_FMT "\n", PetscGlobalRank, lierr, n));
+    for (PetscInt j = 0; j < n; j++) PetscCall(PetscFPrintf(PETSC_COMM_SELF, stderr, "[%d]   tridiag[%" PetscInt_FMT "] diag=%e offdiag=%e\n", PetscGlobalRank, j, (double)PetscRealPart(d[j]), (double)(j < n - 1 ? PetscRealPart(e[j + 1]) : 0.0)));
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error info=%" PetscBLASInt_FMT, lierr);
+  }
   PetscCall(PetscFPTrapPop());
   PetscCall(PetscSortReal(n, r));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -66,9 +72,16 @@ PetscErrorCode KSPComputeExtremeSingularValues_CG(KSP ksp, PetscReal *emax, Pets
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
   PetscCall(PetscFPTrapPop());
-  *emin = dd[0];
-  *emax = dd[n - 1];
+  if (lierr) {
+    /* TEMPORARY DEBUG: print tridiagonal matrix on failure (use original d,e since dd,ee are overwritten) */
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF, stderr, "[%d] KSPComputeExtremeSingularValues_CG: xSTEV FAILED info=%" PetscBLASInt_FMT " n=%" PetscInt_FMT "\n", PetscGlobalRank, lierr, n));
+    for (PetscInt j = 0; j < n; j++) PetscCall(PetscFPrintf(PETSC_COMM_SELF, stderr, "[%d]   tridiag[%" PetscInt_FMT "] diag=%e offdiag=%e\n", PetscGlobalRank, j, (double)PetscRealPart(d[j]), (double)(j < n - 1 ? PetscRealPart(e[j + 1]) : 0.0)));
+    *emin = -1.0;
+    *emax = -1.0;
+  } else {
+    *emin = dd[0];
+    *emax = dd[n - 1];
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
