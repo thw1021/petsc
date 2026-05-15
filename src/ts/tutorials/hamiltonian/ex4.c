@@ -2614,12 +2614,18 @@ static PetscErrorCode RHSFunctionV(TS ts, PetscReal t, Vec X, Vec Vres, void *Ct
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Discrete Gradients Formulation: S, F, gradF (G) */
+/* Discrete Gradients Formulation: S, F, gradF (G)
+   With particle weights w_p, the Hamiltonian formulation uses:
+     S_p = {{0, 1/w_p}, {-1/w_p, 0}}
+     F = sum_p 1/2 w_p m_p v_p^2 + 1/2 int E^2 dx
+     grad F = (-w_p q_p E(x_p), w_p m_p v_p)
+   Giving correct physics: dx/dt = v_p, dv/dt = q_p E / m_p
+   and energy conservation: dF/dt = <grad F, S grad F> = 0 */
 PetscErrorCode RHSJacobianS(TS ts, PetscReal t, Vec U, Mat S, PetscCtx ctx)
 {
-  PetscScalar vals[4] = {0., 1., -1., 0.};
-  DM          sw;
-  PetscInt    dim, d, Np, p, rStart;
+  DM              sw;
+  const PetscReal *weight;
+  PetscInt        dim, d, Np, p, rStart;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
@@ -2627,12 +2633,16 @@ PetscErrorCode RHSJacobianS(TS ts, PetscReal t, Vec U, Mat S, PetscCtx ctx)
   PetscCall(VecGetLocalSize(U, &Np));
   PetscCall(MatGetOwnershipRange(S, &rStart, NULL));
   Np /= 2 * dim;
+  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
   for (p = 0; p < Np; ++p) {
+    const PetscReal   inv_w = 1.0 / weight[p];
+    const PetscScalar vals[4] = {0., inv_w, -inv_w, 0.};
     for (d = 0; d < dim; ++d) {
       const PetscInt rows[2] = {(p * 2 + 0) * dim + d + rStart, (p * 2 + 1) * dim + d + rStart};
       PetscCall(MatSetValues(S, 2, rows, 2, rows, vals, INSERT_VALUES));
     }
   }
+  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2644,6 +2654,7 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
   DM                 sw;
   Vec                phi;
   const PetscScalar *u;
+  const PetscReal   *weight;
   PetscInt           dim, Np, cStart, cEnd;
   PetscReal         *vel, *coords, m_p = 1.;
 
@@ -2659,6 +2670,7 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
 
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
   PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
+  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetLocalSize(U, &Np));
@@ -2672,12 +2684,13 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
       const PetscInt  p  = points[cp];
       const PetscReal v2 = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
 
-      *F += 0.5 * m_p * v2;
+      *F += 0.5 * weight[p] * m_p * v2;
     }
     PetscCall(DMSwarmSortRestorePointsPerCell(sw, c, &Ncp, &points));
   }
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(DMSwarmSortRestoreAccess(sw));
+  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
   PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&vel));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2732,14 +2745,19 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
     PetscCall(PetscFree(saved_coords));
   }
 
-  PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
-  for (p = 0; p < Np; ++p) {
-    for (d = 0; d < dim; ++d) {
-      g[(p * 2 + 0) * dim + d] = -(q_p / m_p) * E[p * dim + d];
-      g[(p * 2 + 1) * dim + d] = m_p * u[(p * 2 + 1) * dim + d];
+  {
+    const PetscReal *weight;
+    PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
+    PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
+    for (p = 0; p < Np; ++p) {
+      for (d = 0; d < dim; ++d) {
+        g[(p * 2 + 0) * dim + d] = -weight[p] * (q_p / m_p) * E[p * dim + d];
+        g[(p * 2 + 1) * dim + d] = weight[p] * m_p * u[(p * 2 + 1) * dim + d];
+      }
     }
+    PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
+    PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
   }
-  PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(VecRestoreArray(G, &g));
   PetscFunctionReturn(PETSC_SUCCESS);
