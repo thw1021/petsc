@@ -66,9 +66,14 @@ PetscErrorCode KSPComputeExtremeSingularValues_CG(KSP ksp, PetscReal *emax, Pets
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
   PetscCall(PetscFPTrapPop());
-  *emin = dd[0];
-  *emax = dd[n - 1];
+  if (lierr) {
+    PetscCall(PetscInfo(ksp, "xSTEV failed with info=%" PetscBLASInt_FMT " n=%" PetscInt_FMT ", returning invalid singular values\n", lierr, n));
+    *emin = -1.0;
+    *emax = -1.0;
+  } else {
+    *emin = dd[0];
+    *emax = dd[n - 1];
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
