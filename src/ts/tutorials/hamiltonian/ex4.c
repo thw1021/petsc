@@ -2688,7 +2688,7 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
 {
   DM                 sw;
   SNES               snes = ((AppCtx *)ctx)->snes;
-  const PetscReal   *coords, *vel, *E;
+  const PetscReal   *E;
   const PetscScalar *u;
   PetscScalar       *g;
   PetscReal          m_p = 1., q_p = -1.;
@@ -2701,13 +2701,37 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetArray(G, &g));
 
-  PetscLogEvent COMPUTEFIELD;
-  PetscCall(PetscLogEventRegister("COMPFIELDATPART", TS_CLASSID, &COMPUTEFIELD));
-  PetscCall(PetscLogEventBegin(COMPUTEFIELD, 0, 0, 0, 0));
-  PetscCall(ComputeFieldAtParticles(snes, sw));
-  PetscCall(PetscLogEventEnd(COMPUTEFIELD, 0, 0, 0, 0));
-  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
+  /* Temporarily set swarm coordinates from Vec U (with periodic wrapping)
+     so that ComputeFieldAtParticles evaluates E at the correct positions.
+     Save and restore original coordinates to avoid corrupting swarm state. */
+  {
+    DM         cdm;
+    PetscReal *swarm_coords, *saved_coords, upper[3], lower[3];
+
+    PetscCall(DMSwarmGetCellDM(sw, &cdm));
+    PetscCall(DMGetBoundingBox(cdm, lower, upper));
+    PetscCall(PetscMalloc1(Np * dim, &saved_coords));
+    PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(PetscArraycpy(saved_coords, swarm_coords, Np * dim));
+    for (p = 0; p < Np; ++p) {
+      for (d = 0; d < dim; ++d) {
+        PetscReal pos = PetscRealPart(u[(p * 2 + 0) * dim + d]);
+        if (pos < lower[d]) pos += (upper[d] - lower[d]);
+        else if (pos > upper[d]) pos -= (upper[d] - lower[d]);
+        swarm_coords[p * dim + d] = pos;
+      }
+    }
+    PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+
+    PetscCall(ComputeFieldAtParticles(snes, sw));
+
+    /* Restore original swarm coordinates */
+    PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(PetscArraycpy(swarm_coords, saved_coords, Np * dim));
+    PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(PetscFree(saved_coords));
+  }
+
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
   for (p = 0; p < Np; ++p) {
     for (d = 0; d < dim; ++d) {
@@ -2716,8 +2740,6 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
     }
   }
   PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
-  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&vel));
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(VecRestoreArray(G, &g));
   PetscFunctionReturn(PETSC_SUCCESS);
