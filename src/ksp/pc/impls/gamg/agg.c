@@ -1602,14 +1602,15 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         PetscScalar *tmp_arr;
         PetscCall(VecGetArray(tmp_vec, &tmp_arr));
         for (PetscInt kk = 0; kk < nloc; kk++) {
-          PetscScalar val               = (PetscScalar)Bc_data[dir * nloc + kk];
-          Bc_ghosted[dir * nnodes + kk] = PetscRealPart(val);
-          tmp_arr[kk]                   = val;
+        for (PetscInt kk = 0; kk < nloc; kk++) {
+          Bc_ghosted[dir * nnodes + kk] = Bc_data[dir * nloc + kk];
+          tmp_arr[kk]                   = (PetscScalar)Bc_data[dir * nloc + kk];
         }
-        PetscCall(VecRestoreArray(tmp_vec, &tmp_arr));
-        PetscCall(VecScatterBegin(mpimat->Mvctx, tmp_vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecScatterEnd(mpimat->Mvctx, tmp_vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecGetArray(mpimat->lvec, &data_arr));
+        for (PetscInt kk = 0; kk < nloc; kk++) {
+          PetscReal val                 = Bc_data[dir * nloc + kk];
+          Bc_ghosted[dir * nnodes + kk] = val;
+          tmp_arr[kk]                   = (PetscScalar)val;
+        }
         for (PetscInt g = 0; g < num_ghosts; g++) Bc_ghosted[dir * nnodes + nloc + g] = PetscRealPart(data_arr[g]);
         PetscCall(VecRestoreArray(mpimat->lvec, &data_arr));
       }
@@ -1765,7 +1766,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         }
         row_offsets[nrows] = offset;
         PetscCall(PetscFPTrapPop());
-        PetscCall(PetscInfo(pc, "PCGAMGKernelPreservingFilter_AGG: nrows=%" PetscInt_FMT " corrected=%" PetscInt_FMT " zero_rows=%" PetscInt_FMT " underdetermined(ncols<nSAvec)=%" PetscInt_FMT " singular_G=%" PetscInt_FMT " max_xnorm2=%g\n", (PetscInt)nrows, (PetscInt)n_corrected, (PetscInt)n_zero_rows, (PetscInt)n_underdetermined, (PetscInt)n_singular, (double)max_xnorm));
+        PetscCall(PetscInfo(pc, "PCGAMGKernelPreservingFilter_AGG: nrows=%" PetscInt_FMT " corrected=%" PetscInt_FMT " zero_rows=%" PetscInt_FMT " underdetermined(ncols<nSAvec)=%" PetscInt_FMT " singular_G=%" PetscInt_FMT " max_xnorm2=%g\n", nrows, n_corrected, n_zero_rows, n_underdetermined, n_singular, (double)max_xnorm));
 
         /* Pass 2: apply all corrections at once */
         for (PetscInt row = 0; row < nrows; row++) {
