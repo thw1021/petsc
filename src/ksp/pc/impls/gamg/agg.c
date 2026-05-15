@@ -1602,33 +1602,30 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
         PetscScalar *tmp_arr;
         PetscCall(VecGetArray(tmp_vec, &tmp_arr));
         for (PetscInt kk = 0; kk < nloc; kk++) {
-          for (PetscInt kk = 0; kk < nloc; kk++) {
-            Bc_ghosted[dir * nnodes + kk] = Bc_data[dir * nloc + kk];
-            tmp_arr[kk]                   = (PetscScalar)Bc_data[dir * nloc + kk];
-          }
-          for (PetscInt kk = 0; kk < nloc; kk++) {
-            PetscReal val                 = Bc_data[dir * nloc + kk];
-            Bc_ghosted[dir * nnodes + kk] = val;
-            tmp_arr[kk]                   = (PetscScalar)val;
-          }
-          for (PetscInt g = 0; g < num_ghosts; g++) Bc_ghosted[dir * nnodes + nloc + g] = PetscRealPart(data_arr[g]);
-          PetscCall(VecRestoreArray(mpimat->lvec, &data_arr));
+          PetscReal val                 = Bc_data[dir * nloc + kk];
+          Bc_ghosted[dir * nnodes + kk] = val;
+          tmp_arr[kk]                   = (PetscScalar)val;
         }
-        PetscCall(VecDestroy(&tmp_vec));
-        Bc_ghosted_ro = Bc_ghosted;
-        /* build hash: global ghost col index -> local ghost index (0-based into ghost portion) */
-        PetscCall(PetscHMapICreateWithSize(2 * num_ghosts + 1, &ghost_gid_to_lid));
-        for (PetscInt g = 0; g < num_ghosts; g++) PetscCall(PetscHMapISet(ghost_gid_to_lid, mpimat->garray[g], g));
+        PetscCall(VecRestoreArray(tmp_vec, &tmp_arr));
+        PetscCall(VecScatterBegin(mpimat->Mvctx, tmp_vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecScatterEnd(mpimat->Mvctx, tmp_vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecGetArray(mpimat->lvec, &data_arr));
+        for (PetscInt g = 0; g < num_ghosts; g++) Bc_ghosted[dir * nnodes + nloc + g] = PetscRealPart(data_arr[g]);
+        PetscCall(VecRestoreArray(mpimat->lvec, &data_arr));
       }
-      else
-      {
-        /* sequential: no ghosts, ghost_stride == nloc, use Bc_data directly (read-only) */
-        ghost_stride  = nloc;
-        Bc_ghosted_ro = Bc_data;
-        PetscCall(PetscHMapICreateWithSize(1, &ghost_gid_to_lid));
-      }
+      PetscCall(VecDestroy(&tmp_vec));
+      Bc_ghosted_ro = Bc_ghosted;
+      /* build hash: global ghost col index -> local ghost index (0-based into ghost portion) */
+      PetscCall(PetscHMapICreateWithSize(2 * num_ghosts + 1, &ghost_gid_to_lid));
+      for (PetscInt g = 0; g < num_ghosts; g++) PetscCall(PetscHMapISet(ghost_gid_to_lid, mpimat->garray[g], g));
+    } else {
+      /* sequential: no ghosts, ghost_stride == nloc, use Bc_data directly (read-only) */
+      ghost_stride  = nloc;
+      Bc_ghosted_ro = Bc_data;
+      PetscCall(PetscHMapICreateWithSize(1, &ghost_gid_to_lid));
+    }
 
-      {
+    {
         PetscInt            nrows = rEnd - rStart, max_ncols = 0;
         const PetscScalar **B_arrays;
         PetscScalar        *work, *new_vals, *G, *rhs, *x, *bc_col;
