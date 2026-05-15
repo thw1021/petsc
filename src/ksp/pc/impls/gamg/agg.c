@@ -1871,8 +1871,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
         emax = 2.0;
         emin = 1.e-5;
         PetscCall(PetscInfo(pc, "%s: Smooth P0: eigenvalue estimation failed, using fallback emax=%e emin=%e\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin));
-      } else
-        PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
+      } else PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
       PetscCall(VecDestroy(&xx));
       PetscCall(VecDestroy(&bb));
       PetscCall(KSPDestroy(&eksp));
