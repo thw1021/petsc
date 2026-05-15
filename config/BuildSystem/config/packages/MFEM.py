@@ -171,10 +171,10 @@ class Configure(config.package.Package):
         petscNvcc = self.getCompiler()
         cudaFlags = self.updatePackageCUDAFlags(self.getCompilerFlags())
         self.popLanguage()
-        cudaFlags = re.sub(r'-std=([^\s]+) ','',cudaFlags)
+        # -std= is kept in cudaFlags for nvcc/cudafe++ and filtered from host CXXFLAGS below
         g.write('MFEM_USE_CUDA = YES\n')
         g.write('CUDA_CXX = '+petscNvcc+'\n')
-        g.write('CXXFLAGS := '+cudaFlags+' $(addprefix -Xcompiler ,$(CXXFLAGS))\n')
+        g.write('CXXFLAGS := '+cudaFlags+' $(addprefix -Xcompiler ,$(filter-out -std=%,$(CXXFLAGS)))\n')
         g.write('CUDA_ARCH = sm_' + self.cuda.cudaArchSingle() + '\n')
       if self.hip.found:
         self.pushLanguage('HIP')
