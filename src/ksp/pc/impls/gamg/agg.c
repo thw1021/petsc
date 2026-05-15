@@ -345,7 +345,7 @@ static PetscErrorCode PCGAMGSetProlongatorFilterThreshold_AGG(PC pc, PetscReal t
   PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
 
   PetscFunctionBegin;
-  PetscCheck(thr >= 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Filter threshold %g must be non-negative", (double)thr);
+  PetscCheck(thr >= 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Filter threshold %g must be non-negative", (double)thr);
   pc_gamg_agg->prolongation_filter = thr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1490,7 +1490,7 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
 /*
    PCGAMGKernelPreservingFilter_AGG - filter the prolongator while preserving the near-null space constraint P*B_c = B
 
-   Applies MatFilter to drop small entries, then corrects each row so that
+   Applies `MatFilter()` to drop small entries, then corrects each row so that
    P_filtered * B_c = B (the fine near-null space) is restored.
 
    For nSAvec == 1: rescale each row by B[i] / (P_filtered[i,:] * B_c[J_i]).
@@ -1542,7 +1542,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
   /* Step 3: correct rows to restore P_filtered * B_c = B */
   if (nSAvec == 1) {
     /*
-      Scalar case: use MatMult + element-wise scaling + MatDiagonalScale.
+      Scalar case: use `MatMult()` + element-wise scaling + `MatDiagonalScale()`.
       scale_i = B_i / (P_filtered * Bc)_i, then P_new = diag(scale) * P_filtered.
       Guard against zero denominators (empty rows after filter).
       No ghost column access needed.
@@ -1571,7 +1571,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       Vector case (nSAvec > 1): per-row least-squares correction.
       Scatter Bc_data to include ghost column values using Prol's Mvctx,
       then build a hash map from global ghost column index to local ghost index
-      so that MatGetRow global column indices can be mapped to the ghosted array.
+      so that `MatGetRow()` global column indices can be mapped to the ghosted array.
     */
     PetscInt         nloc = cEnd - cStart;
     PetscInt         ghost_stride;
@@ -1707,6 +1707,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
             else {
               PetscInt g = -1;
               PetscCall(PetscHMapIGet(ghost_gid_to_lid, cols[j], &g));
+              PetscCheck(g >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Off-diagonal column %" PetscInt_FMT " not found in ghost map for prolongator filter", cols[j]);
               ghosted_idx[j] = nloc + g;
             }
           }
