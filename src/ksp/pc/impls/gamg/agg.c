@@ -1866,7 +1866,12 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
       PetscCall(KSPCheckSolve(eksp, pc, xx));
 
       PetscCall(KSPComputeExtremeSingularValues(eksp, &emax, &emin));
-      PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
+      if (emax <= 0.0) {
+        /* dstev failed to converge (e.g., ILP64 OpenBLAS); use safe fallback for Jacobi-preconditioned spectral radius */
+        emax = 2.0;
+        emin = 0.0;
+        PetscCall(PetscInfo(pc, "%s: Smooth P0: eigenvalue estimation failed, using fallback emax=%e\n", ((PetscObject)pc)->prefix, (double)emax));
+      } else PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
       PetscCall(VecDestroy(&xx));
       PetscCall(VecDestroy(&bb));
       PetscCall(KSPDestroy(&eksp));
