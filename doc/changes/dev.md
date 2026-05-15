@@ -17,6 +17,7 @@
 ## Sys
 
 - Add `PetscGetConfiguration()`
+- Add `PetscObjectViewSynchronizedFromOptions()`
 
 ## Event Logging
 
@@ -90,6 +91,7 @@
 
 ## DM
 
+- Change `DMLabelPropagatePush()` to take a reduce operator
 
 ## DMSwarm
 
@@ -110,6 +112,10 @@
 - Add `DMPlexRebalanceSharedLabelPoints()`
 - Add `DMPlexCheckLabel()` and `DMPlexReconcileLabel()`
 - Change CGNS viewer to use multi-component read/write interface for better performance
+- Add `DMPlexTransformOrderSupports()`
+- Add `DMPlexLabelCohesiveCheck()`
+- Add `DMPlexCheckOrientationLabel()`
+- Change `DMPlexLabelCohesiveComplete()` to remove split argument
 
 ## FE/FV
 
