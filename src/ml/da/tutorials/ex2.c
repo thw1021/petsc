@@ -305,7 +305,6 @@ int main(int argc, char **argv)
 
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da));
-  PetscCall(PetscDASetType(da, PETSCDALETKF)); /* Set LETKF type */
   /* Note: ndof defaults to 1 (scalar field) - perfect for Lorenz-96 */
   PetscCall(PetscDASetSizes(da, n, n));
   PetscCall(PetscDAEnsembleSetSize(da, ensemble_size));
