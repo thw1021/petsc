@@ -254,7 +254,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
   Mat                X_rows, E_analysis_rows;
   Vec                y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
   Vec                w_local, s_transpose_delta;
-  const PetscScalar *w_array, *x_array, *g_array, *mean_array;
+  const PetscScalar *w_array, *x_array, *g_array, *mean_array, *x_rows_array_ro, *ea_rows_array_ro;
   PetscScalar       *g_array_w, *e_array, *x_rows_array, *ea_rows_array;
   PetscScalar        one = 1.0, zero = 0.0;
   PetscBLASInt       ndof_b, m_b, lda_xrows_b, lda_g_b, lda_ea_b;
@@ -369,7 +369,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
     /* Apply local transform via direct BLASgemm: E_analysis_rows = X_rows * G_local.
        Replaces a per-vertex MatMatMult; ndof and m are typically small (1-100), so the
        MatProduct dispatch overhead dominated. */
-    PetscCall(MatDenseGetArrayRead(X_rows, (const PetscScalar **)&x_rows_array));
+    PetscCall(MatDenseGetArrayRead(X_rows, &x_rows_array_ro));
     PetscCall(MatDenseGetArrayRead(G_local, &g_array));
     PetscCall(MatDenseGetArrayWrite(E_analysis_rows, &ea_rows_array));
     PetscCall(MatDenseGetLDA(G_local, &lda_g));
@@ -379,8 +379,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
     PetscCall(PetscBLASIntCast(lda_xrows, &lda_xrows_b));
     PetscCall(PetscBLASIntCast(lda_g, &lda_g_b));
     PetscCall(PetscBLASIntCast(lda_ea, &lda_ea_b));
-    if (ndof > 0) PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &ndof_b, &m_b, &m_b, &one, x_rows_array, &lda_xrows_b, g_array, &lda_g_b, &zero, ea_rows_array, &lda_ea_b));
-    PetscCall(MatDenseRestoreArrayRead(X_rows, (const PetscScalar **)&x_rows_array));
+    if (ndof > 0) PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &ndof_b, &m_b, &m_b, &one, x_rows_array_ro, &lda_xrows_b, g_array, &lda_g_b, &zero, ea_rows_array, &lda_ea_b));
+    PetscCall(MatDenseRestoreArrayRead(X_rows, &x_rows_array_ro));
     PetscCall(MatDenseRestoreArrayRead(G_local, &g_array));
     PetscCall(MatDenseRestoreArrayWrite(E_analysis_rows, &ea_rows_array));
 
@@ -396,11 +396,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
     /* Store result back in ensemble[i_grid_point*ndof:(i_grid_point+1)*ndof, :] */
     PetscCall(MatDenseGetArrayWrite(en->ensemble, &e_array));
     PetscCall(MatDenseGetLDA(en->ensemble, &lda_e));
-    PetscCall(MatDenseGetArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
+    PetscCall(MatDenseGetArrayRead(E_analysis_rows, &ea_rows_array_ro));
     for (j = 0; j < m; j++) {
-      for (k = 0; k < ndof; k++) e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array[k + j * lda_ea];
+      for (k = 0; k < ndof; k++) e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array_ro[k + j * lda_ea];
     }
-    PetscCall(MatDenseRestoreArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
+    PetscCall(MatDenseRestoreArrayRead(E_analysis_rows, &ea_rows_array_ro));
     PetscCall(MatDenseRestoreArrayWrite(en->ensemble, &e_array));
   }
   PetscCall(MatDestroy(&E_analysis_rows));
@@ -730,7 +730,6 @@ static PetscErrorCode PetscDALETKFResetLocalization_LETKF(PetscDA da)
   PetscCall(PetscDALETKFDestroyObsScatter(impl));
   PetscCall(MatDestroy(&impl->Q));
   impl->max_nnz_per_row = 0;
-  impl->min_nnz_per_row = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -828,7 +827,7 @@ static PetscErrorCode PetscDALETKFGetLocalizationRadius_LETKF(PetscDA da, PetscR
 static PetscErrorCode PetscDALETKFInstallQ(PetscDA da, Mat Q)
 {
   PetscDA_LETKF *impl = (PetscDA_LETKF *)da->data;
-  PetscInt       nrows, ncols, rstart, rend, nnz, mm[2];
+  PetscInt       nrows, ncols, rstart, rend, nnz;
 
   PetscFunctionBegin;
   PetscCheck(da->ndof > 0 && da->state_size % da->ndof == 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "state_size (%" PetscInt_FMT ") must be a positive multiple of ndof (%" PetscInt_FMT ")", da->state_size, da->ndof);
@@ -852,24 +851,13 @@ static PetscErrorCode PetscDALETKFInstallQ(PetscDA da, Mat Q)
   impl->Q = Q;
 
   impl->max_nnz_per_row = 0;
-  impl->min_nnz_per_row = PETSC_INT_MAX;
   PetscCall(MatGetOwnershipRange(Q, &rstart, &rend));
   for (PetscInt i = rstart; i < rend; i++) {
     PetscCall(MatGetRow(Q, i, &nnz, NULL, NULL));
     if (nnz > impl->max_nnz_per_row) impl->max_nnz_per_row = nnz;
-    if (nnz < impl->min_nnz_per_row) impl->min_nnz_per_row = nnz;
     PetscCall(MatRestoreRow(Q, i, &nnz, NULL, NULL));
   }
-  /* Coalesce max and min into a single MAX reduction by negating min; cuts the allreduce
-     latency in half. The sentinel PETSC_INT_MAX round-trips correctly through negation. */
-  mm[0] = impl->max_nnz_per_row;
-  mm[1] = -impl->min_nnz_per_row;
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, mm, 2, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)da)));
-  impl->max_nnz_per_row = mm[0];
-  impl->min_nnz_per_row = -mm[1];
-  /* If every rank owned zero rows the MIN reduction returns the sentinel; clamp to 0 so the
-     value displayed by the viewer and consumed by downstream checks is meaningful. */
-  if (impl->min_nnz_per_row == PETSC_INT_MAX) impl->min_nnz_per_row = 0;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &impl->max_nnz_per_row, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)da)));
 
   PetscCall(PetscDALETKFSetupObsScatter(impl, impl->coord_H));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
