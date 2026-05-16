@@ -493,7 +493,8 @@ int main(int argc, char **argv)
   Ex3TestType      test_type      = EX3_TEST_DAM;     /* Default to dam-break */
   Ex3FluxType      flux_type      = EX3_FLUX_RUSANOV; /* Default to first-order Rusanov */
   PetscBool        output_enabled = PETSC_FALSE;
-  FILE            *fp             = NULL;
+  PetscBool        isletkf;
+  FILE            *fp = NULL;
   char             output_file[PETSC_MAX_PATH_LEN];
   const PetscInt   ndof   = 2; /* Degrees of freedom per grid point: h and hu */
   PetscInt         n_vert = DEFAULT_N, steps = DEFAULT_STEPS, obs_freq = DEFAULT_OBS_FREQ;
@@ -650,38 +651,35 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetObsErrorVariance(da, obs_error_var));
 
   /* Configure localization for LETKF (Q is built lazily on first analysis). */
-  {
-    PetscBool isletkf;
-    PetscCall(PetscObjectTypeCompare((PetscObject)da, PETSCDALETKF, &isletkf));
+  PetscCall(PetscObjectTypeCompare((PetscObject)da, PETSCDALETKF, &isletkf));
+  if (isletkf) {
+    Vec          xyz[3] = {NULL, NULL, NULL};
+    Vec          coord;
+    DM           cda;
+    PetscScalar *x_coord;
+    PetscInt     xs, xm, i;
+    PetscReal    bd[3] = {L, 0, 0};
+    PetscBool    radius_set;
+    const char  *da_prefix;
 
-    if (isletkf) {
-      Vec          xyz[3] = {NULL, NULL, NULL};
-      Vec          coord;
-      DM           cda;
-      PetscScalar *x_coord;
-      PetscInt     xs, xm, i;
-      PetscReal    bd[3] = {L, 0, 0};
-      PetscBool    radius_set;
+    PetscCall(DMDASetUniformCoordinates(da_state, 0.0, L, 0.0, 0.0, 0.0, 0.0));
+    PetscCall(DMGetCoordinateDM(da_state, &cda));
+    PetscCall(DMGetCoordinates(da_state, &coord));
+    PetscCall(DMDAGetCorners(cda, &xs, NULL, NULL, &xm, NULL, NULL));
+    PetscCall(DMDAVecGetArray(cda, coord, &x_coord));
+    for (i = xs; i < xs + xm; i++) x_coord[i] = ((PetscReal)i + 0.5) * L / n_vert;
+    PetscCall(DMDAVecRestoreArray(cda, coord, &x_coord));
 
-      PetscCall(DMDASetUniformCoordinates(da_state, 0.0, L, 0.0, 0.0, 0.0, 0.0));
-      PetscCall(DMGetCoordinateDM(da_state, &cda));
-      PetscCall(DMGetCoordinates(da_state, &coord));
-      PetscCall(DMDAGetCorners(cda, &xs, NULL, NULL, &xm, NULL, NULL));
-      PetscCall(DMDAVecGetArray(cda, coord, &x_coord));
-      for (i = xs; i < xs + xm; i++) x_coord[i] = ((PetscReal)i + 0.5) * L / n_vert;
-      PetscCall(DMDAVecRestoreArray(cda, coord, &x_coord));
+    PetscCall(DMCreateGlobalVector(cda, &xyz[0]));
+    PetscCall(PetscObjectSetName((PetscObject)xyz[0], "x_coordinate"));
+    PetscCall(VecCopy(coord, xyz[0]));
 
-      PetscCall(DMCreateGlobalVector(cda, &xyz[0]));
-      PetscCall(VecSetFromOptions(xyz[0]));
-      PetscCall(PetscObjectSetName((PetscObject)xyz[0], "x_coordinate"));
-      PetscCall(VecCopy(coord, xyz[0]));
-
-      PetscCall(PetscOptionsHasName(NULL, ((PetscObject)da)->prefix, "-petscda_letkf_localization_radius", &radius_set));
-      if (!radius_set) PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
-      PetscCall(PetscDALETKFGetLocalizationRadius(da, &localization_radius));
-      PetscCall(PetscDALETKFSetLocalizationCoordinates(da, xyz, bd, H1));
-      PetscCall(VecDestroy(&xyz[0]));
-    }
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)da, &da_prefix));
+    PetscCall(PetscOptionsHasName(NULL, da_prefix, "-petscda_letkf_localization_radius", &radius_set));
+    if (!radius_set) PetscCall(PetscDALETKFSetLocalizationRadius(da, localization_radius));
+    PetscCall(PetscDALETKFGetLocalizationRadius(da, &localization_radius));
+    PetscCall(PetscDALETKFSetLocalizationCoordinates(da, xyz, bd, H1));
+    PetscCall(VecDestroy(&xyz[0]));
   }
 
   /* Initialize ensemble members with perturbations around spun-up state
