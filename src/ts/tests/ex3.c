@@ -153,8 +153,8 @@ int main(int argc, char **argv)
     TSType    type;
     PetscBool sundialstype = PETSC_FALSE;
     PetscCall(TSGetType(ts, &type));
-    PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSSUNDIALS, &sundialstype));
-    PetscCheck(!sundialstype || !appctx.useAlhs, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use Alhs formulation for TSSUNDIALS type");
+    PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSSUNDIALS2, &sundialstype));
+    PetscCheck(!sundialstype || !appctx.useAlhs, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use Alhs formulation for TSSUNDIALS2 type");
   }
 #endif
   /* Sets the initial solution */

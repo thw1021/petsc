@@ -9,6 +9,7 @@ configure_options = [
   #'--download-mpich', use system MPI as elemental fails with this
   '--download-fblaslapack',
   '--download-hypre',
+  '--download-sundials',
   '--download-cmake',
   '--download-metis',
   '--download-parmetis',
@@ -37,7 +38,6 @@ configure_options = [
   '--download-party',
   '--download-yaml',
   '--download-ml',
-  '--download-sundials2',
   '--download-p4est',
   '--download-eigen',
   '--download-pragmatic',

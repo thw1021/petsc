@@ -595,6 +595,7 @@ typedef __fp16 PetscReal;
       #include <complex.h>
     #else
       #define petsccomplexlib std
+      #undef _XOPEN_SOURCE
       #include <complex>
     #endif
 

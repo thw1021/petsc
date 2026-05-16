@@ -25,6 +25,7 @@ if __name__ == '__main__':
     '--with-cxx-dialect=17',
     '--download-umpire',
     '--download-hypre',
+    '--download-sundials',
     '--download-hypre-configure-arguments=--enable-unified-memory',
     '--with-strict-petscerrorcode',
     '--download-mpich=1',
