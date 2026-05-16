@@ -95,15 +95,10 @@ static PetscErrorCode RunManufacturedCase(PetscInt nx, PetscInt ny, PetscInt ste
 
 int main(int argc, char **argv)
 {
-  PetscInt           nx = DEFAULT_NX, ny = DEFAULT_NY, steps = DEFAULT_STEPS, progress_freq = DEFAULT_PROGRESS_FREQ, verification_freq = DEFAULT_VERIFICATION_FREQ;
-  PetscInt           conv_nx_coarse = DEFAULT_CONV_NX_COARSE, conv_ny_coarse = DEFAULT_CONV_NY_COARSE, conv_refine = DEFAULT_CONV_REFINE;
-  PetscReal          g = DEFAULT_G, dt = DEFAULT_DT, Lx = DEFAULT_LX, Ly = DEFAULT_LY, h0 = DEFAULT_H0, Ax = DEFAULT_AX, Ay = DEFAULT_AY;
-  PetscBool          verify_mms = PETSC_FALSE, test_mms_spatial_order = PETSC_FALSE;
-  PetscBool          need_mms;
-  Ex4FluxType        flux_type = EX4_FLUX_RUSANOV;
-  DM                 da_state;
-  ShallowWater2DCtx *sw_ctx = NULL;
-  Vec                x_numerical;
+  PetscInt    nx = DEFAULT_NX, ny = DEFAULT_NY, steps = DEFAULT_STEPS, progress_freq = DEFAULT_PROGRESS_FREQ, verification_freq = DEFAULT_VERIFICATION_FREQ;
+  PetscInt    conv_nx_coarse = DEFAULT_CONV_NX_COARSE, conv_ny_coarse = DEFAULT_CONV_NY_COARSE, conv_refine = DEFAULT_CONV_REFINE;
+  PetscReal   g = DEFAULT_G, dt = DEFAULT_DT, Lx = DEFAULT_LX, Ly = DEFAULT_LY, h0 = DEFAULT_H0, Ax = DEFAULT_AX, Ay = DEFAULT_AY;
+  PetscBool   verify_mms = PETSC_FALSE, test_mms_spatial_order = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -162,20 +157,23 @@ int main(int argc, char **argv)
        hide a degraded order. Assert each observed rate exceeds MIN_OBSERVED_ORDER explicitly. */
     PetscCheck(order_cm_L1 >= MIN_OBSERVED_ORDER && order_cm_L2 >= MIN_OBSERVED_ORDER && order_cm_Linf >= MIN_OBSERVED_ORDER && order_mf_L1 >= MIN_OBSERVED_ORDER && order_mf_L2 >= MIN_OBSERVED_ORDER && order_mf_Linf >= MIN_OBSERVED_ORDER, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MMS spatial-order regression: observed orders fell below %g (coarse->medium L1=%g L2=%g Linf=%g; medium->fine L1=%g L2=%g Linf=%g)", (double)MIN_OBSERVED_ORDER, (double)order_cm_L1, (double)order_cm_L2, (double)order_cm_Linf, (double)order_mf_L1, (double)order_mf_L2, (double)order_mf_Linf);
   } else {
-    PetscCall(SetupForwardProblem(nx, ny, Lx, Ly, g, dt, h0, Ax, Ay, verify_mms, flux_type, &da_state, &sw_ctx, &x_numerical));
+    DM                 da_state;
+    ShallowWater2DCtx *sw_ctx;
+    Vec                x_numerical;
+
+    PetscCall(SetupForwardProblem(nx, ny, Lx, Ly, g, dt, h0, Ax, Ay, verify_mms, &da_state, &sw_ctx, &x_numerical));
     PetscCall(SetInitialCondition(da_state, x_numerical, sw_ctx, verify_mms));
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "2D Shallow Water Forward Example\n==============================\n"));
 
     for (PetscInt step = 1; step <= steps; step++) {
-      PetscReal time          = step * dt;
-      PetscBool emit_progress = (PetscBool)(step == steps || (progress_freq > 0 && step % progress_freq == 0));
+      PetscReal time = step * dt;
       PetscCall(ShallowWaterStep2DVec(sw_ctx, (step - 1) * dt, x_numerical));
       if (verify_mms && (step % verification_freq == 0 || step == steps)) {
         PetscReal L1_err, L2_err, Linf_err;
         PetscCall(ComputeManufacturedError(x_numerical, da_state, time, Lx, Ly, h0, Ax, &L1_err, &L2_err, &Linf_err));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  L1=%.5e  L2=%.5e  Linf=%.5e\n", step, (double)time, (double)L1_err, (double)L2_err, (double)Linf_err));
-      } else if (emit_progress) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  Forward step complete\n", step, (double)time));
+      } else if (step == steps || (progress_freq > 0 && step % progress_freq == 0)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  Forward step complete\n", step, (double)time));
     }
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, verify_mms ? "\nMMS forward run complete.\n" : "\nForward simulation complete.\n"));
