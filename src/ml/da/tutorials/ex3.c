@@ -503,8 +503,8 @@ int main(int argc, char **argv)
   PetscInt         n_stat_steps = 0, obs_count = 0, step;
   PetscInt         obs_stride = 2, nobs; /* LETKF samples nobs = n_vert/obs_stride observations, one every obs_stride-th grid point */
   PetscReal        g = DEFAULT_G, dt = DEFAULT_DT, obs_error_std = DEFAULT_OBS_ERROR_STD;
-  PetscReal        localization_radius = 100.0;                /* Large value = effectively no localization for domain size 80 */
-  PetscReal        L                   = (PetscReal)DEFAULT_N; /* Domain length */
+  PetscReal        localization_radius;                  /* Default 2*L: effectively no localization with Gaspari-Cohn (max periodic distance is L/2) */
+  PetscReal        L             = (PetscReal)DEFAULT_N; /* Domain length */
   PetscReal        rmse_forecast = 0.0, rmse_analysis = 0.0;
   PetscReal        sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
 
@@ -547,7 +547,8 @@ int main(int argc, char **argv)
   /* Parse flux type option */
   PetscCall(PetscOptionsEnum("-ex3_flux", "Flux scheme (rusanov/mc)", "", Ex3FluxTypes, (PetscEnum)flux_type, (PetscEnum *)&flux_type, NULL));
   PetscOptionsEnd();
-  n_spin = 0; /* No spinup needed for either test - dam evolves naturally, wave is already smooth */
+  localization_radius = 2.0 * L;
+  n_spin              = 0; /* No spinup needed for either test - dam evolves naturally, wave is already smooth */
   PetscCheck(obs_stride > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "obs_stride must be positive (got %" PetscInt_FMT ")", obs_stride);
   nobs = n_vert / obs_stride;
 
@@ -671,6 +672,7 @@ int main(int argc, char **argv)
     PetscCall(DMDAVecRestoreArray(cda, coord, &x_coord));
 
     PetscCall(DMCreateGlobalVector(cda, &xyz[0]));
+    PetscCall(VecSetFromOptions(xyz[0]));
     PetscCall(PetscObjectSetName((PetscObject)xyz[0], "x_coordinate"));
     PetscCall(VecCopy(coord, xyz[0]));
 
