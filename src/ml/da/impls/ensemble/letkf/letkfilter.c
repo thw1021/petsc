@@ -496,6 +496,45 @@ static PetscErrorCode PetscDALETKFGlobalAnalysis(PetscDA da, PetscDA_LETKF *impl
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  PetscDALETKFRebuildHTemps - ensure the cached H-compatible work vecs match H's current
+  layout and vec type, rebuilding them (and any caches that depend on H's backend) when H has
+  drifted since the last analysis. Both branches must remain a two-step (invalidate-then-allocate)
+  rather than an if/else so a freshly-destroyed cache is re-created in the same call.
+*/
+static PetscErrorCode PetscDALETKFRebuildHTemps(PetscDA da, PetscDA_LETKF *impl, Mat H)
+{
+  PetscFunctionBegin;
+  if (impl->H_temp_in) {
+    PetscInt  cur_in_local, cur_out_local, want_in_local, want_out_local;
+    VecType   want_type;
+    PetscBool type_match;
+
+    PetscCall(VecGetLocalSize(impl->H_temp_in, &cur_in_local));
+    PetscCall(VecGetLocalSize(impl->H_temp_out, &cur_out_local));
+    PetscCall(MatGetLocalSize(H, &want_out_local, &want_in_local));
+    PetscCall(MatGetVecType(H, &want_type));
+    PetscCall(PetscStrcmp(impl->H_vec_type, want_type, &type_match));
+    if (!type_match || cur_in_local != want_in_local || cur_out_local != want_out_local) {
+      PetscCall(VecDestroy(&impl->H_temp_in));
+      PetscCall(VecDestroy(&impl->H_temp_out));
+      PetscCall(PetscFree(impl->H_vec_type));
+      /* The obs-scatter source layout is templated off H, and Q's device mirrors live in the
+         backend matching the old H vec type (Kokkos vs host); reset the full localization
+         cache so the next analysis rebuilds Q and its mirrors against the new H. */
+      PetscCall(PetscDALETKFResetLocalization_LETKF(da));
+    }
+  }
+  if (!impl->H_temp_in) {
+    VecType want_type;
+
+    PetscCall(MatCreateVecs(H, &impl->H_temp_in, &impl->H_temp_out));
+    PetscCall(MatGetVecType(H, &want_type));
+    PetscCall(PetscStrallocpy(want_type, &impl->H_vec_type));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation, Mat H)
 {
   PetscDA_LETKF *impl = (PetscDA_LETKF *)da->data;
@@ -594,44 +633,12 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   /* Create anomaly matrix X = (E - x_mean * 1') / sqrt(m - 1) */
   PetscCall(PetscDAEnsembleComputeAnomalies(da, impl->mean, &X));
 
-  /* Alg 6.4 line 3-4: Compute GLOBAL observation ensemble Z = H * E.
-     We multiply column-by-column rather than via a single MatMatMult because impl->Z is
-     created with the user-controllable `dense_` options prefix (typically MATDENSE), while
-     H may be MATAIJKOKKOS. PETSc does not currently support that mixed-type product, so
-     each column is staged through cached H-compatible work vecs (impl->H_temp_in/out);
-     per-column overhead is just two VecCopy. A single-call fast path would require either
-     coercing impl->Z to match H's vec type at setup or extending Mat product registrations.
-     TODO: take the fast path when MatProductSetType succeeds for the (H, ensemble) pair. */
-  /* Lazily allocate the cached temps; rebuild if H's layout OR vec type has changed
-     (e.g. observation operator was swapped between analyses, possibly between AIJ and AIJKOKKOS). */
-  if (impl->H_temp_in) {
-    PetscInt  cur_in_local, cur_out_local, want_in_local, want_out_local;
-    VecType   want_type;
-    PetscBool type_match;
-
-    PetscCall(VecGetLocalSize(impl->H_temp_in, &cur_in_local));
-    PetscCall(VecGetLocalSize(impl->H_temp_out, &cur_out_local));
-    PetscCall(MatGetLocalSize(H, &want_out_local, &want_in_local));
-    PetscCall(MatGetVecType(H, &want_type));
-    PetscCall(PetscStrcmp(impl->H_vec_type, want_type, &type_match));
-    if (!type_match || cur_in_local != want_in_local || cur_out_local != want_out_local) {
-      PetscCall(VecDestroy(&impl->H_temp_in));
-      PetscCall(VecDestroy(&impl->H_temp_out));
-      PetscCall(PetscFree(impl->H_vec_type));
-      /* The obs-scatter source layout is templated off H, and Q's device mirrors live in the
-         backend matching the old H vec type (Kokkos vs host); reset the full localization
-         cache so the next analysis rebuilds Q and its mirrors against the new H. */
-      PetscCall(PetscDALETKFResetLocalization_LETKF(da));
-    }
-  }
-  /* Separate guard (not else): the block above may have just nulled H_temp_in via VecDestroy. */
-  if (!impl->H_temp_in) {
-    VecType want_type;
-
-    PetscCall(MatCreateVecs(H, &impl->H_temp_in, &impl->H_temp_out));
-    PetscCall(MatGetVecType(H, &want_type));
-    PetscCall(PetscStrallocpy(want_type, &impl->H_vec_type));
-  }
+  /* Alg 6.4 line 3-4: Compute GLOBAL observation ensemble Z = H * E column-by-column,
+     staged through H-compatible cached work vecs because impl->Z (MATDENSE) and H
+     (possibly MATAIJKOKKOS) cannot share a MatMatMult product type. */
+  /* Lazily allocate / rebuild the cached H-compatible work vecs (and reset Q if H's vec-type
+     backend changed). */
+  PetscCall(PetscDALETKFRebuildHTemps(da, impl, H));
 
   /* Compute Z = H * E column by column to avoid Kokkos vector type issues */
   for (PetscInt j = 0; j < m; j++) {
