@@ -222,6 +222,7 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
   PetscInt     dim = 0, n_vert_local, d, n_obs_global, n_obs_local, n_obs_cand;
   PetscInt     rstart, cstart, cend;
   PetscInt     total_nnz = 0;
+  PetscInt64   total_nnz64 = 0;
   PetscInt     local_min, local_max;
   PetscInt    *d_nnz, *o_nnz, *seq_nnz;
   PetscInt    *row_counts, *row_offsets, *col_indices;
@@ -295,11 +296,16 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
     row_counts[i] = count;
   }
 
-  /* Prefix sum for CSR row offsets, total nnz. */
+  /* Prefix sum for CSR row offsets, total nnz. Accumulate the running total in 64-bit and cast
+     so we trip a clear error instead of silently wrapping when localization radius * obs density
+     overflows PetscInt; mirrors the Kokkos backend (kokkos/dalocalizationletkf.kokkos.cxx). */
   PetscCall(PetscMalloc1(n_vert_local + 1, &row_offsets));
   row_offsets[0] = 0;
-  for (PetscInt i = 0; i < n_vert_local; ++i) row_offsets[i + 1] = row_offsets[i] + row_counts[i];
-  total_nnz = row_offsets[n_vert_local];
+  for (PetscInt i = 0; i < n_vert_local; ++i) {
+    total_nnz64 += (PetscInt64)row_counts[i];
+    row_offsets[i + 1] = row_offsets[i] + row_counts[i];
+  }
+  PetscCall(PetscIntCast(total_nnz64, &total_nnz));
 
   /* Pass 2: Fill column indices and weights. The (dist2 < cutoff2) && (w > 0.0) gate must
      match Pass 1 exactly so each row writes precisely row_counts[i] entries. */
