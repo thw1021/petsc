@@ -43,16 +43,17 @@ PetscErrorCode PetscDALETKFReplicateWeightVector(Vec w, PetscInt m, Mat w_ones)
 {
   const PetscScalar *w_array;
   PetscScalar       *mat_array;
-  PetscInt           w_size_local, lda, wo_rows, wo_cols;
+  PetscInt           w_size, lda, wo_rows, wo_cols;
 
   PetscFunctionBegin;
-  PetscCall(VecGetLocalSize(w, &w_size_local));
+  PetscCall(VecGetLocalSize(w, &w_size));
+  PetscCheck(w_size == m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_INCOMP, "w size %" PetscInt_FMT " != m %" PetscInt_FMT, w_size, m);
   PetscCall(MatGetSize(w_ones, &wo_rows, &wo_cols));
   PetscCheck(wo_rows == m && wo_cols == m, PetscObjectComm((PetscObject)w_ones), PETSC_ERR_ARG_INCOMP, "w_ones must be %" PetscInt_FMT " x %" PetscInt_FMT ", got %" PetscInt_FMT " x %" PetscInt_FMT, m, m, wo_rows, wo_cols);
   PetscCall(VecGetArrayRead(w, &w_array));
   PetscCall(MatDenseGetArrayWrite(w_ones, &mat_array));
   PetscCall(MatDenseGetLDA(w_ones, &lda));
-  for (PetscInt i = 0; i < m; i++) PetscCall(PetscArraycpy(mat_array + i * lda, w_array, w_size_local));
+  for (PetscInt i = 0; i < m; i++) PetscCall(PetscArraycpy(mat_array + i * lda, w_array, m));
   PetscCall(MatDenseRestoreArrayWrite(w_ones, &mat_array));
   PetscCall(VecRestoreArrayRead(w, &w_array));
   PetscFunctionReturn(PETSC_SUCCESS);
