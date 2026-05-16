@@ -223,9 +223,9 @@ int main(int argc, char **argv)
   PetscInt     random_seed = DEFAULT_RANDOM_SEED, ensemble_size = DEFAULT_ENSEMBLE_SIZE;
   PetscInt     n_stat_steps = 0, n_obs_stat_steps = 0, obs_count = 0, step, progress_interval;
   PetscReal    F = DEFAULT_F, dt = DEFAULT_DT, obs_error_std = DEFAULT_OBS_ERROR_STD;
-  PetscReal    ensemble_init_std   = -1;    /* Initial ensemble spread */
-  PetscReal    localization_radius = 100.0; /* Large value = effectively no localization for domain size 40 */
-  PetscReal    bd[3]               = {DEFAULT_N, 0, 0};
+  PetscReal    ensemble_init_std = -1; /* Initial ensemble spread */
+  PetscReal    localization_radius;    /* Default 2*domain: effectively no localization with Gaspari-Cohn (max periodic distance is L/2) */
+  PetscReal    bd[3]         = {DEFAULT_N, 0, 0};
   PetscReal    rmse_forecast = 0.0, rmse_analysis = 0.0, spread = 0.0;
   PetscReal    sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
 
@@ -245,7 +245,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-ensemble_init_std", "Initial ensemble spread standard deviation", "", ensemble_init_std, &ensemble_init_std, NULL));
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscOptionsEnd();
-  bd[0] = (PetscReal)n;
+  bd[0]               = (PetscReal)n;
+  localization_radius = 2.0 * bd[0];
 
   if (ensemble_init_std < 0) ensemble_init_std = obs_error_std;
 
