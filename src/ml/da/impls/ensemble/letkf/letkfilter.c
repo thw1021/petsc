@@ -543,7 +543,6 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   Mat            X;
   PetscInt       m;
   PetscBool      reallocate = PETSC_FALSE;
-  PetscReal      sqrt_m_minus_1, scale;
 
   PetscFunctionBegin;
   m = impl->en.size;
@@ -665,8 +664,9 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   PetscCall(VecReciprocal(impl->r_inv_sqrt));
 
   if (impl->type == PETSCDA_LETKF_LOC_NONE) {
-    sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-    scale          = 1.0 / sqrt_m_minus_1;
+    PetscReal sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
+    PetscReal scale          = 1.0 / sqrt_m_minus_1;
+
     PetscCall(PetscDALETKFGlobalAnalysis(da, impl, m, scale, sqrt_m_minus_1, X, observation));
   } else {
     PetscInt n_local, n_obs_local, rows_old, cols_old;
