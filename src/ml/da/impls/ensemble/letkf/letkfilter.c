@@ -431,16 +431,18 @@ static PetscErrorCode PetscDALETKFGlobalAnalysis(PetscDA da, PetscDA_LETKF *impl
   PetscBLASInt       m_b, n_obs_local_b, s_lda_b, ione = 1;
   PetscMPIInt        m_squared_mpi, m_mpi;
   PetscInt           n_obs_local, s_lda;
-  PetscBool          use_kokkos;
+#if defined(PETSC_HAVE_KOKKOS_KERNELS) && !defined(PETSC_USE_COMPLEX)
+  PetscBool use_kokkos;
+#endif
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_KOKKOS_KERNELS) && !defined(PETSC_USE_COMPLEX)
   PetscCall(PetscDALETKFUseKokkosBackend(da, &use_kokkos));
   if (use_kokkos) {
-#if defined(PETSC_HAVE_KOKKOS_KERNELS) && !defined(PETSC_USE_COMPLEX)
     PetscCall(PetscDALETKFGlobalAnalysis_Kokkos(da, impl, m, X, observation));
     PetscFunctionReturn(PETSC_SUCCESS);
-#endif
   }
+#endif
 
   /* w and s_transpose_delta (size m, PETSC_COMM_SELF) are allocated lazily because the
      per-vertex and Kokkos paths don't need them. */
@@ -667,10 +669,12 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
     scale          = 1.0 / sqrt_m_minus_1;
     PetscCall(PetscDALETKFGlobalAnalysis(da, impl, m, scale, sqrt_m_minus_1, X, observation));
   } else {
-    PetscInt  n_local, n_obs_local, rows_old, cols_old;
+    PetscInt n_local, n_obs_local, rows_old, cols_old;
+#if defined(PETSC_HAVE_KOKKOS_KERNELS) && !defined(PETSC_USE_COMPLEX)
     PetscBool use_kokkos;
 
     PetscCall(PetscDALETKFUseKokkosBackend(da, &use_kokkos));
+#endif
 
     /* Per-vertex local analysis path.
        PetscDALETKFInstallQ() builds the obs-scatter from impl->coord_H, but we tear it down
