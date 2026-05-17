@@ -367,8 +367,9 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
   PetscCall(PetscDALETKFComputeObsCoords(H, xyz, &dim, &obs_vecs));
   PetscCall(VecGetLocalSize(xyz[0], &n_vert_local));
 
-  /* Vertex coordinates flattened as [vert][dim] (row-major). */
-  PetscCall(PetscMalloc1((size_t)n_vert_local * dim, &vertex_coords));
+  /* Vertex coordinates flattened as [vert][dim] (row-major). CSR row buffers are sized off
+     n_vert_local too, so allocate the trio in one shot. */
+  PetscCall(PetscMalloc3((size_t)n_vert_local * dim, &vertex_coords, n_vert_local, &row_counts, n_vert_local + 1, &row_offsets));
   for (PetscInt d = 0; d < dim; ++d) {
     const PetscScalar *local_coords_array;
     PetscCall(VecGetArrayRead(xyz[d], &local_coords_array));
@@ -391,7 +392,6 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
      then compact -- would peak at ~2x the memory and still touch every candidate.
      Both passes go through LETKFRowWeight() (in letkf_kernels.h, shared with the
      Kokkos backend) so the CPU and device kernels stay in lockstep. */
-  PetscCall(PetscMalloc1(n_vert_local, &row_counts));
   for (PetscInt i = 0; i < n_vert_local; ++i) {
     PetscInt count = 0;
     for (PetscInt j = 0; j < n_obs_cand; ++j) {
@@ -403,7 +403,6 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
   /* Prefix sum for CSR row offsets, total nnz. Accumulate the running total in 64-bit and cast
      so we trip a clear error instead of silently wrapping when localization radius * obs density
      overflows PetscInt; mirrors the Kokkos backend (kokkos/dalocalizationletkf.kokkos.cxx). */
-  PetscCall(PetscMalloc1(n_vert_local + 1, &row_offsets));
   row_offsets[0] = 0;
   for (PetscInt i = 0; i < n_vert_local; ++i) {
     total_nnz64 += (PetscInt64)row_counts[i];
@@ -416,8 +415,7 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
      Both passes feed identical operand sequences to LETKFRowWeight(), so the FP results are
      bit-identical and the pass-1/pass-2 count match below holds in IEEE-754; the PetscAssert
      is debug-only insurance against future drift in LETKFRowWeight itself. */
-  PetscCall(PetscMalloc1(total_nnz, &col_indices));
-  PetscCall(PetscMalloc1(total_nnz, &values));
+  PetscCall(PetscMalloc2(total_nnz, &col_indices, total_nnz, &values));
   for (PetscInt i = 0; i < n_vert_local; ++i) {
     PetscInt offset = row_offsets[i];
     PetscInt pos    = 0;
@@ -436,13 +434,10 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
   PetscCall(PetscDALETKFLogQStats(*Q, type, radius, n_vert_local, n_obs_global, row_counts));
 
   PetscCall(PetscDALETKFDestroyObsCoords(dim, &obs_vecs));
-  PetscCall(PetscFree(vertex_coords));
+  PetscCall(PetscFree3(vertex_coords, row_counts, row_offsets));
+  PetscCall(PetscFree2(col_indices, values));
   PetscCall(PetscFree(obs_coords));
   PetscCall(PetscFree(obs_global_idx));
-  PetscCall(PetscFree(row_counts));
-  PetscCall(PetscFree(row_offsets));
-  PetscCall(PetscFree(col_indices));
-  PetscCall(PetscFree(values));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
