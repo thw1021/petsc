@@ -393,7 +393,10 @@ static PetscErrorCode PetscDALETKFCreateLocalizationMat_AIJ(PetscDALETKFLocaliza
   PetscCall(PetscIntCast(total_nnz64, &total_nnz));
 
   /* Pass 2: Fill column indices and weights. The (w > 0.0) gate must match Pass 1 exactly
-     (same LETKFRowWeight() call) so each row writes precisely row_counts[i] entries. */
+     (same LETKFRowWeight() call) so each row writes precisely row_counts[i] entries.
+     Both passes feed identical operand sequences to LETKFRowWeight(), so the FP results are
+     bit-identical and the pass-1/pass-2 count match below holds in IEEE-754; the PetscAssert
+     is debug-only insurance against future drift in LETKFRowWeight itself. */
   PetscCall(PetscMalloc1(total_nnz, &col_indices));
   PetscCall(PetscMalloc1(total_nnz, &values));
   for (PetscInt i = 0; i < n_vert_local; ++i) {
