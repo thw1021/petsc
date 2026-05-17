@@ -543,7 +543,6 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   Mat            X;
   PetscInt       m;
   PetscBool      reallocate = PETSC_FALSE;
-  PetscReal      sqrt_m_minus_1, scale;
 
   PetscFunctionBegin;
   m = impl->en.size;
@@ -665,8 +664,9 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   PetscCall(VecReciprocal(impl->r_inv_sqrt));
 
   if (impl->type == PETSCDA_LETKF_LOC_NONE) {
-    sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-    scale          = 1.0 / sqrt_m_minus_1;
+    PetscReal sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
+    PetscReal scale          = 1.0 / sqrt_m_minus_1;
+
     PetscCall(PetscDALETKFGlobalAnalysis(da, impl, m, scale, sqrt_m_minus_1, X, observation));
   } else {
     PetscInt n_local, n_obs_local, rows_old, cols_old;
@@ -921,7 +921,7 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
   PetscCall(PetscOptionsInt("-petscda_letkf_batch_size", "Batch size for GPU processing (0 = auto)", "PETSCDALETKF", batch_size, &batch_size, NULL));
   PetscCheck(batch_size >= 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "batch_size must be >= 0, got %" PetscInt_FMT, batch_size);
   impl->batch_size = batch_size;
-  radius = impl->localization_radius;
+  radius           = impl->localization_radius;
   PetscCall(PetscOptionsReal("-petscda_letkf_localization_radius", "Localization cutoff radius for built-in kernels", "PetscDALETKFSetLocalizationRadius", radius, &radius, &radius_set));
   if (radius_set) PetscCall(PetscDALETKFSetLocalizationRadius(da, radius));
   type_idx = (PetscInt)impl->type;
