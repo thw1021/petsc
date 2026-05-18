@@ -1531,12 +1531,17 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
   }
 
   /* Step 2: apply the threshold filter */
+  /* Step 2: apply the threshold filter */
   {
-    MatInfo info0, info1;
-    PetscCall(MatGetInfo(Prol, MAT_GLOBAL_SUM, &info0));
+    PetscBool info_active = PETSC_FALSE;
+    MatInfo   info0, info1;
+    PetscCall(PetscInfoEnabled(((PetscObject)pc)->classid, &info_active));
+    if (info_active) PetscCall(MatGetInfo(Prol, MAT_GLOBAL_SUM, &info0));
     PetscCall(MatFilter(Prol, threshold, PETSC_TRUE, PETSC_TRUE));
-    PetscCall(MatGetInfo(Prol, MAT_GLOBAL_SUM, &info1));
-    PetscCall(PetscInfo(pc, "Prolongator filter: nnz before=%g after=%g reduction=%g%%\n", info0.nz_used, info1.nz_used, (info0.nz_used > 0) ? 100.0 * (info0.nz_used - info1.nz_used) / info0.nz_used : 0.0));
+    if (info_active) {
+      PetscCall(MatGetInfo(Prol, MAT_GLOBAL_SUM, &info1));
+      PetscCall(PetscInfo(pc, "Prolongator filter: nnz before=%g after=%g reduction=%g%%\n", info0.nz_used, info1.nz_used, (info0.nz_used > 0) ? 100.0 * (info0.nz_used - info1.nz_used) / info0.nz_used : 0.0));
+    }
   }
 
   /* Step 3: correct rows to restore P_filtered * B_c = B */
