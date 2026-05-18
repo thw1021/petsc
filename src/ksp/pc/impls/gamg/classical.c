@@ -902,10 +902,11 @@ static PetscErrorCode PCGAMGSetData_Classical(PC pc, Mat A)
 
   PetscFunctionBegin;
   /* no data for classical AMG */
-  pc_gamg->data           = NULL;
-  pc_gamg->data_cell_cols = 0;
-  pc_gamg->data_cell_rows = 0;
-  pc_gamg->data_sz        = 0;
+  pc_gamg->data               = NULL;
+  pc_gamg->data_cell_cols     = 0;
+  pc_gamg->data_cell_rows     = 0;
+  pc_gamg->data_sz            = 0;
+  pc_gamg->prolongator_filter = 0.;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
