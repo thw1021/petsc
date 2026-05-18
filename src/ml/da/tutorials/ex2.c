@@ -434,6 +434,8 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No post-burn-in statistics collected (burn >= steps)\n\n"));
   }
 
+  PetscCall(PetscDAView(da, PETSC_VIEWER_STDOUT_WORLD));
+
   /* Cleanup */
   PetscCall(MatDestroy(&H));
   PetscCall(VecDestroy(&x_forecast));
@@ -459,7 +461,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: !complex
-    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5 -petscda_type letkf
+    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_ensemble_size 5 -petscda_type letkf
 
     test:
       suffix: letkf_serial
@@ -480,7 +482,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: kokkos_kernels !complex
-    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5 -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos
+    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_ensemble_size 5 -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos
 
     test:
       nsize: 3
