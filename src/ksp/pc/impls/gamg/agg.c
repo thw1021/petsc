@@ -365,6 +365,8 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
   PetscBool    n_aggressive_flg, old_sq_provided = PETSC_FALSE, new_sq_provided = PETSC_FALSE, new_sqr_graph = pc_gamg_agg->use_aggressive_square_graph;
   PetscInt     nsq_graph_old = 0;
+  PetscReal    thr           = pc_gamg->prolongator_filter;
+  PetscBool    flg;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "GAMG-AGG options");
@@ -384,7 +386,9 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   PetscCall(PetscOptionsBool("-pc_gamg_graph_symmetrize", "Symmetrize graph for coarsening", "PCGAMGSetGraphSymmetrize", pc_gamg_agg->graph_symmetrize, &pc_gamg_agg->graph_symmetrize, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Threshold for filtering small entries from prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", pc_gamg->prolongator_filter, &pc_gamg->prolongator_filter, NULL));
+  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Threshold for filtering small entries from prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", thr, &thr, &flg));
+  if (flg) PetscCall(PCGAMGSetProlongatorFilter(pc, thr));
+
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
