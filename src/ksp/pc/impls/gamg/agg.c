@@ -1532,7 +1532,6 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
   }
 
   /* Step 2: apply the threshold filter */
-  /* Step 2: apply the threshold filter */
   {
     PetscBool info_active = PETSC_FALSE;
     MatInfo   info0, info1;
