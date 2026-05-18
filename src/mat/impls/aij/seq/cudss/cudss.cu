@@ -207,7 +207,7 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscInt     m, n, nnz;
   int         *d_row_32 = NULL, *d_col_32 = NULL; /* MATSEQAIJCUSPARSE path: always 32-bit */
   PetscInt    *d_row_pi = NULL, *d_col_pi = NULL; /* MATSEQAIJ path: PetscInt width */
-  PetscScalar *d_val    = NULL;
+  PetscScalar *d_val = NULL;
   PetscBool    isCUSPARSE;
   cudaStream_t stream;
 
@@ -280,8 +280,8 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
 
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row_32, &d_col_32, &d_row_pi, &d_col_pi, &d_val));
   {
-    void          *d_row = isCUSPARSE ? (void *)d_row_32 : (void *)d_row_pi;
-    void          *d_col = isCUSPARSE ? (void *)d_col_32 : (void *)d_col_pi;
+    void          *d_row    = isCUSPARSE ? (void *)d_row_32 : (void *)d_row_pi;
+    void          *d_col    = isCUSPARSE ? (void *)d_col_32 : (void *)d_col_pi;
     cudaDataType_t idx_type = isCUSPARSE ? CUDA_R_32I : (PetscDefined(USE_64BIT_INDICES) ? CUDA_R_64I : CUDA_R_32I);
     PetscCallCUDSS(cudssMatrixCreateCsr(&lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, idx_type, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO));
 
@@ -395,7 +395,7 @@ static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *
   Mat_cuDSS   *lu       = (Mat_cuDSS *)F->data;
   int         *d_row_32 = NULL, *d_col_32 = NULL;
   PetscInt    *d_row_pi = NULL, *d_col_pi = NULL;
-  PetscScalar *d_val    = NULL;
+  PetscScalar *d_val = NULL;
   cudaStream_t stream;
 
   PetscFunctionBegin;
