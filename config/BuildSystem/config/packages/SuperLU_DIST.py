@@ -64,11 +64,12 @@ class Configure(config.package.CMakePackage):
             args[place]=item[:-1]+' '+' -DDEBUGlevel=0 -DPRNTlevel=0"'
         hipArchFlags = '--amdgpu-target=' + self.hip.hipArch
         args.append('-DHIP_HIPCC_FLAGS="'+hipArchFlags+' '+self.getCompilerFlags()+' '+self.mpi.includepaths+' '+self.headers.toString(self.hip.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"')
+        args.append('-DHIP_ROOT_DIR="' + self.hip.hipDir + '"')
 
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('-DTPL_LAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
-    args.append('-DHIP_ROOT_DIR="' + self.hip.hipDir + '"')
+
     if self.parmetis.found:
       args.append('-DTPL_PARMETIS_INCLUDE_DIRS="'+';'.join([d for d in self.parmetis.dinclude if os.path.exists(d)])+'"')
       args.append('-DTPL_PARMETIS_LIBRARIES="'+self.libraries.toString(self.parmetis.dlib)+'"')
