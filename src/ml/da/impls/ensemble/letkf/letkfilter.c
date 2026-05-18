@@ -613,11 +613,25 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
        lazily in PetscDALETKFGlobalAnalysis() so the per-vertex paths do not pay for them. */
   }
 
+  /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies */
+  PetscCall(PetscDAEnsembleComputeMean(da, impl->mean));
+
+  /* Create anomaly matrix X = (E - x_mean * 1') / sqrt(m - 1) */
+  PetscCall(PetscDAEnsembleComputeAnomalies(da, impl->mean, &X));
+
+  /* Alg 6.4 line 3-4: Compute GLOBAL observation ensemble Z = H * E column-by-column,
+     staged through H-compatible cached work vecs because impl->Z (MATDENSE) and H
+     (possibly MATAIJKOKKOS) cannot share a MatMatMult product type. */
+  /* Lazily allocate / rebuild the cached H-compatible work vecs (and reset Q if H's vec-type
+     backend changed). */
+  PetscCall(PetscDALETKFRebuildHTemps(da, impl, H));
+
   /* Lazily build Q for built-in distance-based kernels using cached coordinates. The dispatcher
      selects host vs Kokkos backend from the type of the cached observation operator. Setters
      destroy Q via PetscDALETKFResetLocalization() when their inputs change, so a non-NULL Q is
-     guaranteed to match the current (type, radius, coord_*) tuple. Built after the reallocation
-     block so the just-built Q is not torn down by the same-call reset above. */
+     guaranteed to match the current (type, radius, coord_*) tuple. Built after PetscDALETKFRebuildHTemps()
+     because that call may reset Q via PetscDALETKFResetLocalization_LETKF() when H's vec-type
+     backend changed since the last analysis. */
   if (impl->type != PETSCDA_LETKF_LOC_NONE && !impl->Q) {
     Mat Q_new = NULL;
 
@@ -705,14 +719,10 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   }
 
   PetscCall(MatDestroy(&X));
-  /* Emit -petscda_view once per localization configuration, after the first analysis has built Q
-     so the viewer can report the localization-matrix state. The flag is cleared whenever
-     PetscDALETKFResetLocalization_LETKF() drops Q (radius/type/coords change), so reconfiguring
-     fires a fresh view. Matches KSPSolve()/SNESSolve() which self-call ViewFromOptions at the tail. */
-  if (!impl->view_emitted) {
-    PetscCall(PetscDAViewFromOptions(da, NULL, "-petscda_view"));
-    impl->view_emitted = PETSC_TRUE;
-  }
+  /* Self-call ViewFromOptions at the tail, mirroring KSPSolve()/SNESSolve(). Fires every cycle
+     when the user passes -petscda_view; tutorials that want a single end-of-run snapshot call
+     PetscDAView() explicitly after the DA loop. */
+  PetscCall(PetscDAViewFromOptions(da, NULL, "-petscda_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -735,7 +745,6 @@ static PetscErrorCode PetscDALETKFResetLocalization_LETKF(PetscDA da)
   PetscCall(PetscDALETKFDestroyObsScatter(impl));
   PetscCall(MatDestroy(&impl->Q));
   impl->max_nnz_per_row = 0;
-  impl->view_emitted    = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -746,6 +755,7 @@ static PetscErrorCode PetscDALETKFSetLocalizationRadius_LETKF(PetscDA da, PetscR
   PetscFunctionBegin;
   PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
   PetscCheck(radius > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Localization radius must be positive, got %g", (double)radius);
+  /* Exact equality: a tolerance would silently keep a stale Q after a small intentional bump. */
   if (impl->localization_radius != radius) {
     impl->localization_radius = radius;
     PetscCall(PetscDALETKFResetLocalization_LETKF(da));
@@ -941,7 +951,8 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
 . -petscda_ensemble_inflation factor                                   - multiplicative inflation factor applied to anomalies
 . -petscda_letkf_batch_size batch_size                                 - set the batch size for GPU processing
 . -petscda_letkf_localization_radius radius                            - localization cutoff radius for the built-in kernels (must be positive)
-- -petscda_letkf_localization_type (none|gaspari_cohn|gaussian|boxcar) - select the localization kernel
+. -petscda_letkf_localization_type (none|gaspari_cohn|gaussian|boxcar) - select the localization kernel
+- -petscda_view                                                        - view the `PetscDA` at the end of every `PetscDAEnsembleAnalysis()` call
 
    Level: beginner
 
@@ -953,6 +964,9 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
    Both the CPU and Kokkos analysis paths support multi-rank runs; the Kokkos backend is selected
    when the covariance matrix `da->R` is a Kokkos AIJ type, otherwise the CPU per-vertex (or LOC_NONE
    replicated) path is used.
+   `-petscda_view` fires at the tail of every `PetscDAEnsembleAnalysis()` call (mirroring `KSPSolve()`/`SNESSolve()`),
+   so over a multi-cycle assimilation run the view is emitted once per analysis. Code that wants a single
+   end-of-run snapshot should call `PetscDAView()` explicitly after the assimilation loop instead.
 
 .seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
           `PetscDALETKFSetLocalizationType()`, `PetscDALETKFGetLocalizationType()`, `PetscDALETKFSetLocalizationCoordinates()`,
@@ -979,7 +993,6 @@ PETSC_INTERN PetscErrorCode PetscDACreate_LETKF(PetscDA da)
   impl->Q                   = NULL;
   impl->batch_size          = 0;
   impl->type                = PETSCDA_LETKF_LOC_GASPARI_COHN;
-  impl->view_emitted        = PETSC_FALSE;
   for (PetscInt d = 0; d < 3; d++) {
     impl->coord_xyz[d] = NULL;
     impl->coord_bd[d]  = 0.0;
