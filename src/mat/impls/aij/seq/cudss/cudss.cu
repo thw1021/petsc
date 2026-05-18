@@ -163,7 +163,14 @@ static PetscErrorCode MatApplyConfig_cuDSS(Mat_cuDSS *lu)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, void **d_row, void **d_col, PetscScalar **d_val)
+/* Ensure the CSR data for matrix A is resident on the device.
+   For MATSEQAIJCUSPARSE, the existing device arrays (always 32-bit integers) are
+   returned via d_row_32/d_col_32.  For plain MATSEQAIJ, the PetscInt device arrays
+   owned by lu are populated via cudaMemcpyAsync and returned via d_row_pi/d_col_pi.
+   Exactly one of {d_row_32, d_col_32} and {d_row_pi, d_col_pi} will be set on return;
+   the other pair is left unchanged (callers initialise them to NULL before the call).
+   d_val is always set. */
+static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, int **d_row_32, int **d_col_32, PetscInt **d_row_pi, PetscInt **d_col_pi, PetscScalar **d_val)
 {
   PetscBool    isCUSPARSE;
   cudaStream_t stream;
@@ -176,8 +183,8 @@ static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, void **d_row
       Mat_SeqAIJCUSPARSE           *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
       Mat_SeqAIJCUSPARSEMultStruct *matstruct      = (Mat_SeqAIJCUSPARSEMultStruct *)cusparsestruct->mat;
       CsrMatrix                    *csr            = (CsrMatrix *)matstruct->mat;
-      *d_row                                       = (void *)thrust::raw_pointer_cast(csr->row_offsets->data());
-      *d_col                                       = (void *)thrust::raw_pointer_cast(csr->column_indices->data());
+      *d_row_32                                    = thrust::raw_pointer_cast(csr->row_offsets->data());
+      *d_col_32                                    = thrust::raw_pointer_cast(csr->column_indices->data());
       *d_val                                       = (PetscScalar *)thrust::raw_pointer_cast(csr->values->data());
     }
   } else {
@@ -186,9 +193,9 @@ static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, void **d_row
     PetscCallCUDA(cudaMemcpyAsync(lu->d_row_offsets, a->i, (lu->n + 1) * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
     PetscCallCUDA(cudaMemcpyAsync(lu->d_col_indices, a->j, lu->nnz * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
     PetscCallCUDA(cudaMemcpyAsync(lu->d_values, a->a, lu->nnz * sizeof(PetscScalar), cudaMemcpyHostToDevice, stream));
-    *d_row = (void *)lu->d_row_offsets;
-    *d_col = (void *)lu->d_col_indices;
-    *d_val = lu->d_values;
+    *d_row_pi = lu->d_row_offsets;
+    *d_col_pi = lu->d_col_indices;
+    *d_val    = lu->d_values;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -198,8 +205,9 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
   Mat_SeqAIJ  *a  = (Mat_SeqAIJ *)A->data;
   PetscInt     m, n, nnz;
-  void        *d_row, *d_col;
-  PetscScalar *d_val;
+  int         *d_row_32 = NULL, *d_col_32 = NULL; /* MATSEQAIJCUSPARSE path: always 32-bit */
+  PetscInt    *d_row_pi = NULL, *d_col_pi = NULL; /* MATSEQAIJ path: PetscInt width */
+  PetscScalar *d_val    = NULL;
   PetscBool    isCUSPARSE;
   cudaStream_t stream;
 
@@ -270,15 +278,18 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   PetscCall(PetscGetCurrentCUDAStream(&stream));
   PetscCallCUDSS(cudssSetStream(lu->handle, stream));
 
-  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
-  PetscCallCUDSS(cudssMatrixCreateCsr(&lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, isCUSPARSE ? CUDA_R_32I : PetscDefined(USE_64BIT_INDICES) ? CUDA_R_64I : CUDA_R_32I, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO));
+  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row_32, &d_col_32, &d_row_pi, &d_col_pi, &d_val));
+  {
+    void          *d_row = isCUSPARSE ? (void *)d_row_32 : (void *)d_row_pi;
+    void          *d_col = isCUSPARSE ? (void *)d_col_32 : (void *)d_col_pi;
+    cudaDataType_t idx_type = isCUSPARSE ? CUDA_R_32I : (PetscDefined(USE_64BIT_INDICES) ? CUDA_R_64I : CUDA_R_32I);
+    PetscCallCUDSS(cudssMatrixCreateCsr(&lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, idx_type, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO));
 
-  PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
-  PetscCallCUDA(cudaMalloc((void **)&lu->d_x, n * sizeof(PetscScalar)));
-  PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_b, n, 1, n, lu->d_b, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
-  PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_x, n, 1, n, lu->d_x, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
-
-  PetscCallCUDSS(cudssMatrixCreateCsr(&lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, isCUSPARSE ? CUDA_R_32I : PetscDefined(USE_64BIT_INDICES) ? CUDA_R_64I : CUDA_R_32I, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO));
+    PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
+    PetscCallCUDA(cudaMalloc((void **)&lu->d_x, n * sizeof(PetscScalar)));
+    PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_b, n, 1, n, lu->d_b, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
+    PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_x, n, 1, n, lu->d_x, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -381,13 +392,16 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
 
 static PetscErrorCode MatFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
-  void        *d_row = NULL, *d_col = NULL;
-  PetscScalar *d_val = NULL;
+  Mat_cuDSS   *lu       = (Mat_cuDSS *)F->data;
+  int         *d_row_32 = NULL, *d_col_32 = NULL;
+  PetscInt    *d_row_pi = NULL, *d_col_pi = NULL;
+  PetscScalar *d_val    = NULL;
   cudaStream_t stream;
 
   PetscFunctionBegin;
-  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row, &d_col, &d_val));
+  /* Index pointers are already registered in cudss_A from the symbolic phase;
+     only d_val is used here to update the matrix values. */
+  PetscCall(MatEnsureOnDevice_cuDSS(A, lu, &d_row_32, &d_col_32, &d_row_pi, &d_col_pi, &d_val));
   PetscCallCUDSS(cudssMatrixSetValues(lu->cudss_A, d_val));
   PetscCall(PetscGetCurrentCUDAStream(&stream));
   PetscCallCUDSS(cudssSetStream(lu->handle, stream));
