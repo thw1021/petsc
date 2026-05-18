@@ -16,7 +16,6 @@ typedef struct {
   PetscBool  use_low_mem_filter;
   PetscBool  graph_symmetrize;
   MatCoarsen crs;
-  PetscReal  prolongator_filter;
 } PC_GAMG_AGG;
 
 /*@
@@ -233,7 +232,7 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 - thr - threshold value; entries with absolute value below this are dropped (0 disables filtering)
 
   Options Database Key:
-. -pc_gamg_agg_prolongator_filter thr - threshold for filtering small entries from prolongator (0=disabled, 0.0025=typical)
+. -pc_gamg_prolongator_filter thr - threshold for filtering small entries from prolongator (0=disabled, 0.0025=typical)
 
   Level: intermediate
 
@@ -340,24 +339,22 @@ static PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
 
 static PetscErrorCode PCGAMGSetProlongatorFilter_AGG(PC pc, PetscReal thr)
 {
-  PC_MG       *mg          = (PC_MG *)pc->data;
-  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
-  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
   PetscCheck(thr >= 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Filter threshold %g must be non-negative", (double)thr);
-  pc_gamg_agg->prolongator_filter = thr;
+  pc_gamg->prolongator_filter = thr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCGAMGGetProlongatorFilter_AGG(PC pc, PetscReal *thr)
 {
-  PC_MG       *mg          = (PC_MG *)pc->data;
-  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
-  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
-  *thr = pc_gamg_agg->prolongator_filter;
+  *thr = pc_gamg->prolongator_filter;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -387,7 +384,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   PetscCall(PetscOptionsBool("-pc_gamg_graph_symmetrize", "Symmetrize graph for coarsening", "PCGAMGSetGraphSymmetrize", pc_gamg_agg->graph_symmetrize, &pc_gamg_agg->graph_symmetrize, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_agg_prolongator_filter", "Threshold for filtering small entries from prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", pc_gamg_agg->prolongator_filter, &pc_gamg_agg->prolongator_filter, NULL));
+  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Threshold for filtering small entries from prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", pc_gamg->prolongator_filter, &pc_gamg->prolongator_filter, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1872,12 +1869,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
       PetscCall(KSPCheckSolve(eksp, pc, xx));
 
       PetscCall(KSPComputeExtremeSingularValues(eksp, &emax, &emin));
-      if (emax <= 0.0) {
-        /* dstev failed to converge (e.g., ILP64 OpenBLAS); use safe fallback for Jacobi-preconditioned spectral radius */
-        emax = 2.0;
-        emin = 1.e-5;
-        PetscCall(PetscInfo(pc, "%s: Smooth P0: eigenvalue estimation failed, using fallback emax=%e emin=%e\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin));
-      } else PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
+      PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
       PetscCall(VecDestroy(&xx));
       PetscCall(VecDestroy(&bb));
       PetscCall(KSPDestroy(&eksp));
@@ -1930,7 +1922,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
     }
     PetscCall(VecDestroy(&diag));
   }
-  if (pc_gamg_agg->prolongator_filter > 0.0) PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pc_gamg_agg->prolongator_filter));
+  if (pc_gamg->prolongator_filter > 0.0) PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pc_gamg->prolongator_filter));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
   PetscCall(MatViewFromOptions(Prol, NULL, "-pc_gamg_agg_view_prolongation"));
   *a_P = Prol;
@@ -1942,7 +1934,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
 
   Options Database Keys:
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation
-. -pc_gamg_agg_prolongator_filter thr                - filter small entries from the prolongator, preserving the near-null space (0=disabled, 0.0025=typical)
+. -pc_gamg_prolongator_filter thr                     - filter small entries from the prolongator, preserving the near-null space (0=disabled, 0.0025=typical)
 . -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2) levels from finest.
 . -pc_gamg_aggressive_square_graph (true|false)       - Use square graph (A'A), alternative is MIS-k (k=2), for aggressive coarsening
 . -pc_gamg_mis_k_minimum_degree_ordering (true|false) - Use minimum degree ordering in greedy MIS algorithm
@@ -1994,7 +1986,6 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
   pc_gamg_agg->use_low_mem_filter           = PETSC_FALSE;
   pc_gamg_agg->aggressive_mis_k             = 2;
   pc_gamg_agg->graph_symmetrize             = PETSC_TRUE;
-  pc_gamg_agg->prolongator_filter           = 0.0;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", PCGAMGSetNSmooths_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", PCGAMGSetAggressiveLevels_AGG));
