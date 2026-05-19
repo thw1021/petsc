@@ -49,9 +49,6 @@ static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, PetscCtx
   PetscInt           xs, xm, i;
 
   PetscFunctionBeginUser;
-  (void)ts;
-  (void)t;
-
   PetscCall(DMDAGetCorners(l95->da, &xs, NULL, NULL, &xm, NULL, NULL));
   PetscCall(DMGetLocalVector(l95->da, &X_local));
   PetscCall(DMGlobalToLocalBegin(l95->da, X, INSERT_VALUES, X_local));
@@ -125,11 +122,11 @@ static PetscErrorCode Lorenz96StepVec(Lorenz96Ctx *l95, Vec x)
 static PetscErrorCode Lorenz96Step(Mat ensemble, PetscCtx ctx)
 {
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
-  PetscInt     n, j;
+  PetscInt     n;
 
   PetscFunctionBeginUser;
   PetscCall(MatGetSize(ensemble, NULL, &n));
-  for (j = 0; j < n; j++) {
+  for (PetscInt j = 0; j < n; j++) {
     Vec col;
 
     PetscCall(MatDenseGetColumnVec(ensemble, j, &col));
