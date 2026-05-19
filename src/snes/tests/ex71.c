@@ -78,7 +78,5 @@ int main(int argc, char **argv)
 
    test:
       suffix: left_npc
-      nsize: 1
-      output_file: output/ex71_left_npc.out
 
 TEST*/

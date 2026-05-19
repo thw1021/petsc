@@ -2995,6 +2995,7 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (snes->npc && snes->npcside == PC_LEFT) {
+    // SNESASPIN uses a shell Amat for the preconditioned problem; SNESNASM computes the preconditioner matrix directly
     PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESASPIN, &flag));
     if (flag) {
       PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
