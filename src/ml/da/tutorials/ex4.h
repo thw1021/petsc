@@ -3,7 +3,10 @@
 #include <petscdmda.h>
 #include <petscts.h>
 
-/* Helpers are `static inline` for small math; bare `static` for address-taken callbacks and one-shot setup. */
+/* Helpers are `static inline` for small math; bare `static` for address-taken callbacks
+   (e.g. ShallowWaterRHS2D registered via TSSetRHSFunction) and for one-shot setup helpers
+   that are intentionally duplicated per translation unit (tutorial isolation - ex4.c and
+   ex4fwd.c stay independent). */
 
 /* Wet/dry threshold: cells with h below this fall back to zero flux to avoid division by ~0. */
 #define EX4_DRY_TOL 1e-10
@@ -137,7 +140,6 @@ static PetscErrorCode ShallowWaterRHS2D(TS ts, PetscReal t, Vec X, Vec F_vec, Pe
   PetscInt             xs, ys, xm, ym;
 
   PetscFunctionBeginUser;
-  (void)ts;
   PetscCall(DMDAGetCorners(sw->da, &xs, &ys, NULL, &xm, &ym, NULL));
   PetscCall(DMGetLocalVector(sw->da, &X_local));
   PetscCall(DMGlobalToLocalBegin(sw->da, X, INSERT_VALUES, X_local));
