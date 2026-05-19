@@ -101,9 +101,6 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, Pets
   const PetscInt     ndof = 2; /* h and hu */
 
   PetscFunctionBeginUser;
-  (void)ts;
-  (void)t;
-
   PetscCall(DMDAGetCorners(sw->da, &xs, NULL, NULL, &xm, NULL, NULL));
   PetscCall(DMGetLocalVector(sw->da, &X_local));
   PetscCall(DMGlobalToLocalBegin(sw->da, X, INSERT_VALUES, X_local));
@@ -278,13 +275,13 @@ static PetscErrorCode ShallowWaterStepVec(ShallowWaterCtx *sw, Vec x)
 static PetscErrorCode ShallowWaterStep(Mat ensemble, PetscCtx ctx)
 {
   ShallowWaterCtx *sw = (ShallowWaterCtx *)ctx;
-  PetscInt         n, j;
+  PetscInt         n;
 
   PetscFunctionBeginUser;
   PetscCall(MatGetSize(ensemble, NULL, &n));
   /* Collective: dense ensemble Mat is row-distributed, so every rank visits every global column j and
      MatDenseGetColumnVec returns the parallel column-Vec that all ranks step together. */
-  for (j = 0; j < n; j++) {
+  for (PetscInt j = 0; j < n; j++) {
     Vec col;
 
     PetscCall(MatDenseGetColumnVec(ensemble, j, &col));
