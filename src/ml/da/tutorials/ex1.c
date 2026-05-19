@@ -90,9 +90,6 @@ static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, PetscCtx
   PetscInt           xs, xm, i;
 
   PetscFunctionBeginUser;
-  (void)ts; /* Mark as intentionally unused to avoid compiler warnings */
-  (void)t;
-
   /* Work with a local (ghosted) vector so the Lorenz-96 stencil has the
    * required neighbors for periodic boundary conditions. */
   PetscCall(DMDAGetCorners(l95->da, &xs, NULL, NULL, &xm, NULL, NULL));
@@ -185,13 +182,13 @@ static PetscErrorCode Lorenz96StepVec(Lorenz96Ctx *l95, Vec x)
 static PetscErrorCode Lorenz96Step(Mat ensemble, PetscCtx ctx)
 {
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
-  PetscInt     n, j;
+  PetscInt     n;
 
   PetscFunctionBeginUser;
   PetscCall(MatGetSize(ensemble, NULL, &n));
   /* Collective: dense ensemble Mat is row-distributed, so every rank visits every global column j and
      MatDenseGetColumnVec returns the parallel column-Vec that all ranks step together. */
-  for (j = 0; j < n; j++) {
+  for (PetscInt j = 0; j < n; j++) {
     Vec col;
 
     PetscCall(MatDenseGetColumnVec(ensemble, j, &col));
