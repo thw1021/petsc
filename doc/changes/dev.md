@@ -65,6 +65,7 @@
 
 ## SNES
 
+- Change `SNESComputeJacobian()` to call the user-provided Jacobian function when a left NPC is active
 
 ## SNESLineSearch
 
