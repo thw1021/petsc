@@ -146,6 +146,10 @@ static PetscErrorCode TaoTermView_Shell(TaoTerm term, PetscViewer viewer)
       any = PETSC_TRUE;
       PetscCall(PetscViewerASCIIPrintf(viewer, " hessian,"));
     }
+    if (term->ops->hessianmult) {
+      any = PETSC_TRUE;
+      PetscCall(PetscViewerASCIIPrintf(viewer, " hessianmult,"));
+    }
     if (any == PETSC_FALSE) PetscCall(PetscViewerASCIIPrintf(viewer, " (none)"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));

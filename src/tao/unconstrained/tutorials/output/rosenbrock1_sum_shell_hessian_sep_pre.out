@@ -46,6 +46,7 @@ Tao Object: 1 MPI process
                 attached to Tao [name omitted]
                 total number of function/gradient evaluations=21
                 total number of Hessian evaluations=14
+                total number of HessianMult evaluations=18
             Map: unmapped
           Summand 1:
             Scale (tao_term_sum_reg1_scale): 1.
@@ -59,6 +60,7 @@ Tao Object: 1 MPI process
                 total number of gradient evaluations=1
                 total number of function/gradient evaluations=15
                 total number of Hessian evaluations=14
+                total number of HessianMult evaluations=18
             Map: unmapped
           Summand 2:
             Scale (tao_term_sum_reg2_scale): -1.
@@ -72,11 +74,13 @@ Tao Object: 1 MPI process
                 total number of gradient evaluations=1
                 total number of function/gradient evaluations=15
                 total number of Hessian evaluations=14
+                total number of HessianMult evaluations=18
             Map: unmapped
         total number of function evaluations=5
         total number of gradient evaluations=1
         total number of function/gradient evaluations=15
         total number of Hessian evaluations=14
+        total number of HessianMult evaluations=18
     Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente

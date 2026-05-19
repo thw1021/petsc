@@ -211,14 +211,15 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
 
 static PetscErrorCode TaoTermComputeHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
 {
-  TaoTerm_L1 *l1   = (TaoTerm_L1 *)term->data;
-  Vec         diag = NULL; /* Appease -Wmaybe-uninitialized */
+  TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
   PetscFunctionBegin;
   if (l1->epsilon == 0.0) {
     PetscCall(TaoTermL1DerivativeCheck(term));
     PetscCall(VecZeroEntries(Hv));
   } else {
+    Vec diag = NULL; /* Appease -Wmaybe-uninitialized */
+
     PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
     PetscCall(VecPointwiseMult(Hv, v, diag));
   }

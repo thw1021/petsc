@@ -149,6 +149,7 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
     if (term->ngrad > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT "\n", term->ngrad));
     if (term->nobjgrad > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT "\n", term->nobjgrad));
     if (term->nhess > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Hessian evaluations=%" PetscInt_FMT "\n", term->nhess));
+    if (term->nhessmult > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of HessianMult evaluations=%" PetscInt_FMT "\n", term->nhessmult));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -465,6 +466,7 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   _term->ngrad        = 0;
   _term->nobjgrad     = 0;
   _term->nhess        = 0;
+  _term->nhessmult    = 0;
   _term->Hpre_is_H    = PETSC_TRUE;
   _term->fd_delta     = 0.5 * PETSC_SQRT_MACHINE_EPSILON;
   _term->H_mattype    = NULL;
@@ -805,6 +807,7 @@ PetscErrorCode TaoTermComputeHessianMult(TaoTerm term, Vec x, Vec params, Vec v,
   PetscCheck(term->ops->hessianmult, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessianMult routine");
   PetscUseTypeMethod(term, hessianmult, x, params, v, Hv);
   PetscCall(PetscLogEventEnd(TAOTERM_HessianMultEval, term, NULL, NULL, NULL));
+  term->nhessmult++;
   PetscCall(VecLockReadPop(v));
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
