@@ -2995,9 +2995,12 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (snes->npc && snes->npcside == PC_LEFT) {
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-    PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESASPIN, &flag));
+    if (flag) {
+      PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
 
   PetscCall(PetscLogEventBegin(SNES_JacobianEval, snes, X, A, B));
