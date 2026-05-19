@@ -299,10 +299,11 @@ struct _p_TaoTerm {
   MatType               Hpre_mattype;
 
   PetscInt ngrad_mffd;
-  PetscInt nobj;     // actual objective callback invocations
-  PetscInt ngrad;    // actual gradient callback invocations
-  PetscInt nobjgrad; // actual objective+gradient callback invocations
-  PetscInt nhess;    // actual Hessian callback invocations
+  PetscInt nobj;      // actual objective callback invocations
+  PetscInt ngrad;     // actual gradient callback invocations
+  PetscInt nobjgrad;  // actual objective+gradient callback invocations
+  PetscInt nhess;     // actual Hessian callback invocations
+  PetscInt nhessmult; // actual Hessian-mult callback invocations
 
   PetscReal fd_delta;    // for TaoTermComputeGradientFD()
   PetscBool fd_gradient; // use finite differences for the gradient
