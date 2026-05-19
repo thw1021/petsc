@@ -9,6 +9,7 @@ typedef struct {
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
 {
   PetscFunctionBeginUser;
+  PetscCall(VecZeroEntries(f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -54,6 +55,7 @@ int main(int argc, char **argv)
   PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, &appctx));
   PetscCall(SNESSetNPCSide(snes, PC_LEFT));
   PetscCall(SNESGetNPC(snes, &npc));
+  PetscCall(SNESSetType(npc, SNESNEWTONLS));
 
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(SNESSetUp(snes));
