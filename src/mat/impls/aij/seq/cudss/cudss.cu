@@ -49,7 +49,7 @@ typedef struct {
   #endif
 #endif
 
-/* Custom macro: cuDSS returns cudssStatus_t, not a PetscErrorCode, so
+/* Custom macro: cuDSS returns cudssStatus_t, not a PetscErrorCode, then
    PetscCallExternal() cannot be used here.  Follows the same convention
    as PetscCallCUBLAS / PetscCallCUSPARSE. */
 #define PetscCallCUDSS(...) \
@@ -271,13 +271,15 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
     PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_b, n, 1, n, NULL, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
     PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_x, n, 1, n, NULL, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
   }
+  /* Analysis phase: reordering and symbolic factorization */
+  PetscCallCUDSS(cudssExecute(lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  PetscCheck(!r && !c, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuDSS does not support user-supplied row/column permutations");
+  if (r || c) PetscCall(PetscInfo(F, "cuDSS performs its own internal reordering; user-supplied row/column permutations are ignored\n"));
   PetscCall(MatFactorSymbolic_cuDSS(F, A, CUDSS_MTYPE_GENERAL, CUDSS_MVIEW_FULL));
   F->ops->lufactornumeric = MatFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -288,7 +290,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   cudssMatrixType_t mtype;
 
   PetscFunctionBegin;
-  PetscCheck(!perm, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuDSS does not support user-supplied permutations");
+  if (perm) PetscCall(PetscInfo(F, "cuDSS performs its own internal reordering; user-supplied Cholesky permutation is ignored\n"));
 #if defined(PETSC_USE_COMPLEX)
   if (A->spd == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HPD;
   else if (A->hermitian == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HERMITIAN;
@@ -417,7 +419,7 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
     `MatSolveTranspose()` is not supported.
 
     cuDSS performs its own internal reordering during the symbolic phase; user-supplied
-    row, column, or Cholesky permutations are not supported and will result in an error.
+    row, column, or Cholesky permutations are silently ignored.
     Select the reordering algorithm via `-mat_cudss_reorder_alg`.
 
     `MatSolve()` requires CUDA-aware vectors (`VECCUDA` / `VECSEQCUDA`). Using plain host
