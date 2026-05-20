@@ -64,7 +64,6 @@ class Configure(config.package.CMakePackage):
             args[place]=item[:-1]+' '+' -DDEBUGlevel=0 -DPRNTlevel=0"'
         hipArchFlags = '--amdgpu-target=' + self.hip.hipArch
         args.append('-DHIP_HIPCC_FLAGS="'+hipArchFlags+' '+self.getCompilerFlags()+' '+self.mpi.includepaths+' '+self.headers.toString(self.hip.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"')
-        args.append('-DHIP_ROOT_DIR="' + self.hip.hipDir + '"')
 
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
