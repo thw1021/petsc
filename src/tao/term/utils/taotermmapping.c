@@ -12,7 +12,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char
     PetscCall(PetscStrallocpy(prefix, &mt->prefix));
   }
   if (term != mt->term) {
-    PetscCall(VecDestroy(&mt->_unmapped_gradient));
+    PetscCall(VecDestroy(&mt->_unmapped_vec_work));
     PetscCall(MatDestroy(&mt->_unmapped_H));
     PetscCall(MatDestroy(&mt->_unmapped_Hpre));
     PetscCall(MatDestroy(&mt->_mapped_H));
@@ -33,7 +33,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermMappingSetData(mt, NULL, 0.0, NULL, NULL));
-  PetscCall(VecDestroy(&mt->_mapped_gradient));
+  PetscCall(VecDestroy(&mt->_mapped_vec_work));
   PetscCall(MatDestroy(&mt->_unmapped_H));
   PetscCall(MatDestroy(&mt->_unmapped_Hpre));
   PetscCall(MatDestroy(&mt->_mapped_H));
@@ -88,30 +88,87 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjective(TaoTermMapping *mt, V
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappingGetGradients(TaoTermMapping *mt, InsertMode mode, Vec g, Vec *mapped_g, Vec *unmapped_g)
+/*
+  TaoTermMappingGetWorkVecs - Get the row-space and column-space
+  work vectors for a `TaoTerm`
+
+  Collective
+
+  Input Parameters:
++ mt   - the `TaoTermMapping`
+. mode - `INSERT_VALUES` or `ADD_VALUES`
+- g    - the destination vector, in the row space of `mt->map`
+
+  Output Parameters:
++ mapped_g   - row-space buffer sized like `g`
+- unmapped_g - column-space buffer the `TaoTerm` writes its raw result into
+
+  Level: developer
+
+  Notes:
+  For `INSERT_VALUES`, `mapped_g` is `g` itself.
+  For `ADD_VALUES`, `mapped_g` is a separate internal vector.
+
+  `unmapped_g` is the same vector as `mapped_g`, unless `mt->map` is set,
+  in which case it is a separate vector in the column space of `mt->map`.
+
+  The internal vectors are allocated on first use.  Pair every call with
+  `TaoTermMappingAccumulateWorkVecs()`.
+
+.seealso: `TaoTermMapping`, `TaoTermMappingAccumulateWorkVecs()`
+*/
+static PetscErrorCode TaoTermMappingGetWorkVecs(TaoTermMapping *mt, InsertMode mode, Vec g, Vec *mapped_g, Vec *unmapped_g)
 {
   PetscFunctionBegin;
   *mapped_g = g;
   if (mode == ADD_VALUES) {
-    if (!mt->_mapped_gradient) PetscCall(VecDuplicate(g, &mt->_mapped_gradient));
-    *mapped_g = mt->_mapped_gradient;
+    if (!mt->_mapped_vec_work) PetscCall(VecDuplicate(g, &mt->_mapped_vec_work));
+    *mapped_g = mt->_mapped_vec_work;
   }
   *unmapped_g = *mapped_g;
   if (mt->map) {
-    if (!mt->_unmapped_gradient) PetscCall(TaoTermCreateSolutionVec(mt->term, &mt->_unmapped_gradient));
-    *unmapped_g = mt->_unmapped_gradient;
+    if (!mt->_unmapped_vec_work) PetscCall(TaoTermCreateSolutionVec(mt->term, &mt->_unmapped_vec_work));
+    *unmapped_g = mt->_unmapped_vec_work;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappingSetGradients(TaoTermMapping *mt, InsertMode mode, Vec g, Vec mapped_g, Vec unmapped_g)
+/*
+  TaoTermMappingAccumulateWorkVecs - Combine the staged work vectors into `g`,
+  applying `mt->map`, `mt->scale`, and the requested `InsertMode`
+
+  Collective
+
+  Input Parameters:
++ mt         - the `TaoTermMapping`
+. mode       - `INSERT_VALUES` or `ADD_VALUES`
+. mapped_g   - row-space work vector from `TaoTermMappingGetWorkVecs()`
+- unmapped_g - column-space work vector from `TaoTermMappingGetWorkVecs()`
+
+  Output Parameter:
+. g - the destination vector, in the row space of `mt->map`
+
+  Level: developer
+
+  Notes:
+  When `mt->map` is set, `mapped_g <- map^H * unmapped_g`; otherwise the two are the same vector.
+
+  For `INSERT_VALUES`, `mapped_g` is `g` itself, and is scaled in place by `mt->scale`.
+  For `ADD_VALUES`, `g <- g + mt->scale * mapped_g`.
+
+  This is the counterpart to `TaoTermMappingGetWorkVecs()` and must be called with the vectors
+  it returned.
+
+.seealso: `TaoTermMapping`, `TaoTermMappingGetWorkVecs()`
+*/
+static PetscErrorCode TaoTermMappingAccumulateWorkVecs(TaoTermMapping *mt, InsertMode mode, Vec mapped_g, Vec unmapped_g, Vec g)
 {
   PetscFunctionBegin;
   if (mt->map) PetscCall(MatMultHermitianTranspose(mt->map, unmapped_g, mapped_g));
-  else PetscAssert(mapped_g == unmapped_g, PETSC_COMM_SELF, PETSC_ERR_PLIB, "gradient not written to the right place");
+  else PetscAssert(mapped_g == unmapped_g, PETSC_COMM_SELF, PETSC_ERR_PLIB, "without a map, mapped_g and unmapped_g must be the same vector returned by TaoTermMappingGetWorkVecs()");
   if (mode == ADD_VALUES) PetscCall(VecAXPY(g, mt->scale, mapped_g));
   else {
-    PetscAssert(mapped_g == g, PETSC_COMM_SELF, PETSC_ERR_PLIB, "gradient not written to the right place");
+    PetscAssert(mapped_g == g, PETSC_COMM_SELF, PETSC_ERR_PLIB, "for INSERT_VALUES, mapped_g and g must be the same vector");
     if (mt->scale != 1.0) PetscCall(VecScale(g, mt->scale));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -127,10 +184,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeGradient(TaoTermMapping *mt, Ve
     if (mode == INSERT_VALUES) PetscCall(VecZeroEntries(g));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(TaoTermMappingGetGradients(mt, mode, g, &mapped_g, &unmapped_g));
+  PetscCall(TaoTermMappingGetWorkVecs(mt, mode, g, &mapped_g, &unmapped_g));
   PetscCall(TaoTermMappingMap(mt, x, &Ax));
   PetscCall(TaoTermComputeGradient(mt->term, Ax, params, unmapped_g));
-  PetscCall(TaoTermMappingSetGradients(mt, mode, g, mapped_g, unmapped_g));
+  PetscCall(TaoTermMappingAccumulateWorkVecs(mt, mode, mapped_g, unmapped_g, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -158,10 +215,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
     PetscCall(TaoTermMappingComputeObjective(mt, x, params, mode, value));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(TaoTermMappingGetGradients(mt, mode, g, &mapped_g, &unmapped_g));
+  PetscCall(TaoTermMappingGetWorkVecs(mt, mode, g, &mapped_g, &unmapped_g));
   PetscCall(TaoTermMappingMap(mt, x, &Ax));
   PetscCall(TaoTermComputeObjectiveAndGradient(mt->term, Ax, params, &v, unmapped_g));
-  PetscCall(TaoTermMappingSetGradients(mt, mode, g, mapped_g, unmapped_g));
+  PetscCall(TaoTermMappingAccumulateWorkVecs(mt, mode, mapped_g, unmapped_g, g));
   if (mode == ADD_VALUES) *value += mt->scale * v;
   else *value = mt->scale * v;
   PetscFunctionReturn(PETSC_SUCCESS);
