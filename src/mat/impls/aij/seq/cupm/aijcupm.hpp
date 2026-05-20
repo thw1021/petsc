@@ -50,16 +50,16 @@ namespace impl
    cprow[i] gives the logical row index for compressed row i; NULL = identity.
    -------------------------------------------------------------------------- */
 struct DiagonalScaleLeft_CSR_Functor {
-  const int         *row_ptr;
+  const PetscInt    *row_ptr;
   PetscScalar       *val_ptr;
   const PetscScalar *lv_ptr;
   const PetscInt    *cprow;
 
-  PETSC_HOSTDEVICE_INLINE_DECL void operator()(int i) const
+  PETSC_HOSTDEVICE_INLINE_DECL void operator()(PetscInt i) const
   {
-    const int         row = cprow ? (int)cprow[i] : i;
+    const PetscInt    row = cprow ? cprow[i] : i;
     const PetscScalar s   = lv_ptr[row];
-    for (int j = row_ptr[i]; j < row_ptr[i + 1]; j++) val_ptr[j] *= s;
+    for (PetscInt j = row_ptr[i]; j < row_ptr[i + 1]; j++) val_ptr[j] *= s;
   }
 };
 
@@ -93,7 +93,7 @@ __global__ static void MatAddCOOValues(const PetscScalar kv[], PetscCount nnz, c
 /* --------------------------------------------------------------------------
    Shared __global__ kernel: extract the CSR diagonal.
    -------------------------------------------------------------------------- */
-__global__ void GetDiagonal_CSR(const int *row, const int *col, const PetscScalar *val, const PetscInt len, PetscScalar *diag)
+__global__ void GetDiagonal_CSR(const PetscInt *row, const PetscInt *col, const PetscScalar *val, const PetscInt len, PetscScalar *diag)
 {
   const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -301,7 +301,7 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
   }
 
   /* MatSeqAIJGetIJ: return device CSR row-pointer and column-index arrays */
-  static PetscErrorCode GetIJ(Mat A, PetscBool compressed, const int **i, const int **j) noexcept
+  static PetscErrorCode GetIJ(Mat A, PetscBool compressed, const PetscInt **i, const PetscInt **j) noexcept
   {
     MatStructType *cusp = (MatStructType *)A->spptr;
     Mat_SeqAIJ    *a    = (Mat_SeqAIJ *)A->data;
@@ -318,7 +318,7 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
     if (i) {
       if (!compressed && a->compressedrow.use) { /* need full row offset */
         if (!cusp->rowoffsets_gpu) {
-          cusp->rowoffsets_gpu = new THRUSTINTARRAY32(A->rmap->n + 1);
+          cusp->rowoffsets_gpu = new THRUSTINTARRAY(A->rmap->n + 1);
           cusp->rowoffsets_gpu->assign(a->i, a->i + A->rmap->n + 1);
           PetscCall(PetscLogCpuToGpu((A->rmap->n + 1) * sizeof(PetscInt)));
         }
@@ -330,7 +330,7 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
   }
 
   /* MatSeqAIJRestoreIJ: nullify the pointers previously obtained with GetIJ */
-  static PetscErrorCode RestoreIJ(Mat A, PetscBool compressed, const int **i, const int **j) noexcept
+  static PetscErrorCode RestoreIJ(Mat A, PetscBool compressed, const PetscInt **i, const PetscInt **j) noexcept
   {
     PetscFunctionBegin;
     PetscValidHeaderSpecific(A, MAT_CLASSID, 1);

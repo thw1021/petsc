@@ -107,18 +107,17 @@ const PetscScalar PETSC_CUSPARSE_ZERO = 0.0;
   #endif
 #endif
 
-#define THRUSTINTARRAY32 thrust::device_vector<int>
-#define THRUSTINTARRAY   thrust::device_vector<PetscInt>
-#define THRUSTARRAY      thrust::device_vector<PetscScalar>
+#define THRUSTINTARRAY thrust::device_vector<PetscInt>
+#define THRUSTARRAY    thrust::device_vector<PetscScalar>
 
 /* A CSR matrix nonzero structure */
 struct CsrMatrix {
-  PetscInt          num_rows;
-  PetscInt          num_cols;
-  PetscInt          num_entries;
-  THRUSTINTARRAY32 *row_offsets;
-  THRUSTINTARRAY32 *column_indices;
-  THRUSTARRAY      *values;
+  PetscInt        num_rows;
+  PetscInt        num_cols;
+  PetscInt        num_entries;
+  THRUSTINTARRAY *row_offsets;
+  THRUSTINTARRAY *column_indices;
+  THRUSTARRAY    *values;
 };
 
 /* This is struct holding the relevant data needed to a MatSolve */
@@ -216,7 +215,7 @@ struct Mat_SeqAIJCUSPARSE {
   Mat_SeqAIJCUSPARSEMultStruct *mat;               /* pointer to the matrix on the GPU */
   Mat_SeqAIJCUSPARSEMultStruct *matTranspose;      /* pointer to the matrix on the GPU (for the transpose ... useful for BiCG) */
   THRUSTARRAY                  *workVector;        /* pointer to a workvector to which we can copy the relevant indices of a vector we want to multiply */
-  THRUSTINTARRAY32             *rowoffsets_gpu;    /* rowoffsets on GPU in non-compressed-row format. It is used to convert CSR to CSC */
+  THRUSTINTARRAY               *rowoffsets_gpu;    /* rowoffsets on GPU in non-compressed-row format. It is used to convert CSR to CSC */
   PetscInt                      nrows;             /* number of rows of the matrix seen by GPU */
   MatCUSPARSEStorageFormat      format;            /* the storage format for the matrix on the device */
   PetscBool                     use_cpu_solve;     /* Use AIJ_Seq (I)LU solve */
