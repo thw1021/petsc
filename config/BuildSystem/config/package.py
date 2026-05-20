@@ -1378,6 +1378,12 @@ const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
       self.download = self.download_darwin
     if hasattr(self, 'download_mingw') and config.setCompilers.Configure.isMINGW(self.framework.getCompiler(), self.log):
       self.download = self.download_mingw
+
+    import platform
+    downloadvar = 'download_'+platform.system()+'_'+platform.machine() # For ex.: self.download_Linux_x86_64  or self.download_Linux_aarch64
+    if hasattr(self,downloadvar):
+      self.download = getattr(self,downloadvar)
+
     if self.download and self.argDB['download-'+self.downloadname.lower()] and (not self.framework.batchBodies or self.installwithbatch):
       self.argDB['with-'+self.package] = 1
       downloadPackageVal = self.argDB['download-'+self.downloadname.lower()]
