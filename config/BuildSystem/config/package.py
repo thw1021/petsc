@@ -2071,9 +2071,10 @@ class CMakePackage(Package):
               args.append('-DCMAKE_CUDA_HOST_COMPILER="{}"'.format(self.getCompiler()))
       if package.found and package.name == 'HIP':
         self.framework.pushLanguage('HIP')
-        self.getExecutable(self.framework.getCompiler(), getFullPath=1, resultName='hip_cc',setMakeMacro=0)
-        hipdir = os.path.dirname(os.path.dirname(self.hip_cc))
-        args.append('-DHIP_ROOT_DIR:STRING="{}"'.format(hipdir))
+        hip_cc_found = self.getExecutable(self.framework.getCompiler(), getFullPath=1, resultName='hip_cc',setMakeMacro=0)
+        if hip_cc_found:
+          hipdir = os.path.dirname(os.path.dirname(self.hip_cc))
+          args.append('-DHIP_ROOT_DIR:STRING="{}"'.format(hipdir))
         self.framework.popLanguage()
 
     if self.need35policy:
