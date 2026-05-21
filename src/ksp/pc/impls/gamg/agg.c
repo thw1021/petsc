@@ -223,7 +223,7 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 }
 
 /*@
-  PCGAMGSetProlongatorFilter - Set threshold for filtering small entries from the prolongator, followed by a kernel preserving fix.
+  PCGAMGSetProlongatorFilter - Set threshold for filtering small entries from the prolongator (a kernel-preserving correction is applied afterward)
 
   Logically Collective
 
