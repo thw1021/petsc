@@ -22,6 +22,10 @@ typedef struct {
   PetscInt    *d_col_indices;
   PetscScalar *d_values;
 
+  /* User-supplied permutation (host array of 32-bit ints, owned by us) */
+  PetscInt *h_user_perm;
+  PetscBool userPermSet;
+
   PetscInt  n; /* matrix dimension */
   PetscInt  nnz;
   PetscBool ownDeviceCSR;
@@ -71,6 +75,7 @@ static const char *const MatCUDSSPivotTypes[]  = {"col", "row", "none"};
 static PetscErrorCode MatFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
 static PetscErrorCode MatSetFromOptions_cuDSS(Mat);
 static PetscErrorCode MatFactorSymbolic_cuDSS(Mat, Mat, cudssMatrixType_t, cudssMatrixViewType_t);
+static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat, IS);
 
 static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
 {
@@ -81,6 +86,7 @@ static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPrintf(viewer, "cuDSS run parameters:\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Reorder algorithm: %s\n", reorderName));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  User permutation: %s\n", lu->userPermSet ? "yes" : "no"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot type: %s\n", pivotName));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot threshold: %g\n", lu->pivotThreshold));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot epsilon: %g\n", lu->pivotEpsilon));
@@ -119,7 +125,9 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
     PetscCallCUDA(cudaFree(lu->d_col_indices));
     PetscCallCUDA(cudaFree(lu->d_values));
   }
+  PetscCall(PetscFree(lu->h_user_perm));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCUDSSSetUserPermutation_C", NULL));
   PetscCall(PetscFree(A->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -287,6 +295,12 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
     PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_b, n, 1, n, NULL, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
     PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_x, n, 1, n, NULL, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
   }
+  /* If the user supplied a permutation, pass it to cuDSS before analysis.
+     cudssDataSet() takes (handle, data, CUDSS_DATA_USER_PERM, host_int_ptr, sizeInBytes). */
+  if (lu->userPermSet == PETSC_TRUE) {
+    PetscCallCUDSS(cudssDataSet(lu->handle, lu->data, CUDSS_DATA_USER_PERM, lu->h_user_perm, (size_t)n * sizeof(PetscInt)));
+    PetscCall(PetscInfo(F, "cuDSS: using user-supplied permutation of size %" PetscInt_FMT "\n", n));
+  }
   /* Analysis phase: reordering and symbolic factorization */
   PetscCallCUDSS(cudssExecute(lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -295,7 +309,10 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
 static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  if (r != NULL || c != NULL) PetscCall(PetscInfo(F, "cuDSS performs its own internal reordering; user-supplied row/column permutations are ignored\n"));
+  if (r != NULL) {
+    if (c != NULL) PetscCall(PetscInfo(F, "cuDSS accepts only a single permutation; using row ordering IS, column ordering IS is ignored\n"));
+    PetscCall(MatCUDSSSetUserPermutation_cuDSS(F, r));
+  } else if (c != NULL) PetscCall(MatCUDSSSetUserPermutation_cuDSS(F, c));
   PetscCall(MatFactorSymbolic_cuDSS(F, A, CUDSS_MTYPE_GENERAL, CUDSS_MVIEW_FULL));
   F->ops->lufactornumeric = MatFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -306,7 +323,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   cudssMatrixType_t mtype;
 
   PetscFunctionBegin;
-  if (perm != NULL) PetscCall(PetscInfo(F, "cuDSS performs its own internal reordering; user-supplied Cholesky permutation is ignored\n"));
+  if (perm != NULL) PetscCall(MatCUDSSSetUserPermutation_cuDSS(F, perm));
 #if defined(PETSC_USE_COMPLEX)
   if (A->spd == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HPD;
   else if (A->hermitian == PETSC_BOOL3_TRUE) mtype = CUDSS_MTYPE_HERMITIAN;
@@ -416,6 +433,71 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  MatCUDSSSetUserPermutation_cuDSS - Store a user-supplied permutation for use during the
+  next symbolic factorization phase.
+
+  Input Parameters:
++ F    - the factor matrix (obtained from MatGetFactor())
+- perm - an IS of length n containing a 0-based permutation of {0,...,n-1}
+
+  The permutation is copied to a host buffer of 32-bit ints and passed to cudssDataSet()
+  with CUDSS_DATA_USER_PERM before CUDSS_PHASE_ANALYSIS.
+*/
+static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
+{
+  Mat_cuDSS      *lu = (Mat_cuDSS *)F->data;
+  PetscInt        n, i;
+  const PetscInt *idx;
+
+  PetscFunctionBegin;
+  PetscCall(ISGetLocalSize(perm, &n));
+  PetscCall(ISGetIndices(perm, &idx));
+  /* (Re-)allocate host buffer (cudssDataSet takes a host pointer) */
+  PetscCall(PetscFree(lu->h_user_perm));
+  PetscCall(PetscMalloc1(n, &lu->h_user_perm));
+  for (i = 0; i < n; i++) lu->h_user_perm[i] = idx[i];
+  PetscCall(ISRestoreIndices(perm, &idx));
+  lu->userPermSet = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatCUDSSSetUserPermutation - Supply a user-defined reordering permutation to the cuDSS
+  sparse direct solver.
+
+  Not Collective
+
+  Input Parameters:
++ F    - the factor matrix obtained from `MatGetFactor()` with solver type `MATSOLVERCUDSS`
+- perm - an `IS` of length n containing a 0-based permutation of {0,...,n-1}
+
+  Level: advanced
+
+  Notes:
+  The permutation is applied during the next call to `MatLUFactorSymbolic()` or
+  `MatCholeskyFactorSymbolic()`.  It overrides cuDSS's internal reordering for that
+  symbolic phase.  The `IS` may be destroyed after this call returns.
+
+  Alternatively, pass the `IS` directly as the row-permutation argument to
+  `MatLUFactorSymbolic()` or as the permutation argument to
+  `MatCholeskyFactorSymbolic()`; both routes call this function internally.
+
+.seealso: [](ch_matrices), `Mat`, `MATSOLVERCUDSS`, `MatLUFactorSymbolic()`, `MatCholeskyFactorSymbolic()`
+@*/
+PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
+{
+  PetscErrorCode (*f)(Mat, IS);
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(perm, IS_CLASSID, 2);
+  PetscCall(PetscObjectQueryFunction((PetscObject)F, "MatCUDSSSetUserPermutation_C", &f));
+  PetscCheck(f, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_WRONG, "Mat is not a cuDSS factor matrix");
+  PetscCall((*f)(F, perm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   MATSOLVERCUDSS = "cudss" - A solver package providing LU and Cholesky factorization for
   sequential sparse matrices via the NVIDIA cuDSS GPU-accelerated sparse direct solver library.
@@ -433,19 +515,19 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   Notes:
     Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
     When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
-
     `MatSolveTranspose()` is not supported.
 
-    cuDSS performs its own internal reordering during the symbolic phase; user-supplied
-    row, column, or Cholesky permutations are silently ignored.
-    Select the reordering algorithm via `-mat_cudss_reorder_alg`.
+    By default cuDSS performs its own internal reordering during the symbolic phase.
+    A user-supplied permutation can be provided via `MatCUDSSSetUserPermutation()`, or by
+    passing a non-NULL `IS` to `MatLUFactorSymbolic()` or `MatCholeskyFactorSymbolic()`.
+    Select the automatic reordering algorithm via `-mat_cudss_reorder_alg`.
 
     `MatSolve()` requires CUDA-aware vectors (`VECCUDA` / `VECSEQCUDA`). Using plain host
     `VECSEQ` vectors with this solver will result in an error. When the input matrix is
     `MATSEQAIJ`, ensure that the right-hand-side and solution vectors are of type
     `VECCUDA` (e.g., created with `VecSetType(v, VECCUDA)`).
 
-.seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`
+.seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`, `MatCUDSSSetUserPermutation()`
 M*/
 
 static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat *F)
@@ -477,6 +559,7 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
   PetscCall(PetscFree(B->solvertype));
   PetscCall(PetscStrallocpy(MATSOLVERCUDSS, &B->solvertype));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatFactorGetSolverType_C", MatFactorGetSolverType_seqaij_cudss));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatCUDSSSetUserPermutation_C", MatCUDSSSetUserPermutation_cuDSS));
 
   PetscCall(PetscNew(&lu));
   lu->reorderAlg     = CUDSS_ALG_DEFAULT;
