@@ -25,6 +25,13 @@ class Configure(config.package.Package):
     self.deps = [self.cuda]
     return
 
+  def consistencyChecks(self):
+    config.package.Package.consistencyChecks(self)
+    if self.argDB['with-'+self.package]:
+      if not self.cuda.version_tuple[0] >= 12:
+        raise RuntimeError('Cannot use cuDSS: requires CUDA version >=12, currently using: '+str(self.cuda.foundversion))
+    return
+
   def getSearchDirectories(self):
     '''Also search the CUDA toolkit directory for cuDSS'''
     dirs = config.package.Package.getSearchDirectories(self)
@@ -34,9 +41,6 @@ class Configure(config.package.Package):
 
   def Install(self):
     import shutil
-
-    if not self.cuda.version_tuple[0] >= 12:
-      raise RuntimeError('Package cuDSS requires CUDA version >=12! Currently using: '+str(self.cuda.foundversion))
 
     conffile = 'petsc.cudss'
     with open(os.path.join(self.packageDir, conffile), 'w') as f:
