@@ -1522,7 +1522,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     PetscInt nloc = cEnd - cStart;
     for (PetscInt k = 0; k < nSAvec; k++) {
       PetscCall(MatCreateVecs(Prol, &Bc_vecs[k], &B_vecs[k]));
-      PetscCall(VecSet(Bc_vecs[k], 0.0));
+      PetscCall(MatCreateVecs(Prol, &Bc_vecs[k], &B_vecs[k]));
       /* fill local entries: Bc_data layout is Bc_data[k * nloc + c] (stride == nloc) */
       PetscCall(VecGetArray(Bc_vecs[k], &Bc_arr));
       for (PetscInt c = 0; c < nloc; c++) Bc_arr[c] = (PetscScalar)Bc_data[k * nloc + c];
