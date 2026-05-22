@@ -359,7 +359,7 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   } else Bcuda = B;
   if (!XisCUDA) {
     PetscInt m_x, N_x;
-    PetscCall(PetscInfo(F, "Creating empty MATDENSECUDA for X (output only, no host-to-device copy needed)\n"));
+
     PetscCall(MatGetSize(X, &m_x, &N_x));
     PetscCall(MatCreateDenseCUDA(PetscObjectComm((PetscObject)X), m_x, N_x, m_x, N_x, NULL, &Xcuda));
   } else Xcuda = X;
@@ -496,10 +496,6 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
 . -mat_cudss_use_matching flag                              - Enable matching, default is false
 - -mat_cudss_ir_n_steps nsteps                              - Number of iterative refinement steps, default is 0
 
-  Notes:
-    Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
-    When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
-
     `MatSolveTranspose()` is not supported.
 
     By default cuDSS performs its own internal reordering during the symbolic phase.
@@ -513,6 +509,10 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
     `VECCUDA` (e.g., created with `VecSetType(v, VECCUDA)`).
 
   Level: intermediate
+
+  Notes:
+    Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
+    When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`, `MatCUDSSSetUserPermutation()`
 M*/
