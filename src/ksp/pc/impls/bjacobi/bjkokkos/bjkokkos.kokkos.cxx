@@ -92,7 +92,7 @@ static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member tea
   int                Nblk = end - start, it, m, stride = stride_shared, idx = 0;
   PetscReal          dp, dpold, w, dpest, tau, psi, cm, r0;
   const PetscScalar *Diag = &glb_idiag[start];
-  PetscScalar       *ptr  = work_space_shared, rho = 0.0, rhoold = 0.0, a = 0.0, s = 0.0, b, eta, etaold, psiold, cf, dpi = 0.0;
+  PetscScalar       *ptr = work_space_shared, rho = 0.0, rhoold = 0.0, a = 0.0, s = 0.0, b, eta, etaold, psiold, cf, dpi = 0.0;
 
   if (idx++ == nShareVec) {
     ptr    = work_space_global;
