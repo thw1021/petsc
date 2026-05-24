@@ -522,8 +522,11 @@ PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
   PetscCall(MatProductSymbolic(*Gmat2));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[pc_gamg->current_level][0], 0, 0, 0, 0));
   PetscCall(MatProductClear(*Gmat2));
-  /* we only need the sparsity, cheat and tell PETSc the matrix has been assembled */
-  (*Gmat2)->assembled = PETSC_TRUE;
+  /* MatProductSymbolic fills only the sparsity; call MatAssemblyEnd to initialize
+     Mvctx/lvec for ghost communication used by PCGAMGGetDataWithGhosts.
+     The stash is empty so no values are communicated; only MatSetUpMultiply is invoked. */
+  PetscCall(MatAssemblyBegin(*Gmat2, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*Gmat2, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -31,8 +31,10 @@ PetscErrorCode PCGAMGGetDataWithGhosts(Mat Gmat, PetscInt data_sz, PetscReal dat
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(Gmat, MAT_CLASSID, 1);
-  mpimat = (Mat_MPIAIJ *)Gmat->data;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)Gmat, MATMPIAIJ, &isMPIAIJ));
+  PetscCall(PetscInfo(Gmat, "Gmat type = %s, isMPIAIJ = %d\n", ((PetscObject)Gmat)->type_name, (int)isMPIAIJ));
+  PetscCheck(isMPIAIJ, PetscObjectComm((PetscObject)Gmat), PETSC_ERR_ARG_WRONG, "Gmat must be MPIAIJ (or subtype), got %s", ((PetscObject)Gmat)->type_name);
+  mpimat = (Mat_MPIAIJ *)Gmat->data;
   PetscCall(MatGetOwnershipRange(Gmat, &my0, &Iend));
   nloc = Iend - my0;
   PetscCall(VecGetLocalSize(mpimat->lvec, &num_ghosts));
