@@ -36,16 +36,56 @@ def _convertCell(ctype, cells, nc, off):
     return
 
 
-def _convertHighOrderCell(ctype, cells, nc, off):
+def _convertHighOrderCell(ctype, cells, deg, nc, off):
+    locCells = np.zeros((nc), dtype=np.uint32)
     if ctype == PETSc.DM.PolytopeType.SEGMENT:
         # Edge unknowns now come last, instead of first
-        locCells = np.zeros((nc), dtype=np.uint32)
         locCells[0] = cells[off + nc - 2]
         locCells[1] = cells[off + nc - 1]
         for i in range(nc - 2):
             locCells[i + 2] = cells[off + i]
-        for i in range(nc):
-            cells[off + i] = locCells[i]
+    elif ctype == PETSc.DM.PolytopeType.TRIANGLE:
+        # Reverse the order, vertices -> edges -> face
+        # I think cubic looks wrong because Kitware has equally spaced nodes
+        locCells[0] = cells[off + nc - 3]
+        locCells[1] = cells[off + nc - 2]
+        locCells[2] = cells[off + nc - 1]
+        loff = 3
+        fsize = ((deg - 2) * (deg - 1)) // 2
+        for e in range(3):
+            for i in range(deg - 1):
+                locCells[i + loff] = cells[off + fsize + e * (deg - 1) + i]
+            loff += deg - 1
+        # I think this is a smaller version of the same ordering, so we need
+        # to invert lexicographic
+        for i in range(fsize):
+            locCells[i + loff] = cells[off + i]
+        loff += fsize
+        assert loff == ((deg + 1) * (deg + 2)) // 2
+    elif ctype == PETSc.DM.PolytopeType.QUADRILATERAL:
+        # Reverse the order, vertices -> edges -> face
+        # I think cubic looks wrong because Kitware has equally spaced nodes
+        locCells[0] = cells[off + nc - 4]
+        locCells[1] = cells[off + nc - 3]
+        locCells[2] = cells[off + nc - 2]
+        locCells[3] = cells[off + nc - 1]
+        loff = 4
+        fsize = (deg - 1) * (deg - 1)
+        for e in range(4):
+            # VTK reverses the two later edges
+            if e < 2:
+                for i in range(deg - 1):
+                    locCells[i + loff] = cells[off + fsize + e * (deg - 1) + i]
+            else:
+                for i in range(deg - 1):
+                    locCells[deg - 2 - i + loff] = cells[
+                        off + fsize + e * (deg - 1) + i
+                    ]
+            loff += deg - 1
+        for i in range(fsize):
+            locCells[i + loff] = cells[off + i]
+    for i in range(nc):
+        cells[off + i] = locCells[i]
     return
 
 
@@ -161,7 +201,7 @@ class PetscPyVista:
                 for d in range(cellCoords.shape[1]):
                     points[off, d] = cellCoords[i, d]
                 off += 1
-            _convertHighOrderCell(plex.getCellType(c), cells, nc, conesLength + 1)
+            _convertHighOrderCell(plex.getCellType(c), cells, cdeg, nc, conesLength + 1)
             conesLength += 1 + nc
         # Make cell types
         celltypes = np.zeros((cEnd - cStart), dtype=np.uint32)
