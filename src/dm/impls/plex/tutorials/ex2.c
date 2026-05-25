@@ -70,6 +70,22 @@ int main(int argc, char **argv)
     args: -dm_view pyvista -dm_plex_shape sphere
     output_file: output/empty.out
 
+  # Draw the 2-sphere with PyVista with quadratic coordinates
+  test:
+    suffix: 5b
+    requires: pyvista
+    args: -dm_view pyvista -dm_plex_shape sphere \
+          -dm_coord_petscspace_degree 2
+    output_file: output/empty.out
+
+  # Draw the 2-sphere with PyVista using quads with quadratic coordinates
+  test:
+    suffix: 5c
+    requires: pyvista
+    args: -dm_view pyvista -dm_plex_shape sphere -dm_plex_simplex 0 \
+          -dm_coord_petscspace_degree 2
+    output_file: output/empty.out
+
   # Refine the sphere three times
   test:
     suffix: 6
