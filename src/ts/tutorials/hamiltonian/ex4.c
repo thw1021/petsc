@@ -678,10 +678,10 @@ static PetscErrorCode ComputeEmaxJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void 
   for (PetscInt i = 0; i < n; ++i) {
     const PetscInt k = i + ctx->s;
 
-    jac[i * 4 + 0] = -PetscExpReal(-gamma * ctx->t[k]) * PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi));
-    jac[i * 4 + 1] = C * ctx->t[k] * PetscExpReal(-gamma * ctx->t[k]) * PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi));
-    jac[i * 4 + 2] = C * ctx->t[k] * PetscExpReal(-gamma * ctx->t[k]) * (PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * PetscSinReal(omega * ctx->t[k] - phi);
-    jac[i * 4 + 3] = -C * PetscExpReal(-gamma * ctx->t[k]) * (PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * PetscSinReal(omega * ctx->t[k] - phi);
+    jac[0 * n + i] = -PetscExpReal(-gamma * ctx->t[k]) * PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi));
+    jac[1 * n + i] = C * ctx->t[k] * PetscExpReal(-gamma * ctx->t[k]) * PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi));
+    jac[2 * n + i] = C * ctx->t[k] * PetscExpReal(-gamma * ctx->t[k]) * (PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * PetscSinReal(omega * ctx->t[k] - phi);
+    jac[3 * n + i] = -C * PetscExpReal(-gamma * ctx->t[k]) * (PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * PetscSinReal(omega * ctx->t[k] - phi);
   }
   PetscCall(MatDenseRestoreArray(J, &jac));
   PetscFunctionReturn(PETSC_SUCCESS);
