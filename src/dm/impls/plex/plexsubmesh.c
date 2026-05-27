@@ -2992,7 +2992,7 @@ PetscErrorCode DMPlexLabelCohesiveCheck(DM dm, DMLabel label, DMLabel bdlabel)
 
         // Ignore edges/faces with clamped points in the cone
         PetscCall(DMPlexGetCellType(dm, point, &ct));
-        PetscCall(DMPlexCellUnsplitVertices_Private(dm, point, ct, &unsplit));
+        PetscCall(DMPlexCellUnsplitVertices_Internal(dm, point, ct, &unsplit));
         if (unsplit) continue;
         PetscCall(DMPlexComputeCellGeometryFVM(dm, point, &vol, centroid, NULL));
         PetscCall(DMPlexGetTransitiveClosure(dm, point, PETSC_TRUE, &clSize, &closure));
