@@ -146,9 +146,12 @@ PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, Pets
   PetscCall(base_type::PetscOptionDeviceView(PetscOptionsObject, &view, &flg));
   PetscOptionsEnd();
 
-  // post-process the options and lay the groundwork for initialization if needs be
-  std::vector<::sycl::device> gpu_devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
-  ngpus                                   = static_cast<PetscInt>(gpu_devices.size());
+  // Follow get_sycl_devices() at https://github.com/kokkos/kokkos/blob/develop/core/src/SYCL/Kokkos_SYCL.cpp
+  std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
+  ::sycl::backend             backend = ::sycl::backend::ext_oneapi_level_zero;
+  devices.erase(std::remove_if(devices.begin(), devices.end(), [backend](const ::sycl::device &d) { return d.get_backend() != backend; }), devices.end());
+
+  ngpus = static_cast<PetscInt>(devices.size());
   PetscCheck(ngpus || id < 0, comm, PETSC_ERR_USER_INPUT, "You specified a sycl gpu device with -device_select_sycl %d but there is no GPU", (int)id);
   PetscCheck(ngpus <= 0 || id < ngpus, comm, PETSC_ERR_USER_INPUT, "You specified a sycl gpu device with -device_select_sycl %d but there are only %d GPU", (int)id, (int)ngpus);
 
