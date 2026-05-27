@@ -733,10 +733,10 @@ static PetscErrorCode ComputeLogEmaxJacobian(Tao tao, Vec x, Mat J, Mat Jpre, vo
   for (PetscInt i = 0; i < n; ++i) {
     const PetscInt k = i + ctx->s;
 
-    jac[0 * n + i] = -1. / (PetscLog10Real(PETSC_E) * C);
+    jac[0 * n + i] = -PetscLog10Real(PETSC_E) / C;
     jac[1 * n + i] = ctx->t[k] * PetscLog10Real(PETSC_E);
-    jac[2 * n + i] = (PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * ctx->t[k] * PetscSinReal(omega * ctx->t[k] - phi) / (PetscLog10Real(PETSC_E) * PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi)));
-    jac[3 * n + i] = -(PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * PetscSinReal(omega * ctx->t[k] - phi) / (PetscLog10Real(PETSC_E) * PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi)));
+    jac[2 * n + i] = (PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * ctx->t[k] * PetscSinReal(omega * ctx->t[k] - phi) * PetscLog10Real(PETSC_E) / PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi));
+    jac[3 * n + i] = -(PetscCosReal(omega * ctx->t[k] - phi) < 0. ? -1. : 1.) * PetscSinReal(omega * ctx->t[k] - phi) * PetscLog10Real(PETSC_E) / PetscAbsReal(PetscCosReal(omega * ctx->t[k] - phi));
   }
   PetscCall(MatDenseRestoreArray(J, &jac));
   PetscCall(MatViewFromOptions(J, NULL, "-emax_jac_view"));
