@@ -1,4 +1,3 @@
-#include "petscdmtypes.h"
 #include <petsc/private/dmpleximpl.h>  /*I      "petscdmplex.h"    I*/
 #include <petsc/private/dmlabelimpl.h> /*I      "petscdmlabel.h"   I*/
 #include <petscsf.h>
