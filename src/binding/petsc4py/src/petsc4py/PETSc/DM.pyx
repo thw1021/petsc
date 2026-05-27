@@ -1176,6 +1176,19 @@ cdef class DM(Object):
         CHKERR(PetscINCREF(c.obj))
         return c
 
+    def getCoordinatesLocalSetUp(self) -> None:
+            """Makes local coordinates non-collective afterwards.
+
+            Collective
+
+            See Also
+            --------
+            petsc.DMGetCoordinatesLocalSetUp
+
+            """
+            CHKERR(DMGetCoordinatesLocalSetUp(self.dm))
+            return
+
     def setCellCoordinateDM(self, DM dm) -> None:
         """Set the cell coordinate `DM`.
 

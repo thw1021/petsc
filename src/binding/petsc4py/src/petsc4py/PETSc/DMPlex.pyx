@@ -2311,6 +2311,44 @@ cdef class DMPlex(DM):
 
     #
 
+    def getCellCoordinates(self, cell: int) -> tuple[bool, int, ArrayReal]:
+        """Compute the volume for a given cell.
+
+        Not collective.
+
+        Parameters
+        ----------
+        cell
+            The cell.
+
+        Returns
+        -------
+        isDG : bool
+            Flag for discontinuous coordinates.
+        coords : ArrayReal
+            The cell coordinates.
+
+        See Also
+        --------
+        DMPlex, DM.getCoordinateSection, DM.getCoordinates
+        petsc.DMPlexComputeCellGeometryFVM
+
+        """
+        cdef PetscInt dims[2]
+        CHKERR(DMGetCoordinateDim(self.dm, &dims[1]))
+        cdef PetscInt ccell = asInt(cell)
+        cdef PetscBool isDG = PETSC_FALSE
+        cdef PetscInt Nc = 0
+        cdef PetscScalar *array = NULL
+        cdef PetscScalar *coords = NULL
+        CHKERR(DMPlexGetCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
+        dims[0] /= dims[1]
+        try:
+            out = array_rd(2, dims, coords)
+        finally:
+            CHKERR(DMPlexRestoreCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
+        return (toBool(isDG), out)
+
     def computeCellGeometryFVM(self, cell: int) -> tuple[float, ArrayReal, ArrayReal]:
         """Compute the volume for a given cell.
 
