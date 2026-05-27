@@ -667,6 +667,51 @@ static PetscErrorCode EmaxModel(PetscRegressor regressor, Mat X, Vec p, Vec f, v
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Analytic Jacobian df/dp for EmaxModel(): f = C e^{-gamma t} |cos(omega t - phi)|.
+static PetscErrorCode EmaxJacobian(PetscRegressor regressor, Mat X, Vec p, Mat J, Mat Jpre, void *ctx)
+{
+  const PetscScalar *p_array, *x_array;
+  PetscReal          C, gamma, omega, phi;
+  PetscInt           m, rstart;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatDenseGetArrayRead(X, &x_array));
+  PetscCall(VecGetArrayRead(p, &p_array));
+  PetscCall(MatGetLocalSize(J, &m, NULL));
+  PetscCall(MatGetOwnershipRange(J, &rstart, NULL));
+  C     = PetscRealPart(p_array[0]);
+  gamma = PetscRealPart(p_array[1]);
+  omega = PetscRealPart(p_array[2]);
+  phi   = PetscRealPart(p_array[3]);
+  for (PetscInt i = 0; i < m; ++i) {
+    const PetscReal t       = PetscRealPart(x_array[i]);
+    const PetscReal u       = omega * t - phi;
+    const PetscReal cosu    = PetscCosReal(u);
+    const PetscReal sinu    = PetscSinReal(u);
+    const PetscReal acosu   = PetscAbsReal(cosu);
+    const PetscReal sgn     = cosu >= 0 ? 1.0 : -1.0;
+    const PetscReal e       = PetscExpReal(-gamma * t);
+    PetscInt        row     = rstart + i;
+    PetscInt        cols[4] = {0, 1, 2, 3};
+    PetscScalar     vals[4];
+
+    vals[0] = e * acosu;                  // df/dC
+    vals[1] = -C * t * e * acosu;         // df/dgamma
+    vals[2] = -C * t * e * sgn * sinu;    // df/domega
+    vals[3] = C * e * sgn * sinu;         // df/dphi
+    PetscCall(MatSetValues(J, 1, &row, 4, cols, vals, INSERT_VALUES));
+  }
+  PetscCall(MatDenseRestoreArrayRead(X, &x_array));
+  PetscCall(VecRestoreArrayRead(p, &p_array));
+  PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
+  if (Jpre != J) {
+    PetscCall(MatAssemblyBegin(Jpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jpre, MAT_FINAL_ASSEMBLY));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // Our model is log_10 E_max(t) = log_10 C - gamma t log_10 e + log_10 |cos(omega t - phi)|
 // p = [C, gamma, omega, phi]; the rows of X hold sample times t.
 static PetscErrorCode LogEmaxModel(PetscRegressor regressor, Mat X, Vec p, Vec f, void *ctx)
@@ -698,6 +743,58 @@ static PetscErrorCode LogEmaxModel(PetscRegressor regressor, Mat X, Vec p, Vec f
   PetscCall(MatDenseRestoreArrayRead(X, &x_array));
   PetscCall(VecRestoreArrayRead(p, &p_array));
   PetscCall(VecRestoreArrayWrite(f, &f_array));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Analytic Jacobian df/dp for LogEmaxModel().
+static PetscErrorCode LogEmaxJacobian(PetscRegressor regressor, Mat X, Vec p, Mat J, Mat Jpre, void *ctx)
+{
+  const PetscScalar *p_array, *x_array;
+  PetscReal          C, omega, phi;
+  const PetscReal    log10e = PetscLog10Real(PETSC_E);
+  PetscInt           m, rstart;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatDenseGetArrayRead(X, &x_array));
+  PetscCall(VecGetArrayRead(p, &p_array));
+  PetscCall(MatGetLocalSize(J, &m, NULL));
+  PetscCall(MatGetOwnershipRange(J, &rstart, NULL));
+  C     = PetscRealPart(p_array[0]);
+  omega = PetscRealPart(p_array[2]);
+  phi   = PetscRealPart(p_array[3]);
+  for (PetscInt i = 0; i < m; ++i) {
+    const PetscReal t       = PetscRealPart(x_array[i]);
+    const PetscReal u       = omega * t - phi;
+    const PetscReal cosu    = PetscCosReal(u);
+    const PetscReal sinu    = PetscSinReal(u);
+    const PetscReal acosu   = PetscAbsReal(cosu);
+    const PetscReal sgn     = cosu >= 0 ? 1.0 : -1.0;
+    PetscInt        row     = rstart + i;
+    PetscInt        cols[4] = {0, 1, 2, 3};
+    PetscScalar     vals[4];
+
+    // Match the sentinel branch in LogEmaxModel(): zero out the gradient when C <= 0.
+    if (C <= 0) {
+      vals[0] = 0.0;
+      vals[1] = 0.0;
+      vals[2] = 0.0;
+      vals[3] = 0.0;
+    } else {
+      vals[0] = log10e / C;                          // df/dC
+      vals[1] = -t * log10e;                         // df/dgamma
+      vals[2] = -log10e * t * sgn * sinu / acosu;    // df/domega
+      vals[3] = log10e * sgn * sinu / acosu;         // df/dphi
+    }
+    PetscCall(MatSetValues(J, 1, &row, 4, cols, vals, INSERT_VALUES));
+  }
+  PetscCall(MatDenseRestoreArrayRead(X, &x_array));
+  PetscCall(VecRestoreArrayRead(p, &p_array));
+  PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
+  if (Jpre != J) {
+    PetscCall(MatAssemblyBegin(Jpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jpre, MAT_FINAL_ASSEMBLY));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -774,8 +871,11 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     Vec            y, p0, p_fit;
     PetscScalar   *p0_array, *x_array, *y_array;
     const PetscScalar *a;
-    const PetscInt n      = ctx->emaxCtx.e - ctx->emaxCtx.s;
-    PetscBool      fitLog = PETSC_TRUE, debug = PETSC_FALSE;
+    const PetscInt n                = ctx->emaxCtx.e - ctx->emaxCtx.s;
+    PetscBool      fitLog           = PETSC_TRUE, debug = PETSC_FALSE;
+    PetscBool      useAnalyticJac   = PETSC_TRUE;
+
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_analytic_jacobian", &useAnalyticJac, NULL));
 
     // Build the n x 1 data matrix X (rows hold sample times) and the target y
     PetscCall(MatCreateDense(PETSC_COMM_SELF, n, 1, n, 1, NULL, &X));
@@ -805,8 +905,13 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     PetscCall(PetscRegressorCreate(PETSC_COMM_SELF, &regressor));
     PetscCall(PetscRegressorSetType(regressor, PETSCREGRESSORNLLS));
     PetscCall(PetscRegressorSetOptionsPrefix(regressor, "emax_"));
-    if (fitLog) PetscCall(PetscRegressorNLLSSetFunction(regressor, NULL, LogEmaxModel, &ctx->emaxCtx));
-    else PetscCall(PetscRegressorNLLSSetFunction(regressor, NULL, EmaxModel, &ctx->emaxCtx));
+    if (fitLog) {
+      PetscCall(PetscRegressorNLLSSetFunction(regressor, NULL, LogEmaxModel, &ctx->emaxCtx));
+      if (useAnalyticJac) PetscCall(PetscRegressorNLLSSetJacobian(regressor, NULL, NULL, LogEmaxJacobian, &ctx->emaxCtx));
+    } else {
+      PetscCall(PetscRegressorNLLSSetFunction(regressor, NULL, EmaxModel, &ctx->emaxCtx));
+      if (useAnalyticJac) PetscCall(PetscRegressorNLLSSetJacobian(regressor, NULL, NULL, EmaxJacobian, &ctx->emaxCtx));
+    }
     PetscCall(PetscRegressorNLLSSetInitialParameters(regressor, p0));
     PetscCall(PetscRegressorSetFromOptions(regressor));
     PetscCall(PetscRegressorFit(regressor, X, y));
