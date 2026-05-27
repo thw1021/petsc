@@ -37,6 +37,7 @@ typedef struct _p_PetscRegressor *PetscRegressor;
 J*/
 typedef const char *PetscRegressorType;
 #define PETSCREGRESSORLINEAR "linear"
+#define PETSCREGRESSORNLLS   "nlls"
 
 /*E
   PetscRegressorLinearType - Type of linear regression
@@ -92,6 +93,46 @@ PETSC_EXTERN PetscErrorCode PetscRegressorViewFromOptions(PetscRegressor, PetscO
 PETSC_EXTERN PetscErrorCode PetscRegressorFit(PetscRegressor, Mat, Vec);
 PETSC_EXTERN PetscErrorCode PetscRegressorPredict(PetscRegressor, Mat, Vec);
 PETSC_EXTERN PetscErrorCode PetscRegressorGetTao(PetscRegressor, Tao *);
+
+/*S
+  PetscRegressorNLLSFunctionFn - A prototype of a `PETSCREGRESSORNLLS` model evaluation function that would be passed to `PetscRegressorNLLSSetFunction()`
+
+  Calling Sequence:
++ regressor - the `PetscRegressor` context
+. X         - data matrix of independent variables (one row per sample)
+. p         - vector of model parameters
+. f         - output vector of model evaluations $f(X, p)$
+- ctx       - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: `PetscRegressor`, `PETSCREGRESSORNLLS`, `PetscRegressorNLLSSetFunction()`, `PetscRegressorNLLSJacobianFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscRegressorNLLSFunctionFn(PetscRegressor regressor, Mat X, Vec p, Vec f, void *ctx);
+
+/*S
+  PetscRegressorNLLSJacobianFn - A prototype of a `PETSCREGRESSORNLLS` Jacobian evaluation function that would be passed to `PetscRegressorNLLSSetJacobian()`
+
+  Calling Sequence:
++ regressor - the `PetscRegressor` context
+. X         - data matrix of independent variables (one row per sample)
+. p         - vector of model parameters
+. J         - Jacobian matrix $\partial f/\partial p$
+. Jpre      - matrix used to construct the preconditioner, often the same as `J`
+- ctx       - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: `PetscRegressor`, `PETSCREGRESSORNLLS`, `PetscRegressorNLLSSetJacobian()`, `PetscRegressorNLLSFunctionFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscRegressorNLLSJacobianFn(PetscRegressor regressor, Mat X, Vec p, Mat J, Mat Jpre, void *ctx);
+
+PETSC_EXTERN PetscErrorCode PetscRegressorNLLSSetFunction(PetscRegressor, Vec, PetscRegressorNLLSFunctionFn *, void *);
+PETSC_EXTERN PetscErrorCode PetscRegressorNLLSGetFunction(PetscRegressor, Vec *, PetscRegressorNLLSFunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode PetscRegressorNLLSSetJacobian(PetscRegressor, Mat, Mat, PetscRegressorNLLSJacobianFn *, void *);
+PETSC_EXTERN PetscErrorCode PetscRegressorNLLSGetJacobian(PetscRegressor, Mat *, Mat *, PetscRegressorNLLSJacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode PetscRegressorNLLSSetInitialParameters(PetscRegressor, Vec);
+PETSC_EXTERN PetscErrorCode PetscRegressorNLLSGetParameters(PetscRegressor, Vec *);
 
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor, PetscBool);
