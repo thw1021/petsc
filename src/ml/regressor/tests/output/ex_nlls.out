@@ -1,0 +1,29 @@
+Fitted parameters:
+Vec Object: 1 MPI process
+  type: seq
+2.5
+-0.3
+0.5
+Predicted values:
+Vec Object: 1 MPI process
+  type: seq
+3.
+2.84699
+2.70334
+2.56849
+2.44189
+2.32303
+2.21145
+2.1067
+2.00837
+1.91605
+1.82938
+1.74801
+1.67163
+1.59992
+1.5326
+1.4694
+1.41007
+1.35437
+1.30208
+1.25299
