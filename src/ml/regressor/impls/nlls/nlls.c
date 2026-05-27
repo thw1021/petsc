@@ -17,8 +17,67 @@ static PetscErrorCode NLLSEvaluateJacobian(Tao tao, Vec p, Mat J, Mat Jpre, void
   PetscRegressor_NLLS *nlls      = (PetscRegressor_NLLS *)regressor->data;
 
   PetscFunctionBegin;
-  if (nlls->jacfn) PetscCall((*nlls->jacfn)(regressor, nlls->current_X, p, J, Jpre, nlls->jacctx));
-  /* If no user Jacobian, rely on TAOBRGN's finite-difference Jacobian. */
+  if (nlls->jacfn) {
+    PetscCall((*nlls->jacfn)(regressor, nlls->current_X, p, J, Jpre, nlls->jacctx));
+  } else {
+    /* Forward-difference Jacobian: column j = (r(p + h e_j) - r(p)) / h. */
+    Vec              p_perturbed, r0, r1;
+    PetscInt         N, j, m, rstart;
+    const PetscReal  epsilon = PETSC_SQRT_MACHINE_EPSILON;
+    PetscReal        pnorm, h;
+    PetscBool        assembled;
+
+    PetscCall(PetscInfo(regressor, "PETSCREGRESSORNLLS: computing Jacobian by finite differences\n"));
+    PetscCall(MatAssembled(J, &assembled));
+    if (assembled) PetscCall(MatZeroEntries(J));
+    if (Jpre && Jpre != J) {
+      PetscCall(MatAssembled(Jpre, &assembled));
+      if (assembled) PetscCall(MatZeroEntries(Jpre));
+    }
+    PetscCall(VecDuplicate(p, &p_perturbed));
+    PetscCall(VecDuplicate(nlls->f_template, &r0));
+    PetscCall(VecDuplicate(nlls->f_template, &r1));
+    PetscCall(VecCopy(p, p_perturbed));
+    PetscCall(NLLSEvaluateResidual(tao, p, r0, regressor));
+    PetscCall(VecNorm(p, NORM_2, &pnorm));
+    PetscCall(VecGetSize(p, &N));
+    PetscCall(VecGetLocalSize(r0, &m));
+    PetscCall(MatGetOwnershipRange(J, &rstart, NULL));
+    for (j = 0; j < N; j++) {
+      const PetscScalar *r0a, *r1a;
+      PetscInt           i;
+      PetscScalar        dh;
+
+      h  = epsilon * PetscSqrtReal(1.0 + pnorm);
+      dh = (PetscScalar)h;
+      PetscCall(VecSetValue(p_perturbed, j, dh, ADD_VALUES));
+      PetscCall(VecAssemblyBegin(p_perturbed));
+      PetscCall(VecAssemblyEnd(p_perturbed));
+      PetscCall(NLLSEvaluateResidual(tao, p_perturbed, r1, regressor));
+      PetscCall(VecSetValue(p_perturbed, j, -dh, ADD_VALUES));
+      PetscCall(VecAssemblyBegin(p_perturbed));
+      PetscCall(VecAssemblyEnd(p_perturbed));
+      PetscCall(VecGetArrayRead(r0, &r0a));
+      PetscCall(VecGetArrayRead(r1, &r1a));
+      for (i = 0; i < m; i++) {
+        PetscInt    row = rstart + i;
+        PetscScalar v   = (r1a[i] - r0a[i]) / dh;
+
+        PetscCall(MatSetValues(J, 1, &row, 1, &j, &v, INSERT_VALUES));
+      }
+      PetscCall(VecRestoreArrayRead(r0, &r0a));
+      PetscCall(VecRestoreArrayRead(r1, &r1a));
+    }
+    PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
+    if (Jpre && Jpre != J) {
+      PetscCall(MatAssemblyBegin(Jpre, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(Jpre, MAT_FINAL_ASSEMBLY));
+    }
+    PetscCall(VecDestroy(&p_perturbed));
+    PetscCall(VecDestroy(&r0));
+    PetscCall(VecDestroy(&r1));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
