@@ -194,7 +194,7 @@ else ifneq ($(KOKKOS_USE_HIP_COMPILER),)
   KOKKOS_LINK = $(HIPC) $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 else ifneq ($(KOKKOS_USE_SYCL_COMPILER),)
   KOKKOS_COMPILE_SINGLE = ${PETSC_SYCLCOMPILE_SINGLE}
-  KOKKOS_LINK = $(SYCLC) $(SYCLC_FLAGS) $(SYCLC_LINKER_FLAGS) $(SYCLOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(SYCLPP_FLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
+  KOKKOS_LINK = $(SYCLC) $(SYCLC_LINKER_FLAGS) $(SYCLOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(SYCLPP_FLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 else
   KOKKOS_COMPILE_SINGLE = ${PETSC_CXXCOMPILE_SINGLE}
   KOKKOS_LINK = $(CXXLINKER) $(CXX_FLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
@@ -215,36 +215,20 @@ endif
 LDLIBS += $(PRELIBS) $(PETSC_LIB) $(LIBS)
 
 % : %.c
-	$(LINK.c) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.F90
-	$(LINK.F) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.kokkos.cxx
-	$(LINK.kokkos.cxx) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.cxx
-	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.hip.cxx
-	$(LINK.hip.cxx) $^ $(LOADLIBES) $(LDLIBS) -o $@
-
-# Shall we compile *.c to *.o and then link *.o to executables in two separate steps?
-SEPARATE_COMPILE_LINK =
-
-# See MR !2750
-ifneq (,$(findstring -TP,$(PCC_FLAGS)))
-  SEPARATE_COMPILE_LINK = 1
-endif
-
-# To avoid warnings when compiling *.c with sycl compilers
-#   icx -fsycl -o ex1 ex1.c ..
-#   icx: warning: treating 'c' input as 'c++' when -fsycl is used [-Wexpected-file-type]
-ifneq (,$(findstring -fsycl,$(PCC_LINKER_FLAGS)))
-  SEPARATE_COMPILE_LINK = 1
-endif
-
-ifdef SEPARATE_COMPILE_LINK
-% : %.c
 	$(subst $@, $@.o, ${PETSC_COMPILE_SINGLE}) $<
-	${CLINKER} -o $@ $@.o $(filter-out $@.o $<,$^) $(LOADLIBES) $(LDLIBS)
-endif
+	${LINK.c} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
+% : %.F90
+	$(subst $@, $@.o, ${PETSC_FCOMPILE_SINGLE}) $<
+	${LINK.F} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
+% : %.kokkos.cxx
+	$(subst $@, $@.o, $(PETSC_KOKKOSCOMPILE_SINGLE)) $<
+	${LINK.kokkos.cxx} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
+% : %.cxx
+	$(subst $@, $@.o, ${PETSC_CXXCOMPILE_SINGLE}) $<
+	${LINK.cc} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
+% : %.hip.cxx
+	$(subst $@, $@.o, ${PETSC_HIPCOMPILE_SINGLE}) $<
+	${LINK.hip.cxx} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
 
 # We don't have % : %.cu target as we can't use nvcc as linker - due to difference in linker options [wrt CLINKER etc.]. For example, nvcc does not accept -Wl,-rpath
 # % : %.cu
