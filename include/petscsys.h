@@ -408,7 +408,7 @@ M*/
    Note:
    By default `PETSC_MPI_THREAD_REQUIRED` equals `MPI_THREAD_FUNNELED` when the MPI implementation provides `MPI_Init_thread()`, otherwise it equals `MPI_THREAD_SINGLE`
 
-.seealso: `PetscInitialize()` `PetscSetMPIThreadRequiredType()`
+.seealso: `PetscInitialize()`, `PetscSetMPIThreadRequiredType()`
 M*/
 PETSC_EXTERN PetscMPIInt PETSC_MPI_THREAD_REQUIRED;
 
