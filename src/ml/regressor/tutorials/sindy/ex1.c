@@ -3,9 +3,11 @@ static char help[] = "Discovers Lorenz dynamics from simulated data using PETSc 
                      "  1. Simulate the Lorenz system with TS to gather state snapshots U.\n"
                      "  2. Build a polynomial library Theta(U) of candidate terms and estimate U' by finite differences.\n"
                      "  3. For each state component, solve the sparse regression Theta * xi_j = U'_{:,j} with PetscRegressor (LASSO).\n"
-                     "  4. Optionally, integrate the discovered system with another TS and print the predicted final state.\n\n";
+                     "  4. Optionally, integrate the discovered system with another TS and print the predicted final state.\n"
+                     "  5. Optionally, overlay the truth and discovered trajectories with PetscDraw (-sindy_monitor_draw).\n\n";
 
 #include <petscts.h>
+#include <petscdraw.h>
 #include <petscregressor.h>
 
 #define SINDY_NSTATE   3  /* number of state variables (x, y, z) */
@@ -53,16 +55,18 @@ static PetscErrorCode LorenzRHS(TS ts, PetscReal t, Vec X, Vec F, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Stash the solution at each accepted step into row `step` of ctx->U. */
+/* Stash the solution at each accepted step into row `step` of the target snapshot matrix.
+   The monitor context is the destination Mat itself, so the same monitor can drive either
+   the truth-phase snapshot matrix or the predict-phase one. */
 static PetscErrorCode SnapshotMonitor(TS ts, PetscInt step, PetscReal t, Vec X, void *ctx)
 {
-  AppCtx            *user = (AppCtx *)ctx;
+  Mat                U                   = (Mat)ctx;
   const PetscScalar *x;
   PetscInt           cols[SINDY_NSTATE] = {0, 1, 2};
 
   PetscFunctionBeginUser;
   PetscCall(VecGetArrayRead(X, &x));
-  PetscCall(MatSetValues(user->U, 1, &step, SINDY_NSTATE, cols, x, INSERT_VALUES));
+  PetscCall(MatSetValues(U, 1, &step, SINDY_NSTATE, cols, x, INSERT_VALUES));
   PetscCall(VecRestoreArrayRead(X, &x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -186,12 +190,93 @@ static PetscErrorCode ViewDiscoveredEquations(Mat Xi, PetscReal display_thresh, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Plot truth (blue) vs. SINDy (red) trajectories. Three time-series panels (x(t), y(t), z(t))
+   plus an x-z phase portrait laid out 2x2 in a single PetscDraw window. The comparison is drawn
+   over the overlap interval [0, min(nrows_truth, nrows_pred) - 1] * dt; the predict run may be
+   shorter than truth. Honors -draw_type, -draw_save, -draw_pause via PetscDrawSetFromOptions. */
+static PetscErrorCode DrawTrajectoryComparison(Mat U_truth, Mat U_pred, PetscReal dt)
+{
+  static const int         colors[2]                  = {PETSC_DRAW_BLUE, PETSC_DRAW_RED};
+  static const char *const legend[2]                  = {"truth", "SINDy"};
+  static const char *const panel_titles[SINDY_NSTATE] = {"x(t)", "y(t)", "z(t)"};
+  static const char *const panel_ylabels[SINDY_NSTATE] = {"x", "y", "z"};
+  PetscDraw                draw;
+  PetscDrawAxis            axis;
+  PetscDrawLG              lg;
+  PetscDrawViewPorts      *ports;
+  const PetscScalar       *u_t, *u_p;
+  PetscInt                 m_t, m_p, n_overlap;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetSize(U_truth, &m_t, NULL));
+  PetscCall(MatGetSize(U_pred, &m_p, NULL));
+  n_overlap = PetscMin(m_t, m_p);
+
+  /* Title is set after SetFromOptions: the image driver uses draw->title as the default save
+     filename if -draw_save was not supplied, and would choke on the '.' in "vs.". */
+  PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 800, 600, &draw));
+  PetscCall(PetscDrawSetFromOptions(draw));
+  PetscCall(PetscDrawSetTitle(draw, "Lorenz: truth vs. SINDy"));
+  PetscCall(PetscDrawViewPortsCreateRect(draw, 2, 2, &ports));
+
+  PetscCall(MatDenseGetArrayRead(U_truth, &u_t));
+  PetscCall(MatDenseGetArrayRead(U_pred, &u_p));
+
+  /* Viewports 0,1,2: time-series x(t), y(t), z(t) with both curves overlaid. */
+  for (PetscInt j = 0; j < SINDY_NSTATE; j++) {
+    PetscCall(PetscDrawViewPortsSet(ports, j));
+    PetscCall(PetscDrawLGCreate(draw, 2, &lg));
+    PetscCall(PetscDrawLGSetColors(lg, colors));
+    PetscCall(PetscDrawLGSetLegend(lg, legend));
+    PetscCall(PetscDrawLGGetAxis(lg, &axis));
+    PetscCall(PetscDrawAxisSetLabels(axis, panel_titles[j], "t", panel_ylabels[j]));
+    for (PetscInt i = 0; i < n_overlap; i++) {
+      PetscReal y[2];
+
+      y[0] = PetscRealPart(u_t[j * m_t + i]);
+      y[1] = PetscRealPart(u_p[j * m_p + i]);
+      PetscCall(PetscDrawLGAddCommonPoint(lg, (PetscReal)i * dt, y));
+    }
+    PetscCall(PetscDrawLGDraw(lg));
+    PetscCall(PetscDrawLGDestroy(&lg));
+  }
+
+  /* Viewport 3: x-z phase portrait, parametrized in time. Each curve has its own (x, z) sequence. */
+  PetscCall(PetscDrawViewPortsSet(ports, 3));
+  PetscCall(PetscDrawLGCreate(draw, 2, &lg));
+  PetscCall(PetscDrawLGSetColors(lg, colors));
+  PetscCall(PetscDrawLGSetLegend(lg, legend));
+  PetscCall(PetscDrawLGGetAxis(lg, &axis));
+  PetscCall(PetscDrawAxisSetLabels(axis, "phase portrait (x vs z)", "x", "z"));
+  for (PetscInt i = 0; i < n_overlap; i++) {
+    PetscReal xx[2], zz[2];
+
+    xx[0] = PetscRealPart(u_t[0 * m_t + i]);
+    xx[1] = PetscRealPart(u_p[0 * m_p + i]);
+    zz[0] = PetscRealPart(u_t[2 * m_t + i]);
+    zz[1] = PetscRealPart(u_p[2 * m_p + i]);
+    PetscCall(PetscDrawLGAddPoint(lg, xx, zz));
+  }
+  PetscCall(PetscDrawLGDraw(lg));
+  PetscCall(PetscDrawLGDestroy(&lg));
+
+  PetscCall(MatDenseRestoreArrayRead(U_pred, &u_p));
+  PetscCall(MatDenseRestoreArrayRead(U_truth, &u_t));
+
+  PetscCall(PetscDrawSave(draw));
+  PetscCall(PetscDrawPause(draw));
+  PetscCall(PetscDrawViewPortsDestroy(ports));
+  PetscCall(PetscDrawDestroy(&draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   AppCtx         ctx;
   TS             ts;
   Vec            X;
   Mat            Theta, Uprime, Xi;
+  Mat            U_pred = NULL;
   PetscRegressor regressor;
   PetscReal      sindy_dt       = 0.01;
   PetscReal      sindy_tmax     = 10.0;
@@ -202,6 +287,7 @@ int main(int argc, char **argv)
   PetscBool      skip_predict  = PETSC_FALSE;
   PetscBool      view_xi_raw   = PETSC_FALSE;
   PetscBool      fit_intercept = PETSC_FALSE;
+  PetscBool      monitor_draw  = PETSC_FALSE;
   PetscInt       nsteps, actual_steps;
   PetscScalar   *x_ptr;
   PetscMPIInt    size;
@@ -233,6 +319,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-sindy_display_threshold", "Pretty-print cutoff for discovered coefficients", "ex1.c", display_thresh, &display_thresh, NULL));
   PetscCall(PetscOptionsBool("-sindy_view_xi_raw", "Debug: full MatView of Xi", "ex1.c", view_xi_raw, &view_xi_raw, NULL));
   PetscCall(PetscOptionsBool("-sindy_fit_intercept", "Fit a separate intercept (Theta already contains a constant column; default off)", "ex1.c", fit_intercept, &fit_intercept, NULL));
+  PetscCall(PetscOptionsBool("-sindy_monitor_draw", "Plot truth vs. discovered trajectories with PetscDraw", "ex1.c", monitor_draw, &monitor_draw, NULL));
   PetscOptionsEnd();
 
   nsteps = (PetscInt)PetscFloorReal(sindy_tmax / sindy_dt + 0.5);
@@ -256,7 +343,7 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxTime(ts, sindy_tmax));
   PetscCall(TSSetMaxSteps(ts, nsteps));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
-  PetscCall(TSMonitorSet(ts, SnapshotMonitor, &ctx, NULL));
+  PetscCall(TSMonitorSet(ts, SnapshotMonitor, ctx.U, NULL));
   PetscCall(TSSetSolution(ts, X));
   PetscCall(TSSetFromOptions(ts));
 
@@ -313,6 +400,7 @@ int main(int argc, char **argv)
     Vec       X_pred;
     PetscReal tf;
     PetscInt  steps_pred;
+    PetscInt  pred_nsteps = (PetscInt)PetscFloorReal(predict_tmax / sindy_dt + 0.5);
 
     ctx.Xi = Xi;
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, SINDY_NFEATURE, &ctx.theta_row));
@@ -323,14 +411,17 @@ int main(int argc, char **argv)
     x_ptr[2] = ic_z;
     PetscCall(VecRestoreArray(X_pred, &x_ptr));
 
+    if (monitor_draw) PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, pred_nsteps + 1, SINDY_NSTATE, NULL, &U_pred));
+
     PetscCall(TSCreate(PETSC_COMM_WORLD, &ts_pred));
     PetscCall(TSSetType(ts_pred, TSRK));
     PetscCall(TSRKSetType(ts_pred, TSRK4));
     PetscCall(TSSetRHSFunction(ts_pred, NULL, SindyRHS, &ctx));
     PetscCall(TSSetTimeStep(ts_pred, sindy_dt));
     PetscCall(TSSetMaxTime(ts_pred, predict_tmax));
-    PetscCall(TSSetMaxSteps(ts_pred, (PetscInt)PetscFloorReal(predict_tmax / sindy_dt + 0.5)));
+    PetscCall(TSSetMaxSteps(ts_pred, pred_nsteps));
     PetscCall(TSSetExactFinalTime(ts_pred, TS_EXACTFINALTIME_MATCHSTEP));
+    if (U_pred) PetscCall(TSMonitorSet(ts_pred, SnapshotMonitor, U_pred, NULL));
     PetscCall(TSSetSolution(ts_pred, X_pred));
     /* No TSSetFromOptions: the predict TS deliberately ignores top-level -ts_* options so the
        integrator settings come from this tutorial alone. Use -sindy_skip_predict to disable. */
@@ -339,16 +430,23 @@ int main(int argc, char **argv)
     PetscCall(TSGetSolveTime(ts_pred, &tf));
     PetscCall(TSGetStepNumber(ts_pred, &steps_pred));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Predict phase: %" PetscInt_FMT " steps to t = %.3f\n", steps_pred, (double)tf));
+    if (U_pred) {
+      PetscCall(MatAssemblyBegin(U_pred, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(U_pred, MAT_FINAL_ASSEMBLY));
+    }
     PetscCall(VecDestroy(&X_pred));
     PetscCall(VecDestroy(&ctx.theta_row));
     PetscCall(TSDestroy(&ts_pred));
   }
+
+  if (monitor_draw && U_pred) PetscCall(DrawTrajectoryComparison(ctx.U, U_pred, sindy_dt));
 
   PetscCall(PetscRegressorDestroy(&regressor));
   PetscCall(MatDestroy(&Xi));
   PetscCall(MatDestroy(&Uprime));
   PetscCall(MatDestroy(&Theta));
   PetscCall(MatDestroy(&ctx.U));
+  PetscCall(MatDestroy(&U_pred));
   PetscCall(VecDestroy(&X));
   PetscCall(PetscFinalize());
   return 0;
@@ -363,5 +461,11 @@ int main(int argc, char **argv)
      suffix: lasso
      nsize: 1
      args: -ts_type rk -ts_rk_type 4 -sindy_dt 0.01 -sindy_tmax 10.0 -sindy_lambda 20.0 -sindy_display_threshold 0.05 -sindy_predict_tmax 5.0
+
+   test:
+     suffix: lasso_draw
+     nsize: 1
+     args: -ts_type rk -ts_rk_type 4 -sindy_dt 0.01 -sindy_tmax 10.0 -sindy_lambda 20.0 -sindy_display_threshold 0.05 -sindy_predict_tmax 5.0 -sindy_monitor_draw -draw_type null
+     output_file: output/ex1_lasso.out
 
 TEST*/
