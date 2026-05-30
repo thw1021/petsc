@@ -1,0 +1,5 @@
+Discovered system (terms with |coef| > 0.05):
+  dx/dt = -9.967 x + 9.983 y
+  dy/dt = 27.688 x - 0.886 y - 0.991 xz
+  dz/dt = -2.620 z + 0.972 xy
+Predict phase: 500 steps to t = 5.000
