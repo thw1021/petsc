@@ -23,7 +23,7 @@ typedef struct {
   PetscScalar *d_values;
 
   /* User-supplied permutation (host array of 32-bit ints, owned by us) */
-  int      *h_user_perm;
+  PetscInt *h_user_perm;
   PetscBool userPermSet;
 
   PetscInt  n; /* matrix dimension */
@@ -297,7 +297,7 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
   /* If the user supplied a permutation, pass it to cuDSS before analysis.
      cudssDataSet() takes (handle, data, CUDSS_DATA_USER_PERM, host_int_ptr, sizeInBytes). */
   if (lu->userPermSet == PETSC_TRUE) {
-    PetscCallCUDSS(cudssDataSet(lu->handle, lu->data, CUDSS_DATA_USER_PERM, lu->h_user_perm, (size_t)n * sizeof(int)));
+    PetscCallCUDSS(cudssDataSet(lu->handle, lu->data, CUDSS_DATA_USER_PERM, lu->h_user_perm, (size_t)n * sizeof(PetscInt)));
     PetscCall(PetscInfo(F, "cuDSS: using user-supplied permutation of size %" PetscInt_FMT "\n", n));
   }
   /* Analysis phase: reordering and symbolic factorization */
@@ -442,7 +442,6 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
 
   The permutation is copied to a host buffer of 32-bit ints and passed to cudssDataSet()
   with CUDSS_DATA_USER_PERM before CUDSS_PHASE_ANALYSIS.
-  If PetscInt is 64-bit, each index is range-checked and narrowed to int.
 */
 static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
 {
@@ -453,13 +452,10 @@ static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
   PetscFunctionBegin;
   PetscCall(ISGetLocalSize(perm, &n));
   PetscCall(ISGetIndices(perm, &idx));
-  /* (Re-)allocate host buffer of 32-bit ints (cudssDataSet takes a host pointer) */
+  /* (Re-)allocate host buffer (cudssDataSet takes a host pointer) */
   PetscCall(PetscFree(lu->h_user_perm));
   PetscCall(PetscMalloc1(n, &lu->h_user_perm));
-  for (i = 0; i < n; i++) {
-    PetscCheck(idx[i] >= 0 && idx[i] < n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Permutation index %" PetscInt_FMT " at position %" PetscInt_FMT " is out of range [0, %" PetscInt_FMT ")", idx[i], i, n);
-    lu->h_user_perm[i] = (int)idx[i];
-  }
+  for (i = 0; i < n; i++) lu->h_user_perm[i] = (int)idx[i];
   PetscCall(ISRestoreIndices(perm, &idx));
   lu->userPermSet = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
