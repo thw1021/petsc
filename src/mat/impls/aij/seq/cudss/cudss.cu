@@ -455,7 +455,7 @@ static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
   /* (Re-)allocate host buffer (cudssDataSet takes a host pointer) */
   PetscCall(PetscFree(lu->h_user_perm));
   PetscCall(PetscMalloc1(n, &lu->h_user_perm));
-  for (i = 0; i < n; i++) lu->h_user_perm[i] = (int)idx[i];
+  for (i = 0; i < n; i++) lu->h_user_perm[i] = idx[i];
   PetscCall(ISRestoreIndices(perm, &idx));
   lu->userPermSet = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
