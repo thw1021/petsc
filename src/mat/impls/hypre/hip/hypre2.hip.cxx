@@ -15,3 +15,30 @@ PetscErrorCode MatZeroRows_HIP(PetscInt n, const PetscInt rows[], const HYPRE_In
   PetscCallHIP(hipGetLastError());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PetscErrorCode PetscHypreIntCastArray_HIP(size_t n, const PetscInt *a, HYPRE_Int *b)
+{
+  hipStream_t stream;
+
+  PetscFunctionBegin;
+  if (n) {
+    PetscCall(PetscGetCurrentHIPStream(&stream));
+    hipLaunchKernelGGL(CastArray, dim3((n + 255) / 256), dim3(256), 0, stream, n, a, b);
+    PetscCallCUDA(hipGetLastError());
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscMalloc_HIP(size_t size, void **ptr)
+{
+  PetscFunctionBegin;
+  PetscCallCUDA(hipMalloc(ptr, size));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscFree_HIP(void *a)
+{
+  PetscFunctionBegin;
+  PetscCallCUDA(hipFree(a));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

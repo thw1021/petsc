@@ -794,6 +794,51 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscHypreIntCastArray_Device(size_t n, const PetscInt *a, HYPRE_Int *b)
+{
+  PetscFunctionBegin;
+#if defined(HYPRE_USING_CUDA)
+  PetscCall(PetscHypreIntCastArray_CUDA(n, a, b));
+#elif defined(HYPRE_USING_HIP)
+  PetscCall(PetscHypreIntCastArray_HIP(n, a, b));
+#elif defined(PETSC_HAVE_KOKKOS)
+  PetscCall(PetscHypreIntCastArray_Kokkos(n, a, b));
+#else
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for PetscHypreIntCastArray_Device on a hypre matrix");
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscMalloc_Device(size_t size, void **ptr)
+{
+  PetscFunctionBegin;
+#if defined(HYPRE_USING_CUDA)
+  PetscCall(PetscMalloc_CUDA(size, ptr));
+#elif defined(HYPRE_USING_HIP)
+  PetscCall(PetscMalloc_HIP(size, ptr));
+#elif defined(PETSC_HAVE_KOKKOS)
+  PetscCall(PetscMalloc_Kokkos(size, ptr));
+#else
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for PetscMalloc_Device on a hypre matrix");
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscFree_Device(void *ptr)
+{
+  PetscFunctionBegin;
+#if defined(HYPRE_USING_CUDA)
+  PetscCall(PetscFree_CUDA(ptr));
+#elif defined(HYPRE_USING_HIP)
+  PetscCall(PetscFree_HIP(ptr));
+#elif defined(PETSC_HAVE_KOKKOS)
+  PetscCall(PetscFree_Kokkos(ptr));
+#else
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for PetscFree_Device on a hypre matrix");
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
 {
   hypre_ParCSRMatrix *tA;
@@ -806,6 +851,7 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
   HYPRE_Int          *hdi = NULL, *hdj = NULL, *hoi = NULL, *hoj = NULL;
   PetscInt           *pdi = NULL, *pdj = NULL, *poi = NULL, *poj = NULL;
   PetscBool           iscuda, iship;
+  PetscInt            dN, oN;
 #if defined(PETSC_HAVE_DEVICE) && defined(PETSC_HAVE_HYPRE_DEVICE)
   PetscBool boundtocpu = A->boundtocpu;
 #else
@@ -824,67 +870,36 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
 
     diag = (Mat_SeqAIJ *)a->A->data;
     offd = (Mat_SeqAIJ *)a->B->data;
-    if (!boundtocpu && (iscuda || iship)) {
-#if defined(HYPRE_USING_CUDA) && defined(PETSC_HAVE_CUDA)
-      if (iscuda) {
-        sameint = PETSC_TRUE;
-        PetscCall(MatSeqAIJCUSPARSEGetIJ(a->A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
-        PetscCall(MatSeqAIJCUSPARSEGetIJ(a->B, PETSC_FALSE, (const HYPRE_Int **)&hoi, (const HYPRE_Int **)&hoj));
-      }
-#endif
-#if defined(HYPRE_USING_HIP) && defined(PETSC_HAVE_HIP)
-      if (iship) {
-        sameint = PETSC_TRUE;
-        PetscCall(MatSeqAIJHIPSPARSEGetIJ(a->A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
-        PetscCall(MatSeqAIJHIPSPARSEGetIJ(a->B, PETSC_FALSE, (const HYPRE_Int **)&hoi, (const HYPRE_Int **)&hoj));
-      }
-#endif
+    if (!boundtocpu) {
+      PetscCall(MatSeqAIJGetCSRAndMemType(a->A, (const PetscInt **)&pdi, (const PetscInt **)&pdj, NULL, NULL));
+      PetscCall(MatSeqAIJGetCSRAndMemType(a->B, (const PetscInt **)&poi, (const PetscInt **)&poj, NULL, NULL));
     } else {
-      boundtocpu = PETSC_TRUE;
-      pdi        = diag->i;
-      pdj        = diag->j;
-      poi        = offd->i;
-      poj        = offd->j;
-      if (sameint) {
-        hdi = (HYPRE_Int *)pdi;
-        hdj = (HYPRE_Int *)pdj;
-        hoi = (HYPRE_Int *)poi;
-        hoj = (HYPRE_Int *)poj;
-      }
+      pdi = diag->i;
+      pdj = diag->j;
+      poi = offd->i;
+      poj = offd->j;
     }
     garray = a->garray;
     noffd  = a->B->cmap->N;
     dnnz   = diag->nz;
     onnz   = offd->nz;
+    dN     = a->A->cmap->N;
+    oN     = a->B->cmap->N;
   } else {
     diag = (Mat_SeqAIJ *)A->data;
     offd = NULL;
-    if (!boundtocpu && (iscuda || iship)) {
-#if defined(HYPRE_USING_CUDA) && defined(PETSC_HAVE_CUDA)
-      if (iscuda) {
-        sameint = PETSC_TRUE;
-        PetscCall(MatSeqAIJCUSPARSEGetIJ(A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
-      }
-#endif
-#if defined(HYPRE_USING_HIP) && defined(PETSC_HAVE_HIP)
-      if (iship) {
-        sameint = PETSC_TRUE;
-        PetscCall(MatSeqAIJHIPSPARSEGetIJ(A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
-      }
-#endif
+    if (!boundtocpu) {
+      PetscCall(MatSeqAIJGetCSRAndMemType(A, (const PetscInt **)&pdi, (const PetscInt **)&pdj, NULL, NULL));
     } else {
-      boundtocpu = PETSC_TRUE;
-      pdi        = diag->i;
-      pdj        = diag->j;
-      if (sameint) {
-        hdi = (HYPRE_Int *)pdi;
-        hdj = (HYPRE_Int *)pdj;
-      }
+      pdi = diag->i;
+      pdj = diag->j;
     }
     garray = NULL;
     noffd  = 0;
     dnnz   = diag->nz;
     onnz   = 0;
+    dN     = A->cmap->N;
+    oN     = 0;
   }
 
   /* create a temporary ParCSR */
@@ -906,7 +921,17 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
 
   /* set diagonal part */
   hdiag = hypre_ParCSRMatrixDiag(tA);
-  if (!sameint) { /* malloc CSR pointers */
+  if (sameint) {
+    hdi = (HYPRE_Int *)pdi;
+    hdj = (HYPRE_Int *)pdj;
+  } else if (!boundtocpu) { // Array-cast PetscInt to HYPRE_Int
+    PetscCall(PetscMalloc_Device(sizeof(HYPRE_Int) * (A->rmap->n + 1), (void **)&hdi));
+    PetscCall(PetscMalloc_Device(sizeof(HYPRE_Int) * dnnz, (void **)&hdj));
+    PetscCall(PetscHypreIntCastArray_Device(A->rmap->n + 1, pdi, hdi));
+    PetscCall(PetscHypreIntCastArray_Device(dnnz, pdj, hdj));
+  } else { // boundtocpu or just matrices on host
+    // Only check the bigest numbers; Using PetscHypreIntCast would be too expensive in the loops
+    PetscCheck(dnnz <= (PetscInt)HYPRE_INT_MAX && dN <= (PetscInt)HYPRE_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " or %" PetscInt_FMT " is too big for HYPRE_Int, you may need to configure hypre with --enable-bigint", dnnz, dN);
     PetscCall(PetscMalloc2(A->rmap->n + 1, &hdi, dnnz, &hdj));
     for (i = 0; i < A->rmap->n + 1; i++) hdi[i] = (HYPRE_Int)pdi[i];
     for (i = 0; i < dnnz; i++) hdj[i] = (HYPRE_Int)pdj[i];
@@ -920,7 +945,17 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
   /* set off-diagonal part */
   hoffd = hypre_ParCSRMatrixOffd(tA);
   if (offd) {
-    if (!sameint) { /* malloc CSR pointers */
+    if (sameint) {
+      hoi = (HYPRE_Int *)poi;
+      hoj = (HYPRE_Int *)poj;
+    } else if (!boundtocpu) {
+      PetscCall(PetscMalloc_Device(sizeof(HYPRE_Int) * (A->rmap->n + 1), (void **)&hoi));
+      PetscCall(PetscMalloc_Device(sizeof(HYPRE_Int) * onnz, (void **)&hoj));
+      PetscCall(PetscHypreIntCastArray_Device(A->rmap->n + 1, poi, hoi));
+      PetscCall(PetscHypreIntCastArray_Device(onnz, poj, hoj));
+    } else { // boundtocpu or just matrices on host
+      // Only check the bigest numbers; Using PetscHypreIntCast would be too expensive in the loops
+      PetscCheck(onnz <= (PetscInt)HYPRE_INT_MAX && oN <= (PetscInt)HYPRE_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " or %" PetscInt_FMT " is too big for HYPRE_Int, you may need to configure hypre with --enable-bigint", onnz, oN);
       PetscCall(PetscMalloc2(A->rmap->n + 1, &hoi, onnz, &hoj));
       for (i = 0; i < A->rmap->n + 1; i++) hoi[i] = (HYPRE_Int)poi[i];
       for (i = 0; i < onnz; i++) hoj[i] = (HYPRE_Int)poj[i];
@@ -958,16 +993,16 @@ static PetscErrorCode MatAIJRestoreParCSR_Private(Mat A, hypre_ParCSRMatrix **hA
   hypre_CSRMatrix *hdiag, *hoffd;
   PetscBool        ismpiaij, sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
   PetscBool        iscuda, iship;
+#if defined(PETSC_HAVE_DEVICE) && defined(PETSC_HAVE_HYPRE_DEVICE)
+  PetscBool boundtocpu = A->boundtocpu;
+#else
+  PetscBool boundtocpu = PETSC_TRUE;
+#endif
 
   PetscFunctionBegin;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &iscuda, MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE, ""));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &iship, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
-#if defined(HYPRE_USING_CUDA) && defined(PETSC_HAVE_CUDA)
-  if (iscuda) sameint = PETSC_TRUE;
-#elif defined(HYPRE_USING_HIP) && defined(PETSC_HAVE_HIP)
-  if (iship) sameint = PETSC_TRUE;
-#endif
   hdiag = hypre_ParCSRMatrixDiag(*hA);
   hoffd = hypre_ParCSRMatrixOffd(*hA);
   /* free temporary memory allocated by PETSc
@@ -977,11 +1012,20 @@ static PetscErrorCode MatAIJRestoreParCSR_Private(Mat A, hypre_ParCSRMatrix **hA
 
     hi = hypre_CSRMatrixI(hdiag);
     hj = hypre_CSRMatrixJ(hdiag);
-    PetscCall(PetscFree2(hi, hj));
+
+    if (!boundtocpu) {
+      PetscCall(PetscFree_Device(hi));
+      PetscCall(PetscFree_Device(hj));
+    } else PetscCall(PetscFree2(hi, hj));
+
     if (ismpiaij) {
       hi = hypre_CSRMatrixI(hoffd);
       hj = hypre_CSRMatrixJ(hoffd);
-      PetscCall(PetscFree2(hi, hj));
+
+      if (!boundtocpu) {
+        PetscCall(PetscFree_Device(hi));
+        PetscCall(PetscFree_Device(hj));
+      } else PetscCall(PetscFree2(hi, hj));
     }
   }
   hypre_CSRMatrixI(hdiag)    = NULL;
