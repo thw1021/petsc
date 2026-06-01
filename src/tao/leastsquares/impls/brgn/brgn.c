@@ -2,6 +2,28 @@
 
 const char *const TaoBRGNRegularizationTypes[] = {"user", "l2prox", "l2pure", "l1dict", "lm", "TaoBRGNRegularizationType", "TAOBRGN_REGULARIZATION_", NULL};
 
+/* Re-derive the subsolver's options prefix from the parent BRGN tao's current prefix.
+   `TaoCreate_BRGN()` sets the subsolver's prefix once, based on the parent's prefix at that moment.
+   If the caller later changes the parent's prefix (via `TaoSetOptionsPrefix()`/`TaoAppendOptionsPrefix()`),
+   that change is not propagated to the subsolver, so its options end up under the wrong prefix.
+   This is a no-op when the subsolver's prefix already matches, which keeps it from clobbering
+   nested prefixes (such as the subsolver's KSP `tao_bnk_` suffix) on repeated invocations. */
+static PetscErrorCode TaoBRGNSyncSubsolverPrefix(Tao tao)
+{
+  TAO_BRGN   *gn = (TAO_BRGN *)tao->data;
+  const char *parent_prefix, *sub_prefix;
+  char        expected[PETSC_MAX_OPTION_NAME];
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &parent_prefix));
+  PetscCall(PetscSNPrintf(expected, sizeof(expected), "%stao_brgn_subsolver_", parent_prefix ? parent_prefix : ""));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)gn->subsolver, &sub_prefix));
+  if (sub_prefix && !strcmp(sub_prefix, expected)) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TaoSetOptionsPrefix(gn->subsolver, parent_prefix));
+  PetscCall(TaoAppendOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode GNHessianProd(Mat H, Vec in, Vec out)
 {
   TAO_BRGN *gn;
@@ -371,6 +393,7 @@ static PetscErrorCode TaoSetFromOptions_BRGN(Tao tao, PetscOptionItems PetscOpti
     PetscCall(TaoGetLineSearch(gn->subsolver, &ls));
     PetscCall(TaoLineSearchSetType(ls, TAOLINESEARCHUNIT));
   }
+  PetscCall(TaoBRGNSyncSubsolverPrefix(tao));
   PetscCall(TaoSetFromOptions(gn->subsolver));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -416,6 +439,7 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
 
   PetscFunctionBegin;
   PetscCheck(tao->ls_res, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoSetResidualRoutine() must be called before setup!");
+  PetscCall(TaoBRGNSyncSubsolverPrefix(tao));
   PetscCall(PetscObjectTypeCompare((PetscObject)gn->subsolver, TAOBNLS, &is_bnls));
   PetscCall(PetscObjectTypeCompare((PetscObject)gn->subsolver, TAOBNTR, &is_bntr));
   PetscCall(PetscObjectTypeCompare((PetscObject)gn->subsolver, TAOBNTL, &is_bntl));
