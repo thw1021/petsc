@@ -25,7 +25,7 @@ class CompilerOptions(config.base.Configure):
     # GNU gcc
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':
-        flags.extend(['-Wall', '-Wwrite-strings', '-Wno-unknown-pragmas'])
+        flags.extend(['-Wall', '-Wwrite-strings', '-Wno-unknown-pragmas', '-Wno-unused-command-line-argument'])
         if config.setCompilers.Configure.isClang(compiler, self.log):
           # gcc does not support -Wno-implicit-float-conversion so -Wconversion is always noisy
           flags.extend(['-Wconversion', '-Wno-sign-conversion', '-Wno-float-conversion', '-Wno-implicit-float-conversion', '-Qunused-arguments'])
@@ -140,7 +140,7 @@ class CompilerOptions(config.base.Configure):
     # GNU g++
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':
-        flags.extend(['-Wall', '-Wwrite-strings', '-Wno-strict-aliasing', '-Wno-unknown-pragmas'])
+        flags.extend(['-Wall', '-Wwrite-strings', '-Wno-strict-aliasing', '-Wno-unknown-pragmas', '-Wno-unused-command-line-argument'])
         if config.setCompilers.Configure.isGNU(compiler, self.log):
           flags.extend(['-Wno-psabi', '-Wno-lto-type-mismatch'])
         if not any([
