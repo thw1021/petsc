@@ -1317,22 +1317,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl,
 */
 PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl, PetscInt m, Mat X, Vec observation)
 {
-  MPI_Comm           comm;
-  PetscReal          scale, sqrt_m_minus_1;
-  PetscInt           n_obs_local, n_local_ens, s_lda, x_lda, e_lda;
-  PetscMemType       s_mt, d_mt, mean_mt, x_mt, e_mt;
-  const PetscScalar *s_arr, *d_arr, *mean_arr, *x_arr;
-  PetscScalar       *e_arr, *gram_host, *Sd_host;
-  PetscMPIInt        mMPI, mmMPI;
-  Vec                Sd_vec;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectGetComm((PetscObject)da, &comm));
-  PetscCall(PetscKokkosInitializeCheck());
-
-  scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
-  sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-
   using exec_space       = Kokkos::DefaultExecutionSpace;
   using view_2d          = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>;
   using view_1d          = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>;
@@ -1343,6 +1327,26 @@ PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl
   using h_1d_const_um    = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   using h_2d_um          = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   using h_1d_um          = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+  MPI_Comm           comm;
+  PetscReal          scale, sqrt_m_minus_1;
+  PetscInt           n_obs_local, n_local_ens, s_lda, x_lda, e_lda, g_lda;
+  PetscMemType       s_mt, d_mt, mean_mt, x_mt, e_mt;
+  const PetscScalar *s_arr, *d_arr, *mean_arr, *x_arr, *g_host;
+  const PetscScalar *s_dev, *d_dev, *mean_dev, *x_dev;
+  PetscScalar       *e_arr, *e_dev, *gram_host, *Sd_host;
+  PetscMPIInt        mMPI, mmMPI;
+  Vec                Sd_vec;
+  PetscBool          e_is_copy = PETSC_FALSE;
+  view_2d            S_managed, X_managed, E_managed, gram_dev, G_dev, XG_dev;
+  view_1d            d_managed, mean_managed, Sd_dev;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)da, &comm));
+  PetscCall(PetscKokkosInitializeCheck());
+
+  scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
+  sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
 
   /* Lazily allocate the LOC_NONE-only m-sized SELF scratch (w, T_sqrt, w_ones) per-rank replicated;
      skipped on the per-vertex paths. s_transpose_delta is allocated only by the CPU LOC_NONE path. */
@@ -1368,11 +1372,11 @@ PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl
   PetscCall(MatDenseGetLDA(impl->en.ensemble, &e_lda));
 
   /* Mirror host arrays to device when needed. */
-  view_2d            S_managed, X_managed, E_managed;
-  view_1d            d_managed, mean_managed;
-  const PetscScalar *s_dev = s_arr, *d_dev = d_arr, *mean_dev = mean_arr, *x_dev = x_arr;
-  PetscScalar       *e_dev     = e_arr;
-  bool               e_is_copy = false;
+  s_dev    = s_arr;
+  d_dev    = d_arr;
+  mean_dev = mean_arr;
+  x_dev    = x_arr;
+  e_dev    = e_arr;
 
   if (s_mt == PETSC_MEMTYPE_HOST) {
     S_managed = view_2d("S_managed", s_lda, m);
@@ -1397,11 +1401,11 @@ PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl
   if (e_mt == PETSC_MEMTYPE_HOST) {
     E_managed = view_2d("E_managed", e_lda, m);
     e_dev     = E_managed.data();
-    e_is_copy = true;
+    e_is_copy = PETSC_TRUE;
   }
 
   /* Device gemm: gram = S^T * S over the active local rows [0, n_obs_local). */
-  view_2d gram_dev("gram_dev", m, m);
+  gram_dev = view_2d("gram_dev", m, m);
   if (n_obs_local > 0) {
     view_2d_const_um S_full(s_dev, s_lda, m);
     auto             S_active = Kokkos::subview(S_full, Kokkos::make_pair((PetscInt)0, n_obs_local), Kokkos::ALL());
@@ -1420,7 +1424,7 @@ PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl
   PetscCall(PetscFree(gram_host));
 
   /* Device gemv: Sd = S^T * delta_scaled, then mirror + Allreduce. */
-  view_1d Sd_dev("Sd_dev", m);
+  Sd_dev = view_1d("Sd_dev", m);
   if (n_obs_local > 0) {
     view_2d_const_um S_full(s_dev, s_lda, m);
     view_1d_const_um d_full(d_dev, n_obs_local);
@@ -1456,28 +1460,24 @@ PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl
   PetscCall(MatAXPY(impl->w_ones, sqrt_m_minus_1, impl->T_sqrt, SAME_NONZERO_PATTERN));
 
   /* Push G to device for the X*G gemm. impl->w_ones is a SELF SeqDense; LDA == m. */
-  view_2d            G_dev("G_dev", m, m);
-  const PetscScalar *g_host;
-  PetscInt           g_lda;
-
+  G_dev = view_2d("G_dev", m, m);
   PetscCall(MatDenseGetArrayRead(impl->w_ones, &g_host));
   PetscCall(MatDenseGetLDA(impl->w_ones, &g_lda));
   PetscCheck(g_lda == m, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected LDA %" PetscInt_FMT " for SELF SeqDense w_ones (m=%" PetscInt_FMT ")", g_lda, m);
   Kokkos::deep_copy(G_dev, h_2d_const_um(g_host, m, m));
   PetscCall(MatDenseRestoreArrayRead(impl->w_ones, &g_host));
 
-  /* Device gemm: XG = X_local * G, then E = mean*1' + XG. */
-  view_2d XG_dev("XG_dev", n_local_ens > 0 ? n_local_ens : 1, m);
+  /* Device gemm: XG = X_local * G, then E = mean*1' + XG. Allocate XG_dev only when
+     this rank actually owns ensemble columns; consumers below are gated identically. */
   if (n_local_ens > 0) {
     view_2d_const_um X_full(x_dev, x_lda, m);
     auto             X_active = Kokkos::subview(X_full, Kokkos::make_pair((PetscInt)0, n_local_ens), Kokkos::ALL());
-    KokkosBlas::gemm("N", "N", (PetscScalar)1.0, X_active, G_dev, (PetscScalar)0.0, XG_dev);
-  }
-
-  if (n_local_ens > 0) {
     view_2d_um       E_full(e_dev, e_lda, m);
     view_1d_const_um mean_full(mean_dev, n_local_ens);
     PetscInt         m_local = m;
+
+    XG_dev = view_2d("XG_dev", n_local_ens, m);
+    KokkosBlas::gemm("N", "N", (PetscScalar)1.0, X_active, G_dev, (PetscScalar)0.0, XG_dev);
     Kokkos::parallel_for(
       "EnsembleUpdate_LOC_NONE", Kokkos::RangePolicy<exec_space>(0, n_local_ens), KOKKOS_LAMBDA(const int i) {
         PetscScalar mi = mean_full(i);
