@@ -138,22 +138,23 @@ static PetscErrorCode SNESSolve_NRichardson(SNES snes)
    SNESNRICHARDSON - Richardson nonlinear solver that uses successive substitutions, also sometimes known as Picard iteration.
 
    Options Database Keys:
-+  -snes_linesearch_type (l2|cp|basic) - Line search type, see `SNESLineSearchType`
++  -snes_linesearch_type (secant|cp|basic|...) - Line search type, see `SNESLineSearchType`
 -  -snes_linesearch_damping damping    - Damping for the line search.
 
    Level: beginner
 
    Notes:
    If no inner nonlinear preconditioner is provided then solves $F(x) - b = 0 $ using $x^{n+1} = x^{n} - \lambda
-   (F(x^n) - b) $ where $ \lambda$ is obtained with either `SNESLineSearchSetDamping()`, `-snes_damping` or a line search.  If
-   an inner nonlinear preconditioner is provided (either with `-npc_snes_typ`e or `SNESSetNPC()`) then the inner
+   (F(x^n) - b) $ where $ \lambda$ is obtained with either `SNESLineSearchSetDamping()` or `-snes_linesearch_damping` if
+   using the `basic` line search type, or determined by an actual line search algorithm.  If
+   an inner nonlinear preconditioner is provided (either with `-npc_snes_type` or `SNESSetNPC()`) then the inner
    solver is called on the initial solution $x^n$ and the nonlinear Richardson uses $ x^{n+1} = x^{n} + \lambda d^{n}$
    where $d^{n} = \hat{x}^{n} - x^{n} $ where $\hat{x}^{n} $ is the solution returned from the inner solver.
 
    The update, especially without inner nonlinear preconditioner, may be ill-scaled.  If using the basic
    linesearch, one may have to scale the update with `-snes_linesearch_damping`
 
-   This uses no derivative information provided with `SNESSetJacobian()` thus it will be much slower than Newton's method obtained with `-snes_type ls`
+   This uses no derivative information provided with `SNESSetJacobian()` thus it will be much slower than Newton's method obtained with `-snes_type newtonls`
 
    Only supports left non-linear preconditioning.
 
