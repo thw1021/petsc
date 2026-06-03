@@ -37,6 +37,7 @@ static PetscErrorCode MatGetDiagonal_Htool(Mat A, Vec v)
   PetscCall(MatHasCongruentLayouts(A, &flg));
   PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Only congruent layouts supported");
   PetscCall(MatShellGetContext(A, &a));
+  PetscCheck(a->block_diagonal_hmatrix, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Block diagonal htool::HMatrix not found");
   PetscCall(VecGetArrayWrite(v, &x));
   PetscCallExternalVoid("copy_diagonal_in_user_numbering", htool::copy_diagonal_in_user_numbering(*a->block_diagonal_hmatrix, x));
   PetscCall(VecRestoreArrayWrite(v, &x));
@@ -47,7 +48,7 @@ static PetscErrorCode MatGetDiagonalBlock_Htool(Mat A, Mat *b)
 {
   Mat_Htool  *a, *c;
   Mat         B;
-  PetscScalar shift, scale;
+  PetscScalar shift[2], scale[2];
   PetscBool   flg;
 
   PetscFunctionBegin;
@@ -55,8 +56,13 @@ static PetscErrorCode MatGetDiagonalBlock_Htool(Mat A, Mat *b)
   PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Only congruent layouts supported");
   PetscCall(MatShellGetContext(A, &a));
   PetscCall(PetscObjectQuery((PetscObject)A, "DiagonalBlock", (PetscObject *)&B)); /* same logic as in MatGetDiagonalBlock_MPIDense() */
+  PetscCall(MatShellGetScalingShifts(A, shift, scale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+  if (B) {
+    PetscCall(MatShellGetScalingShifts(B, shift + 1, scale + 1, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+    /* invalidate cache when scale or shift changed; PetscObjectCompose() below releases the old entry */
+    if (scale[0] != scale[1] || shift[0] != shift[1]) B = nullptr;
+  }
   if (!B) {
-    PetscCall(MatShellGetScalingShifts(A, &shift, &scale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
     PetscCheck(a->block_diagonal_hmatrix, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Block diagonal htool::HMatrix not found");
     PetscCall(MatCreate(PETSC_COMM_SELF, &B));
     PetscCall(MatSetSizes(B, A->rmap->n, A->cmap->n, A->rmap->n, A->cmap->n));
@@ -82,12 +88,9 @@ static PetscErrorCode MatGetDiagonalBlock_Htool(Mat A, Mat *b)
     PetscCall(PetscObjectCompose((PetscObject)A, "DiagonalBlock", (PetscObject)B));
     *b = B;
     PetscCall(MatDestroy(&B));
-    PetscCall(MatShift(*b, shift));
-    PetscCall(MatScale(*b, scale));
-  } else {
-    PetscCall(MatShellGetScalingShifts(A, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
-    *b = B;
-  }
+    PetscCall(MatShift(*b, *shift));
+    PetscCall(MatScale(*b, *scale));
+  } else *b = B;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -421,7 +424,7 @@ static PetscErrorCode MatView_Htool(Mat A, PetscViewer pv)
     PetscCall(PetscObjectTypeCompare((PetscObject)pv, PETSCVIEWERASCII, &flg));
     if (flg) {
       PetscCall(MatShellGetScalingShifts(A, &shift, &scale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
-      PetscCall(PetscViewerASCIIPrintf(pv, "symmetry: %c\n", a->block_diagonal_hmatrix->get_symmetry()));
+      PetscCall(PetscViewerASCIIPrintf(pv, "symmetry: %c\n", a->block_diagonal_hmatrix ? a->block_diagonal_hmatrix->get_symmetry() : 'N'));
       if (PetscAbsScalar(scale - 1.0) > PETSC_MACHINE_EPSILON) {
 #if defined(PETSC_USE_COMPLEX)
         PetscCall(PetscViewerASCIIPrintf(pv, "scaling: %g+%gi\n", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
