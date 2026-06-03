@@ -2656,20 +2656,51 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
   const PetscScalar *u;
   const PetscReal   *weight;
   PetscInt           dim, Np, cStart, cEnd;
-  PetscReal         *vel, *coords, m_p = 1.;
+  PetscReal          m_p = 1.;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMPlexGetHeightStratum(ctx->dmPot, 0, &cStart, &cEnd));
+  PetscCall(DMSwarmGetLocalSize(sw, &Np));
+
+  /* Temporarily set swarm coordinates from Vec U (with periodic wrapping)
+     so that ComputeFieldAtParticles solves Poisson at the correct positions. */
+  {
+    DM         cdm;
+    PetscReal *swarm_coords, *saved_coords, upper[3], lower[3];
+
+    PetscCall(DMSwarmGetCellDM(sw, &cdm));
+    PetscCall(DMGetBoundingBox(cdm, lower, upper));
+    PetscCall(PetscMalloc1(Np * dim, &saved_coords));
+    PetscCall(VecGetArrayRead(U, &u));
+    PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(PetscArraycpy(saved_coords, swarm_coords, Np * dim));
+    for (PetscInt p = 0; p < Np; ++p) {
+      for (PetscInt d = 0; d < dim; ++d) {
+        PetscReal pos = PetscRealPart(u[(p * 2 + 0) * dim + d]);
+        if (pos < lower[d]) pos += (upper[d] - lower[d]);
+        else if (pos > upper[d]) pos -= (upper[d] - lower[d]);
+        swarm_coords[p * dim + d] = pos;
+      }
+    }
+    PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(VecRestoreArrayRead(U, &u));
+
+    PetscCall(ComputeFieldAtParticles(ctx->snes, sw));
+
+    /* Restore original swarm coordinates */
+    PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(PetscArraycpy(swarm_coords, saved_coords, Np * dim));
+    PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&swarm_coords));
+    PetscCall(PetscFree(saved_coords));
+  }
 
   PetscCall(DMGetNamedGlobalVector(ctx->dmPot, "phi", &phi));
   PetscCall(VecViewFromOptions(phi, NULL, "-phi_view_dg"));
   PetscCall(computeFieldEnergy(ctx->dmPot, phi, F));
   PetscCall(DMRestoreNamedGlobalVector(ctx->dmPot, "phi", &phi));
 
-  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(VecGetArrayRead(U, &u));
@@ -2691,8 +2722,6 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(DMSwarmSortRestoreAccess(sw));
   PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
-  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&vel));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
