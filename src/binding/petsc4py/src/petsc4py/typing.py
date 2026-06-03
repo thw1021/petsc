@@ -15,9 +15,6 @@ from numpy.typing import (
 )
 import numpy as np
 from .PETSc import (
-    InsertMode,
-    ScatterMode,
-    NormType,
     Object,
     Vec,
     Mat,
@@ -144,7 +141,7 @@ AccessModeSpec = Literal['rw', 'r', 'w'] | None
 
 """
 
-InsertModeSpec: TypeAlias = InsertMode | bool | None
+InsertModeSpec: TypeAlias = int | bool | None
 """Insertion mode specification.
 
    Possible values are:
@@ -156,11 +153,11 @@ InsertModeSpec: TypeAlias = InsertMode | bool | None
 
    See Also
    --------
-   InsertMode
+   PETSc.InsertMode, petsc.InsertMode
 
 """
 
-ScatterModeSpec: TypeAlias = ScatterMode | bool | str | None
+ScatterModeSpec: TypeAlias = int | bool | str | None
 """Scatter mode specification.
 
    Possible values are:
@@ -174,7 +171,7 @@ ScatterModeSpec: TypeAlias = ScatterMode | bool | str | None
 
    See Also
    --------
-   ScatterMode
+   PETSc.ScatterMode, petsc.ScatterMode
 
 """
 
@@ -190,7 +187,7 @@ LayoutSizeSpec: TypeAlias = int | tuple[int, int]
 
 """
 
-NormTypeSpec: TypeAlias = NormType | None
+NormTypeSpec: TypeAlias = int | None
 """Norm type specification.
 
     Possible values include:
@@ -215,7 +212,7 @@ PetscOptionsHandlerFunction: TypeAlias = Callable[[Object], None]
 
 # --- Mat ---
 
-MatAssemblySpec: TypeAlias = Mat.AssemblyType | bool | None
+MatAssemblySpec: TypeAlias = int | bool | None
 """Matrix assembly specification.
 
    Possible values are:
@@ -227,7 +224,7 @@ MatAssemblySpec: TypeAlias = Mat.AssemblyType | bool | None
 
    See Also
    --------
-   petsc.MatAssemblyType
+   Mat.AssemblyType, petsc.MatAssemblyType
 
 """
 
@@ -317,7 +314,7 @@ KSPRHSFunction = Callable[[KSP, Vec], None]
 KSPOperatorsFunction = Callable[[KSP, Mat, Mat], None]
 """`PETSc.KSP` operators function callback."""
 
-KSPConvergenceTestFunction = Callable[[KSP, int, float], KSP.ConvergedReason]
+KSPConvergenceTestFunction = Callable[[KSP, int, float], int]  # int from KSP.ConvergedReason
 """`PETSc.KSP` convergence test callback."""
 
 KSPMonitorFunction = Callable[[KSP, int, float], None]
@@ -356,7 +353,7 @@ SNESNGSFunction = Callable[[SNES, Vec, Vec], None]
 """`SNES` nonlinear Gauss-Seidel callback."""
 
 SNESConvergedFunction = Callable[
-    [SNES, int, tuple[float, float, float]], SNES.ConvergedReason
+    [SNES, int, tuple[float, float, float]], int  # int from SNES.ConvergedReason
 ]
 """`SNES` convergence test callback."""
 
