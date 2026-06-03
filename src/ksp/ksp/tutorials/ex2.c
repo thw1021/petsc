@@ -283,6 +283,15 @@ int main(int argc, char **args)
       args: -ksp_type fbcgsr -pc_type bjacobi
 
    test:
+      suffix: idr
+      args: -ksp_type idr -ksp_idr_s 4 -pc_type ilu
+
+   test:
+      suffix: idr_2
+      nsize: 3
+      args: -ksp_type idr -ksp_idr_s 4 -pc_type bjacobi
+
+   test:
       suffix: groppcg
       args: -ksp_monitor_short -ksp_type groppcg -m 9 -n 9
 

@@ -372,6 +372,9 @@ KSPSetUp_Richardson:No right preconditioning for KSPRICHARDSON
   * - Enhanced BiCGSTAB(L)
     - ``KSPBCGSL``
     - ``bcgsl``
+  * - Induced Dimension Reduction IDR(s) :cite:`vangijzensonneveld2011`
+    - ``KSPIDR``
+    - ``idr``
   * - Minimal Residual Method :cite:`paige.saunders:solution`
     - ``KSPMINRES``
     - ``minres``
