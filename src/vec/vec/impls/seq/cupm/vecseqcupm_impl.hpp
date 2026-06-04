@@ -1471,47 +1471,26 @@ inline PetscErrorCode VecSeq_CUPM<T>::CopyAsync(Vec xin, Vec yout, PetscDeviceCo
 
     // translate from PetscOffloadMask to cupmMemcpyKind
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-    switch (const auto ymask = yout->offloadmask) {
-    case PETSC_OFFLOAD_UNALLOCATED: {
+    {
       PetscBool yiscupm;
 
       PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(yout), &yiscupm, VECSEQCUPM(), VECMPICUPM(), ""));
       if (yiscupm) {
-        mode = PetscOffloadDevice(xmask) ? cupmMemcpyDeviceToDevice : cupmMemcpyHostToHost;
-        break;
-      }
-    } // fall-through if unallocated and not cupm
-#if PETSC_CPP_VERSION >= 17
-      [[fallthrough]];
-#endif
-    case PETSC_OFFLOAD_CPU: {
-      PetscBool yiscupm;
-
-      PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(yout), &yiscupm, VECSEQCUPM(), VECMPICUPM(), ""));
-      if (yiscupm) {
-        mode = PetscOffloadHost(xmask) ? cupmMemcpyHostToDevice : cupmMemcpyDeviceToDevice;
+        mode = PetscOffloadDevice(xmask) ? cupmMemcpyDeviceToDevice : cupmMemcpyHostToDevice;
       } else {
         mode = PetscOffloadHost(xmask) ? cupmMemcpyHostToHost : cupmMemcpyDeviceToHost;
       }
-      break;
-    }
-    case PETSC_OFFLOAD_BOTH:
-    case PETSC_OFFLOAD_GPU:
-      mode = PetscOffloadDevice(xmask) ? cupmMemcpyDeviceToDevice : cupmMemcpyHostToDevice;
-      break;
-    default:
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Incompatible offload mask %s", PetscOffloadMaskToString(ymask));
     }
 
     PetscCall(GetHandlesFrom_(dctx, &stream));
     switch (mode) {
     case cupmMemcpyDeviceToDevice: // the best case
     case cupmMemcpyHostToDevice: { // not terrible
-      const auto yptr = DeviceArrayWrite(dctx, yout);
       const auto xptr = mode == cupmMemcpyDeviceToDevice ? DeviceArrayRead(dctx, xin).data() : HostArrayRead(dctx, xin).data();
+      const auto yptr = DeviceArrayWrite(dctx, yout).data();
 
       PetscCall(PetscLogGpuTimeBegin());
-      PetscCall(PetscCUPMMemcpyAsync(yptr.data(), xptr, n, mode, stream));
+      PetscCall(PetscCUPMMemcpyAsync(yptr, xptr, n, mode, stream));
       PetscCall(PetscLogGpuTimeEnd());
     } break;
     case cupmMemcpyDeviceToHost: // not great
