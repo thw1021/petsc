@@ -1505,7 +1505,7 @@ PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, Pets
     Then scale and shift to get desired mean and standard deviation.
   */
   /* Real (resp. complex) PetscScalar: one Box-Muller pair fills two consecutive entries (resp. the real and imaginary parts of a single entry) */
-  for (PetscInt i = 0; i < n; i += (PetscDefined(USE_COMPLEX) ? 1 : 2)) {
+  for (PetscInt i = 0; i < n; i++) {
     PetscInt retry_count = 0;
 
     /*
@@ -1536,7 +1536,7 @@ PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, Pets
     array[i] = PetscCMPLX(mean + std_dev * gauss_sample1, mean + std_dev * gauss_sample2);
 #else
     array[i] = mean + std_dev * gauss_sample1;
-    if (i + 1 < n) array[i + 1] = mean + std_dev * gauss_sample2;
+    if (i + 1 < n) array[++i] = mean + std_dev * gauss_sample2;
 #endif
   }
 
