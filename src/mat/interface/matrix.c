@@ -4955,14 +4955,8 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
   }
 
   PetscCall(MatSolverTypeGet(type, ((PetscObject)mat)->type_name, ftype, &foundtype, &foundmtype, &conv));
-  if (!foundtype) {
-    if (type) {
-      SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate solver type %s for factorization type %s and matrix type %s. Perhaps you must ./configure with --download-%s", type, MatFactorTypes[ftype],
-              ((PetscObject)mat)->type_name, type);
-    } else {
-      SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate a solver type for factorization type %s and matrix type %s.", MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
-    }
-  }
+  PetscCheck(foundtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate%s solver type%s%s for factorization type %s and matrix type %s.%s%s", !type ? " a" : "", type ? " " : "", type ? type : "", MatFactorTypes[ftype],
+             ((PetscObject)mat)->type_name, type ? " Perhaps you must ./configure with --download-" : "", type ? type : "");
   PetscCheck(foundmtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "MatSolverType %s does not support matrix type %s", type, ((PetscObject)mat)->type_name);
   PetscCheck(conv, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "MatSolverType %s does not support factorization type %s for matrix type %s", type, MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
 
@@ -5902,6 +5896,70 @@ PetscErrorCode MatNorm(Mat mat, NormType type, PetscReal *nrm)
   MatCheckPreallocated(mat, 1);
 
   PetscUseTypeMethod(mat, norm, type, nrm);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatNormEstimate - Estimate the 2-norm of a matrix.
+
+  Collective
+
+  Input Parameters:
++ A   - the matrix
+. vrn - random vector with normally distributed entries (can be `NULL`)
+- w   - workspace vector (can be `NULL`)
+
+  Output Parameter:
+. nrm - the norm estimate
+
+  Level: developer
+
+  Notes:
+  Does not need access to the matrix entries, just performs a matrix-vector product.
+  Based on work by I. Ipsen and coworkers <https://ipsen.math.ncsu.edu/ps/slides_ima.pdf>.
+
+  The input vector `vrn` must have unit 2-norm.
+  If `vrn` is `NULL`, then it is created internally and filled with `VecSetRandomGaussian()`.
+
+.seealso: `VecSetRandomGaussian()`
+@*/
+PetscErrorCode MatNormEstimate(Mat A, Vec vrn, Vec w, PetscReal *nrm)
+{
+  PetscInt n;
+  Vec      vv = NULL, ww = NULL;
+#if PetscDefined(USE_COMPLEX)
+  Vec vvi;
+#endif
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  if (vrn != NULL) PetscValidHeaderSpecific(vrn, VEC_CLASSID, 2);
+  if (w != NULL) PetscValidHeaderSpecific(w, VEC_CLASSID, 3);
+  PetscAssertPointer(nrm, 4);
+
+  if (vrn == NULL) {
+    PetscCall(MatCreateVecs(A, &vv, NULL));
+    vrn = vv;
+    PetscCall(VecSetRandomGaussian(vv, NULL, 0.0, 1.0));
+#if PetscDefined(USE_COMPLEX)
+    PetscCall(VecDuplicate(vv, &vvi));
+    PetscCall(VecSetRandomGaussian(vvi, NULL, 0.0, 1.0));
+    PetscCall(VecAXPY(vv, PETSC_i, vvi));
+    PetscCall(VecDestroy(&vvi));
+#endif
+    PetscCall(VecNormalize(vv, NULL));
+  }
+  if (w == NULL) {
+    PetscCall(MatCreateVecs(A, &ww, NULL));
+    w = ww;
+  }
+  PetscCall(MatGetSize(A, NULL, &n));
+  PetscCall(MatMult(A, vrn, w));
+  PetscCall(VecNorm(w, NORM_2, nrm));
+  *nrm *= PetscSqrtReal((PetscReal)n);
+  PetscCall(VecDestroy(&vv));
+  PetscCall(VecDestroy(&ww));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
