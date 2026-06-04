@@ -4370,6 +4370,38 @@ cdef class Mat(Object):
         if ntype != norm_1_2: return toReal(rval[0])
         else: return (toReal(rval[0]), toReal(rval[1]))
 
+    def normEstimate(self, Vec vrn: petsc4py.PETSc.Vec | None = None, Vec w: petsc4py.PETSc.Vec | None = None) -> float:
+        """
+        Estimate the matrix 2-norm.
+
+        Collective.
+
+        Parameters
+        ----------
+        A
+            Matrix for norm estimation.
+        vrn
+            Random vector with normally distributed entries and unit 2-norm.
+            If `None`, it is created and initialized internally.
+        w
+            Workspace vector.
+            If `None`, it is created internally.
+
+        Returns
+        -------
+        float
+            The estimated matrix 2-norm.
+
+        See Also
+        --------
+        petsc.MatNormEstimate
+        """
+        cdef PetscVec vrnvec = <PetscVec>NULL if vrn is None else vrn.vec
+        cdef PetscVec wvec = <PetscVec>NULL if w is None else w.vec
+        cdef PetscReal nrm = 0.0
+        CHKERR(MatNormEstimate(self.mat, vrnvec, wvec, &nrm))
+        return toReal(nrm)
+
     def scale(self, alpha: Scalar) -> None:
         """Scale the matrix.
 
