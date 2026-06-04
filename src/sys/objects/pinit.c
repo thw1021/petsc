@@ -1245,7 +1245,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 
   The same value must be set on all MPI processes.
 
-.seealso: `PetscInitialize()`, `PetscOptionsView()`, `PetscMallocDump()`, `PetscMPIDump()`, `PetscEnd()`
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscSetMPIThreadRequiredType(PetscMPIInt required)
 {
