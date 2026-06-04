@@ -1227,7 +1227,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 /*@
   PetscSetMPIThreadRequiredType - Set the MPI required thread level for when `PetscInitialize()` initializes MPI.
 
-  Collective on `MPI_COMM_WORLD`
+  Logically Collective
 
   Input Parameter:
 . required - the desired thread support, one of `MPI_THREAD_SINGLE`, `MPI_THREAD_FUNNELED`, `MPI_THREAD_SERIALIZED`, or `MPI_THREAD_MULTIPLE`.
