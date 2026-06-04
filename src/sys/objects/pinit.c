@@ -1237,7 +1237,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   Notes:
   This must be called before `PetscInitialize()`.
 
-  By default uses `MPI_THREAD_FUNNELED` when the MPI implementation provides `MPI_Init_thread()`, otherwise it defaults to `MPI_THREAD_SINGLE`
+  By default uses `MPI_THREAD_FUNNELED` when the MPI implementation provides `MPI_Init_thread()`, otherwise it defaults to `MPI_THREAD_SINGLE`.
 
   This argument is used in the call to `MPI_Init_thread()` made by `PetscInitialize()`.
 
