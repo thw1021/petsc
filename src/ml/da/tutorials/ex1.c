@@ -417,6 +417,7 @@ int main(int argc, char **argv)
     if (step % obs_freq == 0 && step > 0) {
       /* Generate synthetic noisy observations from truth */
       PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
+      PetscCall(VecRealPart(obs_noise));
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
       /* Perform ETKF analysis with observation matrix H */
@@ -460,7 +461,7 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No post-burn-in statistics collected (burn >= steps)\n\n"));
   }
 
-  /* Test VecSetRandomGaussian to verify Gaussian distribution */
+  /* Test VecSetRandomGaussian() to verify Gaussian distribution */
   {
     Vec          test_vec;
     PetscInt     test_size = 10000; /* Large sample for statistical testing */
@@ -473,8 +474,10 @@ int main(int argc, char **argv)
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_gaussian", &test_gaussian, NULL));
 
     if (test_gaussian) {
+      PetscInt n_samples = PetscDefined(USE_COMPLEX) ? 2 * test_size : test_size;
+
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n==============================================\n"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Testing VecSetRandomGaussian\n"));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Testing VecSetRandomGaussian()\n"));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==============================================\n"));
 
       /* Create test vector */
@@ -489,8 +492,8 @@ int main(int argc, char **argv)
       PetscCall(VecGetArray(test_vec, &array));
 
       /* Compute sample mean */
-      for (PetscInt i = 0; i < test_size; i++) sample_mean += PetscRealPart(array[i]);
-      sample_mean /= test_size;
+      for (PetscInt i = 0; i < test_size; i++) sample_mean += PetscRealPart(array[i]) + PetscImaginaryPart(array[i]);
+      sample_mean /= n_samples;
 
       /* Compute sample variance and higher moments */
       for (PetscInt i = 0; i < test_size; i++) {
@@ -499,13 +502,20 @@ int main(int argc, char **argv)
         sample_variance += diff2;
         skewness += diff * diff2;
         kurtosis += diff2 * diff2;
+#if defined(PETSC_USE_COMPLEX)
+        diff  = PetscImaginaryPart(array[i]) - sample_mean;
+        diff2 = diff * diff;
+        sample_variance += diff2;
+        skewness += diff * diff2;
+        kurtosis += diff2 * diff2;
+#endif
       }
-      sample_variance /= (test_size - 1);
+      sample_variance /= (n_samples - 1);
       sample_std = PetscSqrtReal(sample_variance);
 
       /* Normalize skewness and kurtosis */
-      skewness = (skewness / test_size) / PetscPowReal(sample_std, 3.0);
-      kurtosis = (kurtosis / test_size) / PetscPowReal(sample_std, 4.0) - 3.0; /* Excess kurtosis */
+      skewness = (skewness / n_samples) / PetscPowReal(sample_std, 3.0);
+      kurtosis = (kurtosis / n_samples) / PetscPowReal(sample_std, 4.0) - 3.0; /* Excess kurtosis */
 
       PetscCall(VecRestoreArray(test_vec, &array));
 
@@ -514,7 +524,7 @@ int main(int argc, char **argv)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean      : %.6f\n", (double)mean_target));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std Dev   : %.6f\n", (double)std_target));
 
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nSample statistics (n=%" PetscInt_FMT "):\n", (PetscInt)test_size));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nSample statistics (n=%" PetscInt_FMT "):\n", (PetscInt)n_samples));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean      : %.6f (error: %.6f)\n", (double)sample_mean, (double)PetscAbsReal(sample_mean - mean_target)));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std Dev   : %.6f (error: %.6f)\n", (double)sample_std, (double)PetscAbsReal(sample_std - std_target)));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Skewness  : %.6f (expected ~0 for Gaussian)\n", (double)skewness));
@@ -523,7 +533,7 @@ int main(int argc, char **argv)
       /* Statistical tests with reasonable tolerances for finite samples */
       PetscReal mean_error     = PetscAbsReal(sample_mean - mean_target);
       PetscReal std_error      = PetscAbsReal(sample_std - std_target);
-      PetscReal mean_tolerance = 3.0 * std_target / PetscSqrtReal((PetscReal)test_size); /* 3-sigma rule */
+      PetscReal mean_tolerance = 3.0 * std_target / PetscSqrtReal((PetscReal)n_samples); /* 3-sigma rule */
       PetscReal std_tolerance  = 0.1 * std_target;                                       /* 10% tolerance for std dev */
       PetscReal skew_tolerance = 0.1;                                                    /* Skewness should be near 0 */
       PetscReal kurt_tolerance = 0.5;                                                    /* Excess kurtosis should be near 0 */
