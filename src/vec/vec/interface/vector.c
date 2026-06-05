@@ -1454,7 +1454,8 @@ PetscErrorCode VecSetRandom(Vec x, PetscRandom rctx)
   Level: advanced
 
   Note:
-  For complex builds where `PetscScalar` is complex the imaginary part of all the vector entries is zero
+  For builds where `PetscScalar` is complex, both the real and imaginary parts of each
+  entry are independently sampled from N(`mean`, `std_dev`^2).
 
   Developer Note:
   Uses the Box-Muller transform to generate normally distributed random numbers
@@ -1485,7 +1486,11 @@ PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, Pets
   if (n == 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   if (std_dev == 0.0) {
+#if PetscDefined(USE_COMPLEX)
+    PetscCall(VecSet(v, PetscCMPLX(mean, mean)));
+#else
     PetscCall(VecSet(v, mean));
+#endif
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -1499,7 +1504,8 @@ PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, Pets
       Z1 = sqrt(-2 * ln(U1)) * sin(2pi * U2)
     Then scale and shift to get desired mean and standard deviation.
   */
-  for (PetscInt i = 0; i < n; i += 2) {
+  /* Real (resp. complex) PetscScalar: one Box-Muller pair fills two consecutive entries (resp. the real and imaginary parts of a single entry) */
+  for (PetscInt i = 0; i < n; i += (PetscDefined(USE_COMPLEX) ? 1 : 2)) {
     PetscInt retry_count = 0;
 
     /*
@@ -1526,8 +1532,12 @@ PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, Pets
     gauss_sample2 = magnitude * PetscSinReal(theta);
 
     /* Scale and shift to achieve desired mean and standard deviation */
+#if PetscDefined(USE_COMPLEX)
+    array[i] = PetscCMPLX(mean + std_dev * gauss_sample1, mean + std_dev * gauss_sample2);
+#else
     array[i] = mean + std_dev * gauss_sample1;
     if (i + 1 < n) array[i + 1] = mean + std_dev * gauss_sample2;
+#endif
   }
 
   PetscCall(VecRestoreArrayWrite(v, &array));
