@@ -2442,6 +2442,10 @@ PETSC_EXTERN PetscErrorCode MatSuperluSetILUDropTol(Mat, PetscReal);
 PETSC_EXTERN PetscErrorCode MatSuperluDistGetDiagU(Mat, PetscScalar *);
 #endif
 
+#ifdef PETSC_HAVE_MKL_LIBS
+PETSC_EXTERN int mkl_serv_intel_cpu_true(void);
+#endif
+
 /*E
     MatSTRUMPACKReordering - sparsity reducing ordering to be used in `MATSOLVERSTRUMPACK`
 

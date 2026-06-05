@@ -7,3 +7,8 @@ PETSC_EXTERN void PetscSetMKL_PARDISOThreads(int threads)
 {
   mkl_domain_set_num_threads(threads, MKL_DOMAIN_PARDISO);
 }
+
+PETSC_EXTERN int mkl_serv_intel_cpu_true()
+{
+  return 1;
+}
