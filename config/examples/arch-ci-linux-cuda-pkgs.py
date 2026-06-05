@@ -46,6 +46,7 @@ if __name__ == '__main__':
     '--download-hwloc',
     '--download-umpire',
     '--download-hypre',
+    '--download-sundials',
     '--download-caliper',
     '--download-raja',
     '--download-amgx',

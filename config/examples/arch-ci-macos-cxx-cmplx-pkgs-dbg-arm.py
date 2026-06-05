@@ -42,7 +42,6 @@ configure_options = [
   '--with-petsc4py=1',
   '--download-mpi4py=1',
   '--download-elemental=1',
-  #'--download-sundials2=1',
   '--download-hypre=1',
   '--download-suitesparse=1',
   '--download-chaco=1',
