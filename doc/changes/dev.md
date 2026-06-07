@@ -19,6 +19,7 @@
 
 - Add `PetscGetConfiguration()`
 - Add `PetscObjectViewSynchronizedFromOptions()`
+- Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
 
 ## Event Logging
 
