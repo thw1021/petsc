@@ -66,7 +66,7 @@
 ## KSP
 
 - Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
-- Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetOmega()`, and `KSPIDRGetOmega()`
+- Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
 
 ## SNES
 
