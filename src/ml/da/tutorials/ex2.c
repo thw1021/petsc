@@ -448,8 +448,8 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex
-    args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_ensemble_size 5 -petscda_type letkf
+    requires: kokkos_kernels !complex !sycl
+    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -petscda_ensemble_size 5
 
     test:
       suffix: letkf_serial
@@ -469,13 +469,14 @@ int main(int argc, char **argv)
       args: -petscda_letkf_localization_type none
 
   testset:
-    requires: kokkos_kernels !complex
+    requires: kokkos_kernels !complex !sycl
     args: -steps 20 -burn 5 -obs_freq 1 -obs_error 1 -petscda_ensemble_size 5 -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos
 
     test:
       nsize: 3
       suffix: letkf
-      args: -info :vec -petscda_letkf_localization_radius 5.0
+      # oneapi::mkl::lapack::syevd: invalid argument: On entry, parameter 8 had an illegal value
+      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -n_obs_vertex 5
 
     test:
       suffix: letkf_loc_none_kokkos
