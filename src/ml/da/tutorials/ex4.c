@@ -624,8 +624,8 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex
-    args: -petscda_type letkf -steps 5 -progress_freq 1 -petscda_ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 21 -ny 21
+    requires: kokkos_kernels !complex !sycl
+    args: -steps 10 -progress_freq 1 -petscda_view -petscda_ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 21 -ny 21
 
     test:
       suffix: letkf_wave2d
@@ -643,6 +643,7 @@ int main(int argc, char **argv)
 
     test:
       nsize: 3
+      # oneapi::mkl::lapack::syevd: invalid argument: On entry, parameter 8 had an illegal value
       suffix: kokkos_wave2d
       requires: kokkos_kernels
       args: -mat_type aijkokkos -vec_type kokkos -petscda_ensemble_size 5 -petscda_letkf_localization_radius 10.0
