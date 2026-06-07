@@ -228,7 +228,7 @@ PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch
 PetscErrorCode SNESLineSearchSetUp(SNESLineSearch linesearch)
 {
   PetscFunctionBegin;
-  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
+  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
   if (!linesearch->setupcalled) {
     if (!linesearch->vec_sol_new) PetscCall(VecDuplicate(linesearch->vec_sol, &linesearch->vec_sol_new));
     if (!linesearch->vec_func_new) PetscCall(VecDuplicate(linesearch->vec_sol, &linesearch->vec_func_new));
@@ -596,12 +596,12 @@ PetscErrorCode SNESLineSearchPreCheckPicard(SNESLineSearch linesearch, Vec X, Ve
 - Y     - The current search direction, on output the direction determined by the linesearch, i.e. `Xnew = Xold - lambda*Y`
 
   Options Database Keys:
-+ -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
-. -snes_linesearch_monitor [:filename]                                    - Print progress of line searches
-. -snes_linesearch_damping damping                                        - The linesearch damping parameter, default is 1.0 (no damping)
-. -snes_linesearch_norms (true|false)                                     - Turn on/off the linesearch norms computation (SNESLineSearchSetComputeNorms())
-. -snes_linesearch_keeplambda (true|false)                                - Keep the previous `lambda` as the initial guess
-- -snes_linesearch_max_it it                                              - The number of iterations for iterative line searches
++ -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
+. -snes_linesearch_monitor [:filename]                              - Print progress of line searches
+. -snes_linesearch_damping damping                                  - The linesearch damping parameter, default is 1.0 (no damping)
+. -snes_linesearch_norms (true|false)                               - Turn on/off the linesearch norms computation (SNESLineSearchSetComputeNorms())
+. -snes_linesearch_keeplambda (true|false)                          - Keep the previous `lambda` as the initial guess
+- -snes_linesearch_max_it it                                        - The number of iterations for iterative line searches
 
   Level: advanced
 
@@ -794,21 +794,21 @@ PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char
 . linesearch - a `SNESLineSearch` line search context
 
   Options Database Keys:
-+ -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
-. -snes_linesearch_order order                                            - 1, 2, 3.  Most types only support certain orders (`bt` supports 1, 2 or 3)
-. -snes_linesearch_norms (true|false)                                     - Turn on/off the linesearch norms for the basic linesearch typem (`SNESLineSearchSetComputeNorms()`)
-. -snes_linesearch_minlambda minlambda                                    - The minimum `lambda`
-. -snes_linesearch_maxlambda maxlambda                                    - The maximum `lambda`
-. -snes_linesearch_rtol rtol                                              - Relative tolerance for iterative line searches
-. -snes_linesearch_atol atol                                              - Absolute tolerance for iterative line searches
-. -snes_linesearch_ltol ltol                                              - Change in `lambda` tolerance for iterative line searches
-. -snes_linesearch_max_it max_it                                          - The number of iterations for iterative line searches
-. -snes_linesearch_monitor [:filename]                                    - Print progress of line searches
-. -snes_linesearch_monitor_solution_update [viewer:filename:format]       - view each update tried by line search routine
-. -snes_linesearch_damping damping                                        - The linesearch damping parameter
-. -snes_linesearch_keeplambda (true|false)                                - Keep the previous `lambda` as the initial guess.
-. -snes_linesearch_precheck_picard (true|false)                           - Use precheck that speeds up convergence of picard method
-- -snes_linesearch_precheck_picard_angle angle                            - Angle used in Picard precheck method
++ -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
+. -snes_linesearch_order order                                      - 1, 2, 3. Most types only support certain orders (`bt` supports 1, 2 or 3)
+. -snes_linesearch_norms (true|false)                               - Turn on/off the linesearch norms for the `none` linesearch typem (`SNESLineSearchSetComputeNorms()`)
+. -snes_linesearch_minlambda minlambda                              - The minimum `lambda`
+. -snes_linesearch_maxlambda maxlambda                              - The maximum `lambda`
+. -snes_linesearch_rtol rtol                                        - Relative tolerance for iterative line searches
+. -snes_linesearch_atol atol                                        - Absolute tolerance for iterative line searches
+. -snes_linesearch_ltol ltol                                        - Change in `lambda` tolerance for iterative line searches
+. -snes_linesearch_max_it max_it                                    - The number of iterations for iterative line searches
+. -snes_linesearch_monitor [:filename]                              - Print progress of line searches
+. -snes_linesearch_monitor_solution_update [viewer:filename:format] - view each update tried by line search routine
+. -snes_linesearch_damping damping                                  - The linesearch damping parameter
+. -snes_linesearch_keeplambda (true|false)                          - Keep the previous `lambda` as the initial guess.
+. -snes_linesearch_precheck_picard (true|false)                     - Use precheck that speeds up convergence of picard method
+- -snes_linesearch_precheck_picard_angle angle                      - Angle used in Picard precheck method
 
   Level: intermediate
 
@@ -817,7 +817,7 @@ PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char
 @*/
 PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
 {
-  const char *deft = SNESLINESEARCHBASIC;
+  const char *deft = SNESLINESEARCHNONE;
   char        type[256];
   PetscBool   flg, set;
   PetscViewer viewer;
@@ -958,7 +958,7 @@ PetscErrorCode SNESLineSearchGetType(SNESLineSearch linesearch, SNESLineSearchTy
 - type       - The type of line search to be used, see `SNESLineSearchType`
 
   Options Database Key:
-. -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell) - Line search type to use, see `SNESLineSearchType`
+. -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - Line search type to use, see `SNESLineSearchType`
 
   Level: intermediate
 
@@ -1440,17 +1440,17 @@ PetscErrorCode SNESLineSearchComputeNorms(SNESLineSearch linesearch)
 - flg        - indicates whether or not to compute norms
 
   Options Database Key:
-. -snes_linesearch_norms (true|false) - Turns on/off computation of the norms for basic (none) `SNESLINESEARCHBASIC` line search
+. -snes_linesearch_norms (true|false) - Turns on/off computation of the norms for the `SNESLINESEARCHNONE` line search
 
   Level: intermediate
 
   Note:
-  This is most relevant to the `SNESLINESEARCHBASIC` (or equivalently `SNESLINESEARCHNONE`) line search type since most line searches have a stopping criteria involving the norm.
+  This is most relevant to the `SNESLINESEARCHNONE` line search type since most line searches have a stopping criteria involving the norm.
 
   Developer Note:
   The options database key is misnamed. It should be `-snes_linesearch_compute_norms`
 
-.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetNorms()`, `SNESLineSearchSetNorms()`, `SNESLineSearchComputeNorms()`, `SNESLINESEARCHBASIC`
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetNorms()`, `SNESLineSearchSetNorms()`, `SNESLineSearchComputeNorms()`, `SNESLINESEARCHNONE`
 @*/
 PetscErrorCode SNESLineSearchSetComputeNorms(SNESLineSearch linesearch, PetscBool flg)
 {
