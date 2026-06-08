@@ -124,6 +124,7 @@
 - Add `DMPlexCheckOrientationLabel()`
 - Change `DMPlexLabelCohesiveComplete()` to remove split argument
 - Add `DM_COORD_MAP_TORUS`
+- Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDiheralBound()`, `DMPlexTetgenGetDiheralBound()`
 
 ## FE/FV
 

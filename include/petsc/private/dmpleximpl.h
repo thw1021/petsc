@@ -166,9 +166,12 @@ typedef struct {
 
   /* Generation */
   char            *tetgenOpts;
+  PetscReal        tetgenRadiusEdgeBound; // Maximum tetgen radius-edge ratio
+  PetscReal        tetgenDihedralBound;   // Minimum tetgen dihedral angle
   char            *triangleOpts;
+  PetscReal        triangleAngBound;      // Minimum triangle angle
   PetscPartitioner partitioner;
-  PetscBool        partitionBalance; /* Evenly divide partition overlap when distributing */
+  PetscBool        partitionBalance;      // Evenly divide partition overlap when distributing
   PetscBool        remeshBd;
 
   /* Submesh */

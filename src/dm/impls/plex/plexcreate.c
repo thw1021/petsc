@@ -4463,6 +4463,7 @@ static PetscErrorCode DMPlexCreateBallMesh_Internal(DM dm, PetscInt dim, PetscRe
 {
   DM          sdm, vol;
   DMLabel     bdlabel;
+  PetscReal   ang, rat, dih;
   const char *prefix;
 
   PetscFunctionBegin;
@@ -4475,7 +4476,16 @@ static PetscErrorCode DMPlexCreateBallMesh_Internal(DM dm, PetscInt dim, PetscRe
   PetscCall(DMPlexCreateSphereMesh_Internal(sdm, dim - 1, PETSC_TRUE, R));
   PetscCall(DMSetFromOptions(sdm));
   PetscCall(DMViewFromOptions(sdm, NULL, "-dm_view"));
+  PetscCall(DMPlexTriangleGetAngleBound(sdm, &ang));
+  PetscCall(DMPlexTriangleSetAngleBound(sdm, 30.));
+  PetscCall(DMPlexTetgenGetRadiusEdgeBound(sdm, &rat));
+  PetscCall(DMPlexTetgenSetRadiusEdgeBound(sdm, 1.4));
+  PetscCall(DMPlexTetgenGetDihedralBound(sdm, &dih));
+  PetscCall(DMPlexTetgenSetDihedralBound(sdm, 20.));
   PetscCall(DMPlexGenerate(sdm, NULL, PETSC_TRUE, &vol));
+  PetscCall(DMPlexTriangleSetAngleBound(sdm, ang));
+  PetscCall(DMPlexTetgenSetRadiusEdgeBound(sdm, rat));
+  PetscCall(DMPlexTetgenSetDihedralBound(sdm, dih));
   PetscCall(DMDestroy(&sdm));
   PetscCall(DMPlexReplace_Internal(dm, &vol));
   PetscCall(DMCreateLabel(dm, "marker"));
