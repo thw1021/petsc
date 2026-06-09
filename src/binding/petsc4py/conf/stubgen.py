@@ -84,6 +84,11 @@ def visit_constant(constant):
     return f'{name}: Final[{type(value).__name__}] = ...'
 
 
+def visit_enum(member):
+    name, value = member
+    return f'{name} = {value.value}'
+
+
 def visit_function(function):
     sig = signature(function)
     return f'def {sig}: ...'
@@ -273,7 +278,7 @@ def visit_class(cls, outer=None, done=None):
         if is_constant(attr):
             done.add(name)
             if isinstance(attr, enum.Enum):
-                lines.add = f'{name} = ...'
+                lines.add = visit_enum((name, attr))
             else:
                 lines.add = visit_constant((name, attr))
             continue
