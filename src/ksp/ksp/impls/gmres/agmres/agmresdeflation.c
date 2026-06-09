@@ -155,7 +155,7 @@ static PetscErrorCode KSPAGMRESSchurForm(KSP ksp, PetscBLASInt KspSize, PetscSca
   } else {
     for (j = 0; j < r; j++) select[perm[KspSize - j - 1]] = 1;
   }
-  PetscCallBLAS("LAPACKtgsen", LAPACKntgsen_(&ijob, &wantQ, &wantZ, select, &KspSize, A, &ldA, B, &ldB, wr, wi, beta, Q, &N, Z, &N, &r, NULL, NULL, &Dif[0], work, &lwork, iwork, &liwork, &info));
+  PetscCallBLAS("LAPACKtgsen", LAPACKtgsen_(&ijob, &wantQ, &wantZ, select, &KspSize, A, &ldA, B, &ldB, wr, wi, beta, Q, &N, Z, &N, &r, NULL, NULL, &Dif[0], work, &lwork, iwork, &liwork, &info));
   PetscCheck(info != 1, PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the TGSEN LAPACK routine: ill-conditioned problem %" PetscBLASInt_FMT, info);
   /* Extract the Schur vectors associated to the r smallest eigenvalues */
   PetscCall(PetscArrayzero(Sr, (N + 1) * r));
