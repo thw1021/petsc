@@ -63,3 +63,34 @@ routines for many other operations. See the OpenBLAS manual for more information
 
 BLIS does not bundle LAPACK with it so PETSc's configure attempts to locate a compatible system LAPACK library to use if `--download-blis` is
 selected. One can use `--download-f2cblaslapack --download-blis`. This is recommended as a portable high-performance option. It is possible if you use `--download-blis` without `--download-f2cblaslapack` the BLIS library installed will **not** be used! Instead, PETSc will link in some LAPACK implementation and the BLAS that comes with that implementation!
+
+(ch_blas_lapack_mkl_on_amd)=
+
+## Use Intel MKL's BLAS/LAPACK libraries on AMD CPUs
+
+Intel MKL may query the CPU vendor at runtime and select less optimized code paths on non-Intel processors. A common workaround is to intercept MKL's CPU detection functions (`mkl_serv_intel_cpu_true()` or `mkl_serv_get_cpu_true()`) and force them to report that the processor is an Intel CPU.
+
+Traditionally, this is done by providing replacement implementations in a shared library and loading it via `LD_PRELOAD`. For example, place the following code in `fakeintel.c`:
+
+```
+int mkl_serv_intel_cpu_true(void)
+{
+  return 1;
+}
+
+typedef int (*fakeintel_fptr)(void);
+
+fakeintel_fptr mkl_serv_get_cpu_true(void)
+{
+  return &mkl_serv_intel_cpu_true;
+}
+```
+Build the shared library with:
+
+`gcc -fPIC -shared fakeintel.c -o libfakeintel.so`
+
+and run the application as:
+
+`LD_PRELOAD=/path/to/libfakeintel.so ./myprogram`
+
+See https://danieldk.eu/software/misc/intel-mkl-on-amd-zen for additional details. PETSc already provides implementations of these functions. Therefore, as long as the PETSc library is linked before the MKL libraries—which is typically the case—the same workaround is applied automatically, and no additional user action is required.
