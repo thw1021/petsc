@@ -756,7 +756,7 @@ PetscErrorCode KSPDGMRESComputeSchurForm_DGMRES(KSP ksp, PetscInt *neig)
     PetscReal    CondEig; /* lower bound on the reciprocal condition number for the selected cluster of eigenvalues */
     PetscReal    CondSub; /* estimated reciprocal condition number of the specified invariant subspace. */
     PetscCallBLAS("LAPACKtrsen", LAPACKtrsen_("B", "V", select, &bn, A, &ldA, Q, &ldQ, wr, wi, &NbrEig, &CondEig, &CondSub, work, &lwork, iwork, &liwork, &info));
-    PetscCheck(info != 1, PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the LAPACK routine: ILL-CONDITIONED PROBLEM %" PetscBLASInt_FMT, info);
+    PetscCheck(!info, PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the LAPACK routine: ILL-CONDITIONED PROBLEM %" PetscBLASInt_FMT, info);
   }
   PetscCall(PetscFree(select));
 
@@ -935,7 +935,7 @@ static PetscErrorCode KSPDGMRESImproveEig_DGMRES(KSP ksp, PetscInt neig)
     PetscBLASInt ijob  = 2;
     PetscBLASInt wantQ = 1, wantZ = 1;
     PetscCallBLAS("LAPACKtgsen", LAPACKtgsen_(&ijob, &wantQ, &wantZ, select, &N, AUAU, &ldA, AUU, &ldA, wr, wi, beta, Q, &N, Z, &N, &NbrEig, NULL, NULL, &Dif[0], work, &lwork, iwork, &liwork, &info));
-    PetscCheck(info != 1, PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the TGSEN LAPACK routine: ill-conditioned problem %" PetscBLASInt_FMT, info);
+    PetscCheck(!info, PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the TGSEN LAPACK routine: ill-conditioned problem %" PetscBLASInt_FMT, info);
   }
   PetscCall(PetscFree(select));
 
