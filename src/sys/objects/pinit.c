@@ -1973,3 +1973,16 @@ PETSC_EXTERN PetscErrorCode PetscCtxDestroyDefault(PetscCtxRt ctx)
   PetscCall(PetscFree(*(void **)ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+// See https://danieldk.eu/software/misc/intel-mkl-on-amd-zen
+PETSC_EXTERN int mkl_serv_intel_cpu_true(void)
+{
+  return 1;
+}
+
+typedef int (*fakeintel_fptr)(void);
+
+PETSC_EXTERN fakeintel_fptr mkl_serv_get_cpu_true(void)
+{
+  return &mkl_serv_intel_cpu_true;
+}
