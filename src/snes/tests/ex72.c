@@ -37,10 +37,10 @@ static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat B, PetscCtx ctx)
 
 int main(int argc, char **argv)
 {
-  SNES     snes;
-  Vec      x, r, xl, xu;
-  Mat      J;
-  TestCtx  ctx;
+  SNES    snes;
+  Vec     x, r, xl, xu;
+  Mat     J;
+  TestCtx ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
