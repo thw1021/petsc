@@ -399,7 +399,7 @@ A full test of the MCP server capability can be done by running `src/snes/tutori
 ./ex19 -snes_view saws -snes_saws_block
 ```
 
-It will print out a URL. Then run in the https://gitlab.com/petsc/petsc_mcp_servers repository, and copy the URL
+Then run in the https://gitlab.com/petsc/petsc_mcp_servers repository
 
 ```
 python petsc_mcp_client.py --url http://hostname:8080/mcp get
