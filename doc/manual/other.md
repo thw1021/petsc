@@ -379,7 +379,7 @@ the option `--download-saws`. Options to use SAWs include
 
 Options that control behavior of SAWs include
 
-- `-saws_log filename`        - log all SAWs actions in a file.
+- `-saws_log filename`       - log all SAWs actions in a file.
 - `-saws_https certfile`     - use HTTPS instead of HTTP with a certificate.
 - `-saws_port_auto_select`   - have SAWs pick a port number instead of using 8080. The port number will be printed to the screen in the appropriate URL
 - `-saws_port port`          - use `port` instead of 8080.
