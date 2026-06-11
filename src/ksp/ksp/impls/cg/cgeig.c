@@ -24,18 +24,36 @@ PetscErrorCode KSPComputeEigenvalues_CG(KSP ksp, PetscInt nmax, PetscReal *r, Pe
   e  = cgP->e;
   ee = cgP->ee;
 
-  /* copy tridiagonal matrix to work space */
+  /* Copy the tridiagonal matrix to the work space, truncating at the first
+     non-finite Lanczos coefficient (see KSPComputeExtremeSingularValues_CG()
+     for why Inf/NaN entries can appear) so LAPACKstev does not fail with the
+     "xSTEV error". The leading finite block is a valid result from the
+     converged Krylov subspace. */
+  PetscInt nv = 0;
   for (PetscInt j = 0; j < n; j++) {
-    r[j]  = PetscRealPart(d[j]);
-    ee[j] = PetscRealPart(e[j + 1]);
+    PetscReal dj = PetscRealPart(d[j]);
+    PetscReal ej = PetscRealPart(e[j + 1]);
+    if (PetscIsInfOrNanReal(dj) || PetscIsInfOrNanReal(ej)) break;
+    r[j]  = dj;
+    ee[j] = ej;
+    nv++;
   }
+  *neig = nv;
+  if (!nv) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCall(PetscBLASIntCast(n, &bn));
+  PetscCall(PetscBLASIntCast(nv, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
   PetscCall(PetscFPTrapPop());
-  PetscCall(PetscSortReal(n, r));
+  /* lierr > 0: algorithm did not converge in 30*N iterations; the eigenvalues
+     are only estimates used for Chebyshev smoothing, so skip rather than crash */
+  if (lierr > 0) {
+    PetscCall(PetscInfo(ksp, "xSTEV: %" PetscBLASInt_FMT " off-diagonal elements did not converge; returning zero eigenvalues\n", lierr));
+    *neig = 0;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error (invalid argument %" PetscBLASInt_FMT ")", lierr);
+  PetscCall(PetscSortReal(nv, r));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -57,18 +75,42 @@ PetscErrorCode KSPComputeExtremeSingularValues_CG(KSP ksp, PetscReal *emax, Pets
   dd = cgP->dd;
   ee = cgP->ee;
 
-  /* copy tridiagonal matrix to work space */
+  /* Copy the tridiagonal matrix to the work space, truncating at the first
+     non-finite Lanczos coefficient. With KSP_NORM_NONE and a fixed iteration
+     count (as used by the GAMG/Chebyshev eigen-estimate with a random
+     right-hand side) CG can (nearly) converge before the last iteration; the
+     subsequent Lanczos coefficients become 0/0 or overflow, producing Inf/NaN
+     entries that would otherwise make LAPACKstev fail with "xSTEV error". The
+     leading finite block is a valid estimate from the converged Krylov
+     subspace. */
+  PetscInt nv = 0;
   for (PetscInt j = 0; j < n; j++) {
-    dd[j] = PetscRealPart(d[j]);
-    ee[j] = PetscRealPart(e[j + 1]);
+    PetscReal dj = PetscRealPart(d[j]);
+    PetscReal ej = PetscRealPart(e[j + 1]);
+    if (PetscIsInfOrNanReal(dj) || PetscIsInfOrNanReal(ej)) break;
+    dd[j] = dj;
+    ee[j] = ej;
+    nv++;
+  }
+  if (!nv) {
+    *emax = *emin = 1.0;
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscBLASIntCast(n, &bn));
+  PetscCall(PetscBLASIntCast(nv, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
   PetscCall(PetscFPTrapPop());
+  /* lierr > 0: algorithm did not converge in 30*N iterations; the extreme
+     singular values are only estimates used for Chebyshev smoothing, so use a
+     safe fallback rather than crash */
+  if (lierr > 0) {
+    PetscCall(PetscInfo(ksp, "xSTEV: %" PetscBLASInt_FMT " off-diagonal elements did not converge; returning emin=emax=1\n", lierr));
+    *emax = *emin = 1.0;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error (invalid argument %" PetscBLASInt_FMT ")", lierr);
   *emin = dd[0];
-  *emax = dd[n - 1];
+  *emax = dd[nv - 1];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
