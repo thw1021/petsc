@@ -1711,10 +1711,14 @@ PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat A, MatType newtype, MatReuse reuse,
     PetscCall(MatDisAssemble_MPIAIJ(A, PETSC_FALSE));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->A, MATSEQSELL, MAT_INITIAL_MATRIX, &b->A));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->B, MATSEQSELL, MAT_INITIAL_MATRIX, &b->B));
+    PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
+    PetscCall(MatSetOption(B, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
     PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatSetOption(B, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
   }
 
   if (reuse == MAT_INPLACE_MATRIX) {
