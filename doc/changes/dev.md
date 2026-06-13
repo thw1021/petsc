@@ -21,6 +21,7 @@
 - Add `PetscObjectViewSynchronizedFromOptions()`
 - Add `PetscSetMPIThreadRequiredType()`
 - Deprecate `PETSC_MPI_THREAD_REQUIRED`
+- Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
 
 ## Event Logging
 
