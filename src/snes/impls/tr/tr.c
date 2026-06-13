@@ -796,7 +796,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       step_ok = PETSC_FALSE;
       /* check to see if progress is hopeless */
       PetscCall(SNESTR_Converged_Private(snes, xnorm, ynorm, gnorm));
-      if (snes->reason < 0) { /* We're not progressing, so return with the current iterate */
+      if (snes->reason < 0) {
         snes->numFailures++;
         break;
       } else if (!snes->reason) {
