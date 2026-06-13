@@ -1,4 +1,4 @@
-static char help[] = "Tests MatConvert() from MATAIJ to MATSELL across multiple ranks.\n\n";
+static char help[] = "Tests MatConvert() from MATAIJ to MATSELL across multiple processes.\n\n";
 
 #include <petscmat.h>
 
@@ -21,9 +21,9 @@ int main(int argc, char **args)
 
   PetscCall(MatConvert(A, MATSELL, MAT_INITIAL_MATRIX, &B));
   PetscCall(MatMultEqual(A, B, 10, &flg));
-  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatMult differs between MATAIJ and converted MATSELL");
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatMult() differs between MATAIJ and converted MATSELL");
   PetscCall(MatMultAddEqual(A, B, 10, &flg));
-  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatMultAdd differs between MATAIJ and converted MATSELL");
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatMultAdd() differs between MATAIJ and converted MATSELL");
 
   PetscCall(MatDestroy(&A));
   PetscCall(MatDestroy(&B));
