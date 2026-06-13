@@ -1722,6 +1722,9 @@ PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat A, MatType newtype, MatReuse reuse,
     /* Expand a->B from compacted local off-diag columns back to global columns so the new MPISELL's
        MatAssemblyEnd() builds the correct garray/Mvctx for its off-diagonal block. */
     PetscCall(MatDisAssemble_MPIAIJ(A, PETSC_FALSE));
+    /* Expand a->B from compacted local off-diag columns back to global columns so the new MPISELL's
+    MatAssemblyEnd() builds the correct garray/Mvctx for its off-diagonal block. */
+    PetscCall(MatDisAssemble_MPIAIJ(A, PETSC_FALSE));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->A, MATSEQSELL, MAT_INITIAL_MATRIX, &b->A));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->B, MATSEQSELL, MAT_INITIAL_MATRIX, &b->B));
     /* The locally-populated A and B have no stashed off-processor entries, so skip the stash scatter. */
