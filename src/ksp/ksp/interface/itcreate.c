@@ -692,8 +692,8 @@ PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(rhs, VEC_CLASSID, 2);
   PetscValidHeaderSpecific(sol, VEC_CLASSID, 3);
-  if (ksp->presolve) PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
   if (ksp->presolve_ew) PetscCall((*ksp->presolve_ew)(ksp, rhs, sol, ksp->prectx_ew));
+  if (ksp->presolve) PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -720,8 +720,8 @@ PetscErrorCode KSPPostSolve(KSP ksp, Vec rhs, Vec sol)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(rhs, VEC_CLASSID, 2);
   PetscValidHeaderSpecific(sol, VEC_CLASSID, 3);
-  if (ksp->postsolve) PetscCall((*ksp->postsolve)(ksp, rhs, sol, ksp->postctx));
   if (ksp->postsolve_ew) PetscCall((*ksp->postsolve_ew)(ksp, rhs, sol, ksp->postctx_ew));
+  if (ksp->postsolve) PetscCall((*ksp->postsolve)(ksp, rhs, sol, ksp->postctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
