@@ -237,9 +237,9 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
   Level: intermediate
 
   Note:
-  The threshold is relative (per fine-node row) so it is invariant to the differing scales of the near-null space modes.
+  The threshold is relative (per fine-node row) so it is invariant to the differing scales of the near-null space modes. On coarser levels it is scaled by `PCGAMGSetProlongatorFilterScale()`.
 
-.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilter()`, `PCGAMGSetLowMemoryFilter()`
+.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGSetProlongatorFilter(PC pc, PetscReal thr)
 {
@@ -263,7 +263,7 @@ PetscErrorCode PCGAMGSetProlongatorFilter(PC pc, PetscReal thr)
 
   Level: intermediate
 
-.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGSetLowMemoryFilter()`
+.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
 {
@@ -271,6 +271,58 @@ PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscAssertPointer(thr, 2);
   PetscUseMethod(pc, "PCGAMGGetProlongatorFilter_C", (PC, PetscReal *), (pc, thr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCGAMGSetProlongatorFilterScale - Set the per-level scaling of the prolongator filter threshold (see `PCGAMGSetProlongatorFilter()`)
+
+  Logically Collective
+
+  Input Parameters:
++ pc    - the preconditioner context
+- scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l
+
+  Options Database Key:
+. -pc_gamg_prolongator_filter_scale scale - per-level scaling of the prolongator filter threshold (1.0=default)
+
+  Level: intermediate
+
+  Note:
+  A scale below 1 filters less aggressively on coarser levels, where the prolongator is denser.
+
+.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGGetProlongatorFilterScale()`
+@*/
+PetscErrorCode PCGAMGSetProlongatorFilterScale(PC pc, PetscReal scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(pc, scale, 2);
+  PetscTryMethod(pc, "PCGAMGSetProlongatorFilterScale_C", (PC, PetscReal), (pc, scale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCGAMGGetProlongatorFilterScale - Get the per-level scaling of the prolongator filter threshold
+
+  Not Collective
+
+  Input Parameter:
+. pc - the preconditioner context
+
+  Output Parameter:
+. scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l
+
+  Level: intermediate
+
+.seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`
+@*/
+PetscErrorCode PCGAMGGetProlongatorFilterScale(PC pc, PetscReal *scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(scale, 2);
+  PetscUseMethod(pc, "PCGAMGGetProlongatorFilterScale_C", (PC, PetscReal *), (pc, scale));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -361,6 +413,26 @@ static PetscErrorCode PCGAMGGetProlongatorFilter_AGG(PC pc, PetscReal *thr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCGAMGSetProlongatorFilterScale_AGG(PC pc, PetscReal scale)
+{
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
+
+  PetscFunctionBegin;
+  pc_gamg->prolongator_filter_scale = scale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGGetProlongatorFilterScale_AGG(PC pc, PetscReal *scale)
+{
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
+
+  PetscFunctionBegin;
+  *scale = pc_gamg->prolongator_filter_scale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_MG       *mg          = (PC_MG *)pc->data;
@@ -369,6 +441,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscBool    n_aggressive_flg, old_sq_provided = PETSC_FALSE, new_sq_provided = PETSC_FALSE, new_sqr_graph = pc_gamg_agg->use_aggressive_square_graph;
   PetscInt     nsq_graph_old = 0;
   PetscReal    thr           = pc_gamg->prolongator_filter;
+  PetscReal    scale         = pc_gamg->prolongator_filter_scale;
   PetscBool    flg;
 
   PetscFunctionBegin;
@@ -391,6 +464,8 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsBool("-pc_gamg_graph_symmetrize", "Symmetrize graph for coarsening", "PCGAMGSetGraphSymmetrize", pc_gamg_agg->graph_symmetrize, &pc_gamg_agg->graph_symmetrize, NULL));
   PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Threshold for filtering small entries from prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", thr, &thr, &flg));
   if (flg) PetscCall(PCGAMGSetProlongatorFilter(pc, thr));
+  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter_scale", "Per-level scaling of the prolongator filter threshold", "PCGAMGSetProlongatorFilterScale", scale, &scale, &flg));
+  if (flg) PetscCall(PCGAMGSetProlongatorFilterScale(pc, scale));
 
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -414,6 +489,8 @@ static PetscErrorCode PCDestroy_GAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetGraphSymmetrize_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilter_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilter_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilterScale_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilterScale_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2062,7 +2139,13 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
     }
     PetscCall(VecDestroy(&diag));
   }
-  if (pc_gamg->prolongator_filter > 0.0) PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pc_gamg->prolongator_filter));
+  if (pc_gamg->prolongator_filter > 0.0) {
+    PetscReal pfilter = pc_gamg->prolongator_filter * PetscPowRealInt(pc_gamg->prolongator_filter_scale, pc_gamg->current_level);
+
+    PetscCall(PetscInfo(pc, "%s: level %" PetscInt_FMT " prolongator filter threshold %g (base %g, scale %g^%" PetscInt_FMT ")\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)pfilter, (double)pc_gamg->prolongator_filter,
+                        (double)pc_gamg->prolongator_filter_scale, pc_gamg->current_level));
+    PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pfilter));
+  }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
   PetscCall(MatViewFromOptions(Prol, NULL, "-pc_gamg_agg_view_prolongation"));
   *a_P = Prol;
@@ -2075,6 +2158,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
   Options Database Keys:
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation
 . -pc_gamg_prolongator_filter thr                     - relative threshold for block filtering of the prolongator, preserving the near-null space (0=disabled, 0.1=typical)
+. -pc_gamg_prolongator_filter_scale scale             - per-level scaling of the prolongator filter threshold (1.0=default)
 . -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2) levels from finest.
 . -pc_gamg_aggressive_square_graph (true|false)       - Use square graph (A'A), alternative is MIS-k (k=2), for aggressive coarsening
 . -pc_gamg_mis_k_minimum_degree_ordering (true|false) - Use minimum degree ordering in greedy MIS algorithm
@@ -2136,6 +2220,8 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetGraphSymmetrize_C", PCGAMGSetGraphSymmetrize_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilter_C", PCGAMGSetProlongatorFilter_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilter_C", PCGAMGGetProlongatorFilter_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetProlongatorFilterScale_C", PCGAMGSetProlongatorFilterScale_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetProlongatorFilterScale_C", PCGAMGGetProlongatorFilterScale_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
