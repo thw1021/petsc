@@ -250,6 +250,8 @@ static PetscErrorCode MatGetValues_MPISELL(Mat mat, PetscInt m, const PetscInt i
   Mat_MPISELL *sell = (Mat_MPISELL *)mat->data;
   PetscInt     i, j, rstart = mat->rmap->rstart, rend = mat->rmap->rend;
   PetscInt     cstart = mat->cmap->rstart, cend = mat->cmap->rend, row, col;
+  PetscBool    roworiented = sell->roworiented;
+  PetscScalar *value;
 
   PetscFunctionBegin;
   for (i = 0; i < m; i++) {
@@ -260,9 +262,10 @@ static PetscErrorCode MatGetValues_MPISELL(Mat mat, PetscInt m, const PetscInt i
     for (j = 0; j < n; j++) {
       if (idxn[j] < 0) continue; /* negative column */
       PetscCheck(idxn[j] < mat->cmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column too large: col %" PetscInt_FMT " max %" PetscInt_FMT, idxn[j], mat->cmap->N - 1);
+      value = roworiented ? &v[j + i * n] : &v[i + j * m];
       if (idxn[j] >= cstart && idxn[j] < cend) {
         col = idxn[j] - cstart;
-        PetscCall(MatGetValues(sell->A, 1, &row, 1, &col, v + i * n + j));
+        PetscCall(MatGetValues(sell->A, 1, &row, 1, &col, value));
       } else {
         if (!sell->colmap) PetscCall(MatCreateColmap_MPISELL_Private(mat));
 #if defined(PETSC_USE_CTABLE)
@@ -271,8 +274,8 @@ static PetscErrorCode MatGetValues_MPISELL(Mat mat, PetscInt m, const PetscInt i
 #else
         col = sell->colmap[idxn[j]] - 1;
 #endif
-        if (col < 0 || sell->garray[col] != idxn[j]) *(v + i * n + j) = 0.0;
-        else PetscCall(MatGetValues(sell->B, 1, &row, 1, &col, v + i * n + j));
+        if (col < 0 || sell->garray[col] != idxn[j]) *value = 0.0;
+        else PetscCall(MatGetValues(sell->B, 1, &row, 1, &col, value));
       }
     }
   }
@@ -1706,6 +1709,9 @@ PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat A, MatType newtype, MatReuse reuse,
   } else {
     PetscCall(MatDestroy(&b->A));
     PetscCall(MatDestroy(&b->B));
+    /* Expand a->B from compacted local off-diag columns back to global columns so the new MPISELL's
+    MatAssemblyEnd() builds the correct garray/Mvctx for its off-diagonal block. */
+    PetscCall(MatDisAssemble_MPIAIJ(A, PETSC_FALSE));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->A, MATSEQSELL, MAT_INITIAL_MATRIX, &b->A));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->B, MATSEQSELL, MAT_INITIAL_MATRIX, &b->B));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
