@@ -31,7 +31,7 @@ static inline PetscErrorCode ObjectView(PetscObject obj, PetscViewer viewer, Pet
 - emin - minimum estimated singular value
 
   Options Database Key:
-. -ksp_view_singularvalues - compute extreme singular values and print when `KSPSolve()` completes.
+. -ksp_view_singularvalues viewer - compute extreme singular values and displays them when `KSPSolve()` completes. See `PetscOptionsCreateViewer()` for format of `viewer`
 
   Level: advanced
 
@@ -59,12 +59,8 @@ PetscErrorCode KSPComputeExtremeSingularValues(KSP ksp, PetscReal *emax, PetscRe
   PetscAssertPointer(emax, 2);
   PetscAssertPointer(emin, 3);
   PetscCheck(ksp->calc_sings, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Singular values not requested before KSPSetUp()");
-
-  if (ksp->ops->computeextremesingularvalues) PetscUseTypeMethod(ksp, computeextremesingularvalues, emax, emin);
-  else {
-    *emin = -1.0;
-    *emax = -1.0;
-  }
+  PetscCheck(ksp->reason >= 0 || ksp->reason == KSP_DIVERGED_ITS, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Cannot estimate singular values if KSPSolve() failed");
+  PetscUseTypeMethod(ksp, computeextremesingularvalues, emax, emin);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -84,7 +80,7 @@ PetscErrorCode KSPComputeExtremeSingularValues(KSP ksp, PetscReal *emax, PetscRe
 - neig - actual number of eigenvalues computed (will be less than or equal to `n`)
 
   Options Database Key:
-. -ksp_view_eigenvalues - Prints eigenvalues to stdout
+. -ksp_view_eigenvalues - viewer - compute eigenvalue estimates and displays them when `KSPSolve()` completes. See `PetscOptionsCreateViewer()` for format of `viewer`
 
   Level: advanced
 
@@ -120,9 +116,8 @@ PetscErrorCode KSPComputeEigenvalues(KSP ksp, PetscInt n, PetscReal r[], PetscRe
   PetscCheck(n >= 0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Requested < 0 Eigenvalues");
   PetscAssertPointer(neig, 5);
   PetscCheck(ksp->calc_sings, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not requested before KSPSetUp()");
-
-  if (n && ksp->ops->computeeigenvalues) PetscUseTypeMethod(ksp, computeeigenvalues, n, r, c, neig);
-  else *neig = 0;
+  PetscCheck(ksp->reason >= 0 || ksp->reason == KSP_DIVERGED_ITS, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Cannot estimate singular values if KSPSolve() failed");
+  PetscUseTypeMethod(ksp, computeeigenvalues, n, r, c, neig);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -181,7 +176,7 @@ PetscErrorCode KSPComputeRitz(KSP ksp, PetscBool ritz, PetscBool small, PetscInt
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscCheck(ksp->calc_ritz, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Ritz pairs not requested before KSPSetUp()");
-  PetscTryTypeMethod(ksp, computeritz, ritz, small, nrit, S, tetar, tetai);
+  PetscUseTypeMethod(ksp, computeritz, ritz, small, nrit, S, tetar, tetai);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

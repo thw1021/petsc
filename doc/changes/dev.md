@@ -67,6 +67,10 @@
 
 ## KSP
 
+- `KSPComputeExtremeSingularValues()` and `KSPComputeEigenvalues()` no longer silently return with incorrect estimates if the `KSPType` does not support computing the value
+- `KSPComputeExtremeSingularValues()` and `KSPComputeEigenvalues()` no longer silently return with incorrect estimates if the `KSPSolve()` has failed with any value besides
+  `KSP_DIVERGED_ITS`
+
 
 ## SNES
 
