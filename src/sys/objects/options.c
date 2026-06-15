@@ -90,8 +90,10 @@ struct _n_PetscOptions {
   char **aliases2; /* aliasee */
 
   /* Help */
-  PetscBool help;       /* flag whether "-help" is in the database */
-  PetscBool help_intro; /* flag whether "-help intro" is in the database */
+  PetscBool help;          /* flag whether "-help" is in the database */
+  PetscBool help_intro;    /* flag whether "-help intro" is in the database */
+  int       help_nmansecs; /* number of manual sections given as "-help mansec,..."; 0 means the help output is not restricted */
+  char    **help_mansecs;  /* the manual sections themselves; only the options blocks in one of them are printed */
 
   /* Monitors */
   PetscBool monitorFromOptions, monitorCancel;
@@ -104,7 +106,10 @@ struct _n_PetscOptions {
 static PetscOptions defaultoptions = NULL; /* the options database routines query this object for options */
 
 /* list of options which precede others, i.e., are processed in PetscOptionsProcessPrecedentFlags() */
-/* these options can only take boolean values, the code will crash if given a non-boolean value */
+/* these options can only take boolean values, the code will crash if given a non-boolean value;
+   -help additionally accepts "intro", a comma-separated list of manual sections or a boolean value */
+/* -help 0/no/false turns help printing off and -help 1/yes/true is equivalent to -help */
+/* -help is unable to display the help for a manual section named 0, 1, yes, no, true, or false */
 static const char *precedentOptions[] = {"-petsc_ci", "-options_monitor", "-options_monitor_cancel", "-help", "-skip_petscrc"};
 enum PetscPrecedentOption {
   PO_CI_ENABLE,
@@ -117,6 +122,7 @@ enum PetscPrecedentOption {
 
 PETSC_INTERN PetscErrorCode PetscOptionsSetValue_Private(PetscOptions, const char[], const char[], int *, PetscOptionSource);
 PETSC_INTERN PetscErrorCode PetscOptionsInsertStringYAML_Private(PetscOptions, const char[], PetscOptionSource);
+static PetscErrorCode       PetscOptionsStringToBool_Private(const char[], PetscBool *, PetscBool *);
 
 /*
     Options events monitor
@@ -752,6 +758,7 @@ static PetscErrorCode PetscOptionsProcessPrecedentFlags(PetscOptions options, in
   const char       **val;
   char             **cval;
   PetscBool         *set, unneeded;
+  PetscBool          isbool, helpval;
 
   PetscFunctionBegin;
   PetscCall(PetscCalloc2(n, &cval, n, &set));
@@ -778,9 +785,10 @@ static PetscErrorCode PetscOptionsProcessPrecedentFlags(PetscOptions options, in
   }
 
   /* Process flags */
+  /* "-help" takes a logical value, "intro", or a comma-separated list of manual sections (recorded when -help is inserted below) */
+  PetscCall(PetscOptionsStringToBool_Private(val[PO_HELP], &helpval, &isbool));
   PetscCall(PetscStrcasecmp(val[PO_HELP], "intro", &options->help_intro));
-  if (options->help_intro) options->help = PETSC_TRUE;
-  else PetscCall(PetscOptionsStringToBoolIfSet_Private(PO_HELP, val, set, &options->help));
+  if (set[PO_HELP]) options->help = isbool ? helpval : PETSC_TRUE;
   PetscCall(PetscOptionsStringToBoolIfSet_Private(PO_CI_ENABLE, val, set, &unneeded));
   /* need to manage PO_CI_ENABLE option before the PetscOptionsMonitor is turned on, so its setting is not monitored */
   if (set[PO_CI_ENABLE]) PetscCall(PetscOptionsSetValue_Private(options, opt[PO_CI_ENABLE], val[PO_CI_ENABLE], &a, PETSC_OPT_COMMAND_LINE));
@@ -1193,6 +1201,9 @@ PetscErrorCode PetscOptionsClear(PetscOptions options)
   options->prefix[0]  = 0;
   options->help       = PETSC_FALSE;
   options->help_intro = PETSC_FALSE;
+  if (options->help_mansecs) PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
+  options->help_nmansecs = 0;
+  options->help_mansecs  = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1413,9 +1424,19 @@ setvalue:
 
   /* handle -help so that it can be set from anywhere */
   if (!PetscOptNameCmp(name, "help")) {
-    options->help       = PETSC_TRUE;
-    options->help_intro = (value && !PetscOptNameCmp(value, "intro")) ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool isbool, helpval;
+
+    PetscCall(PetscOptionsStringToBool_Private(value, &helpval, &isbool));
+    options->help       = isbool ? helpval : PETSC_TRUE;
+    options->help_intro = (!isbool && value && !PetscOptNameCmp(value, "intro")) ? PETSC_TRUE : PETSC_FALSE;
     options->used[n]    = PETSC_TRUE;
+    /* a value that is neither a logical value nor "intro" is a comma-separated list of manual sections that
+       restricts the help output; PetscStrToArray() uses raw malloc()/free() like names[]/values[], as needed
+       here since -help is processed before the tracking allocator is set up */
+    if (options->help_mansecs) PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
+    options->help_nmansecs = 0;
+    options->help_mansecs  = NULL;
+    if (!isbool && value && value[0] && !options->help_intro) PetscCall(PetscStrToArray(value, ',', &options->help_nmansecs, &options->help_mansecs));
   }
 
   PetscCall(PetscOptionsMonitor(options, name, value ? value : "", source));
@@ -1454,7 +1475,12 @@ PetscErrorCode PetscOptionsClearValue(PetscOptions options, const char name[])
   PetscFunctionBegin;
   options = options ? options : defaultoptions;
   PetscCheck(name[0] == '-', PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Name must begin with '-': Instead %s", name);
-  if (!PetscOptNameCmp(name, "-help")) options->help = options->help_intro = PETSC_FALSE;
+  if (!PetscOptNameCmp(name, "-help")) {
+    options->help = options->help_intro = PETSC_FALSE;
+    if (options->help_mansecs) PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
+    options->help_nmansecs = 0;
+    options->help_mansecs  = NULL;
+  }
 
   name++; /* skip starting dash */
 
@@ -1758,6 +1784,19 @@ PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions options, PetscBool
   PetscAssertPointer(set, 2);
   options = options ? options : defaultoptions;
   *set    = options->help_intro;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Returns the manual sections given with "-help mansec,...", with n set to 0 when the help output should not be
+   restricted. The returned array is borrowed and remains valid until the option is cleared. */
+PetscErrorCode PetscOptionsHelpManSecs_Internal(PetscOptions options, PetscInt *n, const char *const *mansec[])
+{
+  PetscFunctionBegin;
+  PetscAssertPointer(n, 2);
+  PetscAssertPointer(mansec, 3);
+  options = options ? options : defaultoptions;
+  *n      = options->help_nmansecs;
+  *mansec = (const char *const *)options->help_mansecs;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2182,12 +2221,17 @@ PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*monitor)(const char name[
 
 .seealso: `PetscOptionsStringToInt()`, `PetscOptionsStringToReal()`, `PetscOptionsStringToScalar()`, `PetscOptionsGetBool()`
 @*/
-PetscErrorCode PetscOptionsStringToBool(const char value[], PetscBool *a)
+/*
+   Same as PetscOptionsStringToBool() but reports in isbool whether value is one of the recognized
+   logical values instead of raising an error when it is not.
+*/
+static PetscErrorCode PetscOptionsStringToBool_Private(const char value[], PetscBool *a, PetscBool *isbool)
 {
   PetscBool istrue, isfalse;
   size_t    len;
 
   PetscFunctionBegin;
+  *isbool = PETSC_TRUE;
   /* PetscStrlen() returns 0 for NULL or "" */
   PetscCall(PetscStrlen(value, &len));
   if (!len) {
@@ -2234,7 +2278,18 @@ PetscErrorCode PetscOptionsStringToBool(const char value[], PetscBool *a)
     *a = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unknown logical value: %s", value);
+  *isbool = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscOptionsStringToBool(const char value[], PetscBool *a)
+{
+  PetscBool isbool;
+
+  PetscFunctionBegin;
+  PetscCall(PetscOptionsStringToBool_Private(value, a, &isbool));
+  PetscCheck(isbool, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unknown logical value: %s", value);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
