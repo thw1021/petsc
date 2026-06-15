@@ -1283,6 +1283,7 @@ PetscErrorCode MatDestroy_SeqAIJ(Mat A)
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaij_seqaijkokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaij_seqbaijkokkos_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaij_seqaijcrl_C", NULL));
 #if defined(PETSC_HAVE_ELEMENTAL)
@@ -4762,6 +4763,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJHIPSPARSE(Mat, MatType, MatR
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJKokkos(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqBAIJKokkos(Mat, MatType, MatReuse, Mat *);
 #endif
 
 PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
@@ -4825,6 +4827,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqaij_seqaijkokkos_C", MatConvert_SeqAIJ_SeqAIJKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqaij_seqbaijkokkos_C", MatConvert_SeqAIJ_SeqBAIJKokkos));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqaij_seqaijcrl_C", MatConvert_SeqAIJ_SeqAIJCRL));
 #if defined(PETSC_HAVE_ELEMENTAL)

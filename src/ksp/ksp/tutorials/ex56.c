@@ -119,12 +119,20 @@ int main(int argc, char **args)
     PetscCall(MatCreate(comm, &Amat));
     PetscCall(MatSetSizes(Amat, m, m, M, M));
     if (!test_late_bs) PetscCall(MatSetBlockSize(Amat, 3));
-    PetscCall(MatSetType(Amat, MATAIJ));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_TRUE));
     PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE)); // this keeps CG after switch to negative
     PetscCall(MatSetFromOptions(Amat));
     PetscCall(MatSeqAIJSetPreallocation(Amat, 0, d_nnz));
     PetscCall(MatMPIAIJSetPreallocation(Amat, 0, d_nnz, 0, o_nnz));
+    /* Generic block preallocation: a no-op unless Amat is a BAIJ-family type (e.g. seqbaijkokkos);
+       the operator has square 3x3 blocks. blk_nnz is the block-column count per block-row. */
+    {
+      PetscInt *blk_nnz, mbs = m / 3;
+      PetscCall(PetscMalloc1(mbs, &blk_nnz));
+      for (i = 0; i < mbs; i++) blk_nnz[i] = d_nnz[i * 3] / 3;
+      PetscCall(MatSeqBAIJSetPreallocation(Amat, 3, 0, blk_nnz));
+      PetscCall(PetscFree(blk_nnz));
+    }
 
     PetscCall(PetscFree(d_nnz));
     PetscCall(PetscFree(o_nnz));
@@ -586,5 +594,12 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
        requires: hip
        suffix: rap_bs_hip
        args: -mat_type aijhipsparse -rap_mg_coarse_pc_type jacobi -rap_mg_levels_pc_type jacobi -rap_mg_levels_ksp_type richardson -rap_mg_levels_pc_jacobi_type rowl1 -rap_mg_levels_pc_jacobi_rowl1_scale .5
+
+   test:
+      suffix: seqbaijkokkos
+      requires: kokkos_kernels !complex
+      nsize: 1
+      args: -ne 6 -alpha 1.e-3 -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -use_mat_nearnullspace -pc_gamg_coarse_eq_limit 20 -ksp_rtol 1e-6 -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -mg_coarse_pc_type jacobi -mg_coarse_ksp_type cg -pc_gamg_parallel_coarse_grid_solver -mat_type seqbaijkokkos -ksp_converged_reason -two_solves false
+      output_file: output/ex56_seqbaijkokkos.out
 
 TEST*/

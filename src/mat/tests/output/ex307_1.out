@@ -1,0 +1,10 @@
+Test_bs1_5x5x5 PASS
+Test_bs3_4x4x4 PASS
+Test_bs6_3x3x3 PASS
+Test_rect_4x3x4_bs3x6 PASS
+Test_nonsquare_3x2x3_bs2x3 PASS
+TestPtAP_bs1_4x4 PASS
+TestPtAP_bs3_4x4 PASS
+TestPtAP_elasticity_3to6 PASS
+TestPtAP_bs6_3x3 PASS
+ALL PASS

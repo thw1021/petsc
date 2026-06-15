@@ -1399,6 +1399,10 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
 #endif
   PetscCall(MatSeqAIJSetPreallocation(Prol, col_bs, NULL));
   PetscCall(MatMPIAIJSetPreallocation(Prol, col_bs, NULL, col_bs, NULL));
+  /* Generic BAIJ-family preallocation: a no-op unless Prol is a block type (e.g. seqbaijkokkos),
+     where the rectangular (bs x col_bs) column block size is taken from the matrix set above.
+     The tentative prolongator has one block per block-row. */
+  PetscCall(MatSeqBAIJSetPreallocation(Prol, bs, 1, NULL));
 
   /* can get all points "removed" */
   PetscCall(MatGetSize(Prol, &kk, &ii));

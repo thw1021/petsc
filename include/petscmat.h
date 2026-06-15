@@ -88,6 +88,8 @@ typedef const char *MatType;
 #define MATBAIJ                      "baij"
 #define MATSEQBAIJ                   "seqbaij"
 #define MATMPIBAIJ                   "mpibaij"
+#define MATBAIJKOKKOS                "baijkokkos"
+#define MATSEQBAIJKOKKOS             "seqbaijkokkos"
 #define MATMPIADJ                    "mpiadj"
 #define MATSBAIJ                     "sbaij"
 #define MATSEQSBAIJ                  "seqsbaij"
