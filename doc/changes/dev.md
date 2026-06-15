@@ -35,6 +35,7 @@
 - Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
 - Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
 - Add `PetscIntCSRView()` to inspect CSR graph
+- Add `-help mansec` to restrict the options help output to the options blocks in the given manual section; a comma-separated list may be given, for example `-help ksp,snes`
 
 ## Event Logging
 

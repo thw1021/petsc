@@ -337,6 +337,15 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
   if (flag) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscOptionsHasHelp(NULL, &hashelp));
+  /* these options are printed outside any PetscOptionsBegin()/PetscOptionsEnd() block, so apply the
+     "-help mansec" filter here; they are documented in the manual section a PetscViewer belongs to */
+  if (hashelp) {
+    PetscInt           nmansec = 0, idx = 0;
+    const char *const *mansecs = NULL;
+
+    PetscCall(PetscOptionsHelpManSecs_Internal(NULL, &nmansec, &mansecs));
+    if (nmansec) PetscCall(PetscEListFind(nmansec, mansecs, "Viewer", &idx, &hashelp));
+  }
   if (hashelp) {
     PetscBool found;
 

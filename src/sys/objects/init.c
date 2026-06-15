@@ -233,14 +233,16 @@ PETSC_INTERN PetscBool PetscObjectsLog;
 
 PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
 {
-  char        string[64];
-  PetscBool   flg1 = PETSC_FALSE, flg2 = PETSC_FALSE, flag, hasHelp;
-  PetscBool   checkstack = PETSC_FALSE;
-  PetscReal   si;
-  PetscInt    intensity;
-  int         i;
-  PetscMPIInt rank;
-  char        version[256];
+  char               string[64];
+  PetscBool          flg1 = PETSC_FALSE, flg2 = PETSC_FALSE, flag, hasHelp;
+  PetscBool          checkstack = PETSC_FALSE;
+  PetscReal          si;
+  PetscInt           intensity;
+  PetscInt           nHelpManSecs = 0;
+  int                i;
+  PetscMPIInt        rank;
+  char               version[256];
+  const char *const *helpManSecs = NULL;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -319,6 +321,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
      Print main application help message
   */
   PetscCall(PetscOptionsHasHelp(NULL, &hasHelp));
+  /* in "-help mansec" mode the generic, program-wide help is suppressed; only the matching options blocks are shown */
+  PetscCall(PetscOptionsHelpManSecs_Internal(NULL, &nHelpManSecs, &helpManSecs));
   if (help && hasHelp) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", help));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "----------------------------------------\n"));
@@ -341,7 +345,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "See https://petsc.org/release/faq for problems.\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "See https://petsc.org/release/manualpages for help.\n"));
     if (!PetscCIEnabledPortableErrorOutput) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "Libraries linked from %s\n", PETSC_LIB_DIR));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "----------------------------------------\n"));
+    /* the closing separator and program-wide options list below are dropped in "-help manpage" mode so each matching block prints its own header */
+    if (!nHelpManSecs) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "----------------------------------------\n"));
   }
 
   /*
@@ -592,11 +597,12 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   /*
        Print basic help message
   */
-  if (hasHelp) {
+  if (hasHelp && !nHelpManSecs) {
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "Options for all PETSc programs:\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -version: prints PETSc version\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -help intro: prints example description and PETSc version, and exits\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -help: prints example description, PETSc version, and available options for used routines\n"));
+    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -help mansec: prints only the options in the given manual section(s), for example -help ksp,snes\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -on_error_abort: cause an abort when an error is detected. Useful \n "));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "       only when run in the debugger\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -on_error_attach_debugger [(noxterm)],[(gdb|lldb|...)]\n"));
