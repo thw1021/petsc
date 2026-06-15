@@ -241,6 +241,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   int         i;
   PetscMPIInt rank;
   char        version[256];
+  const char *helpManPage = NULL;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -319,6 +320,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
      Print main application help message
   */
   PetscCall(PetscOptionsHasHelp(NULL, &hasHelp));
+  /* in "-help manpage" mode the generic, program-wide help is suppressed; only the matching options blocks are shown */
+  PetscCall(PetscOptionsHelpManPage_Internal(NULL, &helpManPage));
   if (help && hasHelp) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", help));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "----------------------------------------\n"));
@@ -341,7 +344,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "See https://petsc.org/release/faq for problems.\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "See https://petsc.org/release/manualpages for help.\n"));
     if (!PetscCIEnabledPortableErrorOutput) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "Libraries linked from %s\n", PETSC_LIB_DIR));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "----------------------------------------\n"));
+    /* the closing separator and program-wide options list below are dropped in "-help manpage" mode so each matching block prints its own header */
+    if (!helpManPage) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "----------------------------------------\n"));
   }
 
   /*
@@ -593,7 +597,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   /*
        Print basic help message
   */
-  if (hasHelp) {
+  if (hasHelp && !helpManPage) {
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "Options for all PETSc programs:\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -version: prints PETSc version\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -help intro: prints example description and PETSc version, and exits\n"));

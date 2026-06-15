@@ -192,6 +192,8 @@ struct _n_PetscOptionItems {
   char           *title;
   MPI_Comm        comm;
   PetscBool       printhelp, changedmethod, alreadyprinted;
+  const char     *helpman;      /* when -help manpage is given, only options with this man page are printed; NULL means print all */
+  PetscBool       titleprinted; /* in -help manpage mode, whether this block's title has been printed yet (printed lazily before the first matching option) */
   PetscObject     object;
   PetscOptions    options;
 };
@@ -420,7 +422,7 @@ PetscErrorCode PetscOptionsDeprecatedNoObject(T...);
 M*/
   #define PetscOptionsHeadBegin(PetscOptionsObject, head) \
     do { \
-      if (PetscOptionsObject->printhelp && PetscOptionsObject->count == 1 && !PetscOptionsObject->alreadyprinted) PetscCall((*PetscHelpPrintf)(PetscOptionsObject->comm, "  %s\n", head)); \
+      if (PetscOptionsObject->printhelp && PetscOptionsObject->count == 1 && !PetscOptionsObject->alreadyprinted && !PetscOptionsObject->helpman) PetscCall((*PetscHelpPrintf)(PetscOptionsObject->comm, "  %s\n", head)); \
     } while (0)
 
   #define PetscOptionsHead(...) PETSC_DEPRECATED_MACRO(3, 18, 0, "PetscOptionsHeadBegin()", ) PetscOptionsHeadBegin(__VA_ARGS__)
