@@ -719,7 +719,6 @@ static PetscErrorCode MatNorm_MPIBAIJ(Mat mat, NormType type, PetscReal *nrm)
       PetscInt    *jj, *garray = baij->garray;
 
       PetscCall(MatCreateVecs(mat, &col, NULL));
-      PetscCall(VecSet(col, 0.0));
       PetscCall(VecGetArrayWrite(col, &array));
       v  = amat->a;
       jj = amat->j;
@@ -733,7 +732,6 @@ static PetscErrorCode MatNorm_MPIBAIJ(Mat mat, NormType type, PetscReal *nrm)
       }
       PetscCall(VecRestoreArrayWrite(col, &array));
       PetscCall(MatCreateVecs(baij->B, &bcol, NULL));
-      PetscCall(VecSet(bcol, 0.0));
       PetscCall(VecGetArrayWrite(bcol, &array));
       v  = bmat->a;
       jj = bmat->j;
@@ -1226,9 +1224,9 @@ static PetscErrorCode MatMult_MPIBAIJ(Mat A, Vec xx, Vec yy)
   PetscCall(VecGetLocalSize(yy, &nt));
   PetscCheck(nt == A->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible partition of A and yy");
   PetscCall(VecScatterBegin(a->Mvctx, xx, a->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*a->A->ops->mult)(a->A, xx, yy));
+  PetscUseTypeMethod(a->A, mult, xx, yy);
   PetscCall(VecScatterEnd(a->Mvctx, xx, a->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*a->B->ops->multadd)(a->B, a->lvec, yy, yy));
+  PetscUseTypeMethod(a->B, multadd, a->lvec, yy, yy);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1238,9 +1236,9 @@ static PetscErrorCode MatMultAdd_MPIBAIJ(Mat A, Vec xx, Vec yy, Vec zz)
 
   PetscFunctionBegin;
   PetscCall(VecScatterBegin(a->Mvctx, xx, a->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*a->A->ops->multadd)(a->A, xx, yy, zz));
+  PetscUseTypeMethod(a->A, multadd, xx, yy, zz);
   PetscCall(VecScatterEnd(a->Mvctx, xx, a->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*a->B->ops->multadd)(a->B, a->lvec, zz, zz));
+  PetscUseTypeMethod(a->B, multadd, a->lvec, zz, zz);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1250,9 +1248,9 @@ static PetscErrorCode MatMultTranspose_MPIBAIJ(Mat A, Vec xx, Vec yy)
 
   PetscFunctionBegin;
   /* do nondiagonal part */
-  PetscCall((*a->B->ops->multtranspose)(a->B, xx, a->lvec));
+  PetscUseTypeMethod(a->B, multtranspose, xx, a->lvec);
   /* do local part */
-  PetscCall((*a->A->ops->multtranspose)(a->A, xx, yy));
+  PetscUseTypeMethod(a->A, multtranspose, xx, yy);
   /* add partial results together */
   PetscCall(VecScatterBegin(a->Mvctx, a->lvec, yy, ADD_VALUES, SCATTER_REVERSE));
   PetscCall(VecScatterEnd(a->Mvctx, a->lvec, yy, ADD_VALUES, SCATTER_REVERSE));
@@ -1265,9 +1263,9 @@ static PetscErrorCode MatMultTransposeAdd_MPIBAIJ(Mat A, Vec xx, Vec yy, Vec zz)
 
   PetscFunctionBegin;
   /* do nondiagonal part */
-  PetscCall((*a->B->ops->multtranspose)(a->B, xx, a->lvec));
+  PetscUseTypeMethod(a->B, multtranspose, xx, a->lvec);
   /* do local part */
-  PetscCall((*a->A->ops->multtransposeadd)(a->A, xx, yy, zz));
+  PetscUseTypeMethod(a->A, multtransposeadd, xx, yy, zz);
   /* add partial results together */
   PetscCall(VecScatterBegin(a->Mvctx, a->lvec, zz, ADD_VALUES, SCATTER_REVERSE));
   PetscCall(VecScatterEnd(a->Mvctx, a->lvec, zz, ADD_VALUES, SCATTER_REVERSE));
@@ -1335,8 +1333,8 @@ static PetscErrorCode MatGetRow_MPIBAIJ(Mat matin, PetscInt row, PetscInt *nz, P
     pcA = NULL;
     if (!v) pcB = NULL;
   }
-  PetscCall((*mat->A->ops->getrow)(mat->A, lrow, &nzA, pcA, pvA));
-  PetscCall((*mat->B->ops->getrow)(mat->B, lrow, &nzB, pcB, pvB));
+  PetscUseTypeMethod(mat->A, getrow, lrow, &nzA, pcA, pvA);
+  PetscUseTypeMethod(mat->B, getrow, lrow, &nzB, pcB, pvB);
   nztot = nzA + nzB;
 
   cmap = mat->garray;
@@ -1374,8 +1372,8 @@ static PetscErrorCode MatGetRow_MPIBAIJ(Mat matin, PetscInt row, PetscInt *nz, P
     }
   }
   *nz = nztot;
-  PetscCall((*mat->A->ops->restorerow)(mat->A, lrow, &nzA, pcA, pvA));
-  PetscCall((*mat->B->ops->restorerow)(mat->B, lrow, &nzB, pcB, pvB));
+  PetscUseTypeMethod(mat->A, restorerow, lrow, &nzA, pcA, pvA);
+  PetscUseTypeMethod(mat->B, restorerow, lrow, &nzB, pcB, pvB);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2171,7 +2169,7 @@ static PetscErrorCode MatSOR_MPIBAIJ(Mat matin, Vec bb, PetscReal omega, MatSORT
 
   PetscFunctionBegin;
   if (flag == SOR_APPLY_UPPER) {
-    PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+    PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -2179,7 +2177,7 @@ static PetscErrorCode MatSOR_MPIBAIJ(Mat matin, Vec bb, PetscReal omega, MatSORT
 
   if ((flag & SOR_LOCAL_SYMMETRIC_SWEEP) == SOR_LOCAL_SYMMETRIC_SWEEP) {
     if (flag & SOR_ZERO_INITIAL_GUESS) {
-      PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+      PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
       its--;
     }
 
@@ -2189,14 +2187,14 @@ static PetscErrorCode MatSOR_MPIBAIJ(Mat matin, Vec bb, PetscReal omega, MatSORT
 
       /* update rhs: bb1 = bb - B*x */
       PetscCall(VecScale(mat->lvec, -1.0));
-      PetscCall((*mat->B->ops->multadd)(mat->B, mat->lvec, bb, bb1));
+      PetscUseTypeMethod(mat->B, multadd, mat->lvec, bb, bb1);
 
       /* local sweep */
-      PetscCall((*mat->A->ops->sor)(mat->A, bb1, omega, SOR_SYMMETRIC_SWEEP, fshift, lits, 1, xx));
+      PetscUseTypeMethod(mat->A, sor, bb1, omega, SOR_SYMMETRIC_SWEEP, fshift, lits, 1, xx);
     }
   } else if (flag & SOR_LOCAL_FORWARD_SWEEP) {
     if (flag & SOR_ZERO_INITIAL_GUESS) {
-      PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+      PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
       its--;
     }
     while (its--) {
@@ -2205,14 +2203,14 @@ static PetscErrorCode MatSOR_MPIBAIJ(Mat matin, Vec bb, PetscReal omega, MatSORT
 
       /* update rhs: bb1 = bb - B*x */
       PetscCall(VecScale(mat->lvec, -1.0));
-      PetscCall((*mat->B->ops->multadd)(mat->B, mat->lvec, bb, bb1));
+      PetscUseTypeMethod(mat->B, multadd, mat->lvec, bb, bb1);
 
       /* local sweep */
-      PetscCall((*mat->A->ops->sor)(mat->A, bb1, omega, SOR_FORWARD_SWEEP, fshift, lits, 1, xx));
+      PetscUseTypeMethod(mat->A, sor, bb1, omega, SOR_FORWARD_SWEEP, fshift, lits, 1, xx);
     }
   } else if (flag & SOR_LOCAL_BACKWARD_SWEEP) {
     if (flag & SOR_ZERO_INITIAL_GUESS) {
-      PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+      PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
       its--;
     }
     while (its--) {
@@ -2221,10 +2219,10 @@ static PetscErrorCode MatSOR_MPIBAIJ(Mat matin, Vec bb, PetscReal omega, MatSORT
 
       /* update rhs: bb1 = bb - B*x */
       PetscCall(VecScale(mat->lvec, -1.0));
-      PetscCall((*mat->B->ops->multadd)(mat->B, mat->lvec, bb, bb1));
+      PetscUseTypeMethod(mat->B, multadd, mat->lvec, bb, bb1);
 
       /* local sweep */
-      PetscCall((*mat->A->ops->sor)(mat->A, bb1, omega, SOR_BACKWARD_SWEEP, fshift, lits, 1, xx));
+      PetscUseTypeMethod(mat->A, sor, bb1, omega, SOR_BACKWARD_SWEEP, fshift, lits, 1, xx);
     }
   } else SETERRQ(PetscObjectComm((PetscObject)matin), PETSC_ERR_SUP, "Parallel version of SOR requested not supported");
 
@@ -2519,27 +2517,26 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        NULL,
                                        NULL,
                                        /*124*/ NULL,
-                                       NULL,
                                        MatSetBlockSizes_Default,
                                        NULL,
                                        MatFDColoringSetUp_MPIXAIJ,
-                                       /*129*/ NULL,
-                                       MatCreateMPIMatConcatenateSeqMat_MPIBAIJ,
+                                       NULL,
+                                       /*129*/ MatCreateMPIMatConcatenateSeqMat_MPIBAIJ,
+                                       NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        /*134*/ NULL,
-                                       NULL,
                                        MatEliminateZeros_MPIBAIJ,
                                        MatGetRowSumAbs_MPIBAIJ,
                                        NULL,
-                                       /*139*/ NULL,
                                        NULL,
+                                       /*139*/ NULL,
                                        MatCopyHashToXAIJ_MPI_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
+                                       MatADot_Default,
+                                       /*144*/ MatANorm_Default,
                                        NULL,
                                        NULL};
 

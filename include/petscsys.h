@@ -401,14 +401,14 @@ M*/
 /*MC
    PETSC_MPI_THREAD_REQUIRED - the required threading support used if PETSc initializes MPI with `MPI_Init_thread()`.
 
-   No Fortran Support
+   Deprecated, use `PetscSetMPIThreadRequiredType()`
 
    Level: beginner
 
    Note:
    By default `PETSC_MPI_THREAD_REQUIRED` equals `MPI_THREAD_FUNNELED` when the MPI implementation provides `MPI_Init_thread()`, otherwise it equals `MPI_THREAD_SINGLE`
 
-.seealso: `PetscInitialize()`
+.seealso: `PetscInitialize()`, `PetscSetMPIThreadRequiredType()`
 M*/
 PETSC_EXTERN PetscMPIInt PETSC_MPI_THREAD_REQUIRED;
 
@@ -1366,6 +1366,7 @@ PETSC_EXTERN PetscErrorCode PetscInitializeFortran(void);
 PETSC_EXTERN PetscErrorCode PetscGetArgs(int *, char ***);
 PETSC_EXTERN PetscErrorCode PetscGetArguments(char ***);
 PETSC_EXTERN PetscErrorCode PetscFreeArguments(char **);
+PETSC_EXTERN PetscErrorCode PetscSetMPIThreadRequiredType(PetscMPIInt);
 
 PETSC_EXTERN PetscErrorCode PetscEnd(void);
 PETSC_EXTERN PetscErrorCode PetscSysInitializePackage(void);
@@ -1587,6 +1588,7 @@ PETSC_EXTERN PetscErrorCode PetscObjectChangeTypeName(PetscObject, const char[])
 PETSC_EXTERN PetscErrorCode PetscObjectRegisterDestroy(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectRegisterDestroyAll(void);
 PETSC_EXTERN PetscErrorCode PetscObjectViewFromOptions(PetscObject, PetscObject, const char[]);
+PETSC_EXTERN PetscErrorCode PetscObjectViewSynchronizedFromOptions(PetscObject, PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode PetscObjectName(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectTypeCompare(PetscObject, const char[], PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscObjectObjectTypeCompare(PetscObject, PetscObject, PetscBool *);
@@ -2374,6 +2376,7 @@ PETSC_EXTERN PetscErrorCode PetscSetProgramName(const char[]);
 PETSC_EXTERN PetscErrorCode PetscGetDate(char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscGetVersion(char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscGetVersionNumber(PetscInt *, PetscInt *, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscGetConfiguration(const char *[]);
 
 PETSC_EXTERN PetscErrorCode PetscSortedInt(PetscCount, const PetscInt[], PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscSortedInt64(PetscCount, const PetscInt64[], PetscBool *);

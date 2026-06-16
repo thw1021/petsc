@@ -58,12 +58,11 @@ static PetscErrorCode UpdateStress(const Ctx *, Vec, Vec, Vec);
 
 int main(int argc, char *argv[])
 {
-  Ctx      ctx;
-  Vec      velocity, stress;
-  PetscInt timestep;
+  Ctx ctx;
+  Vec velocity, stress;
 
-  /* Initialize PETSc */
   PetscFunctionBeginUser;
+  /* Initialize PETSc */
   PetscCall(PetscInitialize(&argc, &argv, 0, help));
 
   /* Populate application context */
@@ -188,8 +187,6 @@ int main(int argc, char *argv[])
   PetscCall(DMCreateGlobalVector(ctx.dm_stress, &stress));
 
   /* Initial State */
-  PetscCall(VecSet(velocity, 0.0));
-  PetscCall(VecSet(stress, 0.0));
   PetscCall(ForceStress(&ctx, stress, 0.0));
   if (ctx.dump_output) {
     PetscCall(DumpVelocity(&ctx, velocity, 0));
@@ -197,7 +194,7 @@ int main(int argc, char *argv[])
   }
 
   /* Time Loop */
-  for (timestep = 1; timestep <= ctx.timesteps; ++timestep) {
+  for (PetscInt timestep = 1; timestep <= ctx.timesteps; ++timestep) {
     const PetscReal t = timestep * ctx.dt;
 
     PetscCall(UpdateVelocity(&ctx, velocity, stress, ctx.buoyancy));

@@ -478,7 +478,7 @@ static PetscErrorCode GLLStuffs(DomainData dd, GLLData *glldata)
       pm1 = (PetscBLASInt)(p - 1);
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
       PetscCallBLAS("LAPACKsteqr", LAPACKsteqr_("N", &pm1, &glldata->zGL[1], M, &x, &pm1, M, &lierr));
-      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in STERF Lapack routine %d", (int)lierr);
+      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in STEQR LAPACK routine %" PetscBLASInt_FMT, lierr);
       PetscCall(PetscFPTrapPop());
       PetscCall(PetscFree(M));
     }
@@ -1075,7 +1075,6 @@ int main(int argc, char **args)
       PetscCall(KSPGetOperators(KSPwithFETIDP, &F, NULL));
       PetscCall(MatCreateVecs(F, &fetidp_solution, &fetidp_rhs));
       PetscCall(PCBDDCMatFETIDPGetRHS(F, bddc_rhs, fetidp_rhs));
-      PetscCall(VecSet(fetidp_solution, 0.0));
       /* test ksp with FETIDP */
       PetscCall(KSPSolve(KSPwithFETIDP, fetidp_rhs, fetidp_solution));
       /* assemble fetidp solution on physical domain */

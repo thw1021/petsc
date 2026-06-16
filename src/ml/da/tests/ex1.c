@@ -1,4 +1,4 @@
-static char help[] = "Tests basic creation and destruction of PetscDA objects, and a simple ETKF analysis step.\n\n";
+static char help[] = "Tests basic creation and destruction of PetscDA objects, and a simple LETKF (NONE-localization) analysis step.\n\n";
 #include <petscda.h>
 
 int main(int argc, char **argv)
@@ -9,7 +9,6 @@ int main(int argc, char **argv)
   Vec         x_mean_forecast, x_mean_analysis;
   PetscInt    state_size = 10, obs_size = 10, ensemble_size = 20;
   PetscRandom rng;
-  PetscInt    i;
   PetscReal   norm;
 
   PetscFunctionBeginUser;
@@ -17,7 +16,7 @@ int main(int argc, char **argv)
 
   /* Create the DA object */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da));
-  PetscCall(PetscDASetType(da, PETSCDAETKF));
+  PetscCall(PetscDALETKFSetLocalizationType(da, PETSCDA_LETKF_LOC_NONE));
   PetscCall(PetscDASetSizes(da, state_size, obs_size));
   PetscCall(PetscDAEnsembleSetSize(da, ensemble_size));
   PetscCall(PetscDASetFromOptions(da));
@@ -46,7 +45,7 @@ int main(int argc, char **argv)
   PetscCall(VecCopy(x_true, y_obs));
 
   /* Initialize ensemble with some spread around 0 (far from truth 1.0) */
-  for (i = 0; i < ensemble_size; i++) {
+  for (PetscInt i = 0; i < ensemble_size; i++) {
     Vec member;
     PetscCall(VecDuplicate(x_true, &member));
     PetscCall(VecSetRandom(member, rng)); /* Uniform random [0, 1] */
@@ -78,7 +77,7 @@ int main(int argc, char **argv)
   /* The analysis should move the ensemble closer to the observation (truth) */
   /* Since observation error is small (0.1) and prior spread is ~0.08, it should pull towards observation */
 
-  PetscCall(PetscDAViewFromOptions(da, NULL, "-petscda_view"));
+  PetscCall(PetscDAView(da, PETSC_VIEWER_STDOUT_WORLD));
 
   /* Cleanup */
   PetscCall(MatDestroy(&H));
@@ -99,11 +98,5 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     requires: !complex
-    args: -petscda_view
-
-  test:
-    suffix: chol
-    requires: !complex
-    args: -petscda_view -petscda_ensemble_sqrt_type cholesky
 
 TEST*/

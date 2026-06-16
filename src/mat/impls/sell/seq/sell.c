@@ -217,8 +217,7 @@ static PetscErrorCode MatGetRow_SeqSELL(Mat A, PetscInt row, PetscInt *nz, Petsc
     *idx = a->getrowcols;
   }
   if (v) {
-    PetscInt j;
-    for (j = 0; j < a->rlen[row]; j++) a->getrowvals[j] = a->val[shift + a->sliceheight * j];
+    for (PetscInt j = 0; j < a->rlen[row]; j++) a->getrowvals[j] = a->val[shift + a->sliceheight * j];
     *v = a->getrowvals;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1906,8 +1905,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSELL,
                                        /*124*/ NULL,
                                        NULL,
                                        NULL,
-                                       NULL,
                                        MatFDColoringSetUp_SeqXAIJ,
+                                       NULL,
                                        /*129*/ NULL,
                                        NULL,
                                        NULL,
@@ -1922,9 +1921,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSELL,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
+                                       MatADot_Default,
+                                       /*144*/ MatANorm_Default,
                                        NULL,
                                        NULL};
 

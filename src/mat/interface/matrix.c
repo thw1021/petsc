@@ -240,7 +240,6 @@ PetscErrorCode MatFindNonzeroRowsOrCols_Basic(Mat mat, PetscBool cols, PetscReal
     PetscCall(MatGetOwnershipRange(mat, &st, NULL));
     PetscCall(MatGetSize(mat, &N, NULL));
     PetscCall(MatGetLocalSize(mat, &n, NULL));
-    PetscCall(VecSet(l, 0.0));
     PetscCall(VecSetRandom(r, NULL));
     PetscCall(MatMult(mat, r, l));
     PetscCall(VecGetArrayRead(l, &al));
@@ -2270,10 +2269,7 @@ PetscErrorCode MatSetValuesBatch(Mat mat, PetscInt nb, PetscInt bs, PetscInt row
   PetscAssert(!mat->factortype, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
 
   PetscCall(PetscLogEventBegin(MAT_SetValuesBatch, mat, 0, 0, 0));
-  if (mat->ops->setvaluesbatch) PetscUseTypeMethod(mat, setvaluesbatch, nb, bs, rows, v);
-  else {
-    for (PetscInt b = 0; b < nb; ++b) PetscCall(MatSetValues(mat, bs, &rows[b * bs], bs, &rows[b * bs], &v[b * bs * bs], ADD_VALUES));
-  }
+  for (PetscInt b = 0; b < nb; ++b) PetscCall(MatSetValues(mat, bs, &rows[b * bs], bs, &rows[b * bs], &v[b * bs * bs], ADD_VALUES));
   PetscCall(PetscLogEventEnd(MAT_SetValuesBatch, mat, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3798,7 +3794,7 @@ PetscErrorCode MatSolve(Mat mat, Vec b, Vec x)
 static PetscErrorCode MatMatSolve_Basic(Mat A, Mat B, Mat X, PetscBool trans)
 {
   Vec      b, x;
-  PetscInt N, i;
+  PetscInt N;
   PetscErrorCode (*f)(Mat, Vec, Vec);
   PetscBool Abound, Bneedconv = PETSC_FALSE, Xneedconv = PETSC_FALSE;
 
@@ -3823,7 +3819,7 @@ static PetscErrorCode MatMatSolve_Basic(Mat A, Mat B, Mat X, PetscBool trans)
   if (Xneedconv) PetscCall(MatConvert(X, MATDENSEHIP, MAT_INPLACE_MATRIX, &X));
 #endif
   PetscCall(MatGetSize(B, NULL, &N));
-  for (i = 0; i < N; i++) {
+  for (PetscInt i = 0; i < N; i++) {
     PetscCall(MatDenseGetColumnVecRead(B, i, &b));
     PetscCall(MatDenseGetColumnVecWrite(X, i, &x));
     PetscCall((*f)(A, b, x));

@@ -267,14 +267,13 @@ PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone,
       if (p >= aStart && p < aEnd) PetscCall(PetscSectionGetDof(aSec, p, &aDof));
       if (aDof) {
         PetscInt aOff;
-        PetscInt s, q;
 
         for (j = i + 1; j < numAdj; j++) orig[j - 1] = orig[j];
         origSize--;
         numAdj--;
         PetscCall(PetscSectionGetOffset(aSec, p, &aOff));
-        for (s = 0; s < aDof; ++s) {
-          for (q = 0; q < numAdj || ((void)(orig[numAdj++] = anchors[aOff + s]), 0); ++q) {
+        for (PetscInt s = 0; s < aDof; ++s) {
+          for (PetscInt q = 0; q < numAdj || ((void)(orig[numAdj++] = anchors[aOff + s]), 0); ++q) {
             if (anchors[aOff + s] == orig[q]) break;
           }
           PetscCheck(numAdj <= maxAdjSize, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%" PetscInt_FMT ")", maxAdjSize);
@@ -1136,9 +1135,8 @@ static PetscErrorCode DMPlexDistributeCones(DM dm, PetscSF migrationSF, ISLocalT
   PetscCall(PetscSectionGetStorageSize(newConeSection, &newConesSize));
   PetscCall(ISGlobalToLocalMappingApplyBlock(renumbering, IS_GTOLM_MASK, newConesSize, newCones, NULL, newCones));
   if (PetscDefined(USE_DEBUG)) {
-    PetscInt  p;
     PetscBool valid = PETSC_TRUE;
-    for (p = 0; p < newConesSize; ++p) {
+    for (PetscInt p = 0; p < newConesSize; ++p) {
       if (newCones[p] < 0) {
         valid = PETSC_FALSE;
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] Point %" PetscInt_FMT " not in overlap SF\n", PetscGlobalRank, p));
@@ -1152,7 +1150,18 @@ static PetscErrorCode DMPlexDistributeCones(DM dm, PetscSF migrationSF, ISLocalT
     PetscCall(PetscSectionView(originalConeSection, PETSC_VIEWER_STDOUT_(comm)));
     PetscCall(PetscPrintf(comm, "Parallel Cone Section:\n"));
     PetscCall(PetscSectionView(newConeSection, PETSC_VIEWER_STDOUT_(comm)));
+    PetscCall(PetscPrintf(comm, "Migration SF:\n"));
     PetscCall(PetscSFView(coneSF, NULL));
+    if (original) {
+      PetscViewer viewer;
+
+      PetscCall(PetscPrintf(comm, "Serial Renumbering:\n"));
+      PetscCall(PetscViewerGetSubViewer(PETSC_VIEWER_STDOUT_(comm), PETSC_COMM_SELF, &viewer));
+      PetscCall(ISLocalToGlobalMappingView(original, viewer));
+      PetscCall(PetscViewerRestoreSubViewer(PETSC_VIEWER_STDOUT_(comm), PETSC_COMM_SELF, &viewer));
+    }
+    PetscCall(PetscPrintf(comm, "Parallel Renumbering:\n"));
+    PetscCall(ISLocalToGlobalMappingView(renumbering, PETSC_VIEWER_STDOUT_(comm)));
   }
   PetscCall(DMPlexGetConeOrientations(dm, &cones));
   PetscCall(DMPlexGetConeOrientations(dmParallel, &newCones));
@@ -1318,8 +1327,26 @@ static PetscErrorCode DMPlexDistributeLabels(DM dm, PetscSF migrationSF, DM dmPa
   {
     DMLabel ctLabel;
 
-    // Reset label for fast lookup
     PetscCall(DMPlexGetCellTypeLabel(dmParallel, &ctLabel));
+    // Check that each point has a valid cell type
+    if (PetscDefined(USE_DEBUG)) {
+      PetscInt  pStart, pEnd;
+      PetscBool defined = PETSC_TRUE, gdefined;
+
+      PetscCall(DMPlexGetChart(dmParallel, &pStart, &pEnd));
+      for (PetscInt p = pStart; p < pEnd; ++p) {
+        PetscInt val;
+
+        PetscCall(DMLabelGetValue(ctLabel, p, &val));
+        if (val < 0) {
+          defined = PETSC_FALSE;
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Point %" PetscInt_FMT " has no cell type\n", rank, p));
+        }
+      }
+      PetscCallMPI(MPIU_Allreduce(&defined, &gdefined, 1, MPI_C_BOOL, MPI_LAND, comm));
+      PetscCheck(gdefined, comm, PETSC_ERR_PLIB, "Not all points have a valid cell type");
+    }
+    // Reset label for fast lookup
     PetscCall(DMLabelMakeAllInvalid_Internal(ctLabel));
   }
   PetscCall(PetscLogEventEnd(DMPLEX_DistributeLabels, dm, 0, 0, 0));
@@ -1997,6 +2024,7 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PeOp PetscSF *sf, DM *d
       sfMigration = naturalPointSF;
     }
   }
+  PetscCall(DMPlexCopyFlags(dm, *dmParallel));
   /* Cleanup */
   if (sf) {
     *sf = sfMigration;
@@ -2092,6 +2120,7 @@ PetscErrorCode DMPlexDistributeOverlap_Internal(DM dm, PetscInt overlap, MPI_Com
   PetscCall(DMPlexCopy_Internal(dm, PETSC_TRUE, PETSC_FALSE, *dmOverlap));
   /* TODO: labels stored inside the DS for regions should be handled here */
   PetscCall(DMCopyDisc(dm, *dmOverlap));
+  PetscCall(DMPlexCopyFlags(dm, *dmOverlap));
   /* Cleanup overlap partition */
   PetscCall(DMLabelDestroy(&lblOverlap));
   if (sf) *sf = sfOverlap;

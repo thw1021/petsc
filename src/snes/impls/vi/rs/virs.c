@@ -127,7 +127,6 @@ static PetscErrorCode DMCoarsen_SNESVI(DM dm1, MPI_Comm comm, DM *dm2)
   */
   PetscCall(ISGetIndices(dmsnesvi1->inactive, &index));
   PetscCall(ISGetLocalSize(dmsnesvi1->inactive, &n));
-  PetscCall(VecSet(finemarked, 0.0));
   for (k = 0; k < n; k++) PetscCall(VecSetValue(finemarked, index[k], 1.0, INSERT_VALUES));
   PetscCall(VecAssemblyBegin(finemarked));
   PetscCall(VecAssemblyEnd(finemarked));
@@ -762,7 +761,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_VINEWTONRSLS(SNES snes)
   snes->ops->destroy        = SNESDestroy_VI;
   snes->ops->setfromoptions = SNESSetFromOptions_VI;
   snes->ops->view           = NULL;
-  snes->ops->converged      = SNESConvergedDefault_VI;
+  if (!snes->ops->converged || snes->ops->converged == SNESConvergedDefault) snes->ops->converged = SNESConvergedDefault_VI;
 
   snes->usesksp = PETSC_TRUE;
   snes->usesnpc = PETSC_FALSE;

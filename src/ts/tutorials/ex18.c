@@ -110,14 +110,13 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
 {
   Functional func;
   char      *names[256];
-  PetscInt   f;
 
   PetscFunctionBeginUser;
   PetscOptionsBegin(comm, "", "Simulation Monitor Options", "DMPLEX");
   options->numMonitorFuncs = PETSC_STATIC_ARRAY_LENGTH(names);
   PetscCall(PetscOptionsStringArray("-monitor", "List of functionals to monitor", "", names, &options->numMonitorFuncs, NULL));
   PetscCall(PetscMalloc1(options->numMonitorFuncs, &options->monitorFuncs));
-  for (f = 0; f < options->numMonitorFuncs; ++f) {
+  for (PetscInt f = 0; f < options->numMonitorFuncs; ++f) {
     for (func = options->functionalRegistry; func; func = func->next) {
       PetscBool match;
 
@@ -132,7 +131,7 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
   /* Find out the maximum index of any functional computed by a function we will be calling (even if we are not using it) */
   options->maxMonitorFunc = -1;
   for (func = options->functionalRegistry; func; func = func->next) {
-    for (f = 0; f < options->numMonitorFuncs; ++f) {
+    for (PetscInt f = 0; f < options->numMonitorFuncs; ++f) {
       Functional call = options->monitorFuncs[f];
 
       if (func->func == call->func && func->ctx == call->ctx) options->maxMonitorFunc = PetscMax(options->maxMonitorFunc, func->offset);
@@ -210,16 +209,13 @@ static void g0_constant_pp(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Pets
 
 static void f0_lap_u(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  PetscInt comp;
-  for (comp = 0; comp < dim; ++comp) f0[comp] = 4.0;
+  for (PetscInt comp = 0; comp < dim; ++comp) f0[comp] = 4.0;
 }
 
 static void f1_lap_u(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  PetscInt comp, d;
-  for (comp = 0; comp < dim; ++comp) {
-    for (d = 0; d < dim; ++d) f1[comp * dim + d] = u_x[comp * dim + d];
-  }
+  for (PetscInt comp = 0; comp < dim; ++comp)
+    for (PetscInt d = 0; d < dim; ++d) f1[comp * dim + d] = u_x[comp * dim + d];
 }
 
 static void f0_lap_periodic_u(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
@@ -237,9 +233,9 @@ static void f0_lap_doubly_periodic_u(PetscInt dim, PetscInt Nf, PetscInt NfAux, 
 void g3_uu(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
 {
   const PetscInt Ncomp = dim;
-  PetscInt       compI, d;
+  PetscInt       d;
 
-  for (compI = 0; compI < Ncomp; ++compI) {
+  for (PetscInt compI = 0; compI < Ncomp; ++compI) {
     for (d = 0; d < dim; ++d) g3[((compI * Ncomp + compI) * dim + d) * dim + d] = 1.0;
   }
 }
@@ -273,14 +269,12 @@ void g1_adv_pp(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[],
 
 void g0_adv_pu(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  PetscInt d;
-  for (d = 0; d < dim; ++d) g0[0] += u_x[dim * dim + d];
+  for (PetscInt d = 0; d < dim; ++d) g0[0] += u_x[dim * dim + d];
 }
 
 void g1_adv_pu(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
 {
-  PetscInt d;
-  for (d = 0; d < dim; ++d) g1[d * dim + d] = u[dim];
+  for (PetscInt d = 0; d < dim; ++d) g1[d * dim + d] = u[dim];
 }
 
 static void riemann_advection(PetscInt dim, PetscInt Nf, const PetscReal *qp, const PetscReal *n, const PetscScalar *uL, const PetscScalar *uR, PetscInt numConstants, const PetscScalar constants[], PetscScalar *flux, PetscCtx ctx)
@@ -425,8 +419,7 @@ static PetscErrorCode shear_bc(PetscInt dim, PetscReal time, const PetscReal x[]
 
 static PetscErrorCode initialVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
-  PetscInt d;
-  for (d = 0; d < dim; ++d) u[d] = 0.0;
+  for (PetscInt d = 0; d < dim; ++d) u[d] = 0.0;
   return PETSC_SUCCESS;
 }
 
@@ -1179,13 +1172,13 @@ int main(int argc, char **argv)
       suffix: adv_delta_yper_fim_1
       requires: !complex
       TODO: broken
-      args: -dm_plex_box_bd none,periodic -use_fv -use_implicit -velocity_petscspace_degree 1 -velocity_dist constant -porosity_dist delta -inflow_state 0.0 -ts_type mimex -ts_max_time 5.0 -ts_max_steps 20 -ts_time_step 0.333333 -bc_inflow 2 -bc_outflow 4 -ts_view -monitor Error -dm_view -snes_fd_color -snes_fd_color_use_mat -mat_coloring_type greedy -mat_coloring_greedy_symmetric 0 -snes_rtol 1.0e-7 -pc_type lu -snes_converged_reason -snes_linesearch_type basic
+      args: -dm_plex_box_bd none,periodic -use_fv -use_implicit -velocity_petscspace_degree 1 -velocity_dist constant -porosity_dist delta -inflow_state 0.0 -ts_type mimex -ts_max_time 5.0 -ts_max_steps 20 -ts_time_step 0.333333 -bc_inflow 2 -bc_outflow 4 -ts_view -monitor Error -dm_view -snes_fd_color -snes_fd_color_use_mat -mat_coloring_type greedy -mat_coloring_greedy_symmetric 0 -snes_rtol 1.0e-7 -pc_type lu -snes_converged_reason -snes_linesearch_type none
 
     test:
       suffix: adv_delta_yper_fim_2
       requires: !complex
       TODO: broken
-      args: -dm_plex_box_bd none,periodic -use_fv -use_implicit -velocity_petscspace_degree 2 -velocity_dist constant -porosity_dist delta -inflow_state 0.0 -ts_type mimex -ts_max_time 5.0 -ts_max_steps 20 -ts_time_step 0.333333 -bc_inflow 2 -bc_outflow 4 -ts_view -monitor Error -dm_view -snes_fd_color -snes_fd_color_use_mat -mat_coloring_type greedy -mat_coloring_greedy_symmetric 0 -snes_rtol 1.0e-7 -pc_type lu -snes_converged_reason -snes_linesearch_type basic
+      args: -dm_plex_box_bd none,periodic -use_fv -use_implicit -velocity_petscspace_degree 2 -velocity_dist constant -porosity_dist delta -inflow_state 0.0 -ts_type mimex -ts_max_time 5.0 -ts_max_steps 20 -ts_time_step 0.333333 -bc_inflow 2 -bc_outflow 4 -ts_view -monitor Error -dm_view -snes_fd_color -snes_fd_color_use_mat -mat_coloring_type greedy -mat_coloring_greedy_symmetric 0 -snes_rtol 1.0e-7 -pc_type lu -snes_converged_reason -snes_linesearch_type none
 
     test:
       suffix: adv_delta_yper_im_0

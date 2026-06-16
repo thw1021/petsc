@@ -3,7 +3,7 @@
 #include <petscblaslapack.h>
 #include <petsctime.h>
 
-const char *const DMPlexCoordMaps[] = {"none", "shear", "flare", "annulus", "shell", "sinusoid", "unknown", "DMPlexCoordMap", "DM_COORD_MAP_", NULL};
+const char *const DMPlexCoordMaps[] = {"none", "rotate", "shear", "flare", "annulus", "shell", "sinusoid", "torus", "unknown", "DMPlexCoordMap", "DM_COORD_MAP_", NULL};
 
 /*@
   DMPlexFindVertices - Try to find DAG points based on their coordinates.
@@ -596,13 +596,13 @@ static PetscErrorCode DMPlexLocatePoint_Hex_3D_Linear_Internal(DM dm, const Pets
   PetscScalar       *coords    = NULL;
   const PetscInt     faces[24] = {0, 3, 2, 1, 5, 4, 7, 6, 3, 0, 4, 5, 1, 2, 6, 7, 3, 5, 6, 2, 0, 1, 7, 4};
   PetscBool          found     = PETSC_TRUE;
-  PetscInt           numCoords, f;
+  PetscInt           numCoords;
   PetscBool          isDG;
 
   PetscFunctionBegin;
   PetscCall(DMPlexGetCellCoordinates(dm, c, &isDG, &numCoords, &array, &coords));
   PetscCheck(numCoords == 24, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Quadrilateral should have 8 coordinates, not %" PetscInt_FMT, numCoords);
-  for (f = 0; f < 6; ++f) {
+  for (PetscInt f = 0; f < 6; ++f) {
     /* Check the point is under plane */
     /*   Get face normal */
     PetscReal v_i[3];
@@ -1565,7 +1565,7 @@ PetscErrorCode DMPlexComputeProjection3Dto2D(PetscInt coordSize, PetscScalar coo
 {
   PetscReal      x1[3], x2[3], n[3], c[3], norm;
   const PetscInt dim = 3;
-  PetscInt       d, p;
+  PetscInt       d;
 
   PetscFunctionBegin;
   /* 0) Calculate normal vector */
@@ -1591,7 +1591,7 @@ PetscErrorCode DMPlexComputeProjection3Dto2D(PetscInt coordSize, PetscScalar coo
     R[d * dim + 2] = n[d];
     c[d]           = PetscRealPart(coords[0 * dim + d]);
   }
-  for (p = 0; p < coordSize / dim; p++) {
+  for (PetscInt p = 0; p < coordSize / dim; p++) {
     PetscReal y[3];
     for (d = 0; d < dim; d++) y[d] = PetscRealPart(coords[p * dim + d]) - c[d];
     for (d = 0; d < 2; d++) coords[p * 2 + d] = R[0 * dim + d] * y[0] + R[1 * dim + d] * y[1] + R[2 * dim + d] * y[2];
@@ -2110,7 +2110,7 @@ static PetscErrorCode DMPlexComputeHexahedronGeometry_Internal(DM dm, PetscInt e
   const PetscScalar *array;
   PetscScalar       *coords = NULL;
   const PetscInt     dim    = 3;
-  PetscInt           numCoords, d;
+  PetscInt           numCoords;
   PetscBool          isDG;
 
   PetscFunctionBegin;
@@ -2119,10 +2119,10 @@ static PetscErrorCode DMPlexComputeHexahedronGeometry_Internal(DM dm, PetscInt e
   if (!Nq) {
     *detJ = 0.0;
     if (v) {
-      for (d = 0; d < dim; d++) v[d] = PetscRealPart(coords[d]);
+      for (PetscInt d = 0; d < dim; d++) v[d] = PetscRealPart(coords[d]);
     }
     if (J) {
-      for (d = 0; d < dim; d++) {
+      for (PetscInt d = 0; d < dim; d++) {
         J[d * dim + 0] = 0.5 * (PetscRealPart(coords[3 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
         J[d * dim + 1] = 0.5 * (PetscRealPart(coords[1 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
         J[d * dim + 2] = 0.5 * (PetscRealPart(coords[4 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
@@ -2226,7 +2226,7 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
   const PetscScalar *array;
   PetscScalar       *coords = NULL;
   const PetscInt     dim    = 3;
-  PetscInt           numCoords, d;
+  PetscInt           numCoords;
   PetscBool          isDG;
 
   PetscFunctionBegin;
@@ -2236,10 +2236,10 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
     /* Assume that the map to the reference is affine */
     *detJ = 0.0;
     if (v) {
-      for (d = 0; d < dim; d++) v[d] = PetscRealPart(coords[d]);
+      for (PetscInt d = 0; d < dim; d++) v[d] = PetscRealPart(coords[d]);
     }
     if (J) {
-      for (d = 0; d < dim; d++) {
+      for (PetscInt d = 0; d < dim; d++) {
         J[d * dim + 0] = 0.5 * (PetscRealPart(coords[2 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
         J[d * dim + 1] = 0.5 * (PetscRealPart(coords[1 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
         J[d * dim + 2] = 0.5 * (PetscRealPart(coords[4 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
@@ -2308,7 +2308,6 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
 
       if (v) {
         PetscReal extPoint[6];
-        PetscInt  c;
 
         extPoint[0] = 1.;
         extPoint[1] = eta;
@@ -2316,7 +2315,7 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
         extPoint[3] = zeta;
         extPoint[4] = xi * zeta;
         extPoint[5] = eta * zeta;
-        for (c = 0; c < dim; ++c) {
+        for (PetscInt c = 0; c < dim; ++c) {
           PetscReal val = 0.;
 
           for (k = 0; k < Nv; ++k) val += extPoint[k] * coeff[k * dim + c];
@@ -2430,9 +2429,7 @@ static PetscErrorCode DMPlexComputeCellGeometryFEM_Implicit(DM dm, PetscInt cell
       PetscInt k;
 
       for (i = 0, k = 0; i < Nq; i++) {
-        PetscInt j;
-
-        for (j = 0; j < coordDim * coordDim; j++, k++) J[k] = J0[j];
+        for (PetscInt j = 0; j < coordDim * coordDim; j++, k++) J[k] = J0[j];
       }
     }
     if (invJ) {
@@ -2451,9 +2448,7 @@ static PetscErrorCode DMPlexComputeCellGeometryFEM_Implicit(DM dm, PetscInt cell
         break;
       }
       for (i = 1, k = coordDim * coordDim; i < Nq; i++) {
-        PetscInt j;
-
-        for (j = 0; j < coordDim * coordDim; j++, k++) invJ[k] = invJ[j];
+        for (PetscInt j = 0; j < coordDim * coordDim; j++, k++) invJ[k] = invJ[j];
       }
     }
   }
@@ -2931,7 +2926,6 @@ PetscErrorCode DMPlexComputeCellGeometryFVM(DM dm, PetscInt cell, PetscReal *vol
   PetscFunctionBegin;
   PetscCall(DMPlexGetDepth(dm, &depth));
   PetscCall(DMGetDimension(dm, &dim));
-  PetscCheck(depth == dim, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh must be interpolated");
   PetscCall(DMPlexGetPointDepth(dm, cell, &depth));
   switch (depth) {
   case 0:
@@ -4005,6 +3999,46 @@ void coordMap_identity(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt
   for (c = 0; c < Nc; ++c) f0[c] = u[c];
 }
 
+/* Constants are
+     center location
+     axis vector
+     rotation angle
+ */
+void coordMap_rotate(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+{
+  const PetscInt     Nc     = PetscMin(uOff[1] - uOff[0], 3);
+  const PetscScalar *center = constants;
+  const PetscScalar *k      = &constants[Nc]; // The rotation axis k
+  const PetscReal    theta  = PetscRealPart(constants[Nc * 2]);
+  const PetscReal    ct     = PetscCosReal(theta);
+  const PetscReal    st     = PetscSinReal(theta);
+  PetscReal          v[3];
+
+  // Translate to coordinate with center at the origin
+  for (PetscInt d = 0; d < Nc; ++d) v[d] = PetscRealPart(u[d] - center[d]);
+  switch (dim) {
+  case 2:
+    /* Rotate point, axis is ignored in 2D
+       / ct -st \
+       \ st  ct / */
+    f0[0] = ct * v[0] - st * v[1];
+    f0[1] = st * v[0] + ct * v[1];
+    break;
+  case 3:
+    /* / ct + k_x^2 (1 - ct)       & k_x k_y (1 - ct) - k_z st & k_x k_z (1 - ct) + k_y st \
+       | k_y k_x (1 - ct) + k_z st & ct + k_y^2 (1 - ct)       & k_y k_z (1 - ct) - k_x st |
+       \ k_z k_x (1 - ct) - k_y st & k_z k_y (1 - ct) + k_x st & ct + k_z^2 (1 - ct)       / */
+    f0[0] = (ct + k[0] * k[0] * (1. - ct)) * v[0] + (k[0] * k[1] * (1. - ct) - k[2] * st) * v[1] + (k[0] * k[2] * (1. - ct) + k[1] * st) * v[2];
+    f0[1] = (k[1] * k[0] * (1. - ct) + k[2] * st) * v[0] + (ct + k[1] * k[1] * (1. - ct)) * v[1] + (k[1] * k[2] * (1. - ct) - k[0] * st) * v[2];
+    f0[2] = (k[2] * k[0] * (1. - ct) - k[1] * st) * v[0] + (k[2] * k[1] * (1. - ct) + k[0] * st) * v[1] + (ct + k[2] * k[2] * (1. - ct)) * v[2];
+    break;
+  default:
+    for (PetscInt d = 0; d < Nc; ++d) f0[d] = v[d];
+  }
+  // Translate back to original coordinates
+  for (PetscInt d = 0; d < Nc; ++d) f0[d] += center[d];
+}
+
 /* Shear applies the transformation, assuming we fix z,
   / 1  0  m_0 \
   | 0  1  m_1 |
@@ -4027,9 +4061,8 @@ void coordMap_flare(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
 {
   const PetscInt Nc = uOff[1] - uOff[0];
   const PetscInt cf = (PetscInt)PetscRealPart(constants[0]);
-  PetscInt       c;
 
-  for (c = 0; c < Nc; ++c) coords[c] = u[c] * (c == cf ? 1.0 : constants[c + 1] * u[cf]);
+  for (PetscInt c = 0; c < Nc; ++c) coords[c] = u[c] * (c == cf ? 1.0 : constants[c + 1] * u[cf]);
 }
 
 /*
@@ -4083,6 +4116,20 @@ void coordMap_sinusoid(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt
   xp[0] = x[0];
   xp[1] = x[1];
   if (dim > 2) xp[2] = c * PetscCosReal(2. * m * PETSC_PI * x[0]) * PetscCosReal(2. * n * PETSC_PI * x[1]);
+}
+
+/* This function maps the cylinder [0, r] x [0, 1] along z to the torus revolved around z with radius R,
+     x' = (R + y) cos(2 pi z)
+     y' = (R + y) sin(2 pi z)
+     z' = x
+*/
+void coordMap_torus(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar xp[])
+{
+  const PetscReal R = PetscRealPart(constants[0]);
+
+  xp[0] = (R + x[1]) * PetscCosReal(2 * PETSC_PI * x[2]);
+  xp[1] = (R + x[1]) * PetscSinReal(2 * PETSC_PI * x[2]);
+  xp[2] = x[0];
 }
 
 /*@C
@@ -4150,11 +4197,11 @@ PetscErrorCode DMPlexRemapGeometry(DM dm, PetscReal time, void (*func)(PetscInt 
     PetscCall(VecGetArrayWrite(lCoords, &coords));
     for (PetscInt v = vStart; v < vEnd; ++v) {
       PetscInt uOff[2] = {0, cdim};
-      PetscInt off, c;
+      PetscInt off;
 
       PetscCall(PetscSectionGetOffset(cSection, v, &off));
       (*func)(dim, 1, 0, uOff, NULL, &coords[off], NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0.0, NULL, Nc, constants, f);
-      for (c = 0; c < cdim; ++c) coords[off + c] = f[c];
+      for (PetscInt c = 0; c < cdim; ++c) coords[off + c] = f[c];
     }
     PetscCall(VecRestoreArrayWrite(lCoords, &coords));
   } else {

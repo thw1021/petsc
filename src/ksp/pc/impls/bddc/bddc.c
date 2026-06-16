@@ -189,7 +189,6 @@ static PetscErrorCode PCView_BDDC(PC pc, PetscViewer viewer)
     /* compute interface size */
     PetscCall(VecSet(pcis->vec1_B, 1.0));
     PetscCall(MatCreateVecs(pc->pmat, &counter, NULL));
-    PetscCall(VecSet(counter, 0.0));
     PetscCall(VecScatterBegin(pcis->global_to_B, pcis->vec1_B, counter, INSERT_VALUES, SCATTER_REVERSE));
     PetscCall(VecScatterEnd(pcis->global_to_B, pcis->vec1_B, counter, INSERT_VALUES, SCATTER_REVERSE));
     PetscCall(VecSum(counter, &interface_size));
@@ -1576,12 +1575,11 @@ static PetscErrorCode PCSetUp_BDDC(PC pc)
       if (nearnullspace != pcbddc->onearnullspace) {
         new_nearnullspace_provided = PETSC_TRUE;
       } else { /* maybe the user has changed the content of the nearnullspace so check vectors ObjectStateId */
-        PetscInt         i;
         const Vec       *nearnullvecs;
         PetscObjectState state;
         PetscInt         nnsp_size;
         PetscCall(MatNullSpaceGetVecs(nearnullspace, NULL, &nnsp_size, &nearnullvecs));
-        for (i = 0; i < nnsp_size; i++) {
+        for (PetscInt i = 0; i < nnsp_size; i++) {
           PetscCall(PetscObjectStateGet((PetscObject)nearnullvecs[i], &state));
           if (pcbddc->onearnullvecs_state[i] != state) {
             new_nearnullspace_provided = PETSC_TRUE;
@@ -2619,9 +2617,7 @@ static PetscErrorCode PCBDDCCreateFETIDPOperators_BDDC(PC pc, PetscBool fully_re
       /* run the subproblems to check convergence */
       PetscCall(PetscOptionsGetBool(NULL, ((PetscObject)newmat)->prefix, "-check_saddlepoint", &check, NULL));
       if (check) {
-        PetscInt i;
-
-        for (i = 0; i < nn; i++) {
+        for (PetscInt i = 0; i < nn; i++) {
           KSP       kspC;
           PC        npc;
           Mat       F, pF;

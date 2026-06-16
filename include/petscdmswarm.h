@@ -39,6 +39,7 @@ typedef struct _p_DMSwarmDataBucket *DMSwarmDataBucket;
 .seealso: [](ch_dmbase), `DM`, `DMSWARM`, `DMSwarmSortGetAccess()`, `DMSwarmSortRestoreAccess()`, `DMSwarmSortGetIsValid()`, `DMSwarmSortCreate()`, `DMSwarmSortDestroy()`
 S*/
 typedef struct _p_DMSwarmSort *DMSwarmSort;
+PETSC_EXTERN PetscClassId      DMSWARMSORT_CLASSID;
 
 /*E
    DMSwarmType - Defines the type of `DMSWARM`
@@ -172,10 +173,11 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinates(DM, PetscInt, PetscReal *
 PETSC_EXTERN PetscErrorCode DMSwarmInsertPointsUsingCellDM(DM, DMSwarmPICLayoutType, PetscInt);
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinatesCellwise(DM, PetscInt, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinatesRandom(DM, PetscInt);
-PETSC_EXTERN PetscErrorCode DMSwarmViewFieldsXDMF(DM, const char *, PetscInt, const char **);
+PETSC_EXTERN PetscErrorCode DMSwarmViewFieldsXDMF(DM, const char *, PetscInt, const char *[]);
 PETSC_EXTERN PetscErrorCode DMSwarmViewXDMF(DM, const char *);
 
 PETSC_EXTERN PetscErrorCode DMSwarmSortDestroy(DMSwarmSort *);
+PETSC_EXTERN PetscErrorCode DMSwarmSortView(DMSwarmSort, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetAccess(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmSortRestoreAccess(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetPointsPerCell(DM, PetscInt, PetscInt *, PetscInt **);
@@ -225,3 +227,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmCellDMGetCellID(DMSwarmCellDM, const char *[]
 PETSC_EXTERN PetscErrorCode DMSwarmCellDMGetSort(DMSwarmCellDM, DMSwarmSort *);
 PETSC_EXTERN PetscErrorCode DMSwarmCellDMSetSort(DMSwarmCellDM, DMSwarmSort);
 PETSC_EXTERN PetscErrorCode DMSwarmCellDMGetBlockSize(DMSwarmCellDM, DM, PetscInt *);
+
+PETSC_EXTERN PetscErrorCode DMSwarmPreallocateMassMatrix(DM, DM, Mat, PetscInt *, PetscInt *, PetscCtx);
+PETSC_EXTERN PetscErrorCode DMSwarmFillMassMatrix(DM, DM, Mat, PetscInt, PetscInt, PetscBool, PetscInt, const PetscInt[], PetscReal *[], PetscCtx);

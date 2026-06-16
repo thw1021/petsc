@@ -611,7 +611,7 @@ freebsd-pkgs-opt:
 linux-hip-double:
   extends:
     - .stage-3
-    - .linux_test_noflags
+    - .linux_test
     - .coverage-disable
   tags:
     - gpu:amd
@@ -622,13 +622,24 @@ linux-hip-double:
 linux-hip-cmplx:
   extends:
     - .stage-3
-    - .linux_test_noflags
+    - .linux_test
     - .coverage-disable
   tags:
     - gpu:amd
     - os:linux
   variables:
     TEST_ARCH: arch-ci-linux-hip-cmplx
+
+linux-hip-cxx-64idx:
+  extends:
+    - .stage-3
+    - .linux_test
+    - .coverage-disable
+  tags:
+    - gpu:amd
+    - os:linux
+  variables:
+    TEST_ARCH: arch-ci-linux-hip-cxx-64idx
 
 linux-sycl-double:
   extends:
@@ -671,7 +682,7 @@ linux-kokkos-cuda:
     MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core
     LOAD_MODULES: cuda/12.8.0-rz6425d
 
-linux-cuda112-omp:
+linux-cuda-omp:
   extends:
     - .stage-3
     - .linux_test
@@ -679,9 +690,10 @@ linux-cuda112-omp:
   tags:
     - cuda-stage3
   variables:
-    TEST_ARCH: arch-ci-linux-cuda112-omp
+    TEST_ARCH: arch-ci-linux-cuda-omp
     TEST_OPTS: -j4 query=requires queryval=kokkos_kernels
-    LOAD_MODULES: cuda/11.2.2 u-gcc-9/9.4.0
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core:/nfs/gce/projects/petsc/soft/u22.04/modulefiles
+    LOAD_MODULES: cuda/11.4.4 u-gcc-9/9.4.0
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 1
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
@@ -704,7 +716,7 @@ linux-cuda-double-64idx:
     - cuda12
   variables:
     TEST_ARCH: arch-ci-linux-cuda-double-64idx
-    TEST_OPTS: -j3 query=requires queryval=cuda
+    TEST_OPTS: -j3 query='requires,requires' queryval='cuda,kokkos_kernels'
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
 
 linux-cuda-latest:

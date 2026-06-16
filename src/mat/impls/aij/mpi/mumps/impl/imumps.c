@@ -623,7 +623,6 @@ static PetscErrorCode PetscMUMPSIntCSRCast(PETSC_UNUSED Mat_MUMPS *mumps, PetscI
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
   {
-    PetscInt i;
     if (nrow + 1 > mumps->cur_ilen) { /* realloc ia_alloc/ja_alloc to fit ia/ja */
       PetscCall(PetscFree(mumps->ia_alloc));
       PetscCall(PetscMalloc1(nrow + 1, &mumps->ia_alloc));
@@ -634,8 +633,8 @@ static PetscErrorCode PetscMUMPSIntCSRCast(PETSC_UNUSED Mat_MUMPS *mumps, PetscI
       PetscCall(PetscMalloc1(nnz, &mumps->ja_alloc));
       mumps->cur_jlen = nnz;
     }
-    for (i = 0; i < nrow + 1; i++) PetscCall(PetscMUMPSIntCast(ia[i], &mumps->ia_alloc[i]));
-    for (i = 0; i < nnz; i++) PetscCall(PetscMUMPSIntCast(ja[i], &mumps->ja_alloc[i]));
+    for (PetscInt i = 0; i < nrow + 1; i++) PetscCall(PetscMUMPSIntCast(ia[i], &mumps->ia_alloc[i]));
+    for (PetscInt i = 0; i < nnz; i++) PetscCall(PetscMUMPSIntCast(ja[i], &mumps->ja_alloc[i]));
     *ia_mumps = mumps->ia_alloc;
     *ja_mumps = mumps->ja_alloc;
   }
@@ -1925,7 +1924,6 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
   const PetscScalar *barray = NULL;
   PetscScalar       *array;
   IS                 is_iden, is_petsc;
-  PetscInt           i;
   PetscBool          second_solve = PETSC_FALSE;
   static PetscBool   cite1 = PETSC_FALSE, cite2 = PETSC_FALSE;
 
@@ -1989,7 +1987,7 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
   if (second_solve) PetscCall(MatMumpsHandleSchur_Private(A, PETSC_TRUE));
   else if (mumps->id.ICNTL(26) == 1) { // condense the right hand side
     PetscCall(MatMumpsSolveSchur_Private(A));
-    for (i = 0; i < mumps->id.size_schur; ++i) array[mumps->id.listvar_schur[i] - 1] = ID_FIELD_GET(mumps->id, redrhs, i);
+    for (PetscInt i = 0; i < mumps->id.size_schur; ++i) array[mumps->id.listvar_schur[i] - 1] = ID_FIELD_GET(mumps->id, redrhs, i);
   }
 
   if (mumps->petsc_size > 1) { /* convert mumps distributed solution to PETSc mpi x */
@@ -2001,7 +1999,7 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
       PetscInt *isol2_loc = NULL;
       PetscCall(ISCreateStride(PETSC_COMM_SELF, mumps->id.lsol_loc, 0, 1, &is_iden)); /* from */
       PetscCall(PetscMalloc1(mumps->id.lsol_loc, &isol2_loc));
-      for (i = 0; i < mumps->id.lsol_loc; i++) isol2_loc[i] = mumps->id.isol_loc[i] - 1;                        /* change Fortran style to C style */
+      for (PetscInt i = 0; i < mumps->id.lsol_loc; i++) isol2_loc[i] = mumps->id.isol_loc[i] - 1;               /* change Fortran style to C style */
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF, mumps->id.lsol_loc, isol2_loc, PETSC_OWN_POINTER, &is_petsc)); /* to */
       PetscCall(VecScatterCreate(mumps->x_seq, is_iden, x, is_petsc, &mumps->scat_sol));
       PetscCall(ISDestroy(&is_iden));
@@ -2842,6 +2840,8 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_36", "ICNTL(36): choice of BLR factorization variant", "None", mumps->id.ICNTL(36), &mumps->id.ICNTL(36), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_37", "ICNTL(37): compression of the contribution blocks (CB)", "None", mumps->id.ICNTL(37), &mumps->id.ICNTL(37), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_38", "ICNTL(38): estimated compression rate of LU factors with BLR", "None", mumps->id.ICNTL(38), &mumps->id.ICNTL(38), NULL));
+  PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_40", "ICNTL(40): adaptive BLR precision feature", "None", mumps->id.ICNTL(40), &mumps->id.ICNTL(40), NULL));
+  PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_47", "ICNTL(47): single precision factorization in a double precision instance", "None", mumps->id.ICNTL(47), &mumps->id.ICNTL(47), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_48", "ICNTL(48): multithreading with tree parallelism", "None", mumps->id.ICNTL(48), &mumps->id.ICNTL(48), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_49", "ICNTL(49): compact workarray at the end of factorization phase", "None", mumps->id.ICNTL(49), &mumps->id.ICNTL(49), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_56", "ICNTL(56): postponing and rank-revealing factorization", "None", mumps->id.ICNTL(56), &mumps->id.ICNTL(56), NULL));
@@ -2926,11 +2926,10 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F, Mat A, IS r, PETSC_UNU
         mumps->id.ICNTL(7) = 1;
         if (!mumps->myid) {
           const PetscInt *idx;
-          PetscInt        i;
 
           PetscCall(PetscMalloc1(M, &mumps->id.perm_in));
           PetscCall(ISGetIndices(r, &idx));
-          for (i = 0; i < M; i++) PetscCall(PetscMUMPSIntCast(idx[i] + 1, &mumps->id.perm_in[i])); /* perm_in[]: start from 1, not 0! */
+          for (PetscInt i = 0; i < M; i++) PetscCall(PetscMUMPSIntCast(idx[i] + 1, &mumps->id.perm_in[i])); /* perm_in[]: start from 1, not 0! */
           PetscCall(ISRestoreIndices(r, &idx));
         }
       }
@@ -3130,7 +3129,7 @@ static PetscErrorCode MatView_MUMPS(Mat A, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(20) (RHS sparse pattern):                         %d\n", mumps->id.ICNTL(20)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(21) (solution struct):                            %d\n", mumps->id.ICNTL(21)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(22) (in-core/out-of-core facility):               %d\n", mumps->id.ICNTL(22)));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(23) (max size of memory can be allocated locally):%d\n", mumps->id.ICNTL(23)));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(23) (max size of memory allocated locally):       %d\n", mumps->id.ICNTL(23)));
 
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(24) (detection of null pivot rows):               %d\n", mumps->id.ICNTL(24)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(25) (computation of a null space basis):          %d\n", mumps->id.ICNTL(25)));
@@ -3146,6 +3145,8 @@ static PetscErrorCode MatView_MUMPS(Mat A, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(36) (choice of BLR factorization variant):        %d\n", mumps->id.ICNTL(36)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(37) (compression of the contribution blocks):     %d\n", mumps->id.ICNTL(37)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(38) (estimated compression rate of LU factors):   %d\n", mumps->id.ICNTL(38)));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(40) (adaptive BLR precision feature):             %d\n", mumps->id.ICNTL(40)));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(47) (single precision factorization in a double precision instance): %d\n", mumps->id.ICNTL(47)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(48) (multithreading with tree parallelism):       %d\n", mumps->id.ICNTL(48)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(49) (compact workarray at the end of factorization phase):%d\n", mumps->id.ICNTL(49)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(56) (postponing and rank-revealing factorization):%d\n", mumps->id.ICNTL(56)));
@@ -3183,8 +3184,7 @@ static PetscErrorCode MatView_MUMPS(Mat A, PetscViewer viewer)
         PetscCall(PetscViewerFlush(viewer));
 
         if (mumps->ninfo && mumps->ninfo <= 80) {
-          PetscInt i;
-          for (i = 0; i < mumps->ninfo; i++) {
+          for (PetscInt i = 0; i < mumps->ninfo; i++) {
             PetscCall(PetscViewerASCIIPrintf(viewer, "  INFO(%" PetscInt_FMT "):\n", mumps->info[i]));
             PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "    [%d] %d\n", mumps->myid, mumps->id.INFO(mumps->info[i])));
             PetscCall(PetscViewerFlush(viewer));
@@ -3330,7 +3330,7 @@ static PetscErrorCode MatMumpsSetIcntl_MUMPS(Mat F, PetscInt icntl, PetscInt iva
   Mat_MUMPS *mumps = (Mat_MUMPS *)F->data;
 
   PetscFunctionBegin;
-  PetscCheck((icntl >= 1 && icntl <= 38) || icntl == 48 || icntl == 49 || icntl == 56 || icntl == 58, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_WRONG, "Unsupported ICNTL value %" PetscInt_FMT, icntl);
+  PetscCheck((icntl >= 1 && icntl <= 38) || icntl == 40 || icntl == 47 || icntl == 48 || icntl == 49 || icntl == 56 || icntl == 58, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_WRONG, "Unsupported ICNTL value %" PetscInt_FMT, icntl);
   if (mumps->id.job == JOB_NULL) {                                            /* need to cache icntl and ival since PetscMUMPS_c() has never been called */
     PetscMUMPSInt i, nICNTL_pre = mumps->ICNTL_pre ? mumps->ICNTL_pre[0] : 0; /* number of already cached ICNTL */
     for (i = 0; i < nICNTL_pre; ++i)
@@ -3351,7 +3351,7 @@ static PetscErrorCode MatMumpsGetIcntl_MUMPS(Mat F, PetscInt icntl, PetscInt *iv
   Mat_MUMPS *mumps = (Mat_MUMPS *)F->data;
 
   PetscFunctionBegin;
-  PetscCheck((icntl >= 1 && icntl <= 38) || icntl == 48 || icntl == 49 || icntl == 56 || icntl == 58, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_WRONG, "Unsupported ICNTL value %" PetscInt_FMT, icntl);
+  PetscCheck((icntl >= 1 && icntl <= 38) || icntl == 40 || icntl == 47 || icntl == 48 || icntl == 49 || icntl == 56 || icntl == 58, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_WRONG, "Unsupported ICNTL value %" PetscInt_FMT, icntl);
   if (mumps->id.job == JOB_NULL) {
     PetscInt i, nICNTL_pre = mumps->ICNTL_pre ? mumps->ICNTL_pre[0] : 0;
     *ival = 0;
@@ -3445,7 +3445,7 @@ PetscErrorCode MatMumpsSetOocTmpDir(Mat F, const char *tmpdir)
 
 .seealso: [](ch_matrices), `Mat`, `MatGetFactor()`, `MatMumpsSetOocTmpDir`, `MatMumpsSetIcntl()`, `MatMumpsGetIcntl()`, `MatMumpsSetCntl()`, `MatMumpsGetInfo()`, `MatMumpsGetInfog()`, `MatMumpsGetRinfo()`, `MatMumpsGetRinfog()`
 @*/
-PetscErrorCode MatMumpsGetOocTmpDir(Mat F, const char **tmpdir)
+PetscErrorCode MatMumpsGetOocTmpDir(Mat F, const char *tmpdir[])
 {
   Mat_MUMPS *mumps = (Mat_MUMPS *)F->data;
 
@@ -3651,6 +3651,8 @@ static PetscErrorCode MatMumpsSetBlk_MUMPS(Mat F, PetscInt nblk, const PetscInt 
 .  -mat_mumps_icntl_36          - ICNTL(36): controls the choice of BLR factorization variant
 .  -mat_mumps_icntl_37          - ICNTL(37): compression of the contribution blocks (CB)
 .  -mat_mumps_icntl_38          - ICNTL(38): sets the estimated compression rate of LU factors with BLR
+.  -mat_mumps_icntl_40          - ICNTL(40): adaptive BLR precision feature
+.  -mat_mumps_icntl_47          - ICNTL(47): single precision factorization in a double precision instance
 .  -mat_mumps_icntl_48          - ICNTL(48): multithreading with tree parallelism
 .  -mat_mumps_icntl_49          - ICNTL(49): compact workarray at the end of factorization phase
 .  -mat_mumps_icntl_58          - ICNTL(58): options for symbolic factorization

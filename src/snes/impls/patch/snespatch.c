@@ -143,11 +143,10 @@ static PetscErrorCode PCApply_PATCH_Nonlinear(PC pc, PetscInt i, Vec patchRHS, V
 static PetscErrorCode PCReset_PATCH_Nonlinear(PC pc)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
-  PetscInt  i;
 
   PetscFunctionBegin;
   if (patch->solver) {
-    for (i = 0; i < patch->npatch; ++i) PetscCall(SNESReset((SNES)patch->solver[i]));
+    for (PetscInt i = 0; i < patch->npatch; ++i) PetscCall(SNESReset((SNES)patch->solver[i]));
   }
 
   PetscCall(VecDestroy(&patch->patchResidual));
@@ -161,11 +160,10 @@ static PetscErrorCode PCReset_PATCH_Nonlinear(PC pc)
 static PetscErrorCode PCDestroy_PATCH_Nonlinear(PC pc)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
-  PetscInt  i;
 
   PetscFunctionBegin;
   if (patch->solver) {
-    for (i = 0; i < patch->npatch; ++i) PetscCall(SNESDestroy((SNES *)&patch->solver[i]));
+    for (PetscInt i = 0; i < patch->npatch; ++i) PetscCall(SNESDestroy((SNES *)&patch->solver[i]));
     PetscCall(PetscFree(patch->solver));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -347,7 +345,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Patch(SNES snes)
   snes->ops->view           = SNESView_Patch;
 
   PetscCall(SNESGetLineSearch(snes, &linesearch));
-  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
+  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
   snes->usesksp = PETSC_FALSE;
 
   snes->alwayscomputesfinalresidual = PETSC_FALSE;

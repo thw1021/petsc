@@ -1309,27 +1309,26 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSBAIJ,
                                        NULL,
                                        NULL,
                                        /*124*/ NULL,
-                                       NULL,
                                        MatSetBlockSizes_Default,
                                        NULL,
                                        NULL,
-                                       /*129*/ NULL,
-                                       MatCreateMPIMatConcatenateSeqMat_SeqSBAIJ,
+                                       NULL,
+                                       /*129*/ MatCreateMPIMatConcatenateSeqMat_SeqSBAIJ,
+                                       NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        /*134*/ NULL,
-                                       NULL,
                                        MatEliminateZeros_SeqSBAIJ,
                                        NULL,
                                        NULL,
-                                       /*139*/ NULL,
                                        NULL,
+                                       /*139*/ NULL,
                                        MatCopyHashToXAIJ_Seq_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
+                                       MatADot_Default,
+                                       /*144*/ MatANorm_Default,
                                        NULL,
                                        NULL};
 
@@ -2120,7 +2119,6 @@ PetscErrorCode MatLoad_SeqSBAIJ(Mat mat, PetscViewer viewer)
 @*/
 PetscErrorCode MatCreateSeqSBAIJWithArrays(MPI_Comm comm, PetscInt bs, PetscInt m, PetscInt n, PetscInt i[], PetscInt j[], PetscScalar a[], Mat *mat)
 {
-  PetscInt      ii;
   Mat_SeqSBAIJ *sbaij;
 
   PetscFunctionBegin;
@@ -2143,12 +2141,12 @@ PetscErrorCode MatCreateSeqSBAIJWithArrays(MPI_Comm comm, PetscInt bs, PetscInt 
   sbaij->free_ij        = PETSC_FALSE;
   sbaij->free_imax_ilen = PETSC_TRUE;
 
-  for (ii = 0; ii < m; ii++) {
+  for (PetscInt ii = 0; ii < m; ii++) {
     sbaij->ilen[ii] = sbaij->imax[ii] = i[ii + 1] - i[ii];
     PetscCheck(i[ii + 1] >= i[ii], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Negative row length in i (row indices) row = %" PetscInt_FMT " length = %" PetscInt_FMT, ii, i[ii + 1] - i[ii]);
   }
   if (PetscDefined(USE_DEBUG)) {
-    for (ii = 0; ii < sbaij->i[m]; ii++) {
+    for (PetscInt ii = 0; ii < sbaij->i[m]; ii++) {
       PetscCheck(j[ii] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Negative column index at location = %" PetscInt_FMT " index = %" PetscInt_FMT, ii, j[ii]);
       PetscCheck(j[ii] < n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column index too large at location = %" PetscInt_FMT " index = %" PetscInt_FMT, ii, j[ii]);
     }

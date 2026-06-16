@@ -3090,27 +3090,26 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqBAIJ,
                                        NULL,
                                        NULL,
                                        /*124*/ NULL,
-                                       NULL,
                                        MatSetBlockSizes_Default,
                                        NULL,
                                        MatFDColoringSetUp_SeqXAIJ,
-                                       /*129*/ NULL,
-                                       MatCreateMPIMatConcatenateSeqMat_SeqBAIJ,
+                                       NULL,
+                                       /*129*/ MatCreateMPIMatConcatenateSeqMat_SeqBAIJ,
                                        MatDestroySubMatrices_SeqBAIJ,
                                        NULL,
                                        NULL,
-                                       /*134*/ NULL,
                                        NULL,
+                                       /*134*/ NULL,
                                        MatEliminateZeros_SeqBAIJ,
                                        MatGetRowSumAbs_SeqBAIJ,
                                        NULL,
-                                       /*139*/ NULL,
                                        NULL,
+                                       /*139*/ NULL,
                                        MatCopyHashToXAIJ_Seq_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
+                                       MatADot_Default,
+                                       /*144*/ MatANorm_Default,
                                        NULL,
                                        NULL};
 
@@ -3408,8 +3407,7 @@ static PetscErrorCode MatSeqBAIJSetPreallocationCSR_SeqBAIJ(Mat B, PetscInt bs, 
       const PetscScalar *svals = values + (V ? (bs * bs * ii[i]) : 0);
       PetscCall(MatSetValuesBlocked_SeqBAIJ(B, 1, &i, ncols, icols, svals, INSERT_VALUES));
     } else {
-      PetscInt j;
-      for (j = 0; j < ncols; j++) {
+      for (PetscInt j = 0; j < ncols; j++) {
         const PetscScalar *svals = values + (V ? (bs * bs * (ii[i] + j)) : 0);
         PetscCall(MatSetValuesBlocked_SeqBAIJ(B, 1, &i, 1, &icols[j], svals, INSERT_VALUES));
       }

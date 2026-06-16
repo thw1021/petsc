@@ -119,8 +119,7 @@ static PetscErrorCode MatPreallocateWithMats_Private(Mat B, PetscInt nm, Mat X[]
 
 PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
 {
-  Mat      B;
-  PetscInt r;
+  Mat B;
 
   PetscFunctionBegin;
   if (reuse != MAT_REUSE_MATRIX) {
@@ -148,7 +147,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, Ma
   }
 
   PetscCall(MatGetRowUpperTriangular(A));
-  for (r = A->rmap->rstart; r < A->rmap->rend; r++) {
+  for (PetscInt r = A->rmap->rstart; r < A->rmap->rend; r++) {
     PetscInt           ncols;
     const PetscInt    *row;
     const PetscScalar *vals;
@@ -1023,14 +1022,13 @@ static PetscErrorCode MatMult_MPISBAIJ_Hermitian(Mat A, Vec xx, Vec yy)
 
   PetscFunctionBegin;
   /* diagonal part */
-  PetscCall((*a->A->ops->mult)(a->A, xx, a->slvec1a));
+  PetscUseTypeMethod(a->A, mult, xx, a->slvec1a);
   /* since a->slvec1b shares memory (dangerously) with a->slec1 changes to a->slec1 will affect it */
   PetscCall(PetscObjectStateIncrease((PetscObject)a->slvec1b));
   PetscCall(VecZeroEntries(a->slvec1b));
 
   /* subdiagonal part */
-  PetscCheck(a->B->ops->multhermitiantranspose, PetscObjectComm((PetscObject)a->B), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)a->B)->type_name);
-  PetscCall((*a->B->ops->multhermitiantranspose)(a->B, xx, a->slvec0b));
+  PetscUseTypeMethod(a->B, multhermitiantranspose, xx, a->slvec0b);
 
   /* copy x into the vec slvec0 */
   PetscCall(VecGetArray(a->slvec0, &from));
@@ -1043,7 +1041,7 @@ static PetscErrorCode MatMult_MPISBAIJ_Hermitian(Mat A, Vec xx, Vec yy)
   PetscCall(VecScatterBegin(a->sMvctx, a->slvec0, a->slvec1, ADD_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterEnd(a->sMvctx, a->slvec0, a->slvec1, ADD_VALUES, SCATTER_FORWARD));
   /* supperdiagonal part */
-  PetscCall((*a->B->ops->multadd)(a->B, a->slvec1b, a->slvec1a, yy));
+  PetscUseTypeMethod(a->B, multadd, a->slvec1b, a->slvec1a, yy);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
@@ -1057,13 +1055,13 @@ static PetscErrorCode MatMult_MPISBAIJ(Mat A, Vec xx, Vec yy)
 
   PetscFunctionBegin;
   /* diagonal part */
-  PetscCall((*a->A->ops->mult)(a->A, xx, a->slvec1a));
+  PetscUseTypeMethod(a->A, mult, xx, a->slvec1a);
   /* since a->slvec1b shares memory (dangerously) with a->slec1 changes to a->slec1 will affect it */
   PetscCall(PetscObjectStateIncrease((PetscObject)a->slvec1b));
   PetscCall(VecZeroEntries(a->slvec1b));
 
   /* subdiagonal part */
-  PetscCall((*a->B->ops->multtranspose)(a->B, xx, a->slvec0b));
+  PetscUseTypeMethod(a->B, multtranspose, xx, a->slvec0b);
 
   /* copy x into the vec slvec0 */
   PetscCall(VecGetArray(a->slvec0, &from));
@@ -1076,7 +1074,7 @@ static PetscErrorCode MatMult_MPISBAIJ(Mat A, Vec xx, Vec yy)
   PetscCall(VecScatterBegin(a->sMvctx, a->slvec0, a->slvec1, ADD_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterEnd(a->sMvctx, a->slvec0, a->slvec1, ADD_VALUES, SCATTER_FORWARD));
   /* supperdiagonal part */
-  PetscCall((*a->B->ops->multadd)(a->B, a->slvec1b, a->slvec1a, yy));
+  PetscUseTypeMethod(a->B, multadd, a->slvec1b, a->slvec1a, yy);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1090,13 +1088,12 @@ static PetscErrorCode MatMultAdd_MPISBAIJ_Hermitian(Mat A, Vec xx, Vec yy, Vec z
 
   PetscFunctionBegin;
   /* diagonal part */
-  PetscCall((*a->A->ops->multadd)(a->A, xx, yy, a->slvec1a));
+  PetscUseTypeMethod(a->A, multadd, xx, yy, a->slvec1a);
   PetscCall(PetscObjectStateIncrease((PetscObject)a->slvec1b));
   PetscCall(VecZeroEntries(a->slvec1b));
 
   /* subdiagonal part */
-  PetscCheck(a->B->ops->multhermitiantranspose, PetscObjectComm((PetscObject)a->B), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)a->B)->type_name);
-  PetscCall((*a->B->ops->multhermitiantranspose)(a->B, xx, a->slvec0b));
+  PetscUseTypeMethod(a->B, multhermitiantranspose, xx, a->slvec0b);
 
   /* copy x into the vec slvec0 */
   PetscCall(VecGetArray(a->slvec0, &from));
@@ -1109,7 +1106,7 @@ static PetscErrorCode MatMultAdd_MPISBAIJ_Hermitian(Mat A, Vec xx, Vec yy, Vec z
   PetscCall(VecScatterEnd(a->sMvctx, a->slvec0, a->slvec1, ADD_VALUES, SCATTER_FORWARD));
 
   /* supperdiagonal part */
-  PetscCall((*a->B->ops->multadd)(a->B, a->slvec1b, a->slvec1a, zz));
+  PetscUseTypeMethod(a->B, multadd, a->slvec1b, a->slvec1a, zz);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
@@ -1123,12 +1120,12 @@ static PetscErrorCode MatMultAdd_MPISBAIJ(Mat A, Vec xx, Vec yy, Vec zz)
 
   PetscFunctionBegin;
   /* diagonal part */
-  PetscCall((*a->A->ops->multadd)(a->A, xx, yy, a->slvec1a));
+  PetscUseTypeMethod(a->A, multadd, xx, yy, a->slvec1a);
   PetscCall(PetscObjectStateIncrease((PetscObject)a->slvec1b));
   PetscCall(VecZeroEntries(a->slvec1b));
 
   /* subdiagonal part */
-  PetscCall((*a->B->ops->multtranspose)(a->B, xx, a->slvec0b));
+  PetscUseTypeMethod(a->B, multtranspose, xx, a->slvec0b);
 
   /* copy x into the vec slvec0 */
   PetscCall(VecGetArray(a->slvec0, &from));
@@ -1141,7 +1138,7 @@ static PetscErrorCode MatMultAdd_MPISBAIJ(Mat A, Vec xx, Vec yy, Vec zz)
   PetscCall(VecScatterEnd(a->sMvctx, a->slvec0, a->slvec1, ADD_VALUES, SCATTER_FORWARD));
 
   /* supperdiagonal part */
-  PetscCall((*a->B->ops->multadd)(a->B, a->slvec1b, a->slvec1a, zz));
+  PetscUseTypeMethod(a->B, multadd, a->slvec1b, a->slvec1a, zz);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1210,8 +1207,8 @@ static PetscErrorCode MatGetRow_MPISBAIJ(Mat matin, PetscInt row, PetscInt *nz, 
     pcA = NULL;
     if (!v) pcB = NULL;
   }
-  PetscCall((*mat->A->ops->getrow)(mat->A, lrow, &nzA, pcA, pvA));
-  PetscCall((*mat->B->ops->getrow)(mat->B, lrow, &nzB, pcB, pvB));
+  PetscUseTypeMethod(mat->A, getrow, lrow, &nzA, pcA, pvA);
+  PetscUseTypeMethod(mat->B, getrow, lrow, &nzB, pcB, pvB);
   nztot = nzA + nzB;
 
   cmap = mat->garray;
@@ -1249,8 +1246,8 @@ static PetscErrorCode MatGetRow_MPISBAIJ(Mat matin, PetscInt row, PetscInt *nz, 
     }
   }
   *nz = nztot;
-  PetscCall((*mat->A->ops->restorerow)(mat->A, lrow, &nzA, pcA, pvA));
-  PetscCall((*mat->B->ops->restorerow)(mat->B, lrow, &nzB, pcB, pvB));
+  PetscUseTypeMethod(mat->A, restorerow, lrow, &nzA, pcA, pvA);
+  PetscUseTypeMethod(mat->B, restorerow, lrow, &nzB, pcB, pvB);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2009,27 +2006,26 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPISBAIJ,
                                        NULL,
                                        NULL,
                                        /*124*/ NULL,
-                                       NULL,
                                        MatSetBlockSizes_Default,
                                        NULL,
                                        NULL,
-                                       /*129*/ NULL,
-                                       MatCreateMPIMatConcatenateSeqMat_MPISBAIJ,
+                                       NULL,
+                                       /*129*/ MatCreateMPIMatConcatenateSeqMat_MPISBAIJ,
+                                       NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        /*134*/ NULL,
-                                       NULL,
                                        MatEliminateZeros_MPISBAIJ,
                                        NULL,
                                        NULL,
-                                       /*139*/ NULL,
                                        NULL,
+                                       /*139*/ NULL,
                                        MatCopyHashToXAIJ_MPI_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
+                                       MatADot_Default,
+                                       /*144*/ MatANorm_Default,
                                        NULL,
                                        NULL};
 
@@ -2167,8 +2163,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocationCSR_MPISBAIJ(Mat B, PetscInt bs
       const PetscScalar *svals = values + (V ? (bs * bs * ii[i]) : 0);
       PetscCall(MatSetValuesBlocked_MPISBAIJ(B, 1, &row, ncols, icols, svals, INSERT_VALUES));
     } else { /* block ordering does not match so we can only insert one block at a time. */
-      PetscInt j;
-      for (j = 0; j < ncols; j++) {
+      for (PetscInt j = 0; j < ncols; j++) {
         const PetscScalar *svals = values + (V ? (bs * bs * (ii[i] + j)) : 0);
         PetscCall(MatSetValuesBlocked_MPISBAIJ(B, 1, &row, 1, &icols[j], svals, INSERT_VALUES));
       }
@@ -2737,20 +2732,20 @@ static PetscErrorCode MatSOR_MPISBAIJ(Mat matin, Vec bb, PetscReal omega, MatSOR
   PetscCheck(bs <= 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "SSOR for block size > 1 is not yet implemented");
 
   if (flag == SOR_APPLY_UPPER) {
-    PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+    PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   if ((flag & SOR_LOCAL_SYMMETRIC_SWEEP) == SOR_LOCAL_SYMMETRIC_SWEEP) {
     if (flag & SOR_ZERO_INITIAL_GUESS) {
-      PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, lits, xx));
+      PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, lits, xx);
       its--;
     }
 
     PetscCall(VecDuplicate(bb, &bb1));
     while (its--) {
       /* lower triangular part: slvec0b = - B^T*xx */
-      PetscCall((*mat->B->ops->multtranspose)(mat->B, xx, mat->slvec0b));
+      PetscUseTypeMethod(mat->B, multtranspose, xx, mat->slvec0b);
 
       /* copy xx into slvec0a */
       PetscCall(VecGetArray(mat->slvec0, &ptr));
@@ -2776,22 +2771,22 @@ static PetscErrorCode MatSOR_MPISBAIJ(Mat matin, Vec bb, PetscReal omega, MatSOR
       PetscCall(VecScatterEnd(mat->sMvctx, mat->slvec0, mat->slvec1, ADD_VALUES, SCATTER_FORWARD));
 
       /* upper triangular part: bb1 = bb1 - B*x */
-      PetscCall((*mat->B->ops->multadd)(mat->B, mat->slvec1b, mat->slvec1a, bb1));
+      PetscUseTypeMethod(mat->B, multadd, mat->slvec1b, mat->slvec1a, bb1);
 
       /* local diagonal sweep */
-      PetscCall((*mat->A->ops->sor)(mat->A, bb1, omega, SOR_SYMMETRIC_SWEEP, fshift, lits, lits, xx));
+      PetscUseTypeMethod(mat->A, sor, bb1, omega, SOR_SYMMETRIC_SWEEP, fshift, lits, lits, xx);
     }
     PetscCall(VecDestroy(&bb1));
   } else if ((flag & SOR_LOCAL_FORWARD_SWEEP) && (its == 1) && (flag & SOR_ZERO_INITIAL_GUESS)) {
-    PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+    PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
   } else if ((flag & SOR_LOCAL_BACKWARD_SWEEP) && (its == 1) && (flag & SOR_ZERO_INITIAL_GUESS)) {
-    PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, flag, fshift, lits, 1, xx));
+    PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
   } else if (flag & SOR_EISENSTAT) {
     Vec                xx1;
     PetscBool          hasop;
     const PetscScalar *diag;
     PetscScalar       *sl, scale = (omega - 2.0) / omega;
-    PetscInt           i, n;
+    PetscInt           n;
 
     if (!mat->xx1) {
       PetscCall(VecDuplicate(bb, &mat->xx1));
@@ -2800,7 +2795,7 @@ static PetscErrorCode MatSOR_MPISBAIJ(Mat matin, Vec bb, PetscReal omega, MatSOR
     xx1 = mat->xx1;
     bb1 = mat->bb1;
 
-    PetscCall((*mat->A->ops->sor)(mat->A, bb, omega, (MatSORType)(SOR_ZERO_INITIAL_GUESS | SOR_LOCAL_BACKWARD_SWEEP), fshift, lits, 1, xx));
+    PetscUseTypeMethod(mat->A, sor, bb, omega, (MatSORType)(SOR_ZERO_INITIAL_GUESS | SOR_LOCAL_BACKWARD_SWEEP), fshift, lits, 1, xx);
 
     if (!mat->diag) {
       /* this is wrong for same matrix with new nonzero values */
@@ -2824,10 +2819,10 @@ static PetscErrorCode MatSOR_MPISBAIJ(Mat matin, Vec bb, PetscReal omega, MatSOR
       PetscCall(VecGetArray(xx, &x));
       PetscCall(VecGetLocalSize(xx, &n));
       if (omega == 1.0) {
-        for (i = 0; i < n; i++) sl[i] = b[i] - diag[i] * x[i];
+        for (PetscInt i = 0; i < n; i++) sl[i] = b[i] - diag[i] * x[i];
         PetscCall(PetscLogFlops(2.0 * n));
       } else {
-        for (i = 0; i < n; i++) sl[i] = b[i] + scale * diag[i] * x[i];
+        for (PetscInt i = 0; i < n; i++) sl[i] = b[i] + scale * diag[i] * x[i];
         PetscCall(PetscLogFlops(3.0 * n));
       }
       PetscCall(VecRestoreArray(mat->slvec1a, &sl));
@@ -2839,7 +2834,7 @@ static PetscErrorCode MatSOR_MPISBAIJ(Mat matin, Vec bb, PetscReal omega, MatSOR
     /* multiply off-diagonal portion of matrix */
     PetscCall(PetscObjectStateIncrease((PetscObject)mat->slvec1b));
     PetscCall(VecZeroEntries(mat->slvec1b));
-    PetscCall((*mat->B->ops->multtranspose)(mat->B, xx, mat->slvec0b));
+    PetscUseTypeMethod(mat->B, multtranspose, xx, mat->slvec0b);
     PetscCall(VecGetArray(mat->slvec0, &from));
     PetscCall(VecGetArray(xx, &x));
     PetscCall(PetscArraycpy(from, x, bs * mbs));
@@ -2847,10 +2842,10 @@ static PetscErrorCode MatSOR_MPISBAIJ(Mat matin, Vec bb, PetscReal omega, MatSOR
     PetscCall(VecRestoreArray(xx, &x));
     PetscCall(VecScatterBegin(mat->sMvctx, mat->slvec0, mat->slvec1, ADD_VALUES, SCATTER_FORWARD));
     PetscCall(VecScatterEnd(mat->sMvctx, mat->slvec0, mat->slvec1, ADD_VALUES, SCATTER_FORWARD));
-    PetscCall((*mat->B->ops->multadd)(mat->B, mat->slvec1b, mat->slvec1a, mat->slvec1a));
+    PetscUseTypeMethod(mat->B, multadd, mat->slvec1b, mat->slvec1a, mat->slvec1a);
 
     /* local sweep */
-    PetscCall((*mat->A->ops->sor)(mat->A, mat->slvec1a, omega, (MatSORType)(SOR_ZERO_INITIAL_GUESS | SOR_LOCAL_FORWARD_SWEEP), fshift, lits, 1, xx1));
+    PetscUseTypeMethod(mat->A, sor, mat->slvec1a, omega, (MatSORType)(SOR_ZERO_INITIAL_GUESS | SOR_LOCAL_FORWARD_SWEEP), fshift, lits, 1, xx1);
     PetscCall(VecAXPY(xx, 1.0, xx1));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "MatSORType is not supported for SBAIJ matrix format");
   PetscFunctionReturn(PETSC_SUCCESS);

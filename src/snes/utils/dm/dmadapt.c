@@ -659,7 +659,7 @@ static PetscErrorCode DMAdaptorTransferSolution_Exact_Private(DMAdaptor adaptor,
 PetscErrorCode DMAdaptorSetUp(DMAdaptor adaptor)
 {
   PetscDS  prob;
-  PetscInt Nf, f;
+  PetscInt Nf;
 
   PetscFunctionBegin;
   PetscCall(DMGetDS(adaptor->idm, &prob));
@@ -667,7 +667,7 @@ PetscErrorCode DMAdaptorSetUp(DMAdaptor adaptor)
   PetscCall(VecTaggerSetUp(adaptor->coarsenTag));
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscMalloc2(Nf, &adaptor->exactSol, Nf, &adaptor->exactCtx));
-  for (f = 0; f < Nf; ++f) {
+  for (PetscInt f = 0; f < Nf; ++f) {
     PetscCall(PetscDSGetExactSolution(prob, f, &adaptor->exactSol[f], &adaptor->exactCtx[f]));
     /* TODO Have a flag that forces projection rather than using the exact solution */
     if (adaptor->exactSol[0]) PetscCall(DMAdaptorSetTransferFunction(adaptor, DMAdaptorTransferSolution_Exact_Private));
@@ -839,11 +839,10 @@ static PetscErrorCode DMAdaptorPostAdapt(DMAdaptor adaptor)
 static PetscErrorCode DMAdaptorComputeCellErrorIndicator_Gradient(DMAdaptor adaptor, PetscInt dim, PetscInt Nc, const PetscScalar *field, const PetscScalar *gradient, const PetscFVCellGeom *cg, PetscReal *errInd, PetscCtx ctx)
 {
   PetscReal err = 0.;
-  PetscInt  c, d;
 
   PetscFunctionBeginHot;
-  for (c = 0; c < Nc; c++) {
-    for (d = 0; d < dim; ++d) err += PetscSqr(PetscRealPart(gradient[c * dim + d]));
+  for (PetscInt c = 0; c < Nc; c++) {
+    for (PetscInt d = 0; d < dim; ++d) err += PetscSqr(PetscRealPart(gradient[c * dim + d]));
   }
   *errInd = cg->volume * err;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -858,7 +857,7 @@ static PetscErrorCode DMAdaptorComputeErrorIndicator_Gradient(DMAdaptor adaptor,
   void           *ctx;
   PetscQuadrature quad;
   PetscScalar    *earray;
-  PetscReal       minMaxInd[2] = {PETSC_MAX_REAL, PETSC_MIN_REAL}, minMaxIndGlobal[2];
+  PetscReal       minMaxInd[2] = {PETSC_MAX_REAL, PETSC_MIN_REAL};
   PetscInt        dim, cdim, cStart, cEnd, Nf, Nc;
 
   PetscFunctionBegin;
@@ -949,8 +948,8 @@ static PetscErrorCode DMAdaptorComputeErrorIndicator_Gradient(DMAdaptor adaptor,
   PetscCall(VecRestoreArray(errVec, &earray));
   PetscCall(DMDestroy(&plex));
   PetscCall(DMDestroy(&eplex));
-  PetscCall(PetscGlobalMinMaxReal(PetscObjectComm((PetscObject)adaptor), minMaxInd, minMaxIndGlobal));
-  PetscCall(PetscInfo(adaptor, "DMAdaptor: error indicator range (%g, %g)\n", (double)minMaxIndGlobal[0], (double)minMaxIndGlobal[1]));
+  PetscCall(PetscGlobalMinMaxReal(PetscObjectComm((PetscObject)adaptor), minMaxInd, minMaxInd));
+  PetscCall(PetscInfo(adaptor, "DMAdaptor: error indicator range (%g, %g)\n", (double)minMaxInd[0], (double)minMaxInd[1]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -980,7 +979,6 @@ static PetscErrorCode DMAdaptorComputeErrorIndicator_Flux(DMAdaptor adaptor, Vec
 
   PetscCall(DMCreateGlobalVector(mdm, &mu));
   PetscCall(PetscObjectSetName((PetscObject)mu, "Mixed Solution"));
-  PetscCall(VecSet(mu, 0.0));
   PetscCall(SNESSolve(msnes, NULL, mu));
   PetscCall(VecViewFromOptions(mu, (PetscObject)adaptor, "-adapt_mixed_sol_vec_view"));
 

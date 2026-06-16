@@ -16,7 +16,8 @@ typedef struct {
   CGNS_ENUMT(GridLocation_t) grid_loc;
   PetscInt       num_local_nodes, nStart, nEnd;
   PetscInt       eStart, eEnd;
-  PetscScalar   *nodal_field;
+  PetscInt       num_nodal_fields;
+  PetscScalar  **nodal_fields;
   PetscSegBuffer output_steps;
   PetscSegBuffer output_times;
   PetscInt       previous_output_step;
@@ -27,6 +28,11 @@ typedef struct {
   int      solution_file_index;         // CGNS file solution index for direct access
   int      solution_file_pointer_index; // CGNS file solution index for FlowSolutionPointers (and other related arrays), index by 1
   char    *solution_name;
+
+  // Descriptor information
+  PetscInt num_descriptors, descriptor_capacity;
+  char   **descriptor_names;
+  char   **descriptor_values;
 } PetscViewer_CGNS;
 
 #define PetscCallCGNS(ierr) \

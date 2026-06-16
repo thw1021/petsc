@@ -180,7 +180,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   Vec                 X, dX, lX, F, dXold;
   PetscReal           fnorm, ynorm, xnorm, beta = 0.0;
   PetscScalar         dXdotdX, dXolddotdXold, dXdotdXold, lXdotdX, lXdotdXold;
-  PetscInt            maxits, i;
+  PetscInt            maxits;
   SNESLineSearch      linesearch;
   SNESConvergedReason reason;
 
@@ -252,7 +252,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
 
   /* first update -- just use the (preconditioned) residual direction for the initial conjugate direction */
 
-  for (i = 1; i < maxits + 1; i++) {
+  for (PetscInt i = 1; i < maxits + 1; i++) {
     /* some update types require the old update direction or conjugate direction */
     if (ncg->type != SNES_NCG_FR) PetscCall(VecCopy(dX, dXold));
     PetscCall(SNESLineSearchApply(linesearch, X, F, &fnorm, lX));
@@ -356,9 +356,9 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   Level: beginner
 
   Options Database Keys:
-+   -snes_ncg_type (fr|prp|dy|hs|cd)                                                  - Choice of conjugate-gradient update parameter, default is `prp`.
-.   -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell|ncglinear) - Line search type, see `SNESLineSearchType`
--   -snes_ncg_monitor                                                                 - Print the beta values nonlinear Conjugate-Gradient used in the  iteration, .
++   -snes_ncg_type (fr|prp|dy|hs|cd)                                            - Choice of conjugate-gradient update parameter, default is `prp`.
+.   -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell|ncglinear) - Line search type, see `SNESLineSearchType`
+-   -snes_ncg_monitor                                                           - Print the beta values nonlinear Conjugate-Gradient used in the  iteration, .
 
    Notes:
    This solves the nonlinear system of equations $ F(x) = 0 $ using the nonlinear generalization of the conjugate
