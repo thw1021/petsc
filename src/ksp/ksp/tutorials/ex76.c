@@ -1,7 +1,6 @@
-#include <petscksp.h>
-#include <petsc/private/petscimpl.h>
-
 static char help[] = "Solves a linear system using PCHPDDM.\n\n";
+
+#include <petscksp.h>
 
 int main(int argc, char **args)
 {
