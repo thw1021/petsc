@@ -27,7 +27,6 @@ static PetscErrorCode TestABProduct(PetscInt mbsA, PetscInt kbs, PetscInt nbsB, 
   PetscScalar *vals;
 
   PetscFunctionBeginUser;
-
   m         = mbsA * bsA;
   k         = kbs * bsB;
   n         = nbsB * bsB;
@@ -131,7 +130,6 @@ static PetscErrorCode TestABProduct(PetscInt mbsA, PetscInt kbs, PetscInt nbsB, 
   PetscCall(MatDestroy(&C_diff));
   PetscCall(PetscFree(cols));
   PetscCall(PetscFree(vals));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -157,7 +155,6 @@ static PetscErrorCode TestPtAP(PetscInt nbsA, PetscInt nbsP, PetscInt bsA, Petsc
   PetscScalar *vals;
 
   PetscFunctionBeginUser;
-
   m         = nbsA * bsA;
   n         = nbsP * bsP;
   max_ncols = 3 * PetscMax(bsA, bsP);
@@ -257,7 +254,6 @@ static PetscErrorCode TestPtAP(PetscInt nbsA, PetscInt nbsP, PetscInt bsA, Petsc
   PetscCall(MatDestroy(&C_diff));
   PetscCall(PetscFree(cols));
   PetscCall(PetscFree(vals));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

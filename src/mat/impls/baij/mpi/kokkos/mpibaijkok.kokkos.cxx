@@ -113,7 +113,7 @@ static PetscErrorCode MatMPIBAIJKokkosUnCompressB(Mat mat)
 
   PetscFunctionBegin;
   if (!baij->garray || !baij->B) PetscFunctionReturn(PETSC_SUCCESS);
-  bc = (Mat_SeqBAIJKokkos *)baij->B->spptr;
+  bc      = (Mat_SeqBAIJKokkos *)baij->B->spptr;
   row_bs  = mat->rmap->bs;
   col_bs  = mat->cmap->bs;
   mbs_loc = baij->mbs;
@@ -122,7 +122,7 @@ static PetscErrorCode MatMPIBAIJKokkosUnCompressB(Mat mat)
     auto ci = bc->i_dual.view_host();
     auto cj = bc->j_dual.view_host();
     auto ca = bc->a_dual.view_host();
-    cnblk = ci[mbs_loc];
+    cnblk   = ci[mbs_loc];
 
     MatRowMapKokkosView gi("B_i_glob", mbs_loc + 1);
     MatColIdxKokkosView gj("B_j_glob", cnblk);
@@ -159,7 +159,7 @@ static PetscErrorCode MatMPIBAIJKokkosUnCompressB(Mat mat)
 /*
   MatSetUpMultiply_MPIBAIJKokkos - col_bs-aware column compression and scatter setup for MPIBAIJKOKKOS.
 
-  For a distributed rectangular-block matrix with off-diagonal B (sized rmap->n × cmap->N),
+  For a distributed rectangular-block matrix with off-diagonal B (sized rmap->n x cmap->N),
   the MatMult requires a VecScatter from the global column-space vector (distributed over cmap)
   to a local halo vector (lvec). The off-diagonal's block columns are global coarse-block indices
   0..Nbs-1. This function:
@@ -313,7 +313,7 @@ static PetscErrorCode MatSetUpMultiply_MPIBAIJKokkos(Mat mat)
   preallocation to set up the envelope (layouts, stash, row ownership), then:
   - fix the column-side block bookkeeping (cstartbs/cendbs/nbs/Nbs/bs2) into col_bs units, and
   - replace the square SEQBAIJ A/B created by the base with rectangular SEQBAIJKOKKOS blocks
-    (A: local-rows × local-diagonal-coarse-cols; B: local-rows × global-coarse-cols, uncompressed
+    (A: local-rows x local-diagonal-coarse-cols; B: local-rows x global-coarse-cols, uncompressed
     in F1.2 — the off-diagonal column compression/garray is built in F1.3).
   Column ownership (the A/B split in MatSetValuesBlocked()) is determined by col_bs, not row_bs.
 */
@@ -355,14 +355,14 @@ static PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJKokkos(Mat mat, PetscInt
 
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat), &size));
 
-  // Create diagonal block A (local rows × local diagonal columns)
+  // Create diagonal block A (local rows x local diagonal columns)
   PetscCall(MatCreate(PETSC_COMM_SELF, &mpibaij->A));
   PetscCall(MatSetSizes(mpibaij->A, mat->rmap->n, mat->cmap->n, mat->rmap->n, mat->cmap->n));
   PetscCall(MatSetBlockSizes(mpibaij->A, row_bs, col_bs));
   PetscCall(MatSetType(mpibaij->A, MATSEQBAIJKOKKOS));
   PetscCall(MatSeqBAIJSetPreallocation(mpibaij->A, row_bs, d_nz, d_nnz));
 
-  // Create off-diagonal block B (local rows × global columns; uncompressed in F1.2)
+  // Create off-diagonal block B (local rows x global columns; uncompressed in F1.2)
   PetscCall(MatCreate(PETSC_COMM_SELF, &mpibaij->B));
   PetscCall(MatSetSizes(mpibaij->B, mat->rmap->n, size > 1 ? mat->cmap->N : 0, mat->rmap->n, size > 1 ? mat->cmap->N : 0));
   PetscCall(MatSetBlockSizes(mpibaij->B, row_bs, col_bs));
@@ -376,6 +376,8 @@ static PetscErrorCode MatDestroy_MPIBAIJKokkos(Mat A)
   PetscFunctionBegin;
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIBAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpibaijkokkos_mpiaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpibaijkokkos_mpiaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpiaij_mpibaijkokkos_C", NULL));
   PetscCall(MatDestroy_MPIBAIJ(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -399,11 +401,11 @@ static PetscErrorCode MatDestroy_MPIBAIJKokkos(Mat A)
 */
 static PetscErrorCode MatSetValues_MPIBAIJKokkos(Mat mat, PetscInt m, const PetscInt im[], PetscInt n, const PetscInt in[], const PetscScalar v[], InsertMode addv)
 {
-  Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)mat->data;
+  Mat_MPIBAIJ *baij        = (Mat_MPIBAIJ *)mat->data;
   PetscBool    roworiented = baij->roworiented;
   PetscInt     i, j, row, col;
-  PetscInt     rstart = mat->rmap->rstart, rend = mat->rmap->rend;     /* Scalar row ownership */
-  PetscInt     cstart = mat->cmap->rstart, cend = mat->cmap->rend;     /* Scalar column ownership (diagonal part) */
+  PetscInt     rstart = mat->rmap->rstart, rend = mat->rmap->rend; /* Scalar row ownership */
+  PetscInt     cstart = mat->cmap->rstart, cend = mat->cmap->rend; /* Scalar column ownership (diagonal part) */
   PetscScalar  value;
 
   PetscFunctionBegin;
@@ -504,7 +506,7 @@ static PetscErrorCode MatSetValuesBlocked_MPIBAIJKokkos(Mat mat, PetscInt m, con
           PetscCall(MatSetValuesBlocked(baij->A, 1, &row_in, 1, &col_in, barray, addv));
         } else {
           /* Off-diagonal: store at global block-column index (F1.2 uncompressed)
-             B is sized rmap->n × cmap->N, so we use global block-column in[j] directly.
+             B is sized rmap->n x cmap->N, so we use global block-column in[j] directly.
           */
           row_in = row;
           col_in = in[j]; /* GLOBAL block-column index */
@@ -658,7 +660,7 @@ static PetscErrorCode MatProductSymbolic_MPIBAIJKokkos(Mat C)
   via MatProductSymbolic_MPIBAIJKokkos, which leaves C as MPIAIJ.
 
   Also composed on MPIAIJ operand positions (via composed functions) so mixed-type
-  products (e.g. MPIBAIJKokkos × MPIAIJ) are handled.
+  products (e.g. MPIBAIJKokkos x MPIAIJ) are handled.
 */
 static PetscErrorCode MatProductSetFromOptions_MPIBAIJKokkos(Mat C)
 {
@@ -729,7 +731,6 @@ static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
     PetscCall(MatDestroy(&Yaij));
     PetscCall(MatDestroy(&Xaij));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -897,7 +898,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIBAIJKokkos(Mat A, MatType, Mat
   // Compose mixed-type product query functions for GAMG
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpibaijkokkos_mpiaij_C", MatProductSetFromOptions_mpibaijkokkos_mpiaij_C));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaij_mpibaijkokkos_C", MatProductSetFromOptions_mpiaij_mpibaijkokkos_C));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
