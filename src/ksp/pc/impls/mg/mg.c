@@ -1484,7 +1484,7 @@ static PetscErrorCode PCMGSetGalerkin_MG(PC pc, PCMGGalerkinType use)
 
 /*@
   PCMGSetGalerkin - Causes the coarser grid matrices to be computed from the
-  finest grid via the Galerkin process: $A_{i-1} = r_i  A_i  p_i$.
+  finest grid via the Galerkin process: $A_{i-1} = r_i * A_i * p_i$.
 
   Logically Collective
 

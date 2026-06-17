@@ -1546,10 +1546,10 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
 
   Options Database Keys:
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation
-. -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2) levels from finest.
+. -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2 or square graph) levels from finest.
 . -pc_gamg_aggressive_square_graph (true|false)       - use square graph ($A^T A$), alternative is MIS-k (k=2), for aggressive coarsening
 . -pc_gamg_mis_k_minimum_degree_ordering (true|false) - use minimum degree ordering in greedy MIS algorithm
-. -pc_gamg_pc_gamg_asm_hem_aggs n                     - number of HEM aggregation steps for ASM smoother
+. -pc_gamg_asm_hem_aggs n                             - number of HEM aggregation steps for ASM smoother
 - -pc_gamg_aggressive_mis_k n                         - number (k) distance in MIS coarsening (>2 is 'aggressive')
 
   Level: intermediate
