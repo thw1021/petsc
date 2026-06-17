@@ -1495,7 +1495,7 @@ PetscErrorCode MatDestroy(Mat *A)
   `MatSetValues()` uses 0-based row and column numbers in Fortran
   as well as in C.
 
-  Negative indices may be passed in `idxm` and `idxn`, these rows and columns are  simply ignored. This allows easily inserting element stiffness matrices
+  Negative indices may be passed in `idxm` and `idxn`, these rows and columns are simply ignored. This allows easily inserting element stiffness matrices
   with homogeneous Dirichlet boundary conditions that you don't want represented
   in the matrix.
 
@@ -2439,7 +2439,7 @@ PetscErrorCode MatGetLayouts(Mat A, PetscLayout *rmap, PetscLayout *cmap)
   call MatSetValuesLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES, ierr)
 .ve
 
-  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  If `y` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
   otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValues()`, `MatSetLocalToGlobalMapping()`,
@@ -2529,7 +2529,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
   call MatSetValuesBlockedLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES, ierr)
 .ve
 
-  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  If `y` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
   otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetBlockSize()`, `MatSetLocalToGlobalMapping()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`,
