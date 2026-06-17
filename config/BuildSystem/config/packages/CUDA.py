@@ -535,4 +535,6 @@ class Configure(config.package.Package):
   def configure(self, *args, **kwargs):
     super().configure(*args, **kwargs)
     self.executeTest(self.checkKnownBadCUDAHostCompilerCombo)
+    if self.defaultIndexSize == 64 and self.version_tuple[0] < 13:
+      raise RuntimeError('Configuring PETSc with 64-bit indices requires CUDA-13 and above')
     return
