@@ -458,7 +458,7 @@ static PetscErrorCode MatCoarsenSetStrengthIndex_MATCOARSEN(MatCoarsen coarse, P
 
   Input Parameters:
 + coarse - the coarsen context
-- b      - threshold value, default is -1
+- b      - threshold value, default is 0
 
   Options Database Key:
 . -mat_coarsen_threshold b - threshold

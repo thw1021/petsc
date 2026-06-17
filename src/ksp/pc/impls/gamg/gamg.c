@@ -1888,15 +1888,15 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation
 . -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2 or square graph) levels from finest.
 . -pc_gamg_aggressive_square_graph (true|false)       - use square graph ($A^T A$) for coarsening. Otherwise, MIS-k (k=2) is used, see `PCGAMGMISkSetAggressive()`
-. -pc_gamg_square[_i]_product_type type               - `MatProductType` to use when squaring the matrix for aggressive coarsening (on level i < `n`)
+. -pc_gamg_square[_i]_mat_product_algorithm algorithm - `MatProductAlgorithm` to use when squaring the matrix for aggressive coarsening (on level i < `n`)
 . -pc_gamg_mis_k_minimum_degree_ordering (true|false) - use minimum degree ordering in greedy MIS algorithm
-. -pc_gamg_pc_gamg_asm_hem_aggs n                     - number of HEM aggregation steps for `PCASM` smoother
+. -pc_gamg_asm_hem_aggs n                             - number of HEM aggregation steps for `PCASM` smoother
 - -pc_gamg_aggressive_mis_k n                         - number (k) distance in MIS coarsening (>2 is 'aggressive')
 
   Options Database Keys for Multigrid:
 + -pc_mg_cycle_type (v|w)                            - see `PCMGSetCycleType()`
 . -pc_mg_distinct_smoothup                           - configure the up and down (pre and post) smoothers separately, see `PCMGSetDistinctSmoothUp()`
-. -pc_mg_type (additive|multiplicative|full|kascade) - see `PCMGType`
+. -pc_mg_type (additive|multiplicative|full|kaskade) - see `PCMGType`
 - -pc_mg_levels levels                               - number of levels of multigrid to use; `PCGAMG` has a heuristic to determine the number of levels so
                                                        this is not usually used with `PCGAMG`
 
