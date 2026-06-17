@@ -53,3 +53,7 @@ PETSC_INTERN PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJ(Mat B, PetscInt b
 PETSC_INTERN PetscErrorCode MatAXPYGetPreallocation_MPIBAIJ(Mat, const PetscInt *, Mat, const PetscInt *, PetscInt *);
 
 PETSC_INTERN PetscErrorCode MatConjugate_SeqBAIJ(Mat);
+
+PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat);
+PETSC_INTERN PetscErrorCode MatAssemblyEnd_MPIBAIJ(Mat, MatAssemblyType);
+PETSC_INTERN PetscErrorCode MatDestroy_MPIBAIJ(Mat);

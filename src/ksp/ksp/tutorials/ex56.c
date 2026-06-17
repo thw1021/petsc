@@ -124,14 +124,18 @@ int main(int argc, char **args)
     PetscCall(MatSetFromOptions(Amat));
     PetscCall(MatSeqAIJSetPreallocation(Amat, 0, d_nnz));
     PetscCall(MatMPIAIJSetPreallocation(Amat, 0, d_nnz, 0, o_nnz));
-    /* Generic block preallocation: a no-op unless Amat is a BAIJ-family type (e.g. seqbaijkokkos);
-       the operator has square 3x3 blocks. blk_nnz is the block-column count per block-row. */
+    /* Generic block preallocation: a no-op unless Amat is a BAIJ-family type (e.g. (seq/mpi)baijkokkos);
+       the operator has square 3x3 blocks. blk_nnz/o_blk_nnz are block-column counts per block-row. */
     {
-      PetscInt *blk_nnz, mbs = m / 3;
-      PetscCall(PetscMalloc1(mbs, &blk_nnz));
-      for (i = 0; i < mbs; i++) blk_nnz[i] = d_nnz[i * 3] / 3;
+      PetscInt *blk_nnz, *o_blk_nnz, mbs = m / 3;
+      PetscCall(PetscMalloc2(mbs, &blk_nnz, mbs, &o_blk_nnz));
+      for (i = 0; i < mbs; i++) {
+        blk_nnz[i]   = d_nnz[i * 3] / 3;
+        o_blk_nnz[i] = o_nnz[i * 3] / 3;
+      }
       PetscCall(MatSeqBAIJSetPreallocation(Amat, 3, 0, blk_nnz));
-      PetscCall(PetscFree(blk_nnz));
+      PetscCall(MatMPIBAIJSetPreallocation(Amat, 3, 0, blk_nnz, 0, o_blk_nnz));
+      PetscCall(PetscFree2(blk_nnz, o_blk_nnz));
     }
 
     PetscCall(PetscFree(d_nnz));

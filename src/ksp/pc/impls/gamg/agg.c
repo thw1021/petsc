@@ -1403,6 +1403,7 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
      where the rectangular (bs x col_bs) column block size is taken from the matrix set above.
      The tentative prolongator has one block per block-row. */
   PetscCall(MatSeqBAIJSetPreallocation(Prol, bs, 1, NULL));
+  PetscCall(MatMPIBAIJSetPreallocation(Prol, bs, 1, NULL, 1, NULL));
 
   /* can get all points "removed" */
   PetscCall(MatGetSize(Prol, &kk, &ii));

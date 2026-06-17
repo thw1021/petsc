@@ -83,6 +83,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJViennaCL(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJKokkos(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJKokkos(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJKokkos(Mat);
+PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJKokkos(Mat);
 #endif
 
 #if defined(PETSC_HAVE_FFTW)
@@ -231,7 +232,9 @@ PetscErrorCode MatRegisterAll(void)
   PetscCall(MatRegisterRootName(MATAIJKOKKOS, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS));
   PetscCall(MatRegister(MATSEQAIJKOKKOS, MatCreate_SeqAIJKokkos));
   PetscCall(MatRegister(MATMPIAIJKOKKOS, MatCreate_MPIAIJKokkos));
+  PetscCall(MatRegisterRootName(MATBAIJKOKKOS, MATSEQBAIJKOKKOS, MATMPIBAIJKOKKOS));
   PetscCall(MatRegister(MATSEQBAIJKOKKOS, MatCreate_SeqBAIJKokkos));
+  PetscCall(MatRegister(MATMPIBAIJKOKKOS, MatCreate_MPIBAIJKokkos));
 #endif
 
 #if defined(PETSC_HAVE_FFTW)

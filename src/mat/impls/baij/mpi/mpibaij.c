@@ -4,7 +4,7 @@
 #include <petscblaslapack.h>
 #include <petscsf.h>
 
-static PetscErrorCode MatDestroy_MPIBAIJ(Mat mat)
+PETSC_INTERN PetscErrorCode MatDestroy_MPIBAIJ(Mat mat)
 {
   Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)mat->data;
 
@@ -895,7 +895,7 @@ static PetscErrorCode MatAssemblyBegin_MPIBAIJ(Mat mat, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatAssemblyEnd_MPIBAIJ(Mat mat, MatAssemblyType mode)
+PETSC_INTERN PetscErrorCode MatAssemblyEnd_MPIBAIJ(Mat mat, MatAssemblyType mode)
 {
   Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)mat->data;
   Mat_SeqBAIJ *a    = (Mat_SeqBAIJ *)baij->A->data;
