@@ -395,6 +395,41 @@ PetscErrorCode MatGetDiagonalBlock(Mat A, Mat *a)
 }
 
 /*@
+  MatGetMultPetscSF - Returns the `PetscSF` that communicates to each MPI process the values held on other MPI processes that are coupled to it by the `Mat`
+
+  Not Collective
+
+  Input Parameter:
+. A - the matrix
+
+  Output Parameter:
+. sf - the `PetscSF`, or `NULL` for sequential matrices and matrix types that do not build one
+
+  Level: advanced
+
+  Notes:
+  The returned `PetscSF` is owned by the matrix; do not destroy it. It is only valid after the matrix has been assembled.
+
+  For several PETSc matrix classes, such as `MATMPIAIJ`, `MATMPIBAIJ`, and `MATMPISBAIJ`, this `PetscSF` is used within
+  `MatMult()` to provide the contribution of vector entries that are not local to each MPI process to the matrix-vector product.
+  It maps the global vector layout (the matrix column layout) onto the off-process columns that the local rows couple to,
+  so it can be reused to communicate any per-column data, for example with `PetscSFBcastBegin()`.
+
+.seealso: [](ch_matrices), `Mat`, `PetscSF`, `MatGetDiagonalBlock()`, `MatMPIAIJGetSeqAIJ()`, `PetscSFBcastBegin()`, `MatMult()`
+@*/
+PetscErrorCode MatGetMultPetscSF(Mat A, PetscSF *sf)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscAssertPointer(sf, 2);
+  PetscCheck(A->assembled, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
+  *sf = NULL;
+  PetscTryMethod(A, "MatGetMultPetscSF_C", (Mat, PetscSF *), (A, sf));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   MatGetTrace - Gets the trace of a matrix. The sum of the diagonal entries.
 
   Collective
