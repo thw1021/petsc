@@ -928,24 +928,153 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqBAIJKokkos(Mat A, MatType mtype
 }
 
 /*
+  BlockGemvAccum - compile-time-sized dense block GEMV accumulate (shared by the MatMult family).
+
+  TRANS == false: y(RBS) += A(RBS x CBS) * x(CBS)    (MatMult / MatMultAdd)
+  TRANS == true:  y(CBS) += A(RBS x CBS)^T * x(RBS)  (MatMultTranspose / MatMultTransposeAdd)
+
+  Blocks are row-major: element (ii,jj) is at aval[ii*CBS+jj]. The source vector segment is staged
+  into a thread-local register array so the contraction reads it stride-1, and the A-block is read
+  stride-1 along its fast (column) axis in both orientations; this mirrors the B-block staging in
+  BlockGemmAccum() (F8c). Output uses Kokkos::atomic_add because team threads handling different
+  A-blocks of a block-row (and, for the transpose, different block-rows) target the same output
+  segment (F8b). The unrolled compile-time loops keep the staged data in registers.
+*/
+template <int RBS, int CBS, bool TRANS>
+KOKKOS_INLINE_FUNCTION static void BlockGemvAccum(const MatScalarType *aval, const MatScalarType *xval, MatScalarType *yval)
+{
+  if constexpr (!TRANS) {
+    MatScalarType x_reg[CBS];
+
+#pragma unroll
+    for (int jj = 0; jj < CBS; jj++) x_reg[jj] = xval[jj];
+
+#pragma unroll
+    for (int ii = 0; ii < RBS; ii++) {
+      MatScalarType sum = 0.0;
+#pragma unroll
+      for (int jj = 0; jj < CBS; jj++) sum += aval[ii * CBS + jj] * x_reg[jj];
+      Kokkos::atomic_add(&yval[ii], sum);
+    }
+  } else {
+    MatScalarType y_acc[CBS];
+
+#pragma unroll
+    for (int jj = 0; jj < CBS; jj++) y_acc[jj] = 0.0;
+
+#pragma unroll
+    for (int ii = 0; ii < RBS; ii++) {
+      MatScalarType xi = xval[ii];
+#pragma unroll
+      for (int jj = 0; jj < CBS; jj++) y_acc[jj] += aval[ii * CBS + jj] * xi;
+    }
+
+#pragma unroll
+    for (int jj = 0; jj < CBS; jj++) Kokkos::atomic_add(&yval[jj], y_acc[jj]);
+  }
+}
+
+/*
+  BlockGemvAccumGeneric - runtime-sized fallback of BlockGemvAccum() for shapes lacking a specialization.
+*/
+KOKKOS_INLINE_FUNCTION static void BlockGemvAccumGeneric(const MatScalarType *aval, const MatScalarType *xval, MatScalarType *yval, PetscInt rbs, PetscInt cbs, bool trans)
+{
+  if (!trans) {
+    for (PetscInt ii = 0; ii < rbs; ii++) {
+      MatScalarType sum = 0.0;
+      for (PetscInt jj = 0; jj < cbs; jj++) sum += aval[ii * cbs + jj] * xval[jj];
+      Kokkos::atomic_add(&yval[ii], sum);
+    }
+  } else {
+    for (PetscInt ii = 0; ii < rbs; ii++) {
+      MatScalarType xi = xval[ii];
+      for (PetscInt jj = 0; jj < cbs; jj++) Kokkos::atomic_add(&yval[jj], aval[ii * cbs + jj] * xi);
+    }
+  }
+}
+
+/*
+  RunNumericMult_SeqBAIJKokkos - launch the team-parallel block SpMV y (+)= A x or A^T x.
+
+  One team per block-row i of A; threads split row i's blocks via TeamThreadRange (F8a), each doing
+  one per-block GEMV with atomic accumulation into the output (F8b). TRANS swaps which vector segment
+  is the source and which is the target: non-transpose reads x[bj] and writes y[i]; transpose reads
+  x[i] and writes y[bj]. When the template dims (RBS,CBS) are nonzero the per-block GEMV is the
+  unrolled, register-staged BlockGemvAccum() specialization; RBS==0 selects BlockGemvAccumGeneric().
+  The output vector must be zeroed by the caller (Mult) or pre-seeded with y (MultAdd) before launch.
+  View types are deduced so the caller passes device views directly.
+*/
+template <int RBS, int CBS, bool TRANS, typename RowMapV, typename ColIdxV, typename ScalarV, typename XView, typename YView>
+static PetscErrorCode RunNumericMult_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
+{
+  using TeamPolicy = Kokkos::TeamPolicy<DefaultExecutionSpace>;
+
+  PetscFunctionBegin;
+  /* Team size mirrors RunNumericAB_SeqBAIJKokkos(): a warp cooperates on a block-row on a device
+     backend, one thread per team (league parallelism over block-rows) on a host backend. NO
+     Kokkos::AUTO (it has chosen poorly in this tree). */
+  constexpr bool on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
+  const int      team_size = on_device ? 32 : 1;
+
+  Kokkos::parallel_for(
+    "MatMult_SeqBAIJKokkos", TeamPolicy(mbs, team_size), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
+      PetscInt i       = team.league_rank();
+      PetscInt a_start = a_i_d(i);
+      PetscInt a_end   = a_i_d(i + 1);
+
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(team, a_start, a_end), [&](const PetscInt a_p) {
+        PetscInt             bj   = a_j_d(a_p); /* block-column */
+        const MatScalarType *aval = a_d.data() + a_p * row_bs * col_bs;
+        /* non-transpose: source x[bj], target y[i]; transpose: source x[i], target y[bj] */
+        const MatScalarType *xseg = xv.data() + (TRANS ? i * row_bs : bj * col_bs);
+        MatScalarType       *yseg = const_cast<MatScalarType *>(yv.data()) + (TRANS ? bj * col_bs : i * row_bs);
+
+        if constexpr (RBS > 0) BlockGemvAccum<RBS, CBS, TRANS>(aval, xseg, yseg);
+        else BlockGemvAccumGeneric(aval, xseg, yseg, row_bs, col_bs, TRANS);
+      });
+    });
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatMultDispatch_SeqBAIJKokkos - host-side shape dispatch shared by all four MatMult-family ops.
+
+  Picks the compile-time BlockGemvAccum() specialization once on the host from (row_bs,col_bs) for
+  the elasticity shapes ({1,3,6} combinations), falling back to the generic runtime kernel otherwise.
+  TRANS selects y += A x (false) or y += A^T x (true).
+*/
+template <bool TRANS, typename RowMapV, typename ColIdxV, typename ScalarV, typename XView, typename YView>
+static PetscErrorCode MatMultDispatch_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
+{
+  PetscFunctionBegin;
+#define BAIJKOK_MULT_DISPATCH(R, Cc) PetscCall((RunNumericMult_SeqBAIJKokkos<R, Cc, TRANS>(mbs, row_bs, col_bs, a_i_d, a_j_d, a_d, xv, yv)))
+  if (row_bs == 1 && col_bs == 1) BAIJKOK_MULT_DISPATCH(1, 1);
+  else if (row_bs == 3 && col_bs == 3) BAIJKOK_MULT_DISPATCH(3, 3);
+  else if (row_bs == 6 && col_bs == 6) BAIJKOK_MULT_DISPATCH(6, 6);
+  else if (row_bs == 3 && col_bs == 6) BAIJKOK_MULT_DISPATCH(3, 6);
+  else if (row_bs == 6 && col_bs == 3) BAIJKOK_MULT_DISPATCH(6, 3);
+  else BAIJKOK_MULT_DISPATCH(0, 0);
+#undef BAIJKOK_MULT_DISPATCH
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   MatMult_SeqBAIJKokkos - Compute y = A*x for a rectangular-block sparse matrix.
 
-  This is a HOST implementation (v1). For each block-row bi of A:
+  Device implementation: one team per block-row, threads split the row's blocks and accumulate a
+  per-block GEMV into y with atomics. For each block-row bi of A:
     y[bi*row_bs + ii] += sum (b in [i[bi], i[bi+1])) sum (jj in [0, col_bs))
                          a[b*row_bs*col_bs + ii*col_bs + jj] * x[j[b]*col_bs + jj]
 
   In other words, a per-block dense GEMV (row_bsxcol_bs * col_bs) accumulates
-  into row_bs output entries. A device Kokkos kernel is deferred to Phase B.
+  into row_bs output entries.
 */
 static PetscErrorCode MatMult_SeqBAIJKokkos(Mat A, Vec x, Vec y)
 {
-  Mat_SeqBAIJKokkos   *baijkok;
-  PetscInt             row_bs, col_bs, mbs, bi, block_idx, jj, ii;
-  const PetscScalar   *xv;
-  PetscScalar         *yv;
-  MatRowMapType       *i_h;
-  MatColIdxType       *j_h;
-  const MatScalarType *a_h;
+  Mat_SeqBAIJKokkos         *baijkok;
+  PetscInt                   row_bs, col_bs, mbs;
+  ConstPetscScalarKokkosView xv;
+  PetscScalarKokkosView      yv;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
@@ -955,56 +1084,31 @@ static PetscErrorCode MatMult_SeqBAIJKokkos(Mat A, Vec x, Vec y)
   col_bs = baijkok->col_bs;
   mbs    = baijkok->mbs;
 
-  /* Ensure host has current block values */
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  PetscCall(VecGetKokkosView(x, &xv));
+  PetscCall(VecGetKokkosViewWrite(y, &yv));
 
-  /* Get host views of block-CSR structure */
-  i_h = baijkok->i_dual.view_host().data();
-  j_h = baijkok->j_dual.view_host().data();
-  a_h = baijkok->a_dual.view_host().data();
+  /* Zero y, then accumulate y = A*x with the shared block-GEMV kernel */
+  PetscCallCXX(Kokkos::deep_copy(PetscGetKokkosExecutionSpace(), yv, 0.0));
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<false>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, yv));
 
-  /* Get vector array pointers and zero y before accumulation */
-  PetscCall(VecGetArrayRead(x, &xv));
-  PetscCall(VecGetArray(y, &yv));
-  PetscCall(PetscArrayzero(yv, A->rmap->n));
-
-  /* Block SpMV: for each block-row bi, accumulate into y[bi*row_bs : (bi+1)*row_bs] */
-  for (bi = 0; bi < mbs; bi++) {
-    /* Loop over blocks in row bi: [i_h[bi], i_h[bi+1]) */
-    for (block_idx = i_h[bi]; block_idx < i_h[bi + 1]; block_idx++) {
-      PetscInt bj = j_h[block_idx]; /* block-column index */
-      /* GEMV: (row_bs x col_bs) * (col_bs) -> (row_bs)
-         y[bi*row_bs + ii] += sum_jj a[block_offset + ii*col_bs + jj] * x[bj*col_bs + jj] */
-      const MatScalarType *block_a = a_h + block_idx * row_bs * col_bs;
-
-      for (ii = 0; ii < row_bs; ii++) {
-        PetscScalar sum = 0.0;
-        for (jj = 0; jj < col_bs; jj++) {
-          sum += block_a[ii * col_bs + jj] * xv[bj * col_bs + jj];
-        }
-        yv[bi * row_bs + ii] += sum;
-      }
-    }
-  }
-
-  /* Restore vector pointers */
-  PetscCall(VecRestoreArrayRead(x, &xv));
-  PetscCall(VecRestoreArray(y, &yv));
+  PetscCall(VecRestoreKokkosView(x, &xv));
+  PetscCall(VecRestoreKokkosViewWrite(y, &yv));
+  PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  MatMultAdd_SeqBAIJKokkos - Compute z = y + A*x for a rectangular-block sparse matrix (host).
+  MatMultAdd_SeqBAIJKokkos - Compute z = y + A*x for a rectangular-block sparse matrix (device).
 */
 static PetscErrorCode MatMultAdd_SeqBAIJKokkos(Mat A, Vec x, Vec y, Vec z)
 {
-  Mat_SeqBAIJKokkos   *baijkok;
-  PetscInt             row_bs, col_bs, mbs, bi, block_idx, jj, ii;
-  const PetscScalar   *xv;
-  PetscScalar         *zv;
-  MatRowMapType       *i_h;
-  MatColIdxType       *j_h;
-  const MatScalarType *a_h;
+  Mat_SeqBAIJKokkos         *baijkok;
+  PetscInt                   row_bs, col_bs, mbs;
+  ConstPetscScalarKokkosView xv;
+  PetscScalarKokkosView      zv;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
@@ -1013,44 +1117,29 @@ static PetscErrorCode MatMultAdd_SeqBAIJKokkos(Mat A, Vec x, Vec y, Vec z)
   col_bs = baijkok->col_bs;
   mbs    = baijkok->mbs;
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
-  i_h = baijkok->i_dual.view_host().data();
-  j_h = baijkok->j_dual.view_host().data();
-  a_h = baijkok->a_dual.view_host().data();
-
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
   if (y != z) PetscCall(VecCopy(y, z)); /* z = y; then accumulate A*x into z */
-  PetscCall(VecGetArrayRead(x, &xv));
-  PetscCall(VecGetArray(z, &zv));
-  for (bi = 0; bi < mbs; bi++) {
-    for (block_idx = i_h[bi]; block_idx < i_h[bi + 1]; block_idx++) {
-      PetscInt             bj      = j_h[block_idx];
-      const MatScalarType *block_a = a_h + block_idx * row_bs * col_bs;
-
-      for (ii = 0; ii < row_bs; ii++) {
-        PetscScalar sum = 0.0;
-        for (jj = 0; jj < col_bs; jj++) sum += block_a[ii * col_bs + jj] * xv[bj * col_bs + jj];
-        zv[bi * row_bs + ii] += sum;
-      }
-    }
-  }
-  PetscCall(VecRestoreArrayRead(x, &xv));
-  PetscCall(VecRestoreArray(z, &zv));
+  PetscCall(VecGetKokkosView(x, &xv));
+  PetscCall(VecGetKokkosView(z, &zv)); /* read-write: seeded with y, accumulate into it */
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<false>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, zv));
+  PetscCall(VecRestoreKokkosView(x, &xv));
+  PetscCall(VecRestoreKokkosView(z, &zv));
+  PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  MatMultTranspose_SeqBAIJKokkos - Compute y = A^T*x for a rectangular-block sparse matrix (host).
+  MatMultTranspose_SeqBAIJKokkos - Compute y = A^T*x for a rectangular-block sparse matrix (device).
   x has length mbs*row_bs (rows of A); y has length nbs*col_bs (columns of A).
 */
 static PetscErrorCode MatMultTranspose_SeqBAIJKokkos(Mat A, Vec x, Vec y)
 {
-  Mat_SeqBAIJKokkos   *baijkok;
-  PetscInt             row_bs, col_bs, mbs, bi, block_idx, jj, ii;
-  const PetscScalar   *xv;
-  PetscScalar         *yv;
-  MatRowMapType       *i_h;
-  MatColIdxType       *j_h;
-  const MatScalarType *a_h;
+  Mat_SeqBAIJKokkos         *baijkok;
+  PetscInt                   row_bs, col_bs, mbs;
+  ConstPetscScalarKokkosView xv;
+  PetscScalarKokkosView      yv;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
@@ -1059,44 +1148,29 @@ static PetscErrorCode MatMultTranspose_SeqBAIJKokkos(Mat A, Vec x, Vec y)
   col_bs = baijkok->col_bs;
   mbs    = baijkok->mbs;
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
-  i_h = baijkok->i_dual.view_host().data();
-  j_h = baijkok->j_dual.view_host().data();
-  a_h = baijkok->a_dual.view_host().data();
-
-  PetscCall(VecGetArrayRead(x, &xv));
-  PetscCall(VecZeroEntries(y));
-  PetscCall(VecGetArray(y, &yv));
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  PetscCall(VecGetKokkosView(x, &xv));
+  PetscCall(VecGetKokkosViewWrite(y, &yv));
   /* y[bj*col_bs + jj] += sum_ii a[block, ii, jj] * x[bi*row_bs + ii] */
-  for (bi = 0; bi < mbs; bi++) {
-    for (block_idx = i_h[bi]; block_idx < i_h[bi + 1]; block_idx++) {
-      PetscInt             bj      = j_h[block_idx];
-      const MatScalarType *block_a = a_h + block_idx * row_bs * col_bs;
-
-      for (jj = 0; jj < col_bs; jj++) {
-        PetscScalar sum = 0.0;
-        for (ii = 0; ii < row_bs; ii++) sum += block_a[ii * col_bs + jj] * xv[bi * row_bs + ii];
-        yv[bj * col_bs + jj] += sum;
-      }
-    }
-  }
-  PetscCall(VecRestoreArrayRead(x, &xv));
-  PetscCall(VecRestoreArray(y, &yv));
+  PetscCallCXX(Kokkos::deep_copy(PetscGetKokkosExecutionSpace(), yv, 0.0));
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<true>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, yv));
+  PetscCall(VecRestoreKokkosView(x, &xv));
+  PetscCall(VecRestoreKokkosViewWrite(y, &yv));
+  PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  MatMultTransposeAdd_SeqBAIJKokkos - Compute z = y + A^T*x for a rectangular-block sparse matrix (host).
+  MatMultTransposeAdd_SeqBAIJKokkos - Compute z = y + A^T*x for a rectangular-block sparse matrix (device).
 */
 static PetscErrorCode MatMultTransposeAdd_SeqBAIJKokkos(Mat A, Vec x, Vec y, Vec z)
 {
-  Mat_SeqBAIJKokkos   *baijkok;
-  PetscInt             row_bs, col_bs, mbs, bi, block_idx, jj, ii;
-  const PetscScalar   *xv;
-  PetscScalar         *zv;
-  MatRowMapType       *i_h;
-  MatColIdxType       *j_h;
-  const MatScalarType *a_h;
+  Mat_SeqBAIJKokkos         *baijkok;
+  PetscInt                   row_bs, col_bs, mbs;
+  ConstPetscScalarKokkosView xv;
+  PetscScalarKokkosView      zv;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
@@ -1105,28 +1179,16 @@ static PetscErrorCode MatMultTransposeAdd_SeqBAIJKokkos(Mat A, Vec x, Vec y, Vec
   col_bs = baijkok->col_bs;
   mbs    = baijkok->mbs;
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
-  i_h = baijkok->i_dual.view_host().data();
-  j_h = baijkok->j_dual.view_host().data();
-  a_h = baijkok->a_dual.view_host().data();
-
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
   if (y != z) PetscCall(VecCopy(y, z)); /* z = y; then accumulate A^T*x into z */
-  PetscCall(VecGetArrayRead(x, &xv));
-  PetscCall(VecGetArray(z, &zv));
-  for (bi = 0; bi < mbs; bi++) {
-    for (block_idx = i_h[bi]; block_idx < i_h[bi + 1]; block_idx++) {
-      PetscInt             bj      = j_h[block_idx];
-      const MatScalarType *block_a = a_h + block_idx * row_bs * col_bs;
-
-      for (jj = 0; jj < col_bs; jj++) {
-        PetscScalar sum = 0.0;
-        for (ii = 0; ii < row_bs; ii++) sum += block_a[ii * col_bs + jj] * xv[bi * row_bs + ii];
-        zv[bj * col_bs + jj] += sum;
-      }
-    }
-  }
-  PetscCall(VecRestoreArrayRead(x, &xv));
-  PetscCall(VecRestoreArray(z, &zv));
+  PetscCall(VecGetKokkosView(x, &xv));
+  PetscCall(VecGetKokkosView(z, &zv)); /* read-write: seeded with y, accumulate into it */
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<true>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, zv));
+  PetscCall(VecRestoreKokkosView(x, &xv));
+  PetscCall(VecRestoreKokkosView(z, &zv));
+  PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1142,12 +1204,17 @@ static PetscErrorCode MatProductCtxDestroy_SeqBAIJKokkos(PetscCtxRt pdata)
   PetscFunctionBegin;
   ctx = *reinterpret_cast<MatProductCtx_SeqBAIJKokkos **>(pdata);
   PetscCall(MatDestroy(&ctx->At));
+  PetscCall(MatDestroy(&ctx->W));
   delete ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Forward declaration of MatTranspose_SeqBAIJKokkos_Private for use in product routines */
+/* Forward declarations of transpose routines used by the product routines below */
 static PetscErrorCode MatTranspose_SeqBAIJKokkos_Private(Mat A, Mat *At);
+static PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat A, Mat *At, MatColIdxKokkosView *block_perm);
+static PetscErrorCode MatRefreshTransposeValues_SeqBAIJKokkos(Mat A, Mat At, MatColIdxKokkosView block_perm);
+/* Forward declaration of the native PtAP numeric dispatcher (defined after the AB helpers it reuses) */
+static PetscErrorCode MatProductNumericPtAP_SeqBAIJKokkos(Mat C);
 
 /*
   Binary search helper (KOKKOS_INLINE_FUNCTION) - find column j in C's column indices.
@@ -1441,9 +1508,9 @@ static PetscErrorCode MatProductNumericAB_SeqBAIJKokkos_Helper(Mat C, Mat A, Mat
   MatProductNumeric_SeqBAIJKokkos - Dispatch numeric phase for AB or AtB products.
 
   For MATPRODUCT_AB: calls MatProductNumericAB_SeqBAIJKokkos_Helper(C, product->A, product->B).
-  For MATPRODUCT_AtB: refreshes the transpose stored in product->data->At by syncing
-    product->A to host, rebuilding At via MatTranspose_SeqBAIJKokkos_Private with MAT_REUSE_MATRIX,
-    then calls the AB numeric helper with (At, product->B).
+  For MATPRODUCT_AtB: refreshes the values of the cached transpose product->data->At on device from
+    product->A's current values via the cached block permutation (no structural rebuild, F2.3), then
+    calls the AB numeric helper with (At, product->B).
 
   Level: internal
 */
@@ -1464,13 +1531,190 @@ static PetscErrorCode MatProductNumeric_SeqBAIJKokkos(Mat C)
     /* Numeric phase for C = A*B */
     PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(C, A, B));
   } else if (product->type == MATPRODUCT_AtB) {
-    /* Numeric phase for C = A^T*B: refresh the transpose (rebuild from current A values) and
-       recompute. Destroy the symbolic-phase transpose first so we do not leak it. */
-    PetscCall(MatDestroy(&pdata->At));
-    PetscCall(MatTranspose_SeqBAIJKokkos_Private(A, &pdata->At));
+    /* Numeric phase for C = A^T*B: refresh the cached transpose's values on device from A's current
+       values via the cached block permutation (structure built once in symbolic), then recompute. */
+    PetscCall(MatRefreshTransposeValues_SeqBAIJKokkos(A, pdata->At, pdata->transpose_block_perm));
     PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(C, pdata->At, B));
   } else {
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_SUP, "Product type %s not supported", MatProductTypes[product->type]);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  TripleProductAccum - compile-time-sized fused block triple product: Ac_block += R*(A*P).
+
+  R is CR x KR (= P_{iI}^T), A is KR x KR, P is KR x CR; the result block is CR x CR. The intermediate
+  T = A*P (KR x CR) is staged in a thread-local register array so the second GEMM reads it stride-1.
+  Blocks are row-major. Updates use Kokkos::atomic_add because team threads on different fine block-rows
+  i of the same coarse block-row I may target the same Ac block (I,J).
+*/
+template <int CR, int KR>
+KOKKOS_INLINE_FUNCTION static void TripleProductAccum(const MatScalarType *rval, const MatScalarType *aval, const MatScalarType *pval, MatScalarType *cval)
+{
+  MatScalarType T[KR][CR];
+
+#pragma unroll
+  for (int a = 0; a < KR; a++)
+#pragma unroll
+    for (int b = 0; b < CR; b++) {
+      MatScalarType s = 0.0;
+#pragma unroll
+      for (int c = 0; c < KR; c++) s += aval[a * KR + c] * pval[c * CR + b];
+      T[a][b] = s;
+    }
+
+#pragma unroll
+  for (int x = 0; x < CR; x++)
+#pragma unroll
+    for (int b = 0; b < CR; b++) {
+      MatScalarType s = 0.0;
+#pragma unroll
+      for (int a = 0; a < KR; a++) s += rval[x * KR + a] * T[a][b];
+      Kokkos::atomic_add(&cval[x * CR + b], s);
+    }
+}
+
+/*
+  TripleProductAccumGeneric - runtime-sized fallback of TripleProductAccum() for shapes lacking a
+  specialization. Avoids a variable-length temporary by recomputing the A*P column inside the R loop.
+*/
+KOKKOS_INLINE_FUNCTION static void TripleProductAccumGeneric(const MatScalarType *rval, const MatScalarType *aval, const MatScalarType *pval, MatScalarType *cval, PetscInt cr, PetscInt kr)
+{
+  for (PetscInt x = 0; x < cr; x++) {
+    for (PetscInt b = 0; b < cr; b++) {
+      MatScalarType s = 0.0;
+      for (PetscInt a = 0; a < kr; a++) {
+        MatScalarType ap = 0.0;
+        for (PetscInt c = 0; c < kr; c++) ap += aval[a * kr + c] * pval[c * cr + b];
+        s += rval[x * kr + a] * ap;
+      }
+      Kokkos::atomic_add(&cval[x * cr + b], s);
+    }
+  }
+}
+
+/*
+  RunNumericPtAP_Fused_SeqBAIJKokkos - launch the fused single-pass block PtAP (Ac = P^T A P, MEMORY M1).
+
+  One team per coarse block-row I; threads split the R-row's blocks via TeamThreadRange (each handles one
+  fine block-row i = one R block R_{Ii}). For each i the thread loops A_{ik} over A-row i and P_{kJ} over
+  P-row k, forms the CR x CR contribution R_{Ii}*A_{ik}*P_{kJ} with TripleProductAccum(), locates J in
+  Ac-row I via BinarySearchColumnInCRow(), and atomic-accumulates. No intermediate W is materialized; the
+  A*P sub-block is recomputed per coarse point (redundancy ~ avg coarse points per fine node).
+*/
+template <int CR, int KR, typename RowMapV, typename ColIdxV, typename ScalarV>
+static PetscErrorCode RunNumericPtAP_Fused_SeqBAIJKokkos(PetscInt mbs_C, PetscInt cr, PetscInt kr, RowMapV rt_i, ColIdxV rt_j, ScalarV rt_a, RowMapV a_i, ColIdxV a_j, ScalarV a_a, RowMapV p_i, ColIdxV p_j, ScalarV p_a, RowMapV c_i, ColIdxV c_j, ScalarV c_a)
+{
+  using TeamPolicy = Kokkos::TeamPolicy<DefaultExecutionSpace>;
+
+  PetscFunctionBegin;
+  /* Same team-size rule as the AB kernel: a warp per coarse block-row on device, one thread on host. */
+  constexpr bool on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
+  const int      team_size = on_device ? 32 : 1;
+
+  Kokkos::parallel_for(
+    "MatProductNumeric_SeqBAIJKokkos_PtAP_Fused", TeamPolicy(mbs_C, team_size), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
+      PetscInt I       = team.league_rank();
+      PetscInt r_start = rt_i(I);
+      PetscInt r_end   = rt_i(I + 1);
+      PetscInt c_start = c_i(I);
+      PetscInt c_end   = c_i(I + 1);
+
+      /* Threads split the R-row's blocks; each handles one fine block-row i and its A/P fan-out */
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(team, r_start, r_end), [&](const PetscInt rp) {
+        PetscInt             i    = rt_j(rp); /* fine block-row */
+        const MatScalarType *rval = rt_a.data() + rp * cr * kr;
+
+        for (PetscInt q = a_i(i); q < a_i(i + 1); q++) {
+          PetscInt             k    = a_j(q); /* fine block-col of A == block-row of P */
+          const MatScalarType *aval = a_a.data() + q * kr * kr;
+
+          for (PetscInt s = p_i(k); s < p_i(k + 1); s++) {
+            PetscInt             J    = p_j(s); /* coarse block-col */
+            const MatScalarType *pval = p_a.data() + s * kr * cr;
+            PetscInt             pc   = BinarySearchColumnInCRow(c_j.data(), c_start, c_end, J);
+
+            if (pc < 0) Kokkos::abort("PtAP fused: block (I,J) not in Ac sparsity pattern; symbolic phase failed");
+            MatScalarType *cval = const_cast<MatScalarType *>(c_a.data()) + pc * cr * cr;
+            if constexpr (CR > 0) TripleProductAccum<CR, KR>(rval, aval, pval, cval);
+            else TripleProductAccumGeneric(rval, aval, pval, cval, cr, kr);
+          }
+        }
+      });
+    });
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductNumericPtAP_SeqBAIJKokkos - Numeric phase for the native block PtAP (Ac = P^T A P).
+
+  Refreshes the cached transpose R = P^T values on device from P (F2.3), then either (SPEED) runs two AB
+  numeric launches W = A*P and Ac = R*W reusing the cached W, or (MEMORY M1) runs the fused single-pass
+  kernel that never materializes W.
+*/
+static PetscErrorCode MatProductNumericPtAP_SeqBAIJKokkos(Mat C)
+{
+  Mat_Product                 *product = C->product;
+  MatProductCtx_SeqBAIJKokkos *pdata;
+  Mat                          A, P;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  A     = product->A;
+  P     = product->B;
+  pdata = (MatProductCtx_SeqBAIJKokkos *)product->data;
+
+  /* Refresh R = P^T values on device from P's current values via the cached block permutation */
+  PetscCall(MatRefreshTransposeValues_SeqBAIJKokkos(P, pdata->At, pdata->transpose_block_perm));
+
+  if (pdata->ptap_alg == MAT_BAIJKOK_PTAP_SPEED) {
+    /* Two-product: W = A*P (reused), then Ac = R*W */
+    PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(pdata->W, A, P));
+    PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(C, pdata->At, pdata->W));
+  } else {
+    /* Fused single-pass (MEMORY M1) */
+    Mat_SeqBAIJKokkos *rkok, *akok, *pkok, *ckok;
+    PetscInt           cr, kr, mbs_C;
+
+    PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+    PetscCall(MatSeqBAIJKokkosSyncDevice(P));
+    rkok  = static_cast<Mat_SeqBAIJKokkos *>(pdata->At->spptr);
+    akok  = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+    pkok  = static_cast<Mat_SeqBAIJKokkos *>(P->spptr);
+    ckok  = static_cast<Mat_SeqBAIJKokkos *>(C->spptr);
+    cr    = ckok->row_bs; /* coarse block size (== P->col_bs) */
+    kr    = akok->row_bs; /* fine block size (== A->row_bs == P->row_bs) */
+    mbs_C = ckok->mbs;
+
+    auto rt_i = rkok->i_dual.view_device();
+    auto rt_j = rkok->j_dual.view_device();
+    auto rt_a = rkok->a_dual.view_device();
+    auto a_i  = akok->i_dual.view_device();
+    auto a_j  = akok->j_dual.view_device();
+    auto a_a  = akok->a_dual.view_device();
+    auto p_i  = pkok->i_dual.view_device();
+    auto p_j  = pkok->j_dual.view_device();
+    auto p_a  = pkok->a_dual.view_device();
+    auto c_i  = ckok->i_dual.view_device();
+    auto c_j  = ckok->j_dual.view_device();
+    auto c_a  = ckok->a_dual.view_device();
+
+    /* Zero Ac's block values on device (atomic accumulation follows) */
+    PetscCallCXX(Kokkos::deep_copy(c_a, 0.0));
+
+    PetscCall(PetscLogGpuTimeBegin());
+#define BAIJKOK_PTAP_DISPATCH(CRc, KRc) PetscCall((RunNumericPtAP_Fused_SeqBAIJKokkos<CRc, KRc>(mbs_C, cr, kr, rt_i, rt_j, rt_a, a_i, a_j, a_a, p_i, p_j, p_a, c_i, c_j, c_a)))
+    if (cr == 6 && kr == 3) BAIJKOK_PTAP_DISPATCH(6, 3);
+    else if (cr == 3 && kr == 3) BAIJKOK_PTAP_DISPATCH(3, 3);
+    else if (cr == 6 && kr == 6) BAIJKOK_PTAP_DISPATCH(6, 6);
+    else if (cr == 1 && kr == 1) BAIJKOK_PTAP_DISPATCH(1, 1);
+    else BAIJKOK_PTAP_DISPATCH(0, 0);
+#undef BAIJKOK_PTAP_DISPATCH
+    PetscCall(PetscLogGpuTimeEnd());
+
+    PetscCall(MatSeqBAIJKokkosModifyDevice(C));
+    C->assembled = PETSC_TRUE;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1516,8 +1760,9 @@ static PetscErrorCode MatProductSymbolic_SeqBAIJKokkos_SeqBAIJKokkos(Mat C)
   if (product->type == MATPRODUCT_AB) {
     Aeff = A;
   } else if (product->type == MATPRODUCT_AtB) {
-    /* Build the transpose of A */
-    PetscCall(MatTranspose_SeqBAIJKokkos_Private(A, &pdata->At));
+    /* Build the transpose structure of A once, plus the block permutation used to refresh its values
+       on device in the numeric phase (F2.3) */
+    PetscCall(MatTransposeWithPerm_SeqBAIJKokkos_Private(A, &pdata->At, &pdata->transpose_block_perm));
     Aeff = pdata->At;
   } else {
     SETERRQ(comm, PETSC_ERR_SUP, "Product type %s not supported (use AB or AtB)", MatProductTypes[product->type]);
@@ -1616,6 +1861,136 @@ static PetscErrorCode MatTranspose_SeqBAIJKokkos_Private(Mat A, Mat *At)
 }
 
 /*
+  MatTransposeWithPerm_SeqBAIJKokkos_Private - Build A^T's structure once and a block-value permutation
+  for cheap value refresh across product reuse (F2.3).
+
+  Builds A^T as a fully-assembled MATSEQBAIJKOKKOS directly from a manual block-CSR transpose (mirroring
+  the AIJ MatSeqAIJKokkosGenerateTransposeStructure() at block granularity), and returns block_perm: a
+  device array of length nblk mapping each A^T block-slot p to its source A block-slot. A^T's block
+  values are left zero here; MatRefreshTransposeValues_SeqBAIJKokkos() fills them on device via the perm.
+  Columns within each transposed block-row are sorted ascending, matching the assembled order the AB
+  symbolic phase and BinarySearchColumnInCRow() assume.
+*/
+static PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat A, Mat *At, MatColIdxKokkosView *block_perm)
+{
+  Mat_SeqBAIJKokkos *akok, *atkok;
+  PetscInt           mbs, nbs, row_bs, col_bs, nblk, r, p, bi, disp;
+  PetscInt          *ai_h, *aj_h;
+  PetscInt          *Ti, *Tj, *perm, *offset;
+
+  PetscFunctionBegin;
+  akok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  PetscCheck(akok, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing spptr");
+
+  /* Only the block graph (i,j) is needed for structure + perm; values are not read here */
+  PetscCall(MatSeqBAIJKokkosSyncHost(A));
+  row_bs = akok->row_bs;
+  col_bs = akok->col_bs;
+  mbs    = akok->mbs;
+  nbs    = akok->nbs;
+  nblk   = akok->nblks();
+  ai_h   = akok->i_host_data();
+  aj_h   = akok->j_host_data();
+
+  /* Build the transposed block-row map by counting blocks per transposed block-row, then prefix-sum */
+  PetscCall(PetscCalloc1(nbs + 1, &Ti));
+  for (p = 0; p < nblk; p++) Ti[aj_h[p] + 1]++;
+  for (r = 0; r < nbs; r++) Ti[r + 1] += Ti[r];
+
+  /* Scatter block-columns and the source-block permutation into the transposed rows */
+  PetscCall(PetscMalloc1(nblk, &Tj));
+  PetscCall(PetscMalloc1(nblk, &perm));
+  PetscCall(PetscCalloc1(nbs, &offset));
+  for (bi = 0; bi < mbs; bi++) {
+    for (p = ai_h[bi]; p < ai_h[bi + 1]; p++) {
+      r          = aj_h[p]; /* transposed block-row */
+      disp       = Ti[r] + offset[r];
+      Tj[disp]   = bi; /* transposed block-column */
+      perm[disp] = p;  /* source A block-slot */
+      offset[r]++;
+    }
+  }
+  PetscCall(PetscFree(offset));
+
+  /* Sort each transposed row's columns (and the perm with them) ascending */
+  for (r = 0; r < nbs; r++) PetscCall(PetscSortIntWithArray(Ti[r + 1] - Ti[r], Tj + Ti[r], perm + Ti[r]));
+
+  /* Copy structure + perm to device; allocate zeroed A^T block values (filled by the numeric refresh) */
+  MatRowMapKokkosView Ti_d("i_At", nbs + 1);
+  MatColIdxKokkosView Tj_d("j_At", nblk);
+  MatColIdxKokkosView perm_d("transpose_block_perm", nblk);
+  MatScalarKokkosView a_d("a_At", nblk * row_bs * col_bs);
+  {
+    auto Ti_hm   = Kokkos::create_mirror_view(Ti_d);
+    auto Tj_hm   = Kokkos::create_mirror_view(Tj_d);
+    auto perm_hm = Kokkos::create_mirror_view(perm_d);
+    for (r = 0; r <= nbs; r++) Ti_hm(r) = Ti[r];
+    for (p = 0; p < nblk; p++) Tj_hm(p) = Tj[p];
+    for (p = 0; p < nblk; p++) perm_hm(p) = perm[p];
+    Kokkos::deep_copy(Ti_d, Ti_hm);
+    Kokkos::deep_copy(Tj_d, Tj_hm);
+    Kokkos::deep_copy(perm_d, perm_hm);
+  }
+  PetscCall(PetscFree(Ti));
+  PetscCall(PetscFree(Tj));
+  PetscCall(PetscFree(perm));
+
+  /* Build A^T as a fully-formed MATSEQBAIJKOKKOS (col_bs x row_bs blocks, nbs x mbs block grid) */
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)A), At));
+  PetscCall(MatSetSizes(*At, nbs * col_bs, mbs * row_bs, nbs * col_bs, mbs * row_bs));
+  PetscCall(MatSetBlockSizes(*At, col_bs, row_bs));
+  PetscCall(MatSetType(*At, MATSEQBAIJKOKKOS));
+  PetscCallCXX(atkok = new Mat_SeqBAIJKokkos(col_bs, row_bs, nbs, mbs, nblk, Ti_d, Tj_d, a_d));
+  (*At)->spptr     = atkok;
+  (*At)->assembled = PETSC_TRUE;
+  *block_perm      = perm_d;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatRefreshTransposeValues_SeqBAIJKokkos - Refresh A^T's block values from A on device (F2.3).
+
+  Given the cached structure + block_perm from MatTransposeWithPerm_SeqBAIJKokkos_Private(), gathers and
+  transposes each block of A's current device values into A^T (At block-slot p <- A block-slot
+  block_perm(p), with a per-block element transpose). No host sync, no structural rebuild. Mirrors the
+  AIJ value refresh Ta(i) = Aa(perm(i)) (MatSeqAIJKokkosGenerateTranspose_Private), generalized to a
+  block with element transpose.
+*/
+static PetscErrorCode MatRefreshTransposeValues_SeqBAIJKokkos(Mat A, Mat At, MatColIdxKokkosView block_perm)
+{
+  Mat_SeqBAIJKokkos *akok, *atkok;
+  PetscInt           row_bs, col_bs, nblk;
+
+  PetscFunctionBegin;
+  akok  = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  atkok = static_cast<Mat_SeqBAIJKokkos *>(At->spptr);
+  PetscCheck(akok && atkok, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing spptr");
+
+  row_bs = akok->row_bs;
+  col_bs = akok->col_bs;
+  nblk   = akok->nblks();
+
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  {
+    auto a_d  = akok->a_dual.view_device();
+    auto at_d = atkok->a_dual.view_device();
+    auto perm = block_perm;
+    Kokkos::parallel_for(
+      "MatRefreshTransposeValues_SeqBAIJKokkos", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nblk), KOKKOS_LAMBDA(const PetscInt p) {
+        PetscInt             src   = perm(p);
+        const MatScalarType *ablk  = a_d.data() + src * row_bs * col_bs; /* A block (row_bs x col_bs) */
+        MatScalarType       *atblk = at_d.data() + p * col_bs * row_bs;  /* A^T block (col_bs x row_bs) */
+        for (PetscInt ii = 0; ii < row_bs; ii++)
+          for (PetscInt jj = 0; jj < col_bs; jj++) atblk[jj * row_bs + ii] = ablk[ii * col_bs + jj];
+      });
+  }
+  PetscCall(MatSeqBAIJKokkosModifyDevice(At));
+  PetscCall(PetscLogGpuTimeEnd());
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   MatTranspose_SeqBAIJKokkos - Public transpose operation for MATSEQBAIJKOKKOS.
 
   Handles MAT_INITIAL_MATRIX, MAT_REUSE_MATRIX, and MAT_INPLACE_MATRIX reuse modes.
@@ -1649,11 +2024,157 @@ static PetscErrorCode MatTranspose_SeqBAIJKokkos(Mat A, MatReuse reuse, Mat *B)
 }
 
 /*
+  SpgemmBlockGraph_SeqBAIJKokkos - Run KokkosSparse::spgemm on two scalar block-graph CSRs and return
+  the product block-graph (row map + column indices + nnz).
+
+  Used by the native PtAP symbolic to chain graph(A*P) then graph(P^T*(A*P)). A local KernelHandle is
+  created and destroyed per call so the two chained spgemms do not share handle state. The "fake
+  numeric" call is the KK quirk that populates the column indices (spgemm_symbolic only fills the row
+  map). Result views are fresh non-const copies (length mbsA+1 and nnz).
+*/
+static PetscErrorCode SpgemmBlockGraph_SeqBAIJKokkos(const KokkosCsrMatrix &csrmatA, const KokkosCsrMatrix &csrmatB, MatRowMapKokkosView &i_d_out, MatColIdxKokkosView &j_d_out, PetscInt &nnz_out)
+{
+  KernelHandle    kh;
+  KokkosCsrMatrix csrmatC;
+  PetscInt        mbsA = csrmatA.numRows();
+
+  PetscFunctionBegin;
+  auto spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_DEFAULT;
+#if defined(KOKKOSKERNELS_ENABLE_TPL_CUSPARSE)
+  #if PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
+  spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_KK;
+  #endif
+#endif
+  PetscCallCXX(kh.create_spgemm_handle(spgemm_alg));
+
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCallCXX(KokkosSparse::spgemm_symbolic(kh, csrmatA, false, csrmatB, false, csrmatC));
+  PetscCallCXX(KokkosSparse::spgemm_numeric(kh, csrmatA, false, csrmatB, false, csrmatC));
+#if PETSC_PKG_KOKKOS_KERNELS_VERSION_LT(4, 0, 0)
+  {
+    auto spgemmHandle = kh.get_spgemm_handle();
+    if (spgemmHandle->get_sort_option() != 1) PetscCallCXX(sort_crs_matrix(csrmatC));
+  }
+#endif
+  PetscCall(PetscLogGpuTimeEnd());
+
+  nnz_out = csrmatC.nnz();
+  PetscCallCXX(i_d_out = MatRowMapKokkosView("i_spgemm", mbsA + 1));
+  PetscCallCXX(j_d_out = MatColIdxKokkosView("j_spgemm", nnz_out));
+  PetscCallCXX(Kokkos::deep_copy(i_d_out, csrmatC.graph.row_map));
+  PetscCallCXX(Kokkos::deep_copy(j_d_out, csrmatC.graph.entries));
+  PetscCallCXX(kh.destroy_spgemm_handle());
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductSymbolic_PtAP_SeqBAIJKokkos - Native block PtAP (Ac = P^T A P) symbolic phase.
+
+  A = product->A (square, row_bs==col_bs), P = product->B (rectangular row_bs x col_bs allowed). Builds
+  Ac's block sparsity by chaining two scalar-block-graph spgemms: graph(W = A*P), then
+  graph(Ac = R*W) with R = P^T. The transpose R is built once with a block permutation (F2.3) and
+  cached for the numeric value refresh. For the SPEED algorithm, W is materialized as a fully-formed
+  MATSEQBAIJKOKKOS (zeroed values) and cached; the MEMORY (fused) algorithm keeps only the graphs.
+
+  The numeric algorithm is selected from product->alg (-mat_product_algorithm): "default"/"speed" ->
+  SPEED (materialize W), "memory_m1"/"memory" -> fused single-pass.
+*/
+static PetscErrorCode MatProductSymbolic_PtAP_SeqBAIJKokkos(Mat C)
+{
+  Mat_Product                 *product = C->product;
+  Mat                          A, P;
+  Mat_SeqBAIJKokkos           *akok, *pkok;
+  MatProductCtx_SeqBAIJKokkos *pdata;
+  MPI_Comm                     comm;
+  MatRowMapKokkosView          i_d_W, i_d_C;
+  MatColIdxKokkosView          j_d_W, j_d_C;
+  PetscInt                     nnzW, nnzC, row_bs_C, col_bs_C, mbs_C, nbs_C, kdim;
+  PetscBool                    is_mem = PETSC_FALSE, is_speed = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
+  PetscCheck(!product->data, comm, PETSC_ERR_PLIB, "Product data not empty");
+
+  A = product->A;
+  P = product->B;
+
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  PetscCall(MatSeqBAIJKokkosSyncDevice(P));
+  akok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  pkok = static_cast<Mat_SeqBAIJKokkos *>(P->spptr);
+  PetscCheck(akok && pkok, comm, PETSC_ERR_PLIB, "Missing Mat_SeqBAIJKokkos");
+  PetscCheck(akok->row_bs == akok->col_bs, comm, PETSC_ERR_ARG_WRONGSTATE, "PtAP requires A square at block level (row_bs %" PetscInt_FMT " == col_bs %" PetscInt_FMT ")", akok->row_bs, akok->col_bs);
+  PetscCheck(akok->col_bs == pkok->row_bs, comm, PETSC_ERR_ARG_SIZ, "A->col_bs (%" PetscInt_FMT ") != P->row_bs (%" PetscInt_FMT ")", akok->col_bs, pkok->row_bs);
+
+  PetscCallCXX(product->data = pdata = new MatProductCtx_SeqBAIJKokkos());
+  pdata->reusesym = product->api_user;
+
+  /* Pick the numeric algorithm from -mat_product_algorithm */
+  PetscCall(PetscStrcmp(product->alg, "memory_m1", &is_mem));
+  if (!is_mem) PetscCall(PetscStrcmp(product->alg, "memory", &is_mem));
+  PetscCall(PetscStrcmp(product->alg, "speed", &is_speed));
+  pdata->ptap_alg = is_mem ? MAT_BAIJKOK_PTAP_MEMORY_M1 : MAT_BAIJKOK_PTAP_SPEED;
+  (void)is_speed; /* "default" and "speed" both map to SPEED */
+
+  /* C = Ac block dims: R(col_bs_P x row_bs_P) * W(row_bs_P x col_bs_P) -> (col_bs_P x col_bs_P) */
+  row_bs_C = pkok->col_bs;
+  col_bs_C = pkok->col_bs;
+  mbs_C    = pkok->nbs; /* coarse block-rows */
+  nbs_C    = pkok->nbs; /* coarse block-cols */
+  kdim     = akok->row_bs;
+
+  /* Build R = P^T structure + block permutation once (F2.3), cached for the numeric value refresh */
+  PetscCall(MatTransposeWithPerm_SeqBAIJKokkos_Private(P, &pdata->At, &pdata->transpose_block_perm));
+
+  /* Symbolic chain on block graphs: graph(W = A*P), then graph(Ac = R*W) */
+  PetscCall(SpgemmBlockGraph_SeqBAIJKokkos(akok->csrmat_graph, pkok->csrmat_graph, i_d_W, j_d_W, nnzW));
+  {
+    /* Wrap the W block graph as a scalar CSR (dummy values) to feed the second spgemm */
+    MatScalarKokkosView w_graph_vals("w_graph_vals", nnzW);
+    KokkosCsrMatrix     csrmatW("csrmatW_graph", pkok->nbs, w_graph_vals, KokkosCsrGraph(j_d_W, i_d_W));
+    Mat_SeqBAIJKokkos  *rkok = static_cast<Mat_SeqBAIJKokkos *>(pdata->At->spptr);
+    PetscCall(SpgemmBlockGraph_SeqBAIJKokkos(rkok->csrmat_graph, csrmatW, i_d_C, j_d_C, nnzC));
+  }
+
+  /* Build Ac = C as a fully-formed MATSEQBAIJKOKKOS (zeroed block values) */
+  PetscCall(MatSetSizes(C, mbs_C * row_bs_C, nbs_C * col_bs_C, mbs_C * row_bs_C, nbs_C * col_bs_C));
+  PetscCall(MatSetBlockSizes(C, row_bs_C, col_bs_C));
+  {
+    MatScalarKokkosView a_d_C("a_C_ptap", nnzC * row_bs_C * col_bs_C);
+    Mat_SeqBAIJKokkos  *ckok;
+    PetscCallCXX(ckok = new Mat_SeqBAIJKokkos(row_bs_C, col_bs_C, mbs_C, nbs_C, nnzC, i_d_C, j_d_C, a_d_C));
+    PetscCall(MatSetType(C, MATSEQBAIJKOKKOS));
+    C->spptr     = ckok;
+    C->assembled = PETSC_TRUE;
+  }
+
+  /* SPEED: materialize W (row_bs_P x col_bs_P) as a cached MATSEQBAIJKOKKOS with zeroed values */
+  if (pdata->ptap_alg == MAT_BAIJKOK_PTAP_SPEED) {
+    MatScalarKokkosView a_d_W("a_W_ptap", nnzW * pkok->row_bs * pkok->col_bs);
+    Mat_SeqBAIJKokkos  *wkok;
+    PetscCall(MatCreate(comm, &pdata->W));
+    PetscCall(MatSetSizes(pdata->W, akok->mbs * pkok->row_bs, pkok->nbs * pkok->col_bs, akok->mbs * pkok->row_bs, pkok->nbs * pkok->col_bs));
+    PetscCall(MatSetBlockSizes(pdata->W, pkok->row_bs, pkok->col_bs));
+    PetscCall(MatSetType(pdata->W, MATSEQBAIJKOKKOS));
+    PetscCallCXX(wkok = new Mat_SeqBAIJKokkos(pkok->row_bs, pkok->col_bs, akok->mbs, pkok->nbs, nnzW, i_d_W, j_d_W, a_d_W));
+    pdata->W->spptr     = wkok;
+    pdata->W->assembled = PETSC_TRUE;
+  }
+  (void)kdim;
+
+  C->product->destroy    = MatProductCtxDestroy_SeqBAIJKokkos;
+  C->ops->productnumeric = MatProductNumericPtAP_SeqBAIJKokkos;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   MatProductSetFromOptions_SeqBAIJKokkos - Register product operations for MATSEQBAIJKOKKOS.
 
-  Dispatches MATPRODUCT_AB and MATPRODUCT_AtB to the custom symbolic kernel;
-  MATPRODUCT_PtAP, MATPRODUCT_RARt, and MATPRODUCT_ABC are routed to MatProductSymbolic_ABC_Basic,
-  which decomposes them into two pairwise products (AB and AtB) that dispatch back here.
+  Dispatches MATPRODUCT_AB and MATPRODUCT_AtB to the custom symbolic kernel; MATPRODUCT_PtAP to the
+  native block-PtAP symbolic (SPEED two-product or MEMORY fused, per -mat_product_algorithm).
+  MATPRODUCT_RARt and MATPRODUCT_ABC are routed to MatProductSymbolic_ABC_Basic, which decomposes them
+  into two pairwise products (AB and AtB) that dispatch back here.
 */
 static PetscErrorCode MatProductSetFromOptions_SeqBAIJKokkos(Mat mat)
 {
@@ -1671,6 +2192,8 @@ static PetscErrorCode MatProductSetFromOptions_SeqBAIJKokkos(Mat mat)
       mat->ops->productsymbolic = MatProductSymbolic_SeqBAIJKokkos_SeqBAIJKokkos;
       break;
     case MATPRODUCT_PtAP:
+      mat->ops->productsymbolic = MatProductSymbolic_PtAP_SeqBAIJKokkos;
+      break;
     case MATPRODUCT_RARt:
     case MATPRODUCT_ABC:
       mat->ops->productsymbolic = MatProductSymbolic_ABC_Basic;
@@ -1686,21 +2209,18 @@ static PetscErrorCode MatProductSetFromOptions_SeqBAIJKokkos(Mat mat)
 }
 
 /*
-  MatGetDiagonal_SeqBAIJKokkos - Extract diagonal from a block matrix.
+  MatGetDiagonal_SeqBAIJKokkos - Extract diagonal from a block matrix (device).
 
   For a square block matrix (row_bs == col_bs && mbs == nbs), fills vector v
   with the diagonal entries. v must have length mbs*row_bs (one scalar per row).
-  Implemented on host.
+  One device thread per block-row searches for its diagonal block; absent blocks
+  leave a zero diagonal (Jacobi smoother).
 */
 static PetscErrorCode MatGetDiagonal_SeqBAIJKokkos(Mat A, Vec v)
 {
-  Mat_SeqBAIJKokkos   *baijkok;
-  const MatRowMapType *i;
-  const MatColIdxType *j;
-  const MatScalarType *a;
-  PetscScalar         *xv;
-  PetscInt             bi, row_bs, col_bs, mbs;
-  PetscInt             block_pos;
+  Mat_SeqBAIJKokkos    *baijkok;
+  PetscInt              row_bs, col_bs, mbs;
+  PetscScalarKokkosView vv;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
@@ -1711,36 +2231,29 @@ static PetscErrorCode MatGetDiagonal_SeqBAIJKokkos(Mat A, Vec v)
   col_bs = baijkok->col_bs;
   mbs    = baijkok->mbs;
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
-  i = baijkok->i_host_data();
-  j = baijkok->j_host_data();
-  a = baijkok->a_host_data();
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  PetscCall(VecGetKokkosViewWrite(v, &vv));
+  {
+    auto i_d = baijkok->i_dual.view_device();
+    auto j_d = baijkok->j_dual.view_device();
+    auto a_d = baijkok->a_dual.view_device();
 
-  PetscCall(VecGetArray(v, &xv));
-
-  for (bi = 0; bi < mbs; bi++) {
-    /* Search for diagonal block (column == bi) in [i[bi], i[bi+1]) */
-    PetscBool found = PETSC_FALSE;
-    for (block_pos = i[bi]; block_pos < i[bi + 1]; block_pos++) {
-      if (j[block_pos] == bi) {
-        /* Found diagonal block; extract diagonal entries from this block */
-        const MatScalarType *block_a = &a[block_pos * row_bs * col_bs];
-        for (PetscInt ii = 0; ii < row_bs; ii++) {
-          xv[bi * row_bs + ii] = block_a[ii * col_bs + ii];
+    Kokkos::parallel_for(
+      "MatGetDiagonal_SeqBAIJKokkos", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, mbs), KOKKOS_LAMBDA(const PetscInt bi) {
+        for (PetscInt ii = 0; ii < row_bs; ii++) vv(bi * row_bs + ii) = 0.0;
+        /* Search for the diagonal block (block-column == bi) in [i_d(bi), i_d(bi+1)) */
+        for (PetscInt block_pos = i_d(bi); block_pos < i_d(bi + 1); block_pos++) {
+          if (j_d(block_pos) == bi) {
+            const MatScalarType *block_a = a_d.data() + block_pos * row_bs * col_bs;
+            for (PetscInt ii = 0; ii < row_bs; ii++) vv(bi * row_bs + ii) = block_a[ii * col_bs + ii];
+            break;
+          }
         }
-        found = PETSC_TRUE;
-        break;
-      }
-    }
-    if (!found) {
-      /* Diagonal block absent; set diagonal entries to 0 */
-      for (PetscInt ii = 0; ii < row_bs; ii++) {
-        xv[bi * row_bs + ii] = 0.0;
-      }
-    }
+      });
   }
-
-  PetscCall(VecRestoreArray(v, &xv));
+  PetscCall(VecRestoreKokkosViewWrite(v, &vv));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1749,17 +2262,13 @@ static PetscErrorCode MatGetDiagonal_SeqBAIJKokkos(Mat A, Vec v)
 
   Scales A as: A_ij *= (l? lv[bi*row_bs+ii] : 1) * (r? rv[bj*col_bs+jj] : 1)
   where bi, bj are block row/column indices and ii, jj are within-block indices.
-  Implemented on host. Handles l and/or r being NULL (smoothing passes r=NULL).
+  Device kernel (one thread per block-row). Handles l and/or r being NULL (smoothing passes r=NULL).
 */
 static PetscErrorCode MatDiagonalScale_SeqBAIJKokkos(Mat A, Vec l, Vec r)
 {
-  Mat_SeqBAIJKokkos   *baijkok;
-  const MatRowMapType *i;
-  const MatColIdxType *j;
-  MatScalarType       *a;
-  const PetscScalar   *lv = NULL, *rv = NULL;
-  PetscInt             bi, bj, ii, jj, row_bs, col_bs, mbs, nbs;
-  PetscInt             block_pos;
+  Mat_SeqBAIJKokkos         *baijkok;
+  ConstPetscScalarKokkosView lv, rv; /* empty when l/r is NULL; access guarded by has_l/has_r */
+  PetscInt                   row_bs, col_bs, mbs, nbs;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
@@ -1770,66 +2279,64 @@ static PetscErrorCode MatDiagonalScale_SeqBAIJKokkos(Mat A, Vec l, Vec r)
   mbs    = baijkok->mbs;
   nbs    = baijkok->nbs;
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
-  i = baijkok->i_host_data();
-  j = baijkok->j_host_data();
-  a = baijkok->a_host_data();
+  if (l) PetscCheck(A->rmap->n == row_bs * mbs, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Left vector size mismatch");
+  if (r) PetscCheck(A->cmap->n == col_bs * nbs, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Right vector size mismatch");
 
-  if (l) {
-    PetscCall(VecGetArrayRead(l, &lv));
-    PetscCheck(A->rmap->n == row_bs * mbs, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Left vector size mismatch");
-  }
-  if (r) {
-    PetscCall(VecGetArrayRead(r, &rv));
-    PetscCheck(A->cmap->n == col_bs * nbs, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Right vector size mismatch");
-  }
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  if (l) PetscCall(VecGetKokkosView(l, &lv));
+  if (r) PetscCall(VecGetKokkosView(r, &rv));
+  {
+    const bool has_l = (l != NULL);
+    const bool has_r = (r != NULL);
+    auto       i_d   = baijkok->i_dual.view_device();
+    auto       j_d   = baijkok->j_dual.view_device();
+    auto       a_d   = baijkok->a_dual.view_device();
 
-  /* Scale each block entry */
-  for (bi = 0; bi < mbs; bi++) {
-    for (block_pos = i[bi]; block_pos < i[bi + 1]; block_pos++) {
-      bj                     = j[block_pos];
-      MatScalarType *block_a = &a[block_pos * row_bs * col_bs];
-      for (ii = 0; ii < row_bs; ii++) {
-        for (jj = 0; jj < col_bs; jj++) {
-          PetscScalar l_scale = l ? lv[bi * row_bs + ii] : 1.0;
-          PetscScalar r_scale = r ? rv[bj * col_bs + jj] : 1.0;
-          block_a[ii * col_bs + jj] *= l_scale * r_scale;
+    Kokkos::parallel_for(
+      "MatDiagonalScale_SeqBAIJKokkos", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, mbs), KOKKOS_LAMBDA(const PetscInt bi) {
+        for (PetscInt block_pos = i_d(bi); block_pos < i_d(bi + 1); block_pos++) {
+          PetscInt       bj      = j_d(block_pos);
+          MatScalarType *block_a = a_d.data() + block_pos * row_bs * col_bs;
+          for (PetscInt ii = 0; ii < row_bs; ii++) {
+            MatScalarType l_scale = has_l ? lv(bi * row_bs + ii) : 1.0;
+            for (PetscInt jj = 0; jj < col_bs; jj++) {
+              MatScalarType r_scale = has_r ? rv(bj * col_bs + jj) : 1.0;
+              block_a[ii * col_bs + jj] *= l_scale * r_scale;
+            }
+          }
         }
-      }
-    }
+      });
   }
-
-  if (l) PetscCall(VecRestoreArrayRead(l, &lv));
-  if (r) PetscCall(VecRestoreArrayRead(r, &rv));
-
-  baijkok->a_dual.modify_host();
+  if (l) PetscCall(VecRestoreKokkosView(l, &lv));
+  if (r) PetscCall(VecRestoreKokkosView(r, &rv));
+  PetscCall(MatSeqBAIJKokkosModifyDevice(A));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  MatScale_SeqBAIJKokkos - Multiply all block entries by a scalar.
-
-  Implemented on host.
+  MatScale_SeqBAIJKokkos - Multiply all block entries by a scalar (device).
 */
 static PetscErrorCode MatScale_SeqBAIJKokkos(Mat A, PetscScalar a)
 {
   Mat_SeqBAIJKokkos *baijkok;
-  MatScalarType     *a_h;
   PetscInt           nblk_vals;
 
   PetscFunctionBegin;
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
   PetscCheck(baijkok, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected NULL baijkok");
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(A));
-  a_h       = baijkok->a_host_data();
-  nblk_vals = static_cast<PetscInt>(baijkok->a_dual.view_host().extent(0));
-
-  for (PetscInt k = 0; k < nblk_vals; k++) {
-    a_h[k] *= a;
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(A));
+  {
+    auto a_d  = baijkok->a_dual.view_device();
+    nblk_vals = static_cast<PetscInt>(a_d.extent(0));
+    Kokkos::parallel_for("MatScale_SeqBAIJKokkos", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nblk_vals), KOKKOS_LAMBDA(const PetscInt k) { a_d(k) *= a; });
   }
-
-  baijkok->a_dual.modify_host();
+  PetscCall(MatSeqBAIJKokkosModifyDevice(A));
+  PetscCall(PetscLogGpuFlops(nblk_vals));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1838,16 +2345,12 @@ static PetscErrorCode MatScale_SeqBAIJKokkos(Mat A, PetscScalar a)
 
   Implements SAME_NONZERO_PATTERN and SUBSET_NONZERO_PATTERN.
   For SUBSET: X's block sparsity is a subset of Y's; all X blocks must exist in Y.
-  Implemented on host.
+  Device kernels (element-wise for SAME; one thread per block-row with a binary search for SUBSET).
 */
 static PetscErrorCode MatAXPY_SeqBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, MatStructure str)
 {
-  Mat_SeqBAIJKokkos   *ykok, *xkok;
-  const MatRowMapType *Xi, *Yi;
-  const MatColIdxType *Xj, *Yj;
-  const MatScalarType *Xa;
-  MatScalarType       *Ya;
-  PetscInt             bi, block_pos_x, block_pos_y, row_bs, col_bs, mbs;
+  Mat_SeqBAIJKokkos *ykok, *xkok;
+  PetscInt           row_bs, col_bs, mbs;
 
   PetscFunctionBegin;
   PetscCheckTypeName(Y, MATSEQBAIJKOKKOS);
@@ -1862,52 +2365,40 @@ static PetscErrorCode MatAXPY_SeqBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
   mbs    = ykok->mbs;
   PetscCheck(xkok->row_bs == row_bs && xkok->col_bs == col_bs && xkok->mbs == mbs, PetscObjectComm((PetscObject)Y), PETSC_ERR_ARG_INCOMP, "MatAXPY requires same block sizes and dimensions");
 
-  PetscCall(MatSeqBAIJKokkosSyncHost(Y));
-  PetscCall(MatSeqBAIJKokkosSyncHost(X));
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(MatSeqBAIJKokkosSyncDevice(Y));
+  PetscCall(MatSeqBAIJKokkosSyncDevice(X));
 
-  Yi = ykok->i_host_data();
-  Yj = ykok->j_host_data();
-  Ya = ykok->a_host_data();
-
-  Xi = xkok->i_host_data();
-  Xj = xkok->j_host_data();
-  Xa = xkok->a_host_data();
+  auto Yi_d = ykok->i_dual.view_device();
+  auto Yj_d = ykok->j_dual.view_device();
+  auto Ya_d = ykok->a_dual.view_device();
+  auto Xi_d = xkok->i_dual.view_device();
+  auto Xj_d = xkok->j_dual.view_device();
+  auto Xa_d = xkok->a_dual.view_device();
 
   if (str == SAME_NONZERO_PATTERN) {
     /* X and Y have the same block sparsity pattern; direct element-wise addition */
-    PetscInt nblk_vals = static_cast<PetscInt>(ykok->a_dual.view_host().extent(0));
-    PetscCheck(static_cast<PetscInt>(xkok->a_dual.view_host().extent(0)) == nblk_vals, PetscObjectComm((PetscObject)Y), PETSC_ERR_ARG_INCOMP, "SAME_NONZERO_PATTERN requires identical block count");
-    for (PetscInt k = 0; k < nblk_vals; k++) {
-      Ya[k] += alpha * Xa[k];
-    }
+    PetscInt nblk_vals = static_cast<PetscInt>(Ya_d.extent(0));
+    PetscCheck(static_cast<PetscInt>(Xa_d.extent(0)) == nblk_vals, PetscObjectComm((PetscObject)Y), PETSC_ERR_ARG_INCOMP, "SAME_NONZERO_PATTERN requires identical block count");
+    Kokkos::parallel_for("MatAXPY_SeqBAIJKokkos_same", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nblk_vals), KOKKOS_LAMBDA(const PetscInt k) { Ya_d(k) += alpha * Xa_d(k); });
   } else if (str == SUBSET_NONZERO_PATTERN) {
-    /* X's block pattern is a subset of Y's; for each block in X, find and update the matching block in Y */
-    for (bi = 0; bi < mbs; bi++) {
-      for (block_pos_x = Xi[bi]; block_pos_x < Xi[bi + 1]; block_pos_x++) {
-        PetscInt col_x = Xj[block_pos_x];
-        /* Search for this block in Y's row bi */
-        PetscBool found = PETSC_FALSE;
-        for (block_pos_y = Yi[bi]; block_pos_y < Yi[bi + 1]; block_pos_y++) {
-          if (Yj[block_pos_y] == col_x) {
-            /* Found matching block; do dense block AXPY */
-            const MatScalarType *x_block = &Xa[block_pos_x * row_bs * col_bs];
-            MatScalarType       *y_block = &Ya[block_pos_y * row_bs * col_bs];
-            PetscInt             sz      = row_bs * col_bs;
-            for (PetscInt k = 0; k < sz; k++) {
-              y_block[k] += alpha * x_block[k];
-            }
-            found = PETSC_TRUE;
-            break;
-          }
+    /* X's block pattern is a subset of Y's; for each block in X, binary-search Y's row and add */
+    PetscInt sz = row_bs * col_bs;
+    Kokkos::parallel_for(
+      "MatAXPY_SeqBAIJKokkos_subset", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, mbs), KOKKOS_LAMBDA(const PetscInt bi) {
+        for (PetscInt px = Xi_d(bi); px < Xi_d(bi + 1); px++) {
+          PetscInt col_x = Xj_d(px);
+          PetscInt py    = BinarySearchColumnInCRow(Yj_d.data(), Yi_d(bi), Yi_d(bi + 1), col_x);
+          if (py < 0) Kokkos::abort("MatAXPY SUBSET_NONZERO_PATTERN: a block in X is not present in Y");
+          for (PetscInt k = 0; k < sz; k++) Ya_d(py * sz + k) += alpha * Xa_d(px * sz + k);
         }
-        PetscCheck(found, PetscObjectComm((PetscObject)Y), PETSC_ERR_ARG_INCOMP, "MatAXPY SUBSET_NONZERO_PATTERN: block (%" PetscInt_FMT ",%" PetscInt_FMT ") in X not found in Y", bi, col_x);
-      }
-    }
+      });
   } else {
     SETERRQ(PetscObjectComm((PetscObject)Y), PETSC_ERR_SUP, "MatAXPY with DIFFERENT_NONZERO_PATTERN not yet supported for MATSEQBAIJKOKKOS");
   }
 
-  ykok->a_dual.modify_host();
+  PetscCall(MatSeqBAIJKokkosModifyDevice(Y));
+  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1967,6 +2458,10 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJKokkos(Mat A)
   PetscCall(PetscKokkosInitializeCheck());
   PetscCall(MatCreate_SeqBAIJ(A));
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATSEQBAIJKOKKOS));
+  /* The device MatMult family takes Kokkos Views of x/y, so MatCreateVecs() must hand back
+     VECSEQKOKKOS vectors (e.g. the GAMG eigen-estimate and MG transfer work vectors). */
+  PetscCall(PetscFree(A->defaultvectype));
+  PetscCall(PetscStrallocpy(VECKOKKOS, &A->defaultvectype));
   A->ops->destroy          = MatDestroy_SeqBAIJKokkos;
   A->ops->mult             = MatMult_SeqBAIJKokkos;
   A->ops->multadd          = MatMultAdd_SeqBAIJKokkos;

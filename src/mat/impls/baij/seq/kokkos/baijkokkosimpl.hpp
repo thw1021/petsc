@@ -114,10 +114,19 @@ struct Mat_SeqBAIJKokkos {
   MatRowMapType nblks() { return j_dual.view_device().extent(0); /* number of blocks */ }
 };
 
+/* PtAP numeric algorithm choice (set in symbolic from -mat_product_algorithm). */
+typedef enum {
+  MAT_BAIJKOK_PTAP_SPEED     = 0, /* two-product: materialize W=A*P, then Ac=P^T*W (work-optimal) */
+  MAT_BAIJKOK_PTAP_MEMORY_M1 = 1  /* fused single-pass, no W; atomic accumulate into Ac */
+} MatBAIJKokkosPtAPAlg;
+
 struct MatProductCtx_SeqBAIJKokkos {
-  KernelHandle kh;
-  PetscBool    reusesym;
-  Mat          At;
+  KernelHandle         kh;
+  PetscBool            reusesym;
+  Mat                  At;                   /* cached transpose of product->A (AtB), or of P (PtAP, = R) */
+  MatColIdxKokkosView  transpose_block_perm; /* At block-slot p -> source block-slot (length nblk); empty until built in symbolic */
+  Mat                  W        = NULL;      /* cached intermediate W=A*P for the PtAP SPEED path (NULL otherwise) */
+  MatBAIJKokkosPtAPAlg ptap_alg = MAT_BAIJKOK_PTAP_SPEED;
   MatProductCtx_SeqBAIJKokkos() : reusesym(PETSC_FALSE), At(NULL) { }
 };
 
