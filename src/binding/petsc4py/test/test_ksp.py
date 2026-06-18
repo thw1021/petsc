@@ -200,7 +200,8 @@ class BaseTestKSP:
         self.ksp.setPreSolve(presolve)
         self.assertEqual(getrefcount(presolve), refcnt + 1)
         self.testSolve()
-        self.assertEqual(check['val'], 1)
+        self.ksp.preSolve(self.ksp.getRhs(), self.ksp.getSolution())
+        self.assertEqual(check['val'], 2)
         self.ksp.setPreSolve(None)
         self.assertEqual(getrefcount(presolve), refcnt)
 
@@ -214,7 +215,8 @@ class BaseTestKSP:
         self.ksp.setPostSolve(postsolve)
         self.assertEqual(getrefcount(postsolve), refcnt + 1)
         self.testSolve()
-        self.assertEqual(check['val'], 1)
+        self.ksp.postSolve(self.ksp.getRhs(), self.ksp.getSolution())
+        self.assertEqual(check['val'], 2)
         self.ksp.setPostSolve(None)
         self.assertEqual(getrefcount(postsolve), refcnt)
 
