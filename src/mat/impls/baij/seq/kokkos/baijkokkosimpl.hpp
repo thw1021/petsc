@@ -71,9 +71,26 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
   the AB symbolic phase.
 */
 
+/*
+  BAIJKokkosTeamSizeDefault - default device team size for the block kernels (MatMult family, AB, fused
+  PtAP): a warp cooperates on a block-row on a device backend, one thread per team on a host backend so
+  the league parallelizes over block-rows. 16 was tuned on the A100 (F8f). NOT Kokkos::AUTO (it has
+  chosen poorly in this tree). Overridable per matrix with -mat_baijkokkos_team_size.
+*/
+static inline PetscInt BAIJKokkosTeamSizeDefault()
+{
+  constexpr bool on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
+  return on_device ? 16 : 1;
+}
+
 struct Mat_SeqBAIJKokkos {
   PetscInt row_bs, col_bs; /* block row and column sizes (generalized; row_bs != col_bs allowed) */
   PetscInt mbs, nbs;       /* number of block-rows and block-columns (m/row_bs, n/col_bs) */
+
+  /* Device-kernel tuning, per matrix (set by MatSetFromOptions_SeqBAIJKokkos / at preallocation). */
+  PetscInt  team_size         = BAIJKokkosTeamSizeDefault(); /* TeamPolicy team size; -mat_baijkokkos_team_size */
+  PetscBool use_generic       = PETSC_FALSE;                 /* force generic kernel; -mat_baijkokkos_generic_kernel */
+  PetscBool use_noatomic_spmv = PETSC_FALSE;                 /* opt in to the atomic-free reduction MatMult (experimental, slower on the A100 than the default atomic kernel); -mat_baijkokkos_spmv_noatomic */
 
   MatRowMapKokkosDualView i_dual; /* block-row map (length mbs+1) */
   MatColIdxKokkosDualView j_dual; /* block-column indices (length nblk) */

@@ -25,6 +25,8 @@
 PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJ(Mat);
 PETSC_INTERN PetscErrorCode MatDestroy_SeqBAIJ(Mat);
 
+static PetscErrorCode MatSeqBAIJKokkosApplyOptions(Mat); /* applies -mat_baijkokkos_* into A->spptr */
+
 #if PETSC_PKG_KOKKOS_KERNELS_VERSION_GE(3, 7, 0)
   #include <KokkosSparse_Utils.hpp>
 using KokkosSparse::sort_crs_matrix;
@@ -228,6 +230,10 @@ static PetscErrorCode MatSeqBAIJKokkosSetPreallocation_SeqBAIJKokkos(Mat A, Pets
 
   A->spptr        = baijkok;
   A->preallocated = PETSC_TRUE;
+
+  /* The Kokkos struct is built lazily here, after MatSetFromOptions; apply the per-matrix device-kernel
+     tuning options now that A->spptr exists (-mat_baijkokkos_team_size / -mat_baijkokkos_generic_kernel). */
+  PetscCall(MatSeqBAIJKokkosApplyOptions(A));
 
   /* The rectangular block-CSR lives entirely in spptr; the base SeqBAIJ storage is
      left empty (it cannot represent rectangular column-blocking). i_row_map has been
@@ -928,6 +934,64 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqBAIJKokkos(Mat A, MatType mtype
 }
 
 /*
+  MatSeqBAIJKokkosApplyOptions - read the per-matrix device-kernel tuning options into the matrix's
+  Mat_SeqBAIJKokkos struct (A->spptr). No-op if the struct does not exist yet (the Kokkos storage is
+  built lazily at preallocation, after MatSetFromOptions). Reads the options with the matrix's own prefix
+  so the values are per object, not a process-wide cache. Called both from MatSetFromOptions_SeqBAIJKokkos
+  (handles the convert / programmatic case where the struct already exists) and at the end of
+  MatSeqBAIJSetPreallocation_SeqBAIJKokkos (the common path, where the struct was just created).
+*/
+static PetscErrorCode MatSeqBAIJKokkosApplyOptions(Mat A)
+{
+  Mat_SeqBAIJKokkos *baijkok   = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  constexpr bool     on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
+  const char        *prefix    = ((PetscObject)A)->prefix;
+  PetscInt           ts        = 0;
+  PetscBool          flg = PETSC_FALSE, set = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  if (!baijkok) PetscFunctionReturn(PETSC_SUCCESS);
+  /* Team size override is meaningful only on a device backend (host TeamPolicy must use 1). */
+  if (on_device) {
+    PetscCall(PetscOptionsGetInt(NULL, prefix, "-mat_baijkokkos_team_size", &ts, &set));
+    if (set && ts > 0) baijkok->team_size = ts;
+  }
+  PetscCall(PetscOptionsGetBool(NULL, prefix, "-mat_baijkokkos_generic_kernel", &flg, &set));
+  if (set) baijkok->use_generic = flg;
+  PetscCall(PetscOptionsGetBool(NULL, prefix, "-mat_baijkokkos_spmv_noatomic", &flg, &set));
+  if (set) baijkok->use_noatomic_spmv = flg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatSetFromOptions_SeqBAIJKokkos - register the device-kernel tuning options (for -help and to mark them
+  used) and apply them. The Mat_SeqBAIJKokkos struct is built lazily at preallocation, so at the usual
+  call site (before MatXxxSetPreallocation) A->spptr is still NULL and the values are applied later by
+  MatSeqBAIJKokkosApplyOptions() from the preallocation path; this function applies them immediately when
+  the struct already exists (convert / programmatic MatSetFromOptions after assembly).
+
+  -mat_baijkokkos_team_size <n>   : device TeamPolicy team size (default BAIJKokkosTeamSizeDefault()).
+  -mat_baijkokkos_generic_kernel  : force the runtime-sized generic kernel over the shape specialization.
+  -mat_baijkokkos_spmv_noatomic   : opt in to the experimental atomic-free reduction MatMult (slower on the A100).
+*/
+static PetscErrorCode MatSetFromOptions_SeqBAIJKokkos(Mat A, PetscOptionItems PetscOptionsObject)
+{
+  Mat_SeqBAIJKokkos *baijkok       = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  PetscInt           team_size     = baijkok ? baijkok->team_size : BAIJKokkosTeamSizeDefault();
+  PetscBool          generic       = baijkok ? baijkok->use_generic : PETSC_FALSE;
+  PetscBool          spmv_noatomic = baijkok ? baijkok->use_noatomic_spmv : PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscOptionsHeadBegin(PetscOptionsObject, "SeqBAIJKokkos options");
+  PetscCall(PetscOptionsInt("-mat_baijkokkos_team_size", "Device kernel TeamPolicy team size (block GEMV/GEMM)", "MatSetFromOptions", team_size, &team_size, NULL));
+  PetscCall(PetscOptionsBool("-mat_baijkokkos_generic_kernel", "Force the runtime-sized generic block kernel over the compile-time shape specialization", "MatSetFromOptions", generic, &generic, NULL));
+  PetscCall(PetscOptionsBool("-mat_baijkokkos_spmv_noatomic", "Opt in to the experimental atomic-free team-reduction block MatMult (slower than the default atomic kernel on the A100)", "MatSetFromOptions", spmv_noatomic, &spmv_noatomic, NULL));
+  PetscOptionsHeadEnd();
+  PetscCall(MatSeqBAIJKokkosApplyOptions(A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   BlockGemvAccum - compile-time-sized dense block GEMV accumulate (shared by the MatMult family).
 
   TRANS == false: y(RBS) += A(RBS x CBS) * x(CBS)    (MatMult / MatMultAdd)
@@ -994,6 +1058,103 @@ KOKKOS_INLINE_FUNCTION static void BlockGemvAccumGeneric(const MatScalarType *av
 }
 
 /*
+  BlockRowAccum - compile-time-sized array reducer for the atomic-free non-transpose SpMV. A team
+  cooperatively reduces its partial block-row contributions into RBS output entries via Kokkos::Sum,
+  so each y entry is written once (no global atomics). Mirrors landau_inner_red::TensorValueType
+  (src/ts/utils/dmplexlandau/kokkos/landau.kokkos.cxx): default-init to 0, copy, and += (plus the
+  volatile += Kokkos still expects for some reducers).
+*/
+namespace baijkok_mult_red
+{
+template <int RBS>
+struct BlockRowAccum {
+  MatScalarType v[RBS];
+
+  KOKKOS_INLINE_FUNCTION BlockRowAccum()
+  {
+    for (int i = 0; i < RBS; i++) v[i] = 0.0;
+  }
+  KOKKOS_INLINE_FUNCTION BlockRowAccum(const BlockRowAccum &rhs)
+  {
+    for (int i = 0; i < RBS; i++) v[i] = rhs.v[i];
+  }
+  KOKKOS_INLINE_FUNCTION BlockRowAccum &operator+=(const BlockRowAccum &src)
+  {
+    for (int i = 0; i < RBS; i++) v[i] += src.v[i];
+    return *this;
+  }
+  KOKKOS_INLINE_FUNCTION void operator+=(const volatile BlockRowAccum &src) volatile
+  {
+    for (int i = 0; i < RBS; i++) v[i] += src.v[i];
+  }
+};
+} // namespace baijkok_mult_red
+
+namespace Kokkos
+{ /* reduction identity must live in the Kokkos namespace */
+template <int RBS>
+struct reduction_identity<baijkok_mult_red::BlockRowAccum<RBS>> {
+  KOKKOS_FORCEINLINE_FUNCTION static baijkok_mult_red::BlockRowAccum<RBS> sum() { return baijkok_mult_red::BlockRowAccum<RBS>(); }
+};
+} // namespace Kokkos
+
+/*
+  RunNumericMultNoAtomic_SeqBAIJKokkos - atomic-free, coalesced non-transpose block SpMV y (+)= A x.
+
+  Experimental, opt-in via -mat_baijkokkos_spmv_noatomic. Measured ~15-20% SLOWER than the default
+  atomic kernel (RunNumericMult_SeqBAIJKokkos) on the A100 (F9.0): the team-reduction epilogue plus the
+  per-element div/mod outweigh the cheap L2 double-atomics they remove, and coalescing is not the
+  bottleneck (the per-block reads are already cache-friendly). Kept behind the flag for reproducibility.
+
+  One team per block-row i. The team's threads stride over block-row i's contiguous flat value span
+  [a_start*bs2, a_end*bs2) via TeamThreadRange, so consecutive lanes read consecutive a_d entries
+  (coalesced, F9.0 fix #2). Each thread maps its flat value index v to (block, ii, jj) and accumulates
+  a_d(v)*x[bj*CBS+jj] into output-row ii of a per-team BlockRowAccum<RBS>; Kokkos::Sum reduces across
+  the team so the RBS outputs are written exactly once by Kokkos::single (no per-row atomics, F9.0 fix
+  #1). bs2 = RBS*CBS is compile-time so the div/mod compile to multiply-shift. The output is accumulated
+  (+=) so the caller's pre-zero (Mult) or pre-seed (MultAdd, y already copied into the output vec) both
+  work. Non-transpose only: the transpose's outputs scatter across block-rows, so it keeps the atomic
+  kernel (RunNumericMult_SeqBAIJKokkos<...,true>).
+*/
+template <int RBS, int CBS, typename RowMapV, typename ColIdxV, typename ScalarV, typename XView, typename YView>
+static PetscErrorCode RunNumericMultNoAtomic_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, PetscInt team_size, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
+{
+  using TeamPolicy  = Kokkos::TeamPolicy<DefaultExecutionSpace>;
+  using Accum       = baijkok_mult_red::BlockRowAccum<RBS>;
+  constexpr int bs2 = RBS * CBS;
+
+  PetscFunctionBegin;
+  (void)row_bs;
+  (void)col_bs;
+  Kokkos::parallel_for(
+    "MatMultNoAtomic_SeqBAIJKokkos", TeamPolicy(mbs, team_size), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
+      PetscInt i       = team.league_rank();
+      PetscInt a_start = a_i_d(i);
+      PetscInt a_end   = a_i_d(i + 1);
+      PetscInt v0      = a_start * bs2;
+      Accum    out;
+
+      Kokkos::parallel_reduce(
+        Kokkos::TeamThreadRange(team, v0, a_end * bs2),
+        [&](const PetscInt v, Accum &acc) {
+          PetscInt local = v - v0;
+          PetscInt blk   = local / bs2;
+          PetscInt e     = local % bs2;
+          PetscInt ii    = e / CBS;
+          PetscInt jj    = e % CBS;
+          PetscInt bj    = a_j_d(a_start + blk);
+          acc.v[ii] += a_d(v) * xv(bj * CBS + jj);
+        },
+        Kokkos::Sum<Accum>(out));
+
+      Kokkos::single(Kokkos::PerTeam(team), [&]() {
+        for (int ii = 0; ii < RBS; ii++) yv(i * RBS + ii) += out.v[ii];
+      });
+    });
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   RunNumericMult_SeqBAIJKokkos - launch the team-parallel block SpMV y (+)= A x or A^T x.
 
   One team per block-row i of A; threads split row i's blocks via TeamThreadRange (F8a), each doing
@@ -1005,17 +1166,13 @@ KOKKOS_INLINE_FUNCTION static void BlockGemvAccumGeneric(const MatScalarType *av
   View types are deduced so the caller passes device views directly.
 */
 template <int RBS, int CBS, bool TRANS, typename RowMapV, typename ColIdxV, typename ScalarV, typename XView, typename YView>
-static PetscErrorCode RunNumericMult_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
+static PetscErrorCode RunNumericMult_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, PetscInt team_size, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
 {
   using TeamPolicy = Kokkos::TeamPolicy<DefaultExecutionSpace>;
 
   PetscFunctionBegin;
-  /* Team size mirrors RunNumericAB_SeqBAIJKokkos(): a warp cooperates on a block-row on a device
-     backend, one thread per team (league parallelism over block-rows) on a host backend. NO
-     Kokkos::AUTO (it has chosen poorly in this tree). */
-  constexpr bool on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
-  const int      team_size = on_device ? 32 : 1;
-
+  /* team_size comes from the matrix (per object, -mat_baijkokkos_team_size); a warp cooperates on a
+     block-row on a device backend, one thread per team on host. NO Kokkos::AUTO. */
   Kokkos::parallel_for(
     "MatMult_SeqBAIJKokkos", TeamPolicy(mbs, team_size), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
       PetscInt i       = team.league_rank();
@@ -1044,16 +1201,29 @@ static PetscErrorCode RunNumericMult_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs
   TRANS selects y += A x (false) or y += A^T x (true).
 */
 template <bool TRANS, typename RowMapV, typename ColIdxV, typename ScalarV, typename XView, typename YView>
-static PetscErrorCode MatMultDispatch_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
+static PetscErrorCode MatMultDispatch_SeqBAIJKokkos(PetscInt mbs, PetscInt row_bs, PetscInt col_bs, PetscInt team_size, PetscBool use_generic, PetscBool use_noatomic_spmv, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, XView xv, YView yv)
 {
+  /* Default: the atomic per-block kernel, which on the A100 is faster than the atomic-free team
+     reduction (F9.0: the reduction epilogue + per-element div/mod cost more than the cheap L2 atomics,
+     and the per-block reads are already cache-friendly) and faster than cusparse CSR. The atomic-free
+     reduction is opt-in via -mat_baijkokkos_spmv_noatomic (non-transpose, specialized shapes only). The
+     transpose path is always atomic (its outputs scatter across block-rows, so a per-row team reduction
+     does not apply); -mat_baijkokkos_generic_kernel forces the generic atomic kernel; an unspecialized
+     shape uses the generic atomic kernel. (use_generic is handled by the first branch below.) */
   PetscFunctionBegin;
-#define BAIJKOK_MULT_DISPATCH(R, Cc) PetscCall((RunNumericMult_SeqBAIJKokkos<R, Cc, TRANS>(mbs, row_bs, col_bs, a_i_d, a_j_d, a_d, xv, yv)))
-  if (row_bs == 1 && col_bs == 1) BAIJKOK_MULT_DISPATCH(1, 1);
+#define BAIJKOK_MULT_DISPATCH(R, Cc) \
+  do { \
+    if constexpr (TRANS) PetscCall((RunNumericMult_SeqBAIJKokkos<R, Cc, TRANS>(mbs, row_bs, col_bs, team_size, a_i_d, a_j_d, a_d, xv, yv))); \
+    else if (use_noatomic_spmv) PetscCall((RunNumericMultNoAtomic_SeqBAIJKokkos<R, Cc>(mbs, row_bs, col_bs, team_size, a_i_d, a_j_d, a_d, xv, yv))); \
+    else PetscCall((RunNumericMult_SeqBAIJKokkos<R, Cc, TRANS>(mbs, row_bs, col_bs, team_size, a_i_d, a_j_d, a_d, xv, yv))); \
+  } while (0)
+  if (use_generic) PetscCall((RunNumericMult_SeqBAIJKokkos<0, 0, TRANS>(mbs, row_bs, col_bs, team_size, a_i_d, a_j_d, a_d, xv, yv))); /* -mat_baijkokkos_generic_kernel */
+  else if (row_bs == 1 && col_bs == 1) BAIJKOK_MULT_DISPATCH(1, 1);
   else if (row_bs == 3 && col_bs == 3) BAIJKOK_MULT_DISPATCH(3, 3);
   else if (row_bs == 6 && col_bs == 6) BAIJKOK_MULT_DISPATCH(6, 6);
   else if (row_bs == 3 && col_bs == 6) BAIJKOK_MULT_DISPATCH(3, 6);
   else if (row_bs == 6 && col_bs == 3) BAIJKOK_MULT_DISPATCH(6, 3);
-  else BAIJKOK_MULT_DISPATCH(0, 0);
+  else PetscCall((RunNumericMult_SeqBAIJKokkos<0, 0, TRANS>(mbs, row_bs, col_bs, team_size, a_i_d, a_j_d, a_d, xv, yv))); /* unspecialized shape -> generic atomic */
 #undef BAIJKOK_MULT_DISPATCH
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1091,7 +1261,7 @@ static PetscErrorCode MatMult_SeqBAIJKokkos(Mat A, Vec x, Vec y)
 
   /* Zero y, then accumulate y = A*x with the shared block-GEMV kernel */
   PetscCallCXX(Kokkos::deep_copy(PetscGetKokkosExecutionSpace(), yv, 0.0));
-  PetscCall(MatMultDispatch_SeqBAIJKokkos<false>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, yv));
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<false>(mbs, row_bs, col_bs, baijkok->team_size, baijkok->use_generic, baijkok->use_noatomic_spmv, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, yv));
 
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosViewWrite(y, &yv));
@@ -1122,7 +1292,7 @@ static PetscErrorCode MatMultAdd_SeqBAIJKokkos(Mat A, Vec x, Vec y, Vec z)
   if (y != z) PetscCall(VecCopy(y, z)); /* z = y; then accumulate A*x into z */
   PetscCall(VecGetKokkosView(x, &xv));
   PetscCall(VecGetKokkosView(z, &zv)); /* read-write: seeded with y, accumulate into it */
-  PetscCall(MatMultDispatch_SeqBAIJKokkos<false>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, zv));
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<false>(mbs, row_bs, col_bs, baijkok->team_size, baijkok->use_generic, baijkok->use_noatomic_spmv, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, zv));
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosView(z, &zv));
   PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
@@ -1154,7 +1324,7 @@ static PetscErrorCode MatMultTranspose_SeqBAIJKokkos(Mat A, Vec x, Vec y)
   PetscCall(VecGetKokkosViewWrite(y, &yv));
   /* y[bj*col_bs + jj] += sum_ii a[block, ii, jj] * x[bi*row_bs + ii] */
   PetscCallCXX(Kokkos::deep_copy(PetscGetKokkosExecutionSpace(), yv, 0.0));
-  PetscCall(MatMultDispatch_SeqBAIJKokkos<true>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, yv));
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<true>(mbs, row_bs, col_bs, baijkok->team_size, baijkok->use_generic, baijkok->use_noatomic_spmv, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, yv));
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosViewWrite(y, &yv));
   PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
@@ -1184,7 +1354,7 @@ static PetscErrorCode MatMultTransposeAdd_SeqBAIJKokkos(Mat A, Vec x, Vec y, Vec
   if (y != z) PetscCall(VecCopy(y, z)); /* z = y; then accumulate A^T*x into z */
   PetscCall(VecGetKokkosView(x, &xv));
   PetscCall(VecGetKokkosView(z, &zv)); /* read-write: seeded with y, accumulate into it */
-  PetscCall(MatMultDispatch_SeqBAIJKokkos<true>(mbs, row_bs, col_bs, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, zv));
+  PetscCall(MatMultDispatch_SeqBAIJKokkos<true>(mbs, row_bs, col_bs, baijkok->team_size, baijkok->use_generic, baijkok->use_noatomic_spmv, baijkok->i_dual.view_device(), baijkok->j_dual.view_device(), baijkok->a_dual.view_device(), xv, zv));
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosView(z, &zv));
   PetscCall(PetscLogGpuFlops(2.0 * baijkok->nblks() * row_bs * col_bs));
@@ -1389,19 +1559,14 @@ KOKKOS_INLINE_FUNCTION static void BlockGemmAccumGeneric(const MatScalarType *av
   BlockGemmAccumGeneric(). View types are deduced so the caller passes device views directly.
 */
 template <int RBS, int K, int CBS, typename RowMapV, typename ColIdxV, typename ScalarV>
-static PetscErrorCode RunNumericAB_SeqBAIJKokkos(PetscInt mbs_A, PetscInt rbsA, PetscInt kdim, PetscInt cbsB, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, RowMapV b_i_d, ColIdxV b_j_d, ScalarV b_d, RowMapV c_i_d, ColIdxV c_j_d, ScalarV c_d)
+static PetscErrorCode RunNumericAB_SeqBAIJKokkos(PetscInt mbs_A, PetscInt rbsA, PetscInt kdim, PetscInt cbsB, PetscInt team_size, RowMapV a_i_d, ColIdxV a_j_d, ScalarV a_d, RowMapV b_i_d, ColIdxV b_j_d, ScalarV b_d, RowMapV c_i_d, ColIdxV c_j_d, ScalarV c_d)
 {
   using TeamPolicy = Kokkos::TeamPolicy<DefaultExecutionSpace>;
 
   PetscFunctionBegin;
-  /* Pick the team size explicitly instead of Kokkos::AUTO (which has chosen poorly here). On a
-     device backend let a warp's worth of threads cooperate on a block-row's A-blocks; on a host
-     backend use one thread per team and rely on league-level parallelism over block-rows.
-     DefaultExecutionSpace not being able to reach HostSpace is the direct compile-time GPU test
-     (cf. the runtime concurrency()<1000 heuristic in dmplexlandau/kokkos/landau.kokkos.cxx). */
-  constexpr bool on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
-  const int      team_size = on_device ? 32 : 1;
-
+  /* team_size comes from the matrix (per object, -mat_baijkokkos_team_size); a warp's threads
+     cooperate on a block-row's A-blocks on a device backend, one thread per team on host. NO
+     Kokkos::AUTO (it has chosen poorly here). */
   Kokkos::parallel_for(
     "MatProductNumeric_SeqBAIJKokkos_AB", TeamPolicy(mbs_A, team_size), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
       PetscInt i       = team.league_rank();
@@ -1482,9 +1647,11 @@ static PetscErrorCode MatProductNumericAB_SeqBAIJKokkos_Helper(Mat C, Mat A, Mat
 
   PetscCall(PetscLogGpuTimeBegin());
 
-  /* Dispatch a compile-time specialization for the elasticity block shapes; generic otherwise. */
-#define BAIJKOK_AB_DISPATCH(R, KK, Cc) PetscCall((RunNumericAB_SeqBAIJKokkos<R, KK, Cc>(mbs_A, rbsA, kdim, cbsB, a_i_d, a_j_d, a_d, b_i_d, b_j_d, b_d, c_i_d, c_j_d, c_d)))
-  if (rbsA == 1 && kdim == 1 && cbsB == 1) BAIJKOK_AB_DISPATCH(1, 1, 1);
+  /* Dispatch a compile-time specialization for the elasticity block shapes; generic otherwise. The
+     tuning (team size, generic toggle) comes from C's matrix (-mat_baijkokkos_*). */
+#define BAIJKOK_AB_DISPATCH(R, KK, Cc) PetscCall((RunNumericAB_SeqBAIJKokkos<R, KK, Cc>(mbs_A, rbsA, kdim, cbsB, ckok->team_size, a_i_d, a_j_d, a_d, b_i_d, b_j_d, b_d, c_i_d, c_j_d, c_d)))
+  if (ckok->use_generic) BAIJKOK_AB_DISPATCH(0, 0, 0);
+  else if (rbsA == 1 && kdim == 1 && cbsB == 1) BAIJKOK_AB_DISPATCH(1, 1, 1);
   else if (rbsA == 3 && kdim == 3 && cbsB == 3) BAIJKOK_AB_DISPATCH(3, 3, 3);
   else if (rbsA == 3 && kdim == 3 && cbsB == 6) BAIJKOK_AB_DISPATCH(3, 3, 6);
   else if (rbsA == 3 && kdim == 6 && cbsB == 6) BAIJKOK_AB_DISPATCH(3, 6, 6);
@@ -1604,15 +1771,13 @@ KOKKOS_INLINE_FUNCTION static void TripleProductAccumGeneric(const MatScalarType
   A*P sub-block is recomputed per coarse point (redundancy ~ avg coarse points per fine node).
 */
 template <int CR, int KR, typename RowMapV, typename ColIdxV, typename ScalarV>
-static PetscErrorCode RunNumericPtAP_Fused_SeqBAIJKokkos(PetscInt mbs_C, PetscInt cr, PetscInt kr, RowMapV rt_i, ColIdxV rt_j, ScalarV rt_a, RowMapV a_i, ColIdxV a_j, ScalarV a_a, RowMapV p_i, ColIdxV p_j, ScalarV p_a, RowMapV c_i, ColIdxV c_j, ScalarV c_a)
+static PetscErrorCode RunNumericPtAP_Fused_SeqBAIJKokkos(PetscInt mbs_C, PetscInt cr, PetscInt kr, PetscInt team_size, RowMapV rt_i, ColIdxV rt_j, ScalarV rt_a, RowMapV a_i, ColIdxV a_j, ScalarV a_a, RowMapV p_i, ColIdxV p_j, ScalarV p_a, RowMapV c_i, ColIdxV c_j, ScalarV c_a)
 {
   using TeamPolicy = Kokkos::TeamPolicy<DefaultExecutionSpace>;
 
   PetscFunctionBegin;
-  /* Same team-size rule as the AB kernel: a warp per coarse block-row on device, one thread on host. */
-  constexpr bool on_device = !Kokkos::SpaceAccessibility<DefaultExecutionSpace, Kokkos::HostSpace>::accessible;
-  const int      team_size = on_device ? 32 : 1;
-
+  /* team_size from the matrix (per object, -mat_baijkokkos_team_size): a warp per coarse block-row on
+     device, one thread on host. */
   Kokkos::parallel_for(
     "MatProductNumeric_SeqBAIJKokkos_PtAP_Fused", TeamPolicy(mbs_C, team_size), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
       PetscInt I       = team.league_rank();
@@ -1704,7 +1869,7 @@ static PetscErrorCode MatProductNumericPtAP_SeqBAIJKokkos(Mat C)
     PetscCallCXX(Kokkos::deep_copy(c_a, 0.0));
 
     PetscCall(PetscLogGpuTimeBegin());
-#define BAIJKOK_PTAP_DISPATCH(CRc, KRc) PetscCall((RunNumericPtAP_Fused_SeqBAIJKokkos<CRc, KRc>(mbs_C, cr, kr, rt_i, rt_j, rt_a, a_i, a_j, a_a, p_i, p_j, p_a, c_i, c_j, c_a)))
+#define BAIJKOK_PTAP_DISPATCH(CRc, KRc) PetscCall((RunNumericPtAP_Fused_SeqBAIJKokkos<CRc, KRc>(mbs_C, cr, kr, ckok->team_size, rt_i, rt_j, rt_a, a_i, a_j, a_a, p_i, p_j, p_a, c_i, c_j, c_a)))
     if (cr == 6 && kr == 3) BAIJKOK_PTAP_DISPATCH(6, 3);
     else if (cr == 3 && kr == 3) BAIJKOK_PTAP_DISPATCH(3, 3);
     else if (cr == 6 && kr == 6) BAIJKOK_PTAP_DISPATCH(6, 6);
@@ -2463,6 +2628,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJKokkos(Mat A)
   PetscCall(PetscFree(A->defaultvectype));
   PetscCall(PetscStrallocpy(VECKOKKOS, &A->defaultvectype));
   A->ops->destroy          = MatDestroy_SeqBAIJKokkos;
+  A->ops->setfromoptions   = MatSetFromOptions_SeqBAIJKokkos;
   A->ops->mult             = MatMult_SeqBAIJKokkos;
   A->ops->multadd          = MatMultAdd_SeqBAIJKokkos;
   A->ops->multtranspose    = MatMultTranspose_SeqBAIJKokkos;
