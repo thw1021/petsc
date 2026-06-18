@@ -275,10 +275,6 @@ int main(int argc, char **args)
     PetscCall(VecAssemblyBegin(bb));
     PetscCall(VecAssemblyEnd(bb));
   }
-  PetscCall(MatAssemblyBegin(Amat, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(Amat, MAT_FINAL_ASSEMBLY));
-  PetscCall(VecAssemblyBegin(bb));
-  PetscCall(VecAssemblyEnd(bb));
   if (test_late_bs) {
     PetscCall(VecSetBlockSize(xx, 3));
     PetscCall(VecSetBlockSize(bb, 3));

@@ -3339,6 +3339,8 @@ PetscErrorCode MatZeroEntries_SeqBAIJ(Mat A)
   Mat_SeqBAIJ *a = (Mat_SeqBAIJ *)A->data;
 
   PetscFunctionBegin;
+  MatCheckPreallocated(A, 1);
+  PetscCheck(a->i, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix structure not set; call MatSeqBAIJSetPreallocation()/MatSetUp() (or set a block size) before MatZeroEntries()");
   PetscCall(PetscArrayzero(a->a, a->bs2 * a->i[a->mbs]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

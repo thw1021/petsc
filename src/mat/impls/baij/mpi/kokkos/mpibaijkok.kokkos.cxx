@@ -89,9 +89,7 @@ static PetscErrorCode MatAssemblyEnd_MPIBAIJKokkos(Mat mat, MatAssemblyType mode
   PetscCall(MatAssemblyBegin(baij->B, mode));
   PetscCall(MatAssemblyEnd(baij->B, mode));
   // F1.3: Build the column-compression + garray + lvec + VecScatter for MatMult
-  if (mode == MAT_FINAL_ASSEMBLY && size > 1) {
-    PetscCall(MatSetUpMultiply_MPIBAIJKokkos(mat));
-  }
+  if (mode == MAT_FINAL_ASSEMBLY && size > 1) PetscCall(MatSetUpMultiply_MPIBAIJKokkos(mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -149,6 +147,9 @@ static PetscErrorCode MatMPIBAIJKokkosUnCompressB(Mat mat)
     baij->B->assembled = PETSC_TRUE;
     PetscCall(PetscLayoutDestroy(&baij->B->cmap));
     PetscCall(PetscLayoutCreateFromSizes(PETSC_COMM_SELF, Nbs * col_bs, Nbs * col_bs, col_bs, &baij->B->cmap));
+    // Constructor leaves a_dual host mirror uninitialized (modify_device); sync so MatSetUpMultiply()'s
+    // host re-scan below and any host reader of the uncompressed B see the real off-diagonal values.
+    PetscCall(KokkosDualViewSyncHost(((Mat_SeqBAIJKokkos *)baij->B->spptr)->a_dual, PetscGetKokkosExecutionSpace()));
   }
   PetscCall(PetscFree(baij->garray));
   PetscCall(VecDestroy(&baij->lvec));
@@ -264,6 +265,13 @@ static PetscErrorCode MatSetUpMultiply_MPIBAIJKokkos(Mat mat)
   Mat_SeqBAIJKokkos *B_new = new Mat_SeqBAIJKokkos(row_bs, col_bs, mbs_loc, ec, nblk, i_new_d, j_new_d, a_new_d);
   baij->B->spptr           = (void *)B_new;
   baij->B->assembled       = PETSC_TRUE;
+
+  // The constructor marks a_dual modify_device with an UNINITIALIZED host mirror. Host-side readers of
+  // the compressed B (MatConvert_MPIBAIJKokkos_MPIAIJ(), MatGetRow_MPIBAIJKokkos(), the cached AIJ for
+  // MatNorm()/MatGetInfo()) read a_dual.view_host() directly. On a real device that host mirror is
+  // separate uninitialized memory, so they would read garbage (host == device memory hides this on the
+  // Serial backend). Sync the off-diagonal values to host so every host reader sees the assembled B.
+  PetscCall(KokkosDualViewSyncHost(B_new->a_dual, PetscGetKokkosExecutionSpace()));
 
   // Update B's column layout to reflect ec compressed block-columns
   PetscCall(PetscLayoutDestroy(&baij->B->cmap));
@@ -786,13 +794,14 @@ static PetscErrorCode MatCreateGraph_MPIBAIJKokkos(Mat A, PetscBool sym, PetscBo
 /*
   MatMPIBAIJKokkosGetCachedAIJ - lazily build and cache a value-exact MPIAIJ copy of A.
 
-  Several base MatXxx_MPIBAIJ ops (MatGetRow(), MatNorm(), MatGetInfo(), ...) reach into baij->A/B by
-  casting their ->data to Mat_SeqBAIJ and reading the raw i/j/a arrays, assuming square blocks. Our
-  sub-blocks are SEQBAIJKOKKOS (rectangular, data in spptr), so those base routines segfault or return
-  zero (e.g. MatNorm()/MatGetInfo() report 0 nnz, which skews GAMG's per-process load balancing and
-  changes the coarse hierarchy). We delegate such scalar-view ops to a cached MPIAIJ conversion (the
-  convert is value-exact, validated in F1.4). The cache is composed on A (destroyed with it) and
-  invalidated on (re)assembly.
+  The collective scalar-view ops MatNorm() and MatGetInfo() reach into baij->A/B by casting their
+  ->data to Mat_SeqBAIJ and reading the raw i/j/a arrays, assuming square blocks. Our sub-blocks are
+  SEQBAIJKOKKOS (rectangular, data in spptr), so those base routines return zero (report 0 nnz, which
+  skews GAMG's per-process load balancing and changes the coarse hierarchy). We delegate them to a
+  cached MPIAIJ conversion (value-exact, validated in F1.4). Lazy build is safe here because both
+  callers are collective. MatGetRow() is Not Collective and must not build this cache (an empty-rank
+  deadlock) — it has its own local MatGetRow_MPIBAIJKokkos(). The cache is composed on A (destroyed
+  with it) and invalidated on (re)assembly.
 */
 static PetscErrorCode MatMPIBAIJKokkosGetCachedAIJ(Mat A, Mat *aij)
 {
@@ -807,23 +816,112 @@ static PetscErrorCode MatMPIBAIJKokkosGetCachedAIJ(Mat A, Mat *aij)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatGetRow_MPIBAIJKokkos(Mat A, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
+/*
+  MatGetRow_MPIBAIJKokkos - Not Collective, purely local. Mirrors MatGetRow_MPIBAIJ()/MatGetRow_MPIAIJ():
+  reads the local diagonal (A) and off-diagonal (B) block-rows and merges them into one scalar row sorted
+  by global column, with B mapped to global columns through baij->garray. Unlike the base MPIBAIJ routine
+  this is rectangular-aware (row_bs != col_bs) and reads the SEQBAIJKOKKOS host views (valid after
+  assembly) directly rather than the base Mat_SeqBAIJ arrays. Being local, it does NOT trigger the
+  collective MatConvert cache build, so a rank that owns no rows simply never calls it — no empty-rank
+  collective imbalance (cf. MatAXPY_Basic() in GAMG prolongator smoothing).
+*/
+static PetscErrorCode MatGetRow_MPIBAIJKokkos(Mat mat, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
 {
-  Mat aij = NULL;
+  Mat_MPIBAIJ       *baij   = (Mat_MPIBAIJ *)mat->data;
+  Mat_SeqBAIJKokkos *Ak     = baij->A ? (Mat_SeqBAIJKokkos *)baij->A->spptr : NULL;
+  Mat_SeqBAIJKokkos *Bk     = baij->B ? (Mat_SeqBAIJKokkos *)baij->B->spptr : NULL;
+  PetscInt           row_bs = mat->rmap->bs, col_bs = mat->cmap->bs, bs2 = row_bs * col_bs;
+  PetscInt           rstart = mat->rmap->rstart, cstart = mat->cmap->rstart;
+  PetscInt           lrow, brow, ir, nzA = 0, nzB = 0, k, jj, p, ksplit;
+  PetscInt          *idx_p;
+  PetscScalar       *v_p;
 
   PetscFunctionBegin;
-  PetscCall(MatMPIBAIJKokkosGetCachedAIJ(A, &aij));
-  PetscCall(MatGetRow(aij, row, nz, (const PetscInt **)idx, (const PetscScalar **)v));
+  PetscCheck(row >= rstart && row < mat->rmap->rend, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Only local rows");
+  PetscCheck(!baij->getrowactive, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Already active");
+  baij->getrowactive = PETSC_TRUE;
+
+  PetscCheck(Ak && Bk, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "MATMPIBAIJKOKKOS blocks not built");
+  auto ai = Ak->i_dual.view_host();
+  auto aj = Ak->j_dual.view_host();
+  auto aa = Ak->a_dual.view_host();
+  auto bi = Bk->i_dual.view_host();
+  auto bj = Bk->j_dual.view_host();
+  auto ba = Bk->a_dual.view_host();
+
+  /* One-time scratch sized to the longest local scalar row, as in MatGetRow_MPIBAIJ(). */
+  if (!baij->rowvalues && (idx || v)) {
+    PetscInt max = 1, i, na, nb;
+    for (i = 0; i < baij->mbs; i++) {
+      na = Ak ? ai[i + 1] - ai[i] : 0;
+      nb = Bk ? bi[i + 1] - bi[i] : 0;
+      if (max < na + nb) max = na + nb;
+    }
+    PetscCall(PetscMalloc2(max * col_bs, &baij->rowvalues, max * col_bs, &baij->rowindices));
+  }
+
+  lrow = row - rstart;
+  brow = lrow / row_bs;
+  ir   = lrow % row_bs;
+  if (Ak) nzA = (ai[brow + 1] - ai[brow]) * col_bs;
+  if (Bk) nzB = (bi[brow + 1] - bi[brow]) * col_bs;
+  *nz = nzA + nzB;
+
+  if ((v || idx) && *nz) {
+    v_p   = baij->rowvalues;
+    idx_p = baij->rowindices;
+    p     = 0;
+    /* B blocks below the diagonal range (garray sorted ascending => global columns are monotone). */
+    ksplit = Bk ? bi[brow + 1] : 0;
+    if (Bk) {
+      for (k = bi[brow]; k < bi[brow + 1]; k++) {
+        PetscInt gcol0 = (baij->garray ? baij->garray[bj[k]] : bj[k]) * col_bs;
+        if (gcol0 >= cstart) {
+          ksplit = k;
+          break;
+        }
+        for (jj = 0; jj < col_bs; jj++, p++) {
+          if (idx) idx_p[p] = gcol0 + jj;
+          if (v) v_p[p] = ba[k * bs2 + ir * col_bs + jj];
+        }
+      }
+    }
+    /* Diagonal block A. */
+    if (Ak) {
+      for (k = ai[brow]; k < ai[brow + 1]; k++) {
+        PetscInt gcol0 = cstart + aj[k] * col_bs;
+        for (jj = 0; jj < col_bs; jj++, p++) {
+          if (idx) idx_p[p] = gcol0 + jj;
+          if (v) v_p[p] = aa[k * bs2 + ir * col_bs + jj];
+        }
+      }
+    }
+    /* B blocks above the diagonal range. */
+    if (Bk) {
+      for (k = ksplit; k < bi[brow + 1]; k++) {
+        PetscInt gcol0 = (baij->garray ? baij->garray[bj[k]] : bj[k]) * col_bs;
+        for (jj = 0; jj < col_bs; jj++, p++) {
+          if (idx) idx_p[p] = gcol0 + jj;
+          if (v) v_p[p] = ba[k * bs2 + ir * col_bs + jj];
+        }
+      }
+    }
+    if (v) *v = v_p;
+    if (idx) *idx = idx_p;
+  } else {
+    if (v) *v = NULL;
+    if (idx) *idx = NULL;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatRestoreRow_MPIBAIJKokkos(Mat A, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
+static PetscErrorCode MatRestoreRow_MPIBAIJKokkos(Mat mat, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
 {
-  Mat aij = NULL;
+  Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)mat->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectQuery((PetscObject)A, "MatMPIBAIJKokkos_cached_aij", (PetscObject *)&aij));
-  if (aij) PetscCall(MatRestoreRow(aij, row, nz, (const PetscInt **)idx, (const PetscScalar **)v));
+  PetscCheck(baij->getrowactive, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "MatGetRow() must be called first");
+  baij->getrowactive = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
