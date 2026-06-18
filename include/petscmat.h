@@ -1908,7 +1908,12 @@ PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalGetCoarseparts(MatPartiti
 PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalSetNcoarseparts(MatPartitioning, PetscInt);
 PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalSetNfineparts(MatPartitioning, PetscInt);
 
+typedef const char *MatMeshToCellGraphType;
+#define MATMESHTOCELLGRAPHMETIS    "metis"
+#define MATMESHTOCELLGRAPHPARMETIS "parmetis"
+
 PETSC_EXTERN PetscErrorCode MatMeshToCellGraph(Mat, PetscInt, Mat *);
+PETSC_EXTERN PetscErrorCode MatMeshToCellGraphRegister(const char[], PetscErrorCode (*)(Mat, PetscInt, Mat *));
 
 /*
     If any of the enum values are changed, also update dMatOps dict at src/binding/petsc4py/src/petsc4py/PETSc/libpetsc4py.pyx
