@@ -170,6 +170,7 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(MatOrderingRegisterAll());
   PetscCall(MatColoringRegisterAll());
   PetscCall(MatPartitioningRegisterAll());
+  PetscCall(MatMeshToCellGraphRegisterAll());
   PetscCall(MatCoarsenRegisterAll());
   PetscCall(MatSeqAIJRegisterAll());
   /* Register Events */
