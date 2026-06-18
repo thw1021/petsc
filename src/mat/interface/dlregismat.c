@@ -75,6 +75,7 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_HIPSPARSE(void);
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
 PETSC_INTERN PetscErrorCode MatSolverTypeRegister_Kokkos(void);
+PETSC_INTERN PetscErrorCode MatGetFactor_SeqBAIJKokkos_petsc(Mat, MatFactorType, Mat *);
 #endif
 #if defined(PETSC_HAVE_VIENNACL)
 PETSC_INTERN PetscErrorCode MatSolverTypeRegister_ViennaCL(void);
@@ -358,6 +359,17 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQAIJCRL, MAT_FACTOR_CHOLESKY, MatGetFactor_seqaij_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQAIJCRL, MAT_FACTOR_ILU, MatGetFactor_seqaij_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQAIJCRL, MAT_FACTOR_ICC, MatGetFactor_seqaij_petsc));
+
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  /* Register BEFORE MATSEQBAIJ: MatSolverTypeGet() returns the first handler whose mtype is a string
+     prefix of the query type, and "seqbaijkokkos" begins with "seqbaij". The base seqbaij factor reads
+     the host CSR (a->i/a->j), which SEQBAIJKOKKOS does not maintain (its CSR lives in device DualViews),
+     so it must be intercepted here to factor a converted SeqAIJ copy instead. */
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQBAIJKOKKOS, MAT_FACTOR_LU, MatGetFactor_SeqBAIJKokkos_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQBAIJKOKKOS, MAT_FACTOR_CHOLESKY, MatGetFactor_SeqBAIJKokkos_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQBAIJKOKKOS, MAT_FACTOR_ILU, MatGetFactor_SeqBAIJKokkos_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQBAIJKOKKOS, MAT_FACTOR_ICC, MatGetFactor_SeqBAIJKokkos_petsc));
+#endif
 
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQBAIJ, MAT_FACTOR_LU, MatGetFactor_seqbaij_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQBAIJ, MAT_FACTOR_CHOLESKY, MatGetFactor_seqbaij_petsc));

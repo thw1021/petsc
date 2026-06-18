@@ -1,0 +1,12 @@
+smooth_elasticity_3to6 (bsA=3 bsP=6):
+  stage AB               PASS
+  stage Scale(prod)      PASS
+  stage DiagScale(fresh) PASS
+  stage DiagScale(prod)  PASS
+  stage AYPX             PASS
+smooth_bs3 (bsA=3 bsP=3):
+  stage AB               PASS
+  stage Scale(prod)      PASS
+  stage DiagScale(fresh) PASS
+  stage DiagScale(prod)  PASS
+  stage AYPX             PASS

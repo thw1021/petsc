@@ -4,11 +4,16 @@
 #include <petscpkg_version.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 #include <../src/mat/impls/baij/seq/kokkos/baijkokkosimpl.hpp>
+#include <map>
+#include <set>
+#include <vector>
 
 /* Forward declarations */
 PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqAIJ(Mat, MatType, MatReuse, Mat *);
 static PetscErrorCode       MatSetValuesBlocked_MPIBAIJKokkos(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
 static PetscErrorCode       MatConvert_MPIBAIJKokkos_MPIAIJ(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIBAIJKokkos(Mat, MatType, MatReuse, Mat *);
+static PetscErrorCode       MatBuildMPIBAIJKokkosFromMPIAIJ_Private(Mat, Mat, PetscBool);
 static PetscErrorCode       MatSetUpMultiply_MPIBAIJKokkos(Mat);
 static PetscErrorCode       MatMPIBAIJKokkosUnCompressB(Mat);
 static PetscErrorCode       MatProductSetFromOptions_MPIBAIJKokkos(Mat);
@@ -340,9 +345,18 @@ static PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJKokkos(Mat mat, PetscInt
      from row_bs indicates a genuine rectangular block; otherwise the blocks are square. */
   col_bs = (mat->cmap->bs > 1 && mat->cmap->bs != row_bs) ? mat->cmap->bs : row_bs;
 
-  // Call base MPIBAIJ preallocation to set up layouts, stash, ownership fields
-  // (This will create square SEQBAIJ A/B, which we'll replace)
-  PetscCall(MatMPIBAIJSetPreallocation_MPIBAIJ(mat, bs, d_nz, d_nnz, o_nz, o_nnz));
+  // Reset the column block size to row_bs before delegating to the base preallocator. The base calls
+  // MatSetBlockSize(mat, bs), which locks both row and column block sizes to bs (square). On a *re*-
+  // preallocation of an already-built rectangular matrix (e.g. the GAMG block AB/PtAP numeric phase),
+  // cmap->bs is still the previous col_bs and the square lock would reject "change col bs col_bs to row_bs".
+  // Clearing it here lets the base relock to row_bs cleanly; the true col_bs is restored just below.
+  mat->cmap->bs = row_bs;
+
+  // Call base MPIBAIJ preallocation to set up layouts, stash, ownership fields.
+  // The base creates square SEQBAIJ A/B which we destroy and recreate below, so pass empty
+  // nnz here: the caller's d_nnz/o_nnz are in col_bs-block units and the base would misread
+  // them in row_bs units (fatal when col_bs < row_bs). Real allocation happens below.
+  PetscCall(MatMPIBAIJSetPreallocation_MPIBAIJ(mat, bs, 0, NULL, 0, NULL));
   mpibaij = static_cast<Mat_MPIBAIJ *>(mat->data);
 
   // Fix column block size for rectangular case
@@ -370,12 +384,14 @@ static PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJKokkos(Mat mat, PetscInt
   PetscCall(MatSetType(mpibaij->A, MATSEQBAIJKOKKOS));
   PetscCall(MatSeqBAIJSetPreallocation(mpibaij->A, row_bs, d_nz, d_nnz));
 
-  // Create off-diagonal block B (local rows x global columns; uncompressed in F1.2)
+  // Create off-diagonal block B (local rows x global columns; uncompressed in F1.2).
+  // On a single rank B has no columns, so its preallocation must be empty: the caller's
+  // o_nz/o_nnz (off-diagonal counts) would otherwise exceed B's zero block-columns.
   PetscCall(MatCreate(PETSC_COMM_SELF, &mpibaij->B));
   PetscCall(MatSetSizes(mpibaij->B, mat->rmap->n, size > 1 ? mat->cmap->N : 0, mat->rmap->n, size > 1 ? mat->cmap->N : 0));
   PetscCall(MatSetBlockSizes(mpibaij->B, row_bs, col_bs));
   PetscCall(MatSetType(mpibaij->B, MATSEQBAIJKOKKOS));
-  PetscCall(MatSeqBAIJSetPreallocation(mpibaij->B, row_bs, o_nz, o_nnz));
+  PetscCall(MatSeqBAIJSetPreallocation(mpibaij->B, row_bs, size > 1 ? o_nz : 0, size > 1 ? o_nnz : NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -384,6 +400,7 @@ static PetscErrorCode MatDestroy_MPIBAIJKokkos(Mat A)
   PetscFunctionBegin;
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIBAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpibaijkokkos_mpiaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpiaij_mpibaijkokkos_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpibaijkokkos_mpiaij_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpiaij_mpibaijkokkos_C", NULL));
   PetscCall(MatDestroy_MPIBAIJ(A));
@@ -628,13 +645,95 @@ static PetscErrorCode MatMultTransposeAdd_MPIBAIJKokkos(Mat A, Vec xx, Vec yy, V
 }
 
 /*
+  F10.2 — fully-blocked parallel PtAP. The coarse Galerkin operator C = P^T A P is returned as
+  MATMPIBAIJKOKKOS (not MPIAIJ), so the GAMG solve hot path (coarse SpMV + smoothers) runs the block
+  kernel at every level. "Blocked at all times" needs the coarse *operator* to be block, not the PtAP
+  *compute* to be block-native, so we repackage the mature MPIAIJ PtAP result into block layout:
+    1. operands A, P -> AIJ temporaries (NOT in place: product->A/B stay alive — the MatProductSymbolic()
+       interface tail dereferences them in its MatSetBlockSizes() step, so freeing them is use-after-free);
+    2. Cresult = MatPtAP(Aaij, Paij) into a reusable temporary (NOT on C);
+    3. build C in place as block from Cresult (C is born block, never handed to AIJ ⇒ no MatHeaderReplace).
+  The AIJ matrices (Aaij, Paij, Cresult) are STRICTLY TRANSIENT — created and freed within each
+  symbolic/numeric call, never held for the lifetime of the coarse operator. So the persistent storage is
+  the block C alone (the memory win), with only a transient setup-time peak holding both representations.
+  That transient peak, and the AIJ spgemm itself, are what the deferred F2.2 block-native compute removes
+  (local part on the seq native block PtAP); here numeric recomputes from scratch, so a MAT_INITIAL_MATRIX
+  GAMG build runs the AIJ PtAP twice — acceptable for correctness-first F10.
+*/
+static PetscErrorCode MatProductComputeBlock_MPIBAIJKokkos(Mat C, PetscBool valuesonly)
+{
+  Mat_Product *product = C->product;
+  Mat          A = product->A, B = product->B, Aaij, Baij, Cresult;
+  PetscInt     row_bs, col_bs;
+
+  PetscFunctionBegin;
+  /* Operands -> transient AIJ. Do NOT convert product->A/B in place: the interface tail of
+     MatProductSymbolic() reads the original A/B (block sizes), so they must stay alive. */
+  PetscCall(MatConvert(A, MATMPIAIJ, MAT_INITIAL_MATRIX, &Aaij));
+  PetscCall(MatConvert(B, MATMPIAIJ, MAT_INITIAL_MATRIX, &Baij));
+  switch (product->type) {
+  case MATPRODUCT_AB:
+    /* C = A*B; block sizes (A rows) x (B cols). Used for GAMG prolongator smoothing (A*P0). */
+    PetscCall(MatMatMult(Aaij, Baij, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Cresult));
+    row_bs = A->rmap->bs > 0 ? A->rmap->bs : 1;
+    col_bs = B->cmap->bs > 0 ? B->cmap->bs : 1;
+    break;
+  case MATPRODUCT_PtAP:
+    /* C = P^T A P; square block, size = P column block (near-null-space dimension). */
+    PetscCall(MatPtAP(Aaij, Baij, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Cresult));
+    col_bs = B->cmap->bs > 0 ? B->cmap->bs : 1;
+    row_bs = col_bs;
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_SUP, "Block product path not implemented for %s", MatProductTypes[product->type]);
+  }
+  PetscCall(MatSetBlockSizes(Cresult, row_bs, col_bs));
+  /* Build C in place as block: structure + values when !valuesonly (symbolic), values only otherwise. */
+  PetscCall(MatBuildMPIBAIJKokkosFromMPIAIJ_Private(Cresult, C, valuesonly));
+  PetscCall(MatDestroy(&Aaij));
+  PetscCall(MatDestroy(&Baij));
+  PetscCall(MatDestroy(&Cresult));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductNumericBlock_MPIBAIJKokkos(Mat C)
+{
+  PetscFunctionBegin;
+  /* Full rebuild (re-size + re-preallocate + refill): the AIJ operands/result are transient and the block
+     C is recomputed from scratch, so structure and values are refreshed together. A values-only refill is
+     not possible because the seq Kokkos blocks keep their CSR in device DualViews (base a->i is NULL after
+     assembly), so MatZeroEntries() on the assembled block has no host structure to clear. The re-preallocation
+     of the existing rectangular C is made safe by MatMPIBAIJSetPreallocation_MPIBAIJKokkos(), which clears the
+     locked column block size before delegating to the square-only base preallocator. F2.2 will make this a
+     block-native values recompute that avoids the transient AIJ product entirely. */
+  PetscCall(MatProductComputeBlock_MPIBAIJKokkos(C, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolicBlock_MPIBAIJKokkos(Mat C)
+{
+  PetscBool isbaijkok;
+
+  PetscFunctionBegin;
+  /* C must be MATMPIBAIJKOKKOS so the block build (MatMPIBAIJSetPreallocation, block assembly) is in
+     effect; set it before wiring productnumeric since MatSetType resets C->ops. */
+  PetscCall(PetscObjectTypeCompare((PetscObject)C, MATMPIBAIJKOKKOS, &isbaijkok));
+  if (!isbaijkok) PetscCall(MatSetType(C, MATMPIBAIJKOKKOS));
+
+  PetscCall(MatProductComputeBlock_MPIBAIJKokkos(C, PETSC_FALSE));
+  C->ops->productnumeric = MatProductNumericBlock_MPIBAIJKokkos;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   MatProductSymbolic_MPIBAIJKokkos - Compute symbolic stage for parallel products (AB, AtB, PtAP, RARt, ABC).
 
-  Convert all block operands (MPIBAIJKOKKOS) to MPIAIJ in place, then re-dispatch the product.
-  PETSc's MPIAIJ machinery builds C as MPIAIJ natively. The convert-and-redispatch approach
-  keeps C's header intact (only product->A/B/C *contents* change in the matrix data), so
-  MatProductSymbolic() can proceed safely without use-after-free of the stale product pointer.
-  Milestone caveat: result type MPIAIJ; operand snapshots taken here, so MAT_REUSE_MATRIX
+  PtAP (F10.2) and AB (F10.4) return a block C: PtAP makes the coarse Galerkin operators block; AB makes
+  the GAMG-smoothed prolongator (A*P0) block so interpolation/restriction also run the block kernel. The
+  remaining product types (AtB, RARt, ABC) still convert all block operands to MPIAIJ in place and
+  re-dispatch, leaving C as MPIAIJ — none feeds the default agg GAMG hot path. The convert-and-redispatch
+  keeps C's header intact (only product->A/B/C *contents* change), so MatProductSymbolic() proceeds without
+  use-after-free of the stale product pointer. Operand snapshots are taken here, so MAT_REUSE_MATRIX
   numeric-only reuse recomputes from snapshot (acceptable for GAMG/ex56 which use MAT_INITIAL_MATRIX).
 */
 static PetscErrorCode MatProductSymbolic_MPIBAIJKokkos(Mat C)
@@ -643,6 +742,10 @@ static PetscErrorCode MatProductSymbolic_MPIBAIJKokkos(Mat C)
   Mat          A, B, Cc;
 
   PetscFunctionBegin;
+  if (product->type == MATPRODUCT_PtAP || product->type == MATPRODUCT_AB) {
+    PetscCall(MatProductSymbolicBlock_MPIBAIJKokkos(C));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   // Convert each block operand to MPIAIJ in place, releasing the product's reference
   A = product->A;
   PetscCall(MatConvert(A, MATMPIAIJ, MAT_INITIAL_MATRIX, &product->A));
@@ -664,8 +767,8 @@ static PetscErrorCode MatProductSymbolic_MPIBAIJKokkos(Mat C)
 /*
   MatProductSetFromOptions_MPIBAIJKokkos - Install symbolic for supported products.
 
-  Supported product types: AB, AtB, PtAP, RARt, ABC. These convert and redispatch
-  via MatProductSymbolic_MPIBAIJKokkos, which leaves C as MPIAIJ.
+  Supported product types: AB, AtB, PtAP, RARt, ABC, all dispatched via MatProductSymbolic_MPIBAIJKokkos.
+  AB and PtAP return a block C (F10.4/F10.2); the rest convert and redispatch, leaving C as MPIAIJ.
 
   Also composed on MPIAIJ operand positions (via composed functions) so mixed-type
   products (e.g. MPIBAIJKokkos x MPIAIJ) are handled.
@@ -724,18 +827,24 @@ static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
   PetscCheckTypeName(Y, MATMPIBAIJKOKKOS);
   PetscCheckTypeName(X, MATMPIBAIJKOKKOS);
 
-  if (str == SAME_NONZERO_PATTERN || str == SUBSET_NONZERO_PATTERN) {
-    // For these cases, operate on A and B blocks which are SEQBAIJKOKKOS
+  if (str == SAME_NONZERO_PATTERN) {
+    // Identical nonzero pattern => identical off-diagonal garray, so the compressed B blocks share a
+    // column space and the per-block device AXPY is valid. Operate directly on the SEQBAIJKOKKOS blocks.
     PetscCall(MatAXPY(ybaij->A, alpha, xbaij->A, str));
     PetscCall(MatAXPY(ybaij->B, alpha, xbaij->B, str));
   } else {
-    // For other patterns, use the base MPIBAIJ machinery by converting to MPIAIJ
-    Mat Yaij, Xaij;
+    // SUBSET/DIFFERENT: X and Y have different off-diagonal compressions (distinct garray), so their
+    // compressed B blocks are not in the same local column space and cannot be added block-for-block.
+    // Reconcile in global column space via MPIAIJ (mirrors the base MatAXPY_MPIBAIJ SUBSET path, which
+    // falls back to the global-index MatAXPY_Basic). This is a setup-time operation, not the solve hot path.
+    Mat Yaij, Xaij, Ynew;
     PetscCall(MatConvert(Y, MATMPIAIJ, MAT_INITIAL_MATRIX, &Yaij));
     PetscCall(MatConvert(X, MATMPIAIJ, MAT_INITIAL_MATRIX, &Xaij));
     PetscCall(MatAXPY(Yaij, alpha, Xaij, str));
-    // Copy result back (in-place would be better but not available here)
-    PetscCall(MatConvert(Yaij, MATMPIBAIJKOKKOS, MAT_INPLACE_MATRIX, &Y));
+    /* Repackage the AIJ sum back into a block matrix (block sizes are preserved across the AIJ round-trip)
+       and swap it into Y so the caller's handle holds the result. */
+    PetscCall(MatConvert(Yaij, MATMPIBAIJKOKKOS, MAT_INITIAL_MATRIX, &Ynew));
+    PetscCall(MatHeaderReplace(Y, &Ynew));
     PetscCall(MatDestroy(&Yaij));
     PetscCall(MatDestroy(&Xaij));
   }
@@ -945,6 +1054,29 @@ static PetscErrorCode MatGetInfo_MPIBAIJKokkos(Mat A, MatInfoType flag, MatInfo 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  MatCreateSubMatrix_MPIBAIJKokkos - Extract a parallel submatrix of a rectangular-block Kokkos matrix.
+
+  The base MPIBAIJ submatrix path assumes square blocks and host CSR storage, so it cannot handle the
+  rectangular-block SEQBAIJKOKKOS blocks (device DualViews). Reconcile through MPIAIJ: the row/column index
+  sets carry the block sizes, so the round-trip preserves the block layout. This runs during GAMG level
+  setup (prolongator repartitioning), not in the solve hot path.
+*/
+static PetscErrorCode MatCreateSubMatrix_MPIBAIJKokkos(Mat mat, IS isrow, IS iscol, MatReuse call, Mat *newmat)
+{
+  Mat Aaij, Csub, Cblk;
+
+  PetscFunctionBegin;
+  PetscCall(MatConvert(mat, MATMPIAIJ, MAT_INITIAL_MATRIX, &Aaij));
+  PetscCall(MatCreateSubMatrix(Aaij, isrow, iscol, MAT_INITIAL_MATRIX, &Csub));
+  PetscCall(MatConvert(Csub, MATMPIBAIJKOKKOS, MAT_INITIAL_MATRIX, &Cblk));
+  if (call == MAT_REUSE_MATRIX) PetscCall(MatHeaderReplace(*newmat, &Cblk));
+  else *newmat = Cblk;
+  PetscCall(MatDestroy(&Aaij));
+  PetscCall(MatDestroy(&Csub));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatSetOps_MPIBAIJKokkos(Mat B)
 {
   PetscFunctionBegin;
@@ -962,11 +1094,14 @@ static PetscErrorCode MatSetOps_MPIBAIJKokkos(Mat B)
   B->ops->multtranspose         = MatMultTranspose_MPIBAIJKokkos;
   B->ops->multtransposeadd      = MatMultTransposeAdd_MPIBAIJKokkos;
   B->ops->axpy                  = MatAXPY_MPIBAIJKokkos;
+  B->ops->createsubmatrix       = MatCreateSubMatrix_MPIBAIJKokkos;
   B->ops->creategraph           = MatCreateGraph_MPIBAIJKokkos;
   B->ops->productsetfromoptions = MatProductSetFromOptions_MPIBAIJKokkos;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIBAIJSetPreallocation_C", MatMPIBAIJSetPreallocation_MPIBAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpibaijkokkos_mpiaij_C", MatConvert_MPIBAIJKokkos_MPIAIJ));
+  /* Reverse convert (MPIAIJ -> MPIBAIJKOKKOS) queried on the destination type via MatConvert step (2). */
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpiaij_mpibaijkokkos_C", MatConvert_MPIAIJ_MPIBAIJKokkos));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1055,7 +1190,9 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJKokkos_MPIAIJ(Mat A, MatType, MatR
   if (a_baij->A) {
     Mat_SeqBAIJKokkos *aseqkok = (Mat_SeqBAIJKokkos *)a_baij->A->spptr;
     if (aseqkok && aseqkok->mbs > 0 && aseqkok->nbs > 0) {
-      // Use host views to access data (don't sync; data was assembled on host)
+      // Sync values device->host: an in-place device op (e.g. MatDiagonalScale/MatScale in GAMG
+      // prolongator smoothing) may have modified a_dual on device, leaving the host mirror stale.
+      PetscCall(KokkosDualViewSyncHost(aseqkok->a_dual, PetscGetKokkosExecutionSpace()));
       auto i_hv = aseqkok->i_dual.view_host();
       auto j_hv = aseqkok->j_dual.view_host();
       auto a_hv = aseqkok->a_dual.view_host();
@@ -1081,7 +1218,9 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJKokkos_MPIAIJ(Mat A, MatType, MatR
   if (a_baij->B) {
     Mat_SeqBAIJKokkos *bseqkok = (Mat_SeqBAIJKokkos *)a_baij->B->spptr;
     if (bseqkok && bseqkok->mbs > 0) {
-      // Use host views to access data (don't sync; data was assembled on host)
+      // Sync values device->host (see the diagonal-block note above): a prior in-place device op may
+      // have left the host mirror stale.
+      PetscCall(KokkosDualViewSyncHost(bseqkok->a_dual, PetscGetKokkosExecutionSpace()));
       auto i_hv = bseqkok->i_dual.view_host();
       auto j_hv = bseqkok->j_dual.view_host();
       auto a_hv = bseqkok->a_dual.view_host();
@@ -1114,6 +1253,134 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJKokkos_MPIAIJ(Mat A, MatType, MatR
     PetscCall(MatHeaderReplace(A, &B));
   } else {
     *newmat = B;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatBuildMPIBAIJKokkosFromMPIAIJ_Private - core repackage worker shared by the MPIAIJ->MPIBAIJKOKKOS
+  convert (F10.1) and the parallel block product symbolic/numeric (F10.2).
+
+  A is a scalar MPIAIJ source. M is an already-created MATMPIBAIJKOKKOS target. Block sizes are taken
+  from A's layouts (A->rmap->bs x A->cmap->bs); the caller must MatSetBlockSizes() on A first when they
+  differ from 1. When valuesonly is PETSC_FALSE, M is sized + block-preallocated from A's structure
+  (M must be unsized/unassembled). When valuesonly is PETSC_TRUE, M's block structure already exists
+  (built by an earlier call) and only its values are refreshed via MatZeroEntries + insert.
+
+  Uses the public MatGetRow()/MatSetValuesBlocked() path (global indices), so it is agnostic to A's
+  internal storage and handles rectangular blocks. The MPIBAIJKOKKOS assembly path
+  (MatAssemblyEnd_MPIBAIJKokkos + MatSetUpMultiply) builds the compressed off-diagonal B and garray.
+*/
+static PetscErrorCode MatBuildMPIBAIJKokkosFromMPIAIJ_Private(Mat A, Mat M, PetscBool valuesonly)
+{
+  PetscInt           row_bs, col_bs, m, mbs, rstart, rstartbs, cstart, cend;
+  PetscInt           bi, ii, k, ncols, grow, gbrow;
+  const PetscInt    *cols;
+  const PetscScalar *vals;
+  PetscScalar       *block;
+
+  PetscFunctionBegin;
+  PetscCheck(A->assembled, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Matrix must be assembled");
+
+  row_bs   = A->rmap->bs > 0 ? A->rmap->bs : 1;
+  col_bs   = A->cmap->bs > 0 ? A->cmap->bs : 1;
+  m        = A->rmap->n;
+  rstart   = A->rmap->rstart;
+  cstart   = A->cmap->rstart;
+  cend     = A->cmap->rend;
+  rstartbs = rstart / row_bs;
+  PetscCheck(m % row_bs == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Local rows %" PetscInt_FMT " not divisible by row_bs %" PetscInt_FMT, m, row_bs);
+  PetscCheck(A->cmap->N % col_bs == 0, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Global columns %" PetscInt_FMT " not divisible by col_bs %" PetscInt_FMT, A->cmap->N, col_bs);
+  PetscCheck(rstart % row_bs == 0 && cstart % col_bs == 0, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Row/column ownership ranges not aligned to block sizes");
+  mbs = m / row_bs;
+
+  if (valuesonly) {
+    PetscCall(MatZeroEntries(M));
+  } else {
+    PetscInt *d_nnz, *o_nnz;
+
+    /* Block preallocation: per block-row, count unique diagonal/off-diagonal block-columns. */
+    PetscCall(PetscCalloc2(mbs, &d_nnz, mbs, &o_nnz));
+    for (bi = 0; bi < mbs; bi++) {
+      std::set<PetscInt> dset, oset;
+      for (ii = 0; ii < row_bs; ii++) {
+        grow = rstart + bi * row_bs + ii;
+        PetscCall(MatGetRow(A, grow, &ncols, &cols, NULL));
+        for (k = 0; k < ncols; k++) {
+          if (cols[k] >= cstart && cols[k] < cend) dset.insert(cols[k] / col_bs);
+          else oset.insert(cols[k] / col_bs);
+        }
+        PetscCall(MatRestoreRow(A, grow, &ncols, &cols, NULL));
+      }
+      d_nnz[bi] = (PetscInt)dset.size();
+      o_nnz[bi] = (PetscInt)oset.size();
+    }
+
+    PetscCall(MatSetSizes(M, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
+    PetscCall(MatSetBlockSizes(M, row_bs, col_bs));
+    PetscCall(MatMPIBAIJSetPreallocation(M, row_bs, 0, d_nnz, 0, o_nnz));
+    PetscCall(PetscFree2(d_nnz, o_nnz));
+  }
+
+  /* Fill: gather each global block-row into dense row_bs x col_bs blocks and insert (global indices). */
+  PetscCall(PetscMalloc1(row_bs * col_bs, &block));
+  for (bi = 0; bi < mbs; bi++) {
+    std::map<PetscInt, std::vector<PetscScalar>> blocks; /* global block-col -> row-major dense block */
+
+    for (ii = 0; ii < row_bs; ii++) {
+      grow = rstart + bi * row_bs + ii;
+      PetscCall(MatGetRow(A, grow, &ncols, &cols, &vals));
+      for (k = 0; k < ncols; k++) {
+        PetscInt gbcol = cols[k] / col_bs, jj = cols[k] % col_bs;
+        auto    &b = blocks[gbcol];
+        if (b.empty()) b.assign(row_bs * col_bs, 0.0);
+        b[ii * col_bs + jj] = vals[k];
+      }
+      PetscCall(MatRestoreRow(A, grow, &ncols, &cols, &vals));
+    }
+
+    gbrow = rstartbs + bi;
+    for (auto &kv : blocks) {
+      PetscInt gbcol = kv.first;
+      PetscCall(PetscArraycpy(block, kv.second.data(), row_bs * col_bs));
+      PetscCall(MatSetValuesBlocked(M, 1, &gbrow, 1, &gbcol, block, INSERT_VALUES));
+    }
+  }
+  PetscCall(PetscFree(block));
+
+  PetscCall(MatSetOption(M, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+  PetscCall(MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(M, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatConvert_MPIAIJ_MPIBAIJKokkos - repackage a scalar MPIAIJ matrix into rectangular-block MATMPIBAIJKOKKOS.
+
+  Reverse of MatConvert_MPIBAIJKokkos_MPIAIJ(). Block sizes are taken from A's layouts
+  (A->rmap->bs x A->cmap->bs), so the caller must MatSetBlockSizes() on A first when they differ from 1
+  (e.g. the GAMG coarse operator, whose block size is the near-null-space dimension).
+*/
+PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIBAIJKokkos(Mat A, MatType, MatReuse reuse, Mat *newmat)
+{
+  Mat M;
+
+  PetscFunctionBegin;
+  PetscCall(PetscKokkosInitializeCheck());
+  if (reuse == MAT_REUSE_MATRIX) {
+    M = *newmat;
+    PetscCall(MatBuildMPIBAIJKokkosFromMPIAIJ_Private(A, M, PETSC_TRUE));
+  } else {
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &M));
+    PetscCall(MatSetType(M, MATMPIBAIJKOKKOS));
+    PetscCall(MatBuildMPIBAIJKokkosFromMPIAIJ_Private(A, M, PETSC_FALSE));
+  }
+
+  if (reuse == MAT_INPLACE_MATRIX) {
+    PetscCall(MatHeaderReplace(A, &M));
+  } else if (reuse == MAT_INITIAL_MATRIX) {
+    *newmat = M;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

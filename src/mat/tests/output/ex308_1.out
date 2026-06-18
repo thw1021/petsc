@@ -1,0 +1,4 @@
+square_bs1                   row_bs=1 col_bs=1 rel_err=0. PASS
+square_bs3                   row_bs=3 col_bs=3 rel_err=0. PASS
+square_bs6                   row_bs=6 col_bs=6 rel_err=0. PASS
+rect_3x6                     row_bs=3 col_bs=6 rel_err=0. PASS

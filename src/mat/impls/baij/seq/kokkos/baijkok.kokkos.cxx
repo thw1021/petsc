@@ -20,6 +20,7 @@
 
 #include <../src/mat/impls/baij/seq/kokkos/baijkokkosimpl.hpp>
 #include <../src/mat/impls/baij/seq/baij.h>
+#include <petsc/private/kernels/blockinvert.h>
 
 // Forward declarations for SeqBAIJ lifecycle
 PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJ(Mat);
@@ -84,6 +85,7 @@ PETSC_INTERN PetscErrorCode MatSeqBAIJKokkosModifyDevice(Mat A)
   PetscCheck(A->factortype == MAT_FACTOR_NONE, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Not supported for factorized matrices");
   baijkok->a_dual.clear_sync_state();
   baijkok->a_dual.modify_device();
+  ((Mat_SeqBAIJ *)A->data)->idiagvalid = PETSC_FALSE; /* cached block-diagonal inverse is now stale */
   PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -676,10 +678,11 @@ static PetscErrorCode MatAssemblyEnd_SeqBAIJKokkos(Mat A, MatAssemblyType mode)
     baijkok->csrmat_graph = KokkosCsrMatrix("csrmat_graph", baijkok->nbs, graph_vals, KokkosCsrGraph(j_d_final, i_d_final));
   }
 
-  A->assembled        = PETSC_TRUE;
-  A->was_assembled    = PETSC_TRUE;
-  nzstate             = A->nonzerostate;
-  A->ass_nonzerostate = nzstate;
+  A->assembled                         = PETSC_TRUE;
+  A->was_assembled                     = PETSC_TRUE;
+  ((Mat_SeqBAIJ *)A->data)->idiagvalid = PETSC_FALSE; /* cached block-diagonal inverse is now stale */
+  nzstate                              = A->nonzerostate;
+  A->ass_nonzerostate                  = nzstate;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2374,6 +2377,118 @@ static PetscErrorCode MatProductSetFromOptions_SeqBAIJKokkos(Mat mat)
 }
 
 /*
+  MatInvertBlockDiagonal_SeqBAIJKokkos - Invert each square diagonal block (host).
+
+  PCPBJACOBI's host setup (PCSetUp_PBJacobi_Host) calls this and consumes the returned
+  pointer as column-major bs x bs inverse blocks. SEQBAIJKOKKOS stores blocks ROW-MAJOR in
+  device DualViews and never wires the base Mat_SeqBAIJ a->i/a->j/a->a host arrays, so the
+  inherited host MatInvertBlockDiagonal_SeqBAIJ would deref NULL. We sync values to host,
+  locate each diagonal block from the host i/j mirrors, transpose-copy it into column-major
+  order, and invert in place with the same PetscKernel_A_gets_inverse_A helpers. The inverse
+  is cached in the base a->idiag/a->idiagvalid (the contract storage), and invalidated by
+  MatSeqBAIJKokkosModifyDevice()/MatAssemblyEnd_SeqBAIJKokkos() when values change.
+
+  Square blocks only (row_bs == col_bs): PBJacobi is applied only to square level operators,
+  never the rectangular prolongator.
+*/
+static PetscErrorCode MatInvertBlockDiagonal_SeqBAIJKokkos(Mat A, const PetscScalar **values)
+{
+  Mat_SeqBAIJKokkos *baijkok;
+  Mat_SeqBAIJ       *a  = (Mat_SeqBAIJ *)A->data;
+  PetscInt           bs = A->rmap->bs, bs2 = bs * bs, mbs, i, ipvt[5], *v_pivots = NULL;
+  MatScalar         *diag, work[25], *v_work = NULL;
+  PetscReal          shift = 0.0;
+  PetscBool          allowzeropivot, zeropivotdetected = PETSC_FALSE;
+  const PetscInt    *i_h, *j_h;
+  const MatScalar   *a_h;
+
+  PetscFunctionBegin;
+  baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  PetscCheck(baijkok, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected NULL baijkok");
+  PetscCheck(baijkok->row_bs == baijkok->col_bs, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatInvertBlockDiagonal requires square blocks (row_bs %" PetscInt_FMT " != col_bs %" PetscInt_FMT ")", baijkok->row_bs, baijkok->col_bs);
+  allowzeropivot = PetscNot(A->erroriffailure);
+
+  if (a->idiagvalid) {
+    if (values) *values = a->idiag;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  mbs = baijkok->mbs;
+  if (!a->idiag) PetscCall(PetscMalloc1(bs2 * mbs, &a->idiag));
+  diag = a->idiag;
+  if (values) *values = a->idiag;
+
+  PetscCall(MatSeqBAIJKokkosSyncHost(A));
+  i_h = baijkok->i_dual.view_host().data();
+  j_h = baijkok->j_dual.view_host().data();
+  a_h = baijkok->a_dual.view_host().data();
+
+  if (bs > 7) PetscCall(PetscMalloc2(bs, &v_work, bs, &v_pivots));
+  for (i = 0; i < mbs; i++) {
+    const MatScalar *odiag = NULL;
+    PetscInt         ib, jb, block_pos;
+
+    /* Find the diagonal block (block-column == i) within block-row i's [i_h[i], i_h[i+1]) */
+    for (block_pos = i_h[i]; block_pos < i_h[i + 1]; block_pos++) {
+      if (j_h[block_pos] == i) {
+        odiag = a_h + (size_t)block_pos * bs2;
+        break;
+      }
+    }
+    PetscCheck(odiag, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Missing diagonal block at block-row %" PetscInt_FMT, i);
+
+    /* Transpose row-major Kokkos block -> column-major diag (the layout the inverse kernels
+       and PCPBJacobi expect): diag[ib + jb*bs] = M(ib,jb) = odiag[ib*bs + jb]. */
+    for (ib = 0; ib < bs; ib++)
+      for (jb = 0; jb < bs; jb++) diag[ib + jb * bs] = odiag[ib * bs + jb];
+
+    switch (bs) {
+    case 1:
+      if (PetscAbsScalar(diag[0] + shift) < PETSC_MACHINE_EPSILON) {
+        PetscCheck(allowzeropivot, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "Zero pivot, row %" PetscInt_FMT " pivot value %g tolerance %g", i, (double)PetscAbsScalar(diag[0]), (double)PETSC_MACHINE_EPSILON);
+        A->factorerrortype             = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+        A->factorerror_zeropivot_value = PetscAbsScalar(diag[0]);
+        A->factorerror_zeropivot_row   = i;
+        PetscCall(PetscInfo(A, "Zero pivot, row %" PetscInt_FMT "\n", i));
+      }
+      diag[0] = (PetscScalar)1.0 / (diag[0] + shift);
+      break;
+    case 2:
+      PetscCall(PetscKernel_A_gets_inverse_A_2(diag, shift, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      break;
+    case 3:
+      PetscCall(PetscKernel_A_gets_inverse_A_3(diag, shift, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      break;
+    case 4:
+      PetscCall(PetscKernel_A_gets_inverse_A_4(diag, shift, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      break;
+    case 5:
+      PetscCall(PetscKernel_A_gets_inverse_A_5(diag, ipvt, work, shift, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      break;
+    case 6:
+      PetscCall(PetscKernel_A_gets_inverse_A_6(diag, shift, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      break;
+    case 7:
+      PetscCall(PetscKernel_A_gets_inverse_A_7(diag, shift, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      break;
+    default:
+      PetscCall(PetscKernel_A_gets_inverse_A(bs, diag, v_pivots, v_work, allowzeropivot, &zeropivotdetected));
+      if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    }
+    diag += bs2;
+  }
+  if (bs > 7) PetscCall(PetscFree2(v_work, v_pivots));
+  a->idiagvalid = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   MatGetDiagonal_SeqBAIJKokkos - Extract diagonal from a block matrix (device).
 
   For a square block matrix (row_bs == col_bs && mbs == nbs), fills vector v
@@ -2598,6 +2713,169 @@ static PetscErrorCode MatCreateGraph_SeqBAIJKokkos(Mat A, PetscBool sym, PetscBo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  Factorization of a SEQBAIJKOKKOS matrix via a converted SeqAIJ copy.
+
+  SEQBAIJKOKKOS keeps its block-CSR only in device DualViews and never maintains the base SeqBAIJ host
+  arrays (a->i/a->j/a->a), so the inherited host SeqBAIJ factorization (MatLUFactorSymbolic_SeqBAIJ et al.)
+  dereferences a NULL a->i and crashes — this is reached by the default GAMG coarse bjacobi/LU solver once
+  the coarse operator is block (F10). To support it without maintaining a parallel host representation, we
+  factor a scalar SeqAIJ conversion: MatGetFactor() returns a genuine SeqAIJ factor whose symbolic/numeric
+  ops are intercepted to substitute the converted copy for the block input matrix. The converted copy is
+  kept on the factor (refreshed values-only across numeric reuse) and freed when the factor is destroyed.
+*/
+typedef struct {
+  Mat Aaij; /* SeqAIJ conversion of the block matrix being factored */
+  PetscErrorCode (*symbolic_lu)(Mat, Mat, IS, IS, const MatFactorInfo *);
+  PetscErrorCode (*symbolic_ilu)(Mat, Mat, IS, IS, const MatFactorInfo *);
+  PetscErrorCode (*symbolic_cholesky)(Mat, Mat, IS, const MatFactorInfo *);
+  PetscErrorCode (*symbolic_icc)(Mat, Mat, IS, const MatFactorInfo *);
+  PetscErrorCode (*numeric_lu)(Mat, Mat, const MatFactorInfo *);
+  PetscErrorCode (*numeric_cholesky)(Mat, Mat, const MatFactorInfo *);
+} Mat_SeqBAIJKokkosFactor;
+
+static PetscErrorCode MatSeqBAIJKokkosFactorDestroy(PetscCtxRt data)
+{
+  Mat_SeqBAIJKokkosFactor *fac = *(Mat_SeqBAIJKokkosFactor **)data;
+
+  PetscFunctionBegin;
+  PetscCall(MatDestroy(&fac->Aaij));
+  PetscCall(PetscFree(fac));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode MatSeqBAIJKokkosFactorGet(Mat B, Mat_SeqBAIJKokkosFactor **fac)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectContainerQuery((PetscObject)B, "MatSeqBAIJKokkosFactor", fac));
+  PetscCheck(*fac, PetscObjectComm((PetscObject)B), PETSC_ERR_PLIB, "Missing SeqBAIJKokkos factor context");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Numeric wrappers: refresh the converted copy's values from the (current) block A, then delegate. */
+static PetscErrorCode MatLUFactorNumeric_SeqBAIJKokkosFactor(Mat B, Mat A, const MatFactorInfo *info)
+{
+  Mat_SeqBAIJKokkosFactor *fac;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosFactorGet(B, &fac));
+  PetscCall(MatConvert(A, MATSEQAIJ, MAT_REUSE_MATRIX, &fac->Aaij));
+  PetscCall(fac->numeric_lu(B, fac->Aaij, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatCholeskyFactorNumeric_SeqBAIJKokkosFactor(Mat B, Mat A, const MatFactorInfo *info)
+{
+  Mat_SeqBAIJKokkosFactor *fac;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosFactorGet(B, &fac));
+  PetscCall(MatConvert(A, MATSEQAIJ, MAT_REUSE_MATRIX, &fac->Aaij));
+  PetscCall(fac->numeric_cholesky(B, fac->Aaij, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Symbolic wrappers: delegate on the converted copy, then re-install the numeric wrapper (the SeqAIJ
+   symbolic call installs the real SeqAIJ numeric op, which we capture and override). The incoming row/col
+   orderings are ignored — they would be block-sized (or absent, since the factor reports canuseordering =
+   PETSC_FALSE so PCSetUp_LU skips MatGetOrdering on the block matrix); a fresh scalar ordering is computed
+   on the AIJ copy instead. */
+static PetscErrorCode MatLUFactorSymbolic_SeqBAIJKokkosFactor(Mat B, Mat A, IS r, IS c, const MatFactorInfo *info)
+{
+  Mat_SeqBAIJKokkosFactor *fac;
+  IS                       ar, ac;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosFactorGet(B, &fac));
+  PetscCall(MatGetOrdering(fac->Aaij, MATORDERINGND, &ar, &ac));
+  PetscCall(fac->symbolic_lu(B, fac->Aaij, ar, ac, info));
+  PetscCall(ISDestroy(&ar));
+  PetscCall(ISDestroy(&ac));
+  fac->numeric_lu         = B->ops->lufactornumeric;
+  B->ops->lufactornumeric = MatLUFactorNumeric_SeqBAIJKokkosFactor;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatILUFactorSymbolic_SeqBAIJKokkosFactor(Mat B, Mat A, IS r, IS c, const MatFactorInfo *info)
+{
+  Mat_SeqBAIJKokkosFactor *fac;
+  IS                       ar, ac;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosFactorGet(B, &fac));
+  PetscCall(MatGetOrdering(fac->Aaij, MATORDERINGND, &ar, &ac));
+  PetscCall(fac->symbolic_ilu(B, fac->Aaij, ar, ac, info));
+  PetscCall(ISDestroy(&ar));
+  PetscCall(ISDestroy(&ac));
+  fac->numeric_lu         = B->ops->lufactornumeric;
+  B->ops->lufactornumeric = MatLUFactorNumeric_SeqBAIJKokkosFactor;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatCholeskyFactorSymbolic_SeqBAIJKokkosFactor(Mat B, Mat A, IS r, const MatFactorInfo *info)
+{
+  Mat_SeqBAIJKokkosFactor *fac;
+  IS                       ar, ac;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosFactorGet(B, &fac));
+  PetscCall(MatGetOrdering(fac->Aaij, MATORDERINGND, &ar, &ac));
+  PetscCall(fac->symbolic_cholesky(B, fac->Aaij, ar, info));
+  PetscCall(ISDestroy(&ar));
+  PetscCall(ISDestroy(&ac));
+  fac->numeric_cholesky         = B->ops->choleskyfactornumeric;
+  B->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_SeqBAIJKokkosFactor;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatICCFactorSymbolic_SeqBAIJKokkosFactor(Mat B, Mat A, IS r, const MatFactorInfo *info)
+{
+  Mat_SeqBAIJKokkosFactor *fac;
+  IS                       ar, ac;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosFactorGet(B, &fac));
+  PetscCall(MatGetOrdering(fac->Aaij, MATORDERINGND, &ar, &ac));
+  PetscCall(fac->symbolic_icc(B, fac->Aaij, ar, info));
+  PetscCall(ISDestroy(&ar));
+  PetscCall(ISDestroy(&ac));
+  fac->numeric_cholesky         = B->ops->choleskyfactornumeric;
+  B->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_SeqBAIJKokkosFactor;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatGetFactor_SeqBAIJKokkos_petsc - Produce a PETSc factor for a SEQBAIJKOKKOS matrix by factoring a
+  scalar SeqAIJ conversion. Registered (in dlregismat.c) ahead of the base MATSEQBAIJ handler so the
+  prefix match in MatSolverTypeGet() resolves "seqbaijkokkos" here rather than to the host SeqBAIJ factor.
+*/
+PETSC_INTERN PetscErrorCode MatGetFactor_SeqBAIJKokkos_petsc(Mat A, MatFactorType ftype, Mat *B)
+{
+  Mat                      Aaij;
+  Mat_SeqBAIJKokkosFactor *fac;
+
+  PetscFunctionBegin;
+  PetscCall(MatConvert(A, MATSEQAIJ, MAT_INITIAL_MATRIX, &Aaij));
+  PetscCall(MatGetFactor(Aaij, MATSOLVERPETSC, ftype, B));
+  /* PCSetUp_LU/Cholesky would otherwise call MatGetOrdering() on the block matrix, whose host CSR is
+     absent; report that the factor does not consume a caller-provided ordering so that step is skipped.
+     The symbolic wrappers compute their own ordering on the scalar copy. */
+  (*B)->canuseordering = PETSC_FALSE;
+  /* Capture the real SeqAIJ symbolic ops, then intercept them to substitute the converted copy. */
+  PetscCall(PetscNew(&fac));
+  fac->Aaij              = Aaij;
+  fac->symbolic_lu       = (*B)->ops->lufactorsymbolic;
+  fac->symbolic_ilu      = (*B)->ops->ilufactorsymbolic;
+  fac->symbolic_cholesky = (*B)->ops->choleskyfactorsymbolic;
+  fac->symbolic_icc      = (*B)->ops->iccfactorsymbolic;
+  if (fac->symbolic_lu) (*B)->ops->lufactorsymbolic = MatLUFactorSymbolic_SeqBAIJKokkosFactor;
+  if (fac->symbolic_ilu) (*B)->ops->ilufactorsymbolic = MatILUFactorSymbolic_SeqBAIJKokkosFactor;
+  if (fac->symbolic_cholesky) (*B)->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SeqBAIJKokkosFactor;
+  if (fac->symbolic_icc) (*B)->ops->iccfactorsymbolic = MatICCFactorSymbolic_SeqBAIJKokkosFactor;
+  PetscCall(PetscObjectContainerCompose((PetscObject)*B, "MatSeqBAIJKokkosFactor", fac, MatSeqBAIJKokkosFactorDestroy));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    MATSEQBAIJKOKKOS - MATBAIJKOKKOS = "(seq)baijkokkos" - A matrix type for rectangular-block sparse matrices with Kokkos
 
@@ -2627,22 +2905,23 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJKokkos(Mat A)
      VECSEQKOKKOS vectors (e.g. the GAMG eigen-estimate and MG transfer work vectors). */
   PetscCall(PetscFree(A->defaultvectype));
   PetscCall(PetscStrallocpy(VECKOKKOS, &A->defaultvectype));
-  A->ops->destroy          = MatDestroy_SeqBAIJKokkos;
-  A->ops->setfromoptions   = MatSetFromOptions_SeqBAIJKokkos;
-  A->ops->mult             = MatMult_SeqBAIJKokkos;
-  A->ops->multadd          = MatMultAdd_SeqBAIJKokkos;
-  A->ops->multtranspose    = MatMultTranspose_SeqBAIJKokkos;
-  A->ops->multtransposeadd = MatMultTransposeAdd_SeqBAIJKokkos;
-  A->ops->transpose        = MatTranspose_SeqBAIJKokkos;
-  A->ops->setvalues        = MatSetValues_SeqBAIJKokkos;
-  A->ops->setvaluesblocked = MatSetValuesBlocked_SeqBAIJKokkos;
-  A->ops->assemblyend      = MatAssemblyEnd_SeqBAIJKokkos;
-  A->ops->creategraph      = MatCreateGraph_SeqBAIJKokkos;
-  A->ops->getdiagonal      = MatGetDiagonal_SeqBAIJKokkos;
-  A->ops->diagonalscale    = MatDiagonalScale_SeqBAIJKokkos;
-  A->ops->scale            = MatScale_SeqBAIJKokkos;
-  A->ops->axpy             = MatAXPY_SeqBAIJKokkos;
-  A->spptr                 = NULL;
+  A->ops->destroy             = MatDestroy_SeqBAIJKokkos;
+  A->ops->setfromoptions      = MatSetFromOptions_SeqBAIJKokkos;
+  A->ops->mult                = MatMult_SeqBAIJKokkos;
+  A->ops->multadd             = MatMultAdd_SeqBAIJKokkos;
+  A->ops->multtranspose       = MatMultTranspose_SeqBAIJKokkos;
+  A->ops->multtransposeadd    = MatMultTransposeAdd_SeqBAIJKokkos;
+  A->ops->transpose           = MatTranspose_SeqBAIJKokkos;
+  A->ops->setvalues           = MatSetValues_SeqBAIJKokkos;
+  A->ops->setvaluesblocked    = MatSetValuesBlocked_SeqBAIJKokkos;
+  A->ops->assemblyend         = MatAssemblyEnd_SeqBAIJKokkos;
+  A->ops->creategraph         = MatCreateGraph_SeqBAIJKokkos;
+  A->ops->getdiagonal         = MatGetDiagonal_SeqBAIJKokkos;
+  A->ops->invertblockdiagonal = MatInvertBlockDiagonal_SeqBAIJKokkos;
+  A->ops->diagonalscale       = MatDiagonalScale_SeqBAIJKokkos;
+  A->ops->scale               = MatScale_SeqBAIJKokkos;
+  A->ops->axpy                = MatAXPY_SeqBAIJKokkos;
+  A->spptr                    = NULL;
   /* Override the SeqBAIJ base so the generic MatSeqBAIJSetPreallocation() preallocates our storage
      (rectangular column block size honored from the matrix's block sizes; see the adapter). */
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqBAIJSetPreallocation_C", MatSeqBAIJSetPreallocation_SeqBAIJKokkos));
