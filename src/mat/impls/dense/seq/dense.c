@@ -73,8 +73,8 @@ PetscErrorCode MatSeqDenseInvertFactors_Private(Mat A)
       PetscCall(PetscFPTrapPop());
       PetscCall(MatSeqDenseSymmetrize_Private(A, PETSC_FALSE));
     }
-    PetscCheck(info < 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in LAPACK argument %" PetscBLASInt_FMT, info - 1);
-    PetscCheck(info > 0, PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad Inversion: zero pivot in row %" PetscBLASInt_FMT, info - 1);
+    PetscCheck(info >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in LAPACK argument %" PetscBLASInt_FMT, -info);
+    PetscCheck(info <= 0, PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad Inversion: zero pivot in row %" PetscBLASInt_FMT, info - 1);
     PetscCall(PetscLogFlops((1.0 * A->cmap->n * A->cmap->n * A->cmap->n) / 3.0));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix must be factored to solve");
 
