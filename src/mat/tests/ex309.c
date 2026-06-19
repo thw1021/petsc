@@ -86,7 +86,9 @@ static PetscErrorCode TestPtAPBlock(PetscInt mbs, PetscInt cbs, PetscInt bsA, Pe
   PetscCall(MatNorm(C_diff, NORM_FROBENIUS, &norm_diff));
   rel_err = norm_ref > 0.0 ? norm_diff / norm_ref : norm_diff;
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%-26s bsA=%" PetscInt_FMT " bsP=%" PetscInt_FMT " block=%s rel_err=%g %s\n", case_name, bsA, bsP, is_block ? "yes" : "no", (double)rel_err, (is_block && rel_err < 1e-10) ? "PASS" : "FAIL"));
+  /* rel_err is volatile across product algorithms (native block kernels differ from the AIJ reference at
+     machine epsilon), so print only the thresholded PASS/FAIL verdict to keep the gold output stable. */
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%-26s bsA=%" PetscInt_FMT " bsP=%" PetscInt_FMT " block=%s %s\n", case_name, bsA, bsP, is_block ? "yes" : "no", (is_block && rel_err < 1e-10) ? "PASS" : "FAIL"));
 
   PetscCall(MatDestroy(&A_aij));
   PetscCall(MatDestroy(&P_aij));
@@ -177,7 +179,9 @@ static PetscErrorCode TestABBlock(PetscInt mbs, PetscInt cbs, PetscInt bsA, Pets
   PetscCall(MatNorm(C_diff, NORM_FROBENIUS, &norm_diff));
   rel_err = norm_ref > 0.0 ? norm_diff / norm_ref : norm_diff;
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%-26s bsA=%" PetscInt_FMT " bsP=%" PetscInt_FMT " block=%s rel_err=%g %s\n", case_name, bsA, bsP, is_block ? "yes" : "no", (double)rel_err, (is_block && rel_err < 1e-10) ? "PASS" : "FAIL"));
+  /* rel_err is volatile across product algorithms (native block kernels differ from the AIJ reference at
+     machine epsilon), so print only the thresholded PASS/FAIL verdict to keep the gold output stable. */
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%-26s bsA=%" PetscInt_FMT " bsP=%" PetscInt_FMT " block=%s %s\n", case_name, bsA, bsP, is_block ? "yes" : "no", (is_block && rel_err < 1e-10) ? "PASS" : "FAIL"));
 
   PetscCall(MatDestroy(&A_aij));
   PetscCall(MatDestroy(&P_aij));

@@ -1382,10 +1382,10 @@ static PetscErrorCode MatProductCtxDestroy_SeqBAIJKokkos(PetscCtxRt pdata)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Forward declarations of transpose routines used by the product routines below */
+/* Forward declarations of transpose routines used by the product routines below.
+   MatTransposeWithPerm_SeqBAIJKokkos_Private() is declared PETSC_INTERN in baijkokkosimpl.hpp
+   (reused by the parallel MPIBAIJKOKKOS products, F2.2 Option B). */
 static PetscErrorCode MatTranspose_SeqBAIJKokkos_Private(Mat A, Mat *At);
-static PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat A, Mat *At, MatColIdxKokkosView *block_perm);
-static PetscErrorCode MatRefreshTransposeValues_SeqBAIJKokkos(Mat A, Mat At, MatColIdxKokkosView block_perm);
 /* Forward declaration of the native PtAP numeric dispatcher (defined after the AB helpers it reuses) */
 static PetscErrorCode MatProductNumericPtAP_SeqBAIJKokkos(Mat C);
 
@@ -1415,7 +1415,7 @@ static PetscInt BinarySearchColumnInCRow(const MatColIdxType *c_j, PetscInt c_st
   Computes C's block sparsity pattern via spgemm_symbolic on the scalar block-graph CSR.
   Returns the completed C matrix (fully assembled MATSEQBAIJKOKKOS) ready for numeric phase.
 */
-static PetscErrorCode MatProductSymbolicAB_SeqBAIJKokkos_Helper(Mat C, Mat A, Mat B, MatProductCtx_SeqBAIJKokkos *pdata)
+PETSC_INTERN PetscErrorCode MatProductSymbolicAB_SeqBAIJKokkos_Helper(Mat C, Mat A, Mat B, MatProductCtx_SeqBAIJKokkos *pdata)
 {
   Mat_SeqBAIJKokkos *akok, *bkok, *ckok;
   MPI_Comm           comm;
@@ -1608,7 +1608,7 @@ static PetscErrorCode RunNumericAB_SeqBAIJKokkos(PetscInt mbs_A, PetscInt rbsA, 
   specialization for the elasticity block shapes ({1,3,6} combinations), falling back to the generic
   runtime-sized kernel for any other shape.
 */
-static PetscErrorCode MatProductNumericAB_SeqBAIJKokkos_Helper(Mat C, Mat A, Mat B)
+PETSC_INTERN PetscErrorCode MatProductNumericAB_SeqBAIJKokkos_Helper(Mat C, Mat A, Mat B)
 {
   Mat_SeqBAIJKokkos *akok, *bkok, *ckok;
   PetscInt           rbsA, kdim, cbsB, mbs_A;
@@ -2039,7 +2039,7 @@ static PetscErrorCode MatTranspose_SeqBAIJKokkos_Private(Mat A, Mat *At)
   Columns within each transposed block-row are sorted ascending, matching the assembled order the AB
   symbolic phase and BinarySearchColumnInCRow() assume.
 */
-static PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat A, Mat *At, MatColIdxKokkosView *block_perm)
+PETSC_INTERN PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat A, Mat *At, MatColIdxKokkosView *block_perm)
 {
   Mat_SeqBAIJKokkos *akok, *atkok;
   PetscInt           mbs, nbs, row_bs, col_bs, nblk, r, p, bi, disp;
@@ -2124,7 +2124,7 @@ static PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat A, Mat *At,
   AIJ value refresh Ta(i) = Aa(perm(i)) (MatSeqAIJKokkosGenerateTranspose_Private), generalized to a
   block with element transpose.
 */
-static PetscErrorCode MatRefreshTransposeValues_SeqBAIJKokkos(Mat A, Mat At, MatColIdxKokkosView block_perm)
+PETSC_INTERN PetscErrorCode MatRefreshTransposeValues_SeqBAIJKokkos(Mat A, Mat At, MatColIdxKokkosView block_perm)
 {
   Mat_SeqBAIJKokkos *akok, *atkok;
   PetscInt           row_bs, col_bs, nblk;

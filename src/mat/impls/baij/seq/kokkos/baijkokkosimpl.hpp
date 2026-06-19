@@ -151,3 +151,9 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqBAIJKokkos(Mat, MatType, MatReu
 PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJKokkos_SeqAIJ(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqBAIJKokkosModifyDevice(Mat);
 PETSC_INTERN PetscErrorCode MatSeqBAIJKokkosSyncDevice(Mat);
+
+/* Native seq block-product helpers, reused by the parallel MPIBAIJKOKKOS products (F2.2 Option B). */
+PETSC_INTERN PetscErrorCode MatProductSymbolicAB_SeqBAIJKokkos_Helper(Mat, Mat, Mat, MatProductCtx_SeqBAIJKokkos *);
+PETSC_INTERN PetscErrorCode MatProductNumericAB_SeqBAIJKokkos_Helper(Mat, Mat, Mat);
+PETSC_INTERN PetscErrorCode MatTransposeWithPerm_SeqBAIJKokkos_Private(Mat, Mat *, MatColIdxKokkosView *);
+PETSC_INTERN PetscErrorCode MatRefreshTransposeValues_SeqBAIJKokkos(Mat, Mat, MatColIdxKokkosView);

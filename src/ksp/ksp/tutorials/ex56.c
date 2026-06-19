@@ -609,4 +609,15 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
       args: -ne 17 -alpha 1.e-3 -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -use_mat_nearnullspace -pc_gamg_coarse_eq_limit 20 -ksp_rtol 1e-6 -mg_levels_ksp_type chebyshev -mg_levels_pc_type pbjacobi -mg_coarse_pc_type jacobi -mg_coarse_ksp_type cg -pc_gamg_parallel_coarse_grid_solver -mat_type mpibaijkokkos -ksp_converged_reason -two_solves false
       output_file: output/ex56_mpibaijkokkos.out
 
+   # exercises the native parallel block PtAP/AB values-only MAT_REUSE numeric (F2.2 Option B Stage 2):
+   # -two_solves changes the operator values and -pc_gamg_reuse_interpolation reuses the hierarchy, so the
+   # values-only numeric fires on every re-setup; all three solves must converge in 17 (== full rebuild).
+   test:
+      suffix: mpibaijkokkos_reuse
+      requires: kokkos_kernels !complex
+      nsize: 8
+      args: -ne 17 -alpha 1.e-3 -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -use_mat_nearnullspace -pc_gamg_coarse_eq_limit 20 -ksp_rtol 1e-6 -mg_levels_ksp_type chebyshev -mg_levels_pc_type pbjacobi -mg_coarse_pc_type jacobi -mg_coarse_ksp_type cg -pc_gamg_parallel_coarse_grid_solver -mat_type mpibaijkokkos -ksp_converged_reason -two_solves -pc_gamg_reuse_interpolation true
+      filter: grep "Linear solve converged"
+      output_file: output/ex56_mpibaijkokkos_reuse.out
+
 TEST*/

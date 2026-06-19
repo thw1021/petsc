@@ -1,8 +1,8 @@
-ptap_bs1                   bsA=1 bsP=1 block=yes rel_err=0. PASS
-ptap_bs3                   bsA=3 bsP=3 block=yes rel_err=0. PASS
-ptap_elasticity_3to6       bsA=3 bsP=6 block=yes rel_err=0. PASS
-ptap_bs6                   bsA=6 bsP=6 block=yes rel_err=0. PASS
-ab_bs1                     bsA=1 bsP=1 block=yes rel_err=0. PASS
-ab_bs3                     bsA=3 bsP=3 block=yes rel_err=0. PASS
-ab_elasticity_3to6         bsA=3 bsP=6 block=yes rel_err=0. PASS
-ab_bs6                     bsA=6 bsP=6 block=yes rel_err=0. PASS
+ptap_bs1                   bsA=1 bsP=1 block=yes PASS
+ptap_bs3                   bsA=3 bsP=3 block=yes PASS
+ptap_elasticity_3to6       bsA=3 bsP=6 block=yes PASS
+ptap_bs6                   bsA=6 bsP=6 block=yes PASS
+ab_bs1                     bsA=1 bsP=1 block=yes PASS
+ab_bs3                     bsA=3 bsP=3 block=yes PASS
+ab_elasticity_3to6         bsA=3 bsP=6 block=yes PASS
+ab_bs6                     bsA=6 bsP=6 block=yes PASS

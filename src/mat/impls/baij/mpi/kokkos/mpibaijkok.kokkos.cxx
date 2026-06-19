@@ -4,12 +4,15 @@
 #include <petscpkg_version.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 #include <../src/mat/impls/baij/seq/kokkos/baijkokkosimpl.hpp>
+#include <petscsf.h>
+#include <algorithm>
 #include <map>
 #include <set>
 #include <vector>
 
 /* Forward declarations */
 PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqAIJ(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat, Mat, MatReuse, PetscInt **, PetscInt **, MatScalar **, Mat *);
 static PetscErrorCode       MatSetValuesBlocked_MPIBAIJKokkos(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
 static PetscErrorCode       MatConvert_MPIBAIJKokkos_MPIAIJ(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIBAIJKokkos(Mat, MatType, MatReuse, Mat *);
@@ -20,6 +23,8 @@ static PetscErrorCode       MatProductSetFromOptions_MPIBAIJKokkos(Mat);
 static PetscErrorCode       MatProductSymbolic_MPIBAIJKokkos(Mat);
 static PetscErrorCode       MatAXPY_MPIBAIJKokkos(Mat, PetscScalar, Mat, MatStructure);
 static PetscErrorCode       MatCreateGraph_MPIBAIJKokkos(Mat, PetscBool, PetscBool, PetscReal, PetscInt, PetscInt[], Mat *);
+static PetscErrorCode       MatMPIBAIJKokkosGetCachedAIJ(Mat, Mat *);
+static PetscErrorCode       MatProductNumericBlock_MPIBAIJKokkos(Mat);
 static PetscErrorCode       MatProductSetFromOptions_mpibaijkokkos_mpiaij_C(Mat);
 static PetscErrorCode       MatProductSetFromOptions_mpiaij_mpibaijkokkos_C(Mat);
 
@@ -660,17 +665,725 @@ static PetscErrorCode MatMultTransposeAdd_MPIBAIJKokkos(Mat A, Vec xx, Vec yy, V
   (local part on the seq native block PtAP); here numeric recomputes from scratch, so a MAT_INITIAL_MATRIX
   GAMG build runs the AIJ PtAP twice — acceptable for correctness-first F10.
 */
+/*
+  MatProductOperandAsAIJ_MPIBAIJKokkos - get an MPIAIJ representation of a block product operand.
+
+  When the operand is MATMPIBAIJKOKKOS, returns the shared, value-invalidated cached AIJ
+  (MatMPIBAIJKokkosGetCachedAIJ): a single convert per operand is reused across the level's AB and PtAP
+  products and across symbolic+numeric, instead of re-converting on every call (the F2.2 MatConvert
+  bottleneck - 57% of block GAMG setup). The returned matrix is BORROWED (*owned = PETSC_FALSE): the caller
+  must NOT destroy it; it lives on the operand until its values change (cache dropped at MatAssemblyEnd) or
+  the operand is destroyed. For a non-block operand (mixed-type products via the composed shims), converts
+  to a fresh transient (*owned = PETSC_TRUE) that the caller destroys.
+*/
+static PetscErrorCode MatProductOperandAsAIJ_MPIBAIJKokkos(Mat M, Mat *aij, PetscBool *owned)
+{
+  PetscBool isbaijkok;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)M, MATMPIBAIJKOKKOS, &isbaijkok));
+  if (isbaijkok) {
+    PetscCall(MatMPIBAIJKokkosGetCachedAIJ(M, aij));
+    *owned = PETSC_FALSE;
+  } else {
+    PetscCall(MatConvert(M, MATMPIAIJ, MAT_INITIAL_MATRIX, aij));
+    *owned = PETSC_TRUE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* ---------------------------------------------------------------------------------------------------
+   F2.2 Option B: native parallel block PtAP/AB compute for MATMPIBAIJKOKKOS.
+
+   The parallel triple product is assembled from native seq block kernels (no operand convert, no AIJ
+   spgemm) working entirely in GLOBAL coarse block-column space; the comm-heavy off-process row gather
+   borrows the proven MatGetBrowsOfAoCols_MPIAIJ() on the cached operand MPIAIJ (free after Option A).
+   The result is assembled into the block C via MatSetValuesBlocked(ADD_VALUES): off-process coarse rows
+   stash and the standard block assembly routes+sums them (the "thin C_oth merge").
+
+   Stage 2 adds values-only numeric reuse: the first (symbolic) build caches every seq building block and
+   the P_oth comm plan in a MatProductCtx_MPIBAIJKokkos; each later MAT_REUSE numeric refreshes only the
+   block values (zero+refill the device CSR a_dual, structure i_dual/j_dual kept) and replays just the
+   a-array of the P_oth gather (MatGetBrowsOfAoCols_MPIAIJ MAT_REUSE_MATRIX). GAMG calls numeric many
+   times per symbolic (repeated solves, -pc_gamg_reuse_interpolation), so this removes the per-numeric
+   structural rebuild (host CSR malloc, device deep_copy, spgemm symbolic, transpose-perm build).
+   --------------------------------------------------------------------------------------------------- */
+
+/*
+  MatProductCtx_MPIBAIJKokkos - cached structures + comm plan for the native parallel block product,
+  carried across numeric calls on C->product->data for values-only MAT_REUSE recompute (Stage 2).
+
+  Every Mat here keeps its block sparsity (i_dual/j_dual) across reuse; only a_dual is refreshed. The
+  P_oth AIJ-comm-borrow plan (startsj_s/startsj_r/bufa + the scalar P_oth_aij scratch) lets the reuse
+  numeric replay only the a-array of the off-process P row gather. Cresult is the parallel MPIAIJ scatter
+  target reused with the same nonzero structure (zeroed + refilled each numeric).
+*/
+struct MatProductCtx_MPIBAIJKokkos {
+  Mat                 A_local     = NULL; /* [A_diag | A_offdiag shifted], mbs x (mbs+ec_A) */
+  Mat                 P_localrows = NULL; /* P's local block-rows, GLOBAL coarse cols, mbs x pNbs */
+  Mat                 P_oth       = NULL; /* gathered off-process P rows, ec_A x pNbs (NULL if size 1) */
+  Mat                 P_stack     = NULL; /* [P_localrows ; P_oth], (mbs+ec_A) x pNbs */
+  Mat                 AP          = NULL; /* A_local * P_stack */
+  Mat                 R           = NULL; /* P_localrows^T (PtAP only) */
+  Mat                 Cseq        = NULL; /* per-process triple product in global coarse cols */
+  MatColIdxKokkosView perm;               /* transpose block-perm for R (PtAP only) */
+  Mat                 P_oth_aij = NULL;   /* scalar AIJ scratch reused by MatGetBrowsOfAoCols_MPIAIJ */
+  PetscInt           *startsj_s = NULL;   /* cached send-offsets plan (PetscMalloc2 with startsj_r) */
+  PetscInt           *startsj_r = NULL;   /* cached recv-offsets plan */
+  MatScalar          *bufa      = NULL;   /* cached a-array send buffer */
+  PetscInt            ec_A      = 0;      /* A off-diagonal block-cols == P_oth block-rows */
+  PetscInt            rowbase   = 0;      /* C_seq block-row -> global block-row offset (AB only) */
+
+  /* Stage 3: native PetscSF block-row scatter of the off-process triple-product rows (C_oth) to their
+     owners, replacing the transient MPIAIJ Cresult round-trip. The plan (SF + structure) is built once at
+     symbolic and reused by every values-only numeric (re-pack leaf values, PetscSFReduce, reassemble C). */
+  PetscSF      cscatter = NULL;              /* block-level SF: my off-process C_seq blocks -> owner slots */
+  MPI_Datatype blkunit  = MPI_DATATYPE_NULL; /* contiguous PetscScalar unit of one csb-sized dense block */
+  PetscInt     nIn      = 0;                 /* number of off-process blocks received as an owner */
+  PetscInt     nLeafBlk = 0;                 /* number of off-process blocks this rank sends */
+  PetscInt     csb      = 0;                 /* values per block (crb*ccb) for the cached buffers */
+  PetscInt    *inrow    = NULL;              /* nIn: global coarse block-row per received slot */
+  PetscInt    *incol    = NULL;              /* nIn: global coarse block-col per received slot */
+  PetscScalar *inval    = NULL;              /* nIn*csb: received block values (SF root buffer) */
+  PetscScalar *leafval  = NULL;              /* nLeafBlk*csb: packed send values (SF leaf buffer) */
+};
+
+/*
+  MatProductCtxDestroy_MPIBAIJKokkos - free the cached native-product context (C->product->destroy hook).
+*/
+static PetscErrorCode MatProductCtxDestroy_MPIBAIJKokkos(PetscCtxRt ctx)
+{
+  MatProductCtx_MPIBAIJKokkos *p;
+
+  PetscFunctionBegin;
+  p = *reinterpret_cast<MatProductCtx_MPIBAIJKokkos **>(ctx);
+  if (p) {
+    PetscCall(MatDestroy(&p->A_local));
+    PetscCall(MatDestroy(&p->P_localrows));
+    PetscCall(MatDestroy(&p->P_oth));
+    PetscCall(MatDestroy(&p->P_stack));
+    PetscCall(MatDestroy(&p->AP));
+    PetscCall(MatDestroy(&p->R));
+    PetscCall(MatDestroy(&p->Cseq));
+    PetscCall(MatDestroy(&p->P_oth_aij));
+    if (p->startsj_s) PetscCall(PetscFree2(p->startsj_s, p->startsj_r)); /* allocated together (PetscMalloc2) */
+    PetscCall(PetscFree(p->bufa));
+    PetscCall(PetscSFDestroy(&p->cscatter));
+    if (p->blkunit != MPI_DATATYPE_NULL) PetscCallMPI(MPI_Type_free(&p->blkunit));
+    PetscCall(PetscFree2(p->inrow, p->incol));
+    PetscCall(PetscFree(p->inval));
+    PetscCall(PetscFree(p->leafval));
+    PetscCallCXX(delete p);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatCreateSeqBAIJKokkosFromHostCSR - build a fully-assembled MATSEQBAIJKOKKOS from host block-CSR arrays.
+
+  i_h (length mbs+1), j_h (length nblk, block-columns), a_h (length nblk*row_bs*col_bs, row-major per
+  block). Copies the host arrays into device views, constructs the Mat_SeqBAIJKokkos, and syncs the host
+  mirror so both host and device sides are valid (host readers like the transpose helper need it). The
+  caller retains ownership of i_h/j_h/a_h.
+*/
+static PetscErrorCode MatCreateSeqBAIJKokkosFromHostCSR(PetscInt row_bs, PetscInt col_bs, PetscInt mbs, PetscInt nbs, PetscInt nblk, const PetscInt *i_h, const PetscInt *j_h, const PetscScalar *a_h, Mat *out)
+{
+  Mat_SeqBAIJKokkos *mk;
+  PetscInt           bs2 = row_bs * col_bs, i, k;
+
+  PetscFunctionBegin;
+  MatRowMapKokkosView i_d("i_seqbaijkok", mbs + 1);
+  MatColIdxKokkosView j_d("j_seqbaijkok", nblk);
+  MatScalarKokkosView a_d("a_seqbaijkok", (size_t)nblk * bs2);
+  {
+    auto ih = Kokkos::create_mirror_view(i_d);
+    auto jh = Kokkos::create_mirror_view(j_d);
+    auto ah = Kokkos::create_mirror_view(a_d);
+    for (i = 0; i <= mbs; i++) ih(i) = i_h[i];
+    for (k = 0; k < nblk; k++) jh(k) = j_h[k];
+    for (k = 0; k < nblk * bs2; k++) ah(k) = a_h[k];
+    PetscCallCXX(Kokkos::deep_copy(i_d, ih));
+    PetscCallCXX(Kokkos::deep_copy(j_d, jh));
+    PetscCallCXX(Kokkos::deep_copy(a_d, ah));
+  }
+  PetscCall(MatCreate(PETSC_COMM_SELF, out));
+  PetscCall(MatSetSizes(*out, mbs * row_bs, nbs * col_bs, mbs * row_bs, nbs * col_bs));
+  PetscCall(MatSetBlockSizes(*out, row_bs, col_bs));
+  PetscCall(MatSetType(*out, MATSEQBAIJKOKKOS));
+  PetscCallCXX(mk = new Mat_SeqBAIJKokkos(row_bs, col_bs, mbs, nbs, nblk, i_d, j_d, a_d));
+  (*out)->spptr     = (void *)mk;
+  (*out)->assembled = PETSC_TRUE;
+  /* The block-column count nbs may differ from the square default; set the column layout explicitly. */
+  PetscCall(PetscLayoutDestroy(&(*out)->cmap));
+  PetscCall(PetscLayoutCreateFromSizes(PETSC_COMM_SELF, nbs * col_bs, nbs * col_bs, col_bs, &(*out)->cmap));
+  /* Constructor leaves the a_dual host mirror uninitialized (modify_device); sync so host readers see it. */
+  PetscCall(KokkosDualViewSyncHost(mk->a_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatBuildSeqBAIJKokkosFromHostCSR - build (reuse == PETSC_FALSE) or value-refresh (reuse == PETSC_TRUE) a
+  MATSEQBAIJKOKKOS from host block-CSR arrays.
+
+  On build it forwards to MatCreateSeqBAIJKokkosFromHostCSR(). On reuse it overwrites only the block values
+  of the existing *out (whose block structure i_h/j_h must be unchanged from the build call) with a_h,
+  marking the host mirror modified so the next device read syncs it. Used by the Stage-2 values-only
+  numeric to refresh the cached seq building blocks without reallocating their CSR.
+*/
+static PetscErrorCode MatBuildSeqBAIJKokkosFromHostCSR(PetscBool reuse, PetscInt row_bs, PetscInt col_bs, PetscInt mbs, PetscInt nbs, PetscInt nblk, const PetscInt *i_h, const PetscInt *j_h, const PetscScalar *a_h, Mat *out)
+{
+  Mat_SeqBAIJKokkos *mk;
+  PetscInt           bs2 = row_bs * col_bs;
+
+  PetscFunctionBegin;
+  if (!reuse) {
+    PetscCall(MatCreateSeqBAIJKokkosFromHostCSR(row_bs, col_bs, mbs, nbs, nblk, i_h, j_h, a_h, out));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  mk = static_cast<Mat_SeqBAIJKokkos *>((*out)->spptr);
+  PetscCheck(mk, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing Mat_SeqBAIJKokkos spptr on reuse");
+  PetscCheck(mk->nblks() == nblk, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Reuse block count %" PetscInt_FMT " != cached %" PetscInt_FMT, nblk, (PetscInt)mk->nblks());
+  PetscCall(PetscArraycpy(mk->a_host_data(), a_h, (size_t)nblk * bs2));
+  PetscCallCXX(mk->a_dual.modify_host());
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatSeqBAIJKokkosGetHostCSR_Private - sync a SEQBAIJKOKKOS block to host and return its host block-CSR.
+
+  Returns the block-CSR graph (i,j index blocks) and row-major block values, plus block dimensions.
+  Values are synced device->host first so the host arrays are current.
+*/
+static PetscErrorCode MatSeqBAIJKokkosGetHostCSR_Private(Mat M, PetscInt *row_bs, PetscInt *col_bs, PetscInt *mbs, PetscInt *nblk, PetscInt **i_h, PetscInt **j_h, PetscScalar **a_h)
+{
+  Mat_SeqBAIJKokkos *mk = static_cast<Mat_SeqBAIJKokkos *>(M->spptr);
+
+  PetscFunctionBegin;
+  PetscCheck(mk, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing Mat_SeqBAIJKokkos spptr");
+  PetscCall(KokkosDualViewSyncHost(mk->a_dual, PetscGetKokkosExecutionSpace()));
+  if (row_bs) *row_bs = mk->row_bs;
+  if (col_bs) *col_bs = mk->col_bs;
+  if (mbs) *mbs = mk->mbs;
+  if (nblk) *nblk = mk->nblks();
+  if (i_h) *i_h = mk->i_host_data();
+  if (j_h) *j_h = mk->j_host_data();
+  if (a_h) *a_h = mk->a_host_data();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatBuildAlocal_MPIBAIJKokkos - build A_local = [A_diag | A_offdiag] as one MATSEQBAIJKOKKOS.
+
+  A_local has mbs block-rows and (mbs + ec_A) block-columns: the diagonal block A_diag keeps its local
+  block-columns [0, mbs); the off-diagonal A_offdiag's compressed columns [0, ec_A) are shifted to
+  [mbs, mbs + ec_A). This stacked column space lines up with P_stack's row space (local P rows then
+  P_oth rows) so a single seq AB computes A*P over the local fine rows. Square diagonal: A's col_bs == row_bs.
+*/
+static PetscErrorCode MatBuildAlocal_MPIBAIJKokkos(Mat A, PetscBool reuse, Mat *A_local, PetscInt *ec_A_out)
+{
+  Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)A->data;
+  PetscInt     fb = A->rmap->bs, mbs = baij->mbs, ec_A = 0;
+  PetscInt     dmbs, dnblk, ombs, onblk = 0, drb, dcb, orb, ocb;
+  PetscInt    *di, *dj, *oi = NULL, *oj = NULL, *li, *lj;
+  PetscScalar *da, *oa = NULL, *la;
+  PetscInt     bs2 = fb * fb, i, k, nnz, pos;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(baij->A, &drb, &dcb, &dmbs, &dnblk, &di, &dj, &da));
+  if (baij->B && baij->garray) {
+    PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(baij->B, &orb, &ocb, &ombs, &onblk, &oi, &oj, &oa));
+    ec_A = ((Mat_SeqBAIJKokkos *)baij->B->spptr)->nbs;
+  }
+  nnz = dnblk + onblk;
+  PetscCall(PetscMalloc3(mbs + 1, &li, nnz, &lj, (size_t)nnz * bs2, &la));
+  li[0] = 0;
+  pos   = 0;
+  for (i = 0; i < mbs; i++) {
+    for (k = di[i]; k < di[i + 1]; k++) {
+      lj[pos] = dj[k]; /* diagonal block-columns [0, mbs) unchanged */
+      for (PetscInt b = 0; b < bs2; b++) la[(size_t)pos * bs2 + b] = da[(size_t)k * bs2 + b];
+      pos++;
+    }
+    if (oi) {
+      for (k = oi[i]; k < oi[i + 1]; k++) {
+        lj[pos] = mbs + oj[k]; /* off-diagonal compressed columns shifted to [mbs, mbs+ec_A) */
+        for (PetscInt b = 0; b < bs2; b++) la[(size_t)pos * bs2 + b] = oa[(size_t)k * bs2 + b];
+        pos++;
+      }
+    }
+    li[i + 1] = pos;
+  }
+  PetscCall(MatBuildSeqBAIJKokkosFromHostCSR(reuse, fb, fb, mbs, mbs + ec_A, nnz, li, lj, la, A_local));
+  PetscCall(PetscFree3(li, lj, la));
+  if (ec_A_out) *ec_A_out = ec_A;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatBuildPlocalGlobal_MPIBAIJKokkos - build P's local block-rows with GLOBAL coarse block-columns.
+
+  Merges P_diag (local coarse columns, shifted by P's coarse block start) and P_offdiag (compressed
+  columns mapped to global via P's garray) per block-row into one MATSEQBAIJKOKKOS of size mbs x pNbs
+  (pNbs = global coarse block count), columns sorted ascending. Both inputs' per-row columns are already
+  sorted in global numbering, so a two-way merge suffices.
+*/
+static PetscErrorCode MatBuildPlocalGlobal_MPIBAIJKokkos(Mat P, PetscBool reuse, Mat *P_localrows)
+{
+  Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)P->data;
+  PetscInt     fb = P->rmap->bs, cb = P->cmap->bs, mbs = baij->mbs, pNbs = baij->Nbs;
+  PetscInt     cstartbs = baij->cstartbs;
+  PetscInt    *garray   = baij->garray;
+  PetscInt     dmbs, dnblk, ombs, onblk = 0, drb, dcb, orb, ocb;
+  PetscInt    *di, *dj, *oi = NULL, *oj = NULL, *li, *lj;
+  PetscScalar *da, *oa = NULL, *la;
+  PetscInt     bs2 = fb * cb, i, kd, ko, nnz, pos;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(baij->A, &drb, &dcb, &dmbs, &dnblk, &di, &dj, &da));
+  if (baij->B && garray) PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(baij->B, &orb, &ocb, &ombs, &onblk, &oi, &oj, &oa));
+  else onblk = 0;
+  nnz = dnblk + onblk;
+  PetscCall(PetscMalloc3(mbs + 1, &li, nnz, &lj, (size_t)nnz * bs2, &la));
+  li[0] = 0;
+  pos   = 0;
+  for (i = 0; i < mbs; i++) {
+    kd              = di[i];
+    ko              = oi ? oi[i] : 0;
+    PetscInt kd_end = di[i + 1], ko_end = oi ? oi[i + 1] : 0;
+    while (kd < kd_end || ko < ko_end) {
+      PetscInt gd = (kd < kd_end) ? dj[kd] + cstartbs : PETSC_INT_MAX;
+      PetscInt go = (ko < ko_end) ? garray[oj[ko]] : PETSC_INT_MAX;
+      if (gd <= go) {
+        lj[pos] = gd;
+        for (PetscInt b = 0; b < bs2; b++) la[(size_t)pos * bs2 + b] = da[(size_t)kd * bs2 + b];
+        kd++;
+      } else {
+        lj[pos] = go;
+        for (PetscInt b = 0; b < bs2; b++) la[(size_t)pos * bs2 + b] = oa[(size_t)ko * bs2 + b];
+        ko++;
+      }
+      pos++;
+    }
+    li[i + 1] = pos;
+  }
+  PetscCall(MatBuildSeqBAIJKokkosFromHostCSR(reuse, fb, cb, mbs, pNbs, nnz, li, lj, la, P_localrows));
+  PetscCall(PetscFree3(li, lj, la));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatBuildPoth_MPIBAIJKokkos - gather P's off-process block-rows (those referenced by A's off-diagonal
+  block-columns) as one MATSEQBAIJKOKKOS with GLOBAL coarse block-columns.
+
+  Borrows the proven MatGetBrowsOfAoCols_MPIAIJ() on the cached operand MPIAIJ (free after Option A) to do
+  the comm, then groups the returned scalar SeqAIJ rows into fb x cb dense blocks. The result has ec_A
+  block-rows (one per A off-diagonal compressed block-column, in A's garray order) and pNbs block-columns.
+  Returns *P_oth_blk == NULL and ec_A == 0 on a single rank (no off-process rows).
+
+  reuse == PETSC_FALSE (build): a MAT_INITIAL gather that caches the comm plan (startsj_s/startsj_r/bufa)
+  and the scalar scratch *P_oth_aij in the caller's ctx, and creates *P_oth_blk. reuse == PETSC_TRUE: a
+  MAT_REUSE gather replaying only the a-array into the cached *P_oth_aij, then refreshing only the values
+  of the existing *P_oth_blk (structure unchanged: A and P structures are stable across GAMG reuse).
+*/
+static PetscErrorCode MatBuildPoth_MPIBAIJKokkos(Mat A, Mat P, PetscBool reuse, Mat *P_oth_aij, PetscInt **startsj_s, PetscInt **startsj_r, MatScalar **bufa, Mat *P_oth_blk, PetscInt *ec_A_out)
+{
+  Mat                      A_aij, P_aij;
+  PetscInt                 fb = A->rmap->bs, cb = P->cmap->bs, pNbs = ((Mat_MPIBAIJ *)P->data)->Nbs;
+  PetscInt                 aBn = 0, ec_A = 0, bs2 = fb * cb, I, l, c, nc;
+  const PetscInt          *cols;
+  const PetscScalar       *vals;
+  std::vector<PetscInt>    ai, aj, bcs;
+  std::vector<PetscScalar> aa;
+
+  PetscFunctionBegin;
+  if (ec_A_out) *ec_A_out = 0;
+  PetscCall(MatMPIBAIJKokkosGetCachedAIJ(A, &A_aij));
+  PetscCall(MatMPIBAIJKokkosGetCachedAIJ(P, &P_aij));
+  if (reuse) PetscCall(MatGetBrowsOfAoCols_MPIAIJ(A_aij, P_aij, MAT_REUSE_MATRIX, startsj_s, startsj_r, bufa, P_oth_aij));
+  else PetscCall(MatGetBrowsOfAoCols_MPIAIJ(A_aij, P_aij, MAT_INITIAL_MATRIX, startsj_s, startsj_r, bufa, P_oth_aij));
+  if (!*P_oth_aij) PetscFunctionReturn(PETSC_SUCCESS); /* single rank: no off-process rows */
+
+  PetscCall(MatGetSize(*P_oth_aij, &aBn, NULL));
+  PetscCheck(aBn % fb == 0, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "P_oth scalar rows %" PetscInt_FMT " not a multiple of fine block size %" PetscInt_FMT, aBn, fb);
+  ec_A = aBn / fb;
+  PetscCallCXX(ai.resize(ec_A + 1));
+  ai[0] = 0;
+  for (I = 0; I < ec_A; I++) {
+    /* collect the sorted, unique block-columns of block-row I across its fb scalar rows */
+    PetscCallCXX(bcs.clear());
+    for (l = 0; l < fb; l++) {
+      PetscCall(MatGetRow(*P_oth_aij, I * fb + l, &nc, &cols, NULL));
+      for (c = 0; c < nc; c++) PetscCallCXX(bcs.push_back(cols[c] / cb));
+      PetscCall(MatRestoreRow(*P_oth_aij, I * fb + l, &nc, &cols, NULL));
+    }
+    PetscCallCXX(std::sort(bcs.begin(), bcs.end()));
+    PetscCallCXX(bcs.erase(std::unique(bcs.begin(), bcs.end()), bcs.end()));
+    PetscInt nb = (PetscInt)bcs.size(), base = (PetscInt)aj.size();
+    ai[I + 1] = ai[I] + nb;
+    for (PetscInt s = 0; s < nb; s++) PetscCallCXX(aj.push_back(bcs[s]));
+    PetscCallCXX(aa.resize(aa.size() + (size_t)nb * bs2, 0.0));
+    /* scatter values into the dense fb x cb blocks (row-major within block) */
+    for (l = 0; l < fb; l++) {
+      PetscCall(MatGetRow(*P_oth_aij, I * fb + l, &nc, &cols, &vals));
+      for (c = 0; c < nc; c++) {
+        PetscInt bc = cols[c] / cb, within = cols[c] % cb, s;
+        PetscCall(PetscFindInt(bc, nb, aj.data() + base, &s));
+        aa[(size_t)(base + s) * bs2 + (size_t)l * cb + within] = vals[c];
+      }
+      PetscCall(MatRestoreRow(*P_oth_aij, I * fb + l, &nc, &cols, &vals));
+    }
+  }
+  PetscCall(MatBuildSeqBAIJKokkosFromHostCSR(reuse, fb, cb, ec_A, pNbs, (PetscInt)aj.size(), ai.data(), aj.data(), aa.data(), P_oth_blk));
+  if (ec_A_out) *ec_A_out = ec_A;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatBuildPstack_MPIBAIJKokkos - stack P_localrows (mbs rows) atop P_oth (ec_A rows) into one
+  MATSEQBAIJKOKKOS with the same global coarse block-columns. The combined row space [0, mbs+ec_A)
+  matches A_local's stacked block-column space. P_oth may be NULL (single rank): then P_stack is just
+  a copy of P_localrows.
+*/
+static PetscErrorCode MatBuildPstack_MPIBAIJKokkos(Mat P_localrows, Mat P_oth, PetscBool reuse, Mat *P_stack)
+{
+  PetscInt     fb, cb, lmbs, lnblk, pNbs, ombs = 0, onblk = 0, rb2, cb2;
+  PetscInt    *li, *lj, *oi = NULL, *oj = NULL, *si, *sj;
+  PetscScalar *la, *oa = NULL, *sa;
+  PetscInt     i, k, bs2, nnz;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(P_localrows, &fb, &cb, &lmbs, &lnblk, &li, &lj, &la));
+  pNbs = ((Mat_SeqBAIJKokkos *)P_localrows->spptr)->nbs;
+  if (P_oth) PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(P_oth, &rb2, &cb2, &ombs, &onblk, &oi, &oj, &oa));
+  bs2 = fb * cb;
+  nnz = lnblk + onblk;
+  PetscCall(PetscMalloc3(lmbs + ombs + 1, &si, nnz, &sj, (size_t)nnz * bs2, &sa));
+  for (i = 0; i <= lmbs; i++) si[i] = li[i];
+  for (i = 1; i <= ombs; i++) si[lmbs + i] = lnblk + oi[i];
+  for (k = 0; k < lnblk; k++) sj[k] = lj[k];
+  for (k = 0; k < onblk; k++) sj[lnblk + k] = oj[k];
+  for (k = 0; k < lnblk * bs2; k++) sa[k] = la[k];
+  for (k = 0; k < onblk * bs2; k++) sa[lnblk * bs2 + k] = oa[k];
+  PetscCall(MatBuildSeqBAIJKokkosFromHostCSR(reuse, fb, cb, lmbs + ombs, pNbs, nnz, si, sj, sa, P_stack));
+  PetscCall(PetscFree3(si, sj, sa));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductScatterBuildPlan_MPIBAIJKokkos - Stage 3: build the native PetscSF plan that scatters this
+  rank's off-process triple-product block-rows (C_oth) to their owners. Replaces the transient MPIAIJ
+  Cresult round-trip (the Stage 1/2 "thin C_oth merge"). Only meaningful for PtAP with size > 1; AB rows
+  are all locally owned and single-rank PtAP has no off-process rows (the caller skips this).
+
+  C_seq has GLOBAL coarse block-rows; rows outside this rank's owned coarse range [Crstartbs, Crendbs) are
+  off-process. We build a block-granular SF whose leaves are this rank's off-process C_seq blocks and whose
+  roots are unique incoming slots on the owners. Slots are assigned with PetscSFFetchAndOp(MPI_SUM) over a
+  row-SF (each off-process row fetches its base offset among the blocks arriving for that owned row), then
+  the owner's per-row block starts are broadcast back so every leaf knows its absolute root slot. The
+  global block-column of each block is moved once here (MPI_REPLACE); the owned global block-row of each
+  received slot is reconstructed locally from the owner prefix. Cached on ctx: cscatter, blkunit, nIn,
+  nLeafBlk, csb, inrow, incol (structure); inval/leafval are (re)allocated and filled by the value pass.
+*/
+static PetscErrorCode MatProductScatterBuildPlan_MPIBAIJKokkos(Mat C, MatProductCtx_MPIBAIJKokkos *ctx, Mat P, PetscInt crb, PetscInt ccb, PetscInt cmbs, const PetscInt *ci, const PetscInt *cj)
+{
+  MPI_Comm           comm;
+  PetscLayout        rowlayout;
+  PetscSF            rowsf;
+  const PetscSFNode *iremote;
+  PetscSFNode       *blkremote;
+  PetscInt           cb = P->cmap->bs, Crstartbs = P->cmap->rstart / cb, Crendbs = P->cmap->rend / cb;
+  PetscInt           pNbs = P->cmap->N / cb, nCown = Crendbs - Crstartbs;
+  PetscInt          *oth_grows, *leafnblk, *leafoff, *leaf_rowstart, *rootcnt, *rowstart, *leafcol;
+  PetscInt           nob = 0, nLeafBlk = 0, nIn, i, r, s, w, p, k;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
+  ctx->csb = crb * ccb;
+
+  /* Partition off-process block-rows (nonempty C_seq rows outside the owned coarse range), in increasing
+     global row order; nLeafBlk = total off-process blocks. This order defines the leaf block ordering used
+     by both the structure pass here and the value pass on every numeric (C_seq structure is stable). */
+  for (i = 0; i < cmbs; i++) {
+    if (ci[i + 1] == ci[i]) continue;
+    if (i >= Crstartbs && i < Crendbs) continue;
+    nob++;
+    nLeafBlk += ci[i + 1] - ci[i];
+  }
+  PetscCall(PetscMalloc1(nob, &oth_grows));
+  PetscCall(PetscMalloc3(nob, &leafnblk, nob, &leafoff, nob, &leaf_rowstart));
+  for (i = 0, k = 0; i < cmbs; i++) {
+    if (ci[i + 1] == ci[i] || (i >= Crstartbs && i < Crendbs)) continue;
+    oth_grows[k] = i;
+    leafnblk[k]  = ci[i + 1] - ci[i];
+    k++;
+  }
+
+  /* Row-SF: my off-process rows (leaves, by global coarse block-row) -> their owners (roots). */
+  PetscCall(PetscLayoutCreate(comm, &rowlayout));
+  PetscCall(PetscLayoutSetLocalSize(rowlayout, nCown));
+  PetscCall(PetscLayoutSetSize(rowlayout, pNbs));
+  PetscCall(PetscLayoutSetBlockSize(rowlayout, 1));
+  PetscCall(PetscLayoutSetUp(rowlayout));
+  PetscCall(PetscSFCreate(comm, &rowsf));
+  PetscCall(PetscSFSetGraphLayout(rowsf, rowlayout, nob, NULL, PETSC_OWN_POINTER, oth_grows));
+  PetscCall(PetscLayoutDestroy(&rowlayout));
+
+  /* Assign each leaf its base offset among the blocks arriving for its owned row (FetchAndOp MPI_SUM),
+     then prefix-sum the per-owned-row counts and broadcast the per-row starts back to the leaves. */
+  PetscCall(PetscCalloc1(nCown, &rootcnt));
+  PetscCall(PetscSFFetchAndOpBegin(rowsf, MPIU_INT, rootcnt, leafnblk, leafoff, MPI_SUM));
+  PetscCall(PetscSFFetchAndOpEnd(rowsf, MPIU_INT, rootcnt, leafnblk, leafoff, MPI_SUM));
+  PetscCall(PetscMalloc1(nCown + 1, &rowstart));
+  rowstart[0] = 0;
+  for (r = 0; r < nCown; r++) rowstart[r + 1] = rowstart[r] + rootcnt[r];
+  nIn = rowstart[nCown];
+  PetscCall(PetscSFBcastBegin(rowsf, MPIU_INT, rowstart, leaf_rowstart, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(rowsf, MPIU_INT, rowstart, leaf_rowstart, MPI_REPLACE));
+
+  /* Block-SF: each off-process block (leaf) -> its unique incoming slot on the owner. */
+  PetscCall(PetscSFGetGraph(rowsf, NULL, NULL, NULL, &iremote));
+  PetscCall(PetscMalloc1(nLeafBlk, &blkremote));
+  for (i = 0, k = 0; i < nob; i++)
+    for (w = 0; w < leafnblk[i]; w++) {
+      blkremote[k].rank  = iremote[i].rank;
+      blkremote[k].index = leaf_rowstart[i] + leafoff[i] + w;
+      k++;
+    }
+  PetscCall(PetscSFCreate(comm, &ctx->cscatter));
+  PetscCall(PetscSFSetGraph(ctx->cscatter, nIn, nLeafBlk, NULL, PETSC_OWN_POINTER, blkremote, PETSC_OWN_POINTER));
+
+  /* Received structure: owner global block-row per slot from the prefix; global block-col via MPI_REPLACE. */
+  PetscCall(PetscMalloc2(nIn, &ctx->inrow, nIn, &ctx->incol));
+  for (r = 0; r < nCown; r++)
+    for (s = rowstart[r]; s < rowstart[r + 1]; s++) ctx->inrow[s] = Crstartbs + r;
+  PetscCall(PetscMalloc1(nLeafBlk, &leafcol));
+  for (i = 0, k = 0; i < nob; i++)
+    for (p = ci[oth_grows[i]]; p < ci[oth_grows[i] + 1]; p++) leafcol[k++] = cj[p];
+  PetscCall(PetscSFReduceBegin(ctx->cscatter, MPIU_INT, leafcol, ctx->incol, MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(ctx->cscatter, MPIU_INT, leafcol, ctx->incol, MPI_REPLACE));
+  PetscCall(PetscFree(leafcol));
+
+  ctx->nIn      = nIn;
+  ctx->nLeafBlk = nLeafBlk;
+  PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)ctx->csb, MPIU_SCALAR, &ctx->blkunit));
+  PetscCallMPI(MPI_Type_commit(&ctx->blkunit));
+  PetscCall(PetscMalloc1((size_t)nLeafBlk * ctx->csb, &ctx->leafval));
+  PetscCall(PetscMalloc1((size_t)nIn * ctx->csb, &ctx->inval));
+
+  PetscCall(PetscFree(oth_grows));
+  PetscCall(PetscFree3(leafnblk, leafoff, leaf_rowstart));
+  PetscCall(PetscFree(rootcnt));
+  PetscCall(PetscFree(rowstart));
+  PetscCall(PetscSFDestroy(&rowsf));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductAssembleCNative_MPIBAIJKokkos - Stage 3: assemble the parallel block C from the per-process
+  triple product C_seq using the native PetscSF block scatter, with no transient MPIAIJ Cresult and no
+  MatGetRow readback repackage. Owned C_seq block-rows are inserted into C locally; off-process rows are
+  pushed to their owners over ctx->cscatter and inserted there. The owner's MatSetValuesBlocked(ADD_VALUES)
+  merges columns and sums multiple contributors, so the SF moves blocks only (no column union on the SF
+  side). The final block assembly (compressed B + garray + Mvctx) reuses the proven block-assembly tail.
+
+  reuse == PETSC_FALSE builds and caches the SF plan; reuse == PETSC_TRUE re-packs only the leaf values and
+  replays the value reduce. C is re-preallocated + refilled each call (matching the Stage 1/2 contract: the
+  amortized win is the cached seq products + comm plan; the C build is the cheap O(local nnz) tail).
+*/
+static PetscErrorCode MatProductAssembleCNative_MPIBAIJKokkos(Mat C, MatProductCtx_MPIBAIJKokkos *ctx, Mat A, Mat P, PetscBool isPtAP, PetscInt rowbase, PetscBool reuse)
+{
+  MPI_Comm     comm;
+  PetscMPIInt  size;
+  PetscInt     crb, ccb, cmbs, cnblk, csb, cb = P->cmap->bs;
+  PetscInt     Ccstartbs = P->cmap->rstart / cb, Ccendbs = P->cmap->rend / cb;
+  PetscInt     glowstart, nrows_own, Crstartbs = P->cmap->rstart / cb, Crendbs = P->cmap->rend / cb;
+  PetscInt    *ci, *cj, *d_nnz, *o_nnz, i, r, s, p, gbrow, gbcol;
+  PetscScalar *ca, *blk;
+  PetscBool    scatter;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(MatSeqBAIJKokkosGetHostCSR_Private(ctx->Cseq, &crb, &ccb, &cmbs, &cnblk, &ci, &cj, &ca));
+  csb     = crb * ccb;
+  scatter = (PetscBool)(isPtAP && size > 1);
+
+  if (scatter && !reuse) PetscCall(MatProductScatterBuildPlan_MPIBAIJKokkos(C, ctx, P, crb, ccb, cmbs, ci, cj));
+
+  /* Pack this rank's off-process blocks (same order the plan was built in) and reduce values to owners. */
+  if (scatter) {
+    PetscInt k = 0;
+    for (i = 0; i < cmbs; i++) {
+      if (ci[i + 1] == ci[i] || (i >= Crstartbs && i < Crendbs)) continue;
+      for (p = ci[i]; p < ci[i + 1]; p++) PetscCall(PetscArraycpy(ctx->leafval + (size_t)k++ * csb, ca + (size_t)p * csb, csb));
+    }
+    PetscCall(PetscSFReduceBegin(ctx->cscatter, ctx->blkunit, ctx->leafval, ctx->inval, MPI_REPLACE));
+    PetscCall(PetscSFReduceEnd(ctx->cscatter, ctx->blkunit, ctx->leafval, ctx->inval, MPI_REPLACE));
+  }
+
+  /* Owned block-rows: PtAP -> the owned slice of the global coarse rows; AB -> all local fine rows. */
+  if (isPtAP) {
+    glowstart = Crstartbs;
+    nrows_own = Crendbs - Crstartbs;
+  } else {
+    glowstart = rowbase;
+    nrows_own = cmbs;
+  }
+
+  /* Exact block preallocation: per owned block-row, union the global block-cols of its local C_seq row and
+     any received slots, split into diagonal/off-diagonal by C's coarse column ownership. */
+  PetscCall(PetscCalloc2(nrows_own, &d_nnz, nrows_own, &o_nnz));
+  {
+    std::vector<std::set<PetscInt>> dset(nrows_own), oset(nrows_own);
+    for (r = 0; r < nrows_own; r++) {
+      PetscInt lrow = isPtAP ? glowstart + r : r; /* C_seq row index holding this owned row */
+      for (p = ci[lrow]; p < ci[lrow + 1]; p++) {
+        if (cj[p] >= Ccstartbs && cj[p] < Ccendbs) dset[r].insert(cj[p]);
+        else oset[r].insert(cj[p]);
+      }
+    }
+    if (scatter)
+      for (s = 0; s < ctx->nIn; s++) {
+        r = ctx->inrow[s] - glowstart;
+        if (ctx->incol[s] >= Ccstartbs && ctx->incol[s] < Ccendbs) dset[r].insert(ctx->incol[s]);
+        else oset[r].insert(ctx->incol[s]);
+      }
+    for (r = 0; r < nrows_own; r++) {
+      d_nnz[r] = (PetscInt)dset[r].size();
+      o_nnz[r] = (PetscInt)oset[r].size();
+    }
+  }
+  if (isPtAP) PetscCall(MatSetSizes(C, P->cmap->n, P->cmap->n, P->cmap->N, P->cmap->N));
+  else PetscCall(MatSetSizes(C, A->rmap->n, P->cmap->n, A->rmap->N, P->cmap->N));
+  PetscCall(MatSetBlockSizes(C, crb, ccb));
+  PetscCall(MatMPIBAIJSetPreallocation(C, crb, 0, d_nnz, 0, o_nnz));
+  PetscCall(PetscFree2(d_nnz, o_nnz));
+
+  /* Fill: local owned C_seq blocks then received blocks, all ADD_VALUES (block assembly sums + merges). */
+  PetscCall(PetscMalloc1(csb, &blk));
+  for (r = 0; r < nrows_own; r++) {
+    PetscInt lrow = isPtAP ? glowstart + r : r;
+    gbrow         = glowstart + r;
+    for (p = ci[lrow]; p < ci[lrow + 1]; p++) {
+      gbcol = cj[p];
+      PetscCall(PetscArraycpy(blk, ca + (size_t)p * csb, csb));
+      PetscCall(MatSetValuesBlocked(C, 1, &gbrow, 1, &gbcol, blk, ADD_VALUES));
+    }
+  }
+  if (scatter)
+    for (s = 0; s < ctx->nIn; s++) {
+      gbrow = ctx->inrow[s];
+      gbcol = ctx->incol[s];
+      PetscCall(MatSetValuesBlocked(C, 1, &gbrow, 1, &gbcol, ctx->inval + (size_t)s * csb, ADD_VALUES));
+    }
+  PetscCall(PetscFree(blk));
+
+  PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+  PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductComputeNative_MPIBAIJKokkos - native parallel block PtAP/AB compute (F2.2 Option B).
+
+  Computes the per-process triple product C_seq with native seq block kernels (no AIJ spgemm, no operand
+  convert) in GLOBAL coarse block-column space, scatters it into a parallel MPIAIJ Cresult
+  (MatSetValuesBlocked ADD_VALUES; off-process coarse rows route+sum through standard assembly), and
+  repackages Cresult into the block C via the proven MatBuildMPIBAIJKokkosFromMPIAIJ_Private().
+
+    PtAP: AP = A_local * P_stack (A*P over local fine rows), R = P_localrows^T, C_seq = R * AP
+          (global coarse rows; off-process rows scatter to owners).
+    AB:   C_seq = AP = A_local * P_stack (local fine rows; no transpose, no scatter).
+
+  valuesonly == PETSC_FALSE is the BUILD path (symbolic): every structure is created from scratch and
+  cached in a MatProductCtx_MPIBAIJKokkos on C->product->data, and C is built with full block structure.
+  valuesonly == PETSC_TRUE is the REUSE path (MAT_REUSE numeric): the cached structures are kept and only
+  their block values are refreshed (Stage 2) - host CSR a-arrays recomputed and pushed to device, the
+  seq AB numerics rerun over the cached symbolic graphs, the P_oth gather replays only its a-array, and
+  C's values are refreshed without re-preallocation. The dispatch (operand types) is stable across
+  symbolic->numeric, so a reuse call always finds its build-time ctx.
+*/
+static PetscErrorCode MatProductComputeNative_MPIBAIJKokkos(Mat C, PetscBool valuesonly)
+{
+  Mat_Product                 *product = C->product;
+  Mat                          A = product->A, P = product->B;
+  Mat_MPIBAIJ                 *abaij = (Mat_MPIBAIJ *)A->data;
+  MatProductCtx_MPIBAIJKokkos *ctx;
+  MatProductCtx_SeqBAIJKokkos  pdataAP, pdataC;
+  PetscBool                    reuse  = valuesonly;
+  PetscBool                    isPtAP = (PetscBool)(product->type == MATPRODUCT_PtAP);
+  PetscInt                     ec_A = 0, ec_oth = 0, rowbase;
+  MPI_Comm                     comm;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
+  if (reuse) {
+    ctx = (MatProductCtx_MPIBAIJKokkos *)product->data;
+    PetscCheck(ctx, comm, PETSC_ERR_PLIB, "Values-only native product numeric without a cached context");
+  } else { /* fresh build: discard any stale ctx, cache a new one on product->data */
+    if (product->data) PetscCall((*product->destroy)(&product->data));
+    PetscCallCXX(ctx = new MatProductCtx_MPIBAIJKokkos());
+    product->data    = ctx;
+    product->destroy = MatProductCtxDestroy_MPIBAIJKokkos;
+  }
+
+  /* Native local building blocks (all SEQBAIJKOKKOS, GLOBAL coarse columns); reuse refreshes values only */
+  PetscCall(MatBuildAlocal_MPIBAIJKokkos(A, reuse, &ctx->A_local, &ec_A));
+  PetscCall(MatBuildPlocalGlobal_MPIBAIJKokkos(P, reuse, &ctx->P_localrows));
+  PetscCall(MatBuildPoth_MPIBAIJKokkos(A, P, reuse, &ctx->P_oth_aij, &ctx->startsj_s, &ctx->startsj_r, &ctx->bufa, &ctx->P_oth, &ec_oth));
+  PetscCheck(ec_A == ec_oth, comm, PETSC_ERR_PLIB, "A off-diagonal block-columns %" PetscInt_FMT " != gathered P_oth block-rows %" PetscInt_FMT, ec_A, ec_oth);
+  PetscCall(MatBuildPstack_MPIBAIJKokkos(ctx->P_localrows, ctx->P_oth, reuse, &ctx->P_stack));
+  ctx->ec_A = ec_A;
+
+  if (isPtAP) {
+    /* AP = A_local * P_stack; R = P_localrows^T; C_seq = R * AP (global coarse rows) */
+    if (!reuse) {
+      PetscCall(MatCreate(PETSC_COMM_SELF, &ctx->AP));
+      PetscCall(MatProductSymbolicAB_SeqBAIJKokkos_Helper(ctx->AP, ctx->A_local, ctx->P_stack, &pdataAP));
+      PetscCall(MatTransposeWithPerm_SeqBAIJKokkos_Private(ctx->P_localrows, &ctx->R, &ctx->perm));
+    }
+    PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(ctx->AP, ctx->A_local, ctx->P_stack));
+    PetscCall(MatRefreshTransposeValues_SeqBAIJKokkos(ctx->P_localrows, ctx->R, ctx->perm));
+    if (!reuse) {
+      PetscCall(MatCreate(PETSC_COMM_SELF, &ctx->Cseq));
+      PetscCall(MatProductSymbolicAB_SeqBAIJKokkos_Helper(ctx->Cseq, ctx->R, ctx->AP, &pdataC));
+    }
+    PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(ctx->Cseq, ctx->R, ctx->AP));
+    rowbase = 0; /* C_seq block-rows are already GLOBAL coarse block-rows [0, pNbs) */
+  } else {       /* MATPRODUCT_AB: C_seq = A_local * P_stack; rows are this rank's local fine block-rows */
+    if (!reuse) {
+      PetscCall(MatCreate(PETSC_COMM_SELF, &ctx->Cseq));
+      PetscCall(MatProductSymbolicAB_SeqBAIJKokkos_Helper(ctx->Cseq, ctx->A_local, ctx->P_stack, &pdataAP));
+    }
+    PetscCall(MatProductNumericAB_SeqBAIJKokkos_Helper(ctx->Cseq, ctx->A_local, ctx->P_stack));
+    rowbase = abaij->rstartbs; /* local fine block-row i -> global fine block-row rstartbs + i */
+  }
+
+  /* Stage 3: assemble block C directly from C_seq via the native PetscSF block scatter (no transient
+     MPIAIJ Cresult, no MatGetRow readback). Owned C_seq rows insert locally; off-process rows scatter to
+     their owners over ctx->cscatter. The plan is built once (!reuse) and cached; reuse re-packs only the
+     leaf values and replays the value reduce. C is re-preallocated + refilled each call (the cheap tail;
+     a values-only refresh is impossible while C's SEQBAIJKOKKOS sub-blocks keep their CSR device-only with
+     base a->i NULL). */
+  PetscCall(MatProductAssembleCNative_MPIBAIJKokkos(C, ctx, A, P, isPtAP, rowbase, reuse));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatProductComputeBlock_MPIBAIJKokkos(Mat C, PetscBool valuesonly)
 {
   Mat_Product *product = C->product;
   Mat          A = product->A, B = product->B, Aaij, Baij, Cresult;
   PetscInt     row_bs, col_bs;
+  PetscBool    ownA, ownB;
 
   PetscFunctionBegin;
-  /* Operands -> transient AIJ. Do NOT convert product->A/B in place: the interface tail of
-     MatProductSymbolic() reads the original A/B (block sizes), so they must stay alive. */
-  PetscCall(MatConvert(A, MATMPIAIJ, MAT_INITIAL_MATRIX, &Aaij));
-  PetscCall(MatConvert(B, MATMPIAIJ, MAT_INITIAL_MATRIX, &Baij));
+  /* Operands -> AIJ via the shared cache (no per-call re-convert). Do NOT convert product->A/B in place:
+     the interface tail of MatProductSymbolic() reads the original A/B (block sizes), so they must stay
+     alive. The cached AIJ is borrowed (ownA/ownB == PETSC_FALSE) and must not be destroyed below. */
+  PetscCall(MatProductOperandAsAIJ_MPIBAIJKokkos(A, &Aaij, &ownA));
+  PetscCall(MatProductOperandAsAIJ_MPIBAIJKokkos(B, &Baij, &ownB));
   switch (product->type) {
   case MATPRODUCT_AB:
     /* C = A*B; block sizes (A rows) x (B cols). Used for GAMG prolongator smoothing (A*P0). */
@@ -690,23 +1403,72 @@ static PetscErrorCode MatProductComputeBlock_MPIBAIJKokkos(Mat C, PetscBool valu
   PetscCall(MatSetBlockSizes(Cresult, row_bs, col_bs));
   /* Build C in place as block: structure + values when !valuesonly (symbolic), values only otherwise. */
   PetscCall(MatBuildMPIBAIJKokkosFromMPIAIJ_Private(Cresult, C, valuesonly));
-  PetscCall(MatDestroy(&Aaij));
-  PetscCall(MatDestroy(&Baij));
+  if (ownA) PetscCall(MatDestroy(&Aaij)); /* cached AIJ is borrowed; only free a private transient */
+  if (ownB) PetscCall(MatDestroy(&Baij));
   PetscCall(MatDestroy(&Cresult));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductBlockIsNative_MPIBAIJKokkos - true when a block PtAP/AB product takes the native seq block
+  compute (F2.2 Option B): both operands MATMPIBAIJKOKKOS and the product type PtAP or AB. Otherwise the
+  Option-A AIJ path handles it (mixed/non-Kokkos operands). The decision depends only on operand types and
+  product type, so it is stable from symbolic through every numeric.
+*/
+static PetscErrorCode MatProductBlockIsNative_MPIBAIJKokkos(Mat C, PetscBool *native)
+{
+  Mat_Product *product = C->product;
+  PetscBool    isA, isB;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)product->A, MATMPIBAIJKOKKOS, &isA));
+  PetscCall(PetscObjectTypeCompare((PetscObject)product->B, MATMPIBAIJKOKKOS, &isB));
+  *native = (PetscBool)(isA && isB && (product->type == MATPRODUCT_PtAP || product->type == MATPRODUCT_AB));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatProductComputeBlockDispatch_MPIBAIJKokkos - build dispatch (full structure + values, valuesonly ==
+  PETSC_FALSE): native seq block compute when applicable, else the Option-A AIJ path. Used by the symbolic
+  stage; the numeric stage routes through MatProductNumericBlock_MPIBAIJKokkos so the native path can take
+  the values-only MAT_REUSE branch.
+*/
+static PetscErrorCode MatProductComputeBlockDispatch_MPIBAIJKokkos(Mat C, PetscBool valuesonly)
+{
+  PetscBool native;
+
+  PetscFunctionBegin;
+  PetscCall(MatProductBlockIsNative_MPIBAIJKokkos(C, &native));
+  if (native) PetscCall(MatProductComputeNative_MPIBAIJKokkos(C, valuesonly));
+  else PetscCall(MatProductComputeBlock_MPIBAIJKokkos(C, valuesonly));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatProductNumericBlock_MPIBAIJKokkos(Mat C)
 {
+  PetscBool native;
+
   PetscFunctionBegin;
-  /* Full rebuild (re-size + re-preallocate + refill): the AIJ operands/result are transient and the block
-     C is recomputed from scratch, so structure and values are refreshed together. A values-only refill is
-     not possible because the seq Kokkos blocks keep their CSR in device DualViews (base a->i is NULL after
-     assembly), so MatZeroEntries() on the assembled block has no host structure to clear. The re-preallocation
-     of the existing rectangular C is made safe by MatMPIBAIJSetPreallocation_MPIBAIJKokkos(), which clears the
-     locked column block size before delegating to the square-only base preallocator. F2.2 will make this a
-     block-native values recompute that avoids the transient AIJ product entirely. */
-  PetscCall(MatProductComputeBlock_MPIBAIJKokkos(C, PETSC_FALSE));
+  PetscCall(MatProductBlockIsNative_MPIBAIJKokkos(C, &native));
+  /* Native path: values-only MAT_REUSE recompute over the cached structures (Stage 2) - refresh the device
+     CSR values, keep i_dual/j_dual. AIJ fallback: full rebuild (a values-only refill is impossible because
+     the seq Kokkos blocks keep their CSR only in device DualViews; base a->i is NULL after assembly). */
+  if (native) PetscCall(MatProductComputeNative_MPIBAIJKokkos(C, PETSC_TRUE));
+  else PetscCall(MatProductComputeBlock_MPIBAIJKokkos(C, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  The block symbolic already does the full build (structure AND values), so the MAT_INITIAL_MATRIX
+  MatProductNumeric() call that immediately follows it (e.g. GAMG/ex56) is redundant - it would re-run the
+  whole PtAP/AB a second time (the F2.2 baseline showed MatPtAP firing 8x = 4 levels x 2). Skip that first
+  numeric and self-rewire to the real numeric so any later MAT_REUSE recompute (changed operand values)
+  still works.
+*/
+static PetscErrorCode MatProductNumericBlockSkipOnce_MPIBAIJKokkos(Mat C)
+{
+  PetscFunctionBegin;
+  C->ops->productnumeric = MatProductNumericBlock_MPIBAIJKokkos;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -720,8 +1482,8 @@ static PetscErrorCode MatProductSymbolicBlock_MPIBAIJKokkos(Mat C)
   PetscCall(PetscObjectTypeCompare((PetscObject)C, MATMPIBAIJKOKKOS, &isbaijkok));
   if (!isbaijkok) PetscCall(MatSetType(C, MATMPIBAIJKOKKOS));
 
-  PetscCall(MatProductComputeBlock_MPIBAIJKokkos(C, PETSC_FALSE));
-  C->ops->productnumeric = MatProductNumericBlock_MPIBAIJKokkos;
+  PetscCall(MatProductComputeBlockDispatch_MPIBAIJKokkos(C, PETSC_FALSE));
+  C->ops->productnumeric = MatProductNumericBlockSkipOnce_MPIBAIJKokkos;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -827,6 +1589,12 @@ static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
   PetscCheckTypeName(Y, MATMPIBAIJKOKKOS);
   PetscCheckTypeName(X, MATMPIBAIJKOKKOS);
 
+  /* Y's values are about to change. The SAME-pattern fast path below mutates the sub-blocks without
+     raising Y's PetscObjectState, so the state-keyed cache in MatMPIBAIJKokkosGetCachedAIJ() would not
+     see it; drop the cache explicitly here. (MatHeaderReplace in the SUBSET/DIFFERENT branch installs a
+     fresh Y with no cache.) */
+  PetscCall(PetscObjectCompose((PetscObject)Y, "MatMPIBAIJKokkos_cached_aij", NULL));
+
   if (str == SAME_NONZERO_PATTERN) {
     // Identical nonzero pattern => identical off-diagonal garray, so the compressed B blocks share a
     // column space and the per-block device AXPY is valid. Operate directly on the SEQBAIJKOKKOS blocks.
@@ -854,7 +1622,7 @@ static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
 /*
   MatCreateGraph_MPIBAIJKokkos - Build scalar aggregation graph from MPIBAIJKokkos matrix for GAMG.
 
-  Not Collective
+  Collective - builds/uses the shared cached MPIAIJ (a collective MatConvert), as GAMG calls this on all ranks.
 
   Input Parameters:
 + A     - the rectangular-block matrix
@@ -877,8 +1645,7 @@ static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
 */
 static PetscErrorCode MatCreateGraph_MPIBAIJKokkos(Mat A, PetscBool sym, PetscBool scale, PetscReal filter, PetscInt num_idx, PetscInt index[], Mat *graph)
 {
-  Mat      Aaij;
-  PetscInt rbs, cbs;
+  Mat Aaij;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -886,17 +1653,13 @@ static PetscErrorCode MatCreateGraph_MPIBAIJKokkos(Mat A, PetscBool sym, PetscBo
   PetscValidLogicalCollectiveBool(A, scale, 3);
   PetscAssertPointer(graph, 7);
 
-  // Convert to scalar MPIAIJ to leverage the existing block-collapse logic
-  PetscCall(MatConvert(A, MATMPIAIJ, MAT_INITIAL_MATRIX, &Aaij));
-
-  // Ensure block sizes are set on the AIJ matrix so the collapse groups dofs into nodes correctly
-  PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
-  PetscCall(MatSetBlockSizes(Aaij, rbs, cbs));
-
-  // Build graph from the AIJ (its MatCreateGraph_Simple_AIJ will collapse blocks)
+  /* Reuse the shared cached MPIAIJ rather than converting A again: GAMG calls MatCreateGraph() and the
+     PtAP/AB products on the same operator at each level, so a fresh convert here would double the
+     (expensive) operator conversion. The cache is collective-safe (MatCreateGraph is collective) and
+     already carries A's block sizes from the convert, so MatCreateGraph_Simple_AIJ collapses blocks
+     correctly. Aaij is BORROWED (do not destroy); MatCreateGraph reads it and writes only *graph. */
+  PetscCall(MatMPIBAIJKokkosGetCachedAIJ(A, &Aaij));
   PetscCall(MatCreateGraph(Aaij, sym, scale, filter, num_idx, index, graph));
-
-  PetscCall(MatDestroy(&Aaij));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -910,17 +1673,36 @@ static PetscErrorCode MatCreateGraph_MPIBAIJKokkos(Mat A, PetscBool sym, PetscBo
   cached MPIAIJ conversion (value-exact, validated in F1.4). Lazy build is safe here because both
   callers are collective. MatGetRow() is Not Collective and must not build this cache (an empty-rank
   deadlock) — it has its own local MatGetRow_MPIBAIJKokkos(). The cache is composed on A (destroyed
-  with it) and invalidated on (re)assembly.
+  with it).
+
+  F2.2 also reuses this cache for the parallel block product operands (MatProductComputeBlock), which
+  collapses the per-call MatConvert that dominated block GAMG setup. That makes correct invalidation
+  essential: a stale cache fed to a product would silently produce wrong coarse operators. So freshness
+  is keyed on A's PetscObjectState via a composed-data tag - any value mutation that increases the state
+  (MatScale/MatDiagonalScale/MatShift/MatDiagonalSet/MatZeroEntries, and (re)assembly) forces a rebuild.
+  MatAXPY's fast same-pattern path mutates the sub-blocks without raising A's state, so it drops the cache
+  explicitly (see MatAXPY_MPIBAIJKokkos).
 */
 static PetscErrorCode MatMPIBAIJKokkosGetCachedAIJ(Mat A, Mat *aij)
 {
+  static PetscInt state_id = -1; /* composed-data tag (registered once); -1 = not yet registered */
+  PetscBool       fresh    = PETSC_FALSE;
+  PetscInt        stamp    = 0;
+
   PetscFunctionBegin;
+  if (state_id < 0) PetscCall(PetscObjectComposedDataRegister(&state_id));
   PetscCall(PetscObjectQuery((PetscObject)A, "MatMPIBAIJKokkos_cached_aij", (PetscObject *)aij));
+  if (*aij) {
+    /* GetInt sets fresh == TRUE only if the stamp was set at A's current state (values unchanged) */
+    PetscCall(PetscObjectComposedDataGetInt((PetscObject)A, state_id, stamp, fresh));
+    if (!fresh || stamp != 1) *aij = NULL; /* values changed (or no valid stamp) since build -> rebuild below */
+  }
   if (!*aij) {
     PetscCall(MatConvert(A, MATMPIAIJ, MAT_INITIAL_MATRIX, aij));
     PetscCall(PetscObjectCompose((PetscObject)A, "MatMPIBAIJKokkos_cached_aij", (PetscObject)*aij));
     PetscCall(MatDestroy(aij)); /* compose holds the reference */
     PetscCall(PetscObjectQuery((PetscObject)A, "MatMPIBAIJKokkos_cached_aij", (PetscObject *)aij));
+    PetscCall(PetscObjectComposedDataSetInt((PetscObject)A, state_id, 1)); /* stamp A's current state */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
