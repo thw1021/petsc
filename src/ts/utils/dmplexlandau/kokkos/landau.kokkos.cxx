@@ -5,77 +5,27 @@
 #if defined(PETSC_HAVE_CUDA_CLANG)
   #include <petsclandau.h>
   #define LANDAU_NOT_IMPLEMENTED SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Not supported with CLANG")
-/*@C
-  LandauKokkosJacobian - Kokkos backend for assembling the Landau collision-operator Jacobian for the `DMPlex` Landau time integrator
 
-  Collective; No Fortran Support
-
-  Level: developer
-
-  Note:
-  Called internally by the Landau operator setup; users go through `DMPlexLandauIJacobian()`.
-
-.seealso: `DMPlexLandauCreateVelocitySpace()`, `DMPlexLandauIJacobian()`, `LandauKokkosStaticDataSet()`
-@*/
 PetscErrorCode LandauKokkosJacobian(DM[], const PetscInt, const PetscInt, const PetscInt, const PetscInt, const PetscInt[], PetscReal[], PetscScalar[], const PetscScalar[], const LandauStaticData *, const PetscReal, const PetscLogEvent[], const PetscInt[], const PetscInt[], Mat[], Mat)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-/*@C
-  LandauKokkosCreateMatMaps - Build the per-grid Kokkos-backed vertex maps used by the Landau collision operator
-
-  Collective; No Fortran Support
-
-  Level: developer
-
-  Note:
-  Called internally during Landau setup when the device backend is Kokkos.
-
-.seealso: `LandauKokkosDestroyMatMaps()`, `DMPlexLandauCreateVelocitySpace()`
-@*/
 PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-/*@C
-  LandauKokkosDestroyMatMaps - Free the Kokkos-backed vertex maps created with `LandauKokkosCreateMatMaps()`
-
-  Collective; No Fortran Support
-
-  Level: developer
-
-.seealso: `LandauKokkosCreateMatMaps()`
-@*/
 PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *, PetscInt)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-/*@C
-  LandauKokkosStaticDataSet - Copy precomputed Landau quadrature and species data to device-resident Kokkos views for use by `LandauKokkosJacobian()`
-
-  Collective; No Fortran Support
-
-  Level: developer
-
-.seealso: `LandauKokkosStaticDataClear()`, `LandauKokkosJacobian()`
-@*/
 PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, const PetscInt, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauStaticData *)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-/*@C
-  LandauKokkosStaticDataClear - Free the device-resident Kokkos data structures created with `LandauKokkosStaticDataSet()`
-
-  Collective; No Fortran Support
-
-  Level: developer
-
-.seealso: `LandauKokkosStaticDataSet()`
-@*/
 PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *)
 {
   LANDAU_NOT_IMPLEMENTED;
@@ -145,6 +95,24 @@ struct reduction_identity<landau_inner_red::TensorValueType> {
 } // namespace Kokkos
 
 extern "C" {
+/*@C
+   LandauKokkosCreateMatMaps - Build the Kokkos device-side `P4estVertexMaps` used by the `DMPLEX` Landau collision operator from its host-side reduced quadrature-point map
+
+   Not Collective; No Fortran Support
+
+   Input Parameters:
++  maps     - array of vertex-map structs, one per grid, whose device-side representation is to be created
+.  pointMaps - host-side reduced quadrature-point maps, indexed by element and face quadrature point
+.  Nf       - number of fields (species) per grid
+-  grid     - index of the grid for which to build the device-side map
+
+   Level: developer
+
+   Note:
+   This is called by `DMPlexLandauCreateVelocitySpace()` when the Kokkos backend is selected; it is not intended to be called directly by user code.
+
+.seealso: `LandauKokkosDestroyMatMaps()`, `LandauCtx`, `LandauDeviceType`, `LandauStaticData`, `pointInterpolationP4est`
+@*/
 PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps maps[], pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE], PetscInt Nf[], PetscInt grid)
 {
   P4estVertexMaps                                                                                                                                       h_maps; /* host container */
@@ -175,6 +143,16 @@ PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps maps[], pointInterpolat
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@C
+  LandauKokkosDestroyMatMaps - Free the Kokkos-backed vertex maps created with `LandauKokkosCreateMatMaps()`
+
+  Collective; No Fortran Support
+
+  Level: developer
+
+.seealso: `LandauKokkosCreateMatMaps()`
+@*/
 PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_grids)
 {
   PetscFunctionBegin;
@@ -189,6 +167,15 @@ PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_g
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  LandauKokkosStaticDataSet - Copy precomputed Landau quadrature and species data to device-resident Kokkos views for use by `LandauKokkosJacobian()`
+
+  Collective; No Fortran Support
+
+  Level: developer
+
+.seealso: `LandauKokkosStaticDataClear()`, `LandauKokkosJacobian()`
+@*/
 PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt Nb, const PetscInt batch_sz, const PetscInt num_grids, PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[], PetscReal a_nu_alpha[], PetscReal a_nu_beta[], PetscReal a_invMass[], PetscReal a_lambdas[], PetscReal a_invJ[], PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
 {
   PetscReal       *BB, *DD;
@@ -327,6 +314,15 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  LandauKokkosStaticDataClear - Clears precomputed Landau quadrature and species data from device-resident Kokkos views
+
+  Collective; No Fortran Support
+
+  Level: developer
+
+.seealso: `LandauKokkosStaticDataSet()`, `LandauKokkosJacobian()`
+@*/
 PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *SData_d)
 {
   PetscFunctionBegin;
@@ -433,6 +429,18 @@ PetscErrorCode landau_mat_assemble(PetscScalar *coo_vals, const PetscScalar Aij,
   return PETSC_SUCCESS;
 }
 
+/*@C
+  LandauKokkosJacobian - Kokkos backend for assembling the Landau collision-operator Jacobian for the `DMPlex` Landau time integrator
+
+  Collective; No Fortran Support
+
+  Level: developer
+
+  Note:
+  Called internally by the Landau operator setup; users go through `DMPlexLandauIJacobian()`.
+
+.seealso: `DMPlexLandauCreateVelocitySpace()`, `DMPlexLandauIJacobian()`, `LandauKokkosStaticDataSet()`
+@*/
 PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt Nb, const PetscInt batch_sz, const PetscInt num_grids, const PetscInt a_numCells[], PetscReal a_Eq_m[], PetscScalar a_elem_closure[], const PetscScalar a_xarray[], const LandauStaticData *SData_d, const PetscReal shift, const PetscLogEvent events[], const PetscInt a_mat_offset[], const PetscInt a_species_offset[], Mat subJ[], Mat JacP)
 {
   using scr_mem_t   = Kokkos::DefaultExecutionSpace::scratch_memory_space;

@@ -2,6 +2,17 @@
 
 /* SUBMANSEC = DM */
 
+/*J
+   DMLabelType - String name identifying a `DMLabel` implementation
+
+   Level: beginner
+
+   Values:
++   `DMLABELCONCRETE`  - the default in-memory `DMLabel` that stores point-to-value mappings explicitly
+-   `DMLABELEPHEMERAL` - a `DMLabel` whose values are computed on demand from another `DMLabel` and a transformation, without storing them
+
+.seealso: `DMLabel`, `DMLabelSetType()`, `DMLabelGetType()`, `DMLabelCreate()`
+J*/
 typedef const char *DMLabelType;
 #define DMLABELCONCRETE  "concrete"
 #define DMLABELEPHEMERAL "ephemeral"
