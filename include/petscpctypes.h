@@ -323,6 +323,17 @@ typedef const char *PCGAMGType;
 #define PCGAMGGEO       "geo"
 #define PCGAMGCLASSICAL "classical"
 
+/*J
+   PCGAMGClassicalType - String name selecting the prolongator construction used by the classical algebraic multigrid `PCGAMGCLASSICAL` implementation
+
+   Level: intermediate
+
+   Values:
++   `PCGAMGCLASSICALDIRECT`   - Ruge-Stueben direct (also called "matching") interpolation
+-   `PCGAMGCLASSICALSTANDARD` - the standard Ruge-Stueben interpolation
+
+.seealso: [](sec_pc), `PCGAMG`, `PCGAMGCLASSICAL`, `PCGAMGClassicalSetType()`, `PCGAMGClassicalGetType()`, `PCGAMGType`
+J*/
 typedef const char *PCGAMGClassicalType;
 #define PCGAMGCLASSICALDIRECT   "direct"
 #define PCGAMGCLASSICALSTANDARD "standard"

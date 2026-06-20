@@ -34,7 +34,6 @@ enums = {}
 senums = {}          # like enums except strings instead of integer values for enumvalue
 typedefs = {}
 functiontypedefs = {}  # for example SNESFunctionFn
-aliases = {}
 structs = {}
 includefiles = {}
 mansecs = {}         # mansec[mansecname] = set(all submansecnames in mansecname)
@@ -314,7 +313,7 @@ def processManualPage(name, lines):
     for flag in ['E', 'J', 'S', 'M', '@']:
       if lastline == -1 and i.find(flag + '*/') > -1:
         lastline = cnt + 1
-        if lastline > 3:
+        if lastline > 4:
            #print('It is unlikely ' +  name + ' has a manual page')
            return
       elif firstline == -1 and i.find('/*' + flag) > -1:
@@ -498,6 +497,7 @@ def getSenums(filename):
 
 def getDefines(filename):
   import re
+  incomment = False
   file = os.path.basename(filename).replace('types.h','.h')
   regdefine   = re.compile(r'#define [A-Za-z0-9]*\([A-Za-z0-9_, ]*\) ')
   submansec = None
@@ -506,17 +506,21 @@ def getDefines(filename):
   lines = []
   line = f.readline()
   lines.insert(0,line)
+  if line.find('/*') > -1: incomment = True
   while line:
-    mansec,submansec = findmansec(line,mansec,submansec)
-    fl = regdefine.search(line)
-    if fl:
-      name = fl.group(0).split('(')[0][8:]
-      args = fl.group(0).split('(')[1][:-2]
-      args = args.split(', ')
-      defines[name] = Define(name,mansec,file,args)
-      processManualPage(name, lines)
-      lines = []
+    if not incomment:
+      mansec,submansec = findmansec(line,mansec,submansec)
+      fl = regdefine.search(line)
+      if fl:
+        name = fl.group(0).split('(')[0][8:]
+        args = fl.group(0).split('(')[1][:-2]
+        args = args.split(', ')
+        defines[name] = Define(name,mansec,file,args)
+        processManualPage(name, lines)
+        lines = []
     line = f.readline()
+    if line.find('/*') > -1: incomment = True
+    if line.find('*/') > -1: incomment = False
     lines.insert(0,line)
   f.close()
 
@@ -865,7 +869,7 @@ def getFunctions(mansec, functiontoinclude, filename):
       line = line.replace("\n","")
       line = line.strip()
       name = line[:line.find("(")]
-      if not name in functiontoinclude or name in allfuncs:
+      if not name in functiontoinclude:
         line = f.readline()
         lines.insert(0,line)
         continue
@@ -1110,11 +1114,12 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   if pkgname == 'petsc':
     # a few special cases that must be handled manually
     typedefs['PetscBool'] = Typedef('PetscBool','sys','petscsys.h','PetscBool')
-    classes['PetscNull'] = Class('PetscNull')
-    classes['PetscNull'].includefile = 'petscsys.h'
-    classes['PetscNull'].mansec = 'sys'
-    classes['PetscNull'].submansec = 'sys'
-    classes['PetscNull'].petscobject = False
+    # I am not sure what PetscNull is for
+    #classes['PetscNull'] = Class('PetscNull')
+    #classes['PetscNull'].includefile = 'petscsys.h'
+    #classes['PetscNull'].mansec = 'sys'
+    #classes['PetscNull'].submansec = 'sys'
+    #classes['PetscNull'].petscobject = False
     classes['PetscObject'].petscobject = False
     classes['PetscObject'].includefile = 'petscsys.h'
 
@@ -1248,18 +1253,50 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   verbosePrint(verbose, '# PETSc classes')
   for i in classes.keys():
     verbosePrint(verbose, classes[i])
+    if not classes[i].name in list(manualpages.keys()):
+      print(classes[i].name + ' is missing manual page')
 
   verbosePrint(verbose, '# PETSc standalone functions')
   for i in funcs.keys():
     verbosePrint(verbose, funcs[i])
+    if not funcs[i].name in list(manualpages.keys()):
+      print(funcs[i].name + ' is missing manual page')
 
   verbosePrint(verbose, '# PETSc typedefs for function prototypes')
   for i in functiontypedefs.keys():
     verbosePrint(verbose, functiontypedefs[i])
+    if not functiontypedefs[i].name in list(manualpages.keys()):
+      print(functiontypedefs[i].name + ' is missing manual page')
 
-  verbosePrint(verbose, 'Function-like macros  --------------------------------')
+  verbosePrint(verbose, '# PETSc typedefs')
+  for i in typedefs.keys():
+    verbosePrint(verbose, typedefs[i])
+    if not typedefs[i].name in list(manualpages.keys()):
+      print(typedefs[i].name + ' is missing manual page')
+
+  verbosePrint(verbose, 'PETSc function-like macros  --------------------------------')
   for i in defines.keys():
     verbosePrint(verbose, defines[i])
+    if not defines[i].name in list(manualpages.keys()):
+      print(defines[i].name + ' is missing manual page')
+
+  verbosePrint(verbose, 'PETSc enums ------------------------------------------------')
+  for i in enums.keys():
+    verbosePrint(verbose, enums[i])
+    if not enums[i].name in list(manualpages.keys()):
+      print(enums[i].name + ' is missing manual page')
+
+  verbosePrint(verbose, 'PETSc string enums -----------------------------------------')
+  for i in senums.keys():
+    verbosePrint(verbose, senums[i])
+    if not senums[i].name in list(manualpages.keys()):
+      print(senums[i].name + ' is missing manual page')
+
+  verbosePrint(verbose, 'PETSc structs ----------------------------------------------')
+  for i in structs.keys():
+    verbosePrint(verbose, structs[i])
+    if not structs[i].name in list(manualpages.keys()):
+      print(structs[i].name + ' is missing manual page')
 
   # check seealso for manual pages that they actually point to a valid manual page
   # this will be turned on later
@@ -1278,7 +1315,6 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   #pickle.dump(enums,file)
   #pickle.dump(senums,file)
   #pickle.dump(structs,file)
-  #pickle.dump(aliases,file)
   #pickle.dump(classes,file)
   #pickle.dump(typedefs,file)
 
