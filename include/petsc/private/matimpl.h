@@ -251,6 +251,7 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 #endif
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
+PETSC_INTERN PetscErrorCode MatCOOGetUseBlockIndices(Mat, PetscBool *);
 
 /* Scattering of dense matrices with strided PetscSF */
 PETSC_EXTERN PetscErrorCode MatDenseScatter_Private(PetscSF, Mat, Mat, InsertMode, ScatterMode);

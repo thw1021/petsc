@@ -838,6 +838,64 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
 }
 
 /*@
+  MatCOOUseBlockIndices - request that subsequent `MatSetPreallocationCOO()` / `MatSetValuesCOO()` calls
+  on a block matrix type interpret their data in BLOCK form rather than scalar (point) form
+
+  Logically Collective
+
+  Input Parameters:
++ A   - the matrix
+- flg - `PETSC_TRUE` to use block indices and block values, `PETSC_FALSE` (the default) for scalar
+
+  Level: advanced
+
+  Notes:
+  Only the Kokkos block matrix types (`MATSEQBAIJKOKKOS`, `MATMPIBAIJKOKKOS`) honor this. When set, the
+  `coo_i`/`coo_j` arrays passed to `MatSetPreallocationCOO()` are interpreted as block-row/block-column
+  indices (over the matrix's own block sizes `rbs`/`cbs`), and the `coo_v` array passed to
+  `MatSetValuesCOO()` holds one dense `rbs`-by-`cbs` block per entry, stored row-major (the same layout as
+  `MatSetValuesBlocked()`). This mirrors `MatSetValuesBlocked()` versus `MatSetValues()`.
+
+  The default is scalar COO, so matrices that do not call this routine behave exactly as before. Types that
+  do not support block COO ignore the flag and use their scalar COO path.
+
+.seealso: [](ch_matrices), `Mat`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`, `MatSetValuesBlocked()`
+@*/
+PetscErrorCode MatCOOUseBlockIndices(Mat A, PetscBool flg)
+{
+  PetscBool *stored;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(A, flg, 2);
+  PetscCall(PetscNew(&stored));
+  *stored = flg;
+  PetscCall(PetscObjectContainerCompose((PetscObject)A, "__PETSc_MatCOOUseBlockIndices", stored, PetscCtxDestroyDefault));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  MatCOOGetUseBlockIndices - internal query for the flag set by `MatCOOUseBlockIndices()`. Returns
+  `PETSC_FALSE` when the flag was never set (the scalar default).
+*/
+PetscErrorCode MatCOOGetUseBlockIndices(Mat A, PetscBool *flg)
+{
+  PetscContainer container;
+  PetscBool     *stored;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscAssertPointer(flg, 2);
+  *flg = PETSC_FALSE;
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOUseBlockIndices", (PetscObject *)&container));
+  if (container) {
+    PetscCall(PetscContainerGetPointer(container, (void **)&stored));
+    *flg = *stored;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   MatSetBindingPropagates - Sets whether the state of being bound to the CPU for a GPU matrix type propagates to child and some other associated objects
 
   Input Parameters:

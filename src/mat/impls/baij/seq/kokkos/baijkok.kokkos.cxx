@@ -20,6 +20,7 @@
 
 #include <../src/mat/impls/baij/seq/kokkos/baijkokkosimpl.hpp>
 #include <../src/mat/impls/baij/seq/baij.h>
+#include <../src/mat/impls/aij/seq/aij.h> /* MatCOOStruct_SeqAIJ, reused for the block-graph COO indices */
 #include <petsc/private/kernels/blockinvert.h>
 
 // Forward declarations for SeqBAIJ lifecycle
@@ -584,6 +585,15 @@ static PetscErrorCode MatAssemblyEnd_SeqBAIJKokkos(Mat A, MatAssemblyType mode)
 
   baijkok = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
   PetscCheck(baijkok, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix not preallocated");
+
+  /* Device-built matrices (blocked COO, products) carry no host-stash bookkeeping (imax/ilen) and are
+     already in compact final form; the compaction below only applies to the MatSetValuesBlocked() path. */
+  if (!baijkok->ilen) {
+    A->assembled        = PETSC_TRUE;
+    A->was_assembled    = PETSC_TRUE;
+    A->ass_nonzerostate = A->nonzerostate;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   mbs    = baijkok->mbs;
   row_bs = baijkok->row_bs;
@@ -2895,6 +2905,159 @@ PETSC_INTERN PetscErrorCode MatGetFactor_SeqBAIJKokkos_petsc(Mat A, MatFactorTyp
 
 .seealso: [](ch_matrices), `Mat`, `MATSEQBAIJ`, `MATSEQAIJKOKKOS`
 M*/
+/*
+  Blocked COO assembly for MATSEQBAIJKOKKOS (opt in with MatCOOUseBlockIndices()).
+
+  coo_i/coo_j are BLOCK indices; the values passed to MatSetValuesCOO() are one dense row_bs x col_bs
+  block per entry, row-major (same layout as MatSetValuesBlocked() and a_dual). The block-CSR structure
+  and the per-block-nonzero jmap/perm are obtained by running the proven scalar SeqAIJ COO machinery on a
+  helper mbs x nbs scalar "graph" matrix whose scalar entries ARE the block indices; the numeric scatter
+  then widens each scalar slot to a row_bs*col_bs block. Without the opt-in this falls back to scalar COO.
+*/
+struct MatCOOStruct_SeqBAIJKokkos {
+  PetscCount           n;    /* number of COO block entries passed to MatSetPreallocationCOO() */
+  PetscCount           Atot; /* total number of valid (non-negative-index) block entries */
+  PetscInt             nz;   /* number of block-nonzeros after assembly */
+  PetscInt             bs2;  /* row_bs*col_bs: scalars per block */
+  PetscCountKokkosView jmap; /* length nz+1 */
+  PetscCountKokkosView perm; /* length Atot */
+
+  MatCOOStruct_SeqBAIJKokkos(const MatCOOStruct_SeqAIJ *coo_h, PetscInt bs2_in)
+  {
+    nz   = coo_h->nz;
+    n    = coo_h->n;
+    Atot = coo_h->Atot;
+    bs2  = bs2_in;
+    /* Own the data: deep_copy (not create_mirror_view_and_copy, which aliases the host arrays when
+       host == device) since coo_h belongs to a temporary graph matrix that is destroyed right after. */
+    jmap = PetscCountKokkosView(Kokkos::view_alloc(Kokkos::WithoutInitializing, "coo_jmap"), nz + 1);
+    perm = PetscCountKokkosView(Kokkos::view_alloc(Kokkos::WithoutInitializing, "coo_perm"), Atot);
+    Kokkos::deep_copy(jmap, PetscCountKokkosViewHost(coo_h->jmap, nz + 1));
+    Kokkos::deep_copy(perm, PetscCountKokkosViewHost(coo_h->perm, Atot));
+  }
+};
+
+static PetscErrorCode MatCOOStructDestroy_SeqBAIJKokkos(PetscCtxRt data)
+{
+  PetscFunctionBegin;
+  PetscCallCXX(delete *static_cast<MatCOOStruct_SeqBAIJKokkos **>(data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetPreallocationCOO_SeqBAIJKokkos(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscBool                   blocked;
+  PetscInt                    row_bs, col_bs, m, n, mbs, nbs, bs2, nblk, i, k;
+  Mat                         G  = NULL;
+  Mat_SeqAIJ                 *g  = NULL;
+  Mat_SeqBAIJKokkos          *mk = NULL;
+  PetscContainer              container_h;
+  MatCOOStruct_SeqAIJ        *coo_h;
+  MatCOOStruct_SeqBAIJKokkos *coo_d;
+
+  PetscFunctionBegin;
+  PetscCall(MatCOOGetUseBlockIndices(mat, &blocked));
+  if (!blocked) {
+    PetscCall(MatSetPreallocationCOO_Basic(mat, coo_n, coo_i, coo_j));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  row_bs = mat->rmap->bs;
+  col_bs = mat->cmap->bs;
+  m      = mat->rmap->n;
+  n      = mat->cmap->n;
+  PetscCheck(row_bs >= 1 && col_bs >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Block sizes must be >= 1; got %" PetscInt_FMT " x %" PetscInt_FMT, row_bs, col_bs);
+  PetscCheck(m % row_bs == 0 && n % col_bs == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Sizes (%" PetscInt_FMT ",%" PetscInt_FMT ") not divisible by block sizes (%" PetscInt_FMT ",%" PetscInt_FMT ")", m, n, row_bs, col_bs);
+  mbs = m / row_bs;
+  nbs = n / col_bs;
+  bs2 = row_bs * col_bs;
+
+  /* Run the scalar SeqAIJ COO machinery on a helper mbs x nbs graph; its entries are the block indices,
+     so its assembled CSR is C's block-CSR graph and its jmap/perm are the per-block-nonzero maps. */
+  PetscCall(MatCreate(PETSC_COMM_SELF, &G));
+  PetscCall(MatSetSizes(G, mbs, nbs, mbs, nbs));
+  PetscCall(MatSetType(G, MATSEQAIJ));
+  PetscCall(MatSetPreallocationCOO(G, coo_n, coo_i, coo_j));
+  g    = static_cast<Mat_SeqAIJ *>(G->data);
+  nblk = g->nz;
+
+  /* Build C's device block-CSR from G's (i,j); values start at zero. */
+  {
+    MatRowMapKokkosView i_d("i_seqbaijkok_coo", mbs + 1);
+    MatColIdxKokkosView j_d("j_seqbaijkok_coo", nblk);
+    MatScalarKokkosView a_d("a_seqbaijkok_coo", (size_t)nblk * bs2);
+    auto                ih = Kokkos::create_mirror_view(i_d);
+    auto                jh = Kokkos::create_mirror_view(j_d);
+
+    for (i = 0; i <= mbs; i++) ih(i) = g->i[i];
+    for (k = 0; k < nblk; k++) jh(k) = g->j[k];
+    PetscCallCXX(Kokkos::deep_copy(i_d, ih));
+    PetscCallCXX(Kokkos::deep_copy(j_d, jh));
+    PetscCallCXX(delete static_cast<Mat_SeqBAIJKokkos *>(mat->spptr));
+    PetscCallCXX(mk = new Mat_SeqBAIJKokkos(row_bs, col_bs, mbs, nbs, nblk, i_d, j_d, a_d));
+  }
+  mat->spptr     = (void *)mk;
+  mat->assembled = PETSC_TRUE;
+  /* a_d is zero-initialized; sync the (uninitialized) host mirror so host readers see the zeros too. */
+  PetscCall(KokkosDualViewSyncHost(mk->a_dual, PetscGetKokkosExecutionSpace()));
+
+  /* Cache the device COO struct (block jmap/perm + bs2). */
+  PetscCall(PetscObjectQuery((PetscObject)G, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
+  PetscCall(PetscContainerGetPointer(container_h, (void **)&coo_h));
+  PetscCallCXX(coo_d = new MatCOOStruct_SeqBAIJKokkos(coo_h, bs2));
+  PetscCall(PetscObjectContainerCompose((PetscObject)mat, "__PETSc_MatCOOStruct_Device", coo_d, MatCOOStructDestroy_SeqBAIJKokkos));
+
+  PetscCall(MatDestroy(&G));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetValuesCOO_SeqBAIJKokkos(Mat A, const PetscScalar v[], InsertMode imode)
+{
+  Mat_SeqBAIJKokkos          *mk = static_cast<Mat_SeqBAIJKokkos *>(A->spptr);
+  ConstMatScalarKokkosView    kv;
+  PetscMemType                memtype;
+  PetscContainer              container;
+  MatCOOStruct_SeqBAIJKokkos *coo;
+  PetscBool                   blocked;
+  auto                        exec = PetscGetKokkosExecutionSpace();
+
+  PetscFunctionBegin;
+  PetscCall(MatCOOGetUseBlockIndices(A, &blocked));
+  if (!blocked) {
+    PetscCall(MatSetValuesCOO_Basic(A, v, imode));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
+
+  const PetscCount n    = coo->n;
+  const PetscInt   bs2  = coo->bs2;
+  const PetscCount Annz = coo->nz;
+  const auto      &jmap = coo->jmap;
+  const auto      &perm = coo->perm;
+
+  PetscCall(PetscGetMemType(v, &memtype));
+  if (PetscMemTypeHost(memtype)) kv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstMatScalarKokkosViewHost(v, n * bs2));
+  else kv = ConstMatScalarKokkosView(v, n * bs2);
+
+  if (imode != INSERT_VALUES) PetscCall(MatSeqBAIJKokkosSyncDevice(A)); /* ADD needs current device values */
+  auto Aa = mk->a_dual.view_device();
+
+  PetscCall(PetscLogGpuTimeBegin());
+  Kokkos::parallel_for(
+    Kokkos::RangePolicy<>(exec, 0, (size_t)Annz * bs2), KOKKOS_LAMBDA(const PetscCount idx) {
+      PetscCount  i   = idx / bs2; /* block-nonzero slot */
+      PetscInt    e   = idx % bs2; /* element within the block (row-major) */
+      PetscScalar sum = 0.0;
+      for (PetscCount kk = jmap(i); kk < jmap(i + 1); kk++) sum += kv(perm(kk) * bs2 + e);
+      Aa(idx) = (imode == INSERT_VALUES ? 0.0 : Aa(idx)) + sum;
+    });
+  PetscCall(PetscLogGpuTimeEnd());
+
+  PetscCall(MatSeqBAIJKokkosModifyDevice(A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJKokkos(Mat A)
 {
   PetscFunctionBegin;
@@ -2930,5 +3093,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJKokkos(Mat A)
      MatCreate_SeqAIJ() and removed in MatDestroy_SeqAIJ() (the canonical PETSc pattern,
      mirroring MATSEQAIJKOKKOS), so it is not composed here. */
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqbaijkokkos_seqbaijkokkos_C", MatProductSetFromOptions_SeqBAIJKokkos));
+  /* Blocked COO assembly (opt in per matrix with MatCOOUseBlockIndices(); scalar fallback otherwise). */
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqBAIJKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_SeqBAIJKokkos));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

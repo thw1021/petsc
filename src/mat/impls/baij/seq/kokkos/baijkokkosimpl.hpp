@@ -100,6 +100,12 @@ struct Mat_SeqBAIJKokkos {
   PetscInt *imax = NULL; /* imax[i] = allocated block-slots per block-row i (length mbs) */
   PetscInt *ilen = NULL; /* ilen[i] = currently-used block-slots in block-row i (length mbs) */
 
+  /* Built directly from device CSR (blocked COO / native product): block-CSR + (for an MPI sub-block) the
+     column compression and MatSetUpMultiply are already done, so a redundant MatAssemblyEnd must be a
+     complete no-op. Set uniformly at device build on every rank, including empty (mbs==0) ranks - unlike
+     ilen==NULL, which also holds for an empty host-built block and so cannot drive a collective decision. */
+  PetscBool device_assembled = PETSC_FALSE;
+
   KokkosCsrMatrix csrmat_graph; /* Scalar block-graph CSR (i,j only) used to call KokkosSparse::spgemm_symbolic. numRows()=mbs, numCols()=nbs, nnz()=nblk. */
 
   /*

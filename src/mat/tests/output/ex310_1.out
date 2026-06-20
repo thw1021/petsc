@@ -1,0 +1,4 @@
+scalar 1x1         rbs=1 cbs=1: PASS
+square 3x3         rbs=3 cbs=3: PASS
+square 6x6         rbs=6 cbs=6: PASS
+rect 3x6           rbs=3 cbs=6: PASS
