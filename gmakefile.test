@@ -135,6 +135,7 @@ else ifneq ($(KOKKOS_USE_SYCL_COMPILER),)
 else
   KOKKOS_COMPILE = $(PETSC_COMPILE.cxx)
 endif
+PETSC_KOKKOS_RDC_FLAGS = $(if $(PETSC_KOKKOS_RDC),--relocatable-device-code=true,)
 # https://github.com/kokkos/kokkos/pull/5473 used a C++17 feature, inline static variables.
 # We found -fvisibility=hidden could hide these variables such that the supposed globally unique
 # variables become local to each file including them and thus have multiple copies (see an example
@@ -146,7 +147,7 @@ endif
 #
 # The solution is not ideal in the sense we have to duplicate the same workaround to any external libraries
 # using C++17 inline static variables. We have to wait for GNU to clarify this issue.
-PETSC_COMPILE.kokkos.cxx = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE))))
+PETSC_COMPILE.kokkos.cxx = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE) $(PETSC_KOKKOS_RDC_FLAGS))))
 KOKKOS_LINKER = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(CLINKER))))
 
 ifneq ($(RAJA_USE_CUDA_COMPILER),)
@@ -226,8 +227,14 @@ endef
 # link line constructed differently for gmakefile vs gmakefile.test invocation
 ifeq ($(libpetscall),)
 PETSC_TEST_LIB = $(PETSC_LIB)
+PETSC_TEST_DEPS =
+PETSC_TEST_KOKKOS_LIB = $(PETSC_TEST_LIB)
 else
-PETSC_TEST_LIB = $(C_SH_LIB_PATH) $(PETSC_EXTERNAL_LIB_BASIC)
+libpetsckokkos_static ?= $(PETSC_LIB_DIR)/libpetsckokkos$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)
+libpetsckokkosdlink_static ?= $(PETSC_LIB_DIR)/libpetsckokkosdlink$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)
+PETSC_TEST_DEPS = $(if $(strip $(PETSC_KOKKOS_LIB)),$(libpetsckokkos_static),) $(if $(strip $(PETSC_KOKKOS_DLINK_LIB_BASIC)),$(libpetsckokkosdlink_static),)
+PETSC_TEST_LIB = $(C_SH_LIB_PATH) $(PETSC_KOKKOS_LIB) $(PETSC_EXTERNAL_LIB_BASIC)
+PETSC_TEST_KOKKOS_LIB = $(PETSC_TEST_LIB)
 endif
 
 # manually list some library dependencies to check for circular dependencies
@@ -262,35 +269,35 @@ macos-firewall-register-mpiexec:
 	-$(call macos-firewall-register, $(MPIEXEC))
 
 # Test executables
-$(testexe.F) $(testexe.F90) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
+$(testexe.F) $(testexe.F90) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
 	$(call quiet,FLINKER) -o $@ $^ $(PETSC_TEST_LIB)
 	-$(call macos-firewall-register,$@)
 
 ifneq (,$(findstring emcc,$(CC)))
-$(testexe.c) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
+$(testexe.c) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
 	-@$(call quiet,CLINKER) -s MAIN_MODULE -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1 -s ALLOW_MEMORY_GROWTH $(EXEFLAGS) -o $@.js $@.o $(PETSC_LIB)
 	-@printf '#!/usr/bin/env sh\nnode --redirect-warnings=/dev/null $$0.js $$* | grep -v "Heap resize call from"' > $@
 	-@chmod u+x $@
 else
-$(testexe.c) $(testexe.cu) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
+$(testexe.c) $(testexe.cu) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
 	$(call quiet,CLINKER) $(EXEFLAGS) -o $@ $^ $(PETSC_TEST_LIB)
 	-$(call macos-firewall-register,$@)
 
 endif
 
-$(testexe.hip.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
+$(testexe.hip.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
 	$(call quiet,CLINKER) -o $@ $^ $(PETSC_TEST_LIB)
 	-$(call macos-firewall-register,$@)
 
-$(testexe.kokkos.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
-	$(call quiet,KOKKOS_LINKER) $(EXEFLAGS) -o $@ $^ $(PETSC_TEST_LIB)
+$(testexe.kokkos.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
+	$(call quiet,KOKKOS_LINKER) $(EXEFLAGS) -o $@ $^ $(PETSC_TEST_KOKKOS_LIB)
 	-$(call macos-firewall-register,$@)
 
-$(testexe.raja.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
+$(testexe.raja.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
 	$(call quiet,CLINKER) -o $@ $^ $(PETSC_TEST_LIB)
 	-$(call macos-firewall-register,$@)
 
-$(testexe.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
+$(testexe.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall) | $(PETSC_TEST_DEPS)
 	$(call quiet,CXXLINKER) -o $@ $^ $(PETSC_TEST_LIB)
 	-$(call macos-firewall-register,$@)
 

@@ -35,6 +35,8 @@ libpetsc_shared  := $(LIBDIR)/libpetsc$(LIB_NAME_SUFFIX).$(SL_LINKER_SUFFIX)
 libpetsc_soname  := $(call soname_function,$(LIBDIR)/libpetsc)
 libpetsc_libname := $(call libname_function,$(LIBDIR)/libpetsc)
 libpetsc_static  := $(LIBDIR)/libpetsc$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)
+libpetsckokkos_static := $(LIBDIR)/libpetsckokkos$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)
+libpetsckokkosdlink_static := $(LIBDIR)/libpetsckokkosdlink$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)
 libpetscpkgs_shared  := $(foreach pkg, $(pkgs), $(LIBDIR)/libpetsc$(pkg)$(LIB_NAME_SUFFIX).$(SL_LINKER_SUFFIX))
 libpetscpkgs_soname  := $(foreach pkg, $(pkgs), $(call soname_function,$(LIBDIR)/libpetsc$(pkg)))
 libpetscpkgs_libname := $(foreach pkg, $(pkgs), $(call libname_function,$(LIBDIR)/libpetsc$(pkg)))
@@ -94,12 +96,25 @@ langs += kokkos.cxx
 endif
 
 concatlang = $(foreach lang, $(langs), $(srcs-$(1).$(lang):%.$(lang)=$(OBJDIR)/%.o))
+concatkokkos = $(srcs-$(1).kokkos.cxx:%.kokkos.cxx=$(OBJDIR)/%.o)
+concathostlang = $(filter-out $(call concatkokkos,$(1)),$(call concatlang,$(1)))
 srcs.o := $(foreach pkg, $(pkgs), $(call concatlang,$(pkg)))
+hostsrcs.o := $(foreach pkg, $(pkgs), $(call concathostlang,$(pkg)))
+kokkossrcs.o := $(foreach pkg, $(pkgs), $(call concatkokkos,$(pkg)))
+libpetsckokkos := $(if $(strip $(kokkossrcs.o) $(PETSC_KOKKOS_ARCHIVE_LIBS)),$(libpetsckokkos_static),)
+libpetsckokkosdlink := $(if $(and $(PETSC_KOKKOS_RDC),$(KOKKOS_USE_CUDA_COMPILER),$(strip $(kokkossrcs.o) $(PETSC_KOKKOS_ARCHIVE_LIBS))),$(libpetsckokkosdlink_static),)
 srcs.tidy := $(foreach pkg, $(pkgs), $(srcs-$(pkg).c:%.c=$(OBJDIR)/%.tidy))
 concatlangsrc = $(foreach lang, $(langs), $(srcs-$(1).$(lang)))
 csrc := $(foreach pkg, $(pkgs),  $(srcs-$(pkg).c))
 showcsrc:
 	-@echo $(csrc)
+
+libs : $(libpetsckokkos) $(libpetsckokkosdlink)
+
+ifneq ($(KOKKOS_USE_CUDA_COMPILER),)
+KOKKOS_DLINK_FLAGS = $(filter-out --device-c -dc --relocatable-device-code=true -rdc=true -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(CUDAC_FLAGS))))
+KOKKOS_DLINK = $(CUDAC) --device-link $(KOKKOS_DLINK_FLAGS) $(CUDACPPFLAGS) $(CUDA_HOSTFLAGS) $(MPICXX_INCLUDES)
+endif
 
 define SHARED_RECIPE_DLL
   @$(RM) $@ dllcmd.${PETSC_ARCH}
@@ -122,7 +137,7 @@ GMAKE4 = $(if $(findstring 3.99,$(firstword $(sort 3.99 $(MAKE_VERSION)))),1,)
 SHARED_RECIPE = $(if $(findstring -LD,$(SL_LINKER_FUNCTION)),$(SHARED_RECIPE_DLL),$(if $(PCC_AT_FILE),$(if $(GMAKE4),$(SHARED_RECIPE_ATFILE),$(SHARED_RECIPE_DEFAULT)),$(SHARED_RECIPE_DEFAULT)))
 
 # with-single-library=1 (default)
-$(libpetsc_libname) : $(srcs.o) | $$(@D)/.DIR
+$(libpetsc_libname) : $(hostsrcs.o) | $$(@D)/.DIR
 	$(SHARED_RECIPE)
 ifneq ($(DSYMUTIL),true)
 	$(call quiet,DSYMUTIL) $@
@@ -154,11 +169,46 @@ endef
 %$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX) : $$(obj) | $$(@D)/.DIR
 	$(if $(findstring win32fe_lib,$(AR)),$(ARCHIVE_RECIPE_WIN32FE_LIB),$(if $(findstring yes,$(AR_ARGFILE)),$(if $(GMAKE4),$(ARCHIVE_RECIPE_ARGFILE),$(ARCHIVE_RECIPE_DEFAULT)),$(ARCHIVE_RECIPE_DEFAULT)))
 
+$(libpetsckokkos_static) : $(kokkossrcs.o) $(PETSC_KOKKOS_ARCHIVE_LIBS) | $$(@D)/.DIR
+	@$(RM) -r $@.tmp $@
+	@mkdir -p $@.tmp
+	@set -e; \
+	  i=0; \
+	  for lib in $(PETSC_KOKKOS_ARCHIVE_LIBS); do \
+	    i=$$((i+1)); \
+	    d=$@.tmp/$$i; \
+	    mkdir -p "$$d"; \
+	    (cd "$$d" && $(AR) x "$$lib"); \
+	  done; \
+	  objs="$(kokkossrcs.o)"; \
+	  if ls $@.tmp/*/*.o >/dev/null 2>&1; then objs="$$objs $@.tmp/*/*.o"; fi; \
+	  $(AR) $(AR_FLAGS) $@ $$objs
+	@$(RM) -r $@.tmp
+	$(call quiet,RANLIB) $@
+
+$(libpetsckokkosdlink_static) : $(kokkossrcs.o) $(PETSC_KOKKOS_ARCHIVE_LIBS) | $$(@D)/.DIR
+	@$(RM) -r $@.tmp $@
+	@mkdir -p $@.tmp
+	@set -e; \
+	  i=0; \
+	  for lib in $(PETSC_KOKKOS_ARCHIVE_LIBS); do \
+	    i=$$((i+1)); \
+	    d=$@.tmp/$$i; \
+	    mkdir -p "$$d"; \
+	    (cd "$$d" && $(AR) x "$$lib"); \
+	  done; \
+	  objs="$(kokkossrcs.o)"; \
+	  if ls $@.tmp/*/*.o >/dev/null 2>&1; then objs="$$objs $@.tmp/*/*.o"; fi; \
+	  $(KOKKOS_DLINK) -o $@.tmp/petsckokkosdlink.o $$objs; \
+	  $(AR) $(AR_FLAGS) $@ $@.tmp/petsckokkosdlink.o
+	@$(RM) -r $@.tmp
+	$(call quiet,RANLIB) $@
+
 # with-single-library=0
 libpkg = $(foreach pkg, $1, $(LIBDIR)/libpetsc$(pkg)$(LIB_NAME_SUFFIX).$(SL_LINKER_SUFFIX))
 define pkg_template
   $(LIBDIR)/libpetsc$(1)$(LIB_NAME_SUFFIX).$(AR_LIB_SUFFIX)  : $(call concatlang,$(1))
-  $(call libname_function,$(LIBDIR)/libpetsc$(1)) : $(call concatlang,$(1))
+  $(call libname_function,$(LIBDIR)/libpetsc$(1)) : $(call concathostlang,$(1))
 endef
 $(foreach pkg,$(pkgs),$(eval $(call pkg_template,$(pkg))))
 $(call libname_function,$(LIBDIR)/libpetscvec)  : libdep := $(call libpkg,sys)

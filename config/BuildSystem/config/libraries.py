@@ -183,7 +183,7 @@ class Configure(config.base.Configure):
     # no match - assuming the given name is already in short notation
     return lib
 
-  def check(self, libName, funcs, libDir = None, otherLibs = [], prototype = '', call = '', fortranMangle = 0, cxxMangle = 0, cxxLink = 0, functionDefine = 0, examineOutput=lambda ret,out,err:None):
+  def check(self, libName, funcs, libDir = None, otherLibs = [], prototype = '', call = '', fortranMangle = 0, cxxMangle = 0, cxxLink = 0, functionDefine = 0, examineOutput=lambda ret,out,err:None, deviceLink = None):
     '''Checks that the library "libName" contains "funcs", and if it does defines HAVE_LIB"libName"
        - libDir may be a list of directories
        - libName may be a list of library names'''
@@ -282,7 +282,7 @@ extern "C" {
             found = 1
             break
 
-    if found and self.checkLink(includes, body, linkLanguage=linklang, examineOutput=examineOutput):
+    if found and self.checkLink(includes, body, linkLanguage=linklang, examineOutput=examineOutput, deviceLink=deviceLink, deviceLinkLibs=self.setCompilers.LIBS):
       self.logPrint('Functions ['+' '.join(funcs)+'] FOUND in library '+str(libName))
       if hasattr(self.compilers, 'FC') and self.language[-1] == 'C':
         if self.compilers.checkCrossLink(includes+'\nvoid dummy(void) {'+body+'}\n',"     program main\n      print*,'testing'\n      stop\n      end\n",language1='C',language2='FC'):

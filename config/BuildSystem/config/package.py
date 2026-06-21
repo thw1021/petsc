@@ -79,6 +79,7 @@ class Package(config.base.Configure):
     self.functionsDefine        = []   # optional functions we wish to check for in the libraries that should generate a PETSC_HAVE_ define
     self.functionsFortran       = 0    # 1 means the symbols in self.functions are Fortran symbols, so name-mangling is done
     self.functionsCxx           = [0, '', ''] # 1 means the symbols in self.functions symbol are C++ symbol, so name-mangling with prototype/call is done
+    self.deviceLink             = None # language to use for a device-link step before final executable links in configure checks
     self.buildLanguages         = ['C']  # Languages the package is written in, hence also the compilers needed to build it. Normally only contains one
                                          # language, but can have multiple, such as ['FC', 'Cxx']. In PETSc's terminology, languages are C, Cxx, FC, CUDA, HIP, SYCL.
                                          # We use the first language in the list to check include headers, library functions and versions.
@@ -986,7 +987,7 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
       self.compilers.LIBS = ' '.join([self.libraries.getLibArgument(lib) for lib in self.compilers.flibs])+' '+self.setCompilers.LIBS
     if 'Cxx' in self.buildLanguages:
       self.compilers.LIBS = ' '.join([self.libraries.getLibArgument(lib) for lib in self.compilers.cxxlibs])+' '+self.setCompilers.LIBS
-    result = self.checkLink(includes, body, cleanup, codeBegin, codeEnd, shared)
+    result = self.checkLink(includes, body, cleanup, codeBegin, codeEnd, shared, deviceLink=self.deviceLink, deviceLinkLibs=self.compilers.LIBS)
     setattr(self.compilers, flagsArg,oldFlags)
     self.compilers.LIBS = oldLibs
     return result
@@ -1121,10 +1122,10 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
       if 'Cxx' in self.buildLanguages:
         otherlibs.extend(self.compilers.cxxlibs)
       self.libraries.saveLog()
-      if self.executeTest(self.libraries.check,[lib, self.functions],{'otherLibs' : self.dlib, 'fortranMangle' : self.functionsFortran, 'cxxMangle' : self.functionsCxx[0], 'prototype' : self.functionsCxx[1], 'call' : self.functionsCxx[2], 'cxxLink': 'Cxx' in self.buildLanguages}):
+      if self.executeTest(self.libraries.check,[lib, self.functions],{'otherLibs' : self.dlib, 'fortranMangle' : self.functionsFortran, 'cxxMangle' : self.functionsCxx[0], 'prototype' : self.functionsCxx[1], 'call' : self.functionsCxx[2], 'cxxLink': 'Cxx' in self.buildLanguages, 'deviceLink': self.deviceLink}):
         self.lib = lib
         if self.functionsDefine:
-          self.executeTest(self.libraries.check,[lib, self.functionsDefine],{'otherLibs' : self.dlib, 'fortranMangle' : self.functionsFortran, 'cxxMangle' : self.functionsCxx[0], 'prototype' : self.functionsCxx[1], 'call' : self.functionsCxx[2], 'cxxLink': 'Cxx' in self.buildLanguages, 'functionDefine': 1})
+          self.executeTest(self.libraries.check,[lib, self.functionsDefine],{'otherLibs' : self.dlib, 'fortranMangle' : self.functionsFortran, 'cxxMangle' : self.functionsCxx[0], 'prototype' : self.functionsCxx[1], 'call' : self.functionsCxx[2], 'cxxLink': 'Cxx' in self.buildLanguages, 'functionDefine': 1, 'deviceLink': self.deviceLink})
         self.logWrite(self.libraries.restoreLog())
         self.logPrint('Checking for headers '+str(self.includes)+' in '+location+': '+str(incl))
         if (not self.includes) or self.checkInclude(incl, self.includes, self.dinclude, timeout = 60.0):
