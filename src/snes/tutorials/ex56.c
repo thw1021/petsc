@@ -194,13 +194,14 @@ int main(int argc, char **args)
   KSP           ksp;
   MPI_Comm      comm;
   PetscMPIInt   rank;
-  PetscLogStage stage[17];
+  PetscLogStage stage[17], hot_stage;
   PetscBool     test_nonzero_cols = PETSC_FALSE, use_nearnullspace = PETSC_TRUE, attach_nearnullspace = PETSC_FALSE;
   Vec           xx, bb;
-  PetscInt      iter, i, N, dim = 3, max_conv_its, sizes[7], run_type = 1, Ncomp = dim;
+  PetscInt      iter, i, N, dim = 3, max_conv_its, sizes[7], run_type = 1, Ncomp = dim, n_solves = 1;
   DM            dm;
-  PetscBool     flg;
-  PetscReal     Lx, mdisp[10], err[10];
+  PetscBool     flg, convert_block = PETSC_FALSE;
+  PetscReal     Lx, mdisp[10], err[10], hot_scale = 1.001;
+  char          block_mat_type[64] = "";
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
@@ -219,6 +220,10 @@ int main(int argc, char **args)
     PetscCall(PetscOptionsBool("-use_mat_nearnullspace", "MatNearNullSpace API test", "", use_nearnullspace, &use_nearnullspace, NULL));
     PetscCall(PetscOptionsBool("-attach_mat_nearnullspace", "MatNearNullSpace API test (via MatSetNearNullSpace)", "", attach_nearnullspace, &attach_nearnullspace, NULL));
     PetscCall(PetscOptionsInt("-run_type", "0: twisting load on cantalever, 1: Elasticty convergence test on cube, 2: Laplacian, 3: soft core Laplacian", "", run_type, &run_type, NULL));
+    PetscCall(PetscOptionsInt("-n_solves", "Number of solves per refinement level; solves after the first reuse the GAMG hierarchy (hot reuse)", "", n_solves, &n_solves, NULL));
+    PetscCheck(n_solves > 0, PETSC_COMM_WORLD, PETSC_ERR_USER, "Bad number of solves (%" PetscInt_FMT ")", n_solves);
+    PetscCall(PetscOptionsReal("-hot_scale", "Operator scale factor applied before each hot (reuse) solve to force a numeric operator change", "", hot_scale, &hot_scale, NULL));
+    PetscCall(PetscOptionsString("-block_mat_type", "Convert the assembled Jacobian to this block matrix type before solving (workaround for DMPlex BAIJ assembly; e.g. mpibaijkokkos)", "", block_mat_type, block_mat_type, sizeof(block_mat_type), &convert_block));
   }
   PetscOptionsEnd();
   PetscCall(PetscLogStageRegister("Mesh Setup", &stage[16]));
@@ -227,6 +232,7 @@ int main(int argc, char **args)
     str[6] += iter;
     PetscCall(PetscLogStageRegister(str, &stage[iter]));
   }
+  PetscCall(PetscLogStageRegister("Hot Solve", &hot_stage));
   /* create DM, Plex calls DMSetup */
   PetscCall(PetscLogStagePush(stage[16]));
   PetscCall(DMCreate(comm, &dm));
@@ -392,12 +398,24 @@ int main(int argc, char **args)
     sizes[iter] = i;
     PetscCall(PetscInfo(snes, "%" PetscInt_FMT " equations in vector, %" PetscInt_FMT " vertices\n", i, i / dim));
     PetscCall(PetscLogStagePop());
-    /* solve */
+    /* solve; solves after the first reuse the GAMG hierarchy (hot reuse), measured in their own stage */
     PetscCall(SNESComputeJacobian(snes, xx, Amat, Amat));
+    if (convert_block) { /* DMPlex assembles AIJ cleanly; convert to a block type for the block-vs-scalar study */
+      PetscCall(MatConvert(Amat, block_mat_type, MAT_INPLACE_MATRIX, &Amat));
+      PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_TRUE));
+      PetscCall(MatSetOption(Amat, MAT_SYMMETRIC, PETSC_TRUE));
+    }
     PetscCall(MatViewFromOptions(Amat, NULL, "-my_mat_view"));
-    PetscCall(PetscLogStagePush(stage[iter]));
-    PetscCall(SNESSolve(snes, bb, xx));
-    PetscCall(PetscLogStagePop());
+    for (PetscInt s = 0; s < n_solves; s++) {
+      PetscLogStage solve_stage = (n_solves > 1 && s == n_solves - 1) ? hot_stage : stage[iter];
+      if (s > 0) {
+        PetscCall(MatScale(Amat, hot_scale)); /* perturb so PCSetUp rebuilds coarse operators (hot reuse PtAP) with P reused */
+        PetscCall(VecZeroEntries(xx));
+      }
+      PetscCall(PetscLogStagePush(solve_stage));
+      PetscCall(SNESSolve(snes, bb, xx));
+      PetscCall(PetscLogStagePop());
+    }
     PetscCall(VecNorm(xx, NORM_INFINITY, &mdisp[iter]));
     {
       PetscViewer       viewer = NULL;
@@ -573,6 +591,21 @@ int main(int argc, char **args)
       suffix: kokkos
       requires: kokkos_kernels
       args: -dm_mat_type aijkokkos -dm_vec_type kokkos
+
+  # BAIJ-Kokkos study harness: single Jacobian assembly + a hot (reuse) 2nd solve, pbjacobi smoothing.
+  # The block run assembles scalar MPIAIJ and converts to MATMPIBAIJKOKKOS (DMPlex does not build the
+  # Kokkos BAIJ structure directly); block math is identical to scalar, so both share the gold output.
+  testset:
+    requires: kokkos_kernels !single
+    nsize: 1
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0,0,0 -dm_plex_box_upper 1,1,1 -dm_plex_box_faces 4,4,4 -petscspace_degree 2 -run_type 1 -max_conv_its 1 -n_solves 2 -ksp_type cg -ksp_rtol 1.e-8 -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -use_mat_nearnullspace true -mg_levels_ksp_type chebyshev -mg_levels_pc_type pbjacobi -mg_coarse_pc_type jacobi -snes_type ksponly -snes_lag_jacobian -2 -ksp_converged_reason -dm_vec_type kokkos
+    output_file: output/ex56_hot.out
+    test:
+      suffix: hot_scalar
+      args: -dm_mat_type aijkokkos
+    test:
+      suffix: hot_block
+      args: -dm_mat_type mpiaij -block_mat_type mpibaijkokkos
   # Don't run AIJMKL caes with complex scalars because of convergence issues.
   # Note that we need to test both single and multiple MPI rank cases, because these use different sparse MKL routines to implement the PtAP operation.
   test:
