@@ -3271,6 +3271,7 @@ static PetscErrorCode CreateSwarm(DM dm, AppCtx *ctx, DM *sw)
   PetscCall(DMSwarmRegisterPetscDatatypeField(*sw, "velocity", dim, PETSC_REAL));
   PetscCall(DMSwarmRegisterPetscDatatypeField(*sw, "species", 1, PETSC_INT));
   PetscCall(DMSwarmRegisterPetscDatatypeField(*sw, "E_field", dim, PETSC_REAL));
+  PetscCall(DMSwarmRegisterPetscDatatypeField(*sw, "new DMSwarmPIC_coor", dim, PETSC_REAL));
 
   const char *fieldnames[2] = {DMSwarmPICField_coor, "velocity"};
 
@@ -3286,12 +3287,14 @@ static PetscErrorCode CreateSwarm(DM dm, AppCtx *ctx, DM *sw)
   PetscCall(DMSwarmCellDMDestroy(&celldm));
   PetscCall(DMDestroy(&vdm));
 
-  DM mdm;
+
+  const char *newfieldnames[1] = {"new DMSwarmPIC_coor"};
+  DM          mdm;
 
   PetscCall(DMClone(dm, &mdm));
   PetscCall(PetscObjectSetName((PetscObject)mdm, "moments"));
   PetscCall(DMCopyDisc(dm, mdm));
-  PetscCall(DMSwarmCellDMCreate(mdm, 1, vfieldnames, 1, fieldnames, &celldm));
+  PetscCall(DMSwarmCellDMCreate(mdm, 1, vfieldnames, 1, newfieldnames, &celldm));
   PetscCall(DMDestroy(&mdm));
   PetscCall(DMSwarmAddCellDM(*sw, celldm));
   PetscCall(DMSwarmCellDMDestroy(&celldm));
@@ -3657,7 +3660,30 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, Mat M_p, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ComputeFieldAtParticles(SNES snes, DM sw)
+// Localize coordinates in a global vector
+static PetscErrorCode LocalizePositions(DM sw, Vec X)
+{
+  DM               cdm;
+  const PetscReal *L;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMSwarmGetCellDM(sw, &cdm));
+  PetscCall(DMGetPeriodicity(cdm, NULL, NULL, &L));
+  PetscCheck(L, PetscObjectComm((PetscObject)cdm), PETSC_ERR_ARG_WRONG, "Mesh must be periodic");
+  if ((L[0] || L[1]) >= 0.) {
+    PetscScalar *x;
+    PetscInt     Np, dim;
+
+    PetscCall(DMSwarmGetLocalSize(sw, &Np));
+    PetscCall(DMGetDimension(cdm, &dim));
+    PetscCall(VecGetArray(X, &x));
+    for (PetscInt p = 0; p < Np; ++p) PetscCall(DMLocalizeCoordinate(cdm, &x[p * dim], PETSC_TRUE, &x[p * dim]));
+    PetscCall(VecRestoreArray(X, &x));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ComputeFieldAtParticles(SNES snes, Vec X, DM sw)
 {
   AppCtx    *ctx;
   Mat        M_p;
@@ -3672,6 +3698,12 @@ static PetscErrorCode ComputeFieldAtParticles(SNES snes, DM sw)
   PetscCall(DMGetApplicationContext(sw, &ctx));
 
   PetscCall(DMSwarmSetCellDMActive(sw, "moments"));
+  // Update particle positions
+  Vec Xnew;
+  PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "new DMSwarmPIC_coor", &Xnew));
+  PetscCall(VecCopy(X, Xnew));
+  PetscCall(LocalizePositions(sw, Xnew));
+  PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "new DMSwarmPIC_coor", &Xnew));
   // TODO: Could share sort context with space cellDM
   PetscCall(DMSwarmMigrate(sw, PETSC_FALSE));
   PetscCall(DMCreateMassMatrix(sw, ctx->dmPot, &M_p));
@@ -3705,6 +3737,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx
 {
   DM                 sw;
   SNES               snes = ((AppCtx *)ctx)->snes;
+  IS                 isx;
+  Vec                X;
   const PetscScalar *u;
   PetscScalar       *g;
   PetscReal         *E, m_p = 1., q_p = -1.;
@@ -3712,7 +3746,10 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
-  PetscCall(ComputeFieldAtParticles(snes, sw));
+  PetscCall(TSRHSSplitGetIS(ts, "position", &isx));
+  PetscCall(VecGetSubVector(U, isx, &X));
+  PetscCall(ComputeFieldAtParticles(snes, X, sw));
+  PetscCall(VecRestoreSubVector(U, isx, &X));
 
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
@@ -3807,7 +3844,7 @@ static PetscErrorCode RHSFunctionV(TS ts, PetscReal t, Vec X, Vec Vres, void *Ct
   PetscFunctionBeginUser;
   PetscCall(PetscLogEventBegin(ctx->RhsVEvent, ts, 0, 0, 0));
   PetscCall(TSGetDM(ts, &sw));
-  PetscCall(ComputeFieldAtParticles(snes, sw));
+  PetscCall(ComputeFieldAtParticles(snes, X, sw));
 
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
@@ -3961,6 +3998,8 @@ PetscErrorCode RHSFunctionG_Kinetic(TS ts, PetscReal t, Vec U, Vec G, PetscCtx c
 {
   DM                 sw;
   SNES               snes = ((AppCtx *)ctx)->snes;
+  IS                 isx;
+  Vec                X;
   const PetscReal   *coords, *vel, *E;
   const PetscScalar *u;
   PetscScalar       *g;
@@ -3977,7 +4016,10 @@ PetscErrorCode RHSFunctionG_Kinetic(TS ts, PetscReal t, Vec U, Vec G, PetscCtx c
   PetscLogEvent COMPUTEFIELD;
   PetscCall(PetscLogEventRegister("COMPFIELDATPART", TS_CLASSID, &COMPUTEFIELD));
   PetscCall(PetscLogEventBegin(COMPUTEFIELD, 0, 0, 0, 0));
-  PetscCall(ComputeFieldAtParticles(snes, sw));
+  PetscCall(TSRHSSplitGetIS(ts, "position", &isx));
+  PetscCall(VecGetSubVector(U, isx, &X));
+  PetscCall(ComputeFieldAtParticles(snes, X, sw));
+  PetscCall(VecRestoreSubVector(U, isx, &X));
   PetscCall(PetscLogEventEnd(COMPUTEFIELD, 0, 0, 0, 0));
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
   PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
@@ -4269,31 +4311,29 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
 
 static PetscErrorCode MigrateParticles(TS ts)
 {
-  DM               sw, cdm;
-  const PetscReal *L;
-  AppCtx          *ctx;
+  DM      sw;
+  AppCtx *ctx;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetApplicationContext(sw, &ctx));
   PetscCall(DMViewFromOptions(sw, NULL, "-migrate_view_pre"));
   {
-    Vec        u, gc, gv, position, momentum;
+    Vec        u, gc, gv;
     IS         isx, isv;
-    PetscReal *pos, *mom;
 
     PetscCall(TSGetSolution(ts, &u));
     PetscCall(TSRHSSplitGetIS(ts, "position", &isx));
     PetscCall(TSRHSSplitGetIS(ts, "momentum", &isv));
-    PetscCall(VecGetSubVector(u, isx, &position));
-    PetscCall(VecGetSubVector(u, isv, &momentum));
-    PetscCall(VecGetArray(position, &pos));
-    PetscCall(VecGetArray(momentum, &mom));
     PetscCall(DMSwarmCreateGlobalVectorFromField(sw, DMSwarmPICField_coor, &gc));
     PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "velocity", &gv));
     PetscCall(VecISCopy(u, isx, SCATTER_REVERSE, gc));
     PetscCall(VecISCopy(u, isv, SCATTER_REVERSE, gv));
 
+#if 1
+    PetscCall(LocalizePositions(sw, gc));
+#else
+    PetscCall(VecGetSubVector(u, isx, &position));
     PetscCall(DMSwarmGetCellDM(sw, &cdm));
     PetscCall(DMGetPeriodicity(cdm, NULL, NULL, &L));
     PetscCheck(L, PetscObjectComm((PetscObject)cdm), PETSC_ERR_ARG_WRONG, "Mesh must be periodic");
@@ -4322,10 +4362,8 @@ static PetscErrorCode MigrateParticles(TS ts)
       PetscCall(VecRestoreArray(gc, &x));
       PetscCall(VecRestoreArray(gv, &v));
     }
-    PetscCall(VecRestoreArray(position, &pos));
-    PetscCall(VecRestoreArray(momentum, &mom));
     PetscCall(VecRestoreSubVector(u, isx, &position));
-    PetscCall(VecRestoreSubVector(u, isv, &momentum));
+#endif
     PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "velocity", &gv));
     PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, DMSwarmPICField_coor, &gc));
   }
