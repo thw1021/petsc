@@ -238,19 +238,19 @@ PETSC_EXTERN PetscErrorCode                MatShellGetScalingShifts(Mat, PetscSc
 /*
    Utility private matrix routines
 */
-PETSC_INTERN PetscErrorCode MatConvert_Basic(Mat, MatType, MatReuse, Mat *);
-PETSC_INTERN PetscErrorCode MatConvert_Shell(Mat, MatType, MatReuse, Mat *);
-PETSC_INTERN PetscErrorCode MatConvertFrom_Shell(Mat, MatType, MatReuse, Mat *);
-PETSC_INTERN PetscErrorCode MatShellSetContext_Immutable(Mat, void *);
-PETSC_INTERN PetscErrorCode MatShellSetContextDestroy_Immutable(Mat, PetscCtxDestroyFn *);
-PETSC_INTERN PetscErrorCode MatShellSetManageScalingShifts_Immutable(Mat);
-PETSC_INTERN PetscErrorCode MatCopy_Basic(Mat, Mat, MatStructure);
-PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat, Vec, InsertMode);
+PETSC_INTERN PetscErrorCode                MatConvert_Basic(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode                MatConvert_Shell(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode                MatConvertFrom_Shell(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode                MatShellSetContext_Immutable(Mat, void *);
+PETSC_INTERN PetscErrorCode                MatShellSetContextDestroy_Immutable(Mat, PetscCtxDestroyFn *);
+PETSC_INTERN PetscErrorCode                MatShellSetManageScalingShifts_Immutable(Mat);
+PETSC_INTERN PetscErrorCode                MatCopy_Basic(Mat, Mat, MatStructure);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatDiagonalSet_Default(Mat, Vec, InsertMode);
 #if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
-PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode                MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
 #endif
-PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
-PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
+PETSC_INTERN PetscErrorCode                MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
+PETSC_INTERN PetscErrorCode                MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
 
 /* Scattering of dense matrices with strided PetscSF */
 PETSC_EXTERN PetscErrorCode MatDenseScatter_Private(PetscSF, Mat, Mat, InsertMode, ScatterMode);
@@ -276,7 +276,7 @@ PETSC_INTERN PetscErrorCode MatProductNumeric_ABC(Mat);
 PETSC_INTERN PetscErrorCode MatProductCreate_Private(Mat, Mat, Mat, Mat);
 /* this callback handles all the different triple products and
    does not rely on the function pointers; used by cuSPARSE/hipSPARSE and KOKKOS-KERNELS */
-PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
 /* CreateGraph is common to AIJ seq and mpi */
 PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat, PetscBool, PetscBool, PetscReal, PetscInt, PetscInt[], Mat *);
@@ -1693,16 +1693,16 @@ typedef struct {
 } Mat_Diagonal;
 
 #if PetscDefined(HAVE_CUDA)
-PETSC_INTERN PetscErrorCode MatADot_Diagonal_SeqCUDA(Mat, Vec, Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_SeqCUDA(Mat, Vec, PetscReal *);
+PETSC_INTERN PetscErrorCode                MatADot_Diagonal_SeqCUDA(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode                MatANormSq_Diagonal_SeqCUDA(Mat, Vec, PetscReal *);
 #endif
 #if PetscDefined(HAVE_HIP)
-PETSC_INTERN PetscErrorCode MatADot_Diagonal_SeqHIP(Mat, Vec, Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_SeqHIP(Mat, Vec, PetscReal *);
+PETSC_INTERN PetscErrorCode                MatADot_Diagonal_SeqHIP(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode                MatANormSq_Diagonal_SeqHIP(Mat, Vec, PetscReal *);
 #endif
 #if PetscDefined(HAVE_KOKKOS_KERNELS)
-PETSC_INTERN PetscErrorCode MatADot_Diagonal_SeqKokkos(Mat, Vec, Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_SeqKokkos(Mat, Vec, PetscReal *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatADot_Diagonal_SeqKokkos(Mat, Vec, Vec, PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatANormSq_Diagonal_SeqKokkos(Mat, Vec, PetscReal *);
 #endif
 
 PETSC_EXTERN PetscLogEvent MAT_Mult;

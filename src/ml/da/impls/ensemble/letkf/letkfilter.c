@@ -39,7 +39,7 @@ static PetscErrorCode PetscDALETKFClearCoordinates(PetscDA_LETKF *impl)
   PetscDALETKFReplicateWeightVector - replicate weight vector w across all columns of w_ones (m x m dense).
   Used only by the LOC_NONE fast path. w lives on PETSC_COMM_SELF (size m); w_ones is a SELF SeqDense m x m.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFReplicateWeightVector(Vec w, PetscInt m, Mat w_ones)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFReplicateWeightVector(Vec w, PetscInt m, Mat w_ones)
 {
   const PetscScalar *w_array;
   PetscScalar       *mat_array;
@@ -65,7 +65,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFReplicateWeightVector(Vec w, PetscInt m,
   Both the CPU (PetscDALETKFGlobalAnalysis) and Kokkos (PetscDALETKFGlobalAnalysis_Kokkos) backends
   call this on entry; the per-vertex paths skip it.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFEnsureGlobalScratch(PetscDA_LETKF *impl, PetscInt m)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFEnsureGlobalScratch(PetscDA_LETKF *impl, PetscInt m)
 {
   PetscFunctionBegin;
   if (!impl->w) PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &impl->w));

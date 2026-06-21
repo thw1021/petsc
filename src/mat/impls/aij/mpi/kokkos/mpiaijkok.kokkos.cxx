@@ -1720,7 +1720,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType, MatReuse reuse, Mat *newmat)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType, MatReuse reuse, Mat *newmat)
 {
   Mat         B;
   Mat_MPIAIJ *a;

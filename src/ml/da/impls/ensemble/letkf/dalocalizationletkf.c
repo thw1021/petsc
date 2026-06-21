@@ -33,7 +33,7 @@ static inline PetscBool PetscDALETKFCoordInBbox(PetscInt dim, const PetscReal *c
   > 0, so the resulting Q is identical to the all-gather variant - this routine only trims the
   candidate set passed in.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFGatherObsBbox(PetscInt dim, Vec xyz[], PetscReal bd[], PetscReal cutoff, Mat H, Vec obs_vecs[], PetscInt *n_obs_filt, PetscInt **obs_idx_out, PetscReal **obs_coords_out)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFGatherObsBbox(PetscInt dim, Vec xyz[], PetscReal bd[], PetscReal cutoff, Mat H, Vec obs_vecs[], PetscInt *n_obs_filt, PetscInt **obs_idx_out, PetscReal **obs_coords_out)
 {
   MPI_Comm           comm;
   PetscMPIInt        size, two_dim_mpi;
@@ -227,7 +227,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFCoalesceNnzMinMax(MPI_Comm comm, PetscIn
   returns a freshly allocated `Vec[dim]` whose entries are H-image vectors carrying coordinate
   values at observation locations. Caller frees with `PetscDALETKFDestroyObsCoords()`.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFComputeObsCoords(Mat H, Vec xyz[], PetscInt *dim_out, Vec **obs_vecs_out)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFComputeObsCoords(Mat H, Vec xyz[], PetscInt *dim_out, Vec **obs_vecs_out)
 {
   MPI_Comm comm;
   PetscInt dim = 0;
@@ -255,7 +255,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFComputeObsCoords(Mat H, Vec xyz[], Petsc
 /*
   PetscDALETKFDestroyObsCoords - Tear down the obs_vecs array allocated by PetscDALETKFComputeObsCoords().
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsCoords(PetscInt dim, Vec **obs_vecs)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFDestroyObsCoords(PetscInt dim, Vec **obs_vecs)
 {
   PetscFunctionBegin;
   if (!*obs_vecs) PetscFunctionReturn(PETSC_SUCCESS);
@@ -273,7 +273,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsCoords(PetscInt dim, Vec **obs
   `MATAIJKOKKOS`. `H` is consulted only for its row ownership range, which determines the
   diagonal-vs-off-diagonal split used for MPI preallocation. The output Mat is fully assembled.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFAssembleQFromCSR(Mat H, PetscInt n_vert_local, PetscInt n_obs_local, PetscInt n_obs_global, MatType mat_type, const PetscInt row_counts[], const PetscInt row_offsets[], const PetscInt col_indices[], const PetscScalar values[], Mat *Q)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFAssembleQFromCSR(Mat H, PetscInt n_vert_local, PetscInt n_obs_local, PetscInt n_obs_global, MatType mat_type, const PetscInt row_counts[], const PetscInt row_offsets[], const PetscInt col_indices[], const PetscScalar values[], Mat *Q)
 {
   MPI_Comm  comm;
   PetscInt  rstart, cstart, cend;
@@ -328,7 +328,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFAssembleQFromCSR(Mat H, PetscInt n_vert_
 /*
   PetscDALETKFLogQStats - PetscInfo one-liner summarizing min/max nnz per row of `Q`.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFLogQStats(Mat Q, PetscDALETKFLocalizationType type, PetscReal radius, PetscInt n_vert_local, PetscInt n_obs_global, const PetscInt row_counts[])
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFLogQStats(Mat Q, PetscDALETKFLocalizationType type, PetscReal radius, PetscInt n_vert_local, PetscInt n_obs_global, const PetscInt row_counts[])
 {
   MPI_Comm comm;
   PetscInt local_min = PETSC_INT_MAX, local_max = 0;

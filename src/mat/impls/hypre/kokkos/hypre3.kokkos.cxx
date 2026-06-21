@@ -4,7 +4,7 @@
 #include <../src/mat/impls/hypre/mhypre.h>
 #include <petsc/private/kokkosimpl.hpp>
 
-PetscErrorCode MatZeroRows_Kokkos(PetscInt n, const PetscInt rows[], const HYPRE_Int i[], const HYPRE_Int j[], HYPRE_Complex a[], HYPRE_Complex diag)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatZeroRows_Kokkos(PetscInt n, const PetscInt rows[], const HYPRE_Int i[], const HYPRE_Int j[], HYPRE_Complex a[], HYPRE_Complex diag)
 {
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(PETSC_SUCCESS);
@@ -20,14 +20,14 @@ PetscErrorCode MatZeroRows_Kokkos(PetscInt n, const PetscInt rows[], const HYPRE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscHypreIntCastArray_Kokkos(PetscInt n, const PetscInt *a, HYPRE_Int *b)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscHypreIntCastArray_Kokkos(PetscInt n, const PetscInt *a, HYPRE_Int *b)
 {
   PetscFunctionBegin;
   if (n) PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const size_t i) { b[i] = static_cast<HYPRE_Int>(a[i]); }));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatHypreDeviceMalloc_Kokkos(size_t size, void **ptr)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatHypreDeviceMalloc_Kokkos(size_t size, void **ptr)
 {
   PetscFunctionBegin;
   if (size) PetscCallCXX(*ptr = Kokkos::kokkos_malloc<DefaultMemorySpace>(size));
@@ -35,7 +35,7 @@ PetscErrorCode MatHypreDeviceMalloc_Kokkos(size_t size, void **ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatHypreDeviceFree_Kokkos(void *a)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatHypreDeviceFree_Kokkos(void *a)
 {
   PetscFunctionBegin;
   PetscCallCXX(Kokkos::kokkos_free<DefaultMemorySpace>(a));

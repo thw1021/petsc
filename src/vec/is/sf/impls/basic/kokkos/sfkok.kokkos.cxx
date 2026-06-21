@@ -602,7 +602,7 @@ static PetscErrorCode PetscSFLinkMemcpy_Kokkos(PetscSFLink PETSC_UNUSED link, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType mtype, size_t size, void **ptr)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType mtype, size_t size, void **ptr)
 {
   PetscFunctionBegin;
   if (PetscMemTypeHost(mtype)) PetscCall(PetscMalloc(size, ptr));
@@ -613,7 +613,7 @@ PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType mtype, size_t size, void **ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype, void *ptr)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype, void *ptr)
 {
   PetscFunctionBegin;
   if (PetscMemTypeHost(mtype)) PetscCall(PetscFree(ptr));
@@ -635,7 +635,7 @@ static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf, PetscSFLink link)
 }
 
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
-PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF PETSC_UNUSED sf, PetscSFLink link, MPI_Datatype unit)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF PETSC_UNUSED sf, PetscSFLink link, MPI_Datatype unit)
 {
   PetscInt  nSignedChar = 0, nUnsignedChar = 0, nInt = 0, nPetscInt = 0, nPetscReal = 0;
   PetscBool is2Int, is2PetscInt;

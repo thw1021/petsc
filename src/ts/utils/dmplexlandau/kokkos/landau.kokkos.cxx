@@ -6,27 +6,27 @@
   #include <petsclandau.h>
   #define LANDAU_NOT_IMPLEMENTED SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Not supported with CLANG")
 
-PetscErrorCode LandauKokkosJacobian(DM[], const PetscInt, const PetscInt, const PetscInt, const PetscInt, const PetscInt[], PetscReal[], PetscScalar[], const PetscScalar[], const LandauStaticData *, const PetscReal, const PetscLogEvent[], const PetscInt[], const PetscInt[], Mat[], Mat)
+PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM[], const PetscInt, const PetscInt, const PetscInt, const PetscInt, const PetscInt[], PetscReal[], PetscScalar[], const PetscScalar[], const LandauStaticData *, const PetscReal, const PetscLogEvent[], const PetscInt[], const PetscInt[], Mat[], Mat)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt)
+PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *, PetscInt)
+PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *, PetscInt)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, const PetscInt, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauStaticData *)
+PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, const PetscInt, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauStaticData *)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
 
-PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *)
+PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *)
 {
   LANDAU_NOT_IMPLEMENTED;
 }
@@ -113,7 +113,7 @@ extern "C" {
 
 .seealso: `LandauKokkosDestroyMatMaps()`, `LandauCtx`, `LandauDeviceType`, `LandauStaticData`, `pointInterpolationP4est`
 @*/
-PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps maps[], pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE], PetscInt Nf[], PetscInt grid)
+PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps maps[], pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE], PetscInt Nf[], PetscInt grid)
 {
   P4estVertexMaps                                                                                                                                       h_maps; /* host container */
   const Kokkos::View<pointInterpolationP4est *[LANDAU_MAX_Q_FACE], Kokkos::LayoutRight, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>     h_points((pointInterpolationP4est *)pointMaps, maps[grid].num_reduced);
@@ -157,7 +157,7 @@ PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps maps[], pointInterpolat
 
 .seealso: `LandauKokkosCreateMatMaps()`, `LandauCtx`, `LandauStaticData`, `P4estVertexMaps`
 @*/
-PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_grids)
+PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_grids)
 {
   PetscFunctionBegin;
   for (PetscInt grid = 0; grid < num_grids; grid++) {
@@ -205,7 +205,7 @@ PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_g
 
 .seealso: `LandauKokkosStaticDataClear()`, `LandauKokkosJacobian()`, `LandauStaticData`, `LandauCtx`, `DMPlexLandauCreateVelocitySpace()`
 @*/
-PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt Nb, const PetscInt batch_sz, const PetscInt num_grids, PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[], PetscReal a_nu_alpha[], PetscReal a_nu_beta[], PetscReal a_invMass[], PetscReal a_lambdas[], PetscReal a_invJ[], PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
+PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt Nb, const PetscInt batch_sz, const PetscInt num_grids, PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[], PetscReal a_nu_alpha[], PetscReal a_nu_beta[], PetscReal a_invMass[], PetscReal a_lambdas[], PetscReal a_invJ[], PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
 {
   PetscReal       *BB, *DD;
   PetscTabulation *Tf;
@@ -355,7 +355,7 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
 
 .seealso: `LandauKokkosStaticDataSet()`, `LandauKokkosJacobian()`, `LandauStaticData`, `LandauCtx`
 @*/
-PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *SData_d)
+PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *SData_d)
 {
   PetscFunctionBegin;
   if (SData_d->alpha) {
@@ -497,7 +497,7 @@ PetscErrorCode landau_mat_assemble(PetscScalar *coo_vals, const PetscScalar Aij,
 
 .seealso: `DMPlexLandauCreateVelocitySpace()`, `DMPlexLandauIJacobian()`, `LandauKokkosStaticDataSet()`, `LandauStaticData`, `LandauCtx`
 @*/
-PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt Nb, const PetscInt batch_sz, const PetscInt num_grids, const PetscInt a_numCells[], PetscReal a_Eq_m[], PetscScalar a_elem_closure[], const PetscScalar a_xarray[], const LandauStaticData *SData_d, const PetscReal shift, const PetscLogEvent events[], const PetscInt a_mat_offset[], const PetscInt a_species_offset[], Mat subJ[], Mat JacP)
+PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt Nb, const PetscInt batch_sz, const PetscInt num_grids, const PetscInt a_numCells[], PetscReal a_Eq_m[], PetscScalar a_elem_closure[], const PetscScalar a_xarray[], const LandauStaticData *SData_d, const PetscReal shift, const PetscLogEvent events[], const PetscInt a_mat_offset[], const PetscInt a_species_offset[], Mat subJ[], Mat JacP)
 {
   using scr_mem_t   = Kokkos::DefaultExecutionSpace::scratch_memory_space;
   using real2_scr_t = Kokkos::View<PetscScalar **, Kokkos::LayoutRight, scr_mem_t>;

@@ -219,8 +219,8 @@ PETSC_EXTERN PetscLogEvent VEC_HIPCopyFromGPU;
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecView_Seq(Vec, PetscViewer);
 #if defined(PETSC_HAVE_VIENNACL)
-PETSC_EXTERN PetscErrorCode VecViennaCLAllocateCheckHost(Vec v);
-PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPU(Vec v);
+PETSC_EXTERN PetscErrorCode                VecViennaCLAllocateCheckHost(Vec v);
+PETSC_EXTERN PetscErrorCode                VecViennaCLCopyFromGPU(Vec v);
 #endif
 
 /*
@@ -236,9 +236,9 @@ PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPU(Vec v);
 PETSC_EXTERN PetscErrorCode VecGetRootType_Private(Vec, VecType *);
 
 /* Default obtain and release vectors; can be used by any implementation */
-PETSC_INTERN PetscErrorCode VecDuplicateVecs_Default(Vec, PetscInt, Vec *[]);
-PETSC_INTERN PetscErrorCode VecDestroyVecs_Default(PetscInt, Vec[]);
-PETSC_INTERN PetscErrorCode VecView_Binary(Vec, PetscViewer);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecDuplicateVecs_Default(Vec, PetscInt, Vec *[]);
+PETSC_INTERN PetscErrorCode                VecDestroyVecs_Default(PetscInt, Vec[]);
+PETSC_INTERN PetscErrorCode                VecView_Binary(Vec, PetscViewer);
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecLoad_Default(Vec, PetscViewer);
 
@@ -357,32 +357,32 @@ PETSC_INTERN PetscBool      VecTaggerRegisterAllCalled;
 PETSC_INTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger, Vec, IS *, PetscBool *);
 PETSC_INTERN PetscMPIInt    Petsc_Reduction_keyval;
 
-PETSC_INTERN PetscInt       VecGetSubVectorSavedStateId;
-PETSC_INTERN PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec, IS, PetscBool *, PetscInt *, PetscInt *);
-PETSC_INTERN PetscErrorCode VecGetSubVectorThroughVecScatter_Private(Vec, IS, PetscInt, Vec *);
+PETSC_SINGLE_LIBRARY_INTERN PetscInt       VecGetSubVectorSavedStateId;
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec, IS, PetscBool *, PetscInt *, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecGetSubVectorThroughVecScatter_Private(Vec, IS, PetscInt, Vec *);
 
 #if PetscDefined(HAVE_CUDA)
-PETSC_INTERN PetscErrorCode VecCreate_CUDA(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_MPICUDA(Vec);
-PETSC_INTERN PetscErrorCode VecCUDAGetArrays_Private(Vec, const PetscScalar **, const PetscScalar **, PetscOffloadMask *);
-PETSC_INTERN PetscErrorCode VecConvert_Seq_SeqCUDA_inplace(Vec);
-PETSC_INTERN PetscErrorCode VecConvert_MPI_MPICUDA_inplace(Vec);
+PETSC_INTERN PetscErrorCode                VecCreate_CUDA(Vec);
+PETSC_INTERN PetscErrorCode                VecCreate_SeqCUDA(Vec);
+PETSC_INTERN PetscErrorCode                VecCreate_MPICUDA(Vec);
+PETSC_INTERN PetscErrorCode                VecCUDAGetArrays_Private(Vec, const PetscScalar **, const PetscScalar **, PetscOffloadMask *);
+PETSC_INTERN PetscErrorCode                VecConvert_Seq_SeqCUDA_inplace(Vec);
+PETSC_INTERN PetscErrorCode                VecConvert_MPI_MPICUDA_inplace(Vec);
 #endif
 
 #if PetscDefined(HAVE_HIP)
-PETSC_INTERN PetscErrorCode VecCreate_HIP(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_SeqHIP(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_MPIHIP(Vec);
-PETSC_INTERN PetscErrorCode VecHIPGetArrays_Private(Vec, const PetscScalar **, const PetscScalar **, PetscOffloadMask *);
-PETSC_INTERN PetscErrorCode VecConvert_Seq_SeqHIP_inplace(Vec);
-PETSC_INTERN PetscErrorCode VecConvert_MPI_MPIHIP_inplace(Vec);
+PETSC_INTERN PetscErrorCode                VecCreate_HIP(Vec);
+PETSC_INTERN PetscErrorCode                VecCreate_SeqHIP(Vec);
+PETSC_INTERN PetscErrorCode                VecCreate_MPIHIP(Vec);
+PETSC_INTERN PetscErrorCode                VecHIPGetArrays_Private(Vec, const PetscScalar **, const PetscScalar **, PetscOffloadMask *);
+PETSC_INTERN PetscErrorCode                VecConvert_Seq_SeqHIP_inplace(Vec);
+PETSC_INTERN PetscErrorCode                VecConvert_MPI_MPIHIP_inplace(Vec);
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_INTERN PetscErrorCode VecCreateMPIKokkosWithArrays_Private(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscScalar *, const PetscScalar *, Vec *);
-PETSC_INTERN PetscErrorCode VecConvert_Seq_SeqKokkos_inplace(Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode VecConvert_MPI_MPIKokkos_inplace(Vec);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreateMPIKokkosWithArrays_Private(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscScalar *, const PetscScalar *, Vec *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecConvert_Seq_SeqKokkos_inplace(Vec, PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecConvert_MPI_MPIKokkos_inplace(Vec);
 #endif
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreateWithLayout_Private(PetscLayout, Vec *);

@@ -21,7 +21,7 @@
 #undef TYPE_BS_ON
 
 #if defined(PETSC_HAVE_HYPRE)
-PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat, MatType, MatReuse, Mat *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat, MatType, MatReuse, Mat *);
 #endif
 
 #if defined(PETSC_HAVE_MKL_SPARSE_OPTIMIZE)

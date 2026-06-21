@@ -4,7 +4,7 @@
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/matimpl.h>
 
-PETSC_INTERN PetscErrorCode MatADot_Diagonal_SeqKokkos(Mat A, Vec x, Vec y, PetscScalar *z)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatADot_Diagonal_SeqKokkos(Mat A, Vec x, Vec y, PetscScalar *z)
 {
   Mat_Diagonal              *ctx = (Mat_Diagonal *)A->data;
   ConstPetscScalarKokkosView xv, yv, wv;
@@ -24,7 +24,7 @@ PETSC_INTERN PetscErrorCode MatADot_Diagonal_SeqKokkos(Mat A, Vec x, Vec y, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_SeqKokkos(Mat A, Vec x, PetscReal *z)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatANormSq_Diagonal_SeqKokkos(Mat A, Vec x, PetscReal *z)
 {
   Mat_Diagonal              *ctx = (Mat_Diagonal *)A->data;
   ConstPetscScalarKokkosView xv, wv;

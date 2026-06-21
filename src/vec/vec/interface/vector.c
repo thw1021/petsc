@@ -1118,7 +1118,7 @@ PetscErrorCode VecSetOption(Vec x, VecOption op, PetscBool flag)
 
 /* Default routines for obtaining and releasing; */
 /* may be used by any implementation */
-PetscErrorCode VecDuplicateVecs_Default(Vec w, PetscInt m, Vec *V[])
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecDuplicateVecs_Default(Vec w, PetscInt m, Vec *V[])
 {
   PetscFunctionBegin;
   PetscCheck(m > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "m must be > 0: m = %" PetscInt_FMT, m);

@@ -28,19 +28,19 @@ typedef struct {
   PetscInt *rows_d;
 } Mat_HYPRE;
 
-PETSC_INTERN PetscErrorCode MatZeroRows_CUDA(PetscInt, const PetscInt *, const HYPRE_Int *, const HYPRE_Int *, HYPRE_Complex *, HYPRE_Complex);
-PETSC_INTERN PetscErrorCode MatZeroRows_HIP(PetscInt, const PetscInt *, const HYPRE_Int *, const HYPRE_Int *, HYPRE_Complex *, HYPRE_Complex);
-PETSC_INTERN PetscErrorCode MatZeroRows_Kokkos(PetscInt, const PetscInt *, const HYPRE_Int *, const HYPRE_Int *, HYPRE_Complex *, HYPRE_Complex);
+PETSC_INTERN PetscErrorCode                MatZeroRows_CUDA(PetscInt, const PetscInt *, const HYPRE_Int *, const HYPRE_Int *, HYPRE_Complex *, HYPRE_Complex);
+PETSC_INTERN PetscErrorCode                MatZeroRows_HIP(PetscInt, const PetscInt *, const HYPRE_Int *, const HYPRE_Int *, HYPRE_Complex *, HYPRE_Complex);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatZeroRows_Kokkos(PetscInt, const PetscInt *, const HYPRE_Int *, const HYPRE_Int *, HYPRE_Complex *, HYPRE_Complex);
 
 // Cast entries in PetscInt a[] to HYPRE_Int b[] on device
-PETSC_INTERN PetscErrorCode PetscHypreIntCastArray_CUDA(PetscInt, const PetscInt *, HYPRE_Int *);
-PETSC_INTERN PetscErrorCode PetscHypreIntCastArray_HIP(PetscInt, const PetscInt *, HYPRE_Int *);
-PETSC_INTERN PetscErrorCode PetscHypreIntCastArray_Kokkos(PetscInt, const PetscInt *, HYPRE_Int *);
+PETSC_INTERN PetscErrorCode                PetscHypreIntCastArray_CUDA(PetscInt, const PetscInt *, HYPRE_Int *);
+PETSC_INTERN PetscErrorCode                PetscHypreIntCastArray_HIP(PetscInt, const PetscInt *, HYPRE_Int *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscHypreIntCastArray_Kokkos(PetscInt, const PetscInt *, HYPRE_Int *);
 
-PETSC_INTERN PetscErrorCode MatHypreDeviceMalloc_CUDA(size_t, void **);
-PETSC_INTERN PetscErrorCode MatHypreDeviceMalloc_HIP(size_t, void **);
-PETSC_INTERN PetscErrorCode MatHypreDeviceMalloc_Kokkos(size_t, void **);
+PETSC_INTERN PetscErrorCode                MatHypreDeviceMalloc_CUDA(size_t, void **);
+PETSC_INTERN PetscErrorCode                MatHypreDeviceMalloc_HIP(size_t, void **);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatHypreDeviceMalloc_Kokkos(size_t, void **);
 
-PETSC_INTERN PetscErrorCode MatHypreDeviceFree_CUDA(void *);
-PETSC_INTERN PetscErrorCode MatHypreDeviceFree_HIP(void *);
-PETSC_INTERN PetscErrorCode MatHypreDeviceFree_Kokkos(void *);
+PETSC_INTERN PetscErrorCode                MatHypreDeviceFree_CUDA(void *);
+PETSC_INTERN PetscErrorCode                MatHypreDeviceFree_HIP(void *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatHypreDeviceFree_Kokkos(void *);

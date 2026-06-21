@@ -16,7 +16,7 @@
   (`PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_BOXCAR`) and a bit-comparable Q for
   `PETSCDA_LETKF_LOC_GAUSSIAN` modulo `exp()` rounding.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat_Kokkos(PetscDALETKFLocalizationType type, PetscReal radius, Vec xyz[], PetscReal bd[], Mat H, Mat *Q, PetscInt *max_nnz_local, PetscInt *n_nnz_local)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat_Kokkos(PetscDALETKFLocalizationType type, PetscReal radius, Vec xyz[], PetscReal bd[], Mat H, Mat *Q, PetscInt *max_nnz_local, PetscInt *n_nnz_local)
 {
   using ExecSpace    = Kokkos::DefaultExecutionSpace;
   using MemSpace     = ExecSpace::memory_space;

@@ -90,7 +90,7 @@ typedef struct {
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJ(Mat);
 
-PETSC_INTERN PetscErrorCode MatAssemblyEnd_MPIAIJ(Mat, MatAssemblyType);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatAssemblyEnd_MPIAIJ(Mat, MatAssemblyType);
 
 PETSC_INTERN PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat);
 PETSC_INTERN PetscErrorCode MatDisAssemble_MPIAIJ(Mat, PetscBool);
@@ -114,10 +114,10 @@ PETSC_INTERN PetscErrorCode MatLoad_MPIAIJ(Mat, PetscViewer);
 PETSC_INTERN PetscErrorCode MatLoad_MPIAIJ_Binary(Mat, PetscViewer);
 PETSC_INTERN PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat);
 
-PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ(Mat);
-PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat);
-PETSC_INTERN PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat);
-PETSC_INTERN PetscErrorCode MatProductSymbolic_AB_MPIAIJ_MPIAIJ(Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ(Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat);
+PETSC_INTERN PetscErrorCode                MatProductSymbolic_MPIAIJBACKEND(Mat);
+PETSC_INTERN PetscErrorCode                MatProductSymbolic_AB_MPIAIJ_MPIAIJ(Mat);
 
 PETSC_INTERN PetscErrorCode MatProductSymbolic_PtAP_MPIAIJ_MPIAIJ(Mat);
 
@@ -151,15 +151,15 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIDense(Mat, MatType, MatReuse, M
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
 #endif
 
-PETSC_INTERN PetscErrorCode MatDestroy_MPIAIJ(Mat);
-PETSC_INTERN PetscErrorCode MatProductCtxDestroy_MPIAIJ_PtAP(PetscCtxRt);
-PETSC_INTERN PetscErrorCode MatProductCtxDestroy_MPIAIJ_MatMatMult(PetscCtxRt);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatDestroy_MPIAIJ(Mat);
+PETSC_INTERN PetscErrorCode                MatProductCtxDestroy_MPIAIJ_PtAP(PetscCtxRt);
+PETSC_INTERN PetscErrorCode                MatProductCtxDestroy_MPIAIJ_MatMatMult(PetscCtxRt);
 
-PETSC_INTERN PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat, Mat, MatReuse, PetscInt **, PetscInt **, MatScalar **, Mat *);
-PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
-PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ_CopyFromCSRFormat(Mat, const PetscInt[], const PetscInt[], const PetscScalar[]);
-PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ_CopyFromCSRFormat_Symbolic(Mat, const PetscInt[], const PetscInt[]);
-PETSC_INTERN PetscErrorCode MatSetOption_MPIAIJ(Mat, MatOption, PetscBool);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat, Mat, MatReuse, PetscInt **, PetscInt **, MatScalar **, Mat *);
+PETSC_INTERN PetscErrorCode                MatSetValues_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
+PETSC_INTERN PetscErrorCode                MatSetValues_MPIAIJ_CopyFromCSRFormat(Mat, const PetscInt[], const PetscInt[], const PetscScalar[]);
+PETSC_INTERN PetscErrorCode                MatSetValues_MPIAIJ_CopyFromCSRFormat_Symbolic(Mat, const PetscInt[], const PetscInt[]);
+PETSC_INTERN PetscErrorCode                MatSetOption_MPIAIJ(Mat, MatOption, PetscBool);
 
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat, Mat, PetscReal, Mat);
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat, Mat, PetscReal, Mat);
@@ -169,8 +169,8 @@ PETSC_INTERN PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ_matmatmult(
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIDense(Mat, Mat, PetscReal, Mat);
 PETSC_INTERN PetscErrorCode MatGetSeqNonzeroStructure_MPIAIJ(Mat, Mat *);
 
-PETSC_INTERN PetscErrorCode MatSetFromOptions_MPIAIJ(Mat, PetscOptionItems);
-PETSC_INTERN PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
+PETSC_INTERN PetscErrorCode                MatSetFromOptions_MPIAIJ(Mat, PetscOptionItems);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
 
 PETSC_INTERN PetscErrorCode MatAXPYGetPreallocation_MPIX_private(PetscInt, const PetscInt *, const PetscInt *, const PetscInt *, const PetscInt *, const PetscInt *, const PetscInt *, PetscInt *);
 
@@ -180,9 +180,9 @@ extern PetscErrorCode MatDiagonalScaleLocal_MPIAIJ(Mat, Vec);
 PETSC_INTERN PetscErrorCode MatGetSeqMats_MPIAIJ(Mat, Mat *, Mat *);
 PETSC_INTERN PetscErrorCode MatSetSeqMats_MPIAIJ(Mat, IS, IS, IS, MatStructure, Mat, Mat);
 
-PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat, PetscCount, PetscInt[], PetscInt[]);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat, PetscCount, PetscInt[], PetscInt[]);
 
-PETSC_INTERN PetscErrorCode MatGetCurrentMemType_MPIAIJ(Mat, PetscMemType *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatGetCurrentMemType_MPIAIJ(Mat, PetscMemType *);
 
 /* compute apa = A[i,:]*P = Ad[i,:]*P_loc + Ao*[i,:]*P_oth using sparse axpy */
 #define AProw_scalable(i, ad, ao, p_loc, p_oth, api, apj, apa) \

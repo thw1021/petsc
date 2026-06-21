@@ -4,7 +4,7 @@
 */
 #include <petsc/private/vecimpl.h> /*I  "petscvec.h"   I*/
 
-PetscInt VecGetSubVectorSavedStateId = -1;
+PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL PetscInt VecGetSubVectorSavedStateId = -1;
 
 #if PetscDefined(USE_DEBUG)
 // this is a no-op '0' macro in optimized builds
@@ -1495,7 +1495,7 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
 -   blocksize - the block size of the subvector
 
 */
-PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec X, IS is, PetscBool *contig, PetscInt *start, PetscInt *blocksize)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec X, IS is, PetscBool *contig, PetscInt *start, PetscInt *blocksize)
 {
   PetscInt  gstart, gend, lstart;
   PetscBool red[2] = {PETSC_TRUE /*contiguous*/, PETSC_TRUE /*validVBS*/};
@@ -1534,7 +1534,7 @@ PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec X, IS is, PetscBool *c
     Output Parameter:
 .   Z  - the subvector, which will compose the VecScatter context on output
 */
-PetscErrorCode VecGetSubVectorThroughVecScatter_Private(Vec X, IS is, PetscInt bs, Vec *Z)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecGetSubVectorThroughVecScatter_Private(Vec X, IS is, PetscInt bs, Vec *Z)
 {
   PetscInt   n, N;
   VecScatter vscat;

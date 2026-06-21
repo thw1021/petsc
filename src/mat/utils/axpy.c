@@ -369,7 +369,7 @@ PetscErrorCode MatShift(Mat Y, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDiagonalSet_Default(Mat Y, Vec D, InsertMode is)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatDiagonalSet_Default(Mat Y, Vec D, InsertMode is)
 {
   PetscInt           i, start, end;
   const PetscScalar *v;

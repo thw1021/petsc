@@ -438,7 +438,7 @@ static PetscErrorCode BatchedEigenSolve(LETKFView3D T_batch, LETKFView2D Lambda_
 /*
   PetscDALETKFSetupLocalization_Kokkos - Prepares device views for localization matrix Q
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *impl)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *impl)
 {
   PetscInt nrows, rstart, rend, i, nnz, total_nnz;
 
@@ -510,7 +510,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *
   eigensolver workspace and the cusolver/rocblas/SYCL handle survive across rebuilds. The
   full destroy below also calls this helper.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyQDeviceMirrors_Kokkos(PetscDA_LETKF *impl)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFDestroyQDeviceMirrors_Kokkos(PetscDA_LETKF *impl)
 {
   PetscFunctionBegin;
   if (impl->Q_device_i) {
@@ -539,7 +539,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFDestroyQDeviceMirrors_Kokkos(PetscDA_LET
   state, so PetscDADestroy_LETKF calls this regardless of localization type. Q-rebuild paths
   use PetscDALETKFDestroyQDeviceMirrors_Kokkos() instead so the handle and workspace persist.
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *impl)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *impl)
 {
   PetscFunctionBegin;
   PetscCall(PetscDALETKFDestroyQDeviceMirrors_Kokkos(impl));
@@ -627,7 +627,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF
   per-vertex eigendecompositions are dispatched through BatchedEigenSolve_Device() (or
   BatchedEigenSolve_Host() when Kokkos's default execution space is the host).
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
   using exec_space              = Kokkos::DefaultExecutionSpace;
   using view_3d                 = Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, exec_space>;
@@ -1314,7 +1314,7 @@ PETSC_INTERN PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA da, PetscDA
   S^T*S, gemv for S^T*delta, and gemm for X*G; the m x m factor (T = (1/rho)I + S^T*S)
   is eigendecomposed on the host on every rank since m is small (ensemble size).
 */
-PETSC_INTERN PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl, PetscInt m, Mat X, Vec observation)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA da, PetscDA_LETKF *impl, PetscInt m, Mat X, Vec observation)
 {
   using exec_space       = Kokkos::DefaultExecutionSpace;
   using view_2d          = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>;

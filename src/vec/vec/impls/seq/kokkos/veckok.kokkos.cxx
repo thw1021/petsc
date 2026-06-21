@@ -1828,7 +1828,7 @@ PetscErrorCode VecCreateSeqKokkosWithArray(MPI_Comm comm, PetscInt bs, PetscInt 
 
 // Convert VECSEQ to VECSEQKOKKOS. One could provide a non-NULL array_d[] for memory on device. If that is the case, we assume
 // array_d[] is already synced with the host array. If array_d is NULL, then PETSc will allocate the device memory.
-PetscErrorCode VecConvert_Seq_SeqKokkos_inplace(Vec v, PetscScalar *array_d)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecConvert_Seq_SeqKokkos_inplace(Vec v, PetscScalar *array_d)
 {
   Vec_Seq *vecseq;
 
@@ -1984,7 +1984,7 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
 
 .seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`
 M*/
-PetscErrorCode VecCreate_SeqKokkos(Vec v)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_SeqKokkos(Vec v)
 {
   PetscBool                 mdot_use_gemv  = PETSC_TRUE;
   PetscBool                 maxpy_use_gemv = PETSC_FALSE; // default is false as we saw bad performance with vendors' GEMV with tall skinny matrices.

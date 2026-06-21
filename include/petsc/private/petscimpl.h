@@ -1623,10 +1623,10 @@ PETSC_EXTERN int64_t Petsc_adios_group;
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_INTERN PetscBool      PetscBeganKokkos;
-PETSC_EXTERN PetscBool      PetscKokkosInitialized;
-PETSC_INTERN PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *);
-PETSC_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
+PETSC_SINGLE_LIBRARY_INTERN PetscBool      PetscBeganKokkos;
+PETSC_EXTERN PetscBool                     PetscKokkosInitialized;
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
 #endif
 
 #if defined(PETSC_HAVE_OPENMP)

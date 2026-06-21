@@ -600,7 +600,7 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
 {
   MPI_Comm     comm = PetscObjectComm((PetscObject)A);
   Mat          M = NULL, dH = NULL, oH = NULL, dA = NULL, oA = NULL;

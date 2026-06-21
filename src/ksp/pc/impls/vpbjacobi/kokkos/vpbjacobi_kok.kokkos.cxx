@@ -141,7 +141,7 @@ static PetscErrorCode PCDestroy_VPBJacobi_Kokkos(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PCSetUp_VPBJacobi_Kokkos(PC pc, Mat diagVPB)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCSetUp_VPBJacobi_Kokkos(PC pc, Mat diagVPB)
 {
   PC_VPBJacobi        *jac   = (PC_VPBJacobi *)pc->data;
   PC_VPBJacobi_Kokkos *pckok = static_cast<PC_VPBJacobi_Kokkos *>(jac->spptr);

@@ -13,9 +13,9 @@ PETSC_EXTERN PetscErrorCode VecCreate_MPIViennaCL(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_ViennaCL(Vec);
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_EXTERN PetscErrorCode VecCreate_SeqKokkos(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_MPIKokkos(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_Kokkos(Vec);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_SeqKokkos(Vec);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_MPIKokkos(Vec);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_Kokkos(Vec);
 #endif
 
 PetscBool VecRegisterAllCalled = PETSC_FALSE;

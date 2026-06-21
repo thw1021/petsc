@@ -51,7 +51,7 @@ static PetscErrorCode MatDestroy_MPIBAIJ(Mat mat)
 #undef TYPE
 
 #if defined(PETSC_HAVE_HYPRE)
-PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat, MatType, MatReuse, Mat *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat, MatType, MatReuse, Mat *);
 #endif
 
 static PetscErrorCode MatGetRowMaxAbs_MPIBAIJ(Mat A, Vec v, PetscInt idx[])

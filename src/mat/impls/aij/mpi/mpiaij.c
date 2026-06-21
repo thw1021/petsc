@@ -5962,7 +5962,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_Elemental(Mat, MatType, MatReuse, 
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
 #endif
 #if defined(PETSC_HAVE_HYPRE)
-PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat, MatType, MatReuse, Mat *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat, MatType, MatReuse, Mat *);
 #endif
 #if defined(PETSC_HAVE_CUDA)
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat, MatType, MatReuse, Mat *);
@@ -5971,7 +5971,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat, MatType, MatRe
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJHIPSPARSE(Mat, MatType, MatReuse, Mat *);
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat, MatType, MatReuse, Mat *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat, MatType, MatReuse, Mat *);
 #endif
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatConvert_XAIJ_IS(Mat, MatType, MatReuse, Mat *);
@@ -8006,7 +8006,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatGetCurrentMemType_MPIAIJ(Mat A, PetscMemType *memtype)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatGetCurrentMemType_MPIAIJ(Mat A, PetscMemType *memtype)
 {
   Mat_MPIAIJ  *mpiaij = (Mat_MPIAIJ *)A->data;
   PetscMemType mD = PETSC_MEMTYPE_HOST, mO = PETSC_MEMTYPE_HOST;

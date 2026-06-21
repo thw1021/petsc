@@ -63,23 +63,23 @@ typedef struct {
 
 PETSC_INTERN const char *const PetscDALETKFLocalizationTypes[];
 
-PETSC_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat(PetscDALETKFLocalizationType, PetscReal, Vec[], PetscReal[], Mat, PetscBool, Mat *, PetscInt *, PetscInt *);
-PETSC_INTERN PetscErrorCode PetscDALETKFGatherObsBbox(PetscInt, Vec[], PetscReal[], PetscReal, Mat, Vec[], PetscInt *, PetscInt **, PetscReal **);
-PETSC_INTERN PetscErrorCode PetscDALETKFComputeObsCoords(Mat, Vec[], PetscInt *, Vec **);
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsCoords(PetscInt, Vec **);
-PETSC_INTERN PetscErrorCode PetscDALETKFAssembleQFromCSR(Mat, PetscInt, PetscInt, PetscInt, MatType, const PetscInt[], const PetscInt[], const PetscInt[], const PetscScalar[], Mat *);
-PETSC_INTERN PetscErrorCode PetscDALETKFLogQStats(Mat, PetscDALETKFLocalizationType, PetscReal, PetscInt, PetscInt, const PetscInt[]);
-PETSC_INTERN PetscErrorCode PetscDALETKFCoalesceNnzMinMax(MPI_Comm, PetscInt *, PetscInt *);
-PETSC_INTERN PetscErrorCode PetscDALETKFSetupObsScatter(PetscDA_LETKF *, Mat);
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyObsScatter(PetscDA_LETKF *);
-PETSC_INTERN PetscErrorCode PetscDALETKFReplicateWeightVector(Vec, PetscInt, Mat);
-PETSC_INTERN PetscErrorCode PetscDALETKFEnsureGlobalScratch(PetscDA_LETKF *, PetscInt);
-PETSC_INTERN PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA, PetscDA_LETKF *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
+PETSC_INTERN PetscErrorCode                PetscDALETKFCreateLocalizationMat(PetscDALETKFLocalizationType, PetscReal, Vec[], PetscReal[], Mat, PetscBool, Mat *, PetscInt *, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFGatherObsBbox(PetscInt, Vec[], PetscReal[], PetscReal, Mat, Vec[], PetscInt *, PetscInt **, PetscReal **);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFComputeObsCoords(Mat, Vec[], PetscInt *, Vec **);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFDestroyObsCoords(PetscInt, Vec **);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFAssembleQFromCSR(Mat, PetscInt, PetscInt, PetscInt, MatType, const PetscInt[], const PetscInt[], const PetscInt[], const PetscScalar[], Mat *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFLogQStats(Mat, PetscDALETKFLocalizationType, PetscReal, PetscInt, PetscInt, const PetscInt[]);
+PETSC_INTERN PetscErrorCode                PetscDALETKFCoalesceNnzMinMax(MPI_Comm, PetscInt *, PetscInt *);
+PETSC_INTERN PetscErrorCode                PetscDALETKFSetupObsScatter(PetscDA_LETKF *, Mat);
+PETSC_INTERN PetscErrorCode                PetscDALETKFDestroyObsScatter(PetscDA_LETKF *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFReplicateWeightVector(Vec, PetscInt, Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFEnsureGlobalScratch(PetscDA_LETKF *, PetscInt);
+PETSC_INTERN PetscErrorCode                PetscDALETKFLocalAnalysis(PetscDA, PetscDA_LETKF *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat_Kokkos(PetscDALETKFLocalizationType, PetscReal, Vec[], PetscReal[], Mat, Mat *, PetscInt *, PetscInt *);
-PETSC_INTERN PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA, PetscDA_LETKF *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
-PETSC_INTERN PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA, PetscDA_LETKF *, PetscInt, Mat, Vec);
-PETSC_INTERN PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *);
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyQDeviceMirrors_Kokkos(PetscDA_LETKF *);
-PETSC_INTERN PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFCreateLocalizationMat_Kokkos(PetscDALETKFLocalizationType, PetscReal, Vec[], PetscReal[], Mat, Mat *, PetscInt *, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFLocalAnalysis_Kokkos(PetscDA, PetscDA_LETKF *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFGlobalAnalysis_Kokkos(PetscDA, PetscDA_LETKF *, PetscInt, Mat, Vec);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDA_LETKF *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFDestroyQDeviceMirrors_Kokkos(PetscDA_LETKF *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDA_LETKF *);
 #endif

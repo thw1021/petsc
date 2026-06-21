@@ -456,7 +456,7 @@ PetscBool PetscDeviceInitialized(PetscDeviceType type)
 }
 
 /* Get the default PetscDevice for a particular type and constructs them if lazily initialized. */
-PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
 {
   PetscFunctionBegin;
   PetscAssertPointer(device, 2);

@@ -566,7 +566,7 @@ static PetscErrorCode MatSetOption_SeqAIJKokkos(Mat A, MatOption op, PetscBool f
 }
 
 /* Depending on reuse, either build a new mat, or use the existing mat */
-PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJKokkos(Mat A, MatType mtype, MatReuse reuse, Mat *newmat)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJKokkos(Mat A, MatType mtype, MatReuse reuse, Mat *newmat)
 {
   Mat_SeqAIJ *aseq;
 
@@ -2351,7 +2351,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_SeqAIJKokkos_Kokkos(Mat A, MatFactorTyp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatSolverTypeRegister_Kokkos(void)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSolverTypeRegister_Kokkos(void)
 {
   PetscFunctionBegin;
   PetscCall(MatSolverTypeRegister(MATSOLVERKOKKOS, MATSEQAIJKOKKOS, MAT_FACTOR_LU, MatGetFactor_SeqAIJKokkos_Kokkos));

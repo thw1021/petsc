@@ -138,14 +138,14 @@ struct _p_PetscSF {
 PETSC_EXTERN PetscBool      PetscSFRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode PetscSFRegisterAll(void);
 
-PETSC_INTERN PetscErrorCode PetscSFGetDatatypeSize_Internal(MPI_Comm, MPI_Datatype, MPI_Aint *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFGetDatatypeSize_Internal(MPI_Comm, MPI_Datatype, MPI_Aint *);
 
 PETSC_INTERN PetscErrorCode PetscSFCreateLocalSF_Private(PetscSF, PetscSF *);
 PETSC_INTERN PetscErrorCode PetscSFBcastToZero_Private(PetscSF, MPI_Datatype, const void *, void *) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(3, 2) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(4, 2);
 
-PETSC_INTERN PetscErrorCode MPIPetsc_Type_unwrap(MPI_Datatype, MPI_Datatype *, PetscBool *);
-PETSC_INTERN PetscErrorCode MPIPetsc_Type_compare(MPI_Datatype, MPI_Datatype, PetscBool *);
-PETSC_INTERN PetscErrorCode MPIPetsc_Type_compare_contig(MPI_Datatype, MPI_Datatype, PetscInt *);
+PETSC_INTERN PetscErrorCode                MPIPetsc_Type_unwrap(MPI_Datatype, MPI_Datatype *, PetscBool *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MPIPetsc_Type_compare(MPI_Datatype, MPI_Datatype, PetscBool *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MPIPetsc_Type_compare_contig(MPI_Datatype, MPI_Datatype, PetscInt *);
 
 PETSC_INTERN PetscErrorCode MPIPetsc_Type_get_envelope(MPI_Datatype, MPIU_Count *, MPIU_Count *, MPIU_Count *, MPIU_Count *, PetscMPIInt *);
 PETSC_INTERN PetscErrorCode MPIPetsc_Type_get_contents(MPI_Datatype, MPIU_Count, MPIU_Count, MPIU_Count, MPIU_Count, int *, MPI_Aint *, MPIU_Count *, MPI_Datatype *);
@@ -182,16 +182,16 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterRestoreRemote_Private(VecSc
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
 
 #if defined(PETSC_HAVE_CUDA)
-PETSC_INTERN PetscErrorCode PetscSFMalloc_CUDA(PetscMemType, size_t, void **);
-PETSC_INTERN PetscErrorCode PetscSFFree_CUDA(PetscMemType, void *);
+PETSC_INTERN PetscErrorCode                PetscSFMalloc_CUDA(PetscMemType, size_t, void **);
+PETSC_INTERN PetscErrorCode                PetscSFFree_CUDA(PetscMemType, void *);
 #endif
 #if defined(PETSC_HAVE_HIP)
-PETSC_INTERN PetscErrorCode PetscSFMalloc_HIP(PetscMemType, size_t, void **);
-PETSC_INTERN PetscErrorCode PetscSFFree_HIP(PetscMemType, void *);
+PETSC_INTERN PetscErrorCode                PetscSFMalloc_HIP(PetscMemType, size_t, void **);
+PETSC_INTERN PetscErrorCode                PetscSFFree_HIP(PetscMemType, void *);
 #endif
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_INTERN PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType, size_t, void **);
-PETSC_INTERN PetscErrorCode PetscSFFree_Kokkos(PetscMemType, void *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType, size_t, void **);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFFree_Kokkos(PetscMemType, void *);
 #endif
 
 /* SF only supports CUDA and Kokkos devices. Even VIENNACL is a device, its device pointers are invisible to SF.
