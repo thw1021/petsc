@@ -1636,7 +1636,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
         PetscCheck(minf >= 0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Minimum flop %g over all processes for %s is negative! Not possible!", minf, event_name);
 #if defined(PETSC_HAVE_DEVICE) && !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
         /* Put NaN into the time for all events that may not be time accurately since they may happen asynchronously on the GPU */
-        if (!PetscLogGpuTimeFlag && petsc_gflops > 0) {
+        if (!PetscLogGpuTimeFlag && petsc_gflops > 0 && 0) {
           memcpy(&gmaxt, &nas, sizeof(PetscLogDouble));
           if (event_id != SNES_Solve && event_id != KSP_Solve && event_id != TS_Step && event_id != TAO_Solve) {
             memcpy(&mint, &nas, sizeof(PetscLogDouble));

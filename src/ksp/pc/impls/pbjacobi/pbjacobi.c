@@ -283,8 +283,8 @@ static PetscErrorCode PCSetUp_PBJacobi(PC pc)
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   PetscBool isKok;
-  PetscCall(PetscObjectTypeCompareAny((PetscObject)pc->pmat, &isKok, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
-  if (!isKok && diagPB) PetscCall(PetscObjectTypeCompareAny((PetscObject)diagPB, &isKok, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)pc->pmat, &isKok, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATSEQBAIJKOKKOS, MATMPIBAIJKOKKOS, ""));
+  if (!isKok && diagPB) PetscCall(PetscObjectTypeCompareAny((PetscObject)diagPB, &isKok, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATSEQBAIJKOKKOS, MATMPIBAIJKOKKOS, ""));
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
