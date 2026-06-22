@@ -114,10 +114,5 @@ int main(int argc, char **argv)
 
    test:
      suffix: 1
-     requires: !complex
-
-   test:
-     suffix: 1_complex
-     requires: complex
 
 TEST*/

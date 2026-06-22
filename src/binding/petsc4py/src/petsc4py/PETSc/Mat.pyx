@@ -4378,9 +4378,10 @@ cdef class Mat(Object):
         Parameters
         ----------
         norm_type
-            The type of norm: `NormType.NORM_1`, `NormType.NORM_2`, or `NormType.NORM_INFINITY`.
+            The type of norm: `NormType.NORM_1`, `NormType.NORM_2`,
+            or `NormType.NORM_INFINITY`.
         max_it
-            Maximum number of iterations used to approximate the matrix norm
+            Maximum number of iterations used to approximate the norm.
 
         Returns
         -------
@@ -4390,6 +4391,7 @@ cdef class Mat(Object):
         See Also
         --------
         Mat.norm, petsc.MatNormApproximate
+
         """
         cdef PetscInt _max_it = asInt(max_it)
         cdef PetscNormType ntype = PETSC_NORM_2
