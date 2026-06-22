@@ -48,6 +48,7 @@
 
 ## Vec
 
+- Add `VecSetStdBasis()` API to set a vector to the i-th standard basis vector
 
 ## PetscSection
 
