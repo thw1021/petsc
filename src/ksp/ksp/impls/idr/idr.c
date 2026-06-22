@@ -33,7 +33,7 @@ static PetscErrorCode KSPIDRInitShadowSpace_IDR(KSP ksp)
   for (k = 0; k < idr->s; k++) {
     PetscCall(VecNormalize(idr->PP[k], NULL));
     for (j = k + 1; j < idr->s; j++) {
-      PetscCall(VecDot(idr->PP[k], idr->PP[j], &dot));
+      PetscCall(VecDot(idr->PP[j], idr->PP[k], &dot));
       PetscCall(VecAXPY(idr->PP[j], -dot, idr->PP[k]));
     }
   }
@@ -244,9 +244,6 @@ static PetscErrorCode KSPSolve_IDR(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   KSPReset_IDR - Free work vectors not handled with KSPSetWorkVecs().
-*/
 static PetscErrorCode KSPReset_IDR(KSP ksp)
 {
   KSP_IDR *idr = (KSP_IDR *)ksp->data;
@@ -256,9 +253,6 @@ static PetscErrorCode KSPReset_IDR(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   KSPDestroy_IDR - Free private data and clear composed functions.
-*/
 static PetscErrorCode KSPDestroy_IDR(KSP ksp)
 {
   KSP_IDR *idr = (KSP_IDR *)ksp->data;
@@ -277,9 +271,6 @@ static PetscErrorCode KSPDestroy_IDR(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   KSPView_IDR - Print solver parameters to a viewer.
-*/
 static PetscErrorCode KSPView_IDR(KSP ksp, PetscViewer viewer)
 {
   KSP_IDR  *idr = (KSP_IDR *)ksp->data;
@@ -298,9 +289,6 @@ static PetscErrorCode KSPView_IDR(KSP ksp, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   KSPSetFromOptions_IDR - Read solver options from the database.
-*/
 static PetscErrorCode KSPSetFromOptions_IDR(KSP ksp, PetscOptionItems PetscOptionsObject)
 {
   KSP_IDR  *idr = (KSP_IDR *)ksp->data;
@@ -310,9 +298,9 @@ static PetscErrorCode KSPSetFromOptions_IDR(KSP ksp, PetscOptionItems PetscOptio
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "KSP IDR(s) options");
-  PetscCall(PetscOptionsInt("-ksp_idr_s", "Shadow space dimension", "KSPIDRSetS", idr->s, &s, &flg));
+  PetscCall(PetscOptionsBoundedInt("-ksp_idr_s", "Shadow space dimension", "KSPIDRSetS", idr->s, &s, &flg, 1));
   if (flg) PetscCall(KSPIDRSetS(ksp, s));
-  PetscCall(PetscOptionsReal("-ksp_idr_cosine", "Omega stabilization cosine threshold (0 = off)", "KSPIDRSetCosine", idr->cth, &cth, &flg));
+  PetscCall(PetscOptionsRangeReal("-ksp_idr_cosine", "Omega stabilization cosine threshold (0 = off)", "KSPIDRSetCosine", idr->cth, &cth, &flg, 0.0, 1.0));
   if (flg) PetscCall(KSPIDRSetCosine(ksp, cth));
   PetscOptionsHeadEnd();
   PetscCall(KSPIDRGetRandom(ksp, &idr->rand));
@@ -546,7 +534,7 @@ PetscErrorCode KSPIDRGetRandom(KSP ksp, PetscRandom *rand)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscAssertPointer(rand, 2);
-  PetscTryMethod(ksp, "KSPIDRGetRandom_C", (KSP, PetscRandom *), (ksp, rand));
+  PetscUseMethod(ksp, "KSPIDRGetRandom_C", (KSP, PetscRandom *), (ksp, rand));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
