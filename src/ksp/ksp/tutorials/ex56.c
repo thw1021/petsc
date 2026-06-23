@@ -620,4 +620,12 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
       filter: grep "Linear solve converged"
       output_file: output/ex56_mpibaijkokkos_reuse.out
 
+   # exercises the device-resident MPI MIS coarsener (MATCOARSENMISKOKKOS) on a multi-rank
+   # mpiaijkokkos graph; mis_kokkos is auto-selected by GAMG when the graph is MPIAIJKOKKOS.
+   test:
+      suffix: mpiaijkokkos_miskokkos
+      requires: kokkos_kernels !complex
+      nsize: 8
+      args: -ne 17 -alpha 1.e-3 -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -use_mat_nearnullspace -pc_gamg_coarse_eq_limit 20 -ksp_rtol 1e-6 -mg_levels_ksp_type chebyshev -mg_levels_pc_type pbjacobi -mg_coarse_pc_type jacobi -mg_coarse_ksp_type cg -pc_gamg_parallel_coarse_grid_solver -mat_type mpiaijkokkos -pc_gamg_mat_coarsen_type mis_kokkos -ksp_converged_reason -two_solves false
+
 TEST*/

@@ -1304,7 +1304,7 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   PetscCall(PetscFree(bIndexSet));
   PetscCall(PetscRandomDestroy(&random));
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, nloc, permute, PETSC_USE_POINTER, &perm));
-  PetscCall(PetscObjectTypeCompare((PetscObject)Gmat1, MATSEQAIJKOKKOS, &iskok));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)Gmat1, &iskok, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
   PetscCall(PetscOptionsHasName(((PetscObject)pc_gamg_agg->crs)->options, ((PetscObject)pc_gamg_agg->crs)->prefix, "-mat_coarsen_type", &has_explicit_type));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_MIS], 0, 0, 0, 0));
   // square graph
