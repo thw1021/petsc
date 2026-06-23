@@ -27,9 +27,10 @@ typedef struct _p_MatCoarsen *MatCoarsen;
 .seealso: [](ch_matrices), [](sec_graph), `Mat`, `MatCoarsenCreate()`, `MatCoarsen`, `MatColoringType`, `MatPartitioningType`, `MatOrderingType`
 J*/
 typedef const char *MatCoarsenType;
-#define MATCOARSENMIS  "mis"
-#define MATCOARSENHEM  "hem"
-#define MATCOARSENMISK "misk"
+#define MATCOARSENMIS       "mis"
+#define MATCOARSENHEM       "hem"
+#define MATCOARSENMISK      "misk"
+#define MATCOARSENMISKOKKOS "mis_kokkos"
 
 /* linked list for aggregates */
 typedef struct _PetscCDIntNd {

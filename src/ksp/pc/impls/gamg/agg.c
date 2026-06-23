@@ -1259,6 +1259,7 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   PetscInt     Istart, Iend, Ii, nloc, bs, nn;
   PetscInt    *permute, *degree;
   PetscBool   *bIndexSet;
+  PetscBool    iskok, has_explicit_type;
   PetscReal    hashfact;
   PetscInt     iSwapIndex;
   PetscRandom  random;
@@ -1303,14 +1304,16 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   PetscCall(PetscFree(bIndexSet));
   PetscCall(PetscRandomDestroy(&random));
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, nloc, permute, PETSC_USE_POINTER, &perm));
+  PetscCall(PetscObjectTypeCompare((PetscObject)Gmat1, MATSEQAIJKOKKOS, &iskok));
+  PetscCall(PetscOptionsHasName(((PetscObject)pc_gamg_agg->crs)->options, ((PetscObject)pc_gamg_agg->crs)->prefix, "-mat_coarsen_type", &has_explicit_type));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_MIS], 0, 0, 0, 0));
   // square graph
   if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels && pc_gamg_agg->use_aggressive_square_graph) PetscCall(PCGAMGSquareGraph_GAMG(a_pc, Gmat1, &Gmat2));
   else Gmat2 = Gmat1;
-  // switch to old MIS-1 for square graph
+  // switch to device MIS (or old MIS-1 for CPU) for square graph; device MIS for non-aggressive
   if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels) {
     if (!pc_gamg_agg->use_aggressive_square_graph) PetscCall(MatCoarsenMISKSetDistance(pc_gamg_agg->crs, pc_gamg_agg->aggressive_mis_k)); // hardwire to MIS-2
-    else PetscCall(MatCoarsenSetType(pc_gamg_agg->crs, MATCOARSENMIS));                                                                   // old MIS -- side effect
+    else PetscCall(MatCoarsenSetType(pc_gamg_agg->crs, (iskok && !has_explicit_type) ? MATCOARSENMISKOKKOS : MATCOARSENMIS));             // device or old MIS -- side effect
   } else if (pc_gamg_agg->use_aggressive_square_graph && pc_gamg_agg->aggressive_coarsening_levels > 0) {                                 // we reset the MIS
     const char *prefix;
 
@@ -1318,6 +1321,8 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)pc_gamg_agg->crs, prefix));
     PetscCall(MatCoarsenSetFromOptions(pc_gamg_agg->crs)); // get the default back on non-aggressive levels when square graph switched to old MIS
   }
+  // auto-select device MIS on non-aggressive levels when graph is device-resident and no explicit type was requested
+  if (iskok && !has_explicit_type && pc_gamg->current_level >= pc_gamg_agg->aggressive_coarsening_levels) PetscCall(MatCoarsenSetType(pc_gamg_agg->crs, MATCOARSENMISKOKKOS));
   PetscCall(MatCoarsenSetAdjacency(pc_gamg_agg->crs, Gmat2));
   PetscCall(MatCoarsenSetStrictAggs(pc_gamg_agg->crs, PETSC_TRUE));
   PetscCall(MatCoarsenSetGreedyOrdering(pc_gamg_agg->crs, perm));

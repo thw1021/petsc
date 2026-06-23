@@ -738,19 +738,19 @@ static PetscErrorCode MatProductOperandAsAIJ_MPIBAIJKokkos(Mat M, Mat *aij, Pets
   nonzero structure (zeroed + refilled each numeric).
 */
 struct MatProductCtx_MPIBAIJKokkos {
-  Mat                 A_local     = NULL;            /* [A_diag | A_offdiag shifted], mbs x (mbs+ec_A) */
-  Mat                 P_localrows = NULL;            /* P's local block-rows, GLOBAL coarse cols, mbs x pNbs */
-  Mat                 P_oth       = NULL;            /* gathered off-process P rows, ec_A x pNbs (NULL if size 1) */
-  Mat                 P_stack     = NULL;            /* [P_localrows ; P_oth], (mbs+ec_A) x pNbs */
-  Mat                 AP          = NULL;            /* A_local * P_stack */
-  Mat                 R           = NULL;            /* P_localrows^T (PtAP only) */
-  Mat                 Cseq        = NULL;            /* per-process triple product in global coarse cols */
-  MatColIdxKokkosView perm;                          /* transpose block-perm for R (PtAP only) */
+  Mat                 A_local     = NULL; /* [A_diag | A_offdiag shifted], mbs x (mbs+ec_A) */
+  Mat                 P_localrows = NULL; /* P's local block-rows, GLOBAL coarse cols, mbs x pNbs */
+  Mat                 P_oth       = NULL; /* gathered off-process P rows, ec_A x pNbs (NULL if size 1) */
+  Mat                 P_stack     = NULL; /* [P_localrows ; P_oth], (mbs+ec_A) x pNbs */
+  Mat                 AP          = NULL; /* A_local * P_stack */
+  Mat                 R           = NULL; /* P_localrows^T (PtAP only) */
+  Mat                 Cseq        = NULL; /* per-process triple product in global coarse cols */
+  MatColIdxKokkosView perm;               /* transpose block-perm for R (PtAP only) */
   /* Device gather maps recorded at symbolic build, replayed on MAT_REUSE to refresh A_local/P_localrows
      block values straight from the source baij->A/baij->B device a_dual (no host round-trip). Per dest
      block slot: *_src = source block index in the source sub-block, *_isoff = 0 (baij->A diag) / 1 (baij->B offdiag). */
-  MatColIdxKokkosView a_local_src, a_local_isoff;     /* A_local: dest block -> source block in A's diag/offdiag */
-  MatColIdxKokkosView p_loc_src, p_loc_isoff;         /* P_localrows: dest block -> source block in P's diag/offdiag */
+  MatColIdxKokkosView a_local_src, a_local_isoff;    /* A_local: dest block -> source block in A's diag/offdiag */
+  MatColIdxKokkosView p_loc_src, p_loc_isoff;        /* P_localrows: dest block -> source block in P's diag/offdiag */
   PetscSF             sf_blocks = NULL;              /* block-granular BCAST SF: roots = P_localrows blocks, leaves = P_oth blocks */
   MPI_Datatype        blkunit   = MPI_DATATYPE_NULL; /* MPI_Type_contiguous(fb*cb, MPIU_SCALAR): one P block per SF unit */
   PetscInt            ec_A      = 0;                 /* A off-diagonal block-cols == P_oth block-rows */
@@ -758,7 +758,7 @@ struct MatProductCtx_MPIBAIJKokkos {
   /* P's object state at the last P-side (re)build. With -pc_gamg_reuse_interpolation the prolongator P is
      fixed across hot solves while only A changes, so a reuse numeric whose P state matches this skips the
      entire P-side refresh (P_localrows/P_oth Bcast/P_stack/R) - the dominant numeric-phase SF cost. */
-  PetscObjectState    P_state   = -1;
+  PetscObjectState P_state = -1;
 };
 
 /*
@@ -896,16 +896,16 @@ static PetscErrorCode MatRefreshMergedDevice_MPIBAIJKokkos(Mat src, Mat dest, Ma
 {
   Mat_MPIBAIJ       *baij  = (Mat_MPIBAIJ *)src->data;
   Mat_SeqBAIJKokkos *destk = static_cast<Mat_SeqBAIJKokkos *>(dest->spptr);
-  PetscInt           bs2   = destk->row_bs * destk->col_bs, nblk = destk->nblks();
-  PetscBool          hasB  = (PetscBool)(baij->B && baij->garray);
+  PetscInt           bs2 = destk->row_bs * destk->col_bs, nblk = destk->nblks();
+  PetscBool          hasB = (PetscBool)(baij->B && baij->garray);
 
   PetscFunctionBegin;
   PetscCall(MatSeqBAIJKokkosSyncDevice(baij->A));
   if (hasB) PetscCall(MatSeqBAIJKokkosSyncDevice(baij->B));
   {
-    ConstMatScalarKokkosView a_d = static_cast<Mat_SeqBAIJKokkos *>(baij->A->spptr)->a_dual.view_device();
-    ConstMatScalarKokkosView b_d = hasB ? static_cast<Mat_SeqBAIJKokkos *>(baij->B->spptr)->a_dual.view_device() : ConstMatScalarKokkosView();
-    MatScalarKokkosView      dst = destk->a_dual.view_device();
+    ConstMatScalarKokkosView a_d   = static_cast<Mat_SeqBAIJKokkos *>(baij->A->spptr)->a_dual.view_device();
+    ConstMatScalarKokkosView b_d   = hasB ? static_cast<Mat_SeqBAIJKokkos *>(baij->B->spptr)->a_dual.view_device() : ConstMatScalarKokkosView();
+    MatScalarKokkosView      dst   = destk->a_dual.view_device();
     MatColIdxKokkosView      src_v = gather_src, off_v = gather_isoff;
 
     Kokkos::parallel_for(
@@ -951,8 +951,8 @@ static PetscErrorCode MatBuildAlocal_MPIBAIJKokkos(Mat A, PetscBool reuse, Mat *
   MatColIdxKokkosView goff(Kokkos::view_alloc("a_local_isoff", Kokkos::WithoutInitializing), nnz);
   auto                gsrc_h = Kokkos::create_mirror_view(gsrc);
   auto                goff_h = Kokkos::create_mirror_view(goff);
-  li[0] = 0;
-  pos   = 0;
+  li[0]                      = 0;
+  pos                        = 0;
   for (i = 0; i < mbs; i++) {
     for (k = di[i]; k < di[i + 1]; k++) {
       lj[pos] = dj[k]; /* diagonal block-columns [0, mbs) unchanged */
@@ -1015,8 +1015,8 @@ static PetscErrorCode MatBuildPlocalGlobal_MPIBAIJKokkos(Mat P, PetscBool reuse,
   MatColIdxKokkosView goff(Kokkos::view_alloc("p_loc_isoff", Kokkos::WithoutInitializing), nnz);
   auto                gsrc_h = Kokkos::create_mirror_view(gsrc);
   auto                goff_h = Kokkos::create_mirror_view(goff);
-  li[0] = 0;
-  pos   = 0;
+  li[0]                      = 0;
+  pos                        = 0;
   for (i = 0; i < mbs; i++) {
     kd              = di[i];
     ko              = oi ? oi[i] : 0;

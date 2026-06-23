@@ -350,6 +350,17 @@ int main(int argc, char **args)
     PetscCall(PetscObjectSetName((PetscObject)bb, "b"));
     PetscCall(PetscObjectSetName((PetscObject)xx, "u"));
     PetscCall(DMCreateMatrix(dm, &Amat));
+    { /* The DM owns both the matrix and vector types. A bare -mat_type (rather than -dm_mat_type) flips the
+         operator to a device type via MatSetFromOptions() inside DMCreateMatrix() but leaves the DM creating
+         standard vectors, which only fails much later inside a smoother MatMult(). Catch the mismatch here. */
+      VecType   mvtype, dvtype;
+      PetscBool compatible;
+
+      PetscCall(MatGetVecType(Amat, &mvtype));
+      PetscCall(DMGetVecType(dm, &dvtype));
+      PetscCall(PetscStrcmp(mvtype, dvtype, &compatible));
+      PetscCheck(compatible, comm, PETSC_ERR_ARG_INCOMP, "Operator vector type (%s) does not match DM vector type (%s); set both consistently with -dm_mat_type and -dm_vec_type (not -mat_type) so DM-created vectors match the operator", mvtype, dvtype);
+    }
     PetscCall(MatSetOption(Amat, MAT_SYMMETRIC, PETSC_TRUE));        /* Some matrix kernels can take advantage of symmetry if we set this. */
     PetscCall(MatSetOption(Amat, MAT_SYMMETRY_ETERNAL, PETSC_TRUE)); /* Inform PETSc that Amat is always symmetric, so info set above isn't lost. */
     PetscCall(MatSetBlockSize(Amat, Ncomp));
@@ -606,6 +617,13 @@ int main(int argc, char **args)
     test:
       suffix: hot_block
       args: -dm_mat_type mpiaij -block_mat_type mpibaijkokkos
+  # Verify the device-resident mis_kokkos coarsener (single rank, SEQAIJKOKKOS graph, explicit type).
+  test:
+    suffix: kokkos_mis_coarsen
+    nsize: 1
+    requires: kokkos_kernels !single
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0,0,0 -dm_plex_box_upper 1,1,1 -dm_plex_box_faces 2,2,1 -petscspace_degree 2 -snes_max_it 1 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_type agg -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_aggressive_coarsening 1 -pc_gamg_threshold 0.001 -use_mat_nearnullspace true -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.1 -mg_levels_pc_type jacobi -petscpartitioner_type simple -snes_type ksponly -pc_gamg_mat_coarsen_type mis_kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_converged_reason -max_conv_its 2
+
   # Don't run AIJMKL caes with complex scalars because of convergence issues.
   # Note that we need to test both single and multiple MPI rank cases, because these use different sparse MKL routines to implement the PtAP operation.
   test:
