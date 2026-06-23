@@ -46,20 +46,15 @@ static PetscErrorCode MatCoarsenMISKokkosGetDeviceCSR(Mat M, Kokkos::View<const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Refresh the device ghost-owner buffer from the local owner array: D2H of owner_d, a
-   PetscSF broadcast over the column layout (owning rank -> ghost copies), then H2D into
-   cpcol_owner_d. The MIS compute stays on the GPU; only this halo crosses ranks, and as a
-   one-time cold-setup cost the host staging is negligible (device-aware SF is a later step). */
-static PetscErrorCode MatCoarsenMISKokkosHaloExchange(PetscSF sf, PetscInt nloc, PetscInt nfg, PetscIntKokkosView owner_d, PetscInt *owner_stage_h, PetscInt *cpcol_owner_h, PetscIntKokkosView cpcol_owner_d)
+/* Refresh the device ghost-owner buffer from the local owner array via a device-resident
+   PetscSF broadcast over the column layout (owning rank -> ghost copies). The owner array
+   never leaves device memory: PetscSFBcastWithMemType moves it through the same memtype-aware
+   path MPIAIJKOKKOS MatMult uses for its halo, so there is no per-round host staging. */
+static PetscErrorCode MatCoarsenMISKokkosHaloExchange(PetscSF sf, PetscIntKokkosView owner_d, PetscIntKokkosView cpcol_owner_d)
 {
-  PetscIntKokkosViewHost owner_stage_hv(owner_stage_h, nloc);
-  PetscIntKokkosViewHost cpcol_owner_hv(cpcol_owner_h, nfg);
-
   PetscFunctionBegin;
-  PetscCallCXX(Kokkos::deep_copy(owner_stage_hv, owner_d));
-  PetscCall(PetscSFBcastBegin(sf, MPIU_INT, owner_stage_h, cpcol_owner_h, MPI_REPLACE));
-  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, owner_stage_h, cpcol_owner_h, MPI_REPLACE));
-  PetscCallCXX(Kokkos::deep_copy(cpcol_owner_d, cpcol_owner_hv));
+  PetscCall(PetscSFBcastWithMemTypeBegin(sf, MPIU_INT, PETSC_MEMTYPE_KOKKOS, owner_d.data(), PETSC_MEMTYPE_KOKKOS, cpcol_owner_d.data(), MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, owner_d.data(), cpcol_owner_d.data(), MPI_REPLACE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -125,9 +120,8 @@ static PetscErrorCode MatCoarsenApply_MISKokkos_Device(MatCoarsen coarse)
     PetscIntKokkosView                                 is_root("misk_is_root", nloc);
     PetscIntKokkosView                                 cpcol_owner_d("misk_cpcol_owner", num_fine_ghosts);
     PetscIntKokkosView                                 cpcol_gid_d("misk_cpcol_gid", num_fine_ghosts);
-    const PetscInt                                     my0_k         = my0;
-    const PetscInt                                     nfg           = num_fine_ghosts;
-    PetscInt                                          *owner_stage_h = NULL, *cpcol_owner_h = NULL;
+    const PetscInt                                     my0_k = my0;
+    const PetscInt                                     nfg   = num_fine_ghosts;
 
     if (isMPI) {
       PetscCall(MatCoarsenMISKokkosGetDeviceCSR(mpimat->A, ai_d, aj_d));
@@ -136,7 +130,6 @@ static PetscErrorCode MatCoarsenApply_MISKokkos_Device(MatCoarsen coarse)
         PetscIntKokkosViewHost cpcol_gid_hv(cpcol_gid, nfg);
         PetscCallCXX(Kokkos::deep_copy(cpcol_gid_d, cpcol_gid_hv));
       }
-      PetscCall(PetscMalloc2(nloc, &owner_stage_h, nfg, &cpcol_owner_h));
     } else {
       PetscCall(MatCoarsenMISKokkosGetDeviceCSR(Gmat, ai_d, aj_d));
       PetscCallCXX(bi_owner = PetscIntKokkosView("misk_bi_empty", nloc + 1)); /* all-zero row map => no ghost neighbors */
@@ -153,7 +146,7 @@ static PetscErrorCode MatCoarsenApply_MISKokkos_Device(MatCoarsen coarse)
       }));
 
     /* Seed ghost states so the first round sees consistent off-rank owner values. */
-    if (isMPI) PetscCall(MatCoarsenMISKokkosHaloExchange(sf, nloc, nfg, owner_d, owner_stage_h, cpcol_owner_h, cpcol_owner_d));
+    if (isMPI) PetscCall(MatCoarsenMISKokkosHaloExchange(sf, owner_d, cpcol_owner_d));
 
     /* Luby rounds. Each round: (1) snapshot-select roots, (2) commit roots, (3) absorb
        undecided neighbors of a root (lowest-gid root wins for determinism). Ghost neighbors
@@ -203,7 +196,7 @@ static PetscErrorCode MatCoarsenApply_MISKokkos_Device(MatCoarsen coarse)
         }));
 
       /* (3a) refresh ghosts so newly committed off-rank roots are visible to absorb */
-      if (isMPI) PetscCall(MatCoarsenMISKokkosHaloExchange(sf, nloc, nfg, owner_d, owner_stage_h, cpcol_owner_h, cpcol_owner_d));
+      if (isMPI) PetscCall(MatCoarsenMISKokkosHaloExchange(sf, owner_d, cpcol_owner_d));
 
       /* (3b) absorb: each still-undecided vertex joins the lowest-gid root among its neighbors.
          A ghost neighbor is a root iff it owns itself (owner == its own gid). */
@@ -226,7 +219,7 @@ static PetscErrorCode MatCoarsenApply_MISKokkos_Device(MatCoarsen coarse)
         }));
 
       /* (3c) refresh ghosts so the next round's root-mark sees updated decided state */
-      if (isMPI) PetscCall(MatCoarsenMISKokkosHaloExchange(sf, nloc, nfg, owner_d, owner_stage_h, cpcol_owner_h, cpcol_owner_d));
+      if (isMPI) PetscCall(MatCoarsenMISKokkosHaloExchange(sf, owner_d, cpcol_owner_d));
 
       /* (4) convergence: count remaining undecided, globally */
       PetscCallCXX(Kokkos::parallel_reduce(
@@ -247,7 +240,6 @@ static PetscErrorCode MatCoarsenApply_MISKokkos_Device(MatCoarsen coarse)
       PetscIntKokkosViewHost owner_hv(owner_h, nloc);
       PetscCallCXX(Kokkos::deep_copy(owner_hv, owner_d));
     }
-    if (isMPI) PetscCall(PetscFree2(owner_stage_h, cpcol_owner_h));
   }
 
   /* Host bridge: build the strict_aggs PetscCoarsenData. Root's own gid is appended first,
@@ -329,8 +321,8 @@ static PetscErrorCode MatCoarsenView_MISKokkos(MatCoarsen coarse, PetscViewer vi
    weights for deterministic, thread-schedule-independent aggregate selection. It accepts
    `MATSEQAIJ`, `MATSEQAIJKOKKOS`, `MATMPIAIJ`, and `MATMPIAIJKOKKOS` strength graphs and
    runs the selection in Kokkos kernels. In the MPI case the off-rank boundary neighborhood
-   is exchanged through a `PetscSF` halo of the owner array; the result is independent of the
-   rank count.
+   is exchanged through a device-resident `PetscSF` halo of the owner array (the owner buffer
+   stays in device memory across rounds); the result is independent of the rank count.
 
 .seealso: `MatCoarsen`, `MatCoarsenApply()`, `MatCoarsenGetData()`, `MatCoarsenSetType()`, `MatCoarsenType`, `MATCOARSENMIS`
 M*/
