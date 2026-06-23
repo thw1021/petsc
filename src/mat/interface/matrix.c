@@ -4951,14 +4951,8 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
   }
 
   PetscCall(MatSolverTypeGet(type, ((PetscObject)mat)->type_name, ftype, &foundtype, &foundmtype, &conv));
-  if (!foundtype) {
-    if (type) {
-      SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate solver type %s for factorization type %s and matrix type %s. Perhaps you must ./configure with --download-%s", type, MatFactorTypes[ftype],
-              ((PetscObject)mat)->type_name, type);
-    } else {
-      SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate a solver type for factorization type %s and matrix type %s.", MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
-    }
-  }
+  PetscCheck(foundtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate%s solver type%s%s for factorization type %s and matrix type %s.%s%s", !type ? " a" : "", type ? " " : "", type ? type : "", MatFactorTypes[ftype],
+             ((PetscObject)mat)->type_name, type ? " Perhaps you must ./configure with --download-" : "", type ? type : "");
   PetscCheck(foundmtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "MatSolverType %s does not support matrix type %s", type, ((PetscObject)mat)->type_name);
   PetscCheck(conv, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "MatSolverType %s does not support factorization type %s for matrix type %s", type, MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
 
@@ -5884,13 +5878,14 @@ PetscErrorCode MatScale(Mat mat, PetscScalar a)
 
   Level: intermediate
 
-.seealso: [](ch_matrices), `Mat`
+.seealso: [](ch_matrices), `Mat`, `MatNormApproximate()`
 @*/
 PetscErrorCode MatNorm(Mat mat, NormType type, PetscReal *nrm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscValidType(mat, 1);
+  PetscValidLogicalCollectiveEnum(mat, type, 2);
   PetscAssertPointer(nrm, 3);
 
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
@@ -5898,6 +5893,177 @@ PetscErrorCode MatNorm(Mat mat, NormType type, PetscReal *nrm)
   MatCheckPreallocated(mat, 1);
 
   PetscUseTypeMethod(mat, norm, type, nrm);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecSetFinalNormApp_Private(Vec x)
+{
+  PetscScalar *ax, nm1;
+  PetscInt     st, en, n;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetSize(x, &n));
+  if (n < 2) PetscFunctionReturn(PETSC_SUCCESS);
+  nm1 = n - 1;
+  PetscCall(VecGetOwnershipRange(x, &st, &en));
+  PetscCall(VecGetArrayWrite(x, &ax));
+  for (PetscInt i = st; i < en; i++) {
+    const PetscInt    ii = i - st;
+    const PetscScalar s  = i % 2 ? -1.0 : 1.0;
+
+    ax[ii] = s * (1.0 + i / nm1);
+  }
+  PetscCall(VecRestoreArrayWrite(x, &ax));
+  PetscCall(VecAssemblyBegin(x));
+  PetscCall(VecAssemblyEnd(x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatNormApproximate - Approximate the norm of a matrix.
+
+  Collective
+
+  Input Parameters:
++ A        - the matrix
+. normtype - the `NormType`
+- maxit    - maximum number of iterations to use
+
+  Output Parameter:
+. n - the norm estimate
+
+  Level: intermediate
+
+  Notes:
+  Does not need access to the matrix entries; it just performs matrix-vector and transposed matrix-vector products {cite}`Higham1992`, {cite}`doi:10.1137/S0895479899356080`.
+
+  If `maxit` is negative, a default number of iterations is performed.
+
+.seealso: `MatNorm()`
+@*/
+PetscErrorCode MatNormApproximate(Mat A, NormType normtype, PetscInt maxit, PetscReal *n)
+{
+  Vec         x, y, w, z;
+  PetscReal   normz, adot;
+  PetscScalar dot;
+  PetscInt    i, j, N, jold = -1;
+  PetscBool   boundtocpu = PETSC_TRUE, setherm, isherm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscValidLogicalCollectiveEnum(A, normtype, 2);
+  PetscValidLogicalCollectiveInt(A, maxit, 3);
+  PetscAssertPointer(n, 4);
+#if PetscDefined(HAVE_DEVICE)
+  boundtocpu = A->boundtocpu;
+#endif
+  switch (normtype) {
+  case NORM_INFINITY:
+  case NORM_1:
+    if (maxit < 0) maxit = 10; /* pure guess */
+    PetscCall(MatIsHermitianKnown(A, &setherm, &isherm));
+    if ((setherm && isherm) || normtype == NORM_1) {
+      PetscCall(PetscObjectReference((PetscObject)A));
+    } else {
+      Mat B;
+      PetscCall(MatCreateHermitianTranspose(A, &B));
+      A = B;
+    }
+    PetscCall(MatCreateVecs(A, &x, &y));
+    PetscCall(MatCreateVecs(A, &z, &w));
+    PetscCall(VecBindToCPU(x, boundtocpu));
+    PetscCall(VecBindToCPU(y, boundtocpu));
+    PetscCall(VecBindToCPU(z, boundtocpu));
+    PetscCall(VecBindToCPU(w, boundtocpu));
+    PetscCall(VecGetSize(x, &N));
+    PetscCall(VecSet(x, 1. / N));
+    *n = 0.0;
+    for (i = 0; i < maxit; i++) {
+      PetscCall(MatMult(A, x, y));
+      PetscCall(VecNorm(y, NORM_1, n));
+#if defined(PETSC_USE_COMPLEX)
+      PetscCall(VecCopy(y, w));
+      PetscCall(VecAbs(w));
+      PetscCall(VecPointwiseDivide(w, y, w));
+#else
+      PetscCall(VecPointwiseSign(w, y, VEC_SIGN_ZERO_TO_SIGNED_UNIT));
+#endif
+      PetscCall(MatMultHermitianTranspose(A, w, z));
+      PetscCall(VecRealPart(z));
+      PetscCall(VecNorm(z, NORM_INFINITY, &normz));
+      PetscCall(VecDot(x, z, &dot));
+      adot = PetscAbsScalar(dot);
+      PetscCall(PetscInfo(A, "%s norm it %" PetscInt_FMT " -> %g (%g %g)\n", NormTypes[normtype], i, (double)*n, (double)normz, (double)adot));
+      if (normz <= adot && i > 0) {
+        PetscCall(PetscInfo(A, "%s norm    converged\n", NormTypes[normtype]));
+        break;
+      }
+      PetscCall(VecAbs(z));
+      PetscCall(VecMax(z, &j, &normz));
+      if (j == jold) {
+        PetscCall(PetscInfo(A, "%s norm it %" PetscInt_FMT " -> breakdown (j==jold)\n", NormTypes[normtype], i));
+        break;
+      }
+      jold = j;
+      if (i < maxit - 1) PetscCall(VecSetStdBasis(x, j));
+    }
+    /* last check */
+    if (N > 1) {
+      PetscReal ny;
+
+      PetscCall(VecSetFinalNormApp_Private(x));
+      PetscCall(MatMult(A, x, y));
+      PetscCall(VecNorm(y, NORM_1, &ny));
+      ny = 2 * ny / (3 * N);
+      PetscCall(PetscInfo(A, "%s norm final check: current %g test %g\n", NormTypes[normtype], (double)*n, (double)ny));
+      *n = PetscMax(*n, ny);
+    }
+    PetscCall(MatDestroy(&A));
+    PetscCall(VecDestroy(&x));
+    PetscCall(VecDestroy(&w));
+    PetscCall(VecDestroy(&y));
+    PetscCall(VecDestroy(&z));
+    break;
+  case NORM_2:
+    if (maxit < 0) maxit = 20; /* pure guess */
+    PetscCall(MatCreateVecs(A, &x, &y));
+    PetscCall(MatCreateVecs(A, &z, NULL));
+    PetscCall(VecBindToCPU(x, boundtocpu));
+    PetscCall(VecBindToCPU(y, boundtocpu));
+    PetscCall(VecBindToCPU(z, boundtocpu));
+    PetscCall(VecSetRandom(x, NULL));
+    PetscCall(VecNormalize(x, NULL));
+    *n = 0.0;
+    for (i = 0; i < maxit; i++) {
+      PetscCall(MatMult(A, x, y));
+      PetscCall(VecNormalize(y, n));
+      PetscCall(MatMultTranspose(A, y, z));
+      PetscCall(VecNorm(z, NORM_2, &normz));
+      PetscCall(VecDot(x, z, &dot));
+      adot = PetscAbsScalar(dot);
+      PetscCall(PetscInfo(A, "%s norm it %" PetscInt_FMT " -> %g (%g %g)\n", NormTypes[normtype], i, (double)*n, (double)normz, (double)adot));
+      if (normz <= adot) {
+        PetscCall(PetscInfo(A, "%s norm    converged\n", NormTypes[normtype]));
+        break;
+      }
+      if (i < maxit - 1) {
+        Vec t;
+
+        PetscCall(VecNormalize(z, NULL));
+        t = x;
+        x = z;
+        z = t;
+      }
+    }
+    PetscCall(VecDestroy(&x));
+    PetscCall(VecDestroy(&y));
+    PetscCall(VecDestroy(&z));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "%s norm not supported", NormTypes[normtype]);
+  }
+  PetscCall(PetscInfo(A, "%s norm %g computed in %" PetscInt_FMT " iterations\n", NormTypes[normtype], (double)*n, i));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -4370,6 +4370,38 @@ cdef class Mat(Object):
         if ntype != norm_1_2: return toReal(rval[0])
         else: return (toReal(rval[0]), toReal(rval[1]))
 
+    def normApproximate(self, norm_type: NormTypeSpec = None, max_it: int = 10) -> float:
+        """Approximate the matrix norm.
+
+        Collective.
+
+        Parameters
+        ----------
+        norm_type
+            The type of norm: `NormType.NORM_1`, `NormType.NORM_2`,
+            or `NormType.NORM_INFINITY`.
+        max_it
+            Maximum number of iterations used to approximate the norm.
+
+        Returns
+        -------
+        float
+            The estimated matrix norm.
+
+        See Also
+        --------
+        Mat.norm, petsc.MatNormApproximate
+
+        """
+        cdef PetscInt _max_it = asInt(max_it)
+        cdef PetscNormType ntype = PETSC_NORM_2
+        if norm_type is not None: ntype = norm_type
+        if ntype == PETSC_NORM_1_AND_2:
+            raise ValueError("NORM_1_AND_2 is not supported")
+        cdef PetscReal nrm = 0.0
+        CHKERR(MatNormApproximate(self.mat, ntype, _max_it, &nrm))
+        return toReal(nrm)
+
     def scale(self, alpha: Scalar) -> None:
         """Scale the matrix.
 
