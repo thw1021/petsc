@@ -7,7 +7,7 @@
 #define MISK_NOT_DONE -2
 #define MISK_REMOVED  -3
 
-/* Knuth-style multiplicative hash for Luby MIS weight assignment — hashing the global id
+/* Knuth-style multiplicative hash for Luby MIS weight assignment -- hashing the global id
    makes the result thread-schedule-independent so golden-output tests stay reproducible.
    KOKKOS_INLINE_FUNCTION so it is callable from device kernels. */
 KOKKOS_INLINE_FUNCTION static PetscInt misk_hash(PetscInt gid)
@@ -20,7 +20,7 @@ KOKKOS_INLINE_FUNCTION static PetscInt misk_hash(PetscInt gid)
 
 /* Device CSR connectivity (row_map, entries) of a SEQAIJ or SEQAIJKOKKOS graph. For a
    SEQAIJKOKKOS matrix the device views are returned directly; for a host SEQAIJ matrix a
-   mirror is created and copied. Values are unused — strength filtering is baked into Gmat. */
+   mirror is created and copied. Values are unused -- strength filtering is baked into Gmat. */
 static PetscErrorCode MatCoarsenMISKokkosGetDeviceCSR(Mat M, Kokkos::View<const PetscInt *, DefaultMemorySpace> &i_d, Kokkos::View<const PetscInt *, DefaultMemorySpace> &j_d)
 {
   PetscInt  nrows;

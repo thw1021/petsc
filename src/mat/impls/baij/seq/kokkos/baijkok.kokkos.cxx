@@ -2728,7 +2728,7 @@ static PetscErrorCode MatCreateGraph_SeqBAIJKokkos(Mat A, PetscBool sym, PetscBo
 
   SEQBAIJKOKKOS keeps its block-CSR only in device DualViews and never maintains the base SeqBAIJ host
   arrays (a->i/a->j/a->a), so the inherited host SeqBAIJ factorization (MatLUFactorSymbolic_SeqBAIJ et al.)
-  dereferences a NULL a->i and crashes — this is reached by the default GAMG coarse bjacobi/LU solver once
+  dereferences a NULL a->i and crashes -- this is reached by the default GAMG coarse bjacobi/LU solver once
   the coarse operator is block (F10). To support it without maintaining a parallel host representation, we
   factor a scalar SeqAIJ conversion: MatGetFactor() returns a genuine SeqAIJ factor whose symbolic/numeric
   ops are intercepted to substitute the converted copy for the block input matrix. The converted copy is
@@ -2787,7 +2787,7 @@ static PetscErrorCode MatCholeskyFactorNumeric_SeqBAIJKokkosFactor(Mat B, Mat A,
 
 /* Symbolic wrappers: delegate on the converted copy, then re-install the numeric wrapper (the SeqAIJ
    symbolic call installs the real SeqAIJ numeric op, which we capture and override). The incoming row/col
-   orderings are ignored — they would be block-sized (or absent, since the factor reports canuseordering =
+   orderings are ignored -- they would be block-sized (or absent, since the factor reports canuseordering =
    PETSC_FALSE so PCSetUp_LU skips MatGetOrdering on the block matrix); a fresh scalar ordering is computed
    on the AIJ copy instead. */
 static PetscErrorCode MatLUFactorSymbolic_SeqBAIJKokkosFactor(Mat B, Mat A, IS r, IS c, const MatFactorInfo *info)

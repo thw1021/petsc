@@ -54,7 +54,7 @@ static PetscErrorCode MatAssemblyEnd_MPIBAIJKokkos(Mat mat, MatAssemblyType mode
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat), &size));
-  // Drop any cached MPIAIJ copy (MatGetRow/MatNorm/MatGetInfo) — values/structure are about to change
+  // Drop any cached MPIAIJ copy (MatGetRow/MatNorm/MatGetInfo) -- values/structure are about to change
   PetscCall(PetscObjectCompose((PetscObject)mat, "MatMPIBAIJKokkos_cached_aij", NULL));
 
   /* Drain the off-process stash and replay locally through our rectangular set-values.
@@ -94,7 +94,7 @@ static PetscErrorCode MatAssemblyEnd_MPIBAIJKokkos(Mat mat, MatAssemblyType mode
   /* If baij->garray is still set here, the matrix was already fully assembled (B compressed by a
      previous MatSetUpMultiply()) and no values were re-inserted: the set-values routines and the
      stash drain above un-compress B (clearing garray) whenever a real re-fill occurs. This is a
-     redundant re-assembly (e.g. ex56 assembles the operator twice), so skip re-processing — calling
+     redundant re-assembly (e.g. ex56 assembles the operator twice), so skip re-processing -- calling
      MatAssemblyEnd() on the constructor-built compressed B would compact it (ilen==0) and lose the
      off-diagonal. */
   if (baij->garray) PetscFunctionReturn(PETSC_SUCCESS);
@@ -349,7 +349,7 @@ static PetscErrorCode MatSetUpMultiply_MPIBAIJKokkos(Mat mat)
   - fix the column-side block bookkeeping (cstartbs/cendbs/nbs/Nbs/bs2) into col_bs units, and
   - replace the square SEQBAIJ A/B created by the base with rectangular SEQBAIJKOKKOS blocks
     (A: local-rows x local-diagonal-coarse-cols; B: local-rows x global-coarse-cols, uncompressed
-    in F1.2 — the off-diagonal column compression/garray is built in F1.3).
+    in F1.2 -- the off-diagonal column compression/garray is built in F1.3).
   Column ownership (the A/B split in MatSetValuesBlocked()) is determined by col_bs, not row_bs.
 */
 static PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJKokkos(Mat mat, PetscInt bs, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[])
@@ -669,20 +669,20 @@ static PetscErrorCode MatMultTransposeAdd_MPIBAIJKokkos(Mat A, Vec xx, Vec yy, V
 }
 
 /*
-  F10.2 — fully-blocked parallel PtAP. The coarse Galerkin operator C = P^T A P is returned as
+  F10.2 -- fully-blocked parallel PtAP. The coarse Galerkin operator C = P^T A P is returned as
   MATMPIBAIJKOKKOS (not MPIAIJ), so the GAMG solve hot path (coarse SpMV + smoothers) runs the block
   kernel at every level. "Blocked at all times" needs the coarse *operator* to be block, not the PtAP
   *compute* to be block-native, so we repackage the mature MPIAIJ PtAP result into block layout:
-    1. operands A, P -> AIJ temporaries (NOT in place: product->A/B stay alive — the MatProductSymbolic()
+    1. operands A, P -> AIJ temporaries (NOT in place: product->A/B stay alive -- the MatProductSymbolic()
        interface tail dereferences them in its MatSetBlockSizes() step, so freeing them is use-after-free);
     2. Cresult = MatPtAP(Aaij, Paij) into a reusable temporary (NOT on C);
-    3. build C in place as block from Cresult (C is born block, never handed to AIJ ⇒ no MatHeaderReplace).
-  The AIJ matrices (Aaij, Paij, Cresult) are STRICTLY TRANSIENT — created and freed within each
+    3. build C in place as block from Cresult (C is born block, never handed to AIJ => no MatHeaderReplace).
+  The AIJ matrices (Aaij, Paij, Cresult) are STRICTLY TRANSIENT -- created and freed within each
   symbolic/numeric call, never held for the lifetime of the coarse operator. So the persistent storage is
   the block C alone (the memory win), with only a transient setup-time peak holding both representations.
   That transient peak, and the AIJ spgemm itself, are what the deferred F2.2 block-native compute removes
   (local part on the seq native block PtAP); here numeric recomputes from scratch, so a MAT_INITIAL_MATRIX
-  GAMG build runs the AIJ PtAP twice — acceptable for correctness-first F10.
+  GAMG build runs the AIJ PtAP twice -- acceptable for correctness-first F10.
 */
 /*
   MatProductOperandAsAIJ_MPIBAIJKokkos - get an MPIAIJ representation of a block product operand.
@@ -1488,7 +1488,7 @@ static PetscErrorCode MatProductSymbolicBlock_MPIBAIJKokkos(Mat C)
   PtAP (F10.2) and AB (F10.4) return a block C: PtAP makes the coarse Galerkin operators block; AB makes
   the GAMG-smoothed prolongator (A*P0) block so interpolation/restriction also run the block kernel. The
   remaining product types (AtB, RARt, ABC) still convert all block operands to MPIAIJ in place and
-  re-dispatch, leaving C as MPIAIJ — none feeds the default agg GAMG hot path. The convert-and-redispatch
+  re-dispatch, leaving C as MPIAIJ -- none feeds the default agg GAMG hot path. The convert-and-redispatch
   keeps C's header intact (only product->A/B/C *contents* change), so MatProductSymbolic() proceeds without
   use-after-free of the stale product pointer. Operand snapshots are taken here, so MAT_REUSE_MATRIX
   numeric-only reuse recomputes from snapshot (acceptable for GAMG/ex56 which use MAT_INITIAL_MATRIX).
@@ -1572,8 +1572,14 @@ static PetscErrorCode MatProductSetFromOptions_mpiaij_mpibaijkokkos_C(Mat C)
 /*
   MatAXPY_MPIBAIJKokkos - Compute Y += alpha*X for parallel rectangular-block Kokkos matrices.
 
-  For SAME_NONZERO_PATTERN and SUBSET_NONZERO_PATTERN, delegates to A and B.
-  Otherwise delegates to the base implementation (which will convert and try MPIAIJ machinery).
+  SAME_NONZERO_PATTERN: X and Y share an identical off-diagonal compression (garray), so the A and B
+  sub-blocks are added block-for-block on device.
+  SUBSET_NONZERO_PATTERN: the diagonal block A shares a local column space and is added directly; for
+  the off-diagonal block B, X's compressed columns are translated into Y's compressed space via the
+  two sorted garrays and added block-for-block on device - no AIJ round-trip. This is the pattern the
+  GAMG prolongator smoother uses (MatAYPX with SUBSET_NONZERO_PATTERN).
+  DIFFERENT_NONZERO_PATTERN: distinct patterns are reconciled in global column space via MPIAIJ (not
+  reached by the smoother; kept for completeness).
 */
 static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, MatStructure str)
 {
@@ -1584,22 +1590,78 @@ static PetscErrorCode MatAXPY_MPIBAIJKokkos(Mat Y, PetscScalar alpha, Mat X, Mat
   PetscCheckTypeName(Y, MATMPIBAIJKOKKOS);
   PetscCheckTypeName(X, MATMPIBAIJKOKKOS);
 
-  /* Y's values are about to change. The SAME-pattern fast path below mutates the sub-blocks without
-     raising Y's PetscObjectState, so the state-keyed cache in MatMPIBAIJKokkosGetCachedAIJ() would not
-     see it; drop the cache explicitly here. (MatHeaderReplace in the SUBSET/DIFFERENT branch installs a
-     fresh Y with no cache.) */
+  /* Y's values are about to change. The native paths below mutate the sub-blocks without raising Y's
+     PetscObjectState, so the state-keyed cache in MatMPIBAIJKokkosGetCachedAIJ() would not see it;
+     drop the cache explicitly here. (MatHeaderReplace in the DIFFERENT branch installs a fresh Y.) */
   PetscCall(PetscObjectCompose((PetscObject)Y, "MatMPIBAIJKokkos_cached_aij", NULL));
 
-  if (str == SAME_NONZERO_PATTERN) {
-    // Identical nonzero pattern => identical off-diagonal garray, so the compressed B blocks share a
-    // column space and the per-block device AXPY is valid. Operate directly on the SEQBAIJKOKKOS blocks.
+  if (str == SAME_NONZERO_PATTERN || str == SUBSET_NONZERO_PATTERN) {
+    /* Diagonal block A: columns are owned local block-rows, so X and Y share a column space and the
+       native per-block SeqBAIJKokkos AXPY applies directly for both SAME and SUBSET. */
     PetscCall(MatAXPY(ybaij->A, alpha, xbaij->A, str));
-    PetscCall(MatAXPY(ybaij->B, alpha, xbaij->B, str));
+
+    if (str == SAME_NONZERO_PATTERN) {
+      /* Identical garray => B blocks share a local column space; add directly. */
+      PetscCall(MatAXPY(ybaij->B, alpha, xbaij->B, str));
+    } else {
+      /* SUBSET: X's and Y's off-diagonal compressions (garray) differ. Translate each X compressed
+         block-column cx into Y's compressed space (cy with ygarray[cy] == xgarray[cx]) using the two
+         sorted garrays, then add block-for-block on device. */
+      Mat_SeqBAIJKokkos *xkB = (Mat_SeqBAIJKokkos *)xbaij->B->spptr;
+      Mat_SeqBAIJKokkos *ykB = (Mat_SeqBAIJKokkos *)ybaij->B->spptr;
+      PetscInt           nx = xkB->nbs, ny = ykB->nbs;
+
+      if (nx > 0) { /* X has off-diagonal blocks to add; nothing to do otherwise */
+        PetscInt row_bs = ykB->row_bs, col_bs = ykB->col_bs, mbs = ykB->mbs, sz = row_bs * col_bs;
+
+        PetscCheck(xbaij->garray && ybaij->garray, PetscObjectComm((PetscObject)Y), PETSC_ERR_PLIB, "MatAXPY SUBSET: missing off-diagonal garray");
+        PetscCall(MatSeqBAIJKokkosSyncDevice(ybaij->B));
+        PetscCall(MatSeqBAIJKokkosSyncDevice(xbaij->B));
+        {
+          MatColIdxKokkosViewHost colmap_h("MatAXPY_colmap_h", nx);
+          MatColIdxKokkosView     colmap_d("MatAXPY_colmap_d", nx);
+          PetscInt                cy = 0;
+
+          for (PetscInt cx = 0; cx < nx; cx++) { /* two-pointer merge of the sorted garrays */
+            while (cy < ny && ybaij->garray[cy] < xbaij->garray[cx]) cy++;
+            PetscCheck(cy < ny && ybaij->garray[cy] == xbaij->garray[cx], PetscObjectComm((PetscObject)Y), PETSC_ERR_PLIB, "MatAXPY SUBSET: X off-diagonal column %" PetscInt_FMT " absent from Y", xbaij->garray[cx]);
+            colmap_h(cx) = cy;
+          }
+          PetscCallCXX(Kokkos::deep_copy(colmap_d, colmap_h));
+
+          auto Yi = ykB->i_dual.view_device();
+          auto Yj = ykB->j_dual.view_device();
+          auto Ya = ykB->a_dual.view_device();
+          auto Xi = xkB->i_dual.view_device();
+          auto Xj = xkB->j_dual.view_device();
+          auto Xa = xkB->a_dual.view_device();
+          PetscCallCXX(Kokkos::parallel_for(
+            "MatAXPY_MPIBAIJKokkos_offdiag_subset", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, mbs), KOKKOS_LAMBDA(const PetscInt bi) {
+              for (PetscInt px = Xi(bi); px < Xi(bi + 1); px++) {
+                const PetscInt cy_t = colmap_d(Xj(px));
+                /* binary search cy_t in the sorted Yj[Yi(bi), Yi(bi+1)) */
+                PetscInt lo = Yi(bi), hi = Yi(bi + 1), py = -1;
+                while (lo < hi) {
+                  const PetscInt mid = (lo + hi) / 2;
+                  if (Yj(mid) < cy_t) lo = mid + 1;
+                  else if (Yj(mid) > cy_t) hi = mid;
+                  else {
+                    py = mid;
+                    break;
+                  }
+                }
+                if (py < 0) Kokkos::abort("MatAXPY SUBSET (off-diagonal): a block in X is not present in Y");
+                for (PetscInt k = 0; k < sz; k++) Ya(py * sz + k) += alpha * Xa(px * sz + k);
+              }
+            }));
+        }
+        PetscCall(MatSeqBAIJKokkosModifyDevice(ybaij->B));
+      }
+    }
   } else {
-    // SUBSET/DIFFERENT: X and Y have different off-diagonal compressions (distinct garray), so their
-    // compressed B blocks are not in the same local column space and cannot be added block-for-block.
-    // Reconcile in global column space via MPIAIJ (mirrors the base MatAXPY_MPIBAIJ SUBSET path, which
-    // falls back to the global-index MatAXPY_Basic). This is a setup-time operation, not the solve hot path.
+    /* DIFFERENT_NONZERO_PATTERN: distinct patterns; reconcile in global column space via MPIAIJ
+       (mirrors the base MatAXPY_MPIBAIJ fallback). Setup-time only, not the solve hot path, and not
+       reached by the GAMG prolongator smoother (which uses SUBSET). */
     Mat Yaij, Xaij, Ynew;
     PetscCall(MatConvert(Y, MATMPIAIJ, MAT_INITIAL_MATRIX, &Yaij));
     PetscCall(MatConvert(X, MATMPIAIJ, MAT_INITIAL_MATRIX, &Xaij));
@@ -1747,7 +1809,7 @@ static PetscErrorCode MatCreateGraph_MPIBAIJKokkos(Mat A, PetscBool sym, PetscBo
   skews GAMG's per-process load balancing and changes the coarse hierarchy). We delegate them to a
   cached MPIAIJ conversion (value-exact, validated in F1.4). Lazy build is safe here because both
   callers are collective. MatGetRow() is Not Collective and must not build this cache (an empty-rank
-  deadlock) — it has its own local MatGetRow_MPIBAIJKokkos(). The cache is composed on A (destroyed
+  deadlock) -- it has its own local MatGetRow_MPIBAIJKokkos(). The cache is composed on A (destroyed
   with it).
 
   F2.2 also reuses this cache for the parallel block product operands (MatProductComputeBlock), which
@@ -1788,7 +1850,7 @@ static PetscErrorCode MatMPIBAIJKokkosGetCachedAIJ(Mat A, Mat *aij)
   by global column, with B mapped to global columns through baij->garray. Unlike the base MPIBAIJ routine
   this is rectangular-aware (row_bs != col_bs) and reads the SEQBAIJKOKKOS host views (valid after
   assembly) directly rather than the base Mat_SeqBAIJ arrays. Being local, it does NOT trigger the
-  collective MatConvert cache build, so a rank that owns no rows simply never calls it — no empty-rank
+  collective MatConvert cache build, so a rank that owns no rows simply never calls it -- no empty-rank
   collective imbalance (cf. MatAXPY_Basic() in GAMG prolongator smoothing).
 */
 static PetscErrorCode MatGetRow_MPIBAIJKokkos(Mat mat, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
