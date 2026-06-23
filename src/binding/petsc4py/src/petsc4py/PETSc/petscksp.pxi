@@ -114,10 +114,15 @@ cdef extern from * nogil:
                                                           PetscVec,
                                                           void*) except PETSC_ERR_PYTHON
 
-    ctypedef PetscErrorCode (*PetscKSPComputeOpsFunction)(PetscKSP,
-                                                          PetscMat,
-                                                          PetscMat,
-                                                          void*) except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode (*PetscKSPComputeOperatorsFunction)(PetscKSP,
+                                                                PetscMat,
+                                                                PetscMat,
+                                                                void*) except PETSC_ERR_PYTHON
+
+    ctypedef PetscErrorCode (*PetscKSPCreateOperatorsFunction)(PetscKSP,
+                                                               PetscMat*,
+                                                               PetscMat*,
+                                                               void*) except PETSC_ERR_PYTHON
 
     ctypedef PetscErrorCode (*PetscKSPPreSolveFunction)(PetscKSP,
                                                         PetscVec,
@@ -175,7 +180,8 @@ cdef extern from * nogil:
     PetscErrorCode KSPSetComputeSingularValues(PetscKSP, PetscBool)
 
     PetscErrorCode KSPSetComputeRHS(PetscKSP, PetscKSPComputeRHSFunction, void*)
-    PetscErrorCode KSPSetComputeOperators(PetscKSP, PetscKSPComputeOpsFunction, void*)
+    PetscErrorCode KSPSetComputeOperators(PetscKSP, PetscKSPComputeOperatorsFunction, void*)
+    PetscErrorCode KSPSetCreateOperators(PetscKSP, PetscKSPCreateOperatorsFunction, void*)
     PetscErrorCode KSPSetOperators(PetscKSP, PetscMat, PetscMat)
     PetscErrorCode KSPGetOperators(PetscKSP, PetscMat*, PetscMat*)
     PetscErrorCode KSPGetOperatorsSet(PetscKSP, PetscBool*, PetscBool*)
@@ -298,7 +304,7 @@ cdef PetscErrorCode KSP_ComputeRHS(
     computerhs(Ksp, Rhs, *args, **kargs)
     return PETSC_SUCCESS
 
-cdef PetscErrorCode KSP_ComputeOps(
+cdef PetscErrorCode KSP_ComputeOperators(
     PetscKSP ksp,
     PetscMat A,
     PetscMat B,
@@ -312,6 +318,36 @@ cdef PetscErrorCode KSP_ComputeOps(
     assert context is not None and type(context) is tuple # sanity check
     (computeops, args, kargs) = context
     computeops(Ksp, Amat, Bmat, *args, **kargs)
+    return PETSC_SUCCESS
+
+cdef PetscErrorCode KSP_CreateOperators(
+    PetscKSP ksp,
+    PetscMat *A,
+    PetscMat *B,
+    void     *ctx,
+   ) except PETSC_ERR_PYTHON with gil:
+    cdef KSP Ksp = ref_KSP(ksp)
+    cdef Mat Amat
+    cdef Mat Bmat
+    cdef object operators
+    cdef object context = Ksp.get_attr('__create_operators__')
+    if context is None and ctx != NULL: context = <object>ctx
+    assert context is not None and type(context) is tuple # sanity check
+    (createops, args, kargs) = context
+    operators = createops(Ksp, *args, **kargs)
+    if type(operators) is tuple:
+        Amat, Bmat = operators
+    else:
+        Amat = operators
+        Bmat = None
+    CHKERR(PetscINCREF(Amat.obj))
+    A[0] = Amat.mat
+    if Bmat is None:
+        B[0] = NULL
+    else:
+        B[0] = Bmat.mat
+        if B[0] != A[0]:
+            CHKERR(PetscINCREF(Bmat.obj))
     return PETSC_SUCCESS
 
 # -----------------------------------------------------------------------------

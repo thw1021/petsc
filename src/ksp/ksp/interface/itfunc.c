@@ -355,11 +355,24 @@ PetscErrorCode KSPSetUp(KSP ksp)
 
   if ((ksp->dmActive & KSP_DMACTIVE_OPERATOR) && !ksp->setupstage) {
     /* first time in so build matrix and vector data structures using DM */
+    DMKSP kdm;
+    PetscCall(DMGetDMKSP(ksp->dm, &kdm));
     if (!ksp->vec_rhs) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_rhs));
     if (!ksp->vec_sol) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_sol));
-    PetscCall(DMCreateMatrix(ksp->dm, &A));
-    PetscCall(KSPSetOperators(ksp, A, A));
-    PetscCall(PetscObjectDereference((PetscObject)A));
+    if (kdm->ops->createoperators) {
+      A = NULL;
+      B = NULL;
+      PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
+      PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "DMKSP create operators callback did not return an operator matrix");
+      if (!B) B = A;
+      PetscCall(KSPSetOperators(ksp, A, B));
+      if (A != B) PetscCall(MatDestroy(&B));
+      PetscCall(MatDestroy(&A));
+    } else {
+      PetscCall(DMCreateMatrix(ksp->dm, &A));
+      PetscCall(KSPSetOperators(ksp, A, A));
+      PetscCall(PetscObjectDereference((PetscObject)A));
+    }
   }
 
   if (ksp->dmActive) {
