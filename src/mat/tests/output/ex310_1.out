@@ -1,4 +1,16 @@
-scalar 1x1         rbs=1 cbs=1: PASS
-square 3x3         rbs=3 cbs=3: PASS
-square 6x6         rbs=6 cbs=6: PASS
-rect 3x6           rbs=3 cbs=6: PASS
+Test_bs1_5x5x5 PASS
+Test_bs3_4x4x4 PASS
+Test_bs6_3x3x3 PASS
+Test_rect_4x3x4_bs3x6 PASS
+Test_nonsquare_3x2x3_bs2x3 PASS
+TestPtAP_bs1_4x4 PASS
+TestPtAP_bs3_4x4 PASS
+TestPtAP_elasticity_3to6 PASS
+TestPtAP_bs6_3x3 PASS
+TestPtAP_bs1_4x4 PASS
+TestPtAP_bs3_4x4 PASS
+TestPtAP_elasticity_3to6 PASS
+TestPtAP_bs6_3x3 PASS
+TestAtBReuse_bs3_4x4x4 PASS
+TestAtBReuse_rect_bs3x6 PASS
+ALL PASS
