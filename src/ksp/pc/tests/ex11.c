@@ -60,11 +60,11 @@ static PetscErrorCode ComputeOperators(KSP ksp, Mat A, Mat P, void *ctx)
 
 int main(int argc, char **argv)
 {
-  AppCtx    user;
-  DM        dm;
-  KSP       ksp, cksp;
-  PC        pc;
-  Mat       A, P, cA, cP;
+  AppCtx user;
+  DM     dm;
+  KSP    ksp, cksp;
+  PC     pc;
+  Mat    A, P, cA, cP;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
