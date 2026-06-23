@@ -234,7 +234,7 @@ PetscErrorCode MatMeshToCellGraphRegister(const char sname[], PetscErrorCode (*f
 . dual - the dual graph
 
   Options Database Key:
-. -mat_mesh_to_cell_graph_type type - `parmetis` or `metis`. Default is `parmetis` if available, otherwise `metis`.
+. -mat_mesh_to_cell_graph_type (parmetis|metis) - the conversion package to use; default is parmetis if available, otherwise metis
 
   Level: advanced
 
@@ -253,10 +253,10 @@ PetscErrorCode MatMeshToCellGraphRegister(const char sname[], PetscErrorCode (*f
 @*/
 PetscErrorCode MatMeshToCellGraph(Mat mesh, PetscInt ncommonnodes, Mat *dual)
 {
-  char                       type[256];
-  PetscBool                  found;
-  PetscErrorCode           (*fn)(Mat, PetscInt, Mat *);
-  MatMeshToCellGraphType     def;
+  char type[256];
+  PetscBool found;
+  PetscErrorCode (*fn)(Mat, PetscInt, Mat *);
+  MatMeshToCellGraphType def;
 
   PetscFunctionBegin;
   PetscCall(MatInitializePackage());
