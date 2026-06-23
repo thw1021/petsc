@@ -1,4 +1,3 @@
-
 #include <../src/mat/impls/adj/mpi/mpiadj.h> /*I "petscmat.h" I*/
 
 #include <metis.h>
@@ -39,7 +38,7 @@ PETSC_EXTERN PetscErrorCode MatMeshToCellGraph_Metis(Mat mesh, PetscInt ncommonn
 
   {
     idx_t ne = mesh->rmap->N;
-    idx_t nn = adj->nz;
+    idx_t nn = mesh->cmap->N;
 
     PetscCallMetis(METIS_MeshToDual, (&ne, &nn, (idx_t *)adj->i, (idx_t *)adj->j, (idx_t *)&ncommonnodes, (idx_t *)&numflag, (idx_t **)&newxadj, (idx_t **)&newadjncy));
   }
