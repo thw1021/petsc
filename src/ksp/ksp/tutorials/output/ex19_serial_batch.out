@@ -1,27 +1,75 @@
   0 KSP Residual norm 1.131370849898e+01
+    tfqmr+jacobi iterations: 12  16  12  13  15  13  12  15  14  11  14  14  12  14  16  12 
+    [0] tfqmr+jacobi max iterations 16, block 1 (CONVERGED_RTOL)
   1 KSP Residual norm 4.287096329878e+00
+    tfqmr+jacobi iterations: 12  12  11  12  13  12  11  13  13  11  13  13  11  12  12  12 
+    [0] tfqmr+jacobi max iterations 13, block 4 (CONVERGED_RTOL)
   2 KSP Residual norm 3.548904346482e+00
+    tfqmr+jacobi iterations: 11  12  12  12  12  12  11  13  12  11  12  12  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 13, block 7 (CONVERGED_RTOL)
   3 KSP Residual norm 2.165470292705e+00
+    tfqmr+jacobi iterations: 12  12  11  12  12  12  11  12  12  11  12  12  11  12  11  11 
+    [0] tfqmr+jacobi max iterations 12, block 0 (CONVERGED_RTOL)
   4 KSP Residual norm 1.863043400337e+00
+    tfqmr+jacobi iterations: 12  12  12  12  11  13  12  12  12  11  12  11  11  12  11  10 
+    [0] tfqmr+jacobi max iterations 13, block 5 (CONVERGED_RTOL)
   5 KSP Residual norm 1.416881947836e+00
+    tfqmr+jacobi iterations: 12  12  11  13  12  15  11  12  13  11  13  12  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 15, block 5 (CONVERGED_RTOL)
   6 KSP Residual norm 1.392370059392e+00
+    tfqmr+jacobi iterations: 13  11  12  13  12  13  11  13  14  11  14  13  12  14  11  12 
+    [0] tfqmr+jacobi max iterations 14, block 8 (CONVERGED_RTOL)
   7 KSP Residual norm 1.187844234811e+00
+    tfqmr+jacobi iterations: 12  12  12  12  11  13  12  12  14  11  13  13  11  13  12  11 
+    [0] tfqmr+jacobi max iterations 14, block 8 (CONVERGED_RTOL)
   8 KSP Residual norm 1.256483540070e+00
+    tfqmr+jacobi iterations: 13  12  13  12  11  13  11  13  13  11  12  12  13  12  11  12 
+    [0] tfqmr+jacobi max iterations 13, block 0 (CONVERGED_RTOL)
   9 KSP Residual norm 1.055938797171e+00
+    tfqmr+jacobi iterations: 12  12  11  12  12  13  11  12  13  11  12  12  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 13, block 5 (CONVERGED_RTOL)
  10 KSP Residual norm 8.454730167420e-01
+    tfqmr+jacobi iterations: 12  12  12  12  12  11  11  13  12  11  12  12  11  12  12  12 
+    [0] tfqmr+jacobi max iterations 13, block 7 (CONVERGED_RTOL)
  11 KSP Residual norm 5.622985652701e-01
+    tfqmr+jacobi iterations: 12  13  12  12  11  12  11  12  13  10  13  12  11  12  14  11 
+    [0] tfqmr+jacobi max iterations 14, block 14 (CONVERGED_RTOL)
  12 KSP Residual norm 4.634369252025e-01
+    tfqmr+jacobi iterations: 12  11  12  12  12  13  11  12  12  11  12  12  12  12  11  11 
+    [0] tfqmr+jacobi max iterations 13, block 5 (CONVERGED_RTOL)
  13 KSP Residual norm 4.075043735841e-01
+    tfqmr+jacobi iterations: 11  12  11  12  12  12  12  12  12  10  12  12  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 12, block 1 (CONVERGED_RTOL)
  14 KSP Residual norm 3.066584482595e-01
+    tfqmr+jacobi iterations: 12  12  12  12  12  12  11  12  12  10  12  13  12  12  12  12 
+    [0] tfqmr+jacobi max iterations 13, block 11 (CONVERGED_RTOL)
  15 KSP Residual norm 1.702448309906e-01
+    tfqmr+jacobi iterations: 11  12  11  12  12  12  11  12  12  11  12  13  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 13, block 11 (CONVERGED_RTOL)
  16 KSP Residual norm 1.088277432705e-01
+    tfqmr+jacobi iterations: 12  12  13  13  11  12  11  12  12  11  12  12  11  12  12  12 
+    [0] tfqmr+jacobi max iterations 13, block 2 (CONVERGED_RTOL)
  17 KSP Residual norm 7.743585279754e-02
+    tfqmr+jacobi iterations: 11  13  11  13  12  12  11  12  12  11  12  12  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 13, block 1 (CONVERGED_RTOL)
  18 KSP Residual norm 5.386593733414e-02
+    tfqmr+jacobi iterations: 12  12  14  12  12  11  11  11  13  11  12  13  11  12  11  11 
+    [0] tfqmr+jacobi max iterations 14, block 2 (CONVERGED_RTOL)
  19 KSP Residual norm 2.494428469247e-02
+    tfqmr+jacobi iterations: 12  12  12  12  13  12  11  12  12  11  13  12  11  12  12  11 
+    [0] tfqmr+jacobi max iterations 13, block 4 (CONVERGED_RTOL)
  20 KSP Residual norm 1.466900976905e-02
+    tfqmr+jacobi iterations: 12  13  13  12  12  12  11  13  13  11  12  12  11  13  11  12 
+    [0] tfqmr+jacobi max iterations 13, block 1 (CONVERGED_RTOL)
  21 KSP Residual norm 6.819164991417e-03
+    tfqmr+jacobi iterations: 11  12  11  12  12  12  11  12  12  11  12  13  11  12  13  11 
+    [0] tfqmr+jacobi max iterations 13, block 11 (CONVERGED_RTOL)
  22 KSP Residual norm 3.428727643435e-03
+    tfqmr+jacobi iterations: 12  12  12  12  12  11  11  12  13  11  12  12  11  12  12  12 
+    [0] tfqmr+jacobi max iterations 13, block 8 (CONVERGED_RTOL)
  23 KSP Residual norm 1.543975585500e-03
+    tfqmr+jacobi iterations: 11  12  11  12  12  12  11  12  12  11  12  13  11  12  11  11 
+    [0] tfqmr+jacobi max iterations 13, block 11 (CONVERGED_RTOL)
  24 KSP Residual norm 1.086763357489e-03
   Linear solve converged due to CONVERGED_RTOL iterations 24
 Relative norm of error 0.000279251 iterations 13
