@@ -1,0 +1,332 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 MMAP anonymous implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=da593796123f99307b486350f8b2ef6ae7d2c375: (HEAD, origin/feature/gparity-merge-april24) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : This rank is running on host Spire
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent host   allocations: SMALL 8 LARGE 2 HUGE 0
+Grid : Message : MemoryManager::Init() cache pool for recent device allocations: SMALL 16 LARGE 8 Huge 0
+Grid : Message : MemoryManager::Init() cache pool for recent shared allocations: SMALL 16 LARGE 8 Huge 0
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.361650 s : Loading configuration from /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125
+Grid : Message : 0.362030 s : * BEGIN_HEADER
+Grid : Message : 0.362060 s : * HDR_VERSION = 1.0
+Grid : Message : 0.362120 s : * DATATYPE = 4D_SU3_GAUGE_3x3
+Grid : Message : 0.362140 s : * STORAGE_FORMAT = 
+Grid : Message : 0.362160 s : * DIMENSION_1 = 8
+Grid : Message : 0.362190 s : * DIMENSION_2 = 8
+Grid : Message : 0.362210 s : * DIMENSION_3 = 8
+Grid : Message : 0.362230 s : * DIMENSION_4 = 8
+Grid : Message : 0.362250 s : * LINK_TRACE = 0.001096773314
+Grid : Message : 0.362270 s : * PLAQUETTE  = 0.5841722839
+Grid : Message : 0.362290 s : * BOUNDARY_1 = PERIODIC
+Grid : Message : 0.362310 s : * BOUNDARY_2 = PERIODIC
+Grid : Message : 0.362330 s : * BOUNDARY_3 = PERIODIC
+Grid : Message : 0.362350 s : * BOUNDARY_4 = PERIODIC
+Grid : Message : 0.362370 s : * CHECKSUM =   c1eabea0
+Grid : Message : 0.362390 s : * SCIDAC_CHECKSUMA =          0
+Grid : Message : 0.362410 s : * SCIDAC_CHECKSUMB =          0
+Grid : Message : 0.362430 s : * ENSEMBLE_ID = UKQCD
+Grid : Message : 0.362450 s : * ENSEMBLE_LABEL = DWF
+Grid : Message : 0.362470 s : * SEQUENCE_NUMBER = 1
+Grid : Message : 0.362490 s : * CREATOR = paboyle
+Grid : Message : 0.362510 s : * CREATOR_HARDWARE = x1922c6s1b0n0-x86_64-Linux-5.14.21-150400.24.55-default
+Grid : Message : 0.362530 s : * CREATION_DATE = Mon May 20 21:03:16 2024 UTC
+Grid : Message : 0.362550 s : * ARCHIVE_DATE = Mon May 20 21:03:16 2024 UTC
+Grid : Message : 0.362570 s : * FLOATING_POINT = IEEE64BIG
+Grid : Message : 0.362590 s : * END_HEADER
+Grid : Message : 0.370160 s : IOobject: C++ read I/O /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 : 2359296 bytes and offset 646
+Grid : Message : 0.540850 s : IOobject:  read  2359296 bytes in 0.000308 s 7305.19 MB/s 
+Grid : Message : 0.541010 s : IOobject: endian and checksum overhead 0.016759 s
+Grid : Message : 0.630810 s : readLatticeObject: vectorize overhead 0.008972 s
+Grid : Message : 0.601810 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 checksum c1eabea0 header   c1eabea0
+Grid : Message : 0.601818 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 plaquette 0.584172 header    0.584172
+Grid : Message : 0.601827 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 link_trace 0.00109677 header    0.00109677
+Grid : Message : 0.601830 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 and plaquette, link trace, and checksum agree
+lsites: 4096
+  1 EPS nconv=0 first unconverged value (error) -0.706383-0.621736i (3.23720070e-01)
+  2 EPS nconv=0 first unconverged value (error) -0.731323-0.585847i (2.09833657e-01)
+  3 EPS nconv=0 first unconverged value (error) -0.743144-0.588202i (6.34939885e-02)
+  4 EPS nconv=0 first unconverged value (error) -0.750107+0.584446i (7.32578784e-02)
+  5 EPS nconv=0 first unconverged value (error) -0.74778+0.583664i (3.27713122e-02)
+  6 EPS nconv=0 first unconverged value (error) -0.745821-0.587567i (9.83826140e-03)
+  7 EPS nconv=0 first unconverged value (error) -0.746551+0.587607i (5.47441591e-03)
+  8 EPS nconv=0 first unconverged value (error) -0.7468+0.587948i (1.92219883e-03)
+  9 EPS nconv=0 first unconverged value (error) -0.746853+0.588031i (6.79169038e-04)
+ 10 EPS nconv=0 first unconverged value (error) -0.746879-0.587983i (3.18119950e-04)
+ 11 EPS nconv=0 first unconverged value (error) -0.74687-0.587995i (1.00175622e-04)
+ 12 EPS nconv=0 first unconverged value (error) -0.746867-0.587991i (3.20963428e-05)
+ 13 EPS nconv=0 first unconverged value (error) -0.746866+0.58799i (6.53096592e-06)
+ 14 EPS nconv=0 first unconverged value (error) -0.746866-0.58799i (3.44667914e-06)
+ 15 EPS nconv=0 first unconverged value (error) -0.746866+0.58799i (4.04273334e-07)
+ 16 EPS nconv=0 first unconverged value (error) -0.746866+0.58799i (4.45825981e-08)
+ 17 EPS nconv=1 first unconverged value (error) -0.746866-0.58799i (2.03147209e-08)
+ 18 EPS nconv=3 first unconverged value (error) -0.732895-0.525345i (2.24873401e-08)
+ 19 EPS nconv=4 first unconverged value (error) -0.732018-0.571629i (1.25763903e-07)
+ 20 EPS nconv=4 first unconverged value (error) -0.732018+0.571629i (1.94723742e-08)
+ 21 EPS nconv=4 first unconverged value (error) -0.732018-0.571629i (1.00756621e-08)
+ 22 EPS nconv=6 first unconverged value (error) -0.727801+0.589395i (1.82149503e-08)
+ 23 EPS nconv=6 first unconverged value (error) -0.727801-0.589395i (2.30543853e-08)
+ 24 EPS nconv=8 first unconverged value (error) -0.715105+0.68552i (6.81037723e-08)
+ 25 EPS nconv=8 first unconverged value (error) -0.715105+0.68552i (3.12521047e-08)
+ 26 EPS nconv=8 first unconverged value (error) -0.715105+0.68552i (1.81257638e-08)
+ 27 EPS nconv=10 first unconverged value (error) -0.714113+0.669326i (2.17932194e-08)
+ 28 EPS nconv=10 first unconverged value (error) -0.714113+0.669326i (1.73420262e-08)
+ 29 EPS nconv=12 first unconverged value (error) -0.713019+0.60958i (1.87082184e-07)
+ 30 EPS nconv=12 first unconverged value (error) -0.713019+0.60958i (7.13936959e-08)
+ 31 EPS nconv=13 first unconverged value (error) -0.713019+0.60958i (4.89332982e-08)
+ 32 EPS nconv=13 first unconverged value (error) -0.713019+0.60958i (2.12693360e-08)
+ 33 EPS nconv=13 first unconverged value (error) -0.713019+0.60958i (1.09323740e-08)
+ 34 EPS nconv=18 first unconverged value (error) -0.704472+0.59556i (3.27325400e-07)
+ 35 EPS nconv=19 first unconverged value (error) -0.704472+0.59556i (9.05200930e-08)
+ 36 EPS nconv=19 first unconverged value (error) -0.704472+0.59556i (5.44476632e-08)
+ 37 EPS nconv=19 first unconverged value (error) -0.704472+0.59556i (1.42353571e-08)
+ 38 EPS nconv=20 first unconverged value (error) -0.703932+0.654464i (2.10020610e-08)
+ 39 EPS nconv=21 first unconverged value (error) -0.703932+0.654464i (1.09891633e-08)
+ 40 EPS nconv=25 first unconverged value (error) -0.69739+0.635893i (2.96729517e-07)
+ 41 EPS nconv=25 first unconverged value (error) -0.69739+0.635893i (8.31461247e-08)
+ 42 EPS nconv=25 first unconverged value (error) -0.69739+0.635893i (4.15657863e-08)
+ 43 EPS nconv=25 first unconverged value (error) -0.69739+0.635893i (1.59358810e-08)
+ 44 EPS nconv=28 first unconverged value (error) -0.691036+0.696135i (3.24220323e-08)
+ 45 EPS nconv=28 first unconverged value (error) -0.691036+0.696135i (1.64394209e-08)
+ 46 EPS nconv=32 first unconverged value (error) -0.685934+0.739467i (1.81264233e-08)
+ 47 EPS nconv=34 first unconverged value (error) -0.685164+0.671208i (6.48641646e-06)
+ 48 EPS nconv=34 first unconverged value (error) -0.685164+0.671208i (6.10800276e-06)
+ 49 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (3.33615656e-06)
+ 50 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (1.63530029e-06)
+ 51 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (5.41292825e-07)
+ 52 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (2.09930856e-07)
+ 53 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (8.02615284e-08)
+ 54 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (4.08962365e-08)
+ 55 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (1.97749214e-08)
+ 56 EPS nconv=35 first unconverged value (error) -0.685164+0.671208i (1.04839551e-08)
+ 57 EPS nconv=38 first unconverged value (error) -0.675356-0.623213i (1.26083048e-05)
+ 58 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (3.66770302e-06)
+ 59 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (1.51319734e-06)
+ 60 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (7.28046216e-06)
+ 61 EPS nconv=38 first unconverged value (error) -0.675356+0.623213i (6.40930353e-06)
+ 62 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (6.42054950e-06)
+ 63 EPS nconv=38 first unconverged value (error) -0.675356+0.623213i (5.68827371e-06)
+ 64 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (5.30100470e-07)
+ 65 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (5.02743783e-07)
+ 66 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (3.64154422e-07)
+ 67 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (3.39599883e-07)
+ 68 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (3.13551415e-07)
+ 69 EPS nconv=38 first unconverged value (error) -0.675356+0.623213i (3.17863842e-06)
+ 70 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (2.98531918e-06)
+ 71 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (3.05962481e-06)
+ 72 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (1.70903006e-07)
+ 73 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (1.63571765e-07)
+ 74 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (2.29202044e-06)
+ 75 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (1.12361562e-07)
+ 76 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (2.09855195e-06)
+ 77 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (7.44518077e-08)
+ 78 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (1.61311325e-06)
+ 79 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (5.57059900e-08)
+ 80 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (1.30657097e-06)
+ 81 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (4.94207356e-08)
+ 82 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (1.06537575e-06)
+ 83 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (4.19468067e-08)
+ 84 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (9.83357305e-07)
+ 85 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (3.14469730e-08)
+ 86 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (3.50156561e-08)
+ 87 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (7.47489255e-07)
+ 88 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (2.84670148e-08)
+ 89 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (7.38546479e-07)
+ 90 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (2.14243403e-08)
+ 91 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (2.23495292e-08)
+ 92 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (5.16915380e-07)
+ 93 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (1.47535316e-08)
+ 94 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (5.07430218e-07)
+ 95 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (4.03541386e-07)
+ 96 EPS nconv=38 first unconverged value (error) -0.675355-0.623213i (1.12200610e-08)
+ 97 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (3.63451891e-07)
+ 98 EPS nconv=38 first unconverged value (error) -0.675355+0.623213i (3.28607506e-07)
+ 99 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (3.30849245e-07)
+100 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.47935180e-07)
+101 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.46888934e-07)
+102 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.39981728e-07)
+103 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.07365044e-07)
+104 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.28872578e-07)
+105 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.83331836e-07)
+106 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.82512858e-07)
+107 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.71891265e-07)
+108 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.33428072e-07)
+109 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.40494177e-07)
+110 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.16368131e-07)
+111 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (9.23405857e-08)
+112 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (9.91698799e-08)
+113 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (7.57146913e-08)
+114 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (7.99197180e-08)
+115 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (7.76514074e-08)
+116 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (6.49144213e-08)
+117 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (7.28147643e-08)
+118 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (5.80537549e-08)
+119 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (5.45579815e-08)
+120 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (5.47400901e-08)
+121 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (4.15968029e-08)
+122 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (4.27343173e-08)
+123 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (3.80840760e-08)
+124 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (3.11413483e-08)
+125 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.85753895e-08)
+126 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.13889081e-08)
+127 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (2.49395106e-08)
+128 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.52050657e-08)
+129 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.66493881e-08)
+130 EPS nconv=39 first unconverged value (error) -0.675355+0.623213i (1.24629324e-08)
+131 EPS nconv=44 first unconverged value (error) -0.667377+0.70982i (1.36663038e-05)
+132 EPS nconv=44 first unconverged value (error) -0.667377+0.70982i (1.19328128e-05)
+133 EPS nconv=44 first unconverged value (error) -0.667377+0.70982i (1.53737977e-05)
+134 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (1.17443475e-06)
+135 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (5.69750860e-07)
+136 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (4.39531086e-07)
+137 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (2.35913740e-07)
+138 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (1.09213608e-06)
+139 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (1.18542987e-07)
+140 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (1.41961728e-06)
+141 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (1.39972291e-06)
+142 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (5.39020390e-08)
+143 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (1.75596196e-06)
+144 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (2.03392776e-06)
+145 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (3.95148924e-08)
+146 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (3.56826300e-08)
+147 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (3.12248407e-06)
+148 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (3.17142643e-06)
+149 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (4.10569281e-08)
+150 EPS nconv=44 first unconverged value (error) -0.667376+0.709821i (4.94421303e-06)
+151 EPS nconv=44 first unconverged value (error) -0.667377+0.70982i (6.11256669e-06)
+152 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (2.83165346e-06)
+153 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (3.21221017e-08)
+154 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (3.70385573e-07)
+155 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (2.67410140e-07)
+156 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (2.81133928e-08)
+157 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (2.82922771e-08)
+158 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (2.93794758e-08)
+159 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (8.53367789e-08)
+160 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (6.84124912e-08)
+161 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (4.98848190e-08)
+162 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (4.12768477e-08)
+163 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (3.17706200e-08)
+164 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (4.19738058e-08)
+165 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (2.03919720e-08)
+166 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (5.70903572e-08)
+167 EPS nconv=44 first unconverged value (error) -0.667376+0.70982i (1.50411170e-08)
+168 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (7.45912101e-08)
+169 EPS nconv=44 first unconverged value (error) -0.667376-0.70982i (8.91207992e-08)
+170 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.04701369e-07)
+171 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.14250127e-07)
+172 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.35585808e-07)
+173 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.57627763e-07)
+174 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.75373133e-07)
+175 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.80411689e-07)
+176 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.91084396e-07)
+177 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.26304706e-07)
+178 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.66065472e-07)
+179 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.95703922e-07)
+180 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (3.10704386e-07)
+181 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (3.52445650e-07)
+182 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (4.60397069e-07)
+183 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (5.82200297e-07)
+184 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (7.76663899e-07)
+185 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (9.91803702e-07)
+186 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.10820120e-06)
+187 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.29061358e-06)
+188 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.79796909e-06)
+189 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.16442839e-06)
+190 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.25489163e-06)
+191 EPS nconv=45 first unconverged value (error) -0.667376-0.709821i (3.18483439e-06)
+192 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.65653467e-06)
+193 EPS nconv=45 first unconverged value (error) -0.667376-0.709821i (3.60889642e-06)
+194 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.41419079e-06)
+195 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (3.19930937e-06)
+196 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (1.37191405e-06)
+197 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (3.78106079e-06)
+198 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.79372638e-07)
+199 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (7.47343710e-08)
+200 EPS nconv=45 first unconverged value (error) -0.667376-0.70982i (2.07380894e-08)
+201 EPS nconv=48 first unconverged value (error) -0.66561-0.598995i (1.38624809e-07)
+Eigenvalue 0: -0.746866 + 0.58799 i
+Eigenvalue 1: -0.746866 + -0.58799 i
+Eigenvalue 2: -0.732895 + 0.525345 i
+Eigenvalue 3: -0.732895 + -0.525345 i
+Eigenvalue 4: -0.732018 + -0.571629 i
+Eigenvalue 5: -0.732018 + 0.571629 i
+Eigenvalue 6: -0.727801 + 0.589395 i
+Eigenvalue 7: -0.727801 + -0.589395 i
+Eigenvalue 8: -0.715105 + 0.68552 i
+Eigenvalue 9: -0.715105 + -0.68552 i
+Eigenvalue 10: -0.714113 + 0.669326 i
+Eigenvalue 11: -0.714113 + -0.669326 i
+Eigenvalue 12: -0.713019 + 0.60958 i
+Eigenvalue 13: -0.713019 + -0.60958 i
+Eigenvalue 14: -0.706521 + 0.51115 i
+Eigenvalue 15: -0.706521 + -0.51115 i
+Eigenvalue 16: -0.704933 + -0.717184 i
+Eigenvalue 17: -0.704933 + 0.717184 i
+Eigenvalue 18: -0.704472 + 0.59556 i
+Eigenvalue 19: -0.704472 + -0.59556 i
+Eigenvalue 20: -0.703932 + -0.654464 i
+Eigenvalue 21: -0.703932 + 0.654464 i
+Eigenvalue 22: -0.701325 + 0.536261 i
+Eigenvalue 23: -0.701325 + -0.536261 i
+Eigenvalue 24: -0.69739 + 0.635893 i
+Eigenvalue 25: -0.69739 + -0.635893 i
+Eigenvalue 26: -0.692829 + 0.559575 i
+Eigenvalue 27: -0.692829 + -0.559575 i
+Eigenvalue 28: -0.691036 + 0.696135 i
+Eigenvalue 29: -0.691036 + -0.696135 i
+Eigenvalue 30: -0.687518 + 0.466304 i
+Eigenvalue 31: -0.687518 + -0.466304 i
+Eigenvalue 32: -0.685934 + 0.739467 i
+Eigenvalue 33: -0.685934 + -0.739467 i
+Eigenvalue 34: -0.685164 + -0.671208 i
+Eigenvalue 35: -0.685164 + 0.671208 i
+Eigenvalue 36: -0.677763 + 0.761699 i
+Eigenvalue 37: -0.677763 + -0.761699 i
+Eigenvalue 38: -0.675355 + -0.623213 i
+Eigenvalue 39: -0.675355 + 0.623213 i
+Eigenvalue 40: -0.674605 + 0.566108 i
+Eigenvalue 41: -0.674605 + -0.566108 i
+Eigenvalue 42: -0.667464 + 0.755461 i
+Eigenvalue 43: -0.667464 + -0.755461 i
+Eigenvalue 44: -0.667376 + -0.70982 i
+Eigenvalue 45: -0.667376 + 0.70982 i
+Eigenvalue 46: -0.667271 + -0.784047 i
+Eigenvalue 47: -0.667271 + 0.784047 i
+WARNING! There are options you set that were not used!
+WARNING! could be spelling mistake, etc!
+There is one unused database option. It is:
+Option left: name:--grid value: 8.8.8.8 source: command line

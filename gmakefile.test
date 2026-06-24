@@ -240,6 +240,9 @@ $(TESTDIR)/snes/tests/ex1: PETSC_TEST_LIB = $(PETSC_SNES_LIB)
 $(TESTDIR)/ts/tests/ex2: PETSC_TEST_LIB = $(PETSC_TS_LIB)
 $(TESTDIR)/tao/tutorials/ex1: PETSC_TEST_LIB = $(PETSC_TAO_LIB)
 
+# SLEPc-dependent QCD tutorials
+$(TESTDIR)/snes/tutorials/qcd/%: PETSC_TEST_LIB += -lslepc
+
 # MACOS FIREWALL HANDLING
 # - if run with MACOS_FIREWALL=1
 #   (automatically set in $PETSC_ARCH/lib/petsc/conf/petscvariables if configured --with-macos-firewall-rules),
