@@ -1,0 +1,134 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 MMAP anonymous implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=da593796123f99307b486350f8b2ef6ae7d2c375: (HEAD, origin/feature/gparity-merge-april24) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : This rank is running on host Spire
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent host   allocations: SMALL 8 LARGE 2 HUGE 0
+Grid : Message : MemoryManager::Init() cache pool for recent device allocations: SMALL 16 LARGE 8 Huge 0
+Grid : Message : MemoryManager::Init() cache pool for recent shared allocations: SMALL 16 LARGE 8 Huge 0
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.498807 s : Loading configuration from /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000
+Grid : Message : 0.498867 s : * BEGIN_HEADER
+Grid : Message : 0.498872 s : * HDR_VERSION = 1.0
+Grid : Message : 0.498891 s : * DATATYPE = 4D_SU3_GAUGE
+Grid : Message : 0.498896 s : * STORAGE_FORMAT = 1.0
+Grid : Message : 0.498901 s : * DIMENSION_1 = 16
+Grid : Message : 0.498906 s : * DIMENSION_2 = 16
+Grid : Message : 0.498911 s : * DIMENSION_3 = 16
+Grid : Message : 0.498916 s : * DIMENSION_4 = 32
+Grid : Message : 0.498921 s : * LINK_TRACE = -0.0001426958719
+Grid : Message : 0.498926 s : * PLAQUETTE  = 0.5876863045
+Grid : Message : 0.498931 s : * BOUNDARY_1 = PERIODIC
+Grid : Message : 0.498936 s : * BOUNDARY_2 = PERIODIC
+Grid : Message : 0.498941 s : * BOUNDARY_3 = PERIODIC
+Grid : Message : 0.498946 s : * BOUNDARY_4 = PERIODIC
+Grid : Message : 0.498951 s : * CHECKSUM = 9207c824
+Grid : Message : 0.498956 s : * ENSEMBLE_ID = DWF
+Grid : Message : 0.498961 s : * ENSEMBLE_LABEL = DWF
+Grid : Message : 0.498966 s : * SEQUENCE_NUMBER = 4000
+Grid : Message : 0.498971 s : * CREATOR = RBC
+Grid : Message : 0.498976 s : * CREATOR_HARDWARE = CU-QCDOC one rack
+Grid : Message : 0.498981 s : * CREATION_DATE = Sat Jan 10 16:18:39 1970
+Grid : Message : 0.498986 s : * ARCHIVE_DATE = Sat Jan 10 16:18:39 1970
+Grid : Message : 0.498991 s : * FLOATING_POINT = IEEE64BIG
+Grid : Message : 0.498996 s : * END_HEADER
+Grid : Message : 0.533708 s : IOobject: C++ read I/O /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 : 50331648 bytes and offset 540
+Grid : Message : 0.541708 s : IOobject:  read  50331648 bytes in 0.004073 s 11784.9 MB/s 
+Grid : Message : 0.541831 s : IOobject: endian and checksum overhead 0.003938 s
+Grid : Message : 0.552467 s : readLatticeObject: vectorize overhead 0.010507 s
+Grid : Message : 0.694339 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 checksum 9207c824 header   9207c824
+Grid : Message : 0.694434 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 plaquette 0.587686 header    0.587686
+Grid : Message : 0.694518 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 link_trace -0.000142696 header    -0.000142696
+Grid : Message : 0.694594 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 and plaquette, link trace, and checksum agree
+ Set 524288 gauge links 
+ Grid lsites 131072
+Grid : Message : 0.842846 s : Loading configuration from /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000
+Grid : Message : 0.843060 s : * BEGIN_HEADER
+Grid : Message : 0.843199 s : * HDR_VERSION = 1.0
+Grid : Message : 0.843341 s : * DATATYPE = 4D_SU3_GAUGE
+Grid : Message : 0.843410 s : * STORAGE_FORMAT = 1.0
+Grid : Message : 0.843414 s : * DIMENSION_1 = 16
+Grid : Message : 0.843419 s : * DIMENSION_2 = 16
+Grid : Message : 0.843423 s : * DIMENSION_3 = 16
+Grid : Message : 0.843427 s : * DIMENSION_4 = 32
+Grid : Message : 0.843432 s : * LINK_TRACE = -0.0001426958719
+Grid : Message : 0.843437 s : * PLAQUETTE  = 0.5876863045
+Grid : Message : 0.843441 s : * BOUNDARY_1 = PERIODIC
+Grid : Message : 0.843445 s : * BOUNDARY_2 = PERIODIC
+Grid : Message : 0.843449 s : * BOUNDARY_3 = PERIODIC
+Grid : Message : 0.843453 s : * BOUNDARY_4 = PERIODIC
+Grid : Message : 0.843457 s : * CHECKSUM = 9207c824
+Grid : Message : 0.843462 s : * ENSEMBLE_ID = DWF
+Grid : Message : 0.843466 s : * ENSEMBLE_LABEL = DWF
+Grid : Message : 0.843470 s : * SEQUENCE_NUMBER = 4000
+Grid : Message : 0.843474 s : * CREATOR = RBC
+Grid : Message : 0.843479 s : * CREATOR_HARDWARE = CU-QCDOC one rack
+Grid : Message : 0.843484 s : * CREATION_DATE = Sat Jan 10 16:18:39 1970
+Grid : Message : 0.843489 s : * ARCHIVE_DATE = Sat Jan 10 16:18:39 1970
+Grid : Message : 0.843493 s : * FLOATING_POINT = IEEE64BIG
+Grid : Message : 0.843497 s : * END_HEADER
+Grid : Message : 0.878226 s : IOobject: C++ read I/O /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 : 50331648 bytes and offset 540
+Grid : Message : 0.886495 s : IOobject:  read  50331648 bytes in 0.004182 s 11477.8 MB/s 
+Grid : Message : 0.886529 s : IOobject: endian and checksum overhead 0.004091 s
+Grid : Message : 0.897986 s : readLatticeObject: vectorize overhead 0.011309 s
+Grid : Message : 1.309550 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 checksum 9207c824 header   9207c824
+Grid : Message : 1.311030 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 plaquette 0.587686 header    0.587686
+Grid : Message : 1.311150 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 link_trace -0.000142696 header    -0.000142696
+Grid : Message : 1.311200 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_lat.4000 and plaquette, link trace, and checksum agree
+****************************************
+Gauge invariance test 
+****************************************
+Setting gauge to Grid 
+ Set 524288 gauge links 
+ Grid lsites 131072
+Testing Dw 
+******************************
+CheckDwWithGrid Grid  1.41304e+07
+CheckDwWithGrid Petsc 1.41304e+07
+CheckDwWithGrid diff  3.13204e-25
+Grid  35.2575 ms
+Petsc 252.694 ms
+******************************
+******************************
+CheckDwDagWithGrid Grid  1.41307e+07
+CheckDwDagWithGrid Petsc 1.41307e+07
+CheckDwDagWithGrid diff  3.09796e-25
+******************************
+WARNING! There are options you set that were not used!
+WARNING! could be spelling mistake, etc!
+There is one unused database option. It is:
+Option left: name:--grid value: 16.16.16.32 source: command line
