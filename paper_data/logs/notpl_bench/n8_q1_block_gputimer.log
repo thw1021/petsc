@@ -1,0 +1,375 @@
+  Linear solve converged due to CONVERGED_RTOL iterations 30
+  Linear solve converged due to CONVERGED_RTOL iterations 30
+  Linear solve converged due to CONVERGED_RTOL iterations 30
+[0]main |b-Ax|/|b|=7.608920e-07, |b|=2.222509e+00, emax=9.989586e-01
+****************************************************************************************************************************************************************
+***                                WIDEN YOUR WINDOW TO 160 CHARACTERS.  Use 'enscript -r -fCourier9' to print this document                                 ***
+****************************************************************************************************************************************************************
+
+------------------------------------------------------------------ PETSc Performance Summary: ------------------------------------------------------------------
+
+
+
+      ##########################################################
+      #                                                        #
+      #                       WARNING!!!                       #
+      #                                                        #
+      #   This code was run with -log_view_gpu_time            #
+      #   This provides accurate timing within the GPU kernels #
+      #   but can slow down the entire computation by a        #
+      #   measurable amount. For fastest runs we recommend     #
+      #   not using this option.                               #
+      #                                                        #
+      ##########################################################
+
+
+/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/tests/ksp/ksp/tutorials/ex56 on a arch-perlmutter-opt-gcc-kokkos-cuda-notpl named nid001161 with 8 processes and CUDA architecture 80, by madams on Mon Jun 22 07:46:22 2026
+Using PETSc Development Git Revision: v3.25.2-340-g83d2bd4a8b4 Git Date: 2026-06-21 14:23:19 -0400
+
+                         Max       Max/Min     Avg       Total
+Time (sec):           3.231e+00     1.003   3.226e+00
+Objects:              0.000e+00     0.000   0.000e+00
+Flops:                1.006e+10     1.020   9.962e+09  7.969e+10
+Flops/sec:            3.113e+09     1.017   3.088e+09  2.470e+10
+MPI Msg Count:        1.423e+04     1.095   1.336e+04  1.069e+05
+MPI Msg Len (bytes):  7.245e+07     1.039   5.326e+03  5.693e+08
+MPI Reductions:       2.230e+02     1.000
+
+Flop counting convention: 1 flop = 1 real number operation of type (multiply/divide/add/subtract)
+                            e.g., VecAXPY() for real vectors of length N --> 2N flops
+                            and VecAXPY() for complex vectors of length N --> 8N flops
+
+Summary of Stages:   ----- Time ------  ----- Flop ------  --- Messages ---  -- Message Lengths --  -- Reductions --
+                        Avg     %Total     Avg     %Total    Count   %Total     Avg         %Total    Count   %Total
+ 0:      Main Stage: 9.4489e-01  29.3%  1.7301e+08   0.2%  2.630e+02   0.2%  7.069e+04        3.3%  9.000e+00   4.0%
+ 1:           Setup: 1.6130e+00  50.0%  3.1676e+09   4.0%  1.659e+04  15.5%  8.244e+03       24.0%  1.970e+02  88.3%
+ 2:           Solve: 2.1331e-01   6.6%  2.4879e+10  31.2%  2.940e+04  27.5%  4.329e+03       22.4%  0.000e+00   0.0%
+ 3:       2nd Setup: 4.0323e-02   1.2%  1.6548e+09   2.1%  1.822e+03   1.7%  1.761e+04        5.6%  0.000e+00   0.0%
+ 4:       2nd Solve: 2.0704e-01   6.4%  2.4879e+10  31.2%  2.940e+04  27.5%  4.329e+03       22.4%  0.000e+00   0.0%
+ 5:       3rd Setup: 3.1175e-07   0.0%  0.0000e+00   0.0%  0.000e+00   0.0%  0.000e+00        0.0%  0.000e+00   0.0%
+ 6:       3rd Solve: 2.0722e-01   6.4%  2.4941e+10  31.3%  2.940e+04  27.5%  4.329e+03       22.4%  0.000e+00   0.0%
+
+------------------------------------------------------------------------------------------------------------------------
+See the 'Profiling' chapter of the users' manual for details on interpreting output.
+Phase summary info:
+   Count: number of times phase was executed
+   Time and Flop: Max - maximum over all processes
+                  Ratio - ratio of maximum to minimum over all processes
+   Mess: number of messages sent
+   AvgLen: average message length (bytes)
+   Reduct: number of global reductions
+   Global: entire computation
+   Stage: stages of a computation. Set stages with PetscLogStagePush() and PetscLogStagePop().
+      %T - percent time in this phase         %F - percent flop in this phase
+      %M - percent messages in this phase     %L - percent message lengths in this phase
+      %R - percent reductions in this phase
+   Total Mflop/s: 1e-6 * (sum of flop over all processes)/(max time over all processes)
+   GPU Mflop/s: 1e-6 * (sum of flop on GPU over all processes)/(max GPU time over all processes)
+   CpuToGpu Count: total number of CPU to GPU copies per processor
+   CpuToGpu Size (Mbytes): 1e-6 * (total size of CPU to GPU copies per processor)
+   GpuToCpu Count: total number of GPU to CPU copies per processor
+   GpuToCpu Size (Mbytes): 1e-6 * (total size of GPU to CPU copies per processor)
+   GPU %F: percent flops on GPU in this event
+------------------------------------------------------------------------------------------------------------------------
+Event                Count      Time (sec)     Flop                              --- Global ---  --- Stage ----  Total   GPU    - CpuToGpu -   - GpuToCpu - GPU
+                   Max Ratio  Max     Ratio   Max  Ratio  Mess   AvgLen  Reduct  %T %F %M %L %R  %T %F %M %L %R Mflop/s Mflop/s Count   Size   Count   Size  %F
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--- Event Stage 0: Main Stage
+
+BuildTwoSided          4 1.0 3.2601e-02 58.8 0.00e+00 0.0 9.4e+01 5.6e+00 0.0e+00  1  0  0  0  0   2  0 36  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+BuildTwoSidedF         3 1.0 3.3960e-02 51.8 0.00e+00 0.0 9.5e+01 1.9e+05 0.0e+00  1  0  0  3  0   2  0 36 95  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatMult                1 1.0 4.1502e-04 1.4 1.54e+07 1.0 5.6e+01 1.1e+04 0.0e+00  0  0  0  0  0   0 71 21  3  0 297482   700343      0 0.00e+00    0 0.00e+00 100
+MatAssemblyBegin       1 1.0 3.3340e-02 3.6 0.00e+00 0.0 3.8e+01 4.6e+05 0.0e+00  1  0  0  3  0   2  0 14 93  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatAssemblyEnd         1 1.0 3.0224e-02 1.0 0.00e+00 0.0 1.1e+02 2.7e+03 1.0e+00  1  0  0  0  0   3  0 43  2 11     0       0      0 0.00e+00    1 1.93e+00  0
+DCtxCreate             1 1.0 5.6890e-05 2.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+DCtxDestroy            1 1.0 2.2524e-05 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+DCtxSetUp              1 1.0 8.7870e-06 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+DCtxSetDevice          1 1.0 1.5290e-05 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecMDot                3 1.0 8.1758e-04 1.5 2.36e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0 11  0  0  0 23086       0      0 0.00e+00    0 0.00e+00  0
+VecNorm                5 1.0 4.2366e-04 1.4 9.83e+05 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  5  0  0  0 18563   67101      0 0.00e+00    0 0.00e+00 40
+VecScale               3 1.0 4.7261e-05 1.1 2.95e+05 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  1  0  0  0 49921       0      0 0.00e+00    0 0.00e+00  0
+VecAXPY                1 1.0 5.8273e-05 1.2 1.97e+05 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  1  0  0  0 26991   33121      0 0.00e+00    0 0.00e+00 100
+VecMAXPY               3 1.0 2.8364e-04 1.1 2.36e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0 11  0  0  0 66544       0      0 0.00e+00    0 0.00e+00  0
+VecAssemblyBegin       1 1.0 6.8072e-04 1.2 0.00e+00 0.0 5.7e+01 6.1e+03 0.0e+00  0  0  0  0  0   0  0 22  2  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAssemblyEnd         1 1.0 1.0752e-04 7.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterBegin        1 1.0 8.4844e-05 1.7 0.00e+00 0.0 5.6e+01 1.1e+04 0.0e+00  0  0  0  0  0   0  0 21  3  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterEnd          1 1.0 1.7218e-04 30.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecNormalize           3 1.0 2.0983e-04 1.2 8.85e+05 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  4  0  0  0 33732       0      0 0.00e+00    0 0.00e+00  0
+SFSetGraph             1 1.0 7.0326e-05 1.0 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFSetUp                1 1.0 5.6315e-04 1.1 0.00e+00 0.0 1.1e+02 2.7e+03 0.0e+00  0  0  0  0  0   0  0 43  2  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFPack                 1 1.0 4.1880e-06 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFUnpack               1 1.0 1.8000e-07 1.5 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+
+--- Event Stage 1: Setup
+
+BuildTwoSided        267 1.0 3.4122e-02 1.5 0.00e+00 0.0 3.4e+03 4.0e+00 0.0e+00  1  0  3  0  0   2  0 21  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+BuildTwoSidedF       162 1.0 2.4905e-02 1.6 0.00e+00 0.0 7.2e+02 4.8e+04 0.0e+00  1  0  1  6  0   1  0  4 26  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatMult               80 1.0 2.6884e-02 1.1 3.63e+08 1.0 3.4e+03 5.0e+03 0.0e+00  1  4  3  3  0   2 90 20 12  0 106551   505292      7 1.22e-01    0 0.00e+00 100
+MatConvert            20 1.0 7.0927e-01 1.0 0.00e+00 0.0 9.4e+02 1.5e+02 4.8e+01 22  0  1  0 22  44  0  6  0 24     0       0      0 0.00e+00   12 2.30e+01  0
+MatScale              12 1.0 2.5731e-03 1.0 4.44e+06 1.0 1.7e+02 1.4e+03 0.0e+00  0  0  0  0  0   0  1  1  0  0 13759   38909      0 0.00e+00    0 0.00e+00 60
+MatAssemblyBegin      77 1.0 2.3120e-02 1.5 0.00e+00 0.0 7.2e+02 4.8e+04 0.0e+00  1  0  1  6  0   1  0  4 26  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatAssemblyEnd        77 1.0 9.5457e-02 1.4 0.00e+00 0.0 2.4e+03 3.1e+02 4.4e+01  3  0  2  0 20   5  0 15  1 22     0       0      0 0.00e+00   10 1.98e+00  0
+MatSetValues     3689288 1.0 5.0420e-01 1.0 1.52e+06 1.0 0.0e+00 0.0e+00 0.0e+00 15  0  0  0  0  30  0  0  0  0    24       0      0 0.00e+00    0 0.00e+00  0
+MatGetRow         411747 1.0 4.0274e-02 1.0 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   2  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatCreateSubMat        2 1.0 9.8623e-03 1.0 0.00e+00 0.0 1.7e+02 5.1e+01 2.2e+01  0  0  0  0 10   1  0  1  0 11     0       0      0 0.00e+00    2 1.18e-01  0
+MatCoarsen             4 1.0 1.0568e-02 1.0 0.00e+00 0.0 1.7e+03 9.7e+02 2.7e+01  0  0  2  0 12   1  0 10  1 14     0       0      0 0.00e+00    0 0.00e+00  0
+MatAXPY                8 1.0 7.8334e-01 1.0 1.52e+06 1.0 1.1e+03 2.3e+02 4.0e+01 24  0  1  0 18  48  0  7  0 20    15       0      0 0.00e+00   10 2.29e+01  0
+MatTranspose           9 1.0 2.9506e-02 1.1 0.00e+00 0.0 1.4e+03 3.3e+03 2.1e+01  1  0  1  1  9   2  0  9  3 11     0       0      0 0.00e+00    0 0.00e+00  0
+MatMatMultSym          4 1.0 1.3563e-01 1.0 0.00e+00 0.0 2.2e+03 2.7e+03 2.8e+01  4  0  2  1 13   8  0 13  4 14     0       0      0 0.00e+00   33 1.27e+02  0
+MatMatMultNum          4 1.0 7.4300e-07 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatPtAPSymbolic        4 1.0 1.5738e-01 1.0 0.00e+00 0.0 3.1e+03 1.9e+04 2.8e+01  5  0  3 10 13  10  0 19 43 14     0       0      0 0.00e+00   33 1.46e+02  0
+MatPtAPNumeric         4 1.0 9.3100e-07 1.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatTrnMatMultSym       1 1.0 1.7919e-01 1.0 0.00e+00 0.0 3.9e+02 9.2e+04 4.0e+00  6  0  0  6  2  11  0  2 26  2     0       0      0 0.00e+00    0 0.00e+00  0
+MatGetLocalMat         1 1.0 1.2160e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatCreateGraph         4 1.0 1.0113e-01 1.0 2.68e+06 1.0 2.0e+03 2.5e+03 2.8e+01  3  0  2  1 13   6  1 12  4 14   212       0      0 0.00e+00    6 9.88e+00  0
+MatSetPreallCOO        8 1.0 4.4565e-02 1.0 0.00e+00 0.0 2.1e+03 5.7e+02 3.2e+01  1  0  2  0 14   3  0 13  1 16     0       0      0 0.00e+00   24 3.48e+01  0
+MatSetValuesCOO        8 1.0 9.1821e-03 1.1 0.00e+00 0.0 1.2e+02 1.9e+05 0.0e+00  0  0  0  4  0   1  0  1 17  0     0       0      0 0.00e+00    0 0.00e+00  0
+KSPSetUp               1 1.0 1.1691e-03 1.8 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+PCSetUp_GAMG+          1 1.0 1.6123e+00 1.0 4.01e+08 1.0 1.7e+04 8.2e+03 2.0e+02 50  4 16 24 88 100 100 100 100 100  1965   39269      7 1.22e-01   88 3.06e+02 99
+ PCGAMGCreateG         4 1.0 1.0114e-01 1.0 2.68e+06 1.0 2.0e+03 2.5e+03 2.8e+01  3  0  2  1 13   6  1 12  4 14   212       0      0 0.00e+00    6 9.88e+00  0
+ GAMG Coarsen          8 1.0 2.1614e-01 1.0 0.00e+00 0.0 2.3e+03 1.7e+04 3.1e+01  7  0  2  7 14  13  0 14 29 16     0       0      0 0.00e+00    0 0.00e+00  0
+  GAMG MIS/Agg         4 1.0 1.9032e-01 1.0 0.00e+00 0.0 2.0e+03 1.8e+04 3.1e+01  6  0  2  7 14  12  0 12 28 16     0       0      0 0.00e+00    0 0.00e+00  0
+ PCGAMGProl            4 1.0 1.7826e-01 1.0 0.00e+00 0.0 2.5e+03 4.0e+03 1.2e+01  6  0  2  2  5  11  0 15  7  6     0       0      0 0.00e+00    4 1.30e-01  0
+  GAMG Prol-col        4 1.0 9.3061e-02 1.0 0.00e+00 0.0 2.2e+03 3.6e+03 0.0e+00  3  0  2  1  0   6  0 14  6  0     0       0      0 0.00e+00    0 0.00e+00  0
+  GAMG Prol-lift       4 1.0 8.1394e-02 1.0 0.00e+00 0.0 2.8e+02 7.4e+03 4.0e+00  3  0  0  0  2   5  0  2  2  2     0       0      0 0.00e+00    4 1.30e-01  0
+ PCGAMGOptProl         4 1.0 9.1829e-01 1.0 1.97e+08 1.0 4.7e+03 3.1e+03 6.4e+01 28  2  4  3 29  57 49 28 11 32  1691   43878      7 1.22e-01   43 1.50e+02 100
+  GAMG smooth          4 1.0 8.7833e-01 1.0 3.27e+06 1.0 3.0e+03 2.0e+03 6.4e+01 27  0  3  1 29  54  1 18  4 32    30     894      0 0.00e+00   43 1.50e+02 81
+ PCGAMGCreateL         4 1.0 1.6925e-01 1.0 0.00e+00 0.0 3.3e+03 1.8e+04 6.2e+01  5  0  3 10 28  10  0 20 43 31     0       0      0 0.00e+00   35 1.46e+02  0
+  GAMG PtAP            4 1.0 1.5743e-01 1.0 0.00e+00 0.0 3.1e+03 1.9e+04 2.8e+01  5  0  3 10 13  10  0 19 43 14     0       0      0 0.00e+00   33 1.46e+02  0
+  GAMG Reduce          2 1.0 3.2161e-02 1.0 0.00e+00 0.0 8.9e+02 6.7e+03 4.8e+01  1  0  1  1 22   2  0  5  4 24     0       0      0 0.00e+00   19 3.20e+00  0
+PCGAMG Squ l00         1 1.0 1.7919e-01 1.0 0.00e+00 0.0 3.9e+02 9.2e+04 4.0e+00  6  0  0  6  2  11  0  2 26  2     0       0      0 0.00e+00    0 0.00e+00  0
+PCGAMG Gal l00         1 1.0 1.0721e-01 1.0 0.00e+00 0.0 1.2e+03 2.7e+04 7.0e+00  3  0  1  6  3   7  0  7 24  4     0       0      0 0.00e+00    8 1.24e+02  0
+PCGAMG Opt l00         1 1.0 9.9495e-02 1.0 0.00e+00 0.0 7.1e+02 6.0e+03 7.0e+00  3  0  1  1  3   6  0  4  3  4     0       0      0 0.00e+00    8 1.12e+02  0
+PCGAMG Gal l01         1 1.0 3.0093e-02 1.0 0.00e+00 0.0 1.2e+03 1.7e+04 7.0e+00  1  0  1  4  3   2  0  7 15  4     0       0      0 0.00e+00    8 1.91e+01  0
+PCGAMG Opt l01         1 1.0 2.3257e-02 1.0 0.00e+00 0.0 7.3e+02 1.5e+03 7.0e+00  1  0  1  0  3   1  0  4  1  4     0       0      0 0.00e+00    8 1.31e+01  0
+PCGAMG Gal l02         1 1.0 1.4148e-02 1.0 0.00e+00 0.0 6.4e+02 9.3e+03 7.0e+00  0  0  1  1  3   1  0  4  4  4     0       0      0 0.00e+00    8 3.07e+00  0
+PCGAMG Opt l02         1 1.0 8.2072e-03 1.0 0.00e+00 0.0 7.3e+02 6.9e+02 7.0e+00  0  0  1  0  3   1  0  4  0  4     0       0      0 0.00e+00    8 1.93e+00  0
+PCGAMG Gal l03         1 1.0 6.1621e-03 1.0 0.00e+00 0.0 2.7e+01 2.4e+02 7.0e+00  0  0  0  0  3   0  0  0  0  4     0       0      0 0.00e+00    9 1.74e-02  0
+PCGAMG Opt l03         1 1.0 4.7351e-03 1.0 0.00e+00 0.0 2.2e+01 2.8e+02 7.0e+00  0  0  0  0  3   0  0  0  0  4     0       0      0 0.00e+00    9 1.90e-02  0
+PCSetUp                1 1.0 1.6123e+00 1.0 4.01e+08 1.0 1.7e+04 8.2e+03 2.0e+02 50  4 16 24 88 100 100 100 100 100  1965   39269      7 1.22e-01   88 3.06e+02 99
+VecTDot              184 1.0 1.9290e-02 1.2 9.51e+06 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   1  2  0  0  0  3931    9500      0 0.00e+00    0 0.00e+00 100
+VecNorm               44 1.0 5.1733e-03 1.8 2.27e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  1  0  0  0  3505   17793      0 0.00e+00    0 0.00e+00 100
+VecCopy               16 1.0 4.1038e-04 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecSet                 8 1.0 1.8782e-04 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAXPY              160 1.0 3.3938e-03 1.1 8.27e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  2  0  0  0 19431   37728      0 0.00e+00    0 0.00e+00 100
+VecAYPX               72 1.0 1.2704e-03 1.1 3.72e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  1  0  0  0 23358   58147      0 0.00e+00    0 0.00e+00 100
+VecAssemblyBegin     136 1.0 1.3441e-02 1.9 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAssemblyEnd       136 1.0 5.5814e-05 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecPointwiseMult      44 1.0 7.6772e-04 1.1 1.14e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0 11811   28141      0 0.00e+00    0 0.00e+00 100
+VecReciprocal         12 1.0 2.3451e-04 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecSetValues      784962 1.0 4.8482e-02 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   3  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterBegin      221 1.0 1.8121e-02 1.8 0.00e+00 0.0 6.1e+03 4.5e+03 0.0e+00  0  0  6  5  0   1  0 37 20  0     0       0      7 1.22e-01    0 0.00e+00  0
+VecScatterEnd        221 1.0 1.2429e-02 4.3 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFSetGraph           113 1.0 4.5714e-04 1.0 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFSetUp              105 1.0 1.8224e-02 1.1 0.00e+00 0.0 6.2e+03 4.4e+02 0.0e+00  1  0  6  0  0   1  0 37  2  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFBcastBegin          59 1.0 5.3730e-03 1.2 0.00e+00 0.0 2.6e+03 1.5e+04 0.0e+00  0  0  2  7  0   0  0 16 29  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFBcastEnd            59 1.0 2.0334e-03 2.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFReduceBegin         31 1.0 8.4431e-03 2.3 0.00e+00 0.0 5.7e+02 4.3e+04 0.0e+00  0  0  1  4  0   0  0  3 18  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFReduceEnd           31 1.0 5.4912e-03 5.6 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFFetchOpBegin         8 1.0 1.4128e-04 1.6 0.00e+00 0.0 1.2e+02 4.0e+00 0.0e+00  0  0  0  0  0   0  0  1  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFFetchOpEnd           8 1.0 2.5071e-04 2.1 0.00e+00 0.0 1.2e+02 4.0e+00 0.0e+00  0  0  0  0  0   0  0  1  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFCreateEmbed          8 1.0 8.8594e-04 1.2 0.00e+00 0.0 3.4e+02 1.8e+02 0.0e+00  0  0  0  0  0   0  0  2  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFSectionSF            8 1.0 2.3414e-03 1.0 0.00e+00 0.0 6.8e+02 1.2e+03 0.0e+00  0  0  1  0  0   0  0  4  1  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFRemoteOff            8 1.0 1.6577e-03 1.1 0.00e+00 0.0 6.8e+02 4.5e+02 0.0e+00  0  0  1  0  0   0  0  4  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFPack               319 1.0 3.7127e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      3 1.53e-02    0 0.00e+00  0
+SFUnpack             327 1.0 5.4366e-05 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+
+--- Event Stage 2: Solve
+
+MatMult              687 1.0 9.0646e-02 1.1 2.64e+09 1.0 2.2e+04 5.5e+03 0.0e+00  3 26 21 21  0  40 84 75 95  0 230468   492025      1 0.00e+00    0 0.00e+00 100
+MatMultAdd           120 1.0 1.8399e-02 1.2 1.59e+08 1.0 3.7e+03 9.4e+02 0.0e+00  1  2  3  1  0   8  5 12  3  0 68923   310423      0 0.00e+00    0 0.00e+00 100
+MatMultTranspose     120 1.0 1.8811e-02 1.1 1.59e+08 1.0 3.7e+03 9.4e+02 0.0e+00  1  2  3  1  0   8  5 12  3  0 67438   193416      2 7.17e-03    0 0.00e+00 100
+MatResidual          120 1.0 2.0454e-02 1.1 5.50e+08 1.0 5.1e+03 5.0e+03 0.0e+00  1  5  5  4  0   9 17 17 20  0 212494   480722      0 0.00e+00    0 0.00e+00 100
+KSPSolve               1 1.0 2.1332e-01 1.0 3.14e+09 1.0 2.9e+04 4.3e+03 0.0e+00  7 31 28 22  0 100 100 100 100  0 116627   284299      3 7.17e-03    0 0.00e+00 100
+PCApply               30 1.0 1.9711e-01 1.0 2.64e+09 1.0 2.8e+04 3.9e+03 0.0e+00  6 26 26 19  0  92 84 94 86  0 105976   263229      3 7.17e-03    0 0.00e+00 100
+VecTDot              476 1.0 2.9164e-02 1.1 1.22e+07 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0  13  0  0  0  0  3344   10079      0 0.00e+00    0 0.00e+00 100
+VecNorm              238 1.0 2.1122e-02 1.7 6.10e+06 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   9  0  0  0  0  2308   10220      0 0.00e+00    0 0.00e+00 100
+VecCopy              422 1.0 7.5292e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecSet               151 1.0 2.4521e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAXPY              414 1.0 6.8715e-03 1.3 1.18e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  0  0  0  0 13734   35687      0 0.00e+00    0 0.00e+00 100
+VecAYPX              896 1.0 1.5465e-02 1.1 4.29e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   7  1  0  0  0 22138   55289      0 0.00e+00    0 0.00e+00 100
+VecAXPBYCZ           240 1.0 4.3483e-03 1.1 3.10e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   2  1  0  0  0 56870   130123      0 0.00e+00    0 0.00e+00 100
+VecPointwiseMult     207 1.0 3.3742e-03 1.4 1.24e+03 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       1      0 0.00e+00    0 0.00e+00 100
+VecReciprocal          1 1.0 1.6993e-05 1.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterBegin      927 1.0 3.7789e-02 1.4 0.00e+00 0.0 2.9e+04 4.3e+03 0.0e+00  1  0 28 22  0  15  0 100 100  0     0       0      1 0.00e+00    0 0.00e+00  0
+VecScatterEnd        927 1.0 2.4683e-02 1.8 6.25e+04 1.4 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0  10  0  0  0  0    17       0      2 7.17e-03    0 0.00e+00 100
+SFPack               927 1.0 1.6786e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFUnpack             927 1.0 7.9587e-04 1.7 6.25e+04 1.4 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0   541       0      2 7.17e-03    0 0.00e+00 100
+
+--- Event Stage 3: 2nd Setup
+
+MatMult               40 1.0 6.3261e-03 1.1 1.81e+08 1.0 1.7e+03 5.0e+03 0.0e+00  0  2  2  1  0  15 87 93 27  0 226406   513725      0 0.00e+00    0 0.00e+00 100
+MatScale               1 1.0 1.4448e-04 1.1 7.72e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  4  0  0  0 427266   676875      0 0.00e+00    0 0.00e+00 100
+MatAssemblyBegin       4 1.0 8.0300e-07 1.5 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatAssemblyEnd         4 1.0 2.5340e-06 1.3 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatPtAPNumeric         4 1.0 1.0214e-02 1.0 0.00e+00 0.0 1.2e+02 1.9e+05 0.0e+00  0  0  0  4  0  25  0  7 73  0     0       0      0 0.00e+00    0 0.00e+00  0
+MatSetValuesCOO        4 1.0 2.5074e-03 4.5 0.00e+00 0.0 1.2e+02 1.9e+05 0.0e+00  0  0  0  4  0   4  0  7 73  0     0       0      0 0.00e+00    0 0.00e+00  0
+KSPSetUp               1 1.0 1.7000e-07 1.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+PCSetUp_GAMG+          1 1.0 4.0185e-02 1.0 2.02e+08 1.0 1.8e+03 1.8e+04 0.0e+00  1  2  2  6  0 100 96 100 100  0 39642   95505      4 2.59e+00    5 6.77e+01 100
+PCGAMG Gal l00         1 1.0 3.9230e-03 1.1 0.00e+00 0.0 5.1e+01 2.6e+05 0.0e+00  0  0  0  2  0  10  0  3 41  0     0       0      0 0.00e+00    0 0.00e+00  0
+PCGAMG Gal l01         1 1.0 4.9925e-03 1.0 0.00e+00 0.0 5.6e+01 1.7e+05 0.0e+00  0  0  0  2  0  12  0  3 30  0     0       0      0 0.00e+00    0 0.00e+00  0
+PCGAMG Gal l02         1 1.0 1.4055e-03 1.2 0.00e+00 0.0 1.4e+01 4.9e+04 0.0e+00  0  0  0  0  0   3  0  1  2  0     0       0      0 0.00e+00    0 0.00e+00  0
+PCGAMG Gal l03         1 1.0 1.3729e-04 1.5 0.00e+00 0.0 1.0e+00 2.9e+02 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+PCSetUp                1 1.0 4.0187e-02 1.0 2.02e+08 1.0 1.8e+03 1.8e+04 0.0e+00  1  2  2  6  0 100 96 100 100  0 39640   95505      4 2.59e+00    5 6.77e+01 100
+VecTDot               92 1.0 6.3575e-03 1.1 4.75e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0  15  2  0  0  0  5964   18305      0 0.00e+00    0 0.00e+00 100
+VecNorm               44 1.0 4.0210e-03 1.5 2.27e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   9  1  0  0  0  4510   20173      0 0.00e+00    0 0.00e+00 100
+VecCopy                8 1.0 1.8789e-04 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecSet                 4 1.0 1.1572e-04 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAXPY               80 1.0 1.3841e-03 1.1 4.13e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  2  0  0  0 23821   58494      0 0.00e+00    0 0.00e+00 100
+VecAYPX               36 1.0 6.2808e-04 1.1 1.86e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  1  0  0  0 23623   60761      0 0.00e+00    0 0.00e+00 100
+VecReciprocal          1 1.0 1.6893e-05 1.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterBegin       40 1.0 1.9625e-03 1.6 0.00e+00 0.0 1.7e+03 5.0e+03 0.0e+00  0  0  2  1  0   4  0 93 27  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterEnd         40 1.0 1.2056e-03 3.3 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   2  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFReduceBegin          4 1.0 1.3516e-04 2.0 0.00e+00 0.0 1.2e+02 1.9e+05 0.0e+00  0  0  0  4  0   0  0  7 73  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFReduceEnd            4 1.0 2.2848e-03 8.2 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   4  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFPack                44 1.0 1.1682e-04 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFUnpack              44 1.0 6.3900e-06 1.4 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+
+--- Event Stage 4: 2nd Solve
+
+MatMult              687 1.0 8.8915e-02 1.1 2.64e+09 1.0 2.2e+04 5.5e+03 0.0e+00  3 26 21 21  0  41 84 75 95  0 234954   493830      0 0.00e+00    0 0.00e+00 100
+MatMultAdd           120 1.0 1.7115e-02 1.2 1.59e+08 1.0 3.7e+03 9.4e+02 0.0e+00  0  2  3  1  0   8  5 12  3  0 74093   313816      0 0.00e+00    0 0.00e+00 100
+MatMultTranspose     120 1.0 1.5944e-02 1.1 1.59e+08 1.0 3.7e+03 9.4e+02 0.0e+00  0  2  3  1  0   7  5 12  3  0 79564   195425      0 0.00e+00    0 0.00e+00 100
+MatResidual          120 1.0 2.0356e-02 1.1 5.50e+08 1.0 5.1e+03 5.0e+03 0.0e+00  1  5  5  4  0   9 17 17 20  0 213514   480632      0 0.00e+00    0 0.00e+00 100
+KSPSolve               1 1.0 2.0702e-01 1.0 3.14e+09 1.0 2.9e+04 4.3e+03 0.0e+00  6 31 28 22  0 100 100 100 100  0 120174   287045      0 0.00e+00    0 0.00e+00 100
+PCApply               30 1.0 1.9136e-01 1.0 2.64e+09 1.0 2.8e+04 3.9e+03 0.0e+00  6 26 26 19  0  92 84 94 86  0 109158   265212      0 0.00e+00    0 0.00e+00 100
+VecTDot              476 1.0 2.8792e-02 1.1 1.22e+07 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0  14  0  0  0  0  3387   10196      0 0.00e+00    0 0.00e+00 100
+VecNorm              238 1.0 2.0215e-02 1.7 6.10e+06 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   9  0  0  0  0  2412   10409      0 0.00e+00    0 0.00e+00 100
+VecCopy              422 1.0 7.4581e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecSet               151 1.0 2.4299e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAXPY              414 1.0 6.8702e-03 1.3 1.18e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  0  0  0  0 13737   35735      0 0.00e+00    0 0.00e+00 100
+VecAYPX              896 1.0 1.5380e-02 1.1 4.29e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   7  1  0  0  0 22260   55992      0 0.00e+00    0 0.00e+00 100
+VecAXPBYCZ           240 1.0 4.1218e-03 1.1 3.10e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   2  1  0  0  0 59995   148848      0 0.00e+00    0 0.00e+00 100
+VecPointwiseMult     207 1.0 3.3701e-03 1.4 1.24e+03 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       1      0 0.00e+00    0 0.00e+00 100
+VecScatterBegin      927 1.0 3.4523e-02 1.4 0.00e+00 0.0 2.9e+04 4.3e+03 0.0e+00  1  0 28 22  0  14  0 100 100  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterEnd        927 1.0 2.3338e-02 1.9 6.25e+04 1.4 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   9  0  0  0  0    18       0      0 0.00e+00    0 0.00e+00 100
+SFPack               927 1.0 1.6666e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFUnpack             927 1.0 6.6724e-04 1.6 6.25e+04 1.4 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0   645       0      0 0.00e+00    0 0.00e+00 100
+
+--- Event Stage 5: 3rd Setup
+
+
+--- Event Stage 6: 3rd Solve
+
+MatMult              687 1.0 8.9508e-02 1.1 2.64e+09 1.0 2.2e+04 5.5e+03 0.0e+00  3 26 21 21  0  41 84 75 95  0 233399   493439      0 0.00e+00    0 0.00e+00 100
+MatMultAdd           120 1.0 1.7040e-02 1.2 1.59e+08 1.0 3.7e+03 9.4e+02 0.0e+00  0  2  3  1  0   8  5 12  3  0 74421   313302      0 0.00e+00    0 0.00e+00 100
+MatMultTranspose     120 1.0 1.5989e-02 1.1 1.59e+08 1.0 3.7e+03 9.4e+02 0.0e+00  0  2  3  1  0   7  5 12  3  0 79339   195274      0 0.00e+00    0 0.00e+00 100
+MatScale               1 1.0 1.1130e-04 1.0 7.72e+06 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0 554611   690689      0 0.00e+00    0 0.00e+00 100
+MatResidual          120 1.0 2.0394e-02 1.1 5.50e+08 1.0 5.1e+03 5.0e+03 0.0e+00  1  5  5  4  0   9 17 17 20  0 213115   479194      0 0.00e+00    0 0.00e+00 100
+KSPSolve               1 1.0 2.0711e-01 1.0 3.14e+09 1.0 2.9e+04 4.3e+03 0.0e+00  6 31 28 22  0 100 100 100 100  0 120123   286639      0 0.00e+00    0 0.00e+00 100
+PCApply               30 1.0 1.9142e-01 1.0 2.64e+09 1.0 2.8e+04 3.9e+03 0.0e+00  6 26 26 19  0  92 84 94 86  0 109124   264765      0 0.00e+00    0 0.00e+00 100
+VecTDot              476 1.0 2.8312e-02 1.1 1.22e+07 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0  13  0  0  0  0  3445   10119      0 0.00e+00    0 0.00e+00 100
+VecNorm              238 1.0 2.0107e-02 1.7 6.10e+06 1.0 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   9  0  0  0  0  2425   10339      0 0.00e+00    0 0.00e+00 100
+VecCopy              422 1.0 7.3987e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecSet               151 1.0 2.4206e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecAXPY              414 1.0 6.8563e-03 1.3 1.18e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   3  0  0  0  0 13765   35768      0 0.00e+00    0 0.00e+00 100
+VecAYPX              896 1.0 1.5342e-02 1.1 4.29e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   7  1  0  0  0 22315   55561      0 0.00e+00    0 0.00e+00 100
+VecAXPBYCZ           240 1.0 4.1315e-03 1.1 3.10e+07 1.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   2  1  0  0  0 59854   146809      0 0.00e+00    0 0.00e+00 100
+VecPointwiseMult     207 1.0 3.3468e-03 1.4 1.24e+03 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       1      0 0.00e+00    0 0.00e+00 100
+VecScatterBegin      927 1.0 3.4626e-02 1.4 0.00e+00 0.0 2.9e+04 4.3e+03 0.0e+00  1  0 28 22  0  14  0 100 100  0     0       0      0 0.00e+00    0 0.00e+00  0
+VecScatterEnd        927 1.0 2.3520e-02 1.8 6.25e+04 1.4 0.0e+00 0.0e+00 0.0e+00  1  0  0  0  0   9  0  0  0  0    18       0      0 0.00e+00    0 0.00e+00 100
+SFPack               927 1.0 1.6569e-03 1.1 0.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   1  0  0  0  0     0       0      0 0.00e+00    0 0.00e+00  0
+SFUnpack             927 1.0 6.7084e-04 1.7 6.25e+04 1.4 0.0e+00 0.0e+00 0.0e+00  0  0  0  0  0   0  0  0  0  0   642       0      0 0.00e+00    0 0.00e+00 100
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Object Type          Creations   Destructions. Reports information only for process 0.
+
+--- Event Stage 0: Main Stage
+
+           Container     4             12
+       Krylov Solver     1             10
+              Matrix     6             58
+      Matrix Coarsen     0              1
+   Matrix Null Space     1              1
+      Preconditioner     1              6
+              Viewer     1              1
+  PetscDeviceContext     1              0
+              Vector    12             63
+           Index Set     2              2
+   Star Forest Graph     1             25
+    Distributed Mesh     0              4
+     Discrete System     0              4
+           Weak Form     0              4
+
+--- Event Stage 1: Setup
+
+           Container    37             29
+       Krylov Solver    13              4
+              Matrix   323            271
+      Matrix Coarsen     4              3
+      Preconditioner    13              8
+              Vector   358            308
+           Index Set   149            149
+             Section    16             16
+   Star Forest Graph   113             97
+         PetscRandom     4              4
+
+--- Event Stage 2: Solve
+
+              Vector     1              0
+   Star Forest Graph     8              0
+    Distributed Mesh     4              0
+     Discrete System     4              0
+           Weak Form     4              0
+
+--- Event Stage 3: 2nd Setup
+
+              Vector    12             12
+
+--- Event Stage 4: 2nd Solve
+
+
+--- Event Stage 5: 3rd Setup
+
+
+--- Event Stage 6: 3rd Solve
+
+========================================================================================================================
+Average time to get PetscTime(): 3.51e-08
+Average time for MPI_Barrier(): 1.6003e-05
+Average time for zero size MPI_Send(): 1.7693e-05
+#PETSc Option Table entries:
+-alpha 1.e-3 # (source: command line)
+-ksp_converged_reason # (source: command line)
+-ksp_norm_type unpreconditioned # (source: command line)
+-ksp_rtol 1e-6 # (source: command line)
+-ksp_type cg # (source: command line)
+-log_view # (source: command line)
+-log_view_gpu_time # (source: command line)
+-mat_type mpibaijkokkos # (source: command line)
+-mg_coarse_ksp_type cg # (source: command line)
+-mg_coarse_pc_type jacobi # (source: command line)
+-mg_levels_ksp_type chebyshev # (source: command line)
+-mg_levels_pc_type pbjacobi # (source: command line)
+-ne 63 # (source: command line)
+-pc_gamg_agg_nsmooths 1 # (source: command line)
+-pc_gamg_coarse_eq_limit 20 # (source: command line)
+-pc_gamg_parallel_coarse_grid_solver # (source: command line)
+-pc_gamg_reuse_interpolation true # (source: command line)
+-pc_gamg_type agg # (source: command line)
+-pc_type gamg # (source: command line)
+-two_solves # (source: command line)
+-use_mat_nearnullspace # (source: command line)
+#End of PETSc Option Table entries
+Compiled without FORTRAN kernels
+Compiled with full precision matrices (default)
+sizeof(short) 2 sizeof(int) 4 sizeof(long) 8 sizeof(void*) 8 sizeof(PetscScalar) 8 sizeof(PetscInt) 4
+Configure options: --with-kokkos-dir=/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl --with-kokkos-kernels-dir=/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl --with-triangle-dir=/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl --with-batch=0 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --with-kokkos-kernels-tpl=0 --with-make-np=8 --with-mpiexec=srun -G4 --gpu-bind=none PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda-notpl
+-----------------------------------------
+Libraries compiled on 2026-06-22 14:37:25 on login21
+Machine characteristics: Linux-6.4.0-150600.23.103_15.0.24-cray_shasta_c-x86_64-with-glibc2.3.4
+Using PETSc directory: /global/u2/m/madams/petsc
+Using PETSc arch: arch-perlmutter-opt-gcc-kokkos-cuda-notpl
+-----------------------------------------
+
+Using C compiler: cc  -fPIC -Wall -Wwrite-strings -Wno-unknown-pragmas -Wno-lto-type-mismatch -Wno-stringop-overflow -fstack-protector -fvisibility=hidden -g -O 
+-----------------------------------------
+
+Using include paths: -I/global/u2/m/madams/petsc/include -I/global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/include -I/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/include -I/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9/include -I/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/math_libs/12.9/include
+-----------------------------------------
+
+Using C linker: cc
+Using libraries: -Wl,-rpath,/global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/lib -L/global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/lib -lpetsc -Wl,-rpath,/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/lib -L/global/homes/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda-notpl/lib -Wl,-rpath,/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9/lib64 -L/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9/lib64 -Wl,-rpath,/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/math_libs/12.9/lib64 -L/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/math_libs/12.9/lib64 -L/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9/lib64/stubs -lkokkoskernels -lkokkoscontainers -lkokkoscore -lkokkossimd -ltriangle -lcudart -lnvtx3interop -lcufft -lcublas -lcusparse -lcusolver -lcurand -lcuda -lnvidia-ml -lX11 -lstdc++ -lquadmath
+-----------------------------------------
+

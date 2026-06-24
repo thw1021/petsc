@@ -1,0 +1,357 @@
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Error in external library
+[0]PETSC ERROR: cudaMalloc((void **)&buffer1, bufferSize1) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:90
+[0]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[0]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[0]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[0]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[0]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[0]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[0]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[0]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[0]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[0]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[0]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[0]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[0]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[0]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[0]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[0]PETSC ERROR: #9 main() at ex56.c:328
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[0]PETSC ERROR: -ksp_converged_reason (source: command line)
+[0]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[0]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[0]PETSC ERROR: -ksp_type cg (source: command line)
+[0]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[0]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[0]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[0]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[0]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[0]PETSC ERROR: -ne 127 (source: command line)
+[0]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[0]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[0]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[0]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[0]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[0]PETSC ERROR: -pc_type gamg (source: command line)
+[0]PETSC ERROR: -two_solves (source: command line)
+[0]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 0] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[3]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[3]PETSC ERROR: Error in external library
+[3]PETSC ERROR: cudaMalloc((void **)&h->buffer4, h->bufferSize4) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:105
+[3]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[3]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[3]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[3]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[3]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[3]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[3]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[3]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[3]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[3]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[3]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[3]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[3]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[3]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[3]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[3]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[3]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[3]PETSC ERROR: #9 main() at ex56.c:328
+[3]PETSC ERROR: PETSc Option Table entries:
+[3]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[3]PETSC ERROR: -ksp_converged_reason (source: command line)
+[3]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[3]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[3]PETSC ERROR: -ksp_type cg (source: command line)
+[3]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[3]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[3]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[3]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[3]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[3]PETSC ERROR: -ne 127 (source: command line)
+[3]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[3]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[3]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[3]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[3]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[3]PETSC ERROR: -pc_type gamg (source: command line)
+[3]PETSC ERROR: -two_solves (source: command line)
+[3]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[3]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 3] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[4]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[4]PETSC ERROR: Error in external library
+[4]PETSC ERROR: cudaMalloc((void **)&h->buffer4, h->bufferSize4) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:105
+[4]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[4]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[4]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[4]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[4]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[4]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[4]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[4]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[4]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[4]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[4]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[4]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[4]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[4]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[4]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[4]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[4]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[4]PETSC ERROR: #9 main() at ex56.c:328
+[4]PETSC ERROR: PETSc Option Table entries:
+[4]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[4]PETSC ERROR: -ksp_converged_reason (source: command line)
+[4]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[4]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[4]PETSC ERROR: -ksp_type cg (source: command line)
+[4]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[4]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[4]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[4]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[4]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[4]PETSC ERROR: -ne 127 (source: command line)
+[4]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[4]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[4]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[4]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[4]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[4]PETSC ERROR: -pc_type gamg (source: command line)
+[4]PETSC ERROR: -two_solves (source: command line)
+[4]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[4]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 4] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[7]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[7]PETSC ERROR: Error in external library
+[7]PETSC ERROR: cudaMalloc((void **)&buffer2, bufferSize2) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:103
+[7]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[7]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[7]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[7]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[7]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[7]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[7]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[7]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[7]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[7]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[7]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[7]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[7]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[7]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[7]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[7]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[7]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[7]PETSC ERROR: #9 main() at ex56.c:328
+[7]PETSC ERROR: PETSc Option Table entries:
+[7]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[7]PETSC ERROR: -ksp_converged_reason (source: command line)
+[7]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[7]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[7]PETSC ERROR: -ksp_type cg (source: command line)
+[7]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[7]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[7]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[7]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[7]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[7]PETSC ERROR: -ne 127 (source: command line)
+[7]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[7]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[7]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[7]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[7]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[7]PETSC ERROR: -pc_type gamg (source: command line)
+[7]PETSC ERROR: -two_solves (source: command line)
+[7]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[7]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 7] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[2]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[2]PETSC ERROR: Error in external library
+[2]PETSC ERROR: cudaMalloc((void **)&buffer2, bufferSize2) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:103
+[2]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[2]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[2]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[2]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[2]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[2]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[2]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[2]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[2]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[2]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[2]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[2]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[2]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[2]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[2]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[2]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[2]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[2]PETSC ERROR: #9 main() at ex56.c:328
+[2]PETSC ERROR: PETSc Option Table entries:
+[2]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[2]PETSC ERROR: -ksp_converged_reason (source: command line)
+[2]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[2]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[2]PETSC ERROR: -ksp_type cg (source: command line)
+[2]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[2]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[2]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[2]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[2]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[2]PETSC ERROR: -ne 127 (source: command line)
+[2]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[2]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[2]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[2]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[2]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[2]PETSC ERROR: -pc_type gamg (source: command line)
+[2]PETSC ERROR: -two_solves (source: command line)
+[2]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[2]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 2] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[5]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[5]PETSC ERROR: Error in external library
+[5]PETSC ERROR: cudaMalloc((void **)&buffer2, bufferSize2) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:103
+[5]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[5]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[5]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[5]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[5]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[5]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[5]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[5]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[5]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[5]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[5]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[5]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[5]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[5]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[5]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[5]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[5]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[5]PETSC ERROR: #9 main() at ex56.c:328
+[5]PETSC ERROR: PETSc Option Table entries:
+[5]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[5]PETSC ERROR: -ksp_converged_reason (source: command line)
+[5]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[5]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[5]PETSC ERROR: -ksp_type cg (source: command line)
+[5]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[5]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[5]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[5]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[5]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[5]PETSC ERROR: -ne 127 (source: command line)
+[5]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[5]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[5]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[5]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[5]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[5]PETSC ERROR: -pc_type gamg (source: command line)
+[5]PETSC ERROR: -two_solves (source: command line)
+[5]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[5]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 5] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[6]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[6]PETSC ERROR: Error in external library
+[6]PETSC ERROR: cudaMalloc((void **)&h->buffer4, h->bufferSize4) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:105
+[6]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[6]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[6]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[6]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[6]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[6]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[6]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[6]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[6]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[6]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[6]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[6]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[6]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[6]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[6]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[6]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[6]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[6]PETSC ERROR: #9 main() at ex56.c:328
+[6]PETSC ERROR: PETSc Option Table entries:
+[6]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[6]PETSC ERROR: -ksp_converged_reason (source: command line)
+[6]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[6]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[6]PETSC ERROR: -ksp_type cg (source: command line)
+[6]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[6]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[6]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[6]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[6]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[6]PETSC ERROR: -ne 127 (source: command line)
+[6]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[6]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[6]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[6]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[6]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[6]PETSC ERROR: -pc_type gamg (source: command line)
+[6]PETSC ERROR: -two_solves (source: command line)
+[6]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[6]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 6] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+[1]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[1]PETSC ERROR: Error in external library
+[1]PETSC ERROR: cudaMalloc((void **)&h->buffer4, h->bufferSize4) error( cudaErrorMemoryAllocation): out of memory /global/u2/m/madams/petsc/arch-perlmutter-opt-gcc-kokkos-cuda/include/KokkosSparse_spgemm_symbolic_tpl_spec_decl.hpp:105
+[1]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!
+[1]PETSC ERROR:   Option left: name:-mg_coarse_ksp_type value: cg source: command line
+[1]PETSC ERROR:   Option left: name:-mg_coarse_pc_type value: jacobi source: command line
+[1]PETSC ERROR:   Option left: name:-mg_levels_ksp_type value: chebyshev source: command line
+[1]PETSC ERROR:   Option left: name:-mg_levels_pc_type value: pbjacobi source: command line
+[1]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[1]PETSC ERROR: PETSc Development Git Revision: v3.25.2-320-ga5ba3691813 Git Date: 2026-06-19 09:07:30 -0400
+[1]PETSC ERROR: /global/u2/m/madams/petsc/src/ksp/ksp/tutorials/./ex56 with 8 MPI process(es) and PETSC_ARCH arch-perlmutter-opt-gcc-kokkos-cuda on nid001032 by madams Sat Jun 20 16:16:07 2026
+[1]PETSC ERROR: Configure options: --with-make-np=8 --with-mpiexec="srun -G4 --gpu-bind=none" --with-batch=0 --download-triangle=1 --with-cc=cc --with-cxx=CC --with-fc=0 --with-debugging=0 --with-cuda=1 --with-cuda-arch=80 --download-kokkos --download-kokkos-kernels PETSC_ARCH=arch-perlmutter-opt-gcc-kokkos-cuda
+[1]PETSC ERROR: #1 MatProductSymbolic_MPIAIJKokkos_AB() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1201
+[1]PETSC ERROR: #2 MatProductSymbolic_MPIAIJKokkos() at /global/u2/m/madams/petsc/src/mat/impls/aij/mpi/kokkos/mpiaijkok.kokkos.cxx:1372
+[1]PETSC ERROR: #3 MatProductSymbolic() at /global/u2/m/madams/petsc/src/mat/interface/matproduct.c:810
+[1]PETSC ERROR: #4 MatPtAP() at /global/u2/m/madams/petsc/src/mat/interface/matrix.c:10215
+[1]PETSC ERROR: #5 PCGAMGCreateLevel_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:144
+[1]PETSC ERROR: #6 PCSetUp_GAMG() at /global/u2/m/madams/petsc/src/ksp/pc/impls/gamg/gamg.c:809
+[1]PETSC ERROR: #7 PCSetUp() at /global/u2/m/madams/petsc/src/ksp/pc/interface/precon.c:1124
+[1]PETSC ERROR: #8 KSPSetUp() at /global/u2/m/madams/petsc/src/ksp/ksp/interface/itfunc.c:428
+[1]PETSC ERROR: #9 main() at ex56.c:328
+[1]PETSC ERROR: PETSc Option Table entries:
+[1]PETSC ERROR: -alpha 1.e-3 (source: command line)
+[1]PETSC ERROR: -ksp_converged_reason (source: command line)
+[1]PETSC ERROR: -ksp_norm_type unpreconditioned (source: command line)
+[1]PETSC ERROR: -ksp_rtol 1e-6 (source: command line)
+[1]PETSC ERROR: -ksp_type cg (source: command line)
+[1]PETSC ERROR: -mat_type mpiaijkokkos (source: command line)
+[1]PETSC ERROR: -mg_coarse_ksp_type cg (source: command line)
+[1]PETSC ERROR: -mg_coarse_pc_type jacobi (source: command line)
+[1]PETSC ERROR: -mg_levels_ksp_type chebyshev (source: command line)
+[1]PETSC ERROR: -mg_levels_pc_type pbjacobi (source: command line)
+[1]PETSC ERROR: -ne 127 (source: command line)
+[1]PETSC ERROR: -pc_gamg_agg_nsmooths 1 (source: command line)
+[1]PETSC ERROR: -pc_gamg_coarse_eq_limit 20 (source: command line)
+[1]PETSC ERROR: -pc_gamg_parallel_coarse_grid_solver (source: command line)
+[1]PETSC ERROR: -pc_gamg_reuse_interpolation true (source: command line)
+[1]PETSC ERROR: -pc_gamg_type agg (source: command line)
+[1]PETSC ERROR: -pc_type gamg (source: command line)
+[1]PETSC ERROR: -two_solves (source: command line)
+[1]PETSC ERROR: -use_mat_nearnullspace (source: command line)
+[1]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+MPICH ERROR [Rank 1] [job id 54765559.67] [Sat Jun 20 16:16:35 2026] [nid001032] - Abort(76) (rank 0 in comm 16): application called MPI_Abort(MPI_COMM_SELF, 76) - process 0
+
+srun: error: nid001032: tasks 0,4: Exited with exit code 76
+srun: Terminating StepId=54765559.67
+[2026-06-20T23:16:36.976] error: *** STEP 54765559.67 ON nid001032 CANCELLED AT 2026-06-20T23:16:36 DUE TO TASK FAILURE ***
+srun: error: nid001032: tasks 2-3,5-7: Exited with exit code 76
+srun: error: nid001032: task 1: Exited with exit code 76

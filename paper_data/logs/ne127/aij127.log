@@ -1,0 +1,6 @@
+  Linear solve converged due to CONVERGED_RTOL iterations 31
+srun: error: nid001032: tasks 1-7: Killed
+srun: Terminating StepId=54765559.50
+[2026-06-20T22:27:51.930] error: *** STEP 54765559.50 ON nid001032 CANCELLED AT 2026-06-20T22:27:51 DUE TO TASK FAILURE ***
+srun: error: nid001032: task 0: Killed
+srun: Force Terminated StepId=54765559.50
