@@ -1163,6 +1163,13 @@ PetscErrorCode PCSetUp_MG(PC pc)
     if (mglevels[i]->cr) PetscCall(KSPSetInitialGuessNonzero(mglevels[i]->cr, PETSC_TRUE));
     if (mglevels[i]->eventsmoothsetup) PetscCall(PetscLogEventBegin(mglevels[i]->eventsmoothsetup, 0, 0, 0, 0));
     PetscCall(KSPSetUp(mglevels[i]->smoothd));
+    if (!use_amat) {
+      Mat pmat;
+
+      PetscCall(KSPGetOperators(mglevels[i]->smoothd, NULL, &pmat));
+      if (pmat) PetscCall(KSPSetOperators(mglevels[i]->smoothd, pmat, pmat));
+    }
+
     if (mglevels[i]->smoothd->reason) pc->failedreason = PC_SUBPC_ERROR;
     if (mglevels[i]->eventsmoothsetup) PetscCall(PetscLogEventEnd(mglevels[i]->eventsmoothsetup, 0, 0, 0, 0));
     if (!mglevels[i]->residual) {
@@ -1192,6 +1199,13 @@ PetscErrorCode PCSetUp_MG(PC pc)
       PetscCall(KSPSetInitialGuessNonzero(mglevels[i]->smoothu, PETSC_TRUE));
       if (mglevels[i]->eventsmoothsetup) PetscCall(PetscLogEventBegin(mglevels[i]->eventsmoothsetup, 0, 0, 0, 0));
       PetscCall(KSPSetUp(mglevels[i]->smoothu));
+      if (!use_amat) {
+        Mat pmat;
+
+        PetscCall(KSPGetOperators(mglevels[i]->smoothu, NULL, &pmat));
+        if (pmat) PetscCall(KSPSetOperators(mglevels[i]->smoothu, pmat, pmat));
+      }
+
       if (mglevels[i]->smoothu->reason) pc->failedreason = PC_SUBPC_ERROR;
       if (mglevels[i]->eventsmoothsetup) PetscCall(PetscLogEventEnd(mglevels[i]->eventsmoothsetup, 0, 0, 0, 0));
     }
@@ -1208,6 +1222,13 @@ PetscErrorCode PCSetUp_MG(PC pc)
       PetscCall(KSPSetInitialGuessNonzero(mglevels[i]->cr, PETSC_TRUE));
       if (mglevels[i]->eventsmoothsetup) PetscCall(PetscLogEventBegin(mglevels[i]->eventsmoothsetup, 0, 0, 0, 0));
       PetscCall(KSPSetUp(mglevels[i]->cr));
+      if (!use_amat) {
+        Mat pmat;
+
+        PetscCall(KSPGetOperators(mglevels[i]->cr, NULL, &pmat));
+        if (pmat) PetscCall(KSPSetOperators(mglevels[i]->cr, pmat, pmat));
+      }
+
       if (mglevels[i]->cr->reason) pc->failedreason = PC_SUBPC_ERROR;
       if (mglevels[i]->eventsmoothsetup) PetscCall(PetscLogEventEnd(mglevels[i]->eventsmoothsetup, 0, 0, 0, 0));
     }

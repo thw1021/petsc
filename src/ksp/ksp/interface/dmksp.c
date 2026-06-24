@@ -62,16 +62,18 @@ static PetscErrorCode DMKSPCopy(DMKSP kdm, DMKSP nkdm)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(kdm, DMKSP_CLASSID, 1);
   PetscValidHeaderSpecific(nkdm, DMKSP_CLASSID, 2);
+  nkdm->ops->createoperators     = kdm->ops->createoperators;
   nkdm->ops->computeoperators    = kdm->ops->computeoperators;
   nkdm->ops->computerhs          = kdm->ops->computerhs;
   nkdm->ops->computeinitialguess = kdm->ops->computeinitialguess;
   nkdm->ops->destroy             = kdm->ops->destroy;
   nkdm->ops->duplicate           = kdm->ops->duplicate;
 
-  nkdm->operatorsctx    = kdm->operatorsctx;
-  nkdm->rhsctx          = kdm->rhsctx;
-  nkdm->initialguessctx = kdm->initialguessctx;
-  nkdm->data            = kdm->data;
+  nkdm->createoperatorsctx = kdm->createoperatorsctx;
+  nkdm->operatorsctx       = kdm->operatorsctx;
+  nkdm->rhsctx             = kdm->rhsctx;
+  nkdm->initialguessctx    = kdm->initialguessctx;
+  nkdm->data               = kdm->data;
   /* nkdm->originaldm   = kdm->originaldm; */ /* No need since nkdm->originaldm will be immediately updated in caller DMGetDMKSPWrite */
 
   nkdm->fortran_func_pointers[0] = kdm->fortran_func_pointers[0];
@@ -179,6 +181,64 @@ PetscErrorCode DMCopyDMKSP(DM dmsrc, DM dmdest)
   PetscCall(PetscObjectReference(dmdest->dmksp));
   PetscCall(DMCoarsenHookAdd(dmdest, DMCoarsenHook_DMKSP, NULL, NULL));
   PetscCall(DMRefineHookAdd(dmdest, DMRefineHook_DMKSP, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMKSPSetCreateOperators - set `KSP` matrix creation function
+
+  Not Collective
+
+  Input Parameters:
++ dm   - `DM` to be used with `KSP`
+. func - matrix creation function, for calling sequence see `KSPCreateOperatorsFn`
+- ctx  - context for matrix creation
+
+  Level: developer
+
+  Note:
+  `func` is used by `KSPSetUp()` to create the initial operator matrices before the matrix evaluation function set with `DMKSPSetComputeOperators()` is called.
+  If a matrix creation function is not provided this way, `KSPSetUp()` creates A == P via `DMCreateMatrix()`.
+
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPGetCreateOperators()`, `DMKSPSetComputeOperators()`, `KSPCreateOperatorsFn`, `KSPSetOperators()`, `DMCreateMatrix()`
+@*/
+PetscErrorCode DMKSPSetCreateOperators(DM dm, KSPCreateOperatorsFn *func, PetscCtx ctx)
+{
+  DMKSP kdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSPWrite(dm, &kdm));
+  kdm->ops->createoperators = func;
+  kdm->createoperatorsctx   = ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMKSPGetCreateOperators - get `KSP` matrix creation function
+
+  Not Collective
+
+  Input Parameter:
+. dm - `DM` used with a `KSP`
+
+  Output Parameters:
++ func - matrix creation function, for calling sequence see `KSPCreateOperatorsFn`
+- ctx  - context for matrix creation
+
+  Level: developer
+
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetCreateOperators()`, `DMKSPSetComputeOperators()`, `KSPCreateOperatorsFn`
+@*/
+PetscErrorCode DMKSPGetCreateOperators(DM dm, KSPCreateOperatorsFn **func, PetscCtx ctx)
+{
+  DMKSP kdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSP(dm, &kdm));
+  if (func) *func = kdm->ops->createoperators;
+  if (ctx) *(void **)ctx = kdm->createoperatorsctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

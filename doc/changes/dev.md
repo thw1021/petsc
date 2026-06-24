@@ -67,6 +67,7 @@
 ## PC
 
 - Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering small entries from the prolongator in `PCGAMG`
+- Change `PCMG` to set up smoothers `KSP(P, P)` when -pc_use_amat false.
 
 ## KSP
 
@@ -118,6 +119,7 @@
 ## DM
 
 - Change `DMLabelPropagatePush()` to take a reduce operator
+- Add `DMKSPSetCreateOperators()` to let the DM provide a pair of Mat objects to inner KSP solvers.
 
 ## DMSwarm
 
