@@ -4989,7 +4989,7 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
     PetscBool foundbase;
 
     /* First try exact MatType registrations in solver registration order. If all matching backends
-     decline this matrix instance by returning NULL, then try base-type registrations. */
+       decline this matrix instance by returning NULL, then try base-type registrations. */
     PetscCall(MatGetFactor_Private(mat, ftype, PETSC_TRUE, &foundtype, f));
     if (!*f) {
       PetscCall(MatGetFactor_Private(mat, ftype, PETSC_FALSE, &foundbase, f));
