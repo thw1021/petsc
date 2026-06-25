@@ -1180,8 +1180,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
   if (!A->spptr) Aseq = ((Mat_MPIAIJ *)A->data)->A; /* MPI */
   PetscCall(MatSeqAIJKokkosSyncDevice(Aseq));
   {
-    PetscInt       maxit = jac->ksp->max_it;
-    const PetscInt conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0 && PCBJKOKKOS_VEC_SIZE != 1) ? PCBJKOKKOS_TEAM_SIZE : 1;
+    PetscInt           maxit = jac->ksp->max_it;
+    const PetscInt     conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0 && PCBJKOKKOS_VEC_SIZE != 1) ? PCBJKOKKOS_TEAM_SIZE : 1;
     const PetscInt     nwork = jac->nwork, nBlk = jac->nBlocks;
     PetscScalar       *glb_xdata = NULL, *dummy;
     PetscReal          rtol = jac->ksp->rtol, atol = jac->ksp->abstol, dtol = jac->ksp->divtol;
@@ -1317,13 +1317,12 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
       int                                                           stride_shared, stride_global;
       d_bid_eqOffset = jac->d_bid_eqOffset_k->data();
       /* solve each block independently */
-      int scr_bytes_team_shared = 0, nShareVec = 0, nGlobBVec = 0;
+      int scr_bytes_team_shared = 0, nShareVec = 0;
       if (jac->const_block_size) { /* use shared memory for work vectors only if constant block size - TODO: test efficiency loss */
         if (ksp_type_idx == BATCH_KSP_GMRES_IDX) {
           /* GMRES needs all work vectors in global memory (random access to V[j] during orthogonalization) */
           stride_shared         = 0;
           nShareVec             = 0;
-          nGlobBVec             = nwork;
           scr_bytes_team_shared = 0;
         } else {
           size_t      maximum_shared_mem_size = 64000;
@@ -1333,13 +1332,11 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
           stride_shared = jac->const_block_size;                                                   /* captured */
           nShareVec     = maximum_shared_mem_size / (jac->const_block_size * sizeof(PetscScalar)); /* integer floor, number of vectors that fit in shared */
           if (nShareVec > nwork) nShareVec = nwork;
-          else nGlobBVec = nwork - nShareVec;
           scr_bytes_team_shared = jac->const_block_size * nShareVec * sizeof(PetscScalar);
         }
       } else {
         scr_bytes_team_shared = 0;
         stride_shared         = 0;
-        nGlobBVec             = nwork; /* not needed == fix */
       }
       stride_global = jac->n; /* captured */
 #if defined(PETSC_HAVE_CUDA)
@@ -1349,7 +1346,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
       auto &d_work_vecs_k = *jac->d_work_vecs_k;
 #if PCBJKOKKOS_VERBOSE_LEVEL > 1
       PetscCall(PetscInfo(pc, "\tn = %d. %d shared bytes/team, global_buff_words=%" PetscInt_FMT ", rtol=%e, num blocks %d, team_size=%d, %d vector threads, %d shared vectors, %d global vectors\n", (int)jac->n, scr_bytes_team_shared,
-                          (PetscInt)jac->d_work_vecs_k->extent(0), rtol, (int)nBlk, (int)team_size, PCBJKOKKOS_VEC_SIZE, nShareVec, nGlobBVec));
+                          (PetscInt)jac->d_work_vecs_k->extent(0), rtol, (int)nBlk, (int)team_size, PCBJKOKKOS_VEC_SIZE, nShareVec, nwork - nShareVec));
 #endif
       PetscScalar *d_work_vecs = d_work_vecs_k.data();
 
@@ -1637,10 +1634,10 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank));
     PetscCall(MatGetOwnershipRange(A, &Istart, &Iend));
     if (!jac->vec_diag) {
-      Vec      *subX = NULL;
-      DM        pack, *subDM = NULL;
-      PetscInt  nDMs, n, *block_sizes = NULL;
-      IS        isrow, isicol;
+      Vec     *subX = NULL;
+      DM       pack, *subDM = NULL;
+      PetscInt nDMs, n, *block_sizes = NULL;
+      IS       isrow, isicol;
       { /* Permute the matrix to get a block diagonal system: d_isrow_k, d_isicol_k */
         MatOrderingType rtype;
         const PetscInt *rowindices, *icolindices;
@@ -1920,10 +1917,10 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
             stride += PCBJKOKKOS_TEAM_SIZE * L->nrows_coarse; /* spa (sparse accumulator for NumericRAP); width matches PCBJKOKKOS_TEAM_SIZE */
           }
           /* coarsest solve vectors only (Ac_aa is shared with last inter-level slot above) */
-          stride += hier->nrows_coarsest; /* l1 */
-          stride += hier->nrows_coarsest; /* x */
-          stride += hier->nrows_coarsest; /* b */
-          stride += hier->nrows_coarsest; /* r */
+          stride += hier->nrows_coarsest;                                                                               /* l1 */
+          stride += hier->nrows_coarsest;                                                                               /* x */
+          stride += hier->nrows_coarsest;                                                                               /* b */
+          stride += hier->nrows_coarsest;                                                                               /* r */
           if (jac->amg_coarse_type == BJKOKKOS_COARSE_DIRECT_LU) stride += hier->nrows_coarsest * hier->nrows_coarsest; /* lu_dense */
           if (stride > max_stride) max_stride = stride;
         }
@@ -2334,7 +2331,7 @@ static PetscErrorCode PCView_BJKOKKOS(PC pc, PetscViewer viewer)
 
 static PetscErrorCode PCSetFromOptions_BJKOKKOS(PC pc, PetscOptionItems PetscOptionsObject)
 {
-  PC_PCBJKOKKOS    *jac    = (PC_PCBJKOKKOS *)pc->data;
+  PC_PCBJKOKKOS    *jac     = (PC_PCBJKOKKOS *)pc->data;
   const char *const pctab[] = {"jacobi", "amg", NULL};
   PetscInt          pc_type;
   PetscBool         set;

@@ -380,9 +380,9 @@ PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *gl
     });
   Kokkos::fence();
   // setup solver
-  using ScalarType    = typename AMatrixValueView::non_const_value_type;
-  using MagnitudeType  = typename Kokkos::Details::ArithTraits<ScalarType>::mag_type;
-  using Norm2DViewType = Kokkos::View<MagnitudeType **, layout, exec_space>;
+  using ScalarType                = typename AMatrixValueView::non_const_value_type;
+  using MagnitudeType             = typename Kokkos::Details::ArithTraits<ScalarType>::mag_type;
+  using Norm2DViewType            = Kokkos::View<MagnitudeType **, layout, exec_space>;
   using Scalar3DViewType          = Kokkos::View<ScalarType ***, layout, exec_space>;
   using IntViewType               = Kokkos::View<int *, layout, exec_space>;
   using KrylovHandleType          = KokkosBatched::KrylovHandle<Norm2DViewType, IntViewType, Scalar3DViewType>;
