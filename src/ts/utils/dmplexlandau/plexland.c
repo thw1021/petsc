@@ -721,14 +721,17 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
     if (flg) {
       ctx->use_p4est = PETSC_TRUE; /* flag for Forest */
       for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-        DM        dmforest;
-        PetscBool isForest;
+        DM          dmforest;
+        PetscBool   isForest;
+        const char *name;
 
+        PetscCall(PetscObjectGetName((PetscObject)ctx->plex[grid], &name));
         PetscCall(DMConvert(ctx->plex[grid], convType, &dmforest));
         PetscCheck(dmforest, ctx->comm, PETSC_ERR_PLIB, "Convert failed?");
         PetscCall(DMSetOptionsPrefix(dmforest, prefix));
         PetscCall(DMIsForest(dmforest, &isForest));
         PetscCheck(isForest, ctx->comm, PETSC_ERR_PLIB, "Converted to non Forest?");
+        PetscCall(PetscObjectSetName((PetscObject)dmforest, name));
         PetscCall(DMDestroy(&ctx->plex[grid]));
         ctx->plex[grid] = dmforest; // Forest for adaptivity
       }
@@ -2142,10 +2145,15 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
     PetscCall(LandauSetInitialCondition(ctx->plex[grid], Xsub[grid], grid, 0, 1, ctx));
     /* forest refinement - forest goes in (if forest), plex comes out */
     if (ctx->use_p4est) {
-      DM plex;
+      DM          plex;
+      const char *name;
+      char        forest_name[256];
+      PetscCall(PetscObjectGetName((PetscObject)ctx->plex[grid], &name));
+      PetscCall(PetscStrncpy(forest_name, name, sizeof(forest_name)));
       PetscCall(adapt(grid, ctx, &Xsub[grid])); // forest goes in, plex comes out
       // convert to plex, all done with this level
       PetscCall(DMConvert(ctx->plex[grid], DMPLEX, &plex));
+      PetscCall(PetscObjectSetName((PetscObject)plex, forest_name));
       PetscCall(DMDestroy(&ctx->plex[grid]));
       ctx->plex[grid] = plex;
     } else if (ctx->sphere && dim == 3) {

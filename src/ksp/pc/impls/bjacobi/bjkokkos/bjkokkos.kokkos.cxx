@@ -1769,7 +1769,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       PetscCheck(jac->batch_target == -1 || jac->batch_target < jac->num_dms, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "-ksp_batch_target (%" PetscInt_FMT ") >= number of DMs (%" PetscInt_FMT "); use -1 for all batches", jac->batch_target, jac->num_dms);
       PetscOptionsEnd();
       /* AMG tuning options -- defaults */
-      jac->amg_strong_threshold = 0.25;
+      jac->amg_strong_threshold = 0.15;
       jac->amg_max_levels       = PCBJKOKKOS_MAX_AMG_LEVELS;
       jac->amg_min_coarse_size  = 10; /* stop coarsening when block size <= this */
       jac->amg_pre_sweeps       = 1;

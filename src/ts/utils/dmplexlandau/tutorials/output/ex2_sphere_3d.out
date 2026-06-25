@@ -3,22 +3,23 @@ charges:       e=-1.602e-19; charges in elementary units:  0.000e+00  0.000e+00
 n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
 thermal T (K): e= 2.321e+07 i= 0.000e+00  0.000e+00. Normalization grid 0: v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.909e-05 2 batched, view batch 1
 Domain radius (AMR levels) grid 0: par= 6.000e+00 perp= 6.000e+00 (0) 
-0) FormLandau 448 IPs, 7 cells total, Nb=64, Nq=64, dim=3, Tab: Nb=64 Nf=1 Np=64 cdim=3 N=464 nnz= 48752
+0) FormLandau 1512 IPs, 56 cells total, Nb=27, Nq=27, dim=3, Tab: Nb=27 Nf=1 Np=27 cdim=3 N=1034 nnz= 59042
 DM Object: cubed sphere 1 MPI process
   type: plex
 cubed sphere in 3 dimensions:
-  Number of 0-cells per rank: 16
-  Number of 1-cells per rank: 32
-  Number of 2-cells per rank: 24
-  Number of 3-cells per rank: 7
+  Number of 0-cells per rank: 79
+  Number of 1-cells per rank: 202
+  Number of 2-cells per rank: 180
+  Number of 3-cells per rank: 56
 Labels:
-  celltype: 4 strata with value/size (0 (16), 1 (32), 4 (24), 7 (7))
-  depth: 4 strata with value/size (0 (16), 1 (32), 2 (24), 3 (7))
+  depth: 4 strata with value/size (0 (79), 1 (202), 2 (180), 3 (56))
+  celltype: 4 strata with value/size (0 (79), 1 (202), 4 (180), 7 (56))
+  _forest_base_subpoint_map: 79 strata with value/size (0 (27), 1 (27), 2 (27), 3 (27), 4 (27), 5 (27), 6 (27), 7 (1), 8 (1), 9 (1), 10 (1), 11 (1), 12 (1), 13 (1), 14 (1), 15 (1), 16 (1), 17 (1), 18 (1), 19 (1), 20 (1), 21 (1), 22 (1), 23 (9), 24 (9), 25 (9), 26 (9), 27 (9), 28 (9), 29 (9), 30 (9), 31 (9), 32 (9), 33 (9), 34 (9), 35 (9), 36 (9), 37 (9), 38 (9), 39 (9), 40 (9), 41 (9), 42 (9), 43 (9), 44 (9), 45 (9), 46 (9), 47 (3), 48 (3), 49 (3), 50 (3), 51 (3), 52 (3), 53 (3), 54 (3), 55 (3), 56 (3), 57 (3), 58 (3), 59 (3), 60 (3), 61 (3), 62 (3), 63 (3), 64 (3), 65 (3), 66 (3), 67 (3), 68 (3), 69 (3), 70 (3), 71 (3), 72 (3), 73 (3), 74 (3), 75 (3), 76 (3), 77 (3), 78 (3))
 Field e:
   adjacency FEM
-  0) species 0: density=-1.4277140479715e+01, x-momentum= 1.6578607543227e-20, y-momentum= 1.1660596031801e-19, z-momentum=-1.8968149859513e-19, energy=  5.8555876621396e+04 -- 7 cells
-    Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 8
-  1) species 0: density=-1.4277140479715e+01, x-momentum=-2.3432333566684e-20, y-momentum= 7.9280938865935e-20, z-momentum=-1.7782640493294e-19, energy=  5.8555876621396e+04 -- 7 cells
-  0) species 0: density=-1.4277140479715e+01, x-momentum= 1.6578607543227e-20, y-momentum= 1.1660596031801e-19, z-momentum=-1.8968149859513e-19, energy=  5.8555876621396e+04 -- 7 cells
-    Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 8
-  1) species 0: density=-1.4277140479715e+01, x-momentum=-2.3432333566684e-20, y-momentum= 7.9280938865935e-20, z-momentum=-1.7782640493294e-19, energy=  5.8555876621396e+04 -- 7 cells
+  0) species 0: density=-1.5424766794443e+01, x-momentum=-1.3064720248548e-06, y-momentum=-2.6360492903934e-06, z-momentum= 2.6360492903935e-06, energy=  4.2915152336009e+04 -- 56 cells
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 12
+  1) species 0: density=-1.5424766794443e+01, x-momentum=-1.3064720248547e-06, y-momentum=-2.6360492903936e-06, z-momentum= 2.6360492903935e-06, energy=  4.2915152336009e+04 -- 56 cells
+  0) species 0: density=-1.5424766794443e+01, x-momentum=-1.3064720248548e-06, y-momentum=-2.6360492903934e-06, z-momentum= 2.6360492903935e-06, energy=  4.2915152336009e+04 -- 56 cells
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 12
+  1) species 0: density=-1.5424766794443e+01, x-momentum=-1.3064720248547e-06, y-momentum=-2.6360492903936e-06, z-momentum= 2.6360492903935e-06, energy=  4.2915152336009e+04 -- 56 cells

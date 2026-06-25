@@ -794,10 +794,10 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
 
   testset:
-    requires: double !defined(PETSC_USE_DMLANDAU_2D)
+    requires: double !defined(PETSC_USE_DMLANDAU_2D) p4est
     nsize: 1
     args: -dim 3 -dm_landau_thermal_temps 2 -ts_type beuler -ts_time_step .1 -ts_max_steps 1 -dm_landau_verbose 2 -snes_rtol 1.e-14 -snes_stol 1.e-14 -snes_converged_reason \
-     -dm_landau_sphere -dm_landau_batch_size 2 -ex2_grid_view_idx 0 -dm_landau_batch_view_idx 1 -ex2_dm_view -dm_landau_domain_radius 6 -dm_landau_sphere_inner_radius_90degree_scale .35 -petscspace_degree 3 -dm_refine 0
+     -dm_landau_sphere -dm_landau_batch_size 2 -ex2_grid_view_idx 0 -dm_landau_batch_view_idx 1 -ex2_dm_view -dm_landau_domain_radius 6 -dm_landau_sphere_inner_radius_90degree_scale .35 -petscspace_degree 2 -dm_landau_type p8est -dm_landau_amr_post_refine 1
     test:
       suffix: sphere_3d
       output_file: output/ex2_sphere_3d.out
