@@ -323,7 +323,7 @@ ai-review-optional:
       claude -p "${REVIEW_CMD} ${CI_MERGE_REQUEST_IID}" --dangerously-skip-permissions --max-turns 100 | tee ai-review.md
     - |
       if test -s ai-review.md; then
-        pandoc --from=markdown --to=html --standalone --metadata title="AI Review" ai-review.md --output ai-review.html
+        pandoc --from=markdown --to=html --standalone --variable header-includes='<style>body{max-width:none;padding:1em 2em;}</style>' --metadata title="AI Review" ai-review.md --output ai-review.html
       else
         echo "No review output to convert"
       fi
