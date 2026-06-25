@@ -20,3 +20,4 @@ After generating the review, treat every finding at Style or above as tentative.
 
 ### 6. Report
 Per finding: severity, file:line, description, suggested fix. Order CRITICAL → HIGH → MEDIUM → Style. If nothing at or above Style is found, say so explicitly.
+As a footnote - print current: date, MR_IID, CI_PIPELINE_ID - if available
