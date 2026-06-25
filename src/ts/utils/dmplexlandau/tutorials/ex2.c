@@ -807,5 +807,10 @@ int main(int argc, char **argv)
       requires: kokkos_kernels
       output_file: output/ex2_sphere_3d_kokkos_tfqmr_amg.out
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_batch_pc amg
+    test:
+      suffix: sphere_3d_kokkos_bicg_amg
+      requires: kokkos_kernels
+      output_file: output/ex2_sphere_3d_kokkos_bicg_amg.out
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_batch_pc amg -pc_bjkokkos_ksp_rtol 5e-3
 
 TEST*/

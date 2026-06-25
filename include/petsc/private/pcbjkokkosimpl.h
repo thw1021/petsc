@@ -153,7 +153,7 @@ struct AMGCoarsestInfo {
   PetscInt             coarse_sweeps;
   PetscReal            omega;         /* damping factor */
   BJKokkosSmootherType smoother_type; /* smoother type for norm computation */
-  PetscInt             off_lu_dense;  /* offset into work buffer for n×n dense LU matrix; -1 if JACOBI */
+  PetscInt             off_lu_dense;  /* offset into work buffer for nxn dense LU matrix; -1 if JACOBI */
   BJKokkosCoarseType   coarse_type;   /* JACOBI or DIRECT_LU */
 };
 
