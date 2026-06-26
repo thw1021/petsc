@@ -570,7 +570,7 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
 
   PetscCall(PetscNew(&lu));
   lu->reorderAlg     = CUDSS_REORDERING_ALG_DEFAULT;
-  lu->pivotType      = CUDSS_PIVOT_GLOBAL_COL;
+  lu->pivotType      = CUDSS_PIVOT_AUTO;
   lu->pivotThreshold = 1.0;
   lu->pivotEpsilon   = 0.0;
   lu->useMatching    = 0;
