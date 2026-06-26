@@ -7,6 +7,7 @@ typedef struct {
   KSPCGType    type; /* type of system (symmetric of Hermitian) */
   PetscScalar *e, *d;
   PetscReal   *ee, *dd; /* work space for Lanczos algorithm */
+  PetscInt     ned;     /* number of valid Lanczos rows written into d[] (<= ksp->its); must match KSP_CG layout */
 
   PetscInt             mmax;                              /* The maximum number of P/C vectors to store */
   PetscInt             nprealloc;                         /* How many vectors to preallocate */

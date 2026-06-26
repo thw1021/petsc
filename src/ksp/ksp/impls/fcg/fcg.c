@@ -95,6 +95,7 @@ static PetscErrorCode KSPSolve_FCG(KSP ksp)
     d    = fcg->d;
     e[0] = 0.0;
   }
+  fcg->ned = 0;
   /* Compute initial residual needed for convergence check*/
   ksp->its = 0;
   if (!ksp->guess_zero) {
@@ -246,6 +247,7 @@ static PetscErrorCode KSPSolve_FCG(KSP ksp)
       } else {
         d[i] = PetscSqrtReal(PetscAbsScalar(beta)) * e[i] + 1.0 / alpha;
       }
+      fcg->ned = i + 1; /* d[i] is now valid; count only rows that reach this point */
     }
 
     /* Check for convergence */
