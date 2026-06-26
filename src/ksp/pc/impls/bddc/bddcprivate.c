@@ -6542,8 +6542,8 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
 
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)pc), ((PetscObject)pc)->prefix, "BDDC constraints options", "PC");
-  PetscCall(PetscOptionsReal("-pc_bddc_constraint_nulltol", "Retain nearnullspace data if larger than tolerance", NULL, null_tol, &null_tol, NULL));
-  PetscCall(PetscOptionsReal("-pc_bddc_constraint_tol", "Retain singular vectors up to tolerance", NULL, tol, &tol, NULL));
+  PetscCall(PetscOptionsReal("-pc_bddc_constraint_near_null_space_tol", "Retain nearnullspace data if larger than tolerance", NULL, null_tol, &null_tol, NULL));
+  PetscCall(PetscOptionsReal("-pc_bddc_constraint_singular_tol", "Retain singular vectors up to tolerance", NULL, tol, &tol, NULL));
   PetscOptionsEnd();
 
   /* Destroy Mat objects computed previously */
