@@ -15,6 +15,7 @@ class Configure(config.package.Package):
     self.liblist                = [['libcudss.so'], ['libcudss.a']]
     self.downloaddirnames       = ['libcudss']
     self.precisions             = ['single', 'double']
+    self.requires32bitint       = 1
     self.buildLanguages         = ['CUDA']
     self.hastests               = 1
     return
