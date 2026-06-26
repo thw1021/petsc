@@ -70,6 +70,7 @@ static PetscErrorCode KSPSolve_CGNE(KSP ksp)
     d    = cg->d;
     e[0] = 0.0;
   }
+  cg->ned = 0;
   PetscCall(PCGetOperators(ksp->pc, &Amat, &Pmat));
 
   ksp->its = 0;
@@ -136,7 +137,10 @@ static PetscErrorCode KSPSolve_CGNE(KSP ksp)
     PetscCall(VecXDot(P, Z, &dpi)); /*     dpi <- z'p      */
     KSPCheckDot(ksp, dpi);
     a = beta / dpi; /*     a = beta/p'z    */
-    if (eigs) d[i] = PetscSqrtReal(PetscAbsScalar(b)) * e[i] + 1.0 / a;
+    if (eigs) {
+      d[i]    = PetscSqrtReal(PetscAbsScalar(b)) * e[i] + 1.0 / a;
+      cg->ned = i + 1; /* d[i] is now valid; count only rows that reach this point */
+    }
     PetscCall(VecAXPY(X, a, P));  /*     x <- x + ap     */
     PetscCall(VecAXPY(R, -a, Z)); /*     r <- r - az     */
     if (ksp->normtype == KSP_NORM_PRECONDITIONED) {

@@ -29,6 +29,7 @@ typedef struct {
   // The following arrays are of size ksp->maxit
   PetscScalar *e, *d;
   PetscReal   *ee, *dd; /* work space for Lanczos algorithm */
+  PetscInt     ned;     /* number of valid Lanczos rows written into d[] (<= ksp->its) */
 
   /* Trust region support */
   PetscReal radius;

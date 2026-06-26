@@ -147,6 +147,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
     d    = cg->d;
     e[0] = 0.0;
   }
+  cg->ned = 0;
   PetscCall(PCGetOperators(ksp->pc, &Amat, &Pmat));
 
   ksp->its = 0;
@@ -287,7 +288,10 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
       break;
     }
     a = beta / dpi; /*     a = beta/p'w                     */
-    if (eigs) d[i] = PetscSqrtReal(PetscAbsScalar(b)) * e[i] + 1.0 / a;
+    if (eigs) {
+      d[i]    = PetscSqrtReal(PetscAbsScalar(b)) * e[i] + 1.0 / a;
+      cg->ned = i + 1; /* d[i] is now valid; count only rows that reach this point */
+    }
     if (cg->radius) { /* Steihaugh-Toint */
       PetscReal norm_dp1 = norm_d + PetscRealPart(a) * (2.0 * dMp + PetscRealPart(a) * norm_p);
       if (norm_dp1 > r2) {
@@ -391,6 +395,7 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
     d    = cg->d;
     e[0] = 0.0;
   }
+  cg->ned = 0;
   PetscCall(PCGetOperators(ksp->pc, &Amat, &Pmat));
 
   ksp->its = 0;
@@ -484,7 +489,10 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
       break;
     }
     a = beta / dpi; /*    a = beta/p'w                      */
-    if (eigs) d[i] = PetscSqrtReal(PetscAbsScalar(b)) * e[i] + 1.0 / a;
+    if (eigs) {
+      d[i]    = PetscSqrtReal(PetscAbsScalar(b)) * e[i] + 1.0 / a;
+      cg->ned = i + 1; /* d[i] is now valid; count only rows that reach this point */
+    }
     PetscCall(VecAXPY(X, a, P));  /*    x <- x + ap                       */
     PetscCall(VecAXPY(R, -a, W)); /*    r <- r - aw                       */
     if (ksp->normtype == KSP_NORM_PRECONDITIONED && ksp->chknorm < i + 2) {
