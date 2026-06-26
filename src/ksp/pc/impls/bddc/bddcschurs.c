@@ -1291,6 +1291,16 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
           /* subsets ordered last */
           PetscCall(MatFactorSetSchurIS(F, is_sub_schur_all[sub]));
 
+#if 0
+          {
+            PetscViewer vwr;
+            PetscCall(PetscViewerBinaryOpen(PETSC_COMM_SELF, "schur_err.dat", FILE_MODE_WRITE, &vwr));
+            PetscCall(MatView(Asub,vwr));
+            PetscCall(ISView(is_sub_schur_all[sub],vwr));
+            PetscCall(PetscViewerDestroy(&vwr));
+          }
+#endif
+
           /* factorization step */
           switch (sub_schurs->mat_factor_type) {
           case MAT_FACTOR_CHOLESKY:
