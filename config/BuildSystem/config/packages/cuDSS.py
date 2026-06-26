@@ -8,8 +8,8 @@ class Configure(config.package.Package):
     self.versionname            = 'CUDSS_VERSION_MAJOR.CUDSS_VERSION_MINOR.CUDSS_VERSION_PATCH'
     self.versioninclude         = 'cudss.h'
     self.download               = 'NoDefault'
-    self.download_linux_x86_64  = ['https://developer.download.nvidia.com/compute/cudss/redist/libcudss/linux-x86_64/libcudss-linux-x86_64-0.7.1.4_cuda12-archive.tar.xz']
-    self.download_linux_aarch64 = ['https://developer.download.nvidia.com/compute/cudss/redist/libcudss/linux-sbsa/libcudss-linux-sbsa-0.7.1.4_cuda12-archive.tar.xz']
+    self.download_linux_x86_64  = ['https://developer.download.nvidia.com/compute/cudss/redist/libcudss/linux-x86_64/libcudss-linux-x86_64-0.8.0.10_cuda12-archive.tar.xz']
+    self.download_linux_aarch64 = ['https://developer.download.nvidia.com/compute/cudss/redist/libcudss/linux-sbsa/libcudss-linux-sbsa-0.8.0.10_cuda12-archive.tar.xz']
     self.functions              = ['cudssCreate']
     self.includes               = ['cudss.h']
     self.liblist                = [['libcudss.so'], ['libcudss.a']]
