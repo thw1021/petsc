@@ -30,26 +30,26 @@ typedef struct {
   PetscInt  nnz;
   PetscBool ownDeviceCSR;
 
-  cudssAlgType_t   reorderAlg;
-  cudssPivotType_t pivotType;
-  double           pivotThreshold; /* cuDSS expects double for CUDSS_CONFIG_PIVOT_THRESHOLD */
-  double           pivotEpsilon;   /* cuDSS expects double for CUDSS_CONFIG_PIVOT_EPSILON */
-  int              useMatching;    /* cuDSS expects int for CUDSS_CONFIG_USE_MATCHING */
-  int              irNSteps;       /* cuDSS expects int for CUDSS_CONFIG_IR_N_STEPS */
+  cudssReorderingAlg_t reorderAlg;
+  cudssPivotType_t     pivotType;
+  double               pivotThreshold; /* cuDSS expects double for CUDSS_CONFIG_PIVOT_THRESHOLD */
+  double               pivotEpsilon;   /* cuDSS expects double for CUDSS_CONFIG_PIVOT_EPSILON */
+  int                  useMatching;    /* cuDSS expects int, translated to CUDSS_CONFIG_MATCHING_ALG */
+  int                  irNSteps;       /* cuDSS expects int for CUDSS_CONFIG_IR_N_STEPS */
 } Mat_cuDSS;
 
 /* Map PetscScalar to the cuDSS data type */
 #if defined(PETSC_USE_COMPLEX)
   #if defined(PETSC_USE_REAL_SINGLE)
-    #define CUDSS_SCALAR_TYPE CUDA_C_32F
+    #define CUDSS_SCALAR_TYPE CUDSS_C_32F
   #else
-    #define CUDSS_SCALAR_TYPE CUDA_C_64F
+    #define CUDSS_SCALAR_TYPE CUDSS_C_64F
   #endif
 #else
   #if defined(PETSC_USE_REAL_SINGLE)
-    #define CUDSS_SCALAR_TYPE CUDA_R_32F
+    #define CUDSS_SCALAR_TYPE CUDSS_R_32F
   #else
-    #define CUDSS_SCALAR_TYPE CUDA_R_64F
+    #define CUDSS_SCALAR_TYPE CUDSS_R_64F
   #endif
 #endif
 
@@ -63,13 +63,15 @@ typedef struct {
   } while (0)
 
 /* These arrays are indexed by the cuDSS enum values directly.
-   Assumed mapping (cuDSS 0.3.x):
-     cudssAlgType_t:  CUDSS_ALG_DEFAULT==0, CUDSS_ALG_1==1, ..., CUDSS_ALG_5==5
-     cudssPivotType_t: CUDSS_PIVOT_COL==0, CUDSS_PIVOT_ROW==1, CUDSS_PIVOT_NONE==2
+   Mapping (cuDSS 0.8.0):
+     cudssReorderingAlg_t: CUDSS_REORDERING_ALG_DEFAULT==0, ..._BTF_COLAMD==1, ..._COLAMD==2,
+                           ..._AMD==3, ..._NESTED_DISSECTION==4, ..._NONE==5
+     cudssPivotType_t: CUDSS_PIVOT_AUTO==0, ..._NONE==1, ..._GLOBAL_COL==2, ..._GLOBAL_ROW==3,
+                       ..._DIAGONAL==4, ..._LOCAL_BLOCK==5, ..._BUNCH_KAUFMAN==6
    If NVIDIA renumbers these enumerators in a future release, the option parsing
    and view output will silently mismap; update both arrays and this comment. */
-static const char *const MatCUDSSReorderAlgs[] = {"default", "alg1", "alg2", "alg3", "alg4", "alg5"};
-static const char *const MatCUDSSPivotTypes[]  = {"col", "row", "none"};
+static const char *const MatCUDSSReorderAlgs[] = {"default", "btf_colamd", "colamd", "amd", "nested_dissection", "none"};
+static const char *const MatCUDSSPivotTypes[]  = {"auto", "none", "col", "row", "diagonal", "local_block", "bunch_kaufman"};
 
 /* Forward declarations */
 static PetscErrorCode MatFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
@@ -142,7 +144,7 @@ static PetscErrorCode MatSetFromOptions_cuDSS(Mat F)
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
   PetscCall(PetscOptionsEList("-mat_cudss_reorder_alg", "Reordering algorithm", "None", MatCUDSSReorderAlgs, PETSC_STATIC_ARRAY_LENGTH(MatCUDSSReorderAlgs), MatCUDSSReorderAlgs[reorderAlg], &reorderAlg, NULL));
-  lu->reorderAlg = (cudssAlgType_t)reorderAlg;
+  lu->reorderAlg = (cudssReorderingAlg_t)reorderAlg;
   PetscCall(PetscOptionsEList("-mat_cudss_pivot_type", "Pivot type", "None", MatCUDSSPivotTypes, PETSC_STATIC_ARRAY_LENGTH(MatCUDSSPivotTypes), MatCUDSSPivotTypes[pivotType], &pivotType, NULL));
   lu->pivotType = (cudssPivotType_t)pivotType;
   PetscCall(PetscOptionsReal("-mat_cudss_pivot_threshold", "Pivot threshold", "None", pivotThreshold, &pivotThreshold, NULL));
@@ -159,12 +161,16 @@ static PetscErrorCode MatSetFromOptions_cuDSS(Mat F)
 
 static PetscErrorCode MatApplyConfig_cuDSS(Mat_cuDSS *lu)
 {
+  cudssMatchingAlg_t matchingAlg = lu->useMatching ? CUDSS_MATCHING_ALG_AUTO : CUDSS_MATCHING_ALG_NONE;
+
   PetscFunctionBegin;
   PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_REORDERING_ALG, &lu->reorderAlg, sizeof(lu->reorderAlg)));
   PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_PIVOT_TYPE, &lu->pivotType, sizeof(lu->pivotType)));
   PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_PIVOT_THRESHOLD, &lu->pivotThreshold, sizeof(lu->pivotThreshold)));
   PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_PIVOT_EPSILON, &lu->pivotEpsilon, sizeof(lu->pivotEpsilon)));
-  PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_USE_MATCHING, &lu->useMatching, sizeof(lu->useMatching)));
+  /* cuDSS 0.8.0 removed CUDSS_CONFIG_USE_MATCHING; matching is now controlled via
+     CUDSS_CONFIG_MATCHING_ALG (CUDSS_MATCHING_ALG_NONE disables it). */
+  PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_MATCHING_ALG, &matchingAlg, sizeof(matchingAlg)));
   PetscCallCUDSS(cudssConfigSet(lu->config, CUDSS_CONFIG_IR_N_STEPS, &lu->irNSteps, sizeof(lu->irNSteps)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -287,10 +293,10 @@ static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mt
 
   PetscCall(MatEnsureOnDevice_cuDSS(A, lu, PETSC_FALSE, &d_row_32, &d_col_32, &d_row_pi, &d_col_pi, &d_val));
   {
-    void          *d_row    = isCUSPARSE ? (void *)d_row_32 : (void *)d_row_pi;
-    void          *d_col    = isCUSPARSE ? (void *)d_col_32 : (void *)d_col_pi;
-    cudaDataType_t idx_type = CUDA_R_32I; /* cuDSS requires 32-bit indices (cuDSS.py: requires32bitint=1), so PetscInt is 32-bit on both the MATSEQAIJ and MATSEQAIJCUSPARSE paths */
-    PetscCallCUDSS(cudssMatrixCreateCsr(&lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, idx_type, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO));
+    void           *d_row    = isCUSPARSE ? (void *)d_row_32 : (void *)d_row_pi;
+    void           *d_col    = isCUSPARSE ? (void *)d_col_32 : (void *)d_col_pi;
+    cudssDataType_t idx_type = CUDSS_R_32I; /* cuDSS requires 32-bit indices (cuDSS.py: requires32bitint=1), so PetscInt is 32-bit on both the MATSEQAIJ and MATSEQAIJCUSPARSE paths */
+    PetscCallCUDSS(cudssMatrixCreateCsr(&lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, idx_type, idx_type, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO));
 
     PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_b, n, 1, n, NULL, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
     PetscCallCUDSS(cudssMatrixCreateDn(&lu->cudss_x, n, 1, n, NULL, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR));
@@ -503,8 +509,8 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
   sequential sparse matrices via the NVIDIA cuDSS GPU-accelerated sparse direct solver library.
 
   Options Database Keys:
-+ -mat_cudss_reorder_alg (default|alg1|alg2|alg3|alg4|alg5) - reordering algorithm
-. -mat_cudss_pivot_type (col|row|none)                      - pivoting type
++ -mat_cudss_reorder_alg (default|btf_colamd|colamd|amd|nested_dissection|none) - reordering algorithm
+. -mat_cudss_pivot_type (auto|none|col|row|diagonal|local_block|bunch_kaufman) - pivoting type
 . -mat_cudss_pivot_threshold threshold                      - Pivot threshold, default is 1.0
 . -mat_cudss_pivot_epsilon epsilon                          - Pivot epsilon, default is 0.0
 . -mat_cudss_use_matching flag                              - Enable matching, default is false
@@ -515,7 +521,8 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
   Notes:
     Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
     When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
-    `MatSolveTranspose()` is not supported.
+    `MatSolveTranspose()` is not supported. The `bunch_kaufman` value of `-mat_cudss_pivot_type` is
+    reserved in cuDSS and not yet supported; selecting it causes cuDSS to fail at factorization time.
 
     By default cuDSS performs its own internal reordering during the symbolic phase.
     A user-supplied permutation can be provided via `MatCUDSSSetUserPermutation()`, or by
@@ -562,8 +569,8 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatCUDSSSetUserPermutation_C", MatCUDSSSetUserPermutation_cuDSS));
 
   PetscCall(PetscNew(&lu));
-  lu->reorderAlg     = CUDSS_ALG_DEFAULT;
-  lu->pivotType      = CUDSS_PIVOT_COL;
+  lu->reorderAlg     = CUDSS_REORDERING_ALG_DEFAULT;
+  lu->pivotType      = CUDSS_PIVOT_GLOBAL_COL;
   lu->pivotThreshold = 1.0;
   lu->pivotEpsilon   = 0.0;
   lu->useMatching    = 0;
