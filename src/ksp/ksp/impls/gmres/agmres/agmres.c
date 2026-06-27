@@ -650,7 +650,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_AGMRES(KSP ksp)
 
   agmres->haptol         = 1.0e-30;
   agmres->q_preallocate  = 0;
-  agmres->delta_allocate = AGMRES_DELTA_DIRECTIONS;
+  agmres->delta_allocate = GMRES_DELTA_DIRECTIONS;
   agmres->orthog         = KSPGMRESClassicalGramSchmidtOrthogonalization;
   agmres->nrs            = NULL;
   agmres->sol_temp       = NULL;

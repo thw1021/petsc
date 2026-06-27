@@ -56,4 +56,3 @@ PetscErrorCode KSPAGMRESRoddecInitNeighboor(KSP);
 PetscErrorCode KSPAGMRESComputeDeflationData(KSP);
 
 #define AGMRES_DEFAULT_MAXK     30
-#define AGMRES_DELTA_DIRECTIONS 10

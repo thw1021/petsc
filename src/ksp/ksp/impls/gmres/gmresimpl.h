@@ -87,3 +87,5 @@ PETSC_INTERN PetscErrorCode KSPGMRESGetCGSRefinementType_GMRES(KSP, KSPGMRESCGSR
   #define VEC_TEMP_MATOP gmres->vecs[1]
   #define VEC_VV(i)      gmres->vecs[VEC_OFFSET + i]
 #endif
+
+#define GMRES_DELTA_DIRECTIONS 10

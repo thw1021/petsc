@@ -11,7 +11,6 @@
 */
 
 #include <../src/ksp/ksp/impls/gmres/fgmres/fgmresimpl.h> /*I  "petscksp.h"  I*/
-#define FGMRES_DELTA_DIRECTIONS 10
 #define FGMRES_DEFAULT_MAXK     30
 static PetscErrorCode KSPFGMRESGetNewVectors(KSP, PetscInt);
 static PetscErrorCode KSPFGMRESUpdateHessenberg(KSP, PetscInt, PetscBool, PetscReal *);
@@ -561,7 +560,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FGMRES(KSP ksp)
 
   fgmres->haptol         = 1.0e-30;
   fgmres->q_preallocate  = PETSC_FALSE;
-  fgmres->delta_allocate = FGMRES_DELTA_DIRECTIONS;
+  fgmres->delta_allocate = GMRES_DELTA_DIRECTIONS;
   fgmres->orthog         = KSPGMRESClassicalGramSchmidtOrthogonalization;
   fgmres->nrs            = NULL;
   fgmres->sol_temp       = NULL;

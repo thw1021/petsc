@@ -692,7 +692,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_LGMRES(KSP ksp)
   /* defaults */
   lgmres->haptol         = 1.0e-30;
   lgmres->q_preallocate  = PETSC_FALSE;
-  lgmres->delta_allocate = LGMRES_DELTA_DIRECTIONS;
+  lgmres->delta_allocate = GMRES_DELTA_DIRECTIONS;
   lgmres->orthog         = KSPGMRESClassicalGramSchmidtOrthogonalization;
   lgmres->nrs            = NULL;
   lgmres->sol_temp       = NULL;
