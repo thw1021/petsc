@@ -3,7 +3,7 @@ static char help[] = "Two-level system for Landau Damping using Vlasov-Poisson e
 /*
   Moment Equations:
 
-    We will discretize the moment equations using finite elements, and we will project the moments into the finite element space We will use the PFAK method, which guarantees that our FE approximation is weakly equivalent to the true moment. The first moment, number density, is given by
+    Discretize the moment equations using finite elements, andproject the moments into the finite element space. Use the the particle falloff/point attribute remap (PFAK) method, which guarantees that our FE approximation is weakly equivalent to the true moment. The first moment, number density, is given by
 
       \int dx \phi_i n_f = \int dx \phi_i n_p
       \int dx \phi_i n_f = \int dx \phi_i \int dv f
