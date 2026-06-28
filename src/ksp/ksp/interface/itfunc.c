@@ -4,6 +4,7 @@
 
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
+#include <petsc/private/pcimpl.h>
 #include <petscdm.h>
 
 /* number of nested levels of KSPSetUp/Solve(). This is used to determine if KSP_DIVERGED_ITS should be fatal. */
@@ -354,12 +355,26 @@ PetscErrorCode KSPSetUp(KSP ksp)
   PetscCall(KSPSetUpNorms_Private(ksp, PETSC_TRUE, &ksp->normtype, &ksp->pc_side));
 
   if ((ksp->dmActive & KSP_DMACTIVE_OPERATOR) && !ksp->setupstage) {
+    DMKSP kdm;
+
     /* first time in so build matrix and vector data structures using DM */
     if (!ksp->vec_rhs) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_rhs));
     if (!ksp->vec_sol) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_sol));
-    PetscCall(DMCreateMatrix(ksp->dm, &A));
-    PetscCall(KSPSetOperators(ksp, A, A));
-    PetscCall(PetscObjectDereference((PetscObject)A));
+
+    PetscCall(DMGetDMKSP(ksp->dm, &kdm));
+    if (kdm->ops->createoperators) {
+      PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
+      PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetComputeOperators()");
+      if (!B) B = A;
+      if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
+      PetscCall(KSPSetOperators(ksp, A, B));
+      PetscCall(MatDestroy(&A));
+      PetscCall(MatDestroy(&B));
+    } else {
+      PetscCall(DMCreateMatrix(ksp->dm, &A));
+      PetscCall(KSPSetOperators(ksp, A, A));
+      PetscCall(MatDestroy(&A));
+    }
   }
 
   if (ksp->dmActive) {
