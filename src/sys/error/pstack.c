@@ -51,18 +51,6 @@ void PetscStackSAWsTakeAccess(void)
   }
 }
 
-/*@C
-  PetscStackViewSAWs - Publish PETSc's current debug call stack through the SAWs (Scientific Application Web server) so it can be inspected from a remote browser
-
-  Logically Collective on `PETSC_COMM_WORLD`
-
-  Level: developer
-
-  Note:
-  Only MPI rank 0 publishes; other ranks immediately return success. In non-debug builds the stack contents are not published but the call still succeeds.
-
-.seealso: `PetscStackView()`, `PetscStackSAWsViewOff()`, `PetscObjectSAWsViewOff()`
-@*/
 PetscErrorCode PetscStackViewSAWs(void)
 {
   PetscMPIInt rank;
@@ -77,18 +65,6 @@ PetscErrorCode PetscStackViewSAWs(void)
   return PETSC_SUCCESS;
 }
 
-/*@C
-  PetscStackSAWsViewOff - Stop publishing the PETSc debug call stack through SAWs (Scientific Application Web server)
-
-  Logically Collective
-
-  Level: developer
-
-  Note:
-  No-op when `PetscStackViewSAWs()` was never called.
-
-.seealso: `PetscStackViewSAWs()`, `PetscStackView()`, `PetscObjectSAWsViewOff()`
-@*/
 PetscErrorCode PetscStackSAWsViewOff(void)
 {
   PetscFunctionBegin;
@@ -112,29 +88,6 @@ PetscErrorCode PetscStackReset(void)
   return PETSC_SUCCESS;
 }
 
-// PetscClangLinter pragma disable: -fdoc-sowing-chars
-/*@
-  PetscStackView - Print the current (default) PETSc stack to an ASCII file
-
-  Not Collective
-
-  Input Parameter:
-. file - the file pointer, or `NULL` to use `PETSC_STDERR`
-
-  Level: developer
-
-  Notes:
-  In debug mode PETSc maintains a stack of the current function calls that can be used to help
-  to quickly see where a problem has occurred, for example, when a signal is received. It is
-  recommended to use the debugger if extensive information is needed to help debug the problem.
-
-  If `file` is `PETSC_STDERR` (or `NULL`) then `PetscErrorPrintf()` is used to print the stack, otherwise `fprintf()` is used.
-
-  Developer Note:
-  The default stack is a global variable called `petscstack`.
-
-.seealso: `PetscAttachDebugger()`, `PetscStackCopy()`, `PetscStackPrint()`, `PetscStackSAWsGrantAccess()`, `PetscStackSAWsTakeAccess()`
-@*/
 PetscErrorCode PetscStackView(FILE *file)
 {
   if (!file) file = PETSC_STDERR;
