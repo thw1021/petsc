@@ -492,14 +492,10 @@ static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
 @*/
 PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
 {
-  PetscErrorCode (*f)(Mat, IS);
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
   PetscValidHeaderSpecific(perm, IS_CLASSID, 2);
-  PetscCall(PetscObjectQueryFunction((PetscObject)F, "MatCUDSSSetUserPermutation_C", &f));
-  PetscCheck(f, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_WRONG, "Mat is not a cuDSS factor matrix");
-  PetscCall((*f)(F, perm));
+  PetscTryMethod(F, "MatCUDSSSetUserPermutation_C", (Mat, IS), (F, perm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
