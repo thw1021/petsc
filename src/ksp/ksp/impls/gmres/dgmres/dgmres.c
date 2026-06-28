@@ -1043,6 +1043,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_DGMRES(KSP ksp)
   ksp->ops->computeextremesingularvalues = KSPComputeExtremeSingularValues_GMRES;
   ksp->ops->computeeigenvalues           = KSPComputeEigenvalues_GMRES;
 
+  PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetVectorAllocationSize_C", KSPGMRESSetVectorAllocationSize_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetPreAllocateVectors_C", KSPGMRESSetPreAllocateVectors_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetOrthogonalization_C", KSPGMRESSetOrthogonalization_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetRestart_C", KSPGMRESSetRestart_GMRES));

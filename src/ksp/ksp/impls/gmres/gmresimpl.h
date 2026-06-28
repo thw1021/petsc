@@ -32,7 +32,7 @@
   Vec      *vecs;           /* the work vectors */ \
   Vec      *vecb;           /* holds the last full basis vectors of the Krylov subspace to compute (harmonic) Ritz pairs */ \
   PetscBool q_preallocate;  /* Preallocate all the work vectors for the Krylov subspace */ \
-  PetscInt  delta_allocate; /* number of vectors to preallocaate in each block if not preallocated */ \
+  PetscInt  delta_allocate; /* number of vectors to preallocate in each block if not preallocated */ \
   PetscInt  vv_allocated;   /* number of allocated gmres direction vectors */ \
   PetscInt  vecs_allocated; /*   total number of vecs available */ \
   /* Since we may call the user "obtain_work_vectors" several times, we have to keep track of the pointers that it has returned */ \
@@ -65,6 +65,7 @@ PETSC_INTERN PetscErrorCode KSPGMRESGetNewVectors(KSP, PetscInt);
 typedef PetscErrorCode (*FCN)(KSP, PetscInt); /* force argument to next function to not be extern C*/
 
 PETSC_INTERN PetscErrorCode KSPGMRESSetHapTol_GMRES(KSP, PetscReal);
+PETSC_INTERN PetscErrorCode KSPGMRESSetVectorAllocationSize_GMRES(KSP, PetscInt);
 PETSC_INTERN PetscErrorCode KSPGMRESSetPreAllocateVectors_GMRES(KSP);
 PETSC_INTERN PetscErrorCode KSPGMRESSetRestart_GMRES(KSP, PetscInt);
 PETSC_INTERN PetscErrorCode KSPGMRESGetRestart_GMRES(KSP, PetscInt *);
