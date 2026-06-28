@@ -1606,7 +1606,7 @@ PETSC_EXTERN PetscErrorCode MatSetUnfactored(Mat);
 
    Values:
 +   `MAT_FACTOR_SCHUR_UNFACTORED` - the Schur complement has been assembled but has not yet been factored or inverted
-.   `MAT_FACTOR_SCHUR_FACTORED`   - the Schur complement has been factored (for example via dense LU) and can be used to solve with via `MatFactorSolveSchurComplement()`
+.   `MAT_FACTOR_SCHUR_FACTORED`   - the Schur complement has been factored (for example via dense LU) and can be used to solve via `MatFactorSolveSchurComplement()`
 -   `MAT_FACTOR_SCHUR_INVERTED`   - the Schur complement has been explicitly inverted in place; subsequent solves multiply by the dense inverse
 
    Level: advanced
