@@ -349,9 +349,13 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
   Mat_cuDSS         *lu = (Mat_cuDSS *)F->data;
   const PetscScalar *barray;
   PetscScalar       *xarray;
+  PetscBool          bcuda, xcuda;
   cudaStream_t       stream;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)b, &bcuda, VECSEQCUDA, VECMPICUDA, VECCUDA, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)x, &xcuda, VECSEQCUDA, VECMPICUDA, VECCUDA, ""));
+  PetscCheck(bcuda && xcuda, PETSC_COMM_SELF, PETSC_ERR_SUP, "MATSOLVERCUDSS MatSolve() requires CUDA vectors (VECCUDA/VECSEQCUDA) for both the right-hand side and the solution; create them with VecSetType(v, VECCUDA)");
   PetscCall(VecCUDAGetArrayRead(b, &barray));
   PetscCall(VecCUDAGetArrayWrite(x, &xarray));
   PetscCallCUDSS(cudssMatrixSetValues(lu->cudss_b, (void *)barray));
@@ -376,6 +380,7 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   cudaStream_t       stream;
 
   PetscFunctionBegin;
+  PetscCheck(B != X, PETSC_COMM_SELF, PETSC_ERR_SUP, "MATSOLVERCUDSS MatMatSolve() does not support an in-place solve (B == X)");
   PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSECUDA, &BisCUDA));
   PetscCall(PetscObjectTypeCompare((PetscObject)X, MATSEQDENSECUDA, &XisCUDA));
   if (BisCUDA == PETSC_FALSE) {
