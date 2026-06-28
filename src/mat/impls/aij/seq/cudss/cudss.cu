@@ -209,10 +209,12 @@ static PetscErrorCode MatEnsureOnDevice_cuDSS(Mat A, Mat_cuDSS *lu, PetscBool va
       /* Symbolic phase: upload structure (row offsets + column indices) and values */
       PetscCallCUDA(cudaMemcpyAsync(lu->d_row_offsets, a->i, (lu->n + 1) * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
       PetscCallCUDA(cudaMemcpyAsync(lu->d_col_indices, a->j, lu->nnz * sizeof(PetscInt), cudaMemcpyHostToDevice, stream));
+      PetscCall(PetscLogCpuToGpu((lu->n + 1) * sizeof(PetscInt) + lu->nnz * sizeof(PetscInt)));
     }
     /* Numeric phase (valuesOnly==PETSC_TRUE): row offsets and column indices are
        unchanged since the symbolic phase; only upload the new values. */
     PetscCallCUDA(cudaMemcpyAsync(lu->d_values, a->a, lu->nnz * sizeof(PetscScalar), cudaMemcpyHostToDevice, stream));
+    PetscCall(PetscLogCpuToGpu(lu->nnz * sizeof(PetscScalar)));
     *d_row_pi = lu->d_row_offsets;
     *d_col_pi = lu->d_col_indices;
     *d_val    = lu->d_values;
@@ -505,11 +507,11 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
 
   Options Database Keys:
 + -mat_cudss_reorder_alg (default|btf_colamd|colamd|amd|nested_dissection|none) - reordering algorithm
-. -mat_cudss_pivot_type (auto|none|col|row|diagonal|local_block|bunch_kaufman) - pivoting type
-. -mat_cudss_pivot_threshold threshold                      - Pivot threshold, default is 1.0
-. -mat_cudss_pivot_epsilon epsilon                          - Pivot epsilon, default is 0.0
-. -mat_cudss_use_matching flag                              - Enable matching, default is false
-- -mat_cudss_ir_n_steps nsteps                              - Number of iterative refinement steps, default is 0
+. -mat_cudss_pivot_type (auto|none|col|row|diagonal|local_block|bunch_kaufman)  - pivoting type
+. -mat_cudss_pivot_threshold threshold                                          - Pivot threshold, default is 1.0
+. -mat_cudss_pivot_epsilon epsilon                                              - Pivot epsilon, default is 0.0
+. -mat_cudss_use_matching flag                                                  - Enable matching, default is false
+- -mat_cudss_ir_n_steps nsteps                                                  - Number of iterative refinement steps, default is 0
 
   Level: intermediate
 
