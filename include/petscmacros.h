@@ -216,7 +216,7 @@ M*/
   Clang's `__has_builtin()` prior to Clang 10 did not properly handle non-function builtins such as
   `__builtin_types_compatible_p()` which take types or other non-functiony things as
   arguments. The correct way to detect these then is to use `__is_identifier()` (also a Clang
-  extension). GCC has always worked as expected. see https://stackoverflow.com/a/45043153
+  extension). GCC has always worked as expected. See https://stackoverflow.com/a/45043153
 
 .seealso: `PetscHasAttribute()`, `PetscAssume()`
 M*/
@@ -944,7 +944,7 @@ M*/
   nonconforming implementation of variadic macros.
 
   Example Usage:
-  Suppose you would like to call either "foo()" or "bar()" depending on whether `PETSC_USE_DEBUG`
+  Suppose you would like to call either `foo()` or `bar()` depending on whether `PETSC_USE_DEBUG`
   is defined then
 
 .vb

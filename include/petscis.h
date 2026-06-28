@@ -82,7 +82,7 @@ typedef enum {
    Level: intermediate
 
    Note:
-   Some properties (for example `IS_SORTED`) may be true locally but not globally; `ISInfoType` lets the caller specify which interpretation is wanted in `ISSetInfo()` / `ISGetInfo()`.
+   Some properties (for example `IS_SORTED`) may be true locally but not globally; `ISInfoType` lets the caller specify which interpretation is wanted in `ISSetInfo()`/`ISGetInfo()`.
 
 .seealso: `IS`, `ISInfo`, `ISSetInfo()`, `ISGetInfo()`, `ISClearInfoCache()`
 E*/

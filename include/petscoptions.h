@@ -118,7 +118,7 @@ PETSC_EXTERN PetscBool PetscOptionsPublish;
 
 */
 /*E
-   PetscOptionType - Identifies the kind of value held by a `PetscOptionItem` inside a `PetscOptionsBegin()` / `PetscOptionsEnd()` block
+   PetscOptionType - Identifies the kind of value held by a `PetscOptionItem` inside a `PetscOptionsBegin()`/`PetscOptionsEnd()` block
 
    Values:
 +   `OPTION_INT`          - a single `PetscInt`
