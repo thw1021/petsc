@@ -109,7 +109,7 @@ PETSC_EXTERN const char *DMSwarmCollectTypeNames[];
 
    Values:
 +   `DMSWARM_REMAP_NONE`    - do not remap particles
-.   `DMSWARM_REMAP_PFAK`    - the particle falloff/point attribute remap (PFAK) that projects particle weights onto a regular reference distribution
+.   `DMSWARM_REMAP_PFAK`    - the particle remapping method that uses projection to a continuum preserving the moments {cite}`adamsfinnknepleypusztay2025`
 -   `DMSWARM_REMAP_COLELLA` - the Colella remap that uses an interpolation-based redistribution suited to particle-in-cell methods
 
    Level: intermediate
