@@ -388,10 +388,11 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
     PetscCall(MatConvert(B, MATDENSECUDA, MAT_INITIAL_MATRIX, &Bcuda));
   } else Bcuda = B;
   if (XisCUDA == PETSC_FALSE) {
-    PetscInt m_x, N_x;
+    PetscInt m_x, n_x, M_x, N_x;
 
-    PetscCall(MatGetSize(X, &m_x, &N_x));
-    PetscCall(MatCreateDenseCUDA(PetscObjectComm((PetscObject)X), m_x, N_x, m_x, N_x, NULL, &Xcuda));
+    PetscCall(MatGetLocalSize(X, &m_x, &n_x));
+    PetscCall(MatGetSize(X, &M_x, &N_x));
+    PetscCall(MatCreateDenseCUDA(PetscObjectComm((PetscObject)X), m_x, n_x, M_x, N_x, NULL, &Xcuda));
   } else Xcuda = X;
   PetscCall(MatGetSize(Bcuda, &n, &nrhs));
   PetscCall(MatGetSize(Xcuda, &nX, &nrhsX));
