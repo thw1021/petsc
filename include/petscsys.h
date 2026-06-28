@@ -1689,12 +1689,12 @@ PETSC_EXTERN PetscErrorCode PetscStackSAWsViewOff(void);
    #include <petscsys.h>
    PetscErrorCode PetscStackViewSAWs(void)
 
-   Not Collective; No Fortran Support
+   Logically Collective on `PETSC_COMM_WORLD`; No Fortran Support
 
    Level: developer
 
    Note:
-   Compiled to a no-op when PETSc is not configured `--with-saws`; otherwise calls into the SAWs library.
+   Only MPI rank 0 publishes; other ranks return `PETSC_SUCCESS` immediately. In non-debug builds the stack contents are not published but the call still succeeds. Compiled to a no-op when PETSc is not configured `--with-saws`.
 
 .seealso: `PetscStack`, `PetscStackView()`, `PetscStackSAWsViewOff()`, `PetscObjectSAWsViewOff()`
 M*/
@@ -1707,12 +1707,12 @@ M*/
    #include <petscsys.h>
    PetscErrorCode PetscStackSAWsViewOff(void)
 
-   Not Collective; No Fortran Support
+   Logically Collective; No Fortran Support
 
    Level: developer
 
    Note:
-   Compiled to a no-op when PETSc is not configured `--with-saws`; otherwise calls into the SAWs library.
+   No-op when `PetscStackViewSAWs()` was never called. Compiled to a no-op when PETSc is not configured `--with-saws`.
 
 .seealso: `PetscStack`, `PetscStackViewSAWs()`, `PetscObjectSAWsViewOff()`
 M*/
@@ -1761,10 +1761,13 @@ PETSC_EXTERN PetscErrorCode PetscObjectListDuplicate(PetscObjectList, PetscObjec
 
    Level: developer
 
-   Note:
+   Notes:
+   Users who wish to register new classes for use by a particular PETSc component (e.g., `SNES`) should generally call the registration routine for that particular component (e.g., `SNESRegister()`) instead of calling `PetscFunctionListAdd()` directly.
+
    The macro casts `fptr` to the internal `PetscErrorCodeFn *` representation before calling `PetscFunctionListAdd_Private()` so that any error-code-returning function-pointer type may be supplied without an explicit cast.
 
-.seealso: `PetscFunctionList`, `PetscFunctionListFind()`, `PetscFunctionListDestroy()`, `PetscFunctionListView()`, `PetscObjectComposeFunction()`
+.seealso: `PetscFunctionList`, `PetscFunctionListFind()`, `PetscFunctionListDestroy()`, `PetscFunctionListDuplicate()`, `PetscFunctionListView()`, `PetscObjectComposeFunction()`,
+          `SNESRegister()`, `KSPRegister()`, `PCRegister()`, `TSRegister()`
 M*/
 #define PetscFunctionListAdd(list, name, fptr) PetscFunctionListAdd_Private((list), (name), (PetscErrorCodeFn *)(fptr))
 PETSC_EXTERN PetscErrorCode PetscFunctionListAdd_Private(PetscFunctionList *, const char[], PetscErrorCodeFn *);
@@ -1777,7 +1780,7 @@ PETSC_EXTERN PetscErrorCode PetscFunctionListClear(PetscFunctionList);
    #include <petscsys.h>
    PetscErrorCode PetscFunctionListFind(PetscFunctionList list, const char name[], void (**fptr)(void))
 
-   Not Collective
+   Not Collective; No Fortran Support
 
    Input Parameters:
 +  list - the function list
@@ -3168,14 +3171,21 @@ PETSC_EXTERN PetscErrorCode PetscStackView(FILE *);
    Not Collective; No Fortran Support
 
    Input Parameter:
-.  file - the `FILE` pointer to write to; if `NULL` writes to `stdout`
+.  file - the `FILE` pointer to write to; if `NULL` writes to `PETSC_STDERR`
 
    Level: developer
 
-   Note:
+   Notes:
+   In debug mode PETSc maintains a stack of the current function calls that can be used to help to quickly see where a problem has occurred, for example, when a signal is received. It is recommended to use the debugger if extensive information is needed to help debug the problem.
+
+   If `file` is `PETSC_STDERR` (or `NULL`) then `PetscErrorPrintf()` is used to print the stack, otherwise `fprintf()` is used.
+
    The stack is maintained only when PETSc is configured `--with-debugging` and without thread safety; in other configurations this becomes a no-op that returns `PETSC_SUCCESS`.
 
-.seealso: `PetscStack`, `PetscStackViewSAWs()`, `PetscFunctionBegin`, `PetscFunctionReturn()`
+   Developer Note:
+   The default stack is a global variable called `petscstack`.
+
+.seealso: `PetscStack`, `PetscStackViewSAWs()`, `PetscStackCopy()`, `PetscStackPrint()`, `PetscFunctionBegin`, `PetscFunctionReturn()`
 M*/
   #define PetscStackView(file) PETSC_SUCCESS
 #endif
