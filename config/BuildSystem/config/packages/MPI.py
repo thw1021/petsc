@@ -60,6 +60,7 @@ class Configure(config.package.Package):
     self.mpiexec           = None
     self.mpiexecExecutable = None
     self.mpiexecseq        = None
+    self.mpiexec_tail      = None
     return
 
   def setupHelp(self, help):
@@ -191,8 +192,6 @@ shared libraries and run with --known-mpi-shared-libraries=1')
     '''Checking for mpiexec_tail'''
     if 'with-mpiexec-tail' in self.argDB:
       self.mpiexec_tail = self.argDB['with-mpiexec-tail']
-    else:
-      self.mpiexec_tail = ''
     self.addMakeMacro('MPIEXEC_TAIL', self.mpiexec_tail)
 
   def configureMPIEXEC(self):
