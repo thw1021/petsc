@@ -100,25 +100,24 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     iter_indices = NULL;
   }
 
-  {
-    PetscCall(PetscDSGetDiscretization(ds, ds_field, (PetscObject *)&fe));
-    PetscCall(PetscFEGetNumComponents(fe, num_comp));
-    /* Derive cell_size (nodes per point) from the actual closure of an iterated
-       point rather than from PetscFEGetHeightSubspace(), which only supports a
-       uniform tensor cell.  Each call iterates a single height/label stratum, so
-       every iterated point has the same polytope and hence a uniform cell_size.
-       Using the closure lets the offsets be built for heterogeneous-face cells
-       (triangular prisms, pyramids), whose faces have no single height subspace. */
-    if (*num_cells > 0) {
-      PetscInt num_indices, *indices, field_offsets[17];
+  PetscCall(PetscDSGetDiscretization(ds, ds_field, (PetscObject *)&fe));
+  PetscCall(PetscFEGetNumComponents(fe, num_comp));
+  /* Derive cell_size (nodes per point) from the actual closure of an iterated
+     point rather than from PetscFEGetHeightSubspace(), which only supports a
+     uniform tensor cell.  Each call iterates a single height/label stratum, so
+     every iterated point has the same polytope and hence a uniform cell_size.
+     Using the closure lets the offsets be built for heterogeneous-face cells
+     (triangular prisms, pyramids), whose faces have no single height subspace. */
+  if (*num_cells > 0) {
+    PetscInt num_indices, *indices, field_offsets[17];
 
-      PetscCall(DMPlexGetClosureIndices(dm, section, section, iter_indices[0], PETSC_TRUE, &num_indices, &indices, field_offsets, NULL));
-      *cell_size = (field_offsets[dm_field + 1] - field_offsets[dm_field]) / *num_comp;
-      PetscCall(DMPlexRestoreClosureIndices(dm, section, section, iter_indices[0], PETSC_TRUE, &num_indices, &indices, field_offsets, NULL));
-    } else {
-      *cell_size = 0;
-    }
-  }
+    PetscCall(DMPlexGetClosureIndices(dm, section, section, iter_indices[0], PETSC_TRUE, &num_indices, &indices, field_offsets, NULL));
+   PetscInt numrtr = field_offsets[dm_field + 1] - field_offsets[dm_field];
+   PetscCheck(numrtr % *num_comp == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "cell_size from DMPlexGetClosureIndices in plexceed.c failed");
+   *cell_size = numrtr / *num_comp;
+    PetscCall(DMPlexRestoreClosureIndices(dm, section, section, iter_indices[0], PETSC_TRUE, &num_indices, &indices, field_offsets, NULL));
+  } else *cell_size = 0;
+
   PetscInt restr_size = (*num_cells) * (*cell_size);
   PetscCall(PetscMalloc1(restr_size, &restr_indices));
   PetscInt cell_offset = 0;
