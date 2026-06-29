@@ -68,6 +68,7 @@
 ## PC
 
 - Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering small entries from the prolongator in `PCGAMG`
+- Add `PCMGSetSymmetric()` and `-mg_symmetric` to use the transpose of the down smoother for multigrid up smoothing
 
 ## KSP
 
