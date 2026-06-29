@@ -727,7 +727,7 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems PetscOptionsObject)
   PetscCall(PetscOptionsBool("-pc_mg_distinct_smoothup", "Create separate smoothup KSP and append the prefix _up", "PCMGSetDistinctSmoothUp", PETSC_FALSE, &flg, NULL));
   if (flg) PetscCall(PCMGSetDistinctSmoothUp(pc));
   flg2 = mg->symmetric;
-  PetscCall(PetscOptionsBool("-mg_symmetric", "Use the transpose of the down smoother for up smoothing", "PCMGSetSymmetric", mg->symmetric, &flg2, &flg));
+  PetscCall(PetscOptionsBool("-pc_mg_symmetric", "Use the transpose of the down smoother for up smoothing", "PCMGSetSymmetric", mg->symmetric, &flg2, &flg));
   if (flg) PetscCall(PCMGSetSymmetric(pc, flg2));
   PetscCall(PetscOptionsEnum("-pc_mg_galerkin", "Use Galerkin process to compute coarser operators", "PCMGSetGalerkin", PCMGGalerkinTypes, (PetscEnum)mg->galerkin, (PetscEnum *)&gtype, &flg));
   if (flg) PetscCall(PCMGSetGalerkin(pc, gtype));
@@ -1838,11 +1838,13 @@ PetscErrorCode PCMGSetNumberSmooth(PC pc, PetscInt n)
 PetscErrorCode PCMGSetSymmetric(PC pc, PetscBool symmetric)
 {
   PC_MG *mg = (PC_MG *)pc->data;
+  PetscBool ismg;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveBool(pc, symmetric, 2);
-  mg->symmetric = symmetric;
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCMG, &ismg));
+  if (ismg) mg->symmetric = symmetric;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1987,7 +1989,7 @@ PetscErrorCode PCMGGetCoarseSpaceConstructor(const char name[], PCMGCoarseSpaceC
 .  -pc_mg_type (additive|multiplicative|full|kaskade) - multiplicative is the default
 .  -pc_mg_log                                         - log information about time spent on each level of the solver
 .  -pc_mg_distinct_smoothup                           - configure up (after interpolation) and down (before restriction) smoothers separately (with different options prefixes)
-.  -mg_symmetric                                      - use the transpose of the down smoother for up smoothing
+.  -pc_mg_symmetric                                   - use the transpose of the down smoother for up smoothing
 .  -pc_mg_galerkin (both|pmat|mat|none)               - use the Galerkin process to compute coarser operators, i.e., $A_{coarse} = R A_{fine} R^T$
 .  -pc_mg_multiplicative_cycles ncycles               - number of cycles to use as the preconditioner (defaults to 1)
 .  -pc_mg_dump_matlab                                 - dumps the matrices for each level and the restriction/interpolation matrices
