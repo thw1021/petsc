@@ -460,17 +460,24 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
 static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
 {
   Mat_cuDSS      *lu = (Mat_cuDSS *)F->data;
-  PetscInt        n, i;
+  PetscInt        i, nn, mm;
   const PetscInt *idx;
 
   PetscFunctionBegin;
-  PetscCall(ISGetLocalSize(perm, &n));
-  PetscCall(ISGetIndices(perm, &idx));
   /* (Re-)allocate host buffer (cudssDataSet takes a host pointer) */
   PetscCall(PetscFree(lu->h_user_perm));
-  PetscCall(PetscMalloc1(n, &lu->h_user_perm));
-  for (i = 0; i < n; i++) lu->h_user_perm[i] = idx[i];
-  PetscCall(ISRestoreIndices(perm, &idx));
+  PetscCall(MatGetLocalSize(F, &mm, &nn));
+  PetscCall(PetscMalloc1(mm, &lu->h_user_perm));
+  if (perm == NULL) { /* No user permutation, use the identity permutation, cuDSS will permute otherwise (should change) */
+    for (i = 0; i < mm; i++) lu->h_user_perm[i] = i;
+  } else {
+    PetscInt n;
+    PetscCall(ISGetLocalSize(perm, &n));
+    PetscCheck(n == mm && n == nn, PETSC_COMM_SELF, PETSC_ERR_ARG_DIM, "Incompatible matrix and permutation sizes");
+    PetscCall(ISGetIndices(perm, &idx));
+    for (i = 0; i < n; i++) lu->h_user_perm[i] = idx[i];
+    PetscCall(ISRestoreIndices(perm, &idx));
+  }
   lu->userPermSet = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
