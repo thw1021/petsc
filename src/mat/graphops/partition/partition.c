@@ -253,7 +253,7 @@ PetscErrorCode MatMeshToCellGraphRegister(const char sname[], PetscErrorCode (*f
 @*/
 PetscErrorCode MatMeshToCellGraph(Mat mesh, PetscInt ncommonnodes, Mat *dual)
 {
-  char type[256];
+  char      type[256];
   PetscBool found;
   PetscErrorCode (*fn)(Mat, PetscInt, Mat *);
   MatMeshToCellGraphType def;
