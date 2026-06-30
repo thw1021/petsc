@@ -42,11 +42,13 @@ class Configure(config.base.Configure):
       except Exception as e:
         self.logPrint('Error trying to test write permissions on directory '+str(e))
         self.installSudo = 'sudo '
+      if not 'package-prefix-hash' in self.argDB:
+        self.addMakeMacro('PREFIXDIR',self.dir)
     else:
       self.dir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
       self.petscDir = self.petscdir.dir
       self.petscArch = self.arch.arch
-    self.addMakeMacro('PREFIXDIR',self.dir)
+      self.addMakeMacro('PREFIXDIR',self.dir)
     self.confDir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
 
   def configureInstallDir(self):
