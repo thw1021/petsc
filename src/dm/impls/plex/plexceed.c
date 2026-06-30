@@ -118,6 +118,14 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     PetscCall(DMPlexRestoreClosureIndices(dm, section, section, iter_indices[0], PETSC_TRUE, &num_indices, &indices, field_offsets, NULL));
   } else *cell_size = 0;
 
+  /* cell_size is derived from a local sample point, so a rank that owns no
+     iterated points (e.g. a boundary face set absent on this rank after
+     parallel distribution) cannot determine it locally -- recover the
+     rank-uniform value from the ranks that do.  Each call iterates a single
+     mono-topology stratum, so the nonzero cell_size agrees across ranks.
+     NOTE: this makes the routine collective on the communicator of dm. */
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, cell_size, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
+
   PetscInt restr_size = (*num_cells) * (*cell_size);
   PetscCall(PetscMalloc1(restr_size, &restr_indices));
   PetscInt cell_offset = 0;
