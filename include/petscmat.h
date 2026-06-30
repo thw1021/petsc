@@ -1986,7 +1986,12 @@ PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalGetCoarseparts(MatPartiti
 PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalSetNcoarseparts(MatPartitioning, PetscInt);
 PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalSetNfineparts(MatPartitioning, PetscInt);
 
+typedef const char *MatMeshToCellGraphType;
+#define MATMESHTOCELLGRAPHMETIS    "metis"
+#define MATMESHTOCELLGRAPHPARMETIS "parmetis"
+
 PETSC_EXTERN PetscErrorCode MatMeshToCellGraph(Mat, PetscInt, Mat *);
+PETSC_EXTERN PetscErrorCode MatMeshToCellGraphRegister(const char[], PetscErrorCode (*)(Mat, PetscInt, Mat *));
 
 /*E
    MatOperation - Identifies one of the operations stored in a `Mat`'s function table, for example `MATOP_MULT` or `MATOP_LUFACTOR`
