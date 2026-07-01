@@ -26,7 +26,7 @@ int main(int argc, char **args)
   Mat           Amat;
   PetscInt      m, nn, M, Istart, Iend, i, j, k, ii, jj, kk, ic, ne = 4, id;
   PetscReal     x, y, z, h, *coords, soft_alpha = 1.e-3;
-  PetscBool     two_solves = PETSC_FALSE, test_nonzero_cols = PETSC_FALSE, use_nearnullspace = PETSC_FALSE, test_late_bs = PETSC_FALSE, test_rap_bs = PETSC_FALSE;
+  PetscBool     two_solves = PETSC_FALSE, test_nonzero_cols = PETSC_FALSE, use_nearnullspace = PETSC_FALSE, test_late_bs = PETSC_FALSE, test_rap_bs = PETSC_FALSE, test_cudss_no_reorder = PETSC_FALSE;
   Vec           xx, bb;
   KSP           ksp;
   MPI_Comm      comm;
@@ -53,6 +53,7 @@ int main(int argc, char **args)
     PetscCall(PetscOptionsBool("-use_mat_nearnullspace", "MatNearNullSpace API test", "", use_nearnullspace, &use_nearnullspace, NULL));
     PetscCall(PetscOptionsBool("-test_late_bs", "", "", test_late_bs, &test_late_bs, NULL));
     PetscCall(PetscOptionsBool("-test_rap_bs", "", "", test_rap_bs, &test_rap_bs, NULL));
+    PetscCall(PetscOptionsBool("-test_cudss_no_reorder", "Disable cuDSS's automatic reordering via MatCUDSSSetUserPermutation() with a NULL IS", "", test_cudss_no_reorder, &test_cudss_no_reorder, NULL));
   }
   PetscOptionsEnd();
 
@@ -312,6 +313,21 @@ int main(int argc, char **args)
     PetscCall(PCGAMGMISkSetMinDegreeOrdering(pc, PETSC_TRUE));
     PetscCall(PCGAMGSetAggressiveSquareGraph(pc, PETSC_FALSE));
     PetscCall(PCGAMGSetInjectionIndex(pc, 2, idx)); // code coverage, same as command line
+  }
+
+  /* Disable cuDSS's automatic reordering by installing the identity permutation. Must run before the symbolic factorization in KSPSetUp() */
+  if (test_cudss_no_reorder) {
+#if defined(PETSC_HAVE_CUDSS)
+    PC  pc;
+    Mat F;
+
+    PetscCall(KSPGetPC(ksp, &pc));
+    PetscCall(PCFactorSetUpMatSolverType(pc));
+    PetscCall(PCFactorGetMatrix(pc, &F));
+    PetscCall(MatCUDSSSetUserPermutation(F, NULL)); /* a NULL IS installs the identity, disabling cuDSS's reordering */
+#else
+    SETERRQ(comm, PETSC_ERR_SUP, "-test_cudss_no_reorder requires PETSc built with cuDSS");
+#endif
   }
 
   PetscCall(MaybeLogStagePush(stage[0]));
@@ -586,5 +602,18 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
        requires: hip
        suffix: rap_bs_hip
        args: -mat_type aijhipsparse -rap_mg_coarse_pc_type jacobi -rap_mg_levels_pc_type jacobi -rap_mg_levels_ksp_type richardson -rap_mg_levels_pc_jacobi_type rowl1 -rap_mg_levels_pc_jacobi_rowl1_scale .5
+
+   testset:
+     requires: cuda cudss !complex
+     args: -mat_type seqaijcusparse -ne 16 -pc_type lu -pc_factor_mat_solver_type cudss -ksp_view -ksp_converged_reason
+     output_file: output/ex56_cudss.out
+     filter: sed -e "s/User permutation: yes/User permutation: no/"
+
+     test:
+       suffix: cudss
+
+     test:
+       suffix: cudss_no_reorder
+       args: -test_cudss_no_reorder
 
 TEST*/
