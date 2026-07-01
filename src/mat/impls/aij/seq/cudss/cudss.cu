@@ -350,21 +350,38 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
   const PetscScalar *barray;
   PetscScalar       *xarray;
   PetscBool          bcuda, xcuda;
+  Vec                bcu = NULL, xcu = NULL;
   cudaStream_t       stream;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompareAny((PetscObject)b, &bcuda, VECSEQCUDA, VECMPICUDA, VECCUDA, ""));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)x, &xcuda, VECSEQCUDA, VECMPICUDA, VECCUDA, ""));
-  PetscCheck(bcuda && xcuda, PETSC_COMM_SELF, PETSC_ERR_SUP, "MATSOLVERCUDSS MatSolve() requires CUDA vectors (VECCUDA/VECSEQCUDA) for both the right-hand side and the solution; create them with VecSetType(v, VECCUDA)");
-  PetscCall(VecCUDAGetArrayRead(b, &barray));
-  PetscCall(VecCUDAGetArrayWrite(x, &xarray));
+  if (!bcuda) {
+    PetscCall(PetscInfo(F, "Converting b from host to VECCUDA; consider using VECCUDA for better performance\n"));
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)b), &bcu));
+    PetscCall(VecSetSizes(bcu, b->map->n, b->map->N));
+    PetscCall(VecSetType(bcu, VECCUDA));
+    PetscCall(VecCopy(b, bcu));
+  } else bcu = b;
+  if (!xcuda) {
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)x), &xcu));
+    PetscCall(VecSetSizes(xcu, x->map->n, x->map->N));
+    PetscCall(VecSetType(xcu, VECCUDA));
+  } else xcu = x;
+  PetscCall(VecCUDAGetArrayRead(bcu, &barray));
+  PetscCall(VecCUDAGetArrayWrite(xcu, &xarray));
   PetscCallCUDSS(cudssMatrixSetValues(lu->cudss_b, (void *)barray));
   PetscCallCUDSS(cudssMatrixSetValues(lu->cudss_x, xarray));
   PetscCall(PetscGetCurrentCUDAStream(&stream));
   PetscCallCUDSS(cudssSetStream(lu->handle, stream));
   PetscCallCUDSS(cudssExecute(lu->handle, CUDSS_PHASE_SOLVE, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b));
-  PetscCall(VecCUDARestoreArrayRead(b, &barray));
-  PetscCall(VecCUDARestoreArrayWrite(x, &xarray));
+  PetscCall(VecCUDARestoreArrayRead(bcu, &barray));
+  PetscCall(VecCUDARestoreArrayWrite(xcu, &xarray));
+  if (!bcuda) PetscCall(VecDestroy(&bcu));
+  if (!xcuda) {
+    PetscCall(VecCopy(xcu, x));
+    PetscCall(VecDestroy(&xcu));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -540,10 +557,10 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
     passing a non-NULL `IS` to `MatLUFactorSymbolic()` or `MatCholeskyFactorSymbolic()`.
     Select the automatic reordering algorithm via `-mat_cudss_reorder_alg`.
 
-    `MatSolve()` requires CUDA-aware vectors (`VECCUDA` / `VECSEQCUDA`). Using plain host
-    `VECSEQ` vectors with this solver will result in an error. When the input matrix is
-    `MATSEQAIJ`, ensure that the right-hand-side and solution vectors are of type
-    `VECCUDA` (e.g., created with `VecSetType(v, VECCUDA)`).
+    `MatSolve()` and `MatMatSolve()` operate on the GPU. Host right-hand-side and solution
+    objects (`VECSEQ` vectors, `MATSEQDENSE` matrices) are accepted and transparently copied
+    to and from the device, but this incurs extra copies; for best performance supply
+    `VECCUDA` vectors (e.g., created with `VecSetType(v, VECCUDA)`) and `MATSEQDENSECUDA` matrices.
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`, `MatCUDSSSetUserPermutation()`
 M*/
