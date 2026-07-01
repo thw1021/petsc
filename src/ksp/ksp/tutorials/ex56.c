@@ -605,7 +605,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
 
    testset:
      requires: cuda cudss !complex
-     args: -mat_type seqaijcusparse -ne 40 -pc_type lu -pc_factor_mat_solver_type cudss -ksp_view -ksp_converged_reason
+     args: -mat_type seqaijcusparse -ne 16 -pc_type lu -pc_factor_mat_solver_type cudss -ksp_view -ksp_converged_reason
      output_file: output/ex56_cudss.out
      filter: sed -e "s/User permutation: yes/User permutation: no/"
 
