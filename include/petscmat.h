@@ -180,6 +180,7 @@ typedef const char *MatSolverType;
 #define MATSOLVERKOKKOS       "kokkos"
 #define MATSOLVERSPQR         "spqr"
 #define MATSOLVERHTOOL        "htool"
+#define MATSOLVERCUDSS        "cudss"
 
 /*E
     MatFactorType - indicates what type of factorization is requested
@@ -2513,6 +2514,10 @@ PETSC_EXTERN PetscErrorCode MatMumpsSetBlk(Mat, PetscInt, const PetscInt[], cons
 
 PETSC_EXTERN PetscErrorCode MatMumpsSetOocTmpDir(Mat, const char *);
 PETSC_EXTERN PetscErrorCode MatMumpsGetOocTmpDir(Mat, const char *[]);
+
+#if defined(PETSC_HAVE_CUDSS)
+PETSC_EXTERN PetscErrorCode MatCUDSSSetUserPermutation(Mat, IS);
+#endif
 
 #ifdef PETSC_HAVE_MKL_PARDISO
 PETSC_EXTERN PetscErrorCode MatMkl_PardisoSetCntl(Mat, PetscInt, PetscInt);
