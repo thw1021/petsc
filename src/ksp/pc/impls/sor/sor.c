@@ -37,13 +37,23 @@ static PetscErrorCode PCApply_SOR(PC pc, Vec x, Vec y)
 
 static PetscErrorCode PCApplyTranspose_SOR(PC pc, Vec x, Vec y)
 {
-  PC_SOR   *jac  = (PC_SOR *)pc->data;
-  PetscInt  flag = jac->sym | SOR_ZERO_INITIAL_GUESS;
-  PetscBool set, sym;
+  PC_SOR    *jac = (PC_SOR *)pc->data;
+  MatSORType tsym;
+  PetscInt   flag;
 
   PetscFunctionBegin;
-  PetscCall(MatIsSymmetricKnown(pc->pmat, &set, &sym));
-  PetscCheck(set && sym && (jac->sym == SOR_SYMMETRIC_SWEEP || jac->sym == SOR_LOCAL_SYMMETRIC_SWEEP), PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Can only apply transpose of SOR if matrix is symmetric and sweep is symmetric");
+  if (jac->sym == SOR_FORWARD_SWEEP) tsym = SOR_BACKWARD_SWEEP;
+  else if (jac->sym == SOR_BACKWARD_SWEEP) tsym = SOR_FORWARD_SWEEP;
+  else if (jac->sym == SOR_LOCAL_FORWARD_SWEEP) tsym = SOR_LOCAL_BACKWARD_SWEEP;
+  else if (jac->sym == SOR_LOCAL_BACKWARD_SWEEP) tsym = SOR_LOCAL_FORWARD_SWEEP;
+  else {
+    PetscBool set, sym;
+
+    PetscCall(MatIsSymmetricKnown(pc->pmat, &set, &sym));
+    PetscCheck(set && sym && (jac->sym == SOR_SYMMETRIC_SWEEP || jac->sym == SOR_LOCAL_SYMMETRIC_SWEEP), PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Can only apply transpose of SOR if matrix is symmetric and sweep is symmetric");
+    tsym = jac->sym;
+  }
+  flag = tsym | SOR_ZERO_INITIAL_GUESS;
   PetscCall(MatSOR(pc->pmat, x, jac->omega, (MatSORType)flag, jac->fshift, jac->its, jac->lits, y));
   PetscCall(MatFactorGetError(pc->pmat, (MatFactorError *)&pc->failedreason));
   PetscFunctionReturn(PETSC_SUCCESS);

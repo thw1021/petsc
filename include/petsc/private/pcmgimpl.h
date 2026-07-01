@@ -56,6 +56,7 @@ typedef struct {
   PetscInt         maxlevels;              /* total number of levels allocated */
   PCMGGalerkinType galerkin;               /* use Galerkin process to compute coarser matrices */
   PetscBool        usedmfornumberoflevels; /* sets the number of levels by getting this information out of the DM */
+  PetscBool        symmetric;              /* Use the transpose of the down smoother for up smoothing */
 
   PetscBool           adaptInterpolation; /* flag to adapt the interpolator based upon the coarseSpace */
   PCMGCoarseSpaceType coarseSpaceType;    /* Type of coarse space: polynomials, harmonics, eigenvectors, ... */
