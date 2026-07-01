@@ -420,48 +420,48 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
 . tao - the `Tao` solver context
 
   Options Database Keys:
-+ -tao_type <type>                                 - The algorithm that Tao uses (lmvm, nls, etc.)
-. -tao_gatol <gatol>                               - absolute error tolerance for ||gradient||
-. -tao_grtol <grtol>                               - relative error tolerance for ||gradient||
-. -tao_gttol <gttol>                               - reduction of ||gradient|| relative to initial gradient
-. -tao_max_it <max>                                - sets maximum number of iterations
-. -tao_max_funcs <max>                             - sets maximum number of function evaluations
-. -tao_fmin <fmin>                                 - stop if function value reaches fmin
-. -tao_steptol <tol>                               - stop if trust region radius less than <tol>
-. -tao_trust0 <t>                                  - initial trust region radius
-. -tao_view_solution                               - view the solution at the end of the optimization process
-. -tao_monitor                                     - prints function value and residual norm at each iteration
-. -tao_monitor_interval <interval>                 - run the default monitor every `interval` iterations, and the last iteration
-. -tao_monitor_short                               - same as `-tao_monitor`, but truncates very small values
-. -tao_monitor_short_interval <interval>           - run the default short monitor every `interval` iterations, and the last iteration
-. -tao_monitor_constraint_norm                     - prints objective value, gradient, and constraint norm at each iteration
-. -tao_monitor_constraint_norm_interval <interval> - run the constraint norm monitor every `interval` iterations, and the last iteration
-. -tao_monitor_globalization                       - prints information about the globalization at each iteration
-. -tao_monitor_globalization_interval <interval>   - run the globalization norm monitor every `interval` iterations, and the last iteration
-. -tao_monitor_solution                            - prints solution vector at each iteration
-. -tao_monitor_solution_interval <interval>        - run the solution monitor every `interval` iterations, and the last iteration
-. -tao_monitor_ls_residual                         - prints least-squares residual vector at each iteration
-. -tao_monitor_ls_residual_interval <interval>     - run the least-squares residual monitor every `interval` iterations, and the last iteration
-. -tao_monitor_step                                - prints step vector at each iteration
-. -tao_monitor_step_interval <interval>            - run the step monitor every `interval` iterations, and the last iteration
-. -tao_monitor_gradient                            - prints gradient vector at each iteration
-. -tao_monitor_gradient_interval <interval>        - run the gradient monitor every `interval` iterations, and the last iteration
-. -tao_monitor_solution_draw                       - graphically view solution vector at each iteration
-. -tao_monitor_solution_draw_interval <interval>   - run the solution draw monitor every `interval` iterations, and the last iteration
-. -tao_monitor_step_draw                           - graphically view step vector at each iteration
-. -tao_monitor_step_draw_interval <interval>       -  run the step draw monitor every `interval` iterations, and the last iteration
-. -tao_monitor_gradient_draw                       - graphically view gradient at each iteration
-. -tao_monitor_gradient_draw_interval <interval>   -  run the gradient draw monitor every `interval` iterations, and the last iteration
-. -tao_monitor_cancel                              - cancels all monitors (except those set with command line)
-. -tao_fd_gradient                                 - use gradient computed with finite differences
-. -tao_fd_hessian                                  - use hessian computed with finite differences
-. -tao_mf_hessian                                  - use matrix-free Hessian computed with finite differences
-. -tao_recycle_history                             - enable recycling/re-using information from the previous `TaoSolve()` call for some algorithms
-. -tao_subset_type <type, default=subvec>          - the method to use for subsetting in active-set methods, one of `subvec`, `mask`, or `matrixfree`
-. -tao_ksp_ew                                      - use Eisentat-Walker linear system convergence test
-. -tao_view                                        - prints information about the Tao after solving
-. -tao_converged_reason                            - prints the reason Tao stopped iterating
-- -tao_add_terms                                   - takes a comma-separated list of up to 16 options prefixes, a `TaoTerm` will be created for each and added to the objective function
++ -tao_type <type>                                                - The algorithm that Tao uses (lmvm, nls, etc.)
+. -tao_gatol <gatol>                                              - absolute error tolerance for ||gradient||
+. -tao_grtol <grtol>                                              - relative error tolerance for ||gradient||
+. -tao_gttol <gttol>                                              - reduction of ||gradient|| relative to initial gradient
+. -tao_max_it <max>                                               - sets maximum number of iterations
+. -tao_max_funcs <max>                                            - sets maximum number of function evaluations
+. -tao_fmin <fmin>                                                - stop if function value reaches fmin
+. -tao_steptol <tol>                                              - stop if trust region radius less than <tol>
+. -tao_trust0 <t>                                                 - initial trust region radius
+. -tao_view_solution                                              - view the solution at the end of the optimization process
+. -tao_monitor                                                    - prints function value and residual norm at each iteration
+. -tao_monitor_interval <interval>                                - run the default monitor every `interval` iterations, and the last iteration
+. -tao_monitor_short                                              - same as `-tao_monitor`, but truncates very small values
+. -tao_monitor_short_interval <interval>                          - run the default short monitor every `interval` iterations, and the last iteration
+. -tao_monitor_constraint_norm [ascii][:filename]                 - prints objective value, gradient, and constraint norm at each iteration
+. -tao_monitor_constraint_norm_interval <interval>                - run the constraint norm monitor every `interval` iterations, and the last iteration
+. -tao_monitor_globalization                                      - prints information about the globalization at each iteration
+. -tao_monitor_globalization_interval <interval>                  - run the globalization norm monitor every `interval` iterations, and the last iteration
+. -tao_monitor_solution [viewertype][:filename][:viewerformat]    - view solution vector at each iteration
+. -tao_monitor_solution_interval <interval>                       - run the solution monitor every `interval` iterations, and the last iteration
+. -tao_monitor_ls_residual [viewertype][:filename][:viewerformat] - view least-squares residual vector at each iteration
+. -tao_monitor_ls_residual_interval <interval>                    - run the least-squares residual monitor every `interval` iterations, and the last iteration
+. -tao_monitor_step [viewertype][:filename][:viewerformat]        - view step vector at each iteration
+. -tao_monitor_step_interval <interval>                           - run the step monitor every `interval` iterations, and the last iteration
+. -tao_monitor_gradient [viewertype][:filename][:viewerformat]    - view gradient vector at each iteration
+. -tao_monitor_gradient_interval <interval>                       - run the gradient monitor every `interval` iterations, and the last iteration
+. -tao_monitor_solution_draw                                      - graphically view solution vector at each iteration
+. -tao_monitor_solution_draw_interval <interval>                  - run the solution draw monitor every `interval` iterations, and the last iteration
+. -tao_monitor_step_draw                                          - graphically view step vector at each iteration
+. -tao_monitor_step_draw_interval <interval>                      - run the step draw monitor every `interval` iterations, and the last iteration
+. -tao_monitor_gradient_draw                                      - graphically view gradient at each iteration
+. -tao_monitor_gradient_draw_interval <interval>                  - run the gradient draw monitor every `interval` iterations, and the last iteration
+. -tao_monitor_cancel                                             - cancels all monitors (except those set with command line)
+. -tao_fd_gradient                                                - use gradient computed with finite differences
+. -tao_fd_hessian                                                 - use hessian computed with finite differences
+. -tao_mf_hessian                                                 - use matrix-free Hessian computed with finite differences
+. -tao_recycle_history                                            - enable recycling/re-using information from the previous `TaoSolve()` call for some algorithms
+. -tao_subset_type <type, default=subvec>                         - the method to use for subsetting in active-set methods, one of `subvec`, `mask`, or `matrixfree`
+. -tao_ksp_ew                                                     - use Eisentat-Walker linear system convergence test
+. -tao_view                                                       - prints information about the Tao after solving
+. -tao_converged_reason                                           - prints the reason Tao stopped iterating
+- -tao_add_terms                                                  - takes a comma-separated list of up to 16 options prefixes, a `TaoTerm` will be created for each and added to the objective function
 
   Level: beginner
 
@@ -1728,7 +1728,7 @@ PetscErrorCode TaoMonitorCancel(Tao tao)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor                     - monitor function and residual norms at each iteration
++ -tao_monitor [ascii][:filename]  - monitor function and residual norms at each iteration, only ASCII viewers supported
 - -tao_monitor_interval <interval> - only monitor function and residual norms every `interval` iterations, and the last iteration
 
   Level: advanced
@@ -1782,7 +1782,7 @@ PetscErrorCode TaoMonitorDefault(Tao tao, PetscViewerAndFormat *vf)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor_globalization                     - monitor globalization information
++ -tao_monitor_globalization [ascii][:filename]  - monitor globalization information at each iteration, only ASCII viewers are supported
 - -tao_monitor_globalization_interval <interval> - only monitor globalization information every `interval` iterations, and the last iteration
 
   Level: advanced
@@ -1837,7 +1837,7 @@ PetscErrorCode TaoMonitorGlobalization(Tao tao, PetscViewerAndFormat *vf)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor_short                     - monitor function and residual norms at each iteration, with fewer digits of the residual
++ -tao_monitor_short [ascii][:filename]  - monitor function and residual norms at each iteration, with fewer digits of the residual, only ASCII viewers are supported
 - -tao_monitor_short_interval <interval> - only monitor function and residual norms every `interval` iterations, and the last iteration
 
   Level: advanced
@@ -1896,7 +1896,7 @@ PetscErrorCode TaoMonitorDefaultShort(Tao tao, PetscViewerAndFormat *vf)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor_constraint_norm                     - monitor the constraints
++ -tao_monitor_constraint_norm [ascii][:filename]  - monitor the constraints at each iteration, only ASCII viewers are supported
 - -tao_monitor_constraint_norm_interval <interval> - only monitor the constraints every `interval` iterations, and the last iteration
 
   Level: advanced
@@ -1938,8 +1938,8 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, PetscViewerAndFormat *vf)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor_solution                     - view the solution
-- -tao_monitor_solution_interval <interval> - only view the solution every `interval` iterations, and the last iteration
++ -tao_monitor_solution [viewertype][:filename][:viewerformat] - view the solution vector at each iteration
+- -tao_monitor_solution_interval <interval>                    - only view the solution every `interval` iterations, and the last iteration
 
   Level: advanced
 
@@ -1966,8 +1966,8 @@ PetscErrorCode TaoMonitorSolution(Tao tao, PetscViewerAndFormat *vf)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor_gradient                     - view the gradient at each iteration
-- -tao_monitor_gradient_interval <interval> - only view the gradient every `interval` iterations, and the last iteration
++ -tao_monitor_gradient [viewertype][:filename][:viewerformat] - view the gradient at each iteration
+- -tao_monitor_gradient_interval <interval>                    - only view the gradient every `interval` iterations, and the last iteration
 
   Level: advanced
 
@@ -1994,8 +1994,8 @@ PetscErrorCode TaoMonitorGradient(Tao tao, PetscViewerAndFormat *vf)
 - vf  - `PetscViewerAndFormat` context
 
   Options Database Key:
-+ -tao_monitor_step                     - view the step vector at each iteration
-- -tao_monitor_step_interval <interval> - only view the step vector every `interval` iterations, and the last iteration
++ -tao_monitor_step [viewertype][:filename][:viewerformat] - view the step vector at each iteration
+- -tao_monitor_step_interval <interval>                    - only view the step vector every `interval` iterations, and the last iteration
 
   Level: advanced
 
