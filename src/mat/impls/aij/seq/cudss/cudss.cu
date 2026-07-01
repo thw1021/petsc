@@ -452,7 +452,8 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
 
   Input Parameters:
 + F    - the factor matrix (obtained from MatGetFactor())
-- perm - an IS of length n containing a 0-based permutation of {0,...,n-1}
+- perm - an IS of length n containing a 0-based permutation of {0,...,n-1}, or NULL to
+         install the identity permutation and thereby disable cuDSS's automatic reordering
 
   The permutation is copied to a host buffer of 32-bit ints and passed to cudssDataSet()
   with CUDSS_DATA_USER_PERM before CUDSS_PHASE_ANALYSIS.
@@ -468,7 +469,7 @@ static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
   PetscCall(PetscFree(lu->h_user_perm));
   PetscCall(MatGetLocalSize(F, &mm, &nn));
   PetscCall(PetscMalloc1(mm, &lu->h_user_perm));
-  if (perm == NULL) { /* No user permutation, use the identity permutation, cuDSS will permute otherwise (should change) */
+  if (perm == NULL) { /* NULL requests the identity permutation, which disables cuDSS's automatic reordering */
     for (i = 0; i < mm; i++) lu->h_user_perm[i] = i;
   } else {
     PetscInt n;
@@ -490,7 +491,7 @@ static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
 
   Input Parameters:
 + F    - the factor matrix obtained from `MatGetFactor()` with solver type `MATSOLVERCUDSS`
-- perm - an `IS` of length n containing a 0-based permutation of {0,...,n-1}
+- perm - an `IS` of length n containing a 0-based permutation of {0,...,n-1}, use NULL to disable automatic permutation in cuDSS
 
   Level: advanced
 
@@ -509,7 +510,7 @@ PetscErrorCode MatCUDSSSetUserPermutation(Mat F, IS perm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
-  PetscValidHeaderSpecific(perm, IS_CLASSID, 2);
+  if (perm) PetscValidHeaderSpecific(perm, IS_CLASSID, 2);
   PetscTryMethod(F, "MatCUDSSSetUserPermutation_C", (Mat, IS), (F, perm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
