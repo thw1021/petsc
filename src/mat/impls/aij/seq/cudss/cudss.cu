@@ -473,7 +473,7 @@ static PetscErrorCode MatCUDSSSetUserPermutation_cuDSS(Mat F, IS perm)
   } else {
     PetscInt n;
     PetscCall(ISGetLocalSize(perm, &n));
-    PetscCheck(n == mm && n == nn, PETSC_COMM_SELF, PETSC_ERR_ARG_DIM, "Incompatible matrix and permutation sizes");
+    PetscCheck(n == mm && n == nn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible matrix and permutation sizes");
     PetscCall(ISGetIndices(perm, &idx));
     for (i = 0; i < n; i++) lu->h_user_perm[i] = idx[i];
     PetscCall(ISRestoreIndices(perm, &idx));
