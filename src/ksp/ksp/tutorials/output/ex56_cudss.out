@@ -16,7 +16,7 @@ PC Object: 1 MPI process
       Factored matrix:
         Mat Object: 1 MPI process
           type: cudss
-          rows=206763, cols=206763
+          rows=14739, cols=14739
           package used to perform factorization: cudss
           total: nonzeros=0, allocated nonzeros=0
             cuDSS run parameters:
@@ -30,7 +30,7 @@ PC Object: 1 MPI process
   linear system matrix, which is also used to construct the preconditioner:
   Mat Object: 1 MPI process
     type: seqaijcusparse
-    rows=206763, cols=206763, bs=3
-    total: nonzeros=15944049, allocated nonzeros=15944049
+    rows=14739, cols=14739, bs=3
+    total: nonzeros=1058841, allocated nonzeros=1058841
     total number of mallocs used during MatSetValues calls=0
       not using I-node routines
