@@ -11,31 +11,35 @@ PETSC_INTERN PetscErrorCode PCPreSolveChangeRHS(PC, PetscBool *);
 */
 PetscFunctionList PCMGCoarseList = NULL;
 
+static PetscErrorCode PCMGKSPSmooth_Private(PC pc, KSP ksp, Vec b, Vec x, Mat B, Mat X, PetscBool transpose, PetscBool matapp)
+{
+  PetscFunctionBegin;
+  if (matapp) {
+    if (transpose) PetscCall(KSPMatSolveTranspose(ksp, B, X));
+    else PetscCall(KSPMatSolve(ksp, B, X));
+    PetscCall(KSPCheckSolve(ksp, pc, NULL));
+  } else {
+    if (transpose) PetscCall(KSPSolveTranspose(ksp, b, x));
+    else PetscCall(KSPSolve(ksp, b, x));
+    PetscCall(KSPCheckSolve(ksp, pc, x));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode PCMGMCycle_Private(PC pc, PC_MG_Levels **mglevelsin, PetscBool transpose, PetscBool matapp, PCRichardsonConvergedReason *reason)
 {
   PC_MG        *mg = (PC_MG *)pc->data;
   PC_MG_Levels *mgc, *mglevels = *mglevelsin;
+  KSP           smooth;
   PetscInt      cycles = (mglevels->level == 1) ? 1 : mglevels->cycles;
+  PetscBool     smoothtranspose;
 
   PetscFunctionBegin;
   if (mglevels->eventsmoothsolve) PetscCall(PetscLogEventBegin(mglevels->eventsmoothsolve, 0, 0, 0, 0));
-  if (!transpose) {
-    if (matapp) {
-      PetscCall(KSPMatSolve(mglevels->smoothd, mglevels->B, mglevels->X)); /* pre-smooth */
-      PetscCall(KSPCheckSolve(mglevels->smoothd, pc, NULL));
-    } else {
-      PetscCall(KSPSolve(mglevels->smoothd, mglevels->b, mglevels->x)); /* pre-smooth */
-      PetscCall(KSPCheckSolve(mglevels->smoothd, pc, mglevels->x));
-    }
-  } else if (mg->symmetric) {
-    PetscCheck(!matapp, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Not supported");
-    PetscCall(KSPSolve(mglevels->smoothd, mglevels->b, mglevels->x)); /* transpose of post-smooth */
-    PetscCall(KSPCheckSolve(mglevels->smoothd, pc, mglevels->x));
-  } else {
-    PetscCheck(!matapp, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Not supported");
-    PetscCall(KSPSolveTranspose(mglevels->smoothu, mglevels->b, mglevels->x)); /* transpose of post-smooth */
-    PetscCall(KSPCheckSolve(mglevels->smoothu, pc, mglevels->x));
-  }
+  PetscCheck(!transpose || !matapp, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Not supported");
+  smooth          = (transpose && !mg->symmetric) ? mglevels->smoothu : mglevels->smoothd;
+  smoothtranspose = (PetscBool)(transpose && !mg->symmetric);
+  PetscCall(PCMGKSPSmooth_Private(pc, smooth, mglevels->b, mglevels->x, mglevels->B, mglevels->X, smoothtranspose, matapp)); /* pre-smooth */
   if (mglevels->eventsmoothsolve) PetscCall(PetscLogEventEnd(mglevels->eventsmoothsolve, 0, 0, 0, 0));
   if (mglevels->level) { /* not the coarsest grid */
     if (mglevels->eventresidual) PetscCall(PetscLogEventBegin(mglevels->eventresidual, 0, 0, 0, 0));
@@ -94,25 +98,9 @@ PetscErrorCode PCMGMCycle_Private(PC pc, PC_MG_Levels **mglevelsin, PetscBool tr
     }
     if (mglevels->eventinterprestrict) PetscCall(PetscLogEventEnd(mglevels->eventinterprestrict, 0, 0, 0, 0));
     if (mglevels->eventsmoothsolve) PetscCall(PetscLogEventBegin(mglevels->eventsmoothsolve, 0, 0, 0, 0));
-    if (!transpose) {
-      if (mg->symmetric && matapp) {
-        PetscCall(KSPMatSolveTranspose(mglevels->smoothd, mglevels->B, mglevels->X)); /* post smooth */
-        PetscCall(KSPCheckSolve(mglevels->smoothd, pc, NULL));
-      } else if (mg->symmetric) {
-        PetscCall(KSPSolveTranspose(mglevels->smoothd, mglevels->b, mglevels->x)); /* post smooth */
-        PetscCall(KSPCheckSolve(mglevels->smoothd, pc, mglevels->x));
-      } else if (matapp) {
-        PetscCall(KSPMatSolve(mglevels->smoothu, mglevels->B, mglevels->X)); /* post smooth */
-        PetscCall(KSPCheckSolve(mglevels->smoothu, pc, NULL));
-      } else {
-        PetscCall(KSPSolve(mglevels->smoothu, mglevels->b, mglevels->x)); /* post smooth */
-        PetscCall(KSPCheckSolve(mglevels->smoothu, pc, mglevels->x));
-      }
-    } else {
-      PetscCheck(!matapp, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Not supported");
-      PetscCall(KSPSolveTranspose(mglevels->smoothd, mglevels->b, mglevels->x)); /* post smooth */
-      PetscCall(KSPCheckSolve(mglevels->smoothd, pc, mglevels->x));
-    }
+    smooth          = (transpose || mg->symmetric) ? mglevels->smoothd : mglevels->smoothu;
+    smoothtranspose = (PetscBool)(transpose || mg->symmetric);
+    PetscCall(PCMGKSPSmooth_Private(pc, smooth, mglevels->b, mglevels->x, mglevels->B, mglevels->X, smoothtranspose, matapp)); /* post-smooth */
     if (mglevels->cr) {
       Mat crA;
 
@@ -538,6 +526,8 @@ PetscErrorCode PCDestroy_MG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetReusePreconditioner_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGGetLevels_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGSetLevels_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGSetSymmetric_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGGetSymmetric_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetInterpolations_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetCoarseOperators_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGSetAdaptInterpolation_C", NULL));
@@ -1816,6 +1806,24 @@ PetscErrorCode PCMGSetNumberSmooth(PC pc, PetscInt n)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCMGSetSymmetric_MG(PC pc, PetscBool symmetric)
+{
+  PC_MG *mg = (PC_MG *)pc->data;
+
+  PetscFunctionBegin;
+  mg->symmetric = symmetric;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCMGGetSymmetric_MG(PC pc, PetscBool *symmetric)
+{
+  PC_MG *mg = (PC_MG *)pc->data;
+
+  PetscFunctionBegin;
+  *symmetric = mg->symmetric;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   PCMGSetSymmetric - Sets `PCMG` to use the transpose of the down smoother as the up smoother.
 
@@ -1826,25 +1834,51 @@ PetscErrorCode PCMGSetNumberSmooth(PC pc, PetscInt n)
 - symmetric - use the transpose of the down smoother for up smoothing
 
   Options Database Key:
-. -mg_symmetric (true|false) - use the transpose of the down smoother for up smoothing
+. -pc_mg_symmetric (true|false) - use the transpose of the down smoother for up smoothing
 
   Level: advanced
 
-  Note:
+  Notes:
   This uses the down smoother for both pre-smoothing and post-smoothing. Post-smoothing calls `KSPSolveTranspose()` on the down smoother.
+  When the restriction and interpolation operators are transposes of each other, this makes the `PCMG` preconditioner symmetric and suitable for
+  symmetric Krylov methods such as `KSPCG`.
 
-.seealso: [](ch_ksp), `PCMG`, `PCMGSetDistinctSmoothUp()`, `KSPSolveTranspose()`
+.seealso: [](ch_ksp), `PCMG`, `PCMGGetSymmetric()`, `PCMGSetDistinctSmoothUp()`, `KSPSolveTranspose()`
 @*/
 PetscErrorCode PCMGSetSymmetric(PC pc, PetscBool symmetric)
 {
-  PC_MG *mg = (PC_MG *)pc->data;
-  PetscBool ismg;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveBool(pc, symmetric, 2);
-  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCMG, &ismg));
-  if (ismg) mg->symmetric = symmetric;
+  PetscTryMethod(pc, "PCMGSetSymmetric_C", (PC, PetscBool), (pc, symmetric));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCMGGetSymmetric - Gets whether `PCMG` uses the transpose of the down smoother as the up smoother.
+
+  Not Collective
+
+  Input Parameter:
+. pc - the multigrid context
+
+  Output Parameter:
+. symmetric - whether to use the transpose of the down smoother for up smoothing
+
+  Level: advanced
+
+  Notes:
+  See `PCMGSetSymmetric()` for details on the symmetric multigrid cycle.
+
+.seealso: [](ch_ksp), `PCMG`, `PCMGSetSymmetric()`, `PCMGSetDistinctSmoothUp()`, `KSPSolveTranspose()`
+@*/
+PetscErrorCode PCMGGetSymmetric(PC pc, PetscBool *symmetric)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(symmetric, 2);
+  *symmetric = PETSC_FALSE;
+  PetscTryMethod(pc, "PCMGGetSymmetric_C", (PC, PetscBool *), (pc, symmetric));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2029,7 +2063,7 @@ PetscErrorCode PCMGGetCoarseSpaceConstructor(const char name[], PCMGCoarseSpaceC
 
 .seealso: [](sec_mg), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCMGType`, `PCEXOTIC`, `PCGAMG`, `PCML`, `PCHYPRE`,
           `PCMGSetLevels()`, `PCMGGetLevels()`, `PCMGSetType()`, `PCMGSetCycleType()`,
-          `PCMGSetDistinctSmoothUp()`, `PCMGSetSymmetric()`, `PCMGGetCoarseSolve()`, `PCMGSetResidual()`, `PCMGSetInterpolation()`,
+          `PCMGSetDistinctSmoothUp()`, `PCMGSetSymmetric()`, `PCMGGetSymmetric()`, `PCMGGetCoarseSolve()`, `PCMGSetResidual()`, `PCMGSetInterpolation()`,
           `PCMGSetRestriction()`, `PCMGGetSmoother()`, `PCMGGetSmootherUp()`, `PCMGGetSmootherDown()`,
           `PCMGSetCycleTypeOnLevel()`, `PCMGSetRhs()`, `PCMGSetX()`, `PCMGSetR()`,
           `PCMGSetAdaptCR()`, `PCMGGetAdaptInterpolation()`, `PCMGSetGalerkin()`, `PCMGGetAdaptCoarseSpaceType()`, `PCMGSetAdaptCoarseSpaceType()`
@@ -2066,6 +2100,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_MG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetReusePreconditioner_C", PCSetReusePreconditioner_MG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGGetLevels_C", PCMGGetLevels_MG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGSetLevels_C", PCMGSetLevels_MG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGSetSymmetric_C", PCMGSetSymmetric_MG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGGetSymmetric_C", PCMGGetSymmetric_MG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetInterpolations_C", PCGetInterpolations_MG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetCoarseOperators_C", PCGetCoarseOperators_MG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCMGSetAdaptInterpolation_C", PCMGSetAdaptInterpolation_MG));

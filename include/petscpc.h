@@ -425,6 +425,7 @@ PETSC_EXTERN PetscErrorCode PCMGGetLevels(PC, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode PCMGSetDistinctSmoothUp(PC);
 PETSC_EXTERN PetscErrorCode PCMGSetSymmetric(PC, PetscBool);
+PETSC_EXTERN PetscErrorCode PCMGGetSymmetric(PC, PetscBool *);
 PETSC_EXTERN PetscErrorCode PCMGSetNumberSmooth(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCMGSetCycleType(PC, PCMGCycleType);
 PETSC_EXTERN PetscErrorCode PCMGSetCycleTypeOnLevel(PC, PetscInt, PCMGCycleType);
