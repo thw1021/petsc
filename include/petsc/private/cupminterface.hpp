@@ -558,12 +558,12 @@ public:
 
   PETSC_NODISCARD PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND static constexpr cupmReal_t *cupmRealPtrCast(PetscReal *s) noexcept { return reinterpret_cast<cupmReal_t *>(s); }
 
-#if !defined(PETSC_PKG_CUDA_VERSION_GE)
+#if !PetscDefined(PKG_CUDA_VERSION_GE)
   #define PETSC_PKG_CUDA_VERSION_GE(...) 0
   #define CUPM_DEFINED_PETSC_PKG_CUDA_VERSION_GE
 #endif
 
-#if !defined(PETSC_PKG_HIP_VERSION_LT)
+#if !PetscDefined(PKG_HIP_VERSION_LT)
   #define PETSC_PKG_HIP_VERSION_LT(...) 0
   #define CUPM_DEFINED_PETSC_PKG_HIP_VERSION_LT
 #endif

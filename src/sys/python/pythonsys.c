@@ -31,7 +31,7 @@ static PetscErrorCode PetscPythonFindLibraryName(const char pythonexe[], const c
   PetscCall(PetscStrncpy(command, pythonexe, sizeof(command)));
   PetscCall(PetscStrlcat(command, " ", sizeof(command)));
   PetscCall(PetscStrlcat(command, attempt, sizeof(command)));
-#if defined(PETSC_HAVE_POPEN)
+#if PetscDefined(HAVE_POPEN)
   PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, command, "r", &fp));
   if (!fgets(pythonlib, (int)pl, fp)) {
     PetscCall(PetscPClose(PETSC_COMM_SELF, fp));
@@ -63,7 +63,7 @@ static PetscErrorCode PetscPythonFindLibrary(const char pythonexe[], char python
   PetscBool found = PETSC_FALSE;
 
   PetscFunctionBegin;
-#if defined(PETSC_PYTHON_LIB)
+#if PetscDefined(PYTHON_LIB)
   PetscCall(PetscStrncpy(pythonlib, PETSC_PYTHON_LIB, pl));
   PetscFunctionReturn(PETSC_SUCCESS);
 #endif
@@ -229,7 +229,7 @@ PetscErrorCode PetscPythonInitialize(const char pyexe[], const char pylib[])
       int zero = 0;
       PetscCall(PetscStrreplace(PETSC_COMM_SELF, "${PETSC_LIB_DIR}", path, sizeof(path)));
       Py_DecRef(PyObject_CallMethod(sys_path, "insert", "is", zero, (char *)path));
-#if defined(PETSC_PETSC4PY_INSTALL_PATH)
+#if PetscDefined(PETSC4PY_INSTALL_PATH)
       {
         char *rpath;
         PetscCall(PetscStrallocpy(PETSC_PETSC4PY_INSTALL_PATH, &rpath));

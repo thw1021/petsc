@@ -223,7 +223,7 @@ PetscErrorCode PetscRandomSetInterval(PetscRandom r, PetscScalar low, PetscScala
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(r, PETSC_RANDOM_CLASSID, 1);
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   PetscCheck(PetscRealPart(low) <= PetscRealPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high");
   PetscCheck(PetscImaginaryPart(low) <= PetscImaginaryPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high");
 #else

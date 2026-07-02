@@ -161,7 +161,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_MSR(Mat F, Mat A, IS pe
     }
   }
 
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[mbs] != 0) {
     PetscReal af = ((PetscReal)iu[mbs]) / ((PetscReal)ai[mbs]);
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
@@ -368,7 +368,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact, Mat A, IS perm, cons
   } else {
     fact->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[mbs] != 0) {
     PetscReal af = fact->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));
@@ -541,7 +541,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact, Mat A, IS pe
   } else {
     fact->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[mbs] != 0) {
     PetscReal af = fact->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));

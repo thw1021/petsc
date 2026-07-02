@@ -63,7 +63,7 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
   PetscCall(DMPlexComputeIntegralFEM(dm, nullvecs[0], intn, ctx));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, intc, ctx));
   PetscCall(VecAXPY(u, -intc[pfield] / intn[pfield], nullvecs[0]));
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
   PetscCall(DMPlexComputeIntegralFEM(dm, u, intc, ctx));
   PetscCheck(PetscAbsScalar(intc[pfield]) <= PETSC_SMALL, comm, PETSC_ERR_ARG_WRONG, "Continuum integral of pressure after correction: %g", (double)PetscRealPart(intc[pfield]));
 #endif

@@ -44,7 +44,7 @@ PetscErrorCode MatILUFactorNumeric_SeqBAIJ_5_inplace(Mat C, Mat A, const MatFact
     nz    = bi[i + 1] - bi[i];
     ajtmp = bj + bi[i];
     for (j = 0; j < nz; j++) {
-#if defined(PETSC_USE_MEMZERO)
+#if PetscDefined(USE_MEMZERO)
       PetscCall(PetscArrayzero(rtmp + 25 * ajtmp[j], 25));
 #else
       x    = rtmp + 25 * ajtmp[j];
@@ -59,7 +59,7 @@ PetscErrorCode MatILUFactorNumeric_SeqBAIJ_5_inplace(Mat C, Mat A, const MatFact
     ajtmpold = aj + ai[idx];
     v        = aa + 25 * ai[idx];
     for (j = 0; j < nz; j++) {
-#if defined(PETSC_USE_MEMCPY)
+#if PetscDefined(USE_MEMCPY)
       PetscCall(PetscArraycpy(rtmp + 25 * ic[ajtmpold[j]], v, 25));
 #else
       x     = rtmp + 25 * ic[ajtmpold[j]];
@@ -247,7 +247,7 @@ PetscErrorCode MatILUFactorNumeric_SeqBAIJ_5_inplace(Mat C, Mat A, const MatFact
     pj = bj + bi[i];
     nz = bi[i + 1] - bi[i];
     for (j = 0; j < nz; j++) {
-#if defined(PETSC_USE_MEMCPY)
+#if PetscDefined(USE_MEMCPY)
       PetscCall(PetscArraycpy(pv, rtmp + 25 * pj[j], 25));
 #else
       x      = rtmp + 25 * pj[j];
@@ -774,7 +774,7 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_5_NaturalOrdering(Mat B, Mat A, const 
 /*
    Version for when blocks are 9 by 9
  */
-#if defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX2__) && defined(__FMA__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(HAVE_IMMINTRIN_H) && defined(__AVX2__) && defined(__FMA__) && PetscDefined(USE_REAL_DOUBLE) && !PetscDefined(USE_COMPLEX) && !PetscDefined(USE_64BIT_INDICES)
   #include <immintrin.h>
 PetscErrorCode MatLUFactorNumeric_SeqBAIJ_9_NaturalOrdering(Mat B, Mat A, const MatFactorInfo *info)
 {
