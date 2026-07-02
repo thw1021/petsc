@@ -269,7 +269,7 @@ static PetscErrorCode PetscParallelSortInt_Samplesort(PetscLayout mapin, PetscLa
 
   /* local sort */
   PetscCall(PetscSortInt(nrecv, buffer));
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
   {
     PetscBool sorted;
 
@@ -343,7 +343,7 @@ PetscErrorCode PetscParallelSortInt(PetscLayout mapin, PetscLayout mapout, Petsc
     keysin = keysincopy;
   }
   PetscCall(PetscParallelSortInt_Samplesort(mapin, mapout, keysin, keysout));
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
   {
     PetscBool sorted;
 

@@ -184,7 +184,7 @@ static PetscErrorCode PetscPartitionerMultistage_CreateStages(MPI_Comm comm, con
         PetscCallMPI(MPI_Comm_dup(comm, &ncomm));
       }
     } else {
-#if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
+#if PetscDefined(HAVE_MPI_PROCESS_SHARED_MEMORY)
       PetscCallMPI(MPI_Comm_split_type(comm, MPI_COMM_TYPE_SHARED, rank, MPI_INFO_NULL, &ncomm));
 #else
       /* if users do not specify the node size and MPI_Comm_split_type is not available, defaults to same comm */
@@ -382,7 +382,7 @@ PetscErrorCode PetscPartitionerMultistageSetStages(PetscPartitioner part, PetscI
     if (l) { /* let MPI complain/hang if the user did not specify the groups properly */
       PetscCallMPI(MPI_Comm_create(comm, lgroup[l], &lcomm));
     } else { /* in debug mode, we check that the initial group must be consistently (collectively) specified on comm */
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
       MPI_Group    group, igroup = lgroup[0];
       PetscMPIInt *ranks, *granks;
       PetscMPIInt  b[2], b2[2], csize, gsize;

@@ -124,7 +124,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ORDER, "Must call PetscViewerFileSetMode() before PetscViewerFileSetName()");
   }
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
   EXO_mode += EX_ALL_INT64_API;
 #endif
   exo->exoid = ex_open_par(name, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version, PetscObjectComm((PetscObject)viewer), mpi_info);
@@ -841,7 +841,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     case FILE_MODE_WRITE:
       /* Create an empty file if one already exists*/
       EXO_mode = EX_CLOBBER;
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
       EXO_mode += EX_ALL_INT64_API;
 #endif
       CPU_word_size = sizeof(PetscReal);
@@ -1262,7 +1262,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     reopen the file in parallel
   */
   EXO_mode = EX_WRITE;
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
   EXO_mode += EX_ALL_INT64_API;
 #endif
   CPU_word_size = sizeof(PetscReal);
