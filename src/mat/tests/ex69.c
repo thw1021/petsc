@@ -5,7 +5,7 @@ static char help[] = "Tests MatCreateDenseCUDA(), MatDenseCUDAPlaceArray(), MatD
 #include <petscmat.h>
 #include <petscpkg_version.h>
 
-#if !defined(PETSC_PKG_CUDA_VERSION_GE)
+#if defined(PETSC_PKG_CUDA_VERSION_GE)
   #define PETSC_PKG_CUDA_VERSION_GE(MAJ, MIN, PAT) 0
 #endif
 #define PetscConcat3(a, b, c) PetscConcat(PetscConcat(a, b), c)

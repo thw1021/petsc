@@ -33,25 +33,25 @@ int main(int argc, char **args)
   if (!data_provided) { /* get matrices from PETSc distribution */
     PetscCall(PetscStrncpy(file, "${PETSC_DIR}/share/petsc/datafiles/matrices/", sizeof(file)));
     if (hpd) {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       PetscCall(PetscStrlcat(file, "hpd-complex-", sizeof(file)));
 #else
       PetscCall(PetscStrlcat(file, "spd-real-", sizeof(file)));
 #endif
       ftyp = MAT_FACTOR_CHOLESKY;
     } else {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       PetscCall(PetscStrlcat(file, "nh-complex-", sizeof(file)));
 #else
       PetscCall(PetscStrlcat(file, "ns-real-", sizeof(file)));
 #endif
     }
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
     PetscCall(PetscStrlcat(file, "int64-", sizeof(file)));
 #else
     PetscCall(PetscStrlcat(file, "int32-", sizeof(file)));
 #endif
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
     PetscCall(PetscStrlcat(file, "float32", sizeof(file)));
 #else
     PetscCall(PetscStrlcat(file, "float64", sizeof(file)));
@@ -59,7 +59,7 @@ int main(int argc, char **args)
   }
 
   /* Load matrix A */
-#if defined(PETSC_USE_REAL___FLOAT128)
+#if PetscDefined(USE_REAL___FLOAT128)
   PetscCall(PetscOptionsInsertString(NULL, "-binary_read_double"));
 #endif
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, file, FILE_MODE_READ, &fd));
