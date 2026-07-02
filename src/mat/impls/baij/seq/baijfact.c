@@ -1221,7 +1221,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqBAIJ(Mat fact, Mat A, IS perm, const MatF
   } else {
     B->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[am] != 0) {
     PetscReal af = B->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));
@@ -1401,7 +1401,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqBAIJ(Mat fact, Mat A, IS perm, const
   } else {
     B->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[mbs] != 0.) {
     PetscReal af = B->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));

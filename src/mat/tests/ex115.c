@@ -17,7 +17,7 @@ int main(int argc, char **args)
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-f", file, sizeof(file), &flg));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   testptap       = PETSC_FALSE;
   testmatmatmult = PETSC_FALSE;
   PetscCall(PetscOptionsInsertString(NULL, "-options_left 0"));
@@ -109,7 +109,7 @@ int main(int argc, char **args)
     PetscCall(MatConvert(B, MATHYPRE, MAT_INPLACE_MATRIX, &B));
 #endif
 
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     /* make the matrix imaginary */
     PetscCall(MatScale(A, PETSC_i));
     PetscCall(MatScale(B, PETSC_i));
