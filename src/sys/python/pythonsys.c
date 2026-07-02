@@ -229,7 +229,7 @@ PetscErrorCode PetscPythonInitialize(const char pyexe[], const char pylib[])
       int zero = 0;
       PetscCall(PetscStrreplace(PETSC_COMM_SELF, "${PETSC_LIB_DIR}", path, sizeof(path)));
       Py_DecRef(PyObject_CallMethod(sys_path, "insert", "is", zero, (char *)path));
-#if PetscDefined(PETSC4PY_INSTALL_PATH)
+#if defined(PETSC_PETSC4PY_INSTALL_PATH)
       {
         char *rpath;
         PetscCall(PetscStrallocpy(PETSC_PETSC4PY_INSTALL_PATH, &rpath));

@@ -61,7 +61,7 @@ The flow can be driven with the lid or with buoyancy or both:\n\
      petscviewer.h - viewers               petscpc.h  - preconditioners
      petscksp.h   - linear solvers
 */
-#if PetscDefined(APPLE_FRAMEWORK)
+#if defined(PETSC_APPLE_FRAMEWORK)
   #import <PETSc/petscsnes.h>
   #import <PETSc/petscdmda.h>
 #else

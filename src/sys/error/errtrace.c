@@ -191,7 +191,7 @@ PetscErrorCode PetscTraceBackErrorHandler(MPI_Comm comm, int line, const char *f
       }
       if (python) (void)PetscPythonPrintError();
       else if (mess) (void)(*PetscErrorPrintf)("%s\n", mess);
-#if PetscDefined(PKG_CUDA_MIN_ARCH)
+#if defined(PETSC_PKG_CUDA_MIN_ARCH)
       int confCudaArch = PETSC_PKG_CUDA_MIN_ARCH;    // if PETSc was configured with numbered CUDA arches, get the min arch.
       int runCudaArch  = PetscDeviceCUPMRuntimeArch; // 0 indicates the code has never initialized a cuda device.
       if (runCudaArch && confCudaArch > runCudaArch) {

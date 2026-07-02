@@ -55,7 +55,7 @@ There are two compile-time options:
 
 */
 
-#if PetscDefined(APPLE_FRAMEWORK)
+#if defined(PETSC_APPLE_FRAMEWORK)
   #import <PETSc/petscsnes.h>
   #import <PETSc/petsc/private/dmdaimpl.h> /* There is not yet a public interface to manipulate dm->ops */
 #else

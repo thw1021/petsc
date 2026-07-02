@@ -68,7 +68,7 @@ namespace impl
   #define PETSC_CUPMBLAS_FP_RETURN_TYPE_L
 #endif // USE_COMPLEX
 
-#if !PetscDefined(CUPMBLAS_FP_TYPE_U) && !PetscDefined(USE_REAL___FLOAT128)
+#if !defined(PETSC_CUPMBLAS_FP_TYPE_U) && !PetscDefined(USE_REAL___FLOAT128)
   #error "Unsupported floating-point type for CUDA/HIP BLAS"
 #endif
 
