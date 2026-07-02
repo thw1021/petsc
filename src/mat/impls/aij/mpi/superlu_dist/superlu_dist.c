@@ -88,6 +88,9 @@ EXTERN_C_BEGIN
 #endif
 EXTERN_C_END
 PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
+#if defined(HAVE_PARMETIS) // to avoid compilation failure with PetscDefined(HAVE_PARMETIS)
+  #undef HAVE_PARMETIS
+#endif
 
 typedef struct {
   int_t      nprow, npcol, *row, *col;

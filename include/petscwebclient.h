@@ -5,7 +5,8 @@
 
 /* MANSEC = Sys */
 
-/*  complex number I conflicts with SSL include files */
+/* complex number I conflicts with SSL include files */
+#include <petscmacros.h>
 #if !PetscDefined(SKIP_COMPLEX)
   #define PETSC_SKIP_COMPLEX
 #endif

@@ -1,4 +1,4 @@
-#include <petscconf.h>
+#include <petscmacros.h>
 
 #if PetscDefined(HAVE_KOKKOS_KERNELS)
   #include <Kokkos_Core.hpp>
