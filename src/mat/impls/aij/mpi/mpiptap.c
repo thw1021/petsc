@@ -239,7 +239,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A, Mat P, PetscReal fi
   PetscHMapI               ta;
   MatType                  mtype;
   const char              *prefix;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   PetscReal apfill;
 #endif
 
@@ -348,7 +348,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A, Mat P, PetscReal fi
   PetscCall(MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, am, pN, api, apj, apv, &ptap->AP_loc));
   PetscCall(MatSeqAIJCompactOutExtraColumns_SeqAIJ(ptap->AP_loc, &ptap->ltog));
 
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ao) {
     apfill = (PetscReal)api[am] / (ad->i[am] + ao->i[am] + p_loc->i[pm] + 1);
   } else {
@@ -1526,7 +1526,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A, Mat P, PetscReal fill, Mat C
   PetscHMapI               ta;
   MatType                  mtype;
   const char              *prefix;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   PetscReal apfill;
 #endif
 
@@ -1636,7 +1636,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A, Mat P, PetscReal fill, Mat C
   /* Create AP_loc for reuse */
   PetscCall(MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, am, pN, api, apj, apv, &ptap->AP_loc));
   PetscCall(MatSetType(ptap->AP_loc, ((PetscObject)p->A)->type_name));
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ao) {
     apfill = (PetscReal)api[am] / (ad->i[am] + ao->i[am] + p_loc->i[pm] + 1);
   } else {
@@ -2030,7 +2030,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_PtAP_MPIAIJ_MPIAIJ(Mat C)
   }
 
   /* hypre */
-#if defined(PETSC_HAVE_HYPRE)
+#if PetscDefined(HAVE_HYPRE)
   PetscCall(PetscStrcmp(alg, "hypre", &flg));
   if (flg) {
     PetscCall(MatPtAPSymbolic_AIJ_AIJ_wHYPRE(A, P, fill, C));

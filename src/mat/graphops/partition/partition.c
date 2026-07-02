@@ -755,13 +755,13 @@ PetscErrorCode MatPartitioningSetFromOptions(MatPartitioning part)
   PetscFunctionBegin;
   PetscObjectOptionsBegin((PetscObject)part);
   if (!((PetscObject)part)->type_name) {
-#if defined(PETSC_HAVE_PARMETIS)
+#if PetscDefined(HAVE_PARMETIS)
     def = MATPARTITIONINGPARMETIS;
-#elif defined(PETSC_HAVE_CHACO)
+#elif PetscDefined(HAVE_CHACO)
     def = MATPARTITIONINGCHACO;
-#elif defined(PETSC_HAVE_PARTY)
+#elif PetscDefined(HAVE_PARTY)
     def = MATPARTITIONINGPARTY;
-#elif defined(PETSC_HAVE_PTSCOTCH)
+#elif PetscDefined(HAVE_PTSCOTCH)
     def = MATPARTITIONINGPTSCOTCH;
 #else
     def = MATPARTITIONINGCURRENT;

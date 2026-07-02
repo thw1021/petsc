@@ -105,13 +105,13 @@
     This is reproduced from petscsys.h so that mpi.h can be used standalone without first including petscsys.h
     Note that it does require <petscconf.h> to be included to obtain some properties of the system being built for
 */
-  #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+  #if defined(_WIN32) && PetscDefined(USE_SHARED_LIBRARIES)
     #define MPIUni_PETSC_DLLEXPORT __declspec(dllexport)
     #define MPIUni_PETSC_DLLIMPORT __declspec(dllimport)
-  #elif defined(PETSC_USE_VISIBILITY_CXX) && defined(__cplusplus)
+  #elif PetscDefined(USE_VISIBILITY_CXX) && defined(__cplusplus)
     #define MPIUni_PETSC_DLLEXPORT __attribute__((visibility("default")))
     #define MPIUni_PETSC_DLLIMPORT __attribute__((visibility("default")))
-  #elif defined(PETSC_USE_VISIBILITY_C) && !defined(__cplusplus)
+  #elif PetscDefined(USE_VISIBILITY_C) && !defined(__cplusplus)
     #define MPIUni_PETSC_DLLEXPORT __attribute__((visibility("default")))
     #define MPIUni_PETSC_DLLIMPORT __attribute__((visibility("default")))
   #else
@@ -142,7 +142,7 @@ typedef ptrdiff_t MPI_Aint;
   #if defined(PETSC_SIZEOF_LONG_LONG)
 typedef long long          MPIUNI_INT64;
 typedef unsigned long long MPIUNI_UINT64;
-  #elif defined(PETSC_HAVE___INT64)
+  #elif PetscDefined(HAVE___INT64)
 typedef _int64          MPIUNI_INT64;
 typedef unsigned _int64 MPIUNI_UINT64;
   #else
@@ -257,10 +257,10 @@ typedef int MPI_Datatype;
   #define MPI_ORDER_FORTRAN 1
 
   #define MPI_sizeof_default(datatype) ((((datatype) >> 8) & 0xfff) * ((datatype) & 0xff))
-  #if defined(PETSC_USE_REAL___FP16)
+  #if PetscDefined(USE_REAL___FP16)
 MPIUni_PETSC_EXTERN MPI_Datatype MPIU___FP16;
     #define MPI_sizeof(datatype) ((datatype == MPIU___FP16) ? (int)(2 * sizeof(char)) : MPI_sizeof_default(datatype))
-  #elif defined(PETSC_USE_REAL___FLOAT128)
+  #elif PetscDefined(USE_REAL___FLOAT128)
 MPIUni_PETSC_EXTERN MPI_Datatype MPIU___FLOAT128;
     #define MPI_sizeof(datatype) ((datatype == MPIU___FLOAT128) ? (int)(2 * sizeof(double)) : MPI_sizeof_default(datatype))
   #else

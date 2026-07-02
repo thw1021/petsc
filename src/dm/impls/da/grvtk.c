@@ -29,9 +29,9 @@ static PetscErrorCode DMDAGetFieldsNamed(DM da, PetscBool *fieldsnamed)
 static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
 {
   const char *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
   const char precision[] = "Float32";
-#elif defined(PETSC_USE_REAL_DOUBLE)
+#elif PetscDefined(USE_REAL_DOUBLE)
   const char precision[] = "Float64";
 #else
   const char precision[] = "UnknownPrecision";
@@ -255,9 +255,9 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
 static PetscErrorCode DMDAVTKWriteAll_VTR(DM da, PetscViewer viewer)
 {
   const char *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
   const char precision[] = "Float32";
-#elif defined(PETSC_USE_REAL_DOUBLE)
+#elif PetscDefined(USE_REAL_DOUBLE)
   const char precision[] = "Float64";
 #else
   const char precision[] = "UnknownPrecision";
