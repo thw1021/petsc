@@ -183,7 +183,7 @@ checkbadSource:
 	-@echo "----- #if[n]def should use #if [!]defined() ------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n "^[ ]*#if[n]\{0,1\}def " -- ${GITFSRC} ${GITSRC} >> checkbadSource.out;true
 	-@echo "----- #if defined(PETSC_FOO) instead of #if PetscDefined(FOO) ------" >> checkbadSource.out
-	-@git --no-pager grep -n -P "^[ ]*#.*(?:if )?[ (!]defined\(PETSC_(?!(?:USE_DEBUGGER|HAVE_PACKAGES|SIZEOF_LONG_LONG|ARCH|LIB_NAME_SUFFIX|PYTHON_EXE)\))" -- ${GITSRC} ':!*.[hF]90' ':!*/finclude/*.h' ':!include/petscmacros.h' ':!include/petscversion.h' >> checkbadSource.out;true
+	-@git --no-pager grep -n -P "^[ ]*#.*(?:if )?[ (!]defined\(PETSC_(?!(?:USE_DEBUGGER|HAVE_PACKAGES|SIZEOF_LONG_LONG|ARCH|LIB_NAME_SUFFIX|PYTHON_EXE|SILENCE_WSTRINGOP_TRUNCATION_BEGIN|CUPMBLAS_FP_TYPE_U|HOST_DECL|PCBDDC_MAXLEVELS|GMSH_EXE|PKG[A-Z0-9_]+|APPLE_FRAMEWORK|PETSC4PY_INSTALL_PATH)\))" -- ${GITSRC} ':!*.[hF]90' ':!*/finclude/*.h' ':!include/petscmacros.h' ':!include/petscversion.h' >> checkbadSource.out;true
 	-@echo "----- Use PetscTryTypeMethod() instead -----------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P "if \((([A-Za-z_][A-Za-z0-9_]*(->[A-Za-z_][A-Za-z0-9_]*)*)->ops->[A-Za-z_][A-Za-z0-9_]*)\) PetscCall\(\(\*\1\)\(\2," -- ${GITSRC} >> checkbadSource.out;true
 	-@echo "----- Use PetscUseTypeMethod() instead -----------------------------" >> checkbadSource.out
