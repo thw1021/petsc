@@ -26,7 +26,7 @@ static PetscErrorCode VecArrayPrint_private(PetscViewer viewer, PetscInt n, cons
 
   PetscFunctionBegin;
   for (i = 0; i < n; i++) {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     if (PetscImaginaryPart(xv[i]) > 0.0) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "    %g + %g i\n", (double)PetscRealPart(xv[i]), (double)PetscImaginaryPart(xv[i])));
     } else if (PetscImaginaryPart(xv[i]) < 0.0) {
