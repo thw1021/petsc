@@ -27,7 +27,7 @@ PetscErrorCode TSHistoryUpdate(TSHistory tsh, PetscInt id, PetscReal time)
     PetscCall(PetscRealloc(tsh->c * sizeof(*tsh->hist_id), &tsh->hist_id));
   }
   tsh->sorted = (PetscBool)(tsh->sorted && (tsh->n ? (PetscBool)(time >= tsh->hist[tsh->n - 1]) : PETSC_TRUE));
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
   if (tsh->n) { /* id should be unique */
     PetscInt loc, *ids;
 

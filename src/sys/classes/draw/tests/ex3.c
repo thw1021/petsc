@@ -1,6 +1,6 @@
 static char help[] = "Plots a simple line graph.\n";
 
-#if defined(PETSC_APPLE_FRAMEWORK)
+#if PetscDefined(APPLE_FRAMEWORK)
   #import <PETSc/petscsys.h>
   #import <PETSc/petscdraw.h>
 #else

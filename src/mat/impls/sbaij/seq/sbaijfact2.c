@@ -2407,7 +2407,7 @@ static PetscErrorCode MatICCFactorSymbolic_SeqSBAIJ_MSR(Mat B, Mat A, IS perm, c
     }
   }
 
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[mbs] != 0) {
     PetscReal af = ((PetscReal)iu[mbs]) / ((PetscReal)ai[mbs]);
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
@@ -2654,7 +2654,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqSBAIJ(Mat fact, Mat A, IS perm, const Mat
   } else {
     fact->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[am] != 0) {
     PetscReal af = fact->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));
@@ -2846,7 +2846,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqSBAIJ_inplace(Mat fact, Mat A, IS perm, c
   fact->info.factor_mallocs    = reallocs;
   fact->info.fill_ratio_given  = fill;
   fact->info.fill_ratio_needed = ratio_needed;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[am] != 0) {
     PetscReal af = fact->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));

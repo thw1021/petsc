@@ -3,7 +3,7 @@
 #include <petsc/private/pcisimpl.h>
 #include <petsc/private/pcbddcstructsimpl.h>
 
-#if !defined(PETSC_PCBDDC_MAXLEVELS)
+#if !PetscDefined(PCBDDC_MAXLEVELS)
   #define PETSC_PCBDDC_MAXLEVELS 8
 #endif
 

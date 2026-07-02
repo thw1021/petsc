@@ -1,7 +1,7 @@
 #include <petsc/private/matimpl.h>
 #include <petsc/private/vecimpl.h>
 #include <petscsf.h>
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   #include <thrust/for_each.h>
   #include <thrust/device_vector.h>
   #include <thrust/execution_policy.h>
@@ -28,7 +28,7 @@ PETSC_INTERN PetscErrorCode MatDenseGetH2OpusStridedSF(Mat A, PetscSF h2sf, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
 struct StandardBasis_Functor {
   PetscScalar *v;
   PetscInt     j;
@@ -40,14 +40,14 @@ struct StandardBasis_Functor {
 
 PETSC_INTERN PetscErrorCode VecSetDelta(Vec x, PetscInt i)
 {
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   PetscBool iscuda;
 #endif
   PetscInt st, en;
 
   PetscFunctionBegin;
   PetscCall(VecGetOwnershipRange(x, &st, &en));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)x, &iscuda, VECSEQCUDA, VECMPICUDA, ""));
   iscuda = (PetscBool)(iscuda && !x->boundtocpu);
   if (iscuda) {
@@ -79,7 +79,7 @@ PETSC_INTERN PetscErrorCode MatApproximateNorm_Private(Mat A, NormType normtype,
   PetscBool   boundtocpu = PETSC_TRUE;
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   boundtocpu = A->boundtocpu;
 #endif
   switch (normtype) {
