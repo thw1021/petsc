@@ -3551,6 +3551,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqAIJ,
                                        /*144*/ MatADot_Default,
                                        MatANorm_Default,
                                        NULL,
+                                       NULL,
                                        NULL};
 
 static PetscErrorCode MatSeqAIJSetColumnIndices_SeqAIJ(Mat mat, PetscInt *indices)

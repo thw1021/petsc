@@ -801,6 +801,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_BlockMat,
                                        /*144*/ MatADot_Default,
                                        MatANorm_Default,
                                        NULL,
+                                       NULL,
                                        NULL};
 
 /*@C
