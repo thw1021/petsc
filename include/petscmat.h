@@ -396,6 +396,7 @@ PETSC_EXTERN PetscErrorCode MatSetErrorIfFailure(Mat, PetscBool);
 PETSC_EXTERN PetscFunctionList MatList;
 PETSC_EXTERN PetscFunctionList MatColoringList;
 PETSC_EXTERN PetscFunctionList MatPartitioningList;
+PETSC_EXTERN PetscFunctionList MatMeshToCellGraphList;
 
 /*E
    MatStructure - Indicates if two matrices have the same nonzero structure
