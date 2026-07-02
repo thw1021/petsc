@@ -1739,7 +1739,7 @@ PetscErrorCode PCLoad(PC newdm, PetscViewer viewer)
 }
 
 #include <petscdraw.h>
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   #include <petscviewersaws.h>
 #endif
 
@@ -1797,7 +1797,7 @@ PetscErrorCode PCView(PC pc, PetscViewer viewer)
   PCType            cstr;
   PetscViewerFormat format;
   PetscBool         isascii, isstring, isbinary, isdraw, pop = PETSC_FALSE;
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   PetscBool issaws;
 #endif
 
@@ -1811,7 +1811,7 @@ PetscErrorCode PCView(PC pc, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSAWS, &issaws));
 #endif
 
@@ -1884,7 +1884,7 @@ PetscErrorCode PCView(PC pc, PetscViewer viewer)
     PetscCall(PetscDrawPushCurrentPoint(draw, x, bottom));
     PetscTryTypeMethod(pc, view, viewer);
     PetscCall(PetscDrawPopCurrentPoint(draw));
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   } else if (issaws) {
     PetscMPIInt rank;
 

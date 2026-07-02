@@ -1066,7 +1066,7 @@ static PetscErrorCode DMPlexMetricModify_Private(PetscInt dim, PetscReal h_min, 
 
       PetscCall(PetscBLASIntCast(dim, &nb));
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       {
         PetscReal *rwork;
         PetscCall(PetscMalloc1(3 * dim, &rwork));
@@ -1463,7 +1463,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
       /* Compute eigendecomposition of M1 */
       PetscCall(PetscBLASIntCast(dim, &nb));
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       {
         PetscReal *rwork;
         PetscCall(PetscMalloc1(3 * dim, &rwork));
@@ -1500,7 +1500,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
 
       /* Compute eigendecomposition */
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       {
         PetscReal *rwork;
         PetscCall(PetscMalloc1(3 * dim, &rwork));
