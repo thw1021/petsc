@@ -245,7 +245,7 @@ static PetscErrorCode ISGeneralCheckCompress(IS is, PetscBool *compress)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_HDF5)
+#if PetscDefined(HAVE_HDF5)
 // Run length encode the IS
 static PetscErrorCode ISGeneralCompress(IS is, IS *cis)
 {
@@ -358,7 +358,7 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
   }
   PetscCallHDF5Return(filespace, H5Screate_simple, ((int)dim, dims, maxDims));
 
-  #if defined(PETSC_USE_64BIT_INDICES)
+  #if PetscDefined(USE_64BIT_INDICES)
   inttype = H5T_NATIVE_LLONG;
   #else
   inttype = H5T_NATIVE_INT;
@@ -519,7 +519,7 @@ static PetscErrorCode ISView_General(IS is, PetscViewer viewer)
   } else if (isbinary) {
     PetscCall(ISView_Binary(is, viewer));
   } else if (ishdf5) {
-#if defined(PETSC_HAVE_HDF5)
+#if PetscDefined(HAVE_HDF5)
     PetscBool vcompress;
 
     PetscCall(PetscViewerHDF5GetCompress(viewer, &vcompress));

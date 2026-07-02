@@ -7,7 +7,7 @@
   link to the PETSc libraries.
 */
 #include <errno.h>
-#if defined(PETSC_HAVE_UNISTD_H)
+#if PetscDefined(HAVE_UNISTD_H)
   #include <unistd.h>
 #endif
 
@@ -45,7 +45,7 @@ static void SYByteSwapScalar(PetscScalar *buff, PetscCount n)
 {
   double tmp, *buff1 = (double *)buff;
   char  *ptr1, *ptr2 = (char *)&tmp;
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   n *= 2;
 #endif
   for (PetscCount j = 0; j < n; j++) {
