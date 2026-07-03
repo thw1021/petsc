@@ -148,13 +148,13 @@ int main(int argc, char **argv)
   /* get the command line options if there are any and set them */
   PetscCall(TSSetFromOptions(ts));
 
-#if defined(PETSC_HAVE_SUNDIALS2)
+#if PetscDefined(HAVE_ANCIENTSUNDIALS)
   {
     TSType    type;
     PetscBool sundialstype = PETSC_FALSE;
     PetscCall(TSGetType(ts, &type));
-    PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSSUNDIALS, &sundialstype));
-    PetscCheck(!sundialstype || !appctx.useAlhs, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use Alhs formulation for TSSUNDIALS type");
+    PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSANCIENTSUNDIALS, &sundialstype));
+    PetscCheck(!sundialstype || !appctx.useAlhs, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use Alhs formulation for TSANCIENTSUNDIALS type");
   }
 #endif
   /* Sets the initial solution */

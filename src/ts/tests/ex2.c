@@ -248,28 +248,28 @@ PetscReal solz(PetscReal t)
     test:
       suffix: euler
       args: -ts_type euler -nest {{0 1}}
-      requires: !single !sundials2
+      requires: !single !ancientsundials
 
     test:
       suffix: beuler
       args: -ts_type beuler -nest {{0 1}}
-      requires: !single !sundials2
+      requires: !single !ancientsundials
 
     test:
       suffix: rk
       args: -ts_type rk -nest {{0 1}} -ts_adapt_monitor
-      requires: !single !sundials2
+      requires: !single !ancientsundials
 
     test:
       diff_args: -j
-      requires: double !complex !sundials2
+      requires: double !complex !ancientsundials
       output_file: output/ex2_be_adapt.out
       suffix: bdf_1_adapt
       args: -ts_type bdf -ts_bdf_order 1 -ts_adapt_type basic -ts_adapt_clip 0,2
 
     test:
       diff_args: -j
-      requires: double !complex !sundials2
+      requires: double !complex !ancientsundials
       suffix: be_adapt
       args: -ts_type beuler -ts_adapt_type basic -ts_adapt_clip 0,2
 

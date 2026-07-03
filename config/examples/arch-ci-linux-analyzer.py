@@ -17,6 +17,7 @@ configure_options = [
   '--download-strumpack=1',
   '--download-mumps=1',
   '--download-hypre=1',
+  '--download-sundials',
   '--download-ctetgen=1',
   '--download-triangle=1',
   '--download-triangle-build-exec=1',
@@ -25,7 +26,7 @@ configure_options = [
   '--download-hpddm=1',
   '--download-spai=1',
   '--download-radau5=1',
-  #'--download-sundials2=1',
+  #'--download-ancientsundials=1',
 
   '--download-make=1',
   '--download-metis=1',

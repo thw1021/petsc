@@ -93,6 +93,10 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
+- Rename `TSSUNDIALS` to `TSANCIENTSUNDIALS` and all associated `TSSundials*` functions and `SUNDIALS_*` enum values similarly
+- Add `TSCVODEBDF` and `TSCVODEADAMS`
+- Add `TSCVodeSetOrder()` and `TSCVodeGetOrder()`
+- Add `TSCVodeSetConstraints()`
 
 ## TAO
 

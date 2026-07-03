@@ -27,7 +27,7 @@ class Configure(config.package.GNUPackage):
     import os
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
 
-    self.logPrintBox('Installing SUNDIALS 2.5 (April 2012) which is a very old version of SUNDIALS. PETSc does not directly interface with newer versions of SUNDIALS.')
+    self.logPrintBox('Installing SUNDIALS 2.5 (April 2012) which is a very old version of SUNDIALS. Use --download-sundials to interface with newer versions of SUNDIALS.')
     self.pushLanguage('C')
     # use --with-mpi-root if we know it works
     if self.mpi.directory and (os.path.realpath(self.getCompiler())).find(os.path.realpath(self.mpi.directory)) >=0:
