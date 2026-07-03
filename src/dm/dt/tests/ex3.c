@@ -99,13 +99,13 @@ static void func14(const PetscReal a[], void *unused, PetscReal *val)
 
 int main(int argc, char **argv)
 {
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
   PetscInt digits = 7;
 #else
   PetscInt digits = 14;
 #endif
   /* for some reason in __float128 precision it cannot get more accuracy for some of the integrals */
-#if defined(PETSC_USE_REAL___FLOAT128)
+#if PetscDefined(USE_REAL___FLOAT128)
   const PetscReal epsilon = 2.2204460492503131e-16;
 #else
   const PetscReal epsilon = 2500. * PETSC_MACHINE_EPSILON;
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
     /* These can only be integrated accuractely using MPFR */
     if ((f == 6) || (f == 7) || (f == 9) || (f == 11)) continue;
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
     if (f == 8) continue;
 #endif
     PetscCall(PetscDTTanhSinhIntegrate(funcs[f], bounds[f * 2 + 0], bounds[f * 2 + 1], digits, NULL, &integral));
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "The integral of func%2" PetscInt_FMT " is wrong: %g (%g)\n", f + 1, (double)integral, (double)PetscAbsReal(integral - analytic[f])));
     }
   }
-#if defined(PETSC_HAVE_MPFR)
+#if PetscDefined(HAVE_MPFR)
   for (PetscInt f = 0; f < 14; ++f) {
     PetscReal integral;
 

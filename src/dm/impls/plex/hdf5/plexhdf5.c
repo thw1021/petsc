@@ -2958,7 +2958,7 @@ PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
   }
   PetscCall(PetscSectionGetChart(sectionA, NULL, &n));
 /* Create sfAB: A -> B */
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
   {
     PetscInt N, N1;
 
@@ -3109,7 +3109,7 @@ PetscErrorCode DMPlexVecLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM section
     PetscCall(DMGetPointSF(dm, &pointsf));
     PetscCall(DMGetPointSF(sectiondm, &pointsf1));
     PetscCheck(pointsf1 == pointsf, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatching point SFs for dm and sectiondm");
-#if defined(PETSC_USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
     {
       PetscInt MA, MA1;
 

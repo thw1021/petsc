@@ -55,7 +55,7 @@ static PetscErrorCode pounders_feval(Tao tao, Vec x, Vec F, PetscReal *fsum)
 
 static PetscErrorCode gqtwrap(Tao tao, PetscReal *gnorm, PetscReal *qmin)
 {
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
   PetscReal atol = 1.0e-5;
 #else
   PetscReal atol = 1.0e-10;

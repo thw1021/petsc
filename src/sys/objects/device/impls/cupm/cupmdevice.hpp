@@ -15,7 +15,7 @@ namespace device
 namespace cupm
 {
 
-#if defined(PETSC_CUPM_DEVICE_NONE)
+#if PetscDefined(CUPM_DEVICE_NONE)
   #error redefinition of PETSC_CUPM_DEVICE_NONE
 #endif
 
