@@ -101,6 +101,6 @@ int main(int argc, char **args)
       suffix: metis
       nsize: 1
       requires: metis
-      args: -mat_mesh_to_cell_graph_type metis
+      args: -mat_mesh_to_cell_graph_type metis -mat_partitioning_type current
 
 TEST*/
