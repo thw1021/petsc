@@ -43,6 +43,8 @@ PETSC_EXTERN PetscErrorCode MatMeshToCellGraph_Metis(Mat mesh, PetscInt ncommonn
     PetscCallMetis(METIS_MeshToDual, (&ne, &nn, (idx_t *)adj->i, (idx_t *)adj->j, (idx_t *)&ncommonnodes, (idx_t *)&numflag, (idx_t **)&newxadj, (idx_t **)&newadjncy));
   }
 
+  for (PetscInt i = 0; i < mesh->rmap->N; i++) PetscCall(PetscSortInt(newxadj[i + 1] - newxadj[i], newadjncy + newxadj[i]));
+
   PetscCall(MatCreateMPIAdj(PetscObjectComm((PetscObject)mesh), mesh->rmap->n, mesh->rmap->N, newxadj, newadjncy, NULL, dual));
   newadj = (Mat_MPIAdj *)(*dual)->data;
 
