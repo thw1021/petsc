@@ -662,9 +662,9 @@ PetscErrorCode DMAdaptorSetUp(DMAdaptor adaptor)
   PetscInt Nf;
 
   PetscFunctionBegin;
-  PetscCall(DMGetDS(adaptor->idm, &prob));
   PetscCall(VecTaggerSetUp(adaptor->refineTag));
   PetscCall(VecTaggerSetUp(adaptor->coarsenTag));
+  PetscCall(DMGetDS(adaptor->idm, &prob));
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscMalloc2(Nf, &adaptor->exactSol, Nf, &adaptor->exactCtx));
   for (PetscInt f = 0; f < Nf; ++f) {
@@ -1311,20 +1311,22 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
   PetscDS   ds;
   PetscReal errorNorm = 0.;
   PetscInt  numAdapt  = adaptor->numSeq, adaptIter;
-  PetscInt  dim, coordDim, Nf;
-  void     *ctx;
+  PetscInt  dim = 0, coordDim = 0, Nf = 0;
+  void     *ctx = NULL;
   MPI_Comm  comm;
 
   PetscFunctionBegin;
   PetscCall(DMViewFromOptions(adaptor->idm, NULL, "-dm_adapt_pre_view"));
   PetscCall(VecViewFromOptions(inx, NULL, "-sol_adapt_pre_view"));
   PetscCall(PetscObjectGetComm((PetscObject)adaptor, &comm));
-  PetscCall(DMGetDimension(adaptor->idm, &dim));
-  PetscCall(DMGetCoordinateDim(adaptor->idm, &coordDim));
   PetscCall(DMGetApplicationContext(adaptor->idm, &ctx));
   PetscCall(DMGetDS(adaptor->idm, &ds));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
-  PetscCheck(Nf != 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot refine with no fields present!");
+  if (adaptor->adaptCriterion != DM_ADAPTATION_REFINE) {
+    PetscCall(DMGetDimension(adaptor->idm, &dim));
+    PetscCall(DMGetCoordinateDim(adaptor->idm, &coordDim));
+    PetscCheck(Nf != 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot adapt with no fields present!");
+  }
 
   /* Adapt until nothing changes */
   /* Adapt for a specified number of iterates */
@@ -1332,20 +1334,24 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
   for (adaptIter = 0; adaptIter < numAdapt; ++adaptIter) {
     PetscBool adapted = PETSC_FALSE;
     DM        dm      = adaptIter ? *adm : adaptor->idm, odm;
-    Vec       x       = adaptIter ? *ax : inx, locX, ox;
-    Vec       error   = NULL;
+    Vec       x = adaptIter ? *ax : inx, locX = NULL, ox;
+    Vec       error = NULL;
 
-    PetscCall(DMGetLocalVector(dm, &locX));
-    PetscCall(DMAdaptorPreAdapt(adaptor, locX));
+    if (adaptor->adaptCriterion != DM_ADAPTATION_REFINE) {
+      PetscCall(DMGetLocalVector(dm, &locX));
+      PetscCall(DMAdaptorPreAdapt(adaptor, locX));
+    }
     if (doSolve) {
       SNES snes;
 
       PetscCall(DMAdaptorGetSolver(adaptor, &snes));
-      PetscCall(SNESSolve(snes, NULL, adaptIter ? *ax : x));
+      PetscCall(SNESSolve(snes, NULL, x));
     }
-    PetscCall(DMGlobalToLocalBegin(dm, adaptIter ? *ax : x, INSERT_VALUES, locX));
-    PetscCall(DMGlobalToLocalEnd(dm, adaptIter ? *ax : x, INSERT_VALUES, locX));
-    PetscCall(VecViewFromOptions(adaptIter ? *ax : x, (PetscObject)adaptor, "-adapt_primal_sol_vec_view"));
+    if (adaptor->adaptCriterion != DM_ADAPTATION_REFINE) {
+      PetscCall(DMGlobalToLocalBegin(dm, x, INSERT_VALUES, locX));
+      PetscCall(DMGlobalToLocalEnd(dm, x, INSERT_VALUES, locX));
+    }
+    PetscCall(VecViewFromOptions(x, (PetscObject)adaptor, "-adapt_primal_sol_vec_view"));
     switch (adaptor->adaptCriterion) {
     case DM_ADAPTATION_REFINE:
       PetscCall(DMRefine(dm, comm, &odm));
@@ -1521,8 +1527,10 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
     default:
       SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %d", adaptor->adaptCriterion);
     }
-    PetscCall(DMAdaptorPostAdapt(adaptor));
-    PetscCall(DMRestoreLocalVector(dm, &locX));
+    if (adaptor->adaptCriterion != DM_ADAPTATION_REFINE) {
+      PetscCall(DMAdaptorPostAdapt(adaptor));
+      PetscCall(DMRestoreLocalVector(dm, &locX));
+    }
     /* If DM was adapted, replace objects and recreate solution */
     if (adapted) {
       const char *name;
@@ -1533,10 +1541,10 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       PetscCall(SNESReset(adaptor->snes));
       PetscCall(SNESSetDM(adaptor->snes, odm));
       PetscCall(DMAdaptorSetSolver(adaptor, adaptor->snes));
-      PetscCall(DMPlexSetSNESLocalFEM(odm, PETSC_FALSE, ctx));
+      if (Nf) PetscCall(DMPlexSetSNESLocalFEM(odm, PETSC_FALSE, ctx));
       PetscCall(SNESSetFromOptions(adaptor->snes));
       /* Transfer system */
-      PetscCall(DMCopyDisc(dm, odm));
+      if (Nf) PetscCall(DMCopyDisc(dm, odm));
       /* Transfer solution */
       PetscCall(DMCreateGlobalVector(odm, &ox));
       PetscCall(PetscObjectGetName((PetscObject)x, &name));
@@ -1545,8 +1553,10 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       /* Cleanup adaptivity info */
       if (adaptIter > 0) PetscCall(PetscViewerASCIIPopTab(PETSC_VIEWER_STDOUT_(comm)));
       PetscCall(DMForestSetAdaptivityForest(dm, NULL)); /* clear internal references to the previous dm */
-      PetscCall(DMDestroy(&dm));
-      PetscCall(VecDestroy(&x));
+      if (adaptIter > 0) {
+        PetscCall(DMDestroy(&dm));
+        PetscCall(VecDestroy(&x));
+      }
       *adm = odm;
       *ax  = ox;
     } else {
