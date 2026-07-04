@@ -280,17 +280,15 @@ PetscErrorCode MatLUFactorSymbolic_SeqBAIJ(Mat B, Mat A, IS isrow, IS iscol, con
   } else {
     B->info.fill_ratio_needed = 0.0;
   }
-#if PetscDefined(USE_INFO)
-  if (ai[n] != 0) {
-    PetscReal af = B->info.fill_ratio_needed;
-    PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
-    PetscCall(PetscInfo(A, "Run with -pc_factor_fill %g or use \n", (double)af));
-    PetscCall(PetscInfo(A, "PCFactorSetFill(pc,%g);\n", (double)af));
-    PetscCall(PetscInfo(A, "for best performance.\n"));
-  } else {
-    PetscCall(PetscInfo(A, "Empty matrix\n"));
+  if (PetscDefined(USE_INFO)) {
+    if (ai[n] != 0) {
+      PetscReal af = B->info.fill_ratio_needed;
+      PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
+      PetscCall(PetscInfo(A, "Run with -pc_factor_fill %g or use \n", (double)af));
+      PetscCall(PetscInfo(A, "PCFactorSetFill(pc,%g);\n", (double)af));
+      PetscCall(PetscInfo(A, "for best performance.\n"));
+    } else PetscCall(PetscInfo(A, "Empty matrix\n"));
   }
-#endif
 
   PetscCall(ISIdentity(isrow, &row_identity));
   PetscCall(ISIdentity(iscol, &col_identity));

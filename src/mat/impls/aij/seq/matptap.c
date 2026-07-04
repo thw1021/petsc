@@ -174,14 +174,12 @@ PetscErrorCode MatPtAPSymbolic_SeqAIJ_SeqAIJ_SparseAxpy(Mat A, Mat P, PetscReal 
 
   /* Clean up. */
   PetscCall(MatRestoreSymbolicTranspose_SeqAIJ(P, &pti, &ptj));
-#if PetscDefined(USE_INFO)
-  if (ci[pn] != 0) {
-    PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
-    PetscCall(PetscInfo(C, "Use MatPtAP(A,P,MatReuse,%g,&C) for best performance.\n", (double)afill));
-  } else {
-    PetscCall(PetscInfo(C, "Empty matrix product\n"));
+  if (PetscDefined(USE_INFO)) {
+    if (ci[pn] != 0) {
+      PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
+      PetscCall(PetscInfo(C, "Use MatPtAP(A,P,MatReuse,%g,&C) for best performance.\n", (double)afill));
+    } else PetscCall(PetscInfo(C, "Empty matrix product\n"));
   }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

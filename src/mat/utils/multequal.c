@@ -12,11 +12,8 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
   PetscRandom rctx;
   PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
   PetscInt    am, an, bm, bn, k;
-  PetscScalar none = -1.0;
-#if PetscDefined(USE_INFO)
   const char *sops[] = {"MatMult", "MatMultAdd", "MatMultAdd (update)", "MatMultTranspose", "MatMultTransposeAdd", "MatMultTransposeAdd (update)", "MatMultHermitianTranspose", "MatMultHermitianTransposeAdd", "MatMultHermitianTransposeAdd (update)"};
   const char *sop;
-#endif
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -29,9 +26,7 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
   PetscCall(MatGetLocalSize(A, &am, &an));
   PetscCall(MatGetLocalSize(B, &bm, &bn));
   PetscCheck(am == bm && an == bn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, bm, an, bn);
-#if PetscDefined(USE_INFO)
-  sop = sops[add + 3 * t];
-#endif
+  if (PetscDefined(USE_INFO)) sop = sops[add + 3 * t];
   PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)A), &rctx));
   PetscCall(PetscRandomSetFromOptions(rctx));
   if (t) {
@@ -93,7 +88,7 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
     if (r2 < tol) {
       PetscCall(VecNorm(s1, NORM_INFINITY, &r1));
     } else {
-      PetscCall(VecAXPY(s2, none, s1));
+      PetscCall(VecAXPY(s2, -1.0, s1));
       PetscCall(VecNorm(s2, NORM_INFINITY, &r1));
       r1 /= r2;
     }
@@ -119,11 +114,8 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
   PetscRandom rctx;
   PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
   PetscInt    am, an, bm, bn, cm, cn, k;
-  PetscScalar none = -1.0;
-#if PetscDefined(USE_INFO)
   const char *sops[] = {"MatMatMult", "MatTransposeMatMult", "MatMatTransposeMult", "MatTransposeMatTransposeMult"};
   const char *sop;
-#endif
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -150,9 +142,7 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
   }
   PetscCheck(an == bm && am == cm && bn == cn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A, B, C local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, an, bm, bn, cm, cn);
 
-#if PetscDefined(USE_INFO)
-  sop = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
-#endif
+  if (PetscDefined(USE_INFO)) sop = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
   PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)C), &rctx));
   PetscCall(PetscRandomSetFromOptions(rctx));
   if (Bt) {
@@ -188,7 +178,7 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
     if (r2 < tol) {
       PetscCall(VecNorm(s3, NORM_INFINITY, &r1));
     } else {
-      PetscCall(VecAXPY(s2, none, s3));
+      PetscCall(VecAXPY(s2, -1.0, s3));
       PetscCall(VecNorm(s2, NORM_INFINITY, &r1));
       r1 /= r2;
     }

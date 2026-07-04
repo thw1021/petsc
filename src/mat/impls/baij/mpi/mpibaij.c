@@ -806,9 +806,7 @@ static PetscErrorCode MatCreateHashTable_MPIBAIJ_Private(Mat mat, PetscReal fact
   PetscInt    *HT, key;
   MatScalar  **HD;
   PetscReal    tmp;
-#if PetscDefined(USE_INFO)
-  PetscInt ct = 0, max = 0;
-#endif
+  PetscInt     ct = 0, max = 0;
 
   PetscFunctionBegin;
   if (baij->ht) PetscFunctionReturn(PETSC_SUCCESS);
@@ -834,15 +832,9 @@ static PetscErrorCode MatCreateHashTable_MPIBAIJ_Private(Mat mat, PetscReal fact
           HT[(h1 + k) % ht_size] = key;
           HD[(h1 + k) % ht_size] = a->a + j * bs2;
           break;
-#if PetscDefined(USE_INFO)
-        } else {
-          ct++;
-#endif
-        }
+        } else if (PetscDefined(USE_INFO)) ct++;
       }
-#if PetscDefined(USE_INFO)
-      if (k > max) max = k;
-#endif
+      if (PetscDefined(USE_INFO) && k > max) max = k;
     }
   }
   /* Loop Over B */
@@ -857,25 +849,19 @@ static PetscErrorCode MatCreateHashTable_MPIBAIJ_Private(Mat mat, PetscReal fact
           HT[(h1 + k) % ht_size] = key;
           HD[(h1 + k) % ht_size] = b->a + j * bs2;
           break;
-#if PetscDefined(USE_INFO)
-        } else {
-          ct++;
-#endif
-        }
+        } else if (PetscDefined(USE_INFO)) ct++;
       }
-#if PetscDefined(USE_INFO)
-      if (k > max) max = k;
-#endif
+      if (PetscDefined(USE_INFO) && k > max) max = k;
     }
   }
 
   /* Print Summary */
-#if PetscDefined(USE_INFO)
-  for (i = 0, j = 0; i < ht_size; i++) {
-    if (HT[i]) j++;
+  if (PetscDefined(USE_INFO)) {
+    for (i = 0, j = 0; i < ht_size; i++) {
+      if (HT[i]) j++;
+    }
+    PetscCall(PetscInfo(mat, "Average Search = %5.2g,max search = %" PetscInt_FMT "\n", (!j) ? 0.0 : (double)(((PetscReal)(ct + j)) / j), max));
   }
-  PetscCall(PetscInfo(mat, "Average Search = %5.2g,max search = %" PetscInt_FMT "\n", (!j) ? 0.0 : (double)(((PetscReal)(ct + j)) / j), max));
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -976,14 +962,12 @@ static PetscErrorCode MatAssemblyEnd_MPIBAIJ(Mat mat, MatAssemblyType mode)
   PetscCall(MatAssemblyBegin(baij->B, mode));
   PetscCall(MatAssemblyEnd(baij->B, mode));
 
-#if PetscDefined(USE_INFO)
-  if (baij->ht && mode == MAT_FINAL_ASSEMBLY) {
+  if (PetscDefined(USE_INFO) && baij->ht && mode == MAT_FINAL_ASSEMBLY) {
     PetscCall(PetscInfo(mat, "Average Hash Table Search in MatSetValues = %5.2f\n", (double)((PetscReal)baij->ht_total_ct) / baij->ht_insert_ct));
 
     baij->ht_total_ct  = 0;
     baij->ht_insert_ct = 0;
   }
-#endif
   if (baij->ht_flag && !baij->ht && mode == MAT_FINAL_ASSEMBLY) {
     PetscCall(MatCreateHashTable_MPIBAIJ_Private(mat, baij->ht_fact));
 
@@ -3492,16 +3476,14 @@ PETSC_EXTERN PetscErrorCode matmpibaijsetvaluesblocked_(Mat *matin, PetscInt *mi
           if (mat->was_assembled) {
             if (!baij->colmap) PetscCall(MatCreateColmap_MPIBAIJ_Private(mat));
 
-#if PetscDefined(USE_DEBUG)
-  #if PetscDefined(USE_CTABLE)
-            {
+#if PetscDefined(USE_CTABLE)
+            if (PetscDefined(USE_DEBUG)) {
               PetscInt data;
               PetscCall(PetscHMapIGetWithDefault(baij->colmap, in[j] + 1, 0, &data));
               PetscCheck((data - 1) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect colmap");
             }
-  #else
-            PetscCheck((baij->colmap[in[j]] - 1) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect colmap");
-  #endif
+#else
+            if (PetscDefined(USE_DEBUG)) PetscCheck((baij->colmap[in[j]] - 1) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect colmap");
 #endif
 #if PetscDefined(USE_CTABLE)
             PetscCall(PetscHMapIGetWithDefault(baij->colmap, in[j] + 1, 0, &col));

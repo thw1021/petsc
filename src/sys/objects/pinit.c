@@ -4,6 +4,7 @@
 */
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
 #include <petsc/private/logimpl.h>
+#include <petsc/private/petscfptimpl.h>
 #include <petscviewer.h>
 #include <petsc/private/garbagecollector.h>
 
@@ -1177,9 +1178,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   if (!PetscBinaryBigEndian()) PetscCallMPI(MPI_Register_datarep((char *)"petsc", PetscDataRep_read_conv_fn, PetscDataRep_write_conv_fn, PetscDataRep_extent_fn, NULL));
 #endif
 
-#if PetscDefined(SERIALIZE_FUNCTIONS)
-  PetscCall(PetscFPTCreate(10000));
-#endif
+  if (PetscDefined(SERIALIZE_FUNCTIONS)) PetscCall(PetscFPTCreate(10000));
 
 #if PetscDefined(HAVE_HWLOC)
   {
@@ -1544,9 +1543,7 @@ PetscErrorCode PetscFinalize(void)
   }
   PetscCall(PetscSegBufferDestroy(&PetscCitationsList));
 
-#if PetscDefined(SERIALIZE_FUNCTIONS)
-  PetscCall(PetscFPTDestroy());
-#endif
+  if (PetscDefined(SERIALIZE_FUNCTIONS)) PetscCall(PetscFPTDestroy());
 
 #if PetscDefined(HAVE_X)
   flg1 = PETSC_FALSE;
