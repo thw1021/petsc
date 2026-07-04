@@ -754,12 +754,10 @@ static PetscErrorCode MatFactorMKL_PARDISOInitialize_Private(Mat A, MatFactorTyp
     mat_mkl_pardiso->iparm[10] = 1;  /* Use nonsymmetric permutation and scaling MPS */
     mat_mkl_pardiso->iparm[12] = 1;  /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
   } else {
-    mat_mkl_pardiso->iparm[9]  = 8; /* Perturb the pivot elements with 1E-8 */
-    mat_mkl_pardiso->iparm[10] = 0; /* Use nonsymmetric permutation and scaling MPS */
-    mat_mkl_pardiso->iparm[12] = 1; /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
-#if PetscDefined(USE_DEBUG)
-    mat_mkl_pardiso->iparm[26] = 1; /* Matrix checker */
-#endif
+    mat_mkl_pardiso->iparm[9]  = 8;                              /* Perturb the pivot elements with 1E-8 */
+    mat_mkl_pardiso->iparm[10] = 0;                              /* Use nonsymmetric permutation and scaling MPS */
+    mat_mkl_pardiso->iparm[12] = 1;                              /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
+    if (PetscDefined(USE_DEBUG)) mat_mkl_pardiso->iparm[26] = 1; /* Matrix checker */
   }
   PetscCall(PetscCalloc1(A->rmap->N * sizeof(INT_TYPE), &mat_mkl_pardiso->perm));
   mat_mkl_pardiso->schur_size = 0;

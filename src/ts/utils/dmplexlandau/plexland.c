@@ -64,11 +64,8 @@ static PetscErrorCode gamma_m1_f(PetscInt dim, PetscReal time, const PetscReal x
   for (PetscInt i = 0; i < dim; ++i) u2 += x[i] * x[i];
   /* gamma - 1 = g_eps, for conditioning and we only take derivatives */
   xx = u2 / c02;
-#if PetscDefined(USE_DEBUG)
-  u[0] = PetscSqrtReal(1. + xx);
-#else
-  u[0] = xx / (PetscSqrtReal(1. + xx) + 1.) - 1.; // better conditioned. -1 might help condition and only used for derivative
-#endif
+  if (PetscDefined(USE_DEBUG)) u[0] = PetscSqrtReal(1. + xx);
+  else u[0] = xx / (PetscSqrtReal(1. + xx) + 1.) - 1.; // better conditioned. -1 might help condition and only used for derivative
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2411,14 +2408,11 @@ static PetscErrorCode gamma_n_f(PetscInt dim, PetscReal time, const PetscReal x[
   for (PetscInt s = 0; s < Nf; s++) {
     PetscReal tmp1 = 0.;
     for (PetscInt i = 0; i < dim; ++i) tmp1 += x[i] * x[i];
-#if PetscDefined(USE_DEBUG)
-    u[s] = PetscSqrtReal(1. + tmp1 / c02); //  u[0] = PetscSqrtReal(1. + xx);
-#else
-    {
+    if (PetscDefined(USE_DEBUG)) u[s] = PetscSqrtReal(1. + tmp1 / c02); //  u[0] = PetscSqrtReal(1. + xx);
+    else {
       PetscReal xx = tmp1 / c02;
       u[s]         = xx / (PetscSqrtReal(1. + xx) + 1.); // better conditioned = xx/(PetscSqrtReal(1. + xx) + 1.)
     }
-#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
