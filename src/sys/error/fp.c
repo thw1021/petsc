@@ -495,16 +495,16 @@ void PetscDefaultFPTrap(int sig)
   #endif
 
   (void)(*PetscErrorPrintf)("Try option -start_in_debugger\n");
-  #if PetscDefined(USE_DEBUG)
-    #if !PetscDefined(HAVE_THREADSAFETY)
-  (void)(*PetscErrorPrintf)("likely location of problem given in stack below\n");
-  (void)(*PetscErrorPrintf)("---------------------  Stack Frames ------------------------------------\n");
-  (void)PetscStackView(PETSC_STDOUT);
-    #endif
-  #else
-  (void)(*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
-  (void)(*PetscErrorPrintf)("with -start_in_debugger to get more information on the crash.\n");
-  #endif
+  if (PetscDefined(USE_DEBUG)) {
+    if (!PetscDefined(HAVE_THREADSAFETY)) {
+      (void)(*PetscErrorPrintf)("likely location of problem given in stack below\n");
+      (void)(*PetscErrorPrintf)("---------------------  Stack Frames ------------------------------------\n");
+      (void)PetscStackView(PETSC_STDOUT);
+    }
+  } else {
+    (void)(*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
+    (void)(*PetscErrorPrintf)("with -start_in_debugger to get more information on the crash.\n");
+  }
   (void)PetscError(PETSC_COMM_SELF, 0, NULL, NULL, PETSC_ERR_FP, PETSC_ERROR_INITIAL, "trapped floating point error");
   PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_FP);
 }

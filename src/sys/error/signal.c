@@ -143,18 +143,16 @@ PetscErrorCode PetscSignalHandlerDefault(int sig, void *ptr)
 
   (void)(*PetscErrorPrintf)("Try option -start_in_debugger or -on_error_attach_debugger\n");
   (void)(*PetscErrorPrintf)("or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/\n");
-#if PetscDefined(HAVE_CUDA)
-  (void)(*PetscErrorPrintf)("or try https://docs.nvidia.com/compute-sanitizer/ComputeSanitizer/index.html on NVIDIA CUDA systems to find memory corruption errors\n");
-#endif
-#if PetscDefined(USE_DEBUG)
-  #if !PetscDefined(HAVE_THREADSAFETY)
-  (void)(*PetscErrorPrintf)("---------------------  Stack Frames ------------------------------------\n");
-  (void)PetscStackView(PETSC_STDOUT);
-  #endif
-#else
-  (void)(*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
-  (void)(*PetscErrorPrintf)("to get more information on the crash.\n");
-#endif
+  if (PetscDefined(HAVE_CUDA)) (void)(*PetscErrorPrintf)("or try https://docs.nvidia.com/compute-sanitizer/ComputeSanitizer/index.html on NVIDIA CUDA systems to find memory corruption errors\n");
+  if (PetscDefined(USE_DEBUG)) {
+    if (!PetscDefined(HAVE_THREADSAFETY)) {
+      (void)(*PetscErrorPrintf)("---------------------  Stack Frames ------------------------------------\n");
+      (void)PetscStackView(PETSC_STDOUT);
+    }
+  } else {
+    (void)(*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
+    (void)(*PetscErrorPrintf)("to get more information on the crash.\n");
+  }
 #if !PetscDefined(MISSING_SIGBUS)
   if (sig == SIGSEGV || sig == SIGBUS) {
 #else

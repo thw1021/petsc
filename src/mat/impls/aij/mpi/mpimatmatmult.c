@@ -327,14 +327,12 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat A, Mat P, PetscR
   C->info.fill_ratio_given  = fill;
   C->info.fill_ratio_needed = afill;
 
-#if PetscDefined(USE_INFO)
-  if (api[am]) {
-    PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
-    PetscCall(PetscInfo(C, "Use MatMatMult(A,B,MatReuse,%g,&C) for best performance.;\n", (double)afill));
-  } else {
-    PetscCall(PetscInfo(C, "Empty matrix product\n"));
+  if (PetscDefined(USE_INFO)) {
+    if (api[am]) {
+      PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
+      PetscCall(PetscInfo(C, "Use MatMatMult(A,B,MatReuse,%g,&C) for best performance.;\n", (double)afill));
+    } else PetscCall(PetscInfo(C, "Empty matrix product\n"));
   }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -948,14 +946,12 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ(Mat A, Mat P, PetscReal fill, Ma
   C->info.fill_ratio_given  = fill;
   C->info.fill_ratio_needed = afill;
 
-#if PetscDefined(USE_INFO)
-  if (api[am]) {
-    PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
-    PetscCall(PetscInfo(C, "Use MatMatMult(A,B,MatReuse,%g,&C) for best performance.;\n", (double)afill));
-  } else {
-    PetscCall(PetscInfo(C, "Empty matrix product\n"));
+  if (PetscDefined(USE_INFO)) {
+    if (api[am]) {
+      PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
+      PetscCall(PetscInfo(C, "Use MatMatMult(A,B,MatReuse,%g,&C) for best performance.;\n", (double)afill));
+    } else PetscCall(PetscInfo(C, "Empty matrix product\n"));
   }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1223,14 +1219,12 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ_seqMPI(Mat A, Mat P, PetscReal f
   C->info.fill_ratio_given  = fill;
   C->info.fill_ratio_needed = afill;
 
-#if PetscDefined(USE_INFO)
-  if (api[am]) {
-    PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
-    PetscCall(PetscInfo(C, "Use MatMatMult(A,B,MatReuse,%g,&C) for best performance.;\n", (double)afill));
-  } else {
-    PetscCall(PetscInfo(C, "Empty matrix product\n"));
+  if (PetscDefined(USE_INFO)) {
+    if (api[am]) {
+      PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
+      PetscCall(PetscInfo(C, "Use MatMatMult(A,B,MatReuse,%g,&C) for best performance.;\n", (double)afill));
+    } else PetscCall(PetscInfo(C, "Empty matrix product\n"));
   }
-#endif
 
   PetscCall(MatDestroy(&aopoth));
   PetscCall(MatDestroy(&adpd));
@@ -2076,14 +2070,12 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat P, Mat A, PetscReal
 
   C->ops->mattransposemultnumeric = MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ;
 
-#if PetscDefined(USE_INFO)
-  if (bi[pn] != 0) {
-    PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
-    PetscCall(PetscInfo(C, "Use MatTransposeMatMult(A,B,MatReuse,%g,&C) for best performance.\n", (double)afill));
-  } else {
-    PetscCall(PetscInfo(C, "Empty matrix product\n"));
+  if (PetscDefined(USE_INFO)) {
+    if (bi[pn] != 0) {
+      PetscCall(PetscInfo(C, "Reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)afill));
+      PetscCall(PetscInfo(C, "Use MatTransposeMatMult(A,B,MatReuse,%g,&C) for best performance.\n", (double)afill));
+    } else PetscCall(PetscInfo(C, "Empty matrix product\n"));
   }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -239,9 +239,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A, Mat P, PetscReal fi
   PetscHMapI               ta;
   MatType                  mtype;
   const char              *prefix;
-#if PetscDefined(USE_INFO)
-  PetscReal apfill;
-#endif
+  PetscReal                apfill;
 
   PetscFunctionBegin;
   MatCheckProduct(Cmpi, 4);
@@ -348,23 +346,18 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A, Mat P, PetscReal fi
   PetscCall(MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, am, pN, api, apj, apv, &ptap->AP_loc));
   PetscCall(MatSeqAIJCompactOutExtraColumns_SeqAIJ(ptap->AP_loc, &ptap->ltog));
 
-#if PetscDefined(USE_INFO)
-  if (ao) {
-    apfill = (PetscReal)api[am] / (ad->i[am] + ao->i[am] + p_loc->i[pm] + 1);
-  } else {
-    apfill = (PetscReal)api[am] / (ad->i[am] + p_loc->i[pm] + 1);
-  }
-  ptap->AP_loc->info.mallocs           = nspacedouble;
-  ptap->AP_loc->info.fill_ratio_given  = fill;
-  ptap->AP_loc->info.fill_ratio_needed = apfill;
+  if (PetscDefined(USE_INFO)) {
+    if (ao) apfill = (PetscReal)api[am] / (ad->i[am] + ao->i[am] + p_loc->i[pm] + 1);
+    else apfill = (PetscReal)api[am] / (ad->i[am] + p_loc->i[pm] + 1);
+    ptap->AP_loc->info.mallocs           = nspacedouble;
+    ptap->AP_loc->info.fill_ratio_given  = fill;
+    ptap->AP_loc->info.fill_ratio_needed = apfill;
 
-  if (api[am]) {
-    PetscCall(PetscInfo(ptap->AP_loc, "Scalable algorithm, AP_loc reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)apfill));
-    PetscCall(PetscInfo(ptap->AP_loc, "Use MatPtAP(A,B,MatReuse,%g,&C) for best AP_loc performance.;\n", (double)apfill));
-  } else {
-    PetscCall(PetscInfo(ptap->AP_loc, "Scalable algorithm, AP_loc is empty \n"));
+    if (api[am]) {
+      PetscCall(PetscInfo(ptap->AP_loc, "Scalable algorithm, AP_loc reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)apfill));
+      PetscCall(PetscInfo(ptap->AP_loc, "Use MatPtAP(A,B,MatReuse,%g,&C) for best AP_loc performance.;\n", (double)apfill));
+    } else PetscCall(PetscInfo(ptap->AP_loc, "Scalable algorithm, AP_loc is empty \n"));
   }
-#endif
 
   /* (2-1) compute symbolic Co = Ro*AP_loc  */
   PetscCall(MatProductCreate(ptap->Ro, ptap->AP_loc, NULL, &ptap->C_oth));
@@ -1526,9 +1519,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A, Mat P, PetscReal fill, Mat C
   PetscHMapI               ta;
   MatType                  mtype;
   const char              *prefix;
-#if PetscDefined(USE_INFO)
-  PetscReal apfill;
-#endif
+  PetscReal                apfill;
 
   PetscFunctionBegin;
   MatCheckProduct(Cmpi, 4);
@@ -1636,23 +1627,18 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A, Mat P, PetscReal fill, Mat C
   /* Create AP_loc for reuse */
   PetscCall(MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, am, pN, api, apj, apv, &ptap->AP_loc));
   PetscCall(MatSetType(ptap->AP_loc, ((PetscObject)p->A)->type_name));
-#if PetscDefined(USE_INFO)
-  if (ao) {
-    apfill = (PetscReal)api[am] / (ad->i[am] + ao->i[am] + p_loc->i[pm] + 1);
-  } else {
-    apfill = (PetscReal)api[am] / (ad->i[am] + p_loc->i[pm] + 1);
-  }
-  ptap->AP_loc->info.mallocs           = nspacedouble;
-  ptap->AP_loc->info.fill_ratio_given  = fill;
-  ptap->AP_loc->info.fill_ratio_needed = apfill;
+  if (PetscDefined(USE_INFO)) {
+    if (ao) apfill = (PetscReal)api[am] / (ad->i[am] + ao->i[am] + p_loc->i[pm] + 1);
+    else apfill = (PetscReal)api[am] / (ad->i[am] + p_loc->i[pm] + 1);
+    ptap->AP_loc->info.mallocs           = nspacedouble;
+    ptap->AP_loc->info.fill_ratio_given  = fill;
+    ptap->AP_loc->info.fill_ratio_needed = apfill;
 
-  if (api[am]) {
-    PetscCall(PetscInfo(ptap->AP_loc, "Nonscalable algorithm, AP_loc reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)apfill));
-    PetscCall(PetscInfo(ptap->AP_loc, "Use MatPtAP(A,B,MatReuse,%g,&C) for best AP_loc performance.;\n", (double)apfill));
-  } else {
-    PetscCall(PetscInfo(ptap->AP_loc, "Nonscalable algorithm, AP_loc is empty \n"));
+    if (api[am]) {
+      PetscCall(PetscInfo(ptap->AP_loc, "Nonscalable algorithm, AP_loc reallocs %" PetscInt_FMT "; Fill ratio: given %g needed %g.\n", nspacedouble, (double)fill, (double)apfill));
+      PetscCall(PetscInfo(ptap->AP_loc, "Use MatPtAP(A,B,MatReuse,%g,&C) for best AP_loc performance.;\n", (double)apfill));
+    } else PetscCall(PetscInfo(ptap->AP_loc, "Nonscalable algorithm, AP_loc is empty \n"));
   }
-#endif
 
   /* (2-1) compute symbolic Co = Ro*AP_loc  */
   PetscCall(MatGetOptionsPrefix(A, &prefix));

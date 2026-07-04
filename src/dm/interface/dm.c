@@ -4601,7 +4601,6 @@ PetscErrorCode DMSetDefaultConstraints(DM dm, PetscSection section, Mat mat, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if PetscDefined(USE_DEBUG)
 /*
   DMDefaultSectionCheckConsistency - Check the consistentcy of the global and local sections. Generates and error if they are not consistent.
 
@@ -4677,7 +4676,6 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif
 
 PetscErrorCode DMGetIsoperiodicPointSF_Internal(DM dm, PetscSF *sf)
 {
@@ -4754,9 +4752,7 @@ PetscErrorCode DMSetGlobalSection(DM dm, PetscSection section)
   PetscCall(PetscObjectReference((PetscObject)section));
   PetscCall(PetscSectionDestroy(&dm->globalSection));
   dm->globalSection = section;
-#if PetscDefined(USE_DEBUG)
-  if (section) PetscCall(DMDefaultSectionCheckConsistency_Internal(dm, dm->localSection, section));
-#endif
+  if (PetscDefined(USE_DEBUG) && section) PetscCall(DMDefaultSectionCheckConsistency_Internal(dm, dm->localSection, section));
   /* Clear global scratch vectors and sectionSF */
   PetscCall(PetscSFDestroy(&dm->sectionSF));
   PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &dm->sectionSF));

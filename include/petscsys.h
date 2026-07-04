@@ -3021,7 +3021,6 @@ M*/
 PETSC_EXTERN PetscMPIInt    MPIU_Allreduce_Private(const void *, void *, MPIU_Count, MPI_Datatype, MPI_Op, MPI_Comm);
 PETSC_EXTERN PetscErrorCode PetscCheckAllreduceSameLineAndCount_Private(MPI_Comm, const char *, PetscMPIInt, PetscMPIInt);
 
-#if PetscDefined(USE_DEBUG)
 static inline unsigned int PetscStrHash(const char *str)
 {
   unsigned int c, hash = 5381;
@@ -3029,7 +3028,6 @@ static inline unsigned int PetscStrHash(const char *str)
   while ((c = (unsigned int)*str++)) hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
   return hash;
 }
-#endif
 
 /*MC
   MPIU_Allreduce - A replacement for `MPI_Allreduce()` that (1) performs single-count `MPIU_INT` operations in `PetscInt64` to detect
