@@ -398,7 +398,7 @@ TSPreStepFunction = Callable[[TS], None]
 TSPostStepFunction = Callable[[TS], None]
 """`TS` post-step callback."""
 
-TSIndicatorFunction = Callable[[TS, float, Vec, ArrayScalar], None]
+TSIndicatorFunction = Callable[[TS, float, Vec, ArrayReal], None]
 """`TS` event indicator callback."""
 
 TSPostEventFunction = Callable[[TS, ArrayInt, float, Vec, bool], None]
