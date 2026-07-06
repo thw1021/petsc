@@ -228,13 +228,13 @@ PetscErrorCode MatMeshToCellGraphRegister(const char sname[], PetscErrorCode (*f
   Input Parameters:
 + mesh         - the graph that represents the coupling of the vertices of the mesh
 - ncommonnodes - mesh elements that share this number of common nodes are considered neighbors, use 2 for triangles and
-                     quadrilaterials, 3 for tetrahedrals and 4 for hexahedrals
+                 quadrilaterials, 3 for tetrahedrals and 4 for hexahedrals
 
   Output Parameter:
 . dual - the dual graph
 
   Options Database Key:
-. -mat_mesh_to_cell_graph_type (parmetis|metis) - the conversion package to use; default is parmetis if available, otherwise metis
+. -mat_mesh_to_cell_graph_type (parmetis|metis) - the conversion package to use; default is ParMETIS if available, otherwise METIS
 
   Level: advanced
 
@@ -245,7 +245,7 @@ PetscErrorCode MatMeshToCellGraphRegister(const char sname[], PetscErrorCode (*f
 
   Each row of the mesh object represents a single cell in the mesh. For triangles it has 3 entries, quadrilaterials 4 entries,
   tetrahedrals 4 entries and hexahedrals 8 entries. You can mix triangles and quadrilaterals in the same mesh, but cannot
-  mix  tetrahedrals and hexahedrals.
+  mix tetrahedrals and hexahedrals.
   The columns of each row of the `Mat` mesh are the global vertex numbers of the vertices of that row's cell.
   The number of rows in mesh is number of cells, the number of columns is the number of vertices.
 
