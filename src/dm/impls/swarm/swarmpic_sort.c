@@ -93,6 +93,18 @@ static PetscErrorCode DMSwarmSortSetup(DMSwarmSort ctx, DM dm, PetscInt ncells)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMSwarmSortDestroy - Destroy a `DMSwarmSort` object
+
+  Not Collective
+
+  Input Parameter:
+. ctx - the `DMSwarmSort` object
+
+  Level: advanced
+
+.seealso: `DMSWARM`, `DMSwarmSort`, `DMSwarmSetType()`, `DMSwarmSortGetAccess()`, `DMSwarmSortGetPointsPerCell()`
+@*/
 PetscErrorCode DMSwarmSortDestroy(DMSwarmSort *ctx)
 {
   DMSwarmSort ictx;
