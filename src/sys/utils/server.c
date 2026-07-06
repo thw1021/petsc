@@ -60,6 +60,22 @@ PetscErrorCode PetscShmgetAddressesFinalize(void)
 }
 
 /* takes a void so can work bsan safe with PetscObjectContainerCompose() */
+/*@C
+  PCMPIServerAddressesDestroy - Destroys a `PCMPIServerAddresses` context, unmapping its shared-memory addresses
+
+  Not Collective
+
+  Input Parameter:
+. ctx - pointer to the `PCMPIServerAddresses` structure to free
+
+  Level: developer
+
+  Note:
+  Intended for use as a destructor callback registered via `PetscObjectContainerCompose()`; the argument type is
+  a generic pointer so it satisfies that interface.
+
+.seealso: `PCMPI`, `PetscShmgetMapAddresses()`, `PetscShmgetUnmapAddresses()`, `PetscObjectContainerCompose()`
+@*/
 PetscErrorCode PCMPIServerAddressesDestroy(PetscCtxRt ctx)
 {
   PCMPIServerAddresses *addresses = *(PCMPIServerAddresses **)ctx;
