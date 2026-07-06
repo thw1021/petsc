@@ -133,7 +133,7 @@ class TestTSPython(unittest.TestCase):
         self.assertTrue('__ijacobian__' in dct)
 
     def testFDColor(self):
-        #
+
         ts = self.ts
         ts.setProblemType(ts.ProblemType.NONLINEAR)
         ode = MyODE()

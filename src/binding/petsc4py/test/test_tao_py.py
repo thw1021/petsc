@@ -172,7 +172,7 @@ class MyGradientDescent:
             search_direction.scale(-1)
 
             # x = x + .2 search_direction
-            f, s, reason = self._ls.apply(x, gradient, search_direction)
+            f, _s, reason = self._ls.apply(x, gradient, search_direction)
 
             tao.monitor(f=f, res=gradient.norm())
 
