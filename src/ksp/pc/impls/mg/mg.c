@@ -932,8 +932,8 @@ PetscErrorCode PCSetUp_MG(PC pc)
     }
   }
 
+  PetscCall(PCGetUseAmat(pc, &use_amat));
   if (!opsset) {
-    PetscCall(PCGetUseAmat(pc, &use_amat));
     if (use_amat) {
       PetscCall(PetscInfo(pc, "Using outer operators to define finest grid operator \n  because PCMGGetSmoother(pc,nlevels-1,&ksp);KSPSetOperators(ksp,...); was not called.\n"));
       PetscCall(KSPSetOperators(mglevels[n - 1]->smoothd, pc->mat, pc->pmat));
@@ -1069,6 +1069,40 @@ PetscErrorCode PCSetUp_MG(PC pc)
       }
       dA = A;
       dB = B;
+    }
+  } else if (mg->galerkin == PC_MG_GALERKIN_NONE) {
+    for (PetscInt i = n - 2; i > -1; i--) {
+      KSP       smooth = mglevels[i]->smoothd;
+      Mat       A, B;
+      PetscBool matset, pmatset;
+
+      PetscCall(KSPGetOperatorsSet(smooth, &matset, &pmatset));
+      if (matset && pmatset) {
+        if (!use_amat) {
+          PetscCall(KSPGetOperators(smooth, NULL, &B));
+          PetscCall(KSPSetOperators(smooth, B, B));
+        }
+        continue;
+      }
+      if ((smooth->dmActive & KSP_DMACTIVE_OPERATOR) && smooth->dm) {
+        DMKSP kdm;
+
+        PetscCall(DMGetDMKSP(smooth->dm, &kdm));
+        if (kdm->ops->createoperators) {
+          A = B = NULL;
+          PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(smooth, &A, &B, kdm->createoperatorsctx));
+          PetscCheck(A, PetscObjectComm((PetscObject)smooth), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
+          if (!B) B = A;
+          if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
+          PetscCall(KSPSetOperators(smooth, use_amat ? A : B, B));
+          PetscCall(MatDestroy(&A));
+          PetscCall(MatDestroy(&B));
+        } else {
+          PetscCall(DMCreateMatrix(smooth->dm, &A));
+          PetscCall(KSPSetOperators(smooth, A, A));
+          PetscCall(MatDestroy(&A));
+        }
+      }
     }
   }
 
