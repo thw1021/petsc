@@ -39,9 +39,9 @@ class AppCtx:
     def plot(self, t, x):
         nx, ny, nz = self.n
         from numpy import mgrid
-        #
+
         U = x.getArray(readonly=1).reshape(nx,ny,nz, order='f')
-        #
+
         X, Y =  mgrid[0:1:1j*nx,0:1:1j*ny]
         Z = U[:,:,nz//2]
         pylab.figure(0)
@@ -52,7 +52,7 @@ class AppCtx:
         pylab.xlabel('x')
         pylab.ylabel('y')
         pylab.axis('equal')
-        #
+
         X, Y =  mgrid[0:1:1j*nx,0:1:1j*nz]
         Z = U[:,ny//4,:]
         pylab.figure(1)
@@ -63,7 +63,7 @@ class AppCtx:
         pylab.xlabel('x')
         pylab.ylabel('z')
         pylab.axis('equal')
-        #
+
         X, Y =  mgrid[0:1:1j*ny,0:1:1j*nz]
         Z = U[nx//2,:,:]
         pylab.figure(2)
