@@ -273,7 +273,7 @@ PetscErrorCode MatMeshToCellGraph(Mat mesh, PetscInt ncommonnodes, Mat *dual)
     PetscCall(PetscStrncpy(type, def, sizeof(type)));
   }
   PetscCall(PetscFunctionListFind(MatMeshToCellGraphList, type, &fn));
-  PetscCheck(fn, PetscObjectComm((PetscObject)mesh), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown MatMeshToCellGraph type %s", type);
+  PetscCheck(fn, PetscObjectComm((PetscObject)mesh), PETSC_ERR_SUP, "MatMeshToCellGraph type \"%s\" is not available. Configure PETSc with the appropriate package (e.g., --download-metis or --download-parmetis)", type);
   PetscCall((*fn)(mesh, ncommonnodes, dual));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
