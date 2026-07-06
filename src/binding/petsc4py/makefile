@@ -55,14 +55,14 @@ uninstall:
 CYTHONLINT_SRC = src demo
 CYTHONLINT_OPTS =
 RUFF_SRC = .
-RUFF_OPTS = check
 
 cython-lint:
 	conf/cythonize.sh -Wextra -Werror
 	cython-lint ${CYTHONLINT_OPTS} ${CYTHONLINT_SRC}
 
 ruff-lint:
-	ruff ${RUFF_OPTS} ${RUFF_SRC}
+	ruff check ${RUFF_SRC}
+	ruff format --diff ${RUFF_SRC}
 
 lint:
 	${RM} -r petsc4py-lint-env
