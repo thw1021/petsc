@@ -33,7 +33,7 @@ _today = datetime.datetime.now()
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 package = 'petsc4py'
-project = 'petsc4py'   # shown in top left corner of the petsc4py documentation
+project = 'petsc4py'  # shown in top left corner of the petsc4py documentation
 
 docdir = os.path.abspath(os.path.dirname(__file__))
 topdir = os.path.abspath(os.path.join(docdir, *[os.path.pardir] * 2))
@@ -156,8 +156,8 @@ def _mangle_petsc_intersphinx():
         petsc.VecShift
 
     This function downloads their object inventory and strips the leading path
-    elements so that references to PETSc names actually resolve."""
-
+    elements so that references to PETSc names actually resolve.
+    """
     website = intersphinx_mapping['petsc'][0].partition('/release/')[0]
     branch = get_doc_branch()
     doc_url = f'{website}/{branch}/'
@@ -214,8 +214,6 @@ def _setup_autodoc(app):
     from sphinx.util import inspect
     from sphinx.util import typing
 
-    #
-
     def stringify_annotation(annotation, *p, **kw):
         qualname = getattr(annotation, '__qualname__', '')
         module = getattr(annotation, '__module__', '')
@@ -238,8 +236,6 @@ def _setup_autodoc(app):
         autodoc.stringify_typehint = stringify_annotation
 
     inspect.TypeAliasForwardRef.__repr__ = lambda self: self.name
-
-    #
 
     class ClassDocumenterMixin:
         def __init__(self, *args, **kwargs):
@@ -294,8 +290,8 @@ def _monkey_patch_see_also():
     """Rewrite the role of names in "see also" sections.
 
     Napoleon uses :obj: for all names found in "see also" sections but we
-    need :all: so that references to labels work."""
-
+    need :all: so that references to labels work.
+    """
     _parse_numpydoc_see_also_section = NumpyDocstring._parse_numpydoc_see_also_section
 
     @functools.wraps(NumpyDocstring._parse_numpydoc_see_also_section)
