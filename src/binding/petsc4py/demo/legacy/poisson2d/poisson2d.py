@@ -42,11 +42,11 @@ class Poisson2D(object):
                 b[i, j] = 1*hx*hy
 
     def mult(self, mat, X, Y):
-        #
+
         self.da.globalToLocal(X, self.localX)
         x = self.da.getVecArray(self.localX)
         y = self.da.getVecArray(Y)
-        #
+
         mx, my = self.da.getSizes()
         hx, hy = [1.0/m for m in [mx, my]]
         (xs, xe), (ys, ye) = self.da.getRanges()
