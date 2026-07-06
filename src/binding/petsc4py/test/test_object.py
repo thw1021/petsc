@@ -68,7 +68,7 @@ class BaseTestObject:
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2 + prefix1)
         self.obj.setOptionsPrefix(None)
         self.assertEqual(self.obj.getOptionsPrefix(), None)
-        if not self.obj.getType() or not 'da' == str(self.obj.getType()):
+        if not self.obj.getType() or str(self.obj.getType()) != 'da':
             self.obj.setFromOptions()
 
         def opts_handler(obj):
@@ -82,23 +82,23 @@ class BaseTestObject:
         for _ in range(2):
             self.obj.setAttr('opts_handler_called', 0)
             self.obj.setOptionsHandler(opts_handler)
-            if not self.obj.getType() or not 'da' == str(self.obj.getType()):
+            if not self.obj.getType() or str(self.obj.getType()) != 'da':
                 self.obj.setFromOptions()
                 missing = [
-                           'AO',
-                           'DMLabel',
-                           'PetscDualSpace',
-                           'IS',
-                           'ISLocalToGlobalMapping',
-                           'MatPartitioning',
-                           'MatNullSpace',
-                           'PetscRandom',
-                           'PetscViewer',
-                          ]
+                    'AO',
+                    'DMLabel',
+                    'PetscDualSpace',
+                    'IS',
+                    'ISLocalToGlobalMapping',
+                    'MatPartitioning',
+                    'MatNullSpace',
+                    'PetscRandom',
+                    'PetscViewer',
+                ]
                 if self.obj.klass not in missing:
                     self.assertTrue(self.obj.getAttr('opts_handler_called') == 1)
 
-        if not self.obj.getType() or not 'da' == str(self.obj.getType()):
+        if not self.obj.getType() or str(self.obj.getType()) != 'da':
             self.obj.setAttr('opts_handler_called', 0)
             self.obj.setOptionsHandler(None)
             self.obj.setFromOptions()
