@@ -2023,7 +2023,7 @@ PetscErrorCode TaoMonitorStep(Tao tao, PetscViewerAndFormat *vf)
 
   Options Database Key:
 + -tao_monitor_solution_draw                   - draw the solution at each iteration
-- -tao_monitor_solution_draw_interval interval - only draw the solution every `interval` iterations, or only final value if negative
+- -tao_monitor_solution_draw_interval interval - only draw the solution every `interval` iterations and final value, or only final value if negative
 
   Level: advanced
 
@@ -2040,7 +2040,7 @@ PetscErrorCode TaoMonitorSolutionDraw(Tao tao, PetscCtx ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!((ictx->howoften > 0 && !((tao->niter % ictx->howoften) && !tao->reason)) || (ictx->howoften < 0 && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(VecView(tao->solution, ictx->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2056,7 +2056,7 @@ PetscErrorCode TaoMonitorSolutionDraw(Tao tao, PetscCtx ctx)
 
   Options Database Key:
 + -tao_monitor_gradient_draw                   - draw the gradient at each iteration
-- -tao_monitor_gradient_draw_interval interval - only draw the gradient every `interval` iterations, or only final value if negative
+- -tao_monitor_gradient_draw_interval interval - only draw the gradient every `interval` iterations and final value, or only final value if negative
 
   Level: advanced
 
@@ -2068,7 +2068,7 @@ PetscErrorCode TaoMonitorGradientDraw(Tao tao, PetscCtx ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!((ictx->howoften > 0 && !((tao->niter % ictx->howoften) && !tao->reason)) || (ictx->howoften < 0 && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(VecView(tao->gradient, ictx->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2084,7 +2084,7 @@ PetscErrorCode TaoMonitorGradientDraw(Tao tao, PetscCtx ctx)
 
   Options Database Key:
 + -tao_monitor_step_draw                   - draw the step direction at each iteration
-- -tao_monitor_step_draw_interval interval - only draw the step direction every `interval` iterations, or only final value if negative
+- -tao_monitor_step_draw_interval interval - only draw the step direction every `interval` iterations and final value, or only final value if negative
 
   Level: advanced
 
@@ -2096,7 +2096,7 @@ PetscErrorCode TaoMonitorStepDraw(Tao tao, PetscCtx ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!((ictx->howoften > 0 && !((tao->niter % ictx->howoften) && !tao->reason)) || (ictx->howoften < 0 && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(VecView(tao->stepdirection, ictx->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
