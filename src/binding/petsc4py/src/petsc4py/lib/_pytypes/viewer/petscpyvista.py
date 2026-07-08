@@ -1,5 +1,6 @@
 import numpy as np
 import pyvista as pv
+import math
 
 from petsc4py import PETSc
 
@@ -33,7 +34,6 @@ def _convertCell(ctype, cells, nc, off):
         tmp = cells[off + 1]
         cells[off + 1] = cells[off + 3]
         cells[off + 3] = tmp
-    return
 
 
 def _convertHighOrderCell(ctype, cells, deg, nc, off):
@@ -90,7 +90,6 @@ def _convertHighOrderCell(ctype, cells, deg, nc, off):
             raise RuntimeError('Incorrect indexing')
     for i in range(nc):
         cells[off + i] = locCells[i]
-    return
 
 
 VTK_TYPES = {}
@@ -148,14 +147,14 @@ class PetscPyVista:
         # DMPlexGetCellsVertices?
         for c in range(cStart, cEnd):
             conesLength += 1
-            closure, ornt = plex.getTransitiveClosure(c)
+            closure, _ornt = plex.getTransitiveClosure(c)
             for cl in closure:
                 if cl >= vStart and cl < vEnd:
                     conesLength += 1
         cells = np.zeros((conesLength), dtype=np.uint32)
         conesLength = 0
         for c in range(cStart, cEnd):
-            closure, ornt = plex.getTransitiveClosure(c)
+            closure, _ornt = plex.getTransitiveClosure(c)
             nc = 0
             off = 1
             for cl in closure:
@@ -224,10 +223,8 @@ class PetscPyVista:
             elif scalars[2] == dim:
                 ftype = VECTOR
             else:
-                raise RuntimeError(
-                    "Scalars '%s' blocksize %d did not match 1 or mesh dim %d"
-                    % (scalars[0], scalars[2], dm.getDimension())
-                )
+                msg = f"Scalars '{scalars[0]}' blocksize {scalars[2]} did not match 1 or mesh dim {dim}"
+                raise RuntimeError(msg)
             if scalars[1].shape[0] / scalars[2] == grid.n_cells:
                 grid.cell_data[scalars[0]] = scalars[1]
             elif scalars[1].shape[0] / scalars[2] == grid.n_points:
@@ -238,16 +235,8 @@ class PetscPyVista:
                     vecs[:, 0:2] = scalars[1].reshape(-1, scalars[2])
                     grid.point_data[scalars[0]] = vecs
             else:
-                raise RuntimeError(
-                    "Scalars '%s' size %d (%d) did not match sizes for cells (%d) or vertices (%d)"
-                    % (
-                        scalars[0],
-                        scalars[1].shape[0],
-                        scalars[2],
-                        grid.n_cells,
-                        grid.n_points,
-                    )
-                )
+                msg = f"Scalars '{scalars[0]}' size {scalars[1].shape} ({scalars[2]}) did not match sizes for cells ({grid.n_cells}) or vertices ({grid.n_points})"
+                raise RuntimeError(msg)
             if self.warpFactor > 0.0:
                 if ftype == SCALAR:
                     grid = grid.warp_by_scalar(factor=self.warpFactor)
@@ -279,13 +268,10 @@ class PetscPyVista:
                 scalars=(scalars[0] if scalars else None),
                 off_screen=True,
                 screenshot=name,
-                cpos=(self.cpos if self.cpos else None),
+                cpos=(self.cpos or None),
             )
-        return
 
     def viewSwarm(self, viewer, sw):
-        import math
-
         name = viewer.getFileName()
         spoints = sw.getField('DMSwarmPIC_coor')
         n = spoints.shape[0]
@@ -301,10 +287,7 @@ class PetscPyVista:
         field = np.zeros((n,))
         for i in range(n):
             field[i] = wgt[i, 0]
-        if name is None:
-            pl = pv.Plotter()
-        else:
-            pl = pv.Plotter(off_screen=True)
+        pl = pv.Plotter() if name is None else pv.Plotter(off_screen=True)
         pl.add_points(
             points,
             scalars=field,
@@ -337,7 +320,6 @@ class PetscPyVista:
         sw.restoreField(self.swarmField)
         sw.restoreField('velocity')
         sw.restoreField('DMSwarmPIC_coor')
-        return
 
     def viewObject(self, viewer, pobj):
         if pobj.klass == 'Vec':
@@ -350,10 +332,7 @@ class PetscPyVista:
                 self.viewPlex(viewer, pobj)
             elif pobj.type == 'swarm':
                 self.viewSwarm(viewer, pobj)
-        return
 
     def viewCell(self, grid, c):
         cell = grid.get_cell(c)
-        print(cell)
         cell.plot(show_edges=True)
-        return
