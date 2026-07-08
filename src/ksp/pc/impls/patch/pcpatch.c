@@ -1078,6 +1078,80 @@ static PetscErrorCode PCPatchCompleteCellPatch(PC pc, PetscHSetI ht, PetscHSetI 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCPatchAppendPoint_Private(PetscHSetI seen, PetscInt point, PetscInt *numPoints, PetscInt *maxPoints, PetscInt **points)
+{
+  PetscInt *newPoints = NULL;
+  PetscBool has;
+
+  PetscFunctionBegin;
+  PetscCall(PetscHSetIHas(seen, point, &has));
+  if (has == PETSC_TRUE) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscHSetIAdd(seen, point));
+  if (*numPoints == *maxPoints) {
+    PetscInt newMax = PetscMax(2 * *maxPoints, 16);
+
+    PetscCall(PetscMalloc1(newMax, &newPoints));
+    PetscCall(PetscArraycpy(newPoints, *points, *numPoints));
+    PetscCall(PetscFree(*points));
+    *points    = newPoints;
+    *maxPoints = newMax;
+  }
+  (*points)[(*numPoints)++] = point;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCPatchCompleteCellPatchOrdered(PC pc, PetscInt numPoints, const PetscInt points[], PetscHSetI cht, PetscInt *numCompletePoints, PetscInt **completePoints)
+{
+  DM        dm, plex;
+  PC_PATCH *patch         = (PC_PATCH *)pc->data;
+  PetscInt *orderedPoints = NULL;
+  PetscInt *star = NULL, *closure = NULL;
+  PetscInt  numOrderedPoints = 0, maxOrderedPoints = 0;
+  PetscInt  ignoredim, iStart = 0, iEnd = -1, starSize, closureSize, si, ci;
+  PetscInt *fStar = NULL, *fClosure = NULL;
+  PetscInt  fBegin, fEnd, fsi, fci, fStarSize, fClosureSize;
+
+  PetscFunctionBegin;
+  PetscCall(PCGetDM(pc, &dm));
+  PetscCall(DMConvert(dm, DMPLEX, &plex));
+  dm = plex;
+  PetscCall(DMPlexGetHeightStratum(dm, 1, &fBegin, &fEnd));
+  PetscCall(PCPatchGetIgnoreDim(pc, &ignoredim));
+  if (ignoredim >= 0) PetscCall(DMPlexGetDepthStratum(dm, ignoredim, &iStart, &iEnd));
+  PetscCall(PetscHSetIClear(cht));
+  for (PetscInt p = 0; p < numPoints; ++p) {
+    PetscCall(DMPlexGetTransitiveClosure(dm, points[p], PETSC_FALSE, &starSize, &star));
+    for (si = 0; si < starSize * 2; si += 2) {
+      const PetscInt ownedpoint = star[si];
+
+      PetscCall(DMPlexGetTransitiveClosure(dm, ownedpoint, PETSC_TRUE, &closureSize, &closure));
+      for (ci = 0; ci < closureSize * 2; ci += 2) {
+        const PetscInt seenpoint = closure[ci];
+
+        if (ignoredim >= 0 && seenpoint >= iStart && seenpoint < iEnd) continue;
+        PetscCall(PCPatchAppendPoint_Private(cht, seenpoint, &numOrderedPoints, &maxOrderedPoints, &orderedPoints));
+        if (patch->usercomputeopintfacet != NULL) {
+          if (fBegin <= seenpoint && seenpoint < fEnd) {
+            PetscCall(DMPlexGetTransitiveClosure(dm, seenpoint, PETSC_FALSE, &fStarSize, &fStar));
+            for (fsi = 0; fsi < fStarSize * 2; fsi += 2) {
+              PetscCall(DMPlexGetTransitiveClosure(dm, fStar[fsi], PETSC_TRUE, &fClosureSize, &fClosure));
+              for (fci = 0; fci < fClosureSize * 2; fci += 2) PetscCall(PCPatchAppendPoint_Private(cht, fClosure[fci], &numOrderedPoints, &maxOrderedPoints, &orderedPoints));
+              PetscCall(DMPlexRestoreTransitiveClosure(dm, fStar[fsi], PETSC_TRUE, NULL, &fClosure));
+            }
+            PetscCall(DMPlexRestoreTransitiveClosure(dm, seenpoint, PETSC_FALSE, NULL, &fStar));
+          }
+        }
+      }
+      PetscCall(DMPlexRestoreTransitiveClosure(dm, ownedpoint, PETSC_TRUE, NULL, &closure));
+    }
+    PetscCall(DMPlexRestoreTransitiveClosure(dm, points[p], PETSC_FALSE, NULL, &star));
+  }
+  PetscCall(DMDestroy(&dm));
+  *numCompletePoints = numOrderedPoints;
+  *completePoints    = orderedPoints;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCPatchGetGlobalDofs(PC pc, PetscSection dofSection[], PetscInt f, PetscBool combined, PetscInt p, PetscInt *dof, PetscInt *off)
 {
   PetscFunctionBegin;
@@ -1202,15 +1276,17 @@ static PetscErrorCode PCPatchComputeSetDifference_Private(PetscHSetI A, PetscHSe
  */
 static PetscErrorCode PCPatchCreateCellPatches(PC pc)
 {
-  PC_PATCH       *patch = (PC_PATCH *)pc->data;
-  DMLabel         ghost = NULL;
+  PC_PATCH       *patch       = (PC_PATCH *)pc->data;
+  DMLabel         ghost       = NULL;
+  DMLabel        *colorLabels = NULL;
   DM              dm, plex;
   PetscHSetI      ht = NULL, cht = NULL;
   PetscSection    cellCounts, pointCounts, intFacetCounts, extFacetCounts;
   PetscInt       *cellsArray, *pointsArray, *intFacetsArray, *extFacetsArray, *intFacetsToPatchCell, *extFacetsToPatchCell;
   PetscInt        numCells, numPoints, numIntFacets, numExtFacets;
-  const PetscInt *leaves;
-  PetscInt        nleaves, pStart, pEnd, cStart, cEnd, vStart, vEnd, fStart, fEnd, v;
+  const PetscInt *leaves     = NULL;
+  PetscInt        nleaves    = 0, pStart, pEnd, cStart, cEnd, vStart, vEnd, fStart, fEnd, v;
+  PetscInt        colorDepth = -1;
   PetscBool       isFiredrake;
 
   PetscFunctionBegin;
@@ -1225,6 +1301,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
 
+  PetscCheck(patch->use_coloring == PETSC_FALSE || (patch->user_patches == PETSC_FALSE && patch->ctype == PC_PATCH_STAR), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Coloring is only supported with star patch construction");
   if (patch->user_patches) {
     PetscCall(patch->userpatchconstructionop(pc, &patch->npatch, &patch->userIS, &patch->iterationSet, patch->userpatchconstructctx));
     vStart = 0;
@@ -1233,9 +1310,20 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     vStart = 0;
     vEnd   = 1;
   } else if (patch->codim < 0) {
-    if (patch->dim < 0) PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
-    else PetscCall(DMPlexGetDepthStratum(dm, patch->dim, &vStart, &vEnd));
-  } else PetscCall(DMPlexGetHeightStratum(dm, patch->codim, &vStart, &vEnd));
+    if (patch->dim < 0) {
+      PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
+      colorDepth = 0;
+    } else {
+      PetscCall(DMPlexGetDepthStratum(dm, patch->dim, &vStart, &vEnd));
+      colorDepth = patch->dim;
+    }
+  } else {
+    PetscInt dim;
+
+    PetscCall(DMPlexGetHeightStratum(dm, patch->codim, &vStart, &vEnd));
+    PetscCall(DMGetDimension(dm, &dim));
+    colorDepth = dim - patch->codim;
+  }
   patch->npatch = vEnd - vStart;
 
   /* These labels mark the owned points.  We only create patches around points that this process owns. */
@@ -1249,6 +1337,83 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscCall(DMGetPointSF(dm, &sf));
     PetscCall(PetscSFGetGraph(sf, NULL, &nleaves, &leaves, NULL));
     nleaves = PetscMax(nleaves, 0);
+  }
+
+  if (patch->use_coloring == PETSC_TRUE) {
+    ISColoring coloring;
+    IS        *iscolors;
+    PetscInt   ncolors;
+
+    PetscCall(DMPlexCreateColoring(dm, colorDepth, 1, &coloring));
+    PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
+    PetscCall(PetscCalloc1(ncolors, &colorLabels));
+    for (PetscInt c = 0; c < ncolors; ++c) {
+      IS              ownedIS;
+      const PetscInt *colorPoints;
+      PetscInt       *ownedPoints;
+      PetscInt        numColorPoints, numOwnedPoints = 0;
+
+      PetscCall(DMLabelCreate(PETSC_COMM_SELF, "PCPatch color star", &colorLabels[c]));
+      PetscCall(ISGetLocalSize(iscolors[c], &numColorPoints));
+      PetscCall(ISGetIndices(iscolors[c], &colorPoints));
+      PetscCall(PetscMalloc1(numColorPoints, &ownedPoints));
+      for (PetscInt p = 0; p < numColorPoints; ++p) {
+        PetscInt  loc = -1;
+        PetscBool flg;
+
+        if (ghost != NULL) PetscCall(DMLabelHasPoint(ghost, colorPoints[p], &flg));
+        else {
+          PetscCall(PetscFindInt(colorPoints[p], nleaves, leaves, &loc));
+          flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
+        }
+        if (flg == PETSC_FALSE) ownedPoints[numOwnedPoints++] = colorPoints[p];
+      }
+      PetscCall(ISRestoreIndices(iscolors[c], &colorPoints));
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numOwnedPoints, ownedPoints, PETSC_OWN_POINTER, &ownedIS));
+      PetscCall(DMLabelSetStratumIS(colorLabels[c], 1, ownedIS));
+      PetscCall(ISDestroy(&ownedIS));
+      /* A process builds patches only around the points it owns, and the same color on another process is a
+         different patch, so complete each process's patches by themselves */
+      PetscCall(DMPlexLabelCompleteStar_Internal(dm, colorLabels[c], PETSC_FALSE));
+    }
+    PetscCall(ISColoringRestoreIS(coloring, PETSC_USE_POINTER, &iscolors));
+    PetscCall(ISColoringDestroy(&coloring));
+    vStart        = 0;
+    vEnd          = ncolors;
+    patch->npatch = ncolors;
+  }
+
+  if (patch->use_coloring == PETSC_TRUE) {
+    PetscInt  numOwnedPoints;
+    PetscInt *ownedPointsArray = NULL;
+
+    PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &patch->ownedPointCounts));
+    PetscCall(PetscObjectSetName((PetscObject)patch->ownedPointCounts, "Patch Owned Point Layout"));
+    PetscCall(PetscSectionSetChart(patch->ownedPointCounts, vStart, vEnd));
+    for (v = vStart; v < vEnd; ++v) {
+      PetscInt numLabelPoints;
+
+      PetscCall(DMLabelGetStratumSize(colorLabels[v], 1, &numLabelPoints));
+      PetscCall(PetscSectionSetDof(patch->ownedPointCounts, v, numLabelPoints));
+    }
+    PetscCall(PetscSectionSetUp(patch->ownedPointCounts));
+    PetscCall(PetscSectionGetStorageSize(patch->ownedPointCounts, &numOwnedPoints));
+    PetscCall(PetscMalloc1(numOwnedPoints, &ownedPointsArray));
+    for (v = vStart; v < vEnd; ++v) {
+      IS              pointIS        = NULL;
+      const PetscInt *labelPoints    = NULL;
+      PetscInt        numLabelPoints = 0, off;
+
+      PetscCall(DMLabelGetStratumIS(colorLabels[v], 1, &pointIS));
+      if (pointIS == NULL) continue;
+      PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
+      PetscCall(ISGetIndices(pointIS, &labelPoints));
+      PetscCall(PetscSectionGetOffset(patch->ownedPointCounts, v, &off));
+      PetscCall(PetscArraycpy(&ownedPointsArray[off], labelPoints, numLabelPoints));
+      PetscCall(ISRestoreIndices(pointIS, &labelPoints));
+      PetscCall(ISDestroy(&pointIS));
+    }
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numOwnedPoints, ownedPointsArray, PETSC_OWN_POINTER, &patch->ownedPoints));
   }
 
   PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &patch->cellCounts));
@@ -1270,32 +1435,54 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   /* Count cells and points in the patch surrounding each entity */
   PetscCall(DMPlexGetHeightStratum(dm, 1, &fStart, &fEnd));
   for (v = vStart; v < vEnd; ++v) {
-    PetscHashIter hi;
-    PetscInt      chtSize, loc = -1;
-    PetscBool     flg;
+    PetscInt *orderedPoints = NULL;
+    PetscInt  chtSize = 0, loc = -1;
+    PetscBool flg;
 
-    if (!patch->user_patches && patch->ctype != PC_PATCH_PARDECOMP) {
-      if (ghost) PetscCall(DMLabelHasPoint(ghost, v, &flg));
-      else {
-        PetscCall(PetscFindInt(v, nleaves, leaves, &loc));
-        flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
+    if (patch->use_coloring == PETSC_TRUE) {
+      IS              pointIS        = NULL;
+      const PetscInt *labelPoints    = NULL;
+      PetscInt        numLabelPoints = 0;
+
+      PetscCall(DMLabelGetStratumIS(colorLabels[v], 1, &pointIS));
+      if (pointIS != NULL) {
+        PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
+        PetscCall(ISGetIndices(pointIS, &labelPoints));
       }
-      /* Not an owned entity, don't make a cell patch. */
-      if (flg) continue;
+      PetscCall(PCPatchCompleteCellPatchOrdered(pc, numLabelPoints, labelPoints, cht, &chtSize, &orderedPoints));
+      if (pointIS != NULL) {
+        PetscCall(ISRestoreIndices(pointIS, &labelPoints));
+        PetscCall(ISDestroy(&pointIS));
+      }
+    } else {
+      if (patch->user_patches == PETSC_FALSE && patch->ctype != PC_PATCH_PARDECOMP) {
+        if (ghost != NULL) PetscCall(DMLabelHasPoint(ghost, v, &flg));
+        else {
+          PetscCall(PetscFindInt(v, nleaves, leaves, &loc));
+          flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
+        }
+        /* Not an owned entity, do not make a cell patch. */
+        if (flg == PETSC_TRUE) continue;
+      }
+      PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
+      PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
+      PetscCall(PetscHSetIGetSize(cht, &chtSize));
+      if (chtSize) {
+        PetscInt index = 0;
+
+        PetscCall(PetscMalloc1(chtSize, &orderedPoints));
+        PetscCall(PetscHSetIGetElems(cht, &index, orderedPoints));
+      }
+    }
+    /* empty patch, continue */
+    if (chtSize == 0) {
+      PetscCall(PetscFree(orderedPoints));
+      continue;
     }
 
-    PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
-    PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
-    PetscCall(PetscHSetIGetSize(cht, &chtSize));
-    /* empty patch, continue */
-    if (chtSize == 0) continue;
+    for (PetscInt op = 0; op < chtSize; ++op) {
+      PetscInt point = orderedPoints[op], pdof;
 
-    /* safe because size(cht) > 0 from above */
-    PetscHashIterBegin(cht, hi);
-    while (!PetscHashIterAtEnd(cht, hi)) {
-      PetscInt point, pdof;
-
-      PetscHashIterGetKey(cht, hi, point);
       if (fStart <= point && point < fEnd) {
         const PetscInt *support;
         PetscInt        supportSize;
@@ -1307,7 +1494,6 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         } else {
           for (PetscInt p = 0; p < supportSize; p++) {
             PetscBool found;
-            /* FIXME: can I do this while iterating over cht? */
             PetscCall(PetscHSetIHas(cht, support[p], &found));
             if (!found) {
               interior = PETSC_FALSE;
@@ -1315,17 +1501,14 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
             }
           }
         }
-        if (interior) {
-          PetscCall(PetscSectionAddDof(intFacetCounts, v, 1));
-        } else {
-          PetscCall(PetscSectionAddDof(extFacetCounts, v, 1));
-        }
+        if (interior == PETSC_TRUE) PetscCall(PetscSectionAddDof(intFacetCounts, v, 1));
+        else PetscCall(PetscSectionAddDof(extFacetCounts, v, 1));
       }
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, -1, patch->combined, point, &pdof, NULL));
       if (pdof) PetscCall(PetscSectionAddDof(pointCounts, v, 1));
       if (point >= cStart && point < cEnd) PetscCall(PetscSectionAddDof(cellCounts, v, 1));
-      PetscHashIterNext(cht, hi);
     }
+    PetscCall(PetscFree(orderedPoints));
   }
   if (isFiredrake) PetscCall(DMLabelDestroyIndex(ghost));
 
@@ -1347,8 +1530,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
 
   /* Now that we know how much space we need, run through again and actually remember the cells. */
   for (v = vStart; v < vEnd; v++) {
-    PetscHashIter hi;
-    PetscInt      dof, off, cdof, coff, efdof, efoff, ifdof, ifoff, pdof, n = 0, cn = 0, ifn = 0, efn = 0;
+    PetscInt *orderedPoints = NULL;
+    PetscInt  dof, off, cdof, coff, efdof, efoff, ifdof, ifoff, pdof, n = 0, cn = 0, ifn = 0, efn = 0, chtSize = 0;
 
     PetscCall(PetscSectionGetDof(pointCounts, v, &dof));
     PetscCall(PetscSectionGetOffset(pointCounts, v, &off));
@@ -1359,13 +1542,35 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscCall(PetscSectionGetDof(extFacetCounts, v, &efdof));
     PetscCall(PetscSectionGetOffset(extFacetCounts, v, &efoff));
     if (dof <= 0) continue;
-    PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
-    PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
-    PetscHashIterBegin(cht, hi);
-    while (!PetscHashIterAtEnd(cht, hi)) {
-      PetscInt point;
+    if (patch->use_coloring == PETSC_TRUE) {
+      IS              pointIS        = NULL;
+      const PetscInt *labelPoints    = NULL;
+      PetscInt        numLabelPoints = 0;
 
-      PetscHashIterGetKey(cht, hi, point);
+      PetscCall(DMLabelGetStratumIS(colorLabels[v], 1, &pointIS));
+      if (pointIS != NULL) {
+        PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
+        PetscCall(ISGetIndices(pointIS, &labelPoints));
+      }
+      PetscCall(PCPatchCompleteCellPatchOrdered(pc, numLabelPoints, labelPoints, cht, &chtSize, &orderedPoints));
+      if (pointIS != NULL) {
+        PetscCall(ISRestoreIndices(pointIS, &labelPoints));
+        PetscCall(ISDestroy(&pointIS));
+      }
+    } else {
+      PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
+      PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
+      PetscCall(PetscHSetIGetSize(cht, &chtSize));
+      if (chtSize) {
+        PetscInt index = 0;
+
+        PetscCall(PetscMalloc1(chtSize, &orderedPoints));
+        PetscCall(PetscHSetIGetElems(cht, &index, orderedPoints));
+      }
+    }
+    for (PetscInt op = 0; op < chtSize; ++op) {
+      PetscInt point = orderedPoints[op];
+
       if (fStart <= point && point < fEnd) {
         const PetscInt *support;
         PetscInt        supportSize;
@@ -1377,7 +1582,6 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         } else {
           for (PetscInt p = 0; p < supportSize; p++) {
             PetscBool found;
-            /* FIXME: can I do this while iterating over cht? */
             PetscCall(PetscHSetIHas(cht, support[p], &found));
             if (!found) {
               interior = PETSC_FALSE;
@@ -1407,8 +1611,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, -1, patch->combined, point, &pdof, NULL));
       if (pdof) pointsArray[off + n++] = point;
       if (point >= cStart && point < cEnd) cellsArray[coff + cn++] = point;
-      PetscHashIterNext(cht, hi);
     }
+    PetscCall(PetscFree(orderedPoints));
     PetscCheck(ifn == ifdof, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of interior facets in patch %" PetscInt_FMT " is %" PetscInt_FMT ", but should be %" PetscInt_FMT, v, ifn, ifdof);
     PetscCheck(efn == efdof, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of exterior facets in patch %" PetscInt_FMT " is %" PetscInt_FMT ", but should be %" PetscInt_FMT, v, efn, efdof);
     PetscCheck(cn == cdof, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of cells in patch %" PetscInt_FMT " is %" PetscInt_FMT ", but should be %" PetscInt_FMT, v, cn, cdof);
@@ -1429,7 +1633,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         }
         if (found0 && found1) break;
       }
-      PetscCheck(found0 && found1, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Didn't manage to find local point numbers for facet support");
+      PetscCheck(found0 == PETSC_TRUE && found1 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not manage to find local point numbers for facet support");
     }
     for (efn = 0; efn < efdof; efn++) {
       PetscInt  cell0  = extFacetsToPatchCell[efoff + efn];
@@ -1441,8 +1645,12 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
           break;
         }
       }
-      PetscCheck(found0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Didn't manage to find local point number for exterior facet support");
+      PetscCheck(found0 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not manage to find local point number for exterior facet support");
     }
+  }
+  if (colorLabels != NULL) {
+    for (PetscInt c = 0; c < patch->npatch; ++c) PetscCall(DMLabelDestroy(&colorLabels[c]));
+    PetscCall(PetscFree(colorLabels));
   }
   PetscCall(PetscHSetIDestroy(&ht));
   PetscCall(PetscHSetIDestroy(&cht));
@@ -1502,16 +1710,18 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   PetscSection    cellCounts  = patch->cellCounts;
   PetscSection    pointCounts = patch->pointCounts;
   PetscSection    gtolCounts, gtolCountsWithArtificial = NULL, gtolCountsWithAll = NULL;
-  IS              cells         = patch->cells;
-  IS              points        = patch->points;
-  PetscSection    cellNumbering = patch->cellNumbering;
-  PetscInt        Nf            = patch->nsubspaces;
+  IS              cells            = patch->cells;
+  IS              points           = patch->points;
+  IS              ownedPoints      = patch->ownedPoints;
+  PetscSection    cellNumbering    = patch->cellNumbering;
+  PetscSection    ownedPointCounts = patch->ownedPointCounts;
+  PetscInt        Nf               = patch->nsubspaces;
   PetscInt        numCells, numPoints;
   PetscInt        numDofs;
   PetscInt        numGlobalDofs, numGlobalDofsWithArtificial, numGlobalDofsWithAll;
   PetscInt        totalDofsPerCell = patch->totalDofsPerCell;
   PetscInt        vStart, vEnd, v;
-  const PetscInt *cellsArray, *pointsArray;
+  const PetscInt *cellsArray, *pointsArray, *ownedPointsArray = NULL;
   PetscInt       *newCellsArray                 = NULL;
   PetscInt       *dofsArray                     = NULL;
   PetscInt       *dofsArrayWithArtificial       = NULL;
@@ -1597,6 +1807,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
   PetscCall(ISGetIndices(cells, &cellsArray));
   PetscCall(ISGetIndices(points, &pointsArray));
+  if (patch->use_coloring == PETSC_TRUE) PetscCall(ISGetIndices(ownedPoints, &ownedPointsArray));
   PetscCall(PetscHMapICreate(&ht));
   PetscCall(PetscHMapICreate(&htWithArtificial));
   PetscCall(PetscHMapICreate(&htWithAll));
@@ -1614,9 +1825,22 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     if (dof <= 0) continue;
 
     /* Calculate the global numbers of the artificial BC dofs here first */
-    PetscCall(patch->patchconstructop((void *)patch, dm, v, ownedpts));
-    PetscCall(PCPatchCompleteCellPatch(pc, ownedpts, seenpts));
-    PetscCall(PCPatchGetPointDofs(pc, ownedpts, owneddofs, v, &patch->subspaces_to_exclude));
+    PetscCall(PetscHSetIClear(ownedpts));
+    PetscCall(PetscHSetIClear(seenpts));
+    if (patch->use_coloring == PETSC_TRUE) {
+      PetscInt pdof, poff;
+
+      PetscCall(PetscSectionGetDof(ownedPointCounts, v, &pdof));
+      PetscCall(PetscSectionGetOffset(ownedPointCounts, v, &poff));
+      for (p = 0; p < pdof; ++p) PetscCall(PetscHSetIAdd(ownedpts, ownedPointsArray[poff + p]));
+      PetscCall(PetscSectionGetDof(pointCounts, v, &pdof));
+      PetscCall(PetscSectionGetOffset(pointCounts, v, &poff));
+      for (p = 0; p < pdof; ++p) PetscCall(PetscHSetIAdd(seenpts, pointsArray[poff + p]));
+    } else {
+      PetscCall(patch->patchconstructop((void *)patch, dm, v, ownedpts));
+      PetscCall(PCPatchCompleteCellPatch(pc, ownedpts, seenpts));
+    }
+    PetscCall(PCPatchGetPointDofs(pc, ownedpts, owneddofs, v, patch->use_coloring == PETSC_TRUE ? NULL : &patch->subspaces_to_exclude));
     PetscCall(PCPatchGetPointDofs(pc, seenpts, seendofs, v, NULL));
     PetscCall(PCPatchComputeSetDifference_Private(owneddofs, seendofs, artificialbcs));
     if (patch->viewPatches) {
@@ -1939,6 +2163,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   PetscCall(PetscHMapIDestroy(&htWithAll));
   PetscCall(ISRestoreIndices(cells, &cellsArray));
   PetscCall(ISRestoreIndices(points, &pointsArray));
+  if (patch->use_coloring == PETSC_TRUE) PetscCall(ISRestoreIndices(ownedPoints, &ownedPointsArray));
   PetscCall(PetscFree(dofsArray));
   if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) PetscCall(PetscFree(dofsArrayWithArtificial));
   if (isNonlinear) PetscCall(PetscFree(dofsArrayWithAll));
@@ -3284,11 +3509,13 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(PetscSFDestroy(&patch->sectionSF));
   PetscCall(PetscSectionDestroy(&patch->cellCounts));
   PetscCall(PetscSectionDestroy(&patch->pointCounts));
+  PetscCall(PetscSectionDestroy(&patch->ownedPointCounts));
   PetscCall(PetscSectionDestroy(&patch->cellNumbering));
   PetscCall(PetscSectionDestroy(&patch->gtolCounts));
   PetscCall(ISDestroy(&patch->gtol));
   PetscCall(ISDestroy(&patch->cells));
   PetscCall(ISDestroy(&patch->points));
+  PetscCall(ISDestroy(&patch->ownedPoints));
   PetscCall(ISDestroy(&patch->dofs));
   PetscCall(ISDestroy(&patch->offs));
   PetscCall(PetscSectionDestroy(&patch->patchSection));
@@ -3435,6 +3662,8 @@ static PetscErrorCode PCSetFromOptions_PATCH(PC pc, PetscOptionItems PetscOption
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_construct_type", patch->classname));
   PetscCall(PetscOptionsEnum(option, "How should the patches be constructed?", "PCPatchSetConstructType", PCPatchConstructTypes, (PetscEnum)patchConstructionType, (PetscEnum *)&patchConstructionType, &flg));
   if (flg) PetscCall(PCPatchSetConstructType(pc, patchConstructionType, NULL, NULL));
+  PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_use_coloring", patch->classname));
+  PetscCall(PetscOptionsBool(option, "Group star patches using a DMPlex coloring?", "PCPATCH", patch->use_coloring, &patch->use_coloring, &flg));
 
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_vanka_dim", patch->classname));
   PetscCall(PetscOptionsInt(option, "Topological dimension of entities for Vanka to ignore", "PCPATCH", patch->vankadim, &patch->vankadim, &flg));
@@ -3538,7 +3767,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Precomputing element tensors (each cell assembled only once)\n"));
   if (!patch->save_operators) PetscCall(PetscViewerASCIIPrintf(viewer, "Not saving patch operators (rebuilt every PCApply)\n"));
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Saving patch operators (rebuilt every PCSetUp)\n"));
-  if (patch->patchconstructop == PCPatchConstruct_Star) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: star\n"));
+  if (patch->patchconstructop == PCPatchConstruct_Star) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: star%s\n", patch->use_coloring == PETSC_TRUE ? " with coloring" : ""));
   else if (patch->patchconstructop == PCPatchConstruct_Vanka) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: Vanka\n"));
   else if (patch->patchconstructop == PCPatchConstruct_User) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: user-specified\n"));
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: unknown\n"));
@@ -3579,6 +3808,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
 . -pc_patch_points_view  - Views the process local mesh point numbers for each patch
 . -pc_patch_g2l_view     - Views the map between global dofs and patch local dofs for each patch
 . -pc_patch_patches_view - Views the global dofs associated with each patch and its boundary
+. -pc_patch_use_coloring - Groups star patches by `DMPlexCreateColoring()` colors
 - -pc_patch_sub_mat_view - Views the matrix associated with each patch
 
    Level: intermediate
@@ -3610,6 +3840,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->vankadim                 = -1;
   patch->ignoredim                = -1;
   patch->pardecomp_overlap        = 0;
+  patch->ctype                    = PC_PATCH_STAR;
   patch->patchconstructop         = PCPatchConstruct_Star;
   patch->symmetrise_sweep         = PETSC_FALSE;
   patch->npatch                   = 0;
@@ -3617,6 +3848,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->optionsSet               = PETSC_FALSE;
   patch->iterationSet             = NULL;
   patch->user_patches             = PETSC_FALSE;
+  patch->use_coloring             = PETSC_FALSE;
   PetscCall(PetscStrallocpy(MATDENSE, (char **)&patch->sub_mat_type));
   patch->viewPatches                       = PETSC_FALSE;
   patch->viewCells                         = PETSC_FALSE;

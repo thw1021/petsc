@@ -306,6 +306,7 @@ PETSC_EXTERN PetscErrorCode VecLoad_Plex_CGNS_Internal(Vec, PetscViewer);
 #endif
 
 PETSC_INTERN PetscErrorCode DMPlexClosurePoints_Private(DM, PetscInt, const PetscInt[], IS *);
+PETSC_INTERN PetscErrorCode DMPlexLabelCompleteStar_Internal(DM, DMLabel, PetscBool);
 PETSC_INTERN PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM, PetscOptionItems);
 PETSC_INTERN PetscErrorCode DMSetFromOptions_Overlap_Plex(DM, PetscOptionItems, PetscInt *);
 PETSC_INTERN PetscErrorCode DMCoarsen_Plex(DM, MPI_Comm, DM *);
