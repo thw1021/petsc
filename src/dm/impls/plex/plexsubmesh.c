@@ -1,5 +1,6 @@
 #include <petsc/private/dmpleximpl.h>  /*I      "petscdmplex.h"    I*/
 #include <petsc/private/dmlabelimpl.h> /*I      "petscdmlabel.h"   I*/
+#include <petsc/private/hashseti.h>
 #include <petscsf.h>
 
 static PetscErrorCode DMPlexCellIsHybrid_Internal(DM dm, PetscInt p, PetscBool *isHybrid)
@@ -302,6 +303,98 @@ PetscErrorCode DMPlexLabelComplete(DM dm, DMLabel label)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexLabelAppendPoint_Private(PetscHSetI seen, PetscInt point, PetscInt *numPoints, PetscInt *maxPoints, PetscInt **points)
+{
+  PetscInt  *newPoints = NULL;
+  PetscBool  has;
+
+  PetscFunctionBegin;
+  PetscCall(PetscHSetIHas(seen, point, &has));
+  if (has) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscHSetIAdd(seen, point));
+  if (*numPoints == *maxPoints) {
+    PetscInt newMax = PetscMax(2 * *maxPoints, 16);
+
+    PetscCall(PetscMalloc1(newMax, &newPoints));
+    PetscCall(PetscArraycpy(newPoints, *points, *numPoints));
+    PetscCall(PetscFree(*points));
+    *points    = newPoints;
+    *maxPoints = newMax;
+  }
+  (*points)[(*numPoints)++] = point;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexLabelSetStratumOrdered_Private(DMLabel label, PetscInt value, PetscBool append, PetscInt numPoints, const PetscInt points[])
+{
+  IS              oldIS = NULL, newIS;
+  PetscHSetI      seen      = NULL;
+  const PetscInt *oldPoints = NULL;
+  PetscInt       *newPoints = NULL;
+  PetscInt        numOld = 0, numNew = 0;
+  PetscBool       has;
+
+  PetscFunctionBegin;
+  PetscCall(PetscHSetICreate(&seen));
+  if (append) {
+    PetscCall(DMLabelGetStratumIS(label, value, &oldIS));
+    if (oldIS) {
+      PetscCall(ISGetLocalSize(oldIS, &numOld));
+      PetscCall(ISGetIndices(oldIS, &oldPoints));
+    }
+  }
+  PetscCall(PetscMalloc1(numOld + numPoints, &newPoints));
+  for (PetscInt p = 0; p < numOld; ++p) {
+    PetscCall(PetscHSetIHas(seen, oldPoints[p], &has));
+    if (has) continue;
+    PetscCall(PetscHSetIAdd(seen, oldPoints[p]));
+    newPoints[numNew++] = oldPoints[p];
+  }
+  for (PetscInt p = 0; p < numPoints; ++p) {
+    PetscCall(PetscHSetIHas(seen, points[p], &has));
+    if (has) continue;
+    PetscCall(PetscHSetIAdd(seen, points[p]));
+    newPoints[numNew++] = points[p];
+  }
+  if (oldIS) {
+    PetscCall(ISRestoreIndices(oldIS, &oldPoints));
+    PetscCall(ISDestroy(&oldIS));
+  }
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numNew, newPoints, PETSC_OWN_POINTER, &newIS));
+  PetscCall(DMLabelSetStratumIS(label, value, newIS));
+  PetscCall(ISDestroy(&newIS));
+  PetscCall(PetscHSetIDestroy(&seen));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexLabelAppendLabelOrdered_Private(DMLabel label, DMLabel appendLabel)
+{
+  IS              valueIS;
+  const PetscInt *values;
+  PetscInt        numValues;
+
+  PetscFunctionBegin;
+  PetscCall(DMLabelGetValueIS(appendLabel, &valueIS));
+  PetscCall(ISGetLocalSize(valueIS, &numValues));
+  PetscCall(ISGetIndices(valueIS, &values));
+  for (PetscInt v = 0; v < numValues; ++v) {
+    IS              pointIS;
+    const PetscInt *points;
+    PetscInt        numPoints;
+
+    PetscCall(DMLabelGetStratumIS(appendLabel, values[v], &pointIS));
+    if (!pointIS) continue;
+    PetscCall(ISGetLocalSize(pointIS, &numPoints));
+    PetscCall(ISGetIndices(pointIS, &points));
+    PetscCall(DMPlexLabelSetStratumOrdered_Private(label, values[v], PETSC_TRUE, numPoints, points));
+    PetscCall(ISRestoreIndices(pointIS, &points));
+    PetscCall(ISDestroy(&pointIS));
+  }
+  PetscCall(ISRestoreIndices(valueIS, &values));
+  PetscCall(ISDestroy(&valueIS));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMPlexLabelCompleteStar - Starting with a label marking points, we add their star
 
@@ -314,12 +407,62 @@ PetscErrorCode DMPlexLabelComplete(DM dm, DMLabel label)
 
   Level: developer
 
+  Notes:
+  The completed points are ordered by the star of each originally marked point. Points contributed by the star of the first marked point appear first, followed by the points contributed by the second marked point, and so on. Points already present in an earlier completed star are not repeated.
+
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexLabelComplete()`
 @*/
 PetscErrorCode DMPlexLabelCompleteStar(DM dm, DMLabel label)
 {
+  IS              valueIS;
+  PetscSF         sfPoint;
+  const PetscInt *values;
+  PetscInt        numValues, nroots;
+
   PetscFunctionBegin;
-  PetscCall(DMPlexLabelComplete_Internal(dm, label, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(DMLabelGetNumValues(label, &numValues));
+  PetscCall(DMLabelGetValueIS(label, &valueIS));
+  PetscCall(ISGetIndices(valueIS, &values));
+  for (PetscInt v = 0; v < numValues; ++v) {
+    IS              pointIS;
+    PetscHSetI      seen = NULL;
+    const PetscInt *points;
+    PetscInt       *newPoints = NULL;
+    PetscInt        numPoints, numNewPoints = 0, maxNewPoints = 0;
+
+    PetscCall(DMLabelGetStratumIS(label, values[v], &pointIS));
+    if (!pointIS) continue;
+    PetscCall(PetscHSetICreate(&seen));
+    PetscCall(ISGetLocalSize(pointIS, &numPoints));
+    PetscCall(ISGetIndices(pointIS, &points));
+    for (PetscInt p = 0; p < numPoints; ++p) {
+      PetscInt *star = NULL;
+      PetscInt  starSize;
+
+      PetscCall(DMPlexGetTransitiveClosure(dm, points[p], PETSC_FALSE, &starSize, &star));
+      for (PetscInt s = 0; s < starSize * 2; s += 2) PetscCall(DMPlexLabelAppendPoint_Private(seen, star[s], &numNewPoints, &maxNewPoints, &newPoints));
+      PetscCall(DMPlexRestoreTransitiveClosure(dm, points[p], PETSC_FALSE, &starSize, &star));
+    }
+    PetscCall(ISRestoreIndices(pointIS, &points));
+    PetscCall(ISDestroy(&pointIS));
+    PetscCall(DMPlexLabelSetStratumOrdered_Private(label, values[v], PETSC_FALSE, numNewPoints, newPoints));
+    PetscCall(PetscFree(newPoints));
+    PetscCall(PetscHSetIDestroy(&seen));
+  }
+  PetscCall(ISRestoreIndices(valueIS, &values));
+  PetscCall(ISDestroy(&valueIS));
+  PetscCall(DMGetPointSF(dm, &sfPoint));
+  PetscCall(PetscSFGetGraph(sfPoint, &nroots, NULL, NULL, NULL));
+  if (nroots >= 0) {
+    DMLabel lblRoots, lblLeaves;
+
+    PetscCall(DMLabelGather(label, sfPoint, &lblLeaves));
+    PetscCall(DMPlexLabelAppendLabelOrdered_Private(label, lblLeaves));
+    PetscCall(DMLabelDestroy(&lblLeaves));
+    PetscCall(DMLabelDistribute(label, sfPoint, &lblRoots));
+    PetscCall(DMPlexLabelAppendLabelOrdered_Private(label, lblRoots));
+    PetscCall(DMLabelDestroy(&lblRoots));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

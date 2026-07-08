@@ -19,6 +19,7 @@ typedef struct {
   IS          *userIS;
   PetscInt     npatch;       /* Number of patches */
   PetscBool    user_patches; /* Flag for user construction of patches */
+  PetscBool    use_coloring; /* Group star patches by DMPlex coloring */
   PetscInt     dim, codim;   /* Dimension or codimension of mesh points to loop over; only one of them can be set */
   PetscSection cellCounts;   /* Maps patch -> # cells in patch */
   IS           cells;        /* [patch][cell in patch]: Cell number */
@@ -29,8 +30,10 @@ typedef struct {
   PetscSection intFacetCounts;
   PetscSection extFacetCounts;
   PetscSection cellNumbering; /* Plex: NULL Firedrake: Numbering of cells in DM */
-  PetscSection pointCounts;   /* Maps patch -> # points with dofs in patch */
-  IS           points;        /* [patch][point in patch]: Point number */
+  PetscSection pointCounts;      /* Maps patch -> # points with dofs in patch */
+  IS           points;           /* [patch][point in patch]: Point number */
+  PetscSection ownedPointCounts; /* Maps colored patch -> # star-owned points before completion */
+  IS           ownedPoints;      /* [patch][owned point in patch]: Point number */
   /* Dof layout */
   PetscBool     combined;        /* Use a combined space with all fields */
   PetscInt      nsubspaces;      /* Number of fields */
