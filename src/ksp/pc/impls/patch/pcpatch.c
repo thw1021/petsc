@@ -1270,32 +1270,37 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   /* Count cells and points in the patch surrounding each entity */
   PetscCall(DMPlexGetHeightStratum(dm, 1, &fStart, &fEnd));
   for (v = vStart; v < vEnd; ++v) {
-    PetscHashIter hi;
-    PetscInt      chtSize, loc = -1;
-    PetscBool     flg;
+    PetscInt *orderedPoints = NULL;
+    PetscInt  chtSize = 0, loc = -1;
+    PetscBool flg;
 
-    if (!patch->user_patches && patch->ctype != PC_PATCH_PARDECOMP) {
-      if (ghost) PetscCall(DMLabelHasPoint(ghost, v, &flg));
+    if (patch->user_patches == PETSC_FALSE && patch->ctype != PC_PATCH_PARDECOMP) {
+      if (ghost != NULL) PetscCall(DMLabelHasPoint(ghost, v, &flg));
       else {
         PetscCall(PetscFindInt(v, nleaves, leaves, &loc));
         flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
       }
-      /* Not an owned entity, don't make a cell patch. */
-      if (flg) continue;
+      /* Not an owned entity, do not make a cell patch. */
+      if (flg == PETSC_TRUE) continue;
     }
-
     PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
     PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
     PetscCall(PetscHSetIGetSize(cht, &chtSize));
+    if (chtSize) {
+      PetscInt index = 0;
+
+      PetscCall(PetscMalloc1(chtSize, &orderedPoints));
+      PetscCall(PetscHSetIGetElems(cht, &index, orderedPoints));
+    }
     /* empty patch, continue */
-    if (chtSize == 0) continue;
+    if (chtSize == 0) {
+      PetscCall(PetscFree(orderedPoints));
+      continue;
+    }
 
-    /* safe because size(cht) > 0 from above */
-    PetscHashIterBegin(cht, hi);
-    while (!PetscHashIterAtEnd(cht, hi)) {
-      PetscInt point, pdof;
+    for (PetscInt op = 0; op < chtSize; ++op) {
+      PetscInt point = orderedPoints[op], pdof;
 
-      PetscHashIterGetKey(cht, hi, point);
       if (fStart <= point && point < fEnd) {
         const PetscInt *support;
         PetscInt        supportSize;
@@ -1307,7 +1312,6 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         } else {
           for (PetscInt p = 0; p < supportSize; p++) {
             PetscBool found;
-            /* FIXME: can I do this while iterating over cht? */
             PetscCall(PetscHSetIHas(cht, support[p], &found));
             if (!found) {
               interior = PETSC_FALSE;
@@ -1321,8 +1325,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, -1, patch->combined, point, &pdof, NULL));
       if (pdof) PetscCall(PetscSectionAddDof(pointCounts, v, 1));
       if (point >= cStart && point < cEnd) PetscCall(PetscSectionAddDof(cellCounts, v, 1));
-      PetscHashIterNext(cht, hi);
     }
+    PetscCall(PetscFree(orderedPoints));
   }
   if (isFiredrake) PetscCall(DMLabelDestroyIndex(ghost));
 
@@ -1344,8 +1348,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
 
   /* Now that we know how much space we need, run through again and actually remember the cells. */
   for (v = vStart; v < vEnd; v++) {
-    PetscHashIter hi;
-    PetscInt      dof, off, cdof, coff, efdof, efoff, ifdof, ifoff, pdof, n = 0, cn = 0, ifn = 0, efn = 0;
+    PetscInt *orderedPoints = NULL;
+    PetscInt  dof, off, cdof, coff, efdof, efoff, ifdof, ifoff, pdof, n = 0, cn = 0, ifn = 0, efn = 0, chtSize = 0;
 
     PetscCall(PetscSectionGetDof(pointCounts, v, &dof));
     PetscCall(PetscSectionGetOffset(pointCounts, v, &off));
@@ -1358,11 +1362,16 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     if (dof <= 0) continue;
     PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
     PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
-    PetscHashIterBegin(cht, hi);
-    while (!PetscHashIterAtEnd(cht, hi)) {
-      PetscInt point;
+    PetscCall(PetscHSetIGetSize(cht, &chtSize));
+    if (chtSize) {
+      PetscInt index = 0;
 
-      PetscHashIterGetKey(cht, hi, point);
+      PetscCall(PetscMalloc1(chtSize, &orderedPoints));
+      PetscCall(PetscHSetIGetElems(cht, &index, orderedPoints));
+    }
+    for (PetscInt op = 0; op < chtSize; ++op) {
+      PetscInt point = orderedPoints[op];
+
       if (fStart <= point && point < fEnd) {
         const PetscInt *support;
         PetscInt        supportSize;
@@ -1374,7 +1383,6 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         } else {
           for (PetscInt p = 0; p < supportSize; p++) {
             PetscBool found;
-            /* FIXME: can I do this while iterating over cht? */
             PetscCall(PetscHSetIHas(cht, support[p], &found));
             if (!found) {
               interior = PETSC_FALSE;
@@ -1404,8 +1412,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, -1, patch->combined, point, &pdof, NULL));
       if (pdof) pointsArray[off + n++] = point;
       if (point >= cStart && point < cEnd) cellsArray[coff + cn++] = point;
-      PetscHashIterNext(cht, hi);
     }
+    PetscCall(PetscFree(orderedPoints));
     PetscCheck(ifn == ifdof, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of interior facets in patch %" PetscInt_FMT " is %" PetscInt_FMT ", but should be %" PetscInt_FMT, v, ifn, ifdof);
     PetscCheck(efn == efdof, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of exterior facets in patch %" PetscInt_FMT " is %" PetscInt_FMT ", but should be %" PetscInt_FMT, v, efn, efdof);
     PetscCheck(cn == cdof, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of cells in patch %" PetscInt_FMT " is %" PetscInt_FMT ", but should be %" PetscInt_FMT, v, cn, cdof);
