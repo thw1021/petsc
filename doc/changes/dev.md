@@ -237,6 +237,7 @@
 - Add `DMPlexLabelCompleteStar()`
 - Add `DMPlexTransformCreateSplitCellLabel()` to mark the cells of a transformed mesh whose source cell was genuinely split
 - Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum
+- Change `DMPlexLabelCompleteStar()` to add the star of each marked point in a deterministic order rather than in hash order
 - Add `-dm_plex_coloring_ordering_type` to order the points with `MatGetOrdering()` before coloring them
 - Add `-dm_plex_coloring_local` to color the points each process owns by themselves, without communicating
 - Change the `distance` argument of `DMPlexCreateColoring()` to count applications of the adjacency through the mesh rather than hops in the graph of the stratum; the two agree at depth zero but differ elsewhere, most visibly at the cell stratum with finite-element adjacency
