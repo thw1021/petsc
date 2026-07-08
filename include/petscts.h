@@ -1727,3 +1727,6 @@ PETSC_EXTERN PetscErrorCode TSComputeExactError(TS, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscConvEstUseTS(PetscConvEst, PetscBool);
 
 PETSC_EXTERN PetscErrorCode TSSetMatStructure(TS, MatStructure);
+
+PETSC_EXTERN PetscErrorCode DMSwarmTSCreateSolution(TS);
+PETSC_EXTERN PetscErrorCode DMSwarmTSRedistribute(TS);

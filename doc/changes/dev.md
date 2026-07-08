@@ -130,6 +130,7 @@
 - Add `DMSwarmSortDestroy()` and `DMSwarmSortView()`
 - Allow `DMSwarmCellDMSetSort()` to take in `NULL` and clear the sort
 - Add `DMSwarmPreallocateMassMatrix()` and `DMSwarmFillMassMatrix()`
+- Add `DMSwarmTSCreateSolution()` and `DMSwarmTSRedistribute()`
 
 ## DMPlex
 
