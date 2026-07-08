@@ -1315,11 +1315,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
             }
           }
         }
-        if (interior) {
-          PetscCall(PetscSectionAddDof(intFacetCounts, v, 1));
-        } else {
-          PetscCall(PetscSectionAddDof(extFacetCounts, v, 1));
-        }
+        if (interior == PETSC_TRUE) PetscCall(PetscSectionAddDof(intFacetCounts, v, 1));
+        else PetscCall(PetscSectionAddDof(extFacetCounts, v, 1));
       }
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, -1, patch->combined, point, &pdof, NULL));
       if (pdof) PetscCall(PetscSectionAddDof(pointCounts, v, 1));
@@ -1429,7 +1426,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         }
         if (found0 && found1) break;
       }
-      PetscCheck(found0 && found1, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Didn't manage to find local point numbers for facet support");
+      PetscCheck(found0 == PETSC_TRUE && found1 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not find local point numbers for facet support");
     }
     for (efn = 0; efn < efdof; efn++) {
       PetscInt  cell0  = extFacetsToPatchCell[efoff + efn];
@@ -1441,7 +1438,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
           break;
         }
       }
-      PetscCheck(found0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Didn't manage to find local point number for exterior facet support");
+      PetscCheck(found0 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not find local point number for exterior facet support");
     }
   }
   PetscCall(PetscHSetIDestroy(&ht));
@@ -3610,6 +3607,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->vankadim                 = -1;
   patch->ignoredim                = -1;
   patch->pardecomp_overlap        = 0;
+  patch->ctype                    = PC_PATCH_STAR;
   patch->patchconstructop         = PCPatchConstruct_Star;
   patch->symmetrise_sweep         = PETSC_FALSE;
   patch->npatch                   = 0;
