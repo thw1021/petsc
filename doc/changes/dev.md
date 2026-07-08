@@ -73,6 +73,7 @@
 ## PC
 
 - Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering small entries from the prolongator in `PCGAMG`
+- Change `PCMG` to set up smoothers `KSP(P, P)` when `-pc_use_amat false`.
 
 ## KSP
 

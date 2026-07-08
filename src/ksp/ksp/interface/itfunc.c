@@ -354,26 +354,31 @@ PetscErrorCode KSPSetUp(KSP ksp)
   PetscCall(KSPSetUpNorms_Private(ksp, PETSC_TRUE, &ksp->normtype, &ksp->pc_side));
 
   if ((ksp->dmActive & KSP_DMACTIVE_OPERATOR) && !ksp->setupstage) {
-    DMKSP kdm;
+    PetscBool matset, pmatset;
 
     /* first time in so build matrix and vector data structures using DM */
     if (!ksp->vec_rhs) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_rhs));
     if (!ksp->vec_sol) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_sol));
 
-    PetscCall(DMGetDMKSP(ksp->dm, &kdm));
-    if (kdm->ops->createoperators) {
-      A = B = NULL;
-      PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
-      PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
-      if (!B) B = A;
-      if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
-      PetscCall(KSPSetOperators(ksp, A, B));
-      PetscCall(MatDestroy(&A));
-      PetscCall(MatDestroy(&B));
-    } else {
-      PetscCall(DMCreateMatrix(ksp->dm, &A));
-      PetscCall(KSPSetOperators(ksp, A, A));
-      PetscCall(MatDestroy(&A));
+    PetscCall(KSPGetOperatorsSet(ksp, &matset, &pmatset));
+    if (!matset || !pmatset) {
+      DMKSP kdm;
+
+      PetscCall(DMGetDMKSP(ksp->dm, &kdm));
+      if (kdm->ops->createoperators) {
+        A = B = NULL;
+        PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
+        PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
+        if (!B) B = A;
+        if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
+        PetscCall(KSPSetOperators(ksp, A, B));
+        PetscCall(MatDestroy(&A));
+        PetscCall(MatDestroy(&B));
+      } else {
+        PetscCall(DMCreateMatrix(ksp->dm, &A));
+        PetscCall(KSPSetOperators(ksp, A, A));
+        PetscCall(MatDestroy(&A));
+      }
     }
   }
 
