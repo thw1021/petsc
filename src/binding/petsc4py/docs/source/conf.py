@@ -33,7 +33,7 @@ _today = datetime.datetime.now()
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 package = 'petsc4py'
-project = 'petsc4py'   # shown in top left corner of the petsc4py documentation
+project = 'petsc4py'  # shown in top left corner of the petsc4py documentation
 
 docdir = os.path.abspath(os.path.dirname(__file__))
 topdir = os.path.abspath(os.path.join(docdir, *[os.path.pardir] * 2))
@@ -214,8 +214,6 @@ def _setup_autodoc(app):
     from sphinx.util import inspect
     from sphinx.util import typing
 
-    #
-
     def stringify_annotation(annotation, *p, **kw):
         qualname = getattr(annotation, '__qualname__', '')
         module = getattr(annotation, '__module__', '')
@@ -238,8 +236,6 @@ def _setup_autodoc(app):
         autodoc.stringify_typehint = stringify_annotation
 
     inspect.TypeAliasForwardRef.__repr__ = lambda self: self.name
-
-    #
 
     class ClassDocumenterMixin:
         def __init__(self, *args, **kwargs):

@@ -90,7 +90,8 @@ def Import(pkg, name, path, arch):
         # call may be invalid if extension module for
         # other 'arch' has been already imported.
         if arch is not None and arch != module.__arch__:
-            raise ImportError('%s already imported' % module)
+            msg = f'{module} already imported'
+            raise ImportError(msg)
         return module
 
     # silence annoying Cython warning
@@ -116,13 +117,15 @@ def getPathArch(path, arch, rcvar='PETSC_ARCH', rcfile='petsc.cfg'):
     elif os.path.isfile(path):
         path = os.path.dirname(path)
     elif not os.path.isdir(path):
-        raise ValueError("invalid path: '%s'" % path)
+        msg = f"invalid path: '{path}'"
+        raise ValueError(msg)
     # arch
     if arch is not None:
         if not isinstance(arch, str):
             raise TypeError('arch argument must be string')
         if not os.path.isdir(os.path.join(path, arch)):
-            raise TypeError("invalid arch value: '%s'" % arch)
+            msg = f"invalid arch value: '{arch}'"
+            raise TypeError(msg)
         return (path, arch)
 
     # helper function
