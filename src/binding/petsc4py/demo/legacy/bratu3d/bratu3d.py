@@ -35,14 +35,14 @@ class Bratu3D(object):
         self.localX  = da.createLocalVec()
 
     def formInitGuess(self, snes, X):
-        #
+
         x = self.da.getVecArray(X)
-        #
+
         mx, my, mz = self.da.getSizes()
         hx, hy, hz = [1.0/(m-1) for m in [mx, my, mz]]
         lambda_ = self.lambda_
         scale = lambda_/(lambda_ + 1.0)
-        #
+
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         for k in range(zs, ze):
             min_k = min(k,mz-k-1)*hz
@@ -60,11 +60,11 @@ class Bratu3D(object):
                         x[i, j, k] = scale*sqrt(min_kij)
 
     def formFunction(self, snes, X, F):
-        #
+
         self.da.globalToLocal(X, self.localX)
         x = self.da.getVecArray(self.localX)
         f = self.da.getVecArray(F)
-        #
+
         mx, my, mz = self.da.getSizes()
         hx, hy, hz = [1.0/m for m in [mx, my, mz]]
         hxhyhz  = hx*hy*hz
@@ -72,7 +72,7 @@ class Bratu3D(object):
         hyhzdhx = hy*hz/hx;
         hxhydhz = hx*hy/hz;
         lambda_ = self.lambda_
-        #
+
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         for k in range(zs, ze):
             for j in range(ys, ye):
@@ -95,10 +95,10 @@ class Bratu3D(object):
                                      - lambda_*exp(u)*hxhyhz
 
     def formJacobian(self, snes, X, J, P):
-        #
+
         self.da.globalToLocal(X, self.localX)
         x = self.da.getVecArray(self.localX)
-        #
+
         mx, my, mz = self.da.getSizes()
         hx, hy, hz = [1.0/m for m in [mx, my, mz]]
         hxhyhz  = hx*hy*hz
@@ -106,11 +106,11 @@ class Bratu3D(object):
         hyhzdhx = hy*hz/hx;
         hxhydhz = hx*hy/hz;
         lambda_ = self.lambda_
-        #
+
         P.zeroEntries()
         row = PETSc.Mat.Stencil()
         col = PETSc.Mat.Stencil()
-        #
+
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         for k in range(zs, ze):
             for j in range(ys, ye):

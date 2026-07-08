@@ -36,6 +36,7 @@ def init(args=None, arch=None, comm=None):
     -----
     This function should be called only once, typically at the very
     beginning of the bootstrap script of an application.
+
     """
     import petsc4py.lib
 
@@ -50,7 +51,7 @@ def get_include():
     Extension modules that need to compile against petsc4py should use
     this function to locate the appropriate include directory.
 
-    Example
+    Example:
     -------
     Using Python distutils or NumPy distutils::
 
@@ -70,6 +71,7 @@ def get_config():
 
     from io import StringIO
     from configparser import ConfigParser
+
     pgkdir = os.path.dirname(__file__)
     filename = os.path.join(pgkdir, 'lib', 'petsc.cfg')
     with open(filename) as fp:

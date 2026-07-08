@@ -70,8 +70,8 @@ class BaseTestIS:
         del iset
 
     def testRenumber(self):
-        (n1, is1) = self.iset.renumber()
-        (n2, is2) = self.iset.renumber(self.iset)
+        (_n1, is1) = self.iset.renumber()
+        (_n2, is2) = self.iset.renumber(self.iset)
         del is1
         del is2
 

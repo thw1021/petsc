@@ -7,6 +7,7 @@ import numpy
 
 # --------------------------------------------------------------------
 
+
 class BaseTestTAOTerm:
     COMM = None
 
@@ -54,6 +55,7 @@ class BaseTestTAOTerm:
         taoterm = PETSc.TAOTerm().create(comm=self.COMM)
         taoterm.setType(PETSc.TAOTerm.Type.L1)
         taoterm.destroy()
+
 
 # --------------------------------------------------------------------
 
