@@ -330,6 +330,7 @@ PETSC_INTERN PetscErrorCode MatMultTranspose_SeqAIJ(Mat, Vec, Vec);
 PETSC_INTERN PetscErrorCode MatMultTransposeAdd_SeqAIJ(Mat, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode MatSOR_SeqAIJ(Mat, Vec, PetscReal, MatSORType, PetscReal, PetscInt, PetscInt, Vec);
 PETSC_INTERN PetscErrorCode MatSOR_SeqAIJ_Inode(Mat, Vec, PetscReal, MatSORType, PetscReal, PetscInt, PetscInt, Vec);
+PETSC_INTERN PetscErrorCode MatInvertDiagonalForSOR_SeqAIJ(Mat, PetscScalar, PetscScalar);
 
 PETSC_INTERN PetscErrorCode MatSetOption_SeqAIJ(Mat, MatOption, PetscBool);
 
