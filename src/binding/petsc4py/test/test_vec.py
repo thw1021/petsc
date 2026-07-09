@@ -113,7 +113,7 @@ class BaseTestVec:
     def testGetSetValsBlocked(self):
         return
         lsize, gsize = self.vec.getSizes()
-        start, end = self.vec.getOwnershipRange()
+        start, _end = self.vec.getOwnershipRange()
         bsizes = list(range(1, lsize + 1))
         nblocks = list(range(1, lsize + 1))
         compat = [
@@ -192,19 +192,15 @@ class BaseTestVec:
     def testGetSetItem(self):
         v = self.vec
         w = v.duplicate()
-        #
         v[...] = 7
         self.assertEqual(v.max()[1], 7)
         self.assertEqual(v.min()[1], 7)
-        #
         v.setRandom()
         w[...] = v
         self.assertTrue(w.equal(v))
-        #
         v.setRandom()
         w[...] = v.getArray()
         self.assertTrue(w.equal(v))
-        #
         s, e = v.getOwnershipRange()
         v.setRandom()
         w[s:e] = v.getArray().copy()
@@ -240,7 +236,6 @@ class BaseTestVec:
         self.assertEqual(z.max()[1], 1)
         s = (+x) @ (-y)
         self.assertEqual(s, -n)
-        #
         M, N = n, 2 * n
         A = PETSc.Mat().createDense((M, N), comm=self.COMM)
         A.setUp()
@@ -266,7 +261,7 @@ class BaseTestVec:
         y = x.duplicate()
         x.set(1)
         y.set(2)
-        z, index_ises = PETSc.Vec.concatenate([x, y])
+        z, _index_ises = PETSc.Vec.concatenate([x, y])
         self.assertEqual(z.getLocalSize(), x.getLocalSize() + y.getLocalSize())
         self.assertEqual(z.min()[1], x.min()[1])
         self.assertEqual(z.max()[1], y.max()[1])
@@ -300,14 +295,6 @@ class TestVecShared(BaseTestVec, unittest.TestCase):
         TYPE = PETSc.Vec.Type.MPI
     COMM = PETSc.COMM_WORLD
 
-
-# class TestVecSieve(BaseTestVec, unittest.TestCase):
-#    CLASS = PETSc.VecSieve
-#    TARGS = ([],)
-
-# class TestVecGhost(BaseTestVec, unittest.TestCase):
-#    CLASS = PETSc.VecGhost
-#    TARGS = ([],)
 
 # --------------------------------------------------------------------
 
