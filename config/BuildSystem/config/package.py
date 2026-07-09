@@ -1,4 +1,5 @@
 from __future__ import generators
+import textwrap
 import config.base
 
 import os
@@ -1268,37 +1269,38 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     setattr(self.compilers, flagsArg, oldFlags+extraFlags+' '+self.headers.toString(self.dinclude))
     self.compilers.saveLog()
 
-    # Multiple headers are tried in order
-    if not isinstance(self.versioninclude,list):
-      headerList = [self.versioninclude]
-    else:
-      headerList = self.versioninclude
+    output = None
+    if self.versionname: # no need to check if versionname is not set
+      # Multiple headers are tried in order
+      if not isinstance(self.versioninclude,list):
+        headerList = [self.versioninclude]
+      else:
+        headerList = self.versioninclude
 
-    for header in headerList:
-      try:
-        # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
-        # but some preprocessors are picky (ex. dpcpp -E), reporting errors on the code above even
-        # it is just supposed to do preprocessing:
-        #
-        #  error: C++ requires a type specifier for all declarations
-        #  petscpkgver(__SYCL_COMPILER_VERSION);
-        #  ^
-        #
-        # So we instead use this compilable code.
-        output = self.outputPreprocess(
-'''
-#include "{x}"
-#define  PetscXstr_(s) PetscStr_(s)
-#define  PetscStr_(s)  #s
-const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
-'''.format(x=header, y=self.versionname))
-         # Ex. char *ver = "petscpkgver(" "20211206" ")";
-         # But after stripping spaces, quotes etc below, it becomes char*ver=petscpkgver(20211206);
-      except:
-        output = None
-      self.logWrite(self.compilers.restoreLog())
-      if output:
-        break
+      for header in headerList:
+        try:
+          # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
+          # but some preprocessors are picky (ex. dpcpp -E), reporting errors on the code above even
+          # it is just supposed to do preprocessing:
+          #
+          #  error: C++ requires a type specifier for all declarations
+          #  petscpkgver(__SYCL_COMPILER_VERSION);
+          #  ^
+          #
+          # So we instead use this compilable code.
+          output = self.outputPreprocess(textwrap.dedent('''
+            #include "{x}"
+            #define  PetscXstr_(s) PetscStr_(s)
+            #define  PetscStr_(s)  #s
+            const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
+            '''.format(x=header, y=self.versionname)))
+          # Ex. char *ver = "petscpkgver(" "20211206" ")";
+          # But after stripping spaces, quotes etc below, it becomes char*ver=petscpkgver(20211206);
+        except:
+          output = None
+        self.logWrite(self.compilers.restoreLog())
+        if output:
+          break
     self.popLanguage()
     setattr(self.compilers, flagsArg,oldFlags)
     if not output:
