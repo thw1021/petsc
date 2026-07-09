@@ -474,8 +474,12 @@ class Configure(script.Script):
   def preprocess(self, codeStr, timeout = 600.0):
     def report(command, status, output, error):
       if error or status:
-        self.logError('preprocessor', status, output, error)
-        self.logWrite('Source:\n'+self.getCode(codeStr))
+        lines = output.splitlines()
+        if len(lines) > 10:
+          shortOutput = '\n'.join(lines[:5]+['<omitted '+str(len(lines) - 10)+' lines>']+lines[-5:])
+        else:
+          shortOutput = output
+        self.logError('preprocessor', status, shortOutput+'\n', error)
 
     command = self.getPreprocessorCmd()
     if self.compilerDefines: self.framework.outputHeader(self.compilerDefines)
