@@ -1263,15 +1263,18 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     else:
       extraFlags = ''
     setattr(self.compilers, flagsArg, oldFlags+extraFlags+' '+self.headers.toString(self.dinclude))
-    self.compilers.saveLog()
 
-    # Multiple headers are tried in order
-    if not isinstance(self.versioninclude,list):
+    # Multiple headers are tried in order; no need to preprocess if versionname is not set
+    if not self.versionname:
+      headerList = []
+    elif not isinstance(self.versioninclude,list):
       headerList = [self.versioninclude]
     else:
       headerList = self.versioninclude
 
+    output = None
     for header in headerList:
+      self.compilers.saveLog()
       try:
         # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
         # but some preprocessors are picky (ex. dpcpp -E), reporting errors on the code above even
@@ -1299,8 +1302,11 @@ const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
     self.popLanguage()
     setattr(self.compilers, flagsArg,oldFlags)
     if not output:
+      if self.versionname:
         self.log.write('For '+self.package+' unable to run preprocessor to obtain version information, skipping version check\n')
         self.version = ''
+      else:
+        self.log.write('For '+self.package+' no version macro name is set, skipping version check\n')
         return
     # the preprocessor output might be very long, but the petscpkgver line should be at the end. Therefore, we partition it backwards
     [mid, right] = output.rpartition('petscpkgver')[1:]
