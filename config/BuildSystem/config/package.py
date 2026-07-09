@@ -1263,14 +1263,17 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     else:
       extraFlags = ''
     setattr(self.compilers, flagsArg, oldFlags+extraFlags+' '+self.headers.toString(self.dinclude))
-    self.compilers.saveLog()
 
-    # Multiple headers are tried in order
-    if not isinstance(self.versioninclude,list):
+    # Multiple headers are tried in order; no need to preprocess if versionname is not set
+    if not self.versionname:
+      headerList = []
+    elif not isinstance(self.versioninclude,list):
       headerList = [self.versioninclude]
     else:
       headerList = self.versioninclude
 
+    output = None
+    if headerList: self.compilers.saveLog()
     for header in headerList:
       try:
         # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
