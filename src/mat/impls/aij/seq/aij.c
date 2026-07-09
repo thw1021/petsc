@@ -1906,7 +1906,25 @@ PetscErrorCode MatSOR_SeqAIJ(Mat A, Vec bb, PetscReal omega, MatSORType flag, Pe
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCheck(flag != SOR_APPLY_LOWER, PETSC_COMM_SELF, PETSC_ERR_SUP, "SOR_APPLY_LOWER is not implemented");
+  if (flag == SOR_APPLY_LOWER) {
+    /* apply (L + D/omega) to the vector */
+    bs = b;
+    for (i = 0; i < m; i++) {
+      d   = fshift + mdiag[i];
+      n   = diag[i] - a->i[i];
+      idx = a->j + a->i[i];
+      v   = aa + a->i[i];
+      sum = b[i] * d / omega;
+      PetscSparseDensePlusDot(sum, bs, v, idx, n);
+      x[i] = sum;
+    }
+    PetscCall(VecRestoreArray(xx, &x));
+    PetscCall(VecRestoreArrayRead(bb, &b));
+    PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
+    PetscCall(PetscLogFlops(a->nz));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   if (flag & SOR_EISENSTAT) {
     /* Let  A = L + U + D; where L is lower triangular,
     U is upper triangular, E = D/omega; This routine applies

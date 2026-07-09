@@ -1401,7 +1401,7 @@ static PetscErrorCode MatSOR_MPIAIJ(Mat matin, Vec bb, PetscReal omega, MatSORTy
   PetscBool   hasop;
 
   PetscFunctionBegin;
-  if (flag == SOR_APPLY_UPPER) {
+  if (flag == SOR_APPLY_UPPER || flag == SOR_APPLY_LOWER) {
     PetscUseTypeMethod(mat->A, sor, bb, omega, flag, fshift, lits, 1, xx);
     PetscFunctionReturn(PETSC_SUCCESS);
   }

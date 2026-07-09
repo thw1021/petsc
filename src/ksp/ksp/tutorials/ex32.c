@@ -226,4 +226,10 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat jac, PetscCtx ctx)
      requires: !single
      args: -pc_type mg -pc_mg_levels 2 -ksp_monitor_true_residual -ksp_rtol 1.e-10 -ksp_type cg -mg_levels_pc_type sor -mg_levels_ksp_type richardson -mg_levels_ksp_max_it 2 -mg_coarse_pc_type svd -da_refine 4
 
+   test:
+     suffix: symmetric
+     requires: !single
+     args: -pc_type mg -pc_mg_symmetric -pc_mg_levels 2 -ksp_type cg -mg_levels_pc_type sor -mg_levels_pc_sor_forward -mg_levels_ksp_type chebyshev -mg_levels_ksp_max_it 2 -mg_coarse_pc_type svd -da_refine 4
+     output_file: output/empty.out
+
 TEST*/

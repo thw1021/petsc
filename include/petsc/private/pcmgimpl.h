@@ -56,6 +56,7 @@ typedef struct {
   PetscInt         maxlevels;              /* total number of levels allocated */
   PCMGGalerkinType galerkin;               /* use Galerkin process to compute coarser matrices */
   PetscBool        usedmfornumberoflevels; /* sets the number of levels by getting this information out of the DM */
+  PetscBool        symmetric;              /* Use the transpose of the down smoother for up smoothing */
 
   PetscBool           adaptInterpolation; /* flag to adapt the interpolator based upon the coarseSpace */
   PCMGCoarseSpaceType coarseSpaceType;    /* Type of coarse space: polynomials, harmonics, eigenvectors, ... */
@@ -94,6 +95,7 @@ PETSC_INTERN PetscErrorCode DMSetBasisFunction_Internal(PetscInt, PetscBool, Pet
 PETSC_INTERN PetscErrorCode PCMGComputeCoarseSpace_Internal(PC, PetscInt, PCMGCoarseSpaceType, PetscInt, Mat, Mat *);
 PETSC_INTERN PetscErrorCode PCMGAdaptInterpolator_Internal(PC, PetscInt, KSP, KSP, Mat, Mat);
 PETSC_INTERN PetscErrorCode PCMGRecomputeLevelOperators_Internal(PC, PetscInt);
+PETSC_INTERN PetscErrorCode PCMGKSPSmooth_Private(PC, KSP, Vec, Vec, Mat, Mat, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode PCMGACycle_Private(PC, PC_MG_Levels **, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode PCMGFCycle_Private(PC, PC_MG_Levels **, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode PCMGKCycle_Private(PC, PC_MG_Levels **, PetscBool, PetscBool);
