@@ -26,10 +26,12 @@ static PetscErrorCode PCDestroy_SOR(PC pc)
 
 static PetscErrorCode PCApply_SOR(PC pc, Vec x, Vec y)
 {
-  PC_SOR  *jac  = (PC_SOR *)pc->data;
-  PetscInt flag = jac->sym | SOR_ZERO_INITIAL_GUESS;
+  PC_SOR  *jac = (PC_SOR *)pc->data;
+  PetscInt flag;
 
   PetscFunctionBegin;
+  /* SOR_APPLY_UPPER/SOR_APPLY_LOWER are matched by exact equality in the MatSOR() implementations, so they must not be ORed with SOR_ZERO_INITIAL_GUESS */
+  flag = (jac->sym & (SOR_APPLY_UPPER | SOR_APPLY_LOWER)) ? jac->sym : jac->sym | SOR_ZERO_INITIAL_GUESS;
   PetscCall(MatSOR(pc->pmat, x, jac->omega, (MatSORType)flag, jac->fshift, jac->its, jac->lits, y));
   PetscCall(MatFactorGetError(pc->pmat, (MatFactorError *)&pc->failedreason));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -37,13 +39,27 @@ static PetscErrorCode PCApply_SOR(PC pc, Vec x, Vec y)
 
 static PetscErrorCode PCApplyTranspose_SOR(PC pc, Vec x, Vec y)
 {
-  PC_SOR   *jac  = (PC_SOR *)pc->data;
-  PetscInt  flag = jac->sym | SOR_ZERO_INITIAL_GUESS;
-  PetscBool set, sym;
+  PC_SOR    *jac  = (PC_SOR *)pc->data;
+  MatSORType tsym = jac->sym;
+  PetscInt   flag;
 
   PetscFunctionBegin;
-  PetscCall(MatIsSymmetricKnown(pc->pmat, &set, &sym));
-  PetscCheck(set && sym && (jac->sym == SOR_SYMMETRIC_SWEEP || jac->sym == SOR_LOCAL_SYMMETRIC_SWEEP), PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Can only apply transpose of SOR if matrix is symmetric and sweep is symmetric");
+  if ((jac->sym & SOR_SYMMETRIC_SWEEP) == SOR_SYMMETRIC_SWEEP || (jac->sym & SOR_LOCAL_SYMMETRIC_SWEEP) == SOR_LOCAL_SYMMETRIC_SWEEP) {
+    PetscBool set, sym;
+
+    PetscCall(MatIsSymmetricKnown(pc->pmat, &set, &sym));
+    PetscCheck(set && sym, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Can only apply transpose of SOR if matrix is symmetric and sweep is symmetric");
+  } else if (jac->sym & (SOR_FORWARD_SWEEP | SOR_BACKWARD_SWEEP)) {
+    /* transpose swaps the forward and backward bits */
+    tsym = (MatSORType)(jac->sym ^ SOR_SYMMETRIC_SWEEP);
+  } else if (jac->sym & (SOR_LOCAL_FORWARD_SWEEP | SOR_LOCAL_BACKWARD_SWEEP)) {
+    tsym = (MatSORType)(jac->sym ^ SOR_LOCAL_SYMMETRIC_SWEEP);
+  } else if (jac->sym & (SOR_APPLY_UPPER | SOR_APPLY_LOWER)) {
+    /* apply upper and apply lower are transposes of each other */
+    tsym = (MatSORType)(jac->sym ^ (SOR_APPLY_UPPER | SOR_APPLY_LOWER));
+  } else SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Can only apply transpose of SOR for forward, backward, local forward, local backward, symmetric, apply upper, or apply lower sweeps");
+  /* SOR_APPLY_UPPER/SOR_APPLY_LOWER are matched by exact equality in the MatSOR() implementations, so they must not be ORed with SOR_ZERO_INITIAL_GUESS */
+  flag = (tsym & (SOR_APPLY_UPPER | SOR_APPLY_LOWER)) ? tsym : tsym | SOR_ZERO_INITIAL_GUESS;
   PetscCall(MatSOR(pc->pmat, x, jac->omega, (MatSORType)flag, jac->fshift, jac->its, jac->lits, y));
   PetscCall(MatFactorGetError(pc->pmat, (MatFactorError *)&pc->failedreason));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -1,0 +1,9 @@
+MatSOR sym=apply_upper      transpose matches MatSOR(swapped flag)  : PASS
+MatSOR sym=forward          transpose matches MatSOR(swapped flag)  : PASS
+MatSOR sym=local_forward    transpose matches MatSOR(swapped flag)  : PASS
+PCSOR sym=apply_upper      PCApply/PCApplyTranspose match MatSOR: PASS
+PCSOR sym=apply_lower      PCApply/PCApplyTranspose match MatSOR: PASS
+PCSOR sym=forward          PCApply/PCApplyTranspose match MatSOR: PASS
+PCSOR sym=backward         PCApply/PCApplyTranspose match MatSOR: PASS
+PCSOR sym=local_forward    PCApply/PCApplyTranspose match MatSOR: PASS
+PCSOR sym=local_backward   PCApply/PCApplyTranspose match MatSOR: PASS

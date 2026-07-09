@@ -68,6 +68,7 @@
 ## PC
 
 - Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering small entries from the prolongator in `PCGAMG`
+- Add support for `PCApplyTranspose()` in `PCSOR` for forward/backward, local, and apply upper/lower sweeps, including `SOR_APPLY_LOWER` support in `MatSOR()`
 
 ## KSP
 
