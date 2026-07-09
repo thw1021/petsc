@@ -474,7 +474,7 @@ class Configure(script.Script):
   def preprocess(self, codeStr, timeout = 600.0):
     def report(command, status, output, error):
       if error or status:
-        self.logError('preprocessor', status, output, error)
+        self.logError('preprocessor', status, '<omitted>\n', error) # preprocess output is usually very long but not useful (see below, logOutputflg = False)
         self.logWrite('Source:\n'+self.getCode(codeStr))
 
     command = self.getPreprocessorCmd()
