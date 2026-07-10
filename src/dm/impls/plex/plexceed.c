@@ -30,7 +30,7 @@ PetscErrorCode DMGetPoints_Internal(DM dm, DMLabel domainLabel, PetscInt labelVa
 /*@C
   DMPlexGetLocalOffsets - Allocate and populate array of local offsets for each cell closure.
 
-  Not collective
+    Collective on the communicator of dm 
 
   Input Parameters:
 + dm           - The `DMPLEX` object
