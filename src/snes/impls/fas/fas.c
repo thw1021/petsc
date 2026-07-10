@@ -191,7 +191,6 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
   char           lstype[256];
 
   PetscFunctionBegin;
-  PetscCall(SNESLineSearchRegisterAll());
   PetscCall(SNESFASCycleIsFine(snes, &isFine));
   PetscOptionsHeadBegin(PetscOptionsObject, "SNESFAS Options-----------------------------------");
 
@@ -260,10 +259,9 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
 
   /* set up the default line search for coarse grid corrections */
   if (fas->fastype == SNES_FAS_ADDITIVE) {
-    PetscBool isNone;
+    PetscBool hasLinesearch = (PetscBool)(snes->linesearch != NULL);
     PetscCall(SNESGetLineSearch(snes, &linesearch));
-    PetscCall(PetscObjectTypeCompare((PetscObject)linesearch, SNESLINESEARCHNONE, &isNone));
-    if (isNone) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
+    if (!hasLinesearch) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
   }
   if (lsFlg) PetscCall(SNESLineSearchSetType(linesearch, lstype));
 
@@ -557,6 +555,7 @@ b^c = F^c(Rx) - R(F(x) - b)
 static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
 {
   PetscBool           monitorCorrection = ((SNES_FAS *)snes->data)->monitorCorrection;
+  PetscReal           xonorm = 0.0;
   Vec                 X_c, Xo_c, F_c, B_c, Xhat;
   SNESConvergedReason reason;
   SNES                next;
@@ -627,13 +626,13 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventBegin(fasc->eventinterprestrict, snes, 0, 0, 0));
     PetscCall(MatInterpolate(interpolate, X_c, Xhat));
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
+    if (monitorCorrection) PetscCall(VecNorm(X, NORM_2, &xonorm));
     PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &snes->norm, Xhat));
     SNESCheckLineSearchFailure(snes);
     if (monitorCorrection) {
-      PetscReal xnorm, xonorm, inorm;
+      PetscReal xnorm, inorm;
 
       PetscCall(VecNorm(X_c, NORM_2, &xnorm));
-      PetscCall(VecNorm(X, NORM_2, &xonorm));
       PetscCall(VecNorm(X, NORM_2, &inorm));
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes), "||X_c - Xo_c|| %g\n||X|| %g\n||X + I (X_c - X_co)|| %g\n", (double)xnorm, (double)xonorm, (double)inorm));
     }
