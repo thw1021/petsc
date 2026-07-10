@@ -471,20 +471,31 @@ PetscErrorCode PCCreate(MPI_Comm comm, PC *newpc)
   PetscCall(PCInitializePackage());
 
   PetscCall(PetscHeaderCreate(pc, PC_CLASSID, "PC", "Preconditioner", "PC", comm, PCDestroy, PCView));
-  pc->mat                  = NULL;
-  pc->pmat                 = NULL;
-  pc->setupcalled          = PETSC_FALSE;
-  pc->setfromoptionscalled = 0;
-  pc->data                 = NULL;
-  pc->diagonalscale        = PETSC_FALSE;
-  pc->diagonalscaleleft    = NULL;
-  pc->diagonalscaleright   = NULL;
-
-  pc->modifysubmatrices  = NULL;
-  pc->modifysubmatricesP = NULL;
-
+  PetscCall(PCParametersInitialize(pc));
   *newpc = pc;
   PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCParametersInitialize - Sets all the parameters in `pc` to their default value (when `PCCreate()` was called) if they
+  currently contain default values
+
+  Collective
+
+  Input Parameter:
+. pc - the `PC` object
+
+  Level: developer
+
+  Developer Note:
+  This is called in `PCCreate()` and `PCSetType()` routines.
+
+.seealso: [](ch_ksp), `PC`, `PCApply()`, `PCDestroy()`, `PetscObjectParameterSetDefault()`
+@*/
+PetscErrorCode PCParametersInitialize(PC pc)
+{
+  PetscObjectParameterSetDefault(pc, useAmat, PETSC_FALSE);
+  return PETSC_SUCCESS;
 }
 
 /*@
