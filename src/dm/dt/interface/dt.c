@@ -373,7 +373,7 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
 {
   PetscScalar *Js, *Jinvs;
   PetscInt     i, j, k;
-  PetscBLASInt bm, bn, info;
+  PetscBLASInt bm, bn;
 
   PetscFunctionBegin;
   if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
@@ -393,10 +393,8 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
     PetscCall(PetscMalloc2(m, &pivots, m, &W));
 
     PetscCall(PetscArraycpy(Jinvs, Js, m * m));
-    PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, Jinvs, &bm, pivots, &info));
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error returned from LAPACKgetrf %" PetscBLASInt_FMT, info);
-    PetscCallBLAS("LAPACKgetri", LAPACKgetri_(&bm, Jinvs, &bm, pivots, W, &bm, &info));
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error returned from LAPACKgetri %" PetscBLASInt_FMT, info);
+    PetscCallLAPACKInfo("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, Jinvs, &bm, pivots, &info));
+    PetscCallLAPACKInfo("LAPACKgetri", LAPACKgetri_(&bm, Jinvs, &bm, pivots, W, &bm, &info));
     PetscCall(PetscFree2(pivots, W));
   } else if (m < n) {
     PetscScalar  *JJT;
@@ -414,10 +412,8 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
       }
     }
 
-    PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, JJT, &bm, pivots, &info));
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error returned from LAPACKgetrf %" PetscBLASInt_FMT, info);
-    PetscCallBLAS("LAPACKgetri", LAPACKgetri_(&bm, JJT, &bm, pivots, W, &bm, &info));
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error returned from LAPACKgetri %" PetscBLASInt_FMT, info);
+    PetscCallLAPACKInfo("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, JJT, &bm, pivots, &info));
+    PetscCallLAPACKInfo("LAPACKgetri", LAPACKgetri_(&bm, JJT, &bm, pivots, W, &bm, &info));
     for (i = 0; i < n; i++) {
       for (j = 0; j < m; j++) {
         PetscScalar val = 0.;
@@ -444,10 +440,8 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
       }
     }
 
-    PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bn, &bn, JTJ, &bn, pivots, &info));
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error returned from LAPACKgetrf %" PetscBLASInt_FMT, info);
-    PetscCallBLAS("LAPACKgetri", LAPACKgetri_(&bn, JTJ, &bn, pivots, W, &bn, &info));
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error returned from LAPACKgetri %" PetscBLASInt_FMT, info);
+    PetscCallLAPACKInfo("LAPACKgetrf", LAPACKgetrf_(&bn, &bn, JTJ, &bn, pivots, &info));
+    PetscCallLAPACKInfo("LAPACKgetri", LAPACKgetri_(&bn, JTJ, &bn, pivots, W, &bn, &info));
     for (i = 0; i < n; i++) {
       for (j = 0; j < m; j++) {
         PetscScalar val = 0.;
@@ -1422,7 +1416,6 @@ static PetscErrorCode PetscDTSymmetricTridiagonalEigensolve(PetscInt n, PetscRea
   PetscReal     workquery;
   PetscBLASInt  iworkquery;
   PetscBLASInt *iwork;
-  PetscBLASInt  info;
   PetscReal    *work = NULL;
 
   PetscFunctionBegin;
@@ -1435,15 +1428,13 @@ static PetscErrorCode PetscDTSymmetricTridiagonalEigensolve(PetscInt n, PetscRea
   PetscCall(PetscMalloc1(2 * n, &isuppz));
   lwork  = -1;
   liwork = -1;
-  PetscCallBLAS("LAPACKstegr", LAPACKstegr_(&jobz, &range, &bn, diag, subdiag, &VL, &VU, &IL, &IU, &abstol, &bm, eigs, V, &ldz, isuppz, &workquery, &lwork, &iworkquery, &liwork, &info));
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEGR error");
+  PetscCallLAPACKInfo("LAPACKstegr", LAPACKstegr_(&jobz, &range, &bn, diag, subdiag, &VL, &VU, &IL, &IU, &abstol, &bm, eigs, V, &ldz, isuppz, &workquery, &lwork, &iworkquery, &liwork, &info));
   lwork  = (PetscBLASInt)workquery;
   liwork = iworkquery;
   PetscCall(PetscMalloc2(lwork, &work, liwork, &iwork));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKstegr", LAPACKstegr_(&jobz, &range, &bn, diag, subdiag, &VL, &VU, &IL, &IU, &abstol, &bm, eigs, V, &ldz, isuppz, work, &lwork, iwork, &liwork, &info));
+  PetscCallLAPACKInfo("LAPACKstegr", LAPACKstegr_(&jobz, &range, &bn, diag, subdiag, &VL, &VU, &IL, &IU, &abstol, &bm, eigs, V, &ldz, isuppz, work, &lwork, iwork, &liwork, &info));
   PetscCall(PetscFPTrapPop());
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEGR error");
   PetscCall(PetscFree2(work, iwork));
   PetscCall(PetscFree(isuppz));
 #elif !defined(PETSC_MISSING_LAPACK_STEQR)
@@ -1451,9 +1442,8 @@ static PetscErrorCode PetscDTSymmetricTridiagonalEigensolve(PetscInt n, PetscRea
                  tridiagonal matrix.  Z is initialized to the identity
                  matrix. */
   PetscCall(PetscMalloc1(PetscMax(1, 2 * n - 2), &work));
-  PetscCallBLAS("LAPACKsteqr", LAPACKsteqr_("I", &bn, diag, subdiag, V, &ldz, work, &info));
+  PetscCallLAPACKInfo("LAPACKsteqr", LAPACKsteqr_("I", &bn, diag, subdiag, V, &ldz, work, &info));
   PetscCall(PetscFPTrapPop());
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEQR error");
   PetscCall(PetscFree(work));
   PetscCall(PetscArraycpy(eigs, diag, n));
 #endif
@@ -2386,7 +2376,33 @@ PetscErrorCode PetscDTTanhSinhTensorQuadrature(PetscInt dim, PetscInt level, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscDTTanhSinhIntegrate(void (*func)(const PetscReal[], void *, PetscReal *), PetscReal a, PetscReal b, PetscInt digits, PetscCtx ctx, PetscReal *sol)
+/*@C
+  PetscDTTanhSinhIntegrate - Approximate $\int_a^b f(x)\,dx$ to a requested precision using adaptive tanh-sinh (double-exponential) quadrature
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ func   - the integrand callback (`func(x, ctx, &value)` evaluates the integrand at point `x`)
+. a      - lower limit of integration
+. b      - upper limit of integration
+. digits - target number of correct decimal digits
+- ctx    - optional user context passed to `func`
+
+  Output Parameter:
+. sol - the approximate value of the integral
+
+  Level: developer
+
+  Notes:
+  Doubles the number of quadrature points at each refinement level until the change in the
+  integral falls below the requested tolerance. Suitable for smooth integrands and integrands
+  with endpoint singularities.
+
+  For arbitrary-precision arithmetic via MPFR, see `PetscDTTanhSinhIntegrateMPFR()`.
+
+.seealso: `PetscDTTanhSinhIntegrateMPFR()`, `PetscDTGaussQuadrature()`
+@*/
+PetscErrorCode PetscDTTanhSinhIntegrate(void (*func)(const PetscReal[], PetscCtx, PetscReal *), PetscReal a, PetscReal b, PetscInt digits, PetscCtx ctx, PetscReal *sol)
 {
   const PetscInt  p     = 16;           /* Digits of precision in the evaluation */
   const PetscReal alpha = (b - a) / 2.; /* Half-width of the integration interval */
@@ -2450,8 +2466,30 @@ PetscErrorCode PetscDTTanhSinhIntegrate(void (*func)(const PetscReal[], void *, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PetscDTTanhSinhIntegrateMPFR - High-precision version of `PetscDTTanhSinhIntegrate()` that uses the MPFR arbitrary-precision library to evaluate the quadrature
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ func   - the integrand callback (`func(x, ctx, &value)` evaluates the integrand at point `x`)
+. a      - lower limit of integration
+. b      - upper limit of integration
+. digits - target number of correct decimal digits (also drives the working MPFR precision)
+- ctx    - optional user context passed to `func`
+
+  Output Parameter:
+. sol - the approximate value of the integral
+
+  Level: developer
+
+  Note:
+  Requires PETSc to be configured with `--with-mpfr`; otherwise an error is raised.
+
+.seealso: `PetscDTTanhSinhIntegrate()`, `PetscDTGaussQuadrature()`
+@*/
 #if defined(PETSC_HAVE_MPFR)
-PetscErrorCode PetscDTTanhSinhIntegrateMPFR(void (*func)(const PetscReal[], void *, PetscReal *), PetscReal a, PetscReal b, PetscInt digits, PetscCtx ctx, PetscReal *sol)
+PetscErrorCode PetscDTTanhSinhIntegrateMPFR(void (*func)(const PetscReal[], PetscCtx, PetscReal *), PetscReal a, PetscReal b, PetscInt digits, PetscCtx ctx, PetscReal *sol)
 {
   const PetscInt safetyFactor = 2; /* Calculate abscissa until 2*p digits */
   PetscInt       l            = 0; /* Level of refinement, h = 2^{-l} */
@@ -2769,7 +2807,7 @@ PetscErrorCode PetscDTTensorQuadratureCreate(PetscQuadrature q1, PetscQuadrature
  */
 static PetscErrorCode PetscDTPseudoInverseQR(PetscInt m, PetscInt mstride, PetscInt n, PetscReal *A_in, PetscReal *Ainv_out, PetscScalar *tau, PetscInt worksize, PetscScalar *work)
 {
-  PetscBLASInt M, N, K, lda, ldb, ldwork, info;
+  PetscBLASInt M, N, K, lda, ldb, ldwork;
   PetscScalar *A, *Ainv, *R, *Q, Alpha;
 
   PetscFunctionBegin;
@@ -2792,17 +2830,15 @@ static PetscErrorCode PetscDTPseudoInverseQR(PetscInt m, PetscInt mstride, Petsc
   PetscCall(PetscBLASIntCast(mstride, &lda));
   PetscCall(PetscBLASIntCast(worksize, &ldwork));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&M, &N, A, &lda, tau, work, &ldwork, &info));
+  PetscCallLAPACKInfo("LAPACKgeqrf", LAPACKgeqrf_(&M, &N, A, &lda, tau, work, &ldwork, &info));
   PetscCall(PetscFPTrapPop());
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xGEQRF error");
   R = A; /* Upper triangular part of A now contains R, the rest contains the elementary reflectors */
 
   /* Extract an explicit representation of Q */
   Q = Ainv;
   PetscCall(PetscArraycpy(Q, A, mstride * n));
   K = N; /* full rank */
-  PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&M, &N, &K, Q, &lda, tau, work, &ldwork, &info));
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xORGQR/xUNGQR error");
+  PetscCallLAPACKInfo("LAPACKorgqr", LAPACKorgqr_(&M, &N, &K, Q, &lda, tau, work, &ldwork, &info));
 
   /* Compute A^{-T} = (R^{-1} Q^T)^T = Q R^{-T} */
   Alpha = 1.0;
@@ -3204,6 +3240,26 @@ PetscErrorCode PetscGaussLobattoLegendreElementAdvectionDestroy(PetscInt n, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PetscGaussLobattoLegendreElementMassCreate - Build the elemental mass matrix for a single 1D Gauss-Lobatto-Legendre (GLL) spectral element
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ n       - number of GLL nodes
+. nodes   - the GLL quadrature nodes
+- weights - the GLL quadrature weights
+
+  Output Parameter:
+. AA - newly allocated `n` x `n` mass matrix as `PetscReal **`
+
+  Level: beginner
+
+  Note:
+  Free with `PetscGaussLobattoLegendreElementMassDestroy()`.
+
+.seealso: `PetscDTGaussLobattoLegendreQuadrature()`, `PetscGaussLobattoLegendreElementMassDestroy()`, `PetscGaussLobattoLegendreElementLaplacianCreate()`, `PetscGaussLobattoLegendreElementAdvectionCreate()`
+@*/
 PetscErrorCode PetscGaussLobattoLegendreElementMassCreate(PetscInt n, PetscReal *nodes, PetscReal *weights, PetscReal ***AA)
 {
   PetscReal      **A;
@@ -3225,6 +3281,21 @@ PetscErrorCode PetscGaussLobattoLegendreElementMassCreate(PetscInt n, PetscReal 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PetscGaussLobattoLegendreElementMassDestroy - Free a 1D GLL elemental mass matrix created with `PetscGaussLobattoLegendreElementMassCreate()`
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ n       - number of GLL nodes (ignored)
+. nodes   - the GLL quadrature nodes (ignored)
+. weights - the GLL quadrature weights (ignored)
+- AA      - the mass matrix to free; `*AA` is set to `NULL` on return
+
+  Level: beginner
+
+.seealso: `PetscGaussLobattoLegendreElementMassCreate()`, `PetscDTGaussLobattoLegendreQuadrature()`
+@*/
 PetscErrorCode PetscGaussLobattoLegendreElementMassDestroy(PetscInt n, PetscReal *nodes, PetscReal *weights, PetscReal ***AA)
 {
   PetscFunctionBegin;

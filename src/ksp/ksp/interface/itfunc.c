@@ -354,12 +354,27 @@ PetscErrorCode KSPSetUp(KSP ksp)
   PetscCall(KSPSetUpNorms_Private(ksp, PETSC_TRUE, &ksp->normtype, &ksp->pc_side));
 
   if ((ksp->dmActive & KSP_DMACTIVE_OPERATOR) && !ksp->setupstage) {
+    DMKSP kdm;
+
     /* first time in so build matrix and vector data structures using DM */
     if (!ksp->vec_rhs) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_rhs));
     if (!ksp->vec_sol) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_sol));
-    PetscCall(DMCreateMatrix(ksp->dm, &A));
-    PetscCall(KSPSetOperators(ksp, A, A));
-    PetscCall(PetscObjectDereference((PetscObject)A));
+
+    PetscCall(DMGetDMKSP(ksp->dm, &kdm));
+    if (kdm->ops->createoperators) {
+      A = B = NULL;
+      PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
+      PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
+      if (!B) B = A;
+      if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
+      PetscCall(KSPSetOperators(ksp, A, B));
+      PetscCall(MatDestroy(&A));
+      PetscCall(MatDestroy(&B));
+    } else {
+      PetscCall(DMCreateMatrix(ksp->dm, &A));
+      PetscCall(KSPSetOperators(ksp, A, A));
+      PetscCall(MatDestroy(&A));
+    }
   }
 
   if (ksp->dmActive) {
@@ -831,8 +846,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   if (ksp->viewPre) PetscCall(ObjectView((PetscObject)ksp, ksp->viewerPre, ksp->formatPre));
 
-  if (ksp->presolve) PetscCall((*ksp->presolve)(ksp, ksp->vec_rhs, ksp->vec_sol, ksp->prectx));
-
   /* reset the residual history list if requested */
   if (ksp->res_hist_reset) ksp->res_hist_len = 0;
   if (ksp->err_hist_reset) ksp->err_hist_len = 0;
@@ -855,6 +868,8 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
       ksp->guess_zero = PETSC_TRUE;
     }
   }
+
+  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   PetscCall(VecSetErrorIfLocked(ksp->vec_sol, 3));
 
@@ -953,7 +968,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   }
   PetscCall(PetscLogEventEnd(!ksp->transpose_solve ? KSP_Solve : KSP_SolveTranspose, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
   if (ksp->guess) PetscCall(KSPGuessUpdate(ksp->guess, ksp->vec_rhs, ksp->vec_sol));
-  if (ksp->postsolve) PetscCall((*ksp->postsolve)(ksp, ksp->vec_rhs, ksp->vec_sol, ksp->postctx));
+  PetscCall(KSPPostSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   PetscCall(PCGetOperators(ksp->pc, &mat, &pmat));
   if (ksp->viewEV) PetscCall(KSPViewEigenvalues_Internal(ksp, PETSC_FALSE, ksp->viewerEV, ksp->formatEV));
@@ -2206,14 +2221,14 @@ PETSC_INTERN PetscErrorCode PCCreate_MPI(PC);
 
 // PetscClangLinter pragma disable: -fdoc-internal-linkage
 /*@C
-   KSPCheckPCMPI - Checks if `-mpi_linear_solver_server` is active and the `PC` should be changed to `PCMPI`
+  KSPCheckPCMPI - Checks if `-mpi_linear_solver_server` is active and the `PC` should be changed to `PCMPI`
 
-   Collective, No Fortran Support
+  Collective, No Fortran Support
 
-   Input Parameter:
-.  ksp - iterative solver obtained from `KSPCreate()`
+  Input Parameter:
+. ksp - iterative solver obtained from `KSPCreate()`
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_ksp), `KSPSetPC()`, `KSP`, `PCMPIServerBegin()`, `PCMPIServerEnd()`
 @*/
@@ -2442,7 +2457,7 @@ PetscErrorCode KSPGetMonitorContext(KSP ksp, PetscCtxRt ctx)
 
   Notes:
   If provided, `a` is NOT freed by PETSc so the user needs to keep track of it and destroy once the `KSP` object is destroyed.
-  If 'a' is `NULL` then space is allocated for the history. If 'na' `PETSC_DECIDE` or (deprecated) `PETSC_DEFAULT` then a
+  If `a` is `NULL` then space is allocated for the history. If `na` is `PETSC_DECIDE` or (deprecated) `PETSC_DEFAULT` then a
   default array of length 10,000 is allocated.
 
   If the array is not long enough then once the iterations is longer than the array length `KSPSolve()` stops recording the history
@@ -2529,7 +2544,7 @@ PetscErrorCode KSPGetResidualHistory(KSP ksp, const PetscReal *a[], PetscInt *na
 
   Notes:
   If provided, `a` is NOT freed by PETSc so the user needs to keep track of it and destroy once the `KSP` object is destroyed.
-  If 'a' is `NULL` then space is allocated for the history. If 'na' is `PETSC_DECIDE` or (deprecated) `PETSC_DEFAULT` then a default array of length 1,0000 is allocated.
+  If `a` is `NULL` then space is allocated for the history. If `na` is `PETSC_DECIDE` or (deprecated) `PETSC_DEFAULT` then a default array of length 1,0000 is allocated.
 
   If the array is not long enough then once the iterations is longer than the array length `KSPSolve()` stops recording the history
 

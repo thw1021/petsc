@@ -188,9 +188,15 @@ struct _p_KSP {
   PetscInt  setfromoptionscalled;
   PetscBool skippcsetfromoptions; /* if set then KSPSetFromOptions() does not call PCSetFromOptions() */
 
+  /* User-defined pre/post solve callbacks */
   PetscErrorCode (*presolve)(KSP, Vec, Vec, void *);
   PetscErrorCode (*postsolve)(KSP, Vec, Vec, void *);
   void *prectx, *postctx;
+
+  /* PETSc internal pre/post solve callbacks for Eisenstat and Walker trick */
+  PetscErrorCode (*presolve_ew)(KSP, Vec, Vec, void *);
+  PetscErrorCode (*postsolve_ew)(KSP, Vec, Vec, void *);
+  void *prectx_ew, *postctx_ew;
 
   PetscInt nestlevel; /* how many levels of nesting does the KSP have */
 };
@@ -284,6 +290,7 @@ PETSC_INTERN PetscErrorCode KSPPlotEigenContours_Private(KSP, PetscInt, const Pe
 typedef struct _p_DMKSP  *DMKSP;
 typedef struct _DMKSPOps *DMKSPOps;
 struct _DMKSPOps {
+  KSPCreateOperatorsFn     *createoperators;
   KSPComputeOperatorsFn    *computeoperators;
   KSPComputeRHSFn          *computerhs;
   KSPComputeInitialGuessFn *computeinitialguess;
@@ -325,6 +332,7 @@ struct _DMKSPOps {
 S*/
 struct _p_DMKSP {
   PETSCHEADER(struct _DMKSPOps);
+  void *createoperatorsctx;
   void *operatorsctx;
   void *rhsctx;
   void *initialguessctx;

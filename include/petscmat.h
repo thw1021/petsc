@@ -215,9 +215,25 @@ PETSC_DEPRECATED_FUNCTION(3, 15, 0, "MatFactorGetCanUseOrdering()", ) static inl
 {
   return MatFactorGetCanUseOrdering(A, b);
 }
-PETSC_EXTERN PetscErrorCode                 MatFactorGetSolverType(Mat, MatSolverType *);
-PETSC_EXTERN PetscErrorCode                 MatGetFactorType(Mat, MatFactorType *);
-PETSC_EXTERN PetscErrorCode                 MatSetFactorType(Mat, MatFactorType);
+PETSC_EXTERN PetscErrorCode MatFactorGetSolverType(Mat, MatSolverType *);
+PETSC_EXTERN PetscErrorCode MatGetFactorType(Mat, MatFactorType *);
+PETSC_EXTERN PetscErrorCode MatSetFactorType(Mat, MatFactorType);
+/*S
+  MatSolverFn - Function type for the factor-creation callback registered with `MatSolverTypeRegister()`, used by `MatGetFactor()` to allocate a factored matrix of a particular `MatSolverType` and `MatFactorType`
+
+  Synopsis:
+  #include <petscmat.h>
+  PetscErrorCode MatSolverFn(Mat A, MatFactorType ftype, Mat *F)
+
+  Calling Sequence:
++ A     - the matrix to be factored
+. ftype - the kind of factorization requested (e.g. `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`)
+- F     - on output, the newly created factor `Mat` of the appropriate `MatType` for the solver
+
+  Level: developer
+
+.seealso: `Mat`, `MatGetFactor()`, `MatSolverType`, `MatFactorType`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`
+S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatSolverFn(Mat, MatFactorType, Mat *);
 PETSC_EXTERN_TYPEDEF typedef MatSolverFn   *MatSolverFunction;
 
@@ -380,6 +396,7 @@ PETSC_EXTERN PetscErrorCode MatSetErrorIfFailure(Mat, PetscBool);
 PETSC_EXTERN PetscFunctionList MatList;
 PETSC_EXTERN PetscFunctionList MatColoringList;
 PETSC_EXTERN PetscFunctionList MatPartitioningList;
+PETSC_EXTERN PetscFunctionList MatMeshToCellGraphList;
 
 /*E
    MatStructure - Indicates if two matrices have the same nonzero structure
@@ -477,6 +494,17 @@ PETSC_EXTERN PetscErrorCode MatScatterGetVecScatter(Mat, VecScatter *);
 PETSC_EXTERN PetscErrorCode MatCreateBlockMat(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt *, Mat *);
 PETSC_EXTERN PetscErrorCode MatCompositeAddMat(Mat, Mat);
 PETSC_EXTERN PetscErrorCode MatCompositeMerge(Mat);
+/*E
+   MatCompositeMergeType - Selects the order in which the matrices held by a `MATCOMPOSITE` are combined when `MatCompositeMerge()` is called
+
+   Values:
++   `MAT_COMPOSITE_MERGE_RIGHT` - merge into a single matrix starting from the rightmost matrix (multiplicative compositions use this to preserve the natural left-to-right application order)
+-   `MAT_COMPOSITE_MERGE_LEFT`  - merge into a single matrix starting from the leftmost matrix
+
+   Level: advanced
+
+.seealso: [](ch_matrices), `Mat`, `MATCOMPOSITE`, `MatCompositeMerge()`, `MatCompositeSetMergeType()`, `MatCompositeType`
+E*/
 typedef enum {
   MAT_COMPOSITE_MERGE_RIGHT,
   MAT_COMPOSITE_MERGE_LEFT
@@ -546,6 +574,7 @@ PETSC_EXTERN PetscErrorCode MatConjugate(Mat);
 PETSC_EXTERN PetscErrorCode MatRealPart(Mat);
 PETSC_EXTERN PetscErrorCode MatImaginaryPart(Mat);
 PETSC_EXTERN PetscErrorCode MatGetDiagonalBlock(Mat, Mat *);
+PETSC_EXTERN PetscErrorCode MatGetMultPetscSF(Mat, PetscSF *);
 PETSC_EXTERN PetscErrorCode MatGetTrace(Mat, PetscScalar *);
 PETSC_EXTERN PetscErrorCode MatInvertBlockDiagonal(Mat, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatInvertVariableBlockDiagonal(Mat, PetscInt, const PetscInt *, PetscScalar *);
@@ -617,7 +646,7 @@ PETSC_EXTERN PetscErrorCode MatAssembled(Mat, PetscBool *);
    Developer Note:
    Entries that are negative need not be called collectively by all processes.
 
-.seealso: [](ch_matrices), `Mat`, `MatSetOption()`
+.seealso: [](ch_matrices), `Mat`, `MatSetOption()`, `VecOption`
 E*/
 typedef enum {
   MAT_OPTION_MIN                  = -3,
@@ -848,6 +877,7 @@ PETSC_EXTERN PetscErrorCode MatRARtMultEqual(Mat, Mat, Mat, PetscInt, PetscBool 
 PETSC_EXTERN PetscErrorCode MatIsLinear(Mat, PetscInt, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode MatNorm(Mat, NormType, PetscReal *);
+PETSC_EXTERN PetscErrorCode MatNormApproximate(Mat, NormType, PetscInt, PetscReal *);
 PETSC_EXTERN PetscErrorCode MatGetColumnNorms(Mat, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode MatGetColumnSums(Mat, PetscScalar *);
 PETSC_EXTERN PetscErrorCode MatGetColumnSumsRealPart(Mat, PetscReal *);
@@ -1574,6 +1604,19 @@ PETSC_EXTERN PetscErrorCode MatSolveTransposeAdd(Mat, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatSolves(Mat, Vecs, Vecs);
 PETSC_EXTERN PetscErrorCode MatSetUnfactored(Mat);
 
+/*E
+   MatFactorSchurStatus - Records the current state of the dense Schur complement that is maintained by a factored matrix when a user has requested its formation with `MatFactorSetSchurIS()`
+
+   Values:
++   `MAT_FACTOR_SCHUR_UNFACTORED` - the Schur complement has been assembled but has not yet been factored or inverted
+.   `MAT_FACTOR_SCHUR_FACTORED`   - the Schur complement has been factored (for example via dense LU) and can be used to solve via `MatFactorSolveSchurComplement()`
+-   `MAT_FACTOR_SCHUR_INVERTED`   - the Schur complement has been explicitly inverted in place; subsequent solves multiply by the dense inverse
+
+   Level: advanced
+
+.seealso: [](ch_matrices), `Mat`, `MatFactorSetSchurIS()`, `MatFactorGetSchurComplement()`, `MatFactorRestoreSchurComplement()`,
+          `MatFactorInvertSchurComplement()`, `MatFactorCreateSchurComplement()`
+E*/
 typedef enum {
   MAT_FACTOR_SCHUR_UNFACTORED,
   MAT_FACTOR_SCHUR_FACTORED,
@@ -1821,6 +1864,21 @@ PETSC_EXTERN PetscErrorCode MatPartitioningParmetisSetRepartition(MatPartitionin
 PETSC_EXTERN PetscErrorCode MatPartitioningParmetisSetCoarseSequential(MatPartitioning);
 PETSC_EXTERN PetscErrorCode MatPartitioningParmetisGetEdgeCut(MatPartitioning, PetscInt *);
 
+/*E
+   MPChacoGlobalType - Global partitioning method used by `MATPARTITIONINGCHACO` when delegating to the Chaco library
+
+   Values:
++   `MP_CHACO_MULTILEVEL` - multilevel-Kernighan--Lin style partitioning
+.   `MP_CHACO_SPECTRAL`   - spectral partitioning using Lanczos or RQI eigensolvers
+.   `MP_CHACO_LINEAR`     - linear (rank-order) initial partition
+.   `MP_CHACO_RANDOM`     - random initial partition
+-   `MP_CHACO_SCATTERED`  - scattered (round-robin) initial partition
+
+   Level: intermediate
+
+.seealso: [](ch_matrices), `MatPartitioning`, `MATPARTITIONINGCHACO`, `MatPartitioningChacoSetGlobal()`, `MatPartitioningChacoGetGlobal()`,
+          `MPChacoLocalType`, `MPChacoEigenType`
+E*/
 typedef enum {
   MP_CHACO_MULTILEVEL = 1,
   MP_CHACO_SPECTRAL   = 2,
@@ -1829,11 +1887,35 @@ typedef enum {
   MP_CHACO_SCATTERED  = 6
 } MPChacoGlobalType;
 PETSC_EXTERN const char *const MPChacoGlobalTypes[];
+/*E
+   MPChacoLocalType - Local refinement method used by `MATPARTITIONINGCHACO` after the global partition has been chosen
+
+   Values:
++   `MP_CHACO_KERNIGHAN` - apply Kernighan--Lin local refinement to improve the partition
+-   `MP_CHACO_NONE`      - no local refinement
+
+   Level: intermediate
+
+.seealso: [](ch_matrices), `MatPartitioning`, `MATPARTITIONINGCHACO`, `MatPartitioningChacoSetLocal()`, `MatPartitioningChacoGetLocal()`,
+          `MPChacoGlobalType`
+E*/
 typedef enum {
   MP_CHACO_KERNIGHAN = 1,
   MP_CHACO_NONE      = 2
 } MPChacoLocalType;
 PETSC_EXTERN const char *const MPChacoLocalTypes[];
+/*E
+   MPChacoEigenType - Eigensolver used by `MATPARTITIONINGCHACO` when the global partitioning method is `MP_CHACO_SPECTRAL`
+
+   Values:
++   `MP_CHACO_LANCZOS` - Lanczos algorithm
+-   `MP_CHACO_RQI`     - Rayleigh quotient iteration
+
+   Level: intermediate
+
+.seealso: [](ch_matrices), `MatPartitioning`, `MATPARTITIONINGCHACO`, `MatPartitioningChacoSetEigenSolver()`, `MatPartitioningChacoGetEigenSolver()`,
+          `MPChacoGlobalType`
+E*/
 typedef enum {
   MP_CHACO_LANCZOS = 0,
   MP_CHACO_RQI     = 1
@@ -1869,6 +1951,21 @@ PETSC_EXTERN PetscErrorCode MatPartitioningPartySetCoarseLevel(MatPartitioning, 
 PETSC_EXTERN PetscErrorCode MatPartitioningPartySetBipart(MatPartitioning, PetscBool);
 PETSC_EXTERN PetscErrorCode MatPartitioningPartySetMatchOptimization(MatPartitioning, PetscBool);
 
+/*E
+   MPPTScotchStrategyType - Pre-defined strategy used by `MATPARTITIONINGPTSCOTCH` when delegating to the PT-Scotch library
+
+   Values:
++   `MP_PTSCOTCH_DEFAULT`     - the default PT-Scotch strategy
+.   `MP_PTSCOTCH_QUALITY`     - focus on partition quality at the expense of time
+.   `MP_PTSCOTCH_SPEED`       - focus on time to compute the partition
+.   `MP_PTSCOTCH_BALANCE`     - favor load balance
+.   `MP_PTSCOTCH_SAFETY`      - use the most reliable internal heuristics
+-   `MP_PTSCOTCH_SCALABILITY` - favor scalability at large process counts
+
+   Level: intermediate
+
+.seealso: [](ch_matrices), `MatPartitioning`, `MATPARTITIONINGPTSCOTCH`, `MatPartitioningPTScotchSetStrategy()`, `MatPartitioningPTScotchGetStrategy()`
+E*/
 typedef enum {
   MP_PTSCOTCH_DEFAULT,
   MP_PTSCOTCH_QUALITY,
@@ -1892,11 +1989,26 @@ PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalGetCoarseparts(MatPartiti
 PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalSetNcoarseparts(MatPartitioning, PetscInt);
 PETSC_EXTERN PetscErrorCode MatPartitioningHierarchicalSetNfineparts(MatPartitioning, PetscInt);
 
-PETSC_EXTERN PetscErrorCode MatMeshToCellGraph(Mat, PetscInt, Mat *);
+typedef const char *MatMeshToCellGraphType;
+#define MATMESHTOCELLGRAPHMETIS    "metis"
+#define MATMESHTOCELLGRAPHPARMETIS "parmetis"
 
-/*
-    If any of the enum values are changed, also update dMatOps dict at src/binding/petsc4py/src/petsc4py/PETSc/libpetsc4py.pyx
-*/
+PETSC_EXTERN PetscErrorCode MatMeshToCellGraph(Mat, PetscInt, Mat *);
+PETSC_EXTERN PetscErrorCode MatMeshToCellGraphRegister(const char[], PetscErrorCode (*)(Mat, PetscInt, Mat *));
+
+/*E
+   MatOperation - Identifies one of the operations stored in a `Mat`'s function table, for example `MATOP_MULT` or `MATOP_LUFACTOR`
+
+   Level: developer
+
+   Notes:
+   Use `MatSetOperation()` to install a custom implementation of a given operation on a `Mat` (typically a `MATSHELL`), `MatGetOperation()` to retrieve the currently installed implementation, and `MatHasOperation()` to test whether one is installed.
+
+   The numeric values are part of the binary interface used by the petsc4py bindings; if any of these enum values are changed, the `dMatOps` dictionary in `src/binding/petsc4py/src/petsc4py/PETSc/libpetsc4py.pyx` must be updated to match.
+
+.seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatSetOperation()`, `MatGetOperation()`, `MatHasOperation()`,
+          `MatShellSetOperation()`, `MatShellGetOperation()`
+E*/
 typedef enum {
   MATOP_SET_VALUES                = 0,
   MATOP_GET_ROW                   = 1,
@@ -2044,7 +2156,8 @@ typedef enum {
   MATOP_ADOT                      = 143,
   MATOP_ANORM                     = 144,
   MATOP_ADOT_LOCAL                = 145,
-  MATOP_ANORM_LOCAL               = 146
+  MATOP_ANORM_LOCAL               = 146,
+  MATOP_GET_ORDERING              = 147
 } MatOperation;
 
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat, MatOperation, PetscErrorCodeFn *);
@@ -2306,6 +2419,26 @@ PETSC_EXTERN PetscErrorCode MatH2OpusMapVec(Mat, PetscBool, Vec, Vec *);
 PETSC_EXTERN PetscErrorCode MatH2OpusLowRankUpdate(Mat, Mat, Mat, PetscScalar);
 #endif
 
+/*S
+  MatHtoolKernelFn - Function type for the user-supplied kernel callback used by `MATHTOOL` (`MatCreateHtoolFromKernel()`, `MatHtoolSetKernel()`) to evaluate the dense matrix entries on demand
+
+  Synopsis:
+  #include <petscmat.h>
+  PetscErrorCode MatHtoolKernelFn(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *J, const PetscInt *K, PetscScalar *ptr, void *ctx)
+
+  Calling Sequence:
++ sdim - the spatial dimension of the source/target geometries
+. M    - the number of target points
+. N    - the number of source points
+. J    - array of `M` target point indices into the user's target coordinate array
+. K    - array of `N` source point indices into the user's source coordinate array
+. ptr  - column-major output buffer of length `M*N` to fill with kernel values
+- ctx  - the optional user context passed at registration
+
+  Level: intermediate
+
+.seealso: `Mat`, `MATHTOOL`, `MatCreateHtoolFromKernel()`, `MatHtoolSetKernel()`
+S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode    MatHtoolKernelFn(PetscInt, PetscInt, PetscInt, const PetscInt *, const PetscInt *, PetscScalar *, void *);
 PETSC_EXTERN_TYPEDEF typedef MatHtoolKernelFn *MatHtoolKernel;
 
@@ -2388,7 +2521,7 @@ PETSC_EXTERN PetscErrorCode MatMumpsGetInverseTranspose(Mat, Mat);
 PETSC_EXTERN PetscErrorCode MatMumpsSetBlk(Mat, PetscInt, const PetscInt[], const PetscInt[]);
 
 PETSC_EXTERN PetscErrorCode MatMumpsSetOocTmpDir(Mat, const char *);
-PETSC_EXTERN PetscErrorCode MatMumpsGetOocTmpDir(Mat, const char **);
+PETSC_EXTERN PetscErrorCode MatMumpsGetOocTmpDir(Mat, const char *[]);
 
 #ifdef PETSC_HAVE_MKL_PARDISO
 PETSC_EXTERN PetscErrorCode MatMkl_PardisoSetCntl(Mat, PetscInt, PetscInt);
@@ -2558,8 +2691,8 @@ PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm, PetscInt, PetscInt
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat, MatCUSPARSEFormatOperation, MatCUSPARSEStorageFormat);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetUseCPUSolve(Mat, PetscBool);
-PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSEGetIJ(Mat, PetscBool, const int **, const int **);
-PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSERestoreIJ(Mat, PetscBool, const int **, const int **);
+PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSEGetIJ(Mat, PetscBool, const PetscInt *[], const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSERestoreIJ(Mat, PetscBool, const PetscInt *[], const PetscInt *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSEGetArrayRead(Mat, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSERestoreArrayRead(Mat, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSEGetArrayWrite(Mat, PetscScalar **);
@@ -2633,8 +2766,8 @@ PETSC_EXTERN PetscErrorCode MatCreateSeqAIJHIPSPARSE(MPI_Comm, PetscInt, PetscIn
 PETSC_EXTERN PetscErrorCode MatCreateAIJHIPSPARSE(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatHIPSPARSESetFormat(Mat, MatHIPSPARSEFormatOperation, MatHIPSPARSEStorageFormat);
 PETSC_EXTERN PetscErrorCode MatHIPSPARSESetUseCPUSolve(Mat, PetscBool);
-PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSEGetIJ(Mat, PetscBool, const int **, const int **);
-PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSERestoreIJ(Mat, PetscBool, const int **, const int **);
+PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSEGetIJ(Mat, PetscBool, const PetscInt *[], const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSERestoreIJ(Mat, PetscBool, const PetscInt *[], const PetscInt *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSEGetArrayRead(Mat, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSERestoreArrayRead(Mat, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatSeqAIJHIPSPARSEGetArrayWrite(Mat, PetscScalar **);

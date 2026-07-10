@@ -395,6 +395,53 @@ PetscErrorCode MatGetDiagonalBlock(Mat A, Mat *a)
 }
 
 /*@
+  MatGetMultPetscSF - Returns the `PetscSF` that communicates to each MPI process the values held on other MPI processes that are coupled to it by the `Mat`
+
+  Not Collective
+
+  Input Parameter:
+. A - the matrix
+
+  Output Parameter:
+. sf - the `PetscSF`.
+
+  Level: advanced
+
+  Notes:
+  The returned `PetscSF` is owned by the matrix; do not destroy it.
+
+  It is only valid if this function is called after the matrix has been assembled
+  (and for `MATMPIDENSE` after a `MatMult()` has been additionally called).
+
+  This is only implemented for the matrix types listed below; calling it on a sequential matrix or a type that does not
+  build such a `PetscSF` raises an error.
+
+  For `MATMPIAIJ`, `MATMPIBAIJ`, `MATMPIDENSE`, and `MATMPISELL`, this `PetscSF` is used within
+  `MatMult()` to provide the contribution of vector entries that are not local to each MPI process to the matrix-vector product.
+  For `MATMPISBAIJ` the returned `PetscSF` is instead the off-process column gather used by operations such as
+  `MatDiagonalScale()`; `MatMult_MPISBAIJ()` uses a separate, augmented scatter context.
+  In all cases the `PetscSF` maps the global vector layout (the matrix column layout) onto the off-process columns that the local rows couple to,
+  so it can be reused to communicate any per-column data, for example with `PetscSFBcastBegin()`.
+
+  For `MATMPIDENSE` this `PetscSF` is an allgather: every process gathers all columns, including its own, in the natural global
+  order rather than a sparse `garray` order. The leaf set and ordering therefore differ across matrix types, so callers should use
+  `PetscSFGetGraph()` rather than assume a particular leaf layout.
+
+.seealso: [](ch_matrices), `Mat`, `PetscSF`, `MatGetDiagonalBlock()`, `MatMPIAIJGetSeqAIJ()`, `PetscSFBcastBegin()`, `MatMult()`
+@*/
+PetscErrorCode MatGetMultPetscSF(Mat A, PetscSF *sf)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscAssertPointer(sf, 2);
+  PetscCheck(A->assembled, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
+  *sf = NULL;
+  PetscUseMethod(A, "MatGetMultPetscSF_C", (Mat, PetscSF *), (A, sf));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   MatGetTrace - Gets the trace of a matrix. The sum of the diagonal entries.
 
   Collective
@@ -1090,7 +1137,7 @@ PetscErrorCode MatViewFromOptions(Mat A, PetscObject obj, const char name[])
   See share/petsc/matlab/PetscBinaryRead.m for a MATLAB code that can read in the binary file when the binary
   viewer is used and lib/petsc/bin/PetscBinaryIO.py for loading them into Python.
 
-  One can use '-mat_view draw -draw_pause -1' to pause the graphical display of matrix nonzero structure,
+  One can use `-mat_view draw -draw_pause -1` to pause the graphical display of matrix nonzero structure,
   and then use the following mouse functions.
 .vb
   left mouse: zoom in
@@ -1147,6 +1194,7 @@ PetscErrorCode MatView(Mat mat, PetscViewer viewer)
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)mat, viewer));
     if (format == PETSC_VIEWER_ASCII_INFO || format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       MatNullSpace nullsp, transnullsp;
+      PetscBool    nz_factor = PETSC_TRUE;
 
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(MatGetSize(mat, &rows, &cols));
@@ -1157,15 +1205,18 @@ PetscErrorCode MatView(Mat mat, PetscViewer viewer)
       } else PetscCall(PetscViewerASCIIPrintf(viewer, "rows=%" PetscInt_FMT ", cols=%" PetscInt_FMT "\n", rows, cols));
       if (mat->factortype) {
         MatSolverType solver;
+
         PetscCall(MatFactorGetSolverType(mat, &solver));
         PetscCall(PetscViewerASCIIPrintf(viewer, "package used to perform factorization: %s\n", solver));
+        PetscCall(PetscStrcmpAny(solver, &nz_factor, MATSOLVERUMFPACK, MATSOLVERCHOLMOD, MATSOLVERSUPERLU, MATSOLVERSUPERLU_DIST, MATSOLVERSTRUMPACK, MATSOLVERHTOOL, ""));
+        nz_factor = !nz_factor;
       }
       if (mat->ops->getinfo) {
         PetscBool is_constant_or_diagonal;
 
         // Don't print nonzero information for constant or diagonal matrices, it just adds noise to the output
         PetscCall(PetscObjectTypeCompareAny((PetscObject)mat, &is_constant_or_diagonal, MATCONSTANTDIAGONAL, MATDIAGONAL, ""));
-        if (!is_constant_or_diagonal) {
+        if (!is_constant_or_diagonal && nz_factor) {
           MatInfo info;
 
           PetscCall(MatGetInfo(mat, MAT_GLOBAL_SUM, &info));
@@ -1494,8 +1545,7 @@ PetscErrorCode MatDestroy(Mat *A)
   `MatSetValues()` uses 0-based row and column numbers in Fortran
   as well as in C.
 
-  Negative indices may be passed in `idxm` and `idxn`, these rows and columns are
-  simply ignored. This allows easily inserting element stiffness matrices
+  Negative indices may be passed in `idxm` and `idxn`, these rows and columns are simply ignored. This allows easily inserting element stiffness matrices
   with homogeneous Dirichlet boundary conditions that you don't want represented
   in the matrix.
 
@@ -1509,11 +1559,8 @@ PetscErrorCode MatDestroy(Mat *A)
   call MatSetValues(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES, ierr)
 .ve
 
-  If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
-
-  Developer Note:
-  This is labeled with C so does not automatically generate Fortran stubs and interfaces
-  because it requires multiple Fortran interfaces depending on which arguments are scalar or arrays.
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
           `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`
@@ -1595,7 +1642,8 @@ PetscErrorCode MatSetValues(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt
   in the matrix.
 
   Fortran Note:
-  If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
   Efficiency Alert:
   The routine `MatSetValuesBlocked()` may offer much better efficiency
@@ -1624,21 +1672,19 @@ PetscErrorCode MatSetValuesIS(Mat mat, IS ism, IS isn, const PetscScalar v[], In
 }
 
 /*@
-  MatSetValuesRowLocal - Inserts a row (block row for `MATBAIJ` matrices) of nonzero
-  values into a matrix
+  MatSetValuesRowLocal - Inserts a row of nonzero values into a matrix
 
   Not Collective
 
   Input Parameters:
 + mat - the matrix
-. row - the (block) row to set
-- v   - a one-dimensional array that contains the values. For `MATBAIJ` they are implicitly stored as a two-dimensional array, by default in row-major order.
-        See `MAT_ROW_ORIENTED` in `MatSetOption()` for how to use column-major order.
+. row - the row to set
+- v   - a one-dimensional array that contains the values
 
   Level: intermediate
 
   Notes:
-  The values, `v`, are column-oriented (for the block version) and sorted
+  Currently only supported for `MATAIJ`.
 
   All the nonzero values in `row` must be provided
 
@@ -1646,11 +1692,8 @@ PetscErrorCode MatSetValuesIS(Mat mat, IS ism, IS isn, const PetscScalar v[], In
 
   `row` must belong to this MPI process
 
-  Fortran Note:
-  If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
-
 .seealso: [](ch_matrices), `Mat`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
-          `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`, `MatSetValues()`, `MatSetValuesRow()`, `MatSetLocalToGlobalMapping()`
+          `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`, `MatSetValues()`, `MatSetValuesRow()`, `MatSetLocalToGlobalMapping()`, `MATAIJ`
 @*/
 PetscErrorCode MatSetValuesRowLocal(Mat mat, PetscInt row, const PetscScalar v[])
 {
@@ -1666,29 +1709,28 @@ PetscErrorCode MatSetValuesRowLocal(Mat mat, PetscInt row, const PetscScalar v[]
 }
 
 /*@
-  MatSetValuesRow - Inserts a row (block row for `MATBAIJ` matrices) of nonzero
-  values into a matrix
+  MatSetValuesRow - Inserts a row of nonzero values into a matrix
 
   Not Collective
 
   Input Parameters:
 + mat - the matrix
-. row - the (block) row to set
-- v   - a logically two-dimensional (column major) array of values for  block matrices with blocksize larger than one, otherwise a one dimensional array of values
+. row - the row to set
+- v   - a one dimensional array of values
 
   Level: advanced
 
   Notes:
-  The values, `v`, are column-oriented for the block version.
+  Currently only supported for `MATAIJ`.
 
   All the nonzeros in `row` must be provided
 
-  THE MATRIX MUST HAVE PREVIOUSLY HAD ITS COLUMN INDICES SET. IT IS RARE THAT THIS ROUTINE IS USED, usually `MatSetValues()` is used.
+  The matrix must have previously had its column indices set, likely by having been assembled.
 
   `row` must belong to this process
 
 .seealso: [](ch_matrices), `Mat`, `MatSetValues()`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
-          `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`
+          `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`, `MATAIJ`
 @*/
 PetscErrorCode MatSetValuesRow(Mat mat, PetscInt row, const PetscScalar v[])
 {
@@ -1764,8 +1806,14 @@ PetscErrorCode MatSetValuesRow(Mat mat, PetscInt row, const PetscScalar v[])
   Inspired by the structured grid interface to the HYPRE package
   (https://computation.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods)
 
-  Fortran Note:
-  If `y` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
+  Fortran Notes:
+  If any of `idxm`, `idxn`, and `v` are scalars pass them using, for example,
+.vb
+  call MatSetValuesStencil(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES, ierr)
+.ve
+
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
   Efficiency Alert:
   The routine `MatSetValuesBlockedStencil()` may offer much better efficiency
@@ -1871,19 +1919,13 @@ PetscErrorCode MatSetValuesStencil(Mat mat, PetscInt m, const MatStencil idxm[],
   (https://computation.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods)
 
   Fortran Notes:
-  `idxm` and `idxn` should be declared as
+  If any of `idxm`, `idxn`, and `v` are scalars pass them using, for example,
 .vb
-    MatStencil idxm(4,m),idxn(4,n)
-.ve
-  and the values inserted using
-.vb
-    idxm(MatStencil_i,1) = i
-    idxm(MatStencil_j,1) = j
-    idxm(MatStencil_k,1) = k
-   etc
+  call MatSetValuesBlockedStencil(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES, ierr)
 .ve
 
-  If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
           `MatSetValues()`, `MatSetValuesStencil()`, `MatSetStencil()`, `DMCreateMatrix()`, `DMDAVecGetArray()`, `MatStencil`,
@@ -2052,7 +2094,8 @@ PetscErrorCode MatSetStencil(Mat mat, PetscInt dim, const PetscInt dims[], const
   call MatSetValuesBlocked(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES, ierr)
 .ve
 
-  If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetBlockSize()`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValues()`, `MatSetValuesBlockedLocal()`
 @*/
@@ -2410,7 +2453,7 @@ PetscErrorCode MatGetLayouts(Mat A, PetscLayout *rmap, PetscLayout *cmap)
 . irow - the row local indices
 . ncol - number of columns
 . icol - the column local indices
-. y    - a one-dimensional array that contains the values implicitly stored as a two-dimensional array, by default in row-major order.
+. v    - a one-dimensional array that contains the values implicitly stored as a two-dimensional array, by default in row-major order.
          See `MAT_ROW_ORIENTED` in `MatSetOption()` for how to use column-major order.
 - addv - either `ADD_VALUES` to add values to any existing entries, or `INSERT_VALUES` to replace existing entries with new values
 
@@ -2427,17 +2470,18 @@ PetscErrorCode MatGetLayouts(Mat A, PetscLayout *rmap, PetscLayout *cmap)
   MUST be called after all calls to `MatSetValuesLocal()` have been completed.
 
   Fortran Notes:
-  If any of `irow`, `icol`, and `y` are scalars pass them using, for example,
+  If any of `irow`, `icol`, and `v` are scalars pass them using, for example,
 .vb
-  call MatSetValuesLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES, ierr)
+  call MatSetValuesLocal(mat, one, [irow], one, [icol], [v], INSERT_VALUES, ierr)
 .ve
 
-  If `y` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValues()`, `MatSetLocalToGlobalMapping()`,
           `MatGetValuesLocal()`
 @*/
-PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], PetscInt ncol, const PetscInt icol[], const PetscScalar y[], InsertMode addv)
+PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], PetscInt ncol, const PetscInt icol[], const PetscScalar v[], InsertMode addv)
 {
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -2458,7 +2502,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
     mat->assembled     = PETSC_FALSE;
   }
   PetscCall(PetscLogEventBegin(MAT_SetValues, mat, 0, 0, 0));
-  if (mat->ops->setvalueslocal) PetscUseTypeMethod(mat, setvalueslocal, nrow, irow, ncol, icol, y, addv);
+  if (mat->ops->setvalueslocal) PetscUseTypeMethod(mat, setvalueslocal, nrow, irow, ncol, icol, v, addv);
   else {
     PetscInt        buf[8192], *bufr = NULL, *bufc = NULL;
     const PetscInt *irowm, *icolm;
@@ -2479,7 +2523,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
       if (mat->cmap->mapping != mat->rmap->mapping || ncol != nrow || icol != irow) PetscCall(ISLocalToGlobalMappingApply(mat->cmap->mapping, ncol, icol, bufc));
       else icolm = irowm;
     } else icolm = icol;
-    PetscCall(MatSetValues(mat, nrow, irowm, ncol, icolm, y, addv));
+    PetscCall(MatSetValues(mat, nrow, irowm, ncol, icolm, v, addv));
     if (bufr != buf) PetscCall(PetscFree2(bufr, bufc));
   }
   PetscCall(PetscLogEventEnd(MAT_SetValues, mat, 0, 0, 0));
@@ -2498,7 +2542,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
 . irow - the row local indices
 . ncol - number of columns
 . icol - the column local indices
-. y    - a one-dimensional array that contains the values implicitly stored as a two-dimensional array, by default in row-major order.
+. v    - a one-dimensional array that contains the values implicitly stored as a two-dimensional array, by default in row-major order.
          See `MAT_ROW_ORIENTED` in `MatSetOption()` for how to use column-major order.
 - addv - either `ADD_VALUES` to add values to any existing entries, or `INSERT_VALUES` to replace existing entries with new values
 
@@ -2516,17 +2560,18 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
   MUST be called after all calls to `MatSetValuesBlockedLocal()` have been completed.
 
   Fortran Notes:
-  If any of `irow`, `icol`, and `y` are scalars pass them using, for example,
+  If any of `irow`, `icol`, and `v` are scalars pass them using, for example,
 .vb
-  call MatSetValuesBlockedLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES, ierr)
+  call MatSetValuesBlockedLocal(mat, one, [irow], one, [icol], [v], INSERT_VALUES, ierr)
 .ve
 
-  If `y` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
+  If `v` is a two-dimensional array make sure to first call `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE, ierr)` before using this function,
+  otherwise the transpose of `v` will seemingly be inserted in the matrix, since Fortran passes two-dimensional arrays with column orientation.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetBlockSize()`, `MatSetLocalToGlobalMapping()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`,
           `MatSetValuesLocal()`, `MatSetValuesBlocked()`
 @*/
-PetscErrorCode MatSetValuesBlockedLocal(Mat mat, PetscInt nrow, const PetscInt irow[], PetscInt ncol, const PetscInt icol[], const PetscScalar y[], InsertMode addv)
+PetscErrorCode MatSetValuesBlockedLocal(Mat mat, PetscInt nrow, const PetscInt irow[], PetscInt ncol, const PetscInt icol[], const PetscScalar v[], InsertMode addv)
 {
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -2559,7 +2604,7 @@ PetscErrorCode MatSetValuesBlockedLocal(Mat mat, PetscInt nrow, const PetscInt i
     PetscCheck(cbs == icbs, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Different col block sizes! mat %" PetscInt_FMT ", col l2g map %" PetscInt_FMT, cbs, icbs);
   }
   PetscCall(PetscLogEventBegin(MAT_SetValues, mat, 0, 0, 0));
-  if (mat->ops->setvaluesblockedlocal) PetscUseTypeMethod(mat, setvaluesblockedlocal, nrow, irow, ncol, icol, y, addv);
+  if (mat->ops->setvaluesblockedlocal) PetscUseTypeMethod(mat, setvaluesblockedlocal, nrow, irow, ncol, icol, v, addv);
   else {
     PetscInt        buf[8192], *bufr = NULL, *bufc = NULL;
     const PetscInt *irowm, *icolm;
@@ -2580,7 +2625,7 @@ PetscErrorCode MatSetValuesBlockedLocal(Mat mat, PetscInt nrow, const PetscInt i
       if (mat->cmap->mapping != mat->rmap->mapping || ncol != nrow || icol != irow) PetscCall(ISLocalToGlobalMappingApplyBlock(mat->cmap->mapping, ncol, icol, bufc));
       else icolm = irowm;
     } else icolm = icol;
-    PetscCall(MatSetValuesBlocked(mat, nrow, irowm, ncol, icolm, y, addv));
+    PetscCall(MatSetValuesBlocked(mat, nrow, irowm, ncol, icolm, v, addv));
     if (bufr != buf) PetscCall(PetscFree2(bufr, bufc));
   }
   PetscCall(PetscLogEventEnd(MAT_SetValues, mat, 0, 0, 0));
@@ -3280,7 +3325,7 @@ PetscErrorCode MatLUFactor(Mat mat, IS row, IS col, const MatFactorInfo *info)
   See, e.g., `KSPCreate()`.
 
   Probably really in-place only when level of fill is zero, otherwise allocates
-  new space to store factored matrix and deletes previous memory. The preferred approach is to use `MatGetFactor()`, `MatILUFactorSymbolic()`, and `MatILUFactorNumeric()`
+  new space to store factored matrix and deletes previous memory. The preferred approach is to use `MatGetFactor()`, `MatILUFactorSymbolic()`, and `MatLUFactorNumeric()`
   when not using `KSP`.
 
   Fortran Note:
@@ -4721,7 +4766,7 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
   MatSolverTypeGet - Gets the function that creates the factor matrix if it exist
 
   Input Parameters:
-+ type  - name of the package, for example `petsc` or `superlu`, if this is 'NULL', then the first result that satisfies the other criteria is returned
++ type  - name of the package, for example `petsc` or `superlu`, if this is `NULL`, then the first result that satisfies the other criteria is returned
 . ftype - the type of factorization supported by the type
 - mtype - the matrix type that works with this type
 
@@ -4832,6 +4877,41 @@ PetscErrorCode MatSolverTypeDestroy(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetFactor_Private(Mat mat, MatFactorType ftype, PetscBool exact, PetscBool *found, Mat *f)
+{
+  MatSolverTypeHolder         next = MatSolverTypeHolders;
+  MatSolverTypeForSpecifcType inext;
+  PetscBool                   flg, same;
+
+  PetscFunctionBegin;
+  *found = PETSC_FALSE;
+  *f     = NULL;
+  /* When no solver type is requested, MatGetFactor() must honor registration order, but a registered
+     MatSolverType may only be able to reject a particular MatType at runtime by returning NULL in *f.
+     Keep walking the registry until a matching backend actually creates a factor. */
+  while (next) {
+    inext = next->handlers;
+    while (inext) {
+      PetscCall(PetscStrcmp(((PetscObject)mat)->type_name, inext->mtype, &same));
+      if (exact) flg = same;
+      else {
+        /* Do the base-type pass separately from the exact pass so exact registrations for the MatType
+           are all tried before broader registrations such as implementation base classes. */
+        PetscCall(PetscStrbeginswith(((PetscObject)mat)->type_name, inext->mtype, &flg));
+        flg = (PetscBool)(flg && !same);
+      }
+      if (flg && inext->createfactor[(int)ftype - 1]) {
+        *found = PETSC_TRUE;
+        PetscCall((*inext->createfactor[(int)ftype - 1])(mat, ftype, f));
+        if (*f) PetscFunctionReturn(PETSC_SUCCESS);
+      }
+      inext = inext->next;
+    }
+    next = next->next;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatFactorGetCanUseOrdering - Indicates if the factorization can use the ordering provided in `MatLUFactorSymbolic()`, `MatCholeskyFactorSymbolic()`
 
@@ -4884,14 +4964,13 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 
 /*@
   MatGetFactor - Returns a matrix suitable to calls to routines such as `MatLUFactorSymbolic()`, `MatCholeskyFactorSymbolic()`, `MatILUFactorSymbolic()`,
-  `MatICCFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactorNumeric()`, `MatILUFactorNumeric()`, and
-  `MatICCFactorNumeric()`
+  `MatICCFactorSymbolic()`, `MatLUFactorNumeric()`, and `MatCholeskyFactorNumeric()`
 
   Collective
 
   Input Parameters:
 + mat   - the matrix
-. type  - name of solver type, for example, `superlu_dist`, `petsc` (to use PETSc's solver if it is available), if this is 'NULL', then the first result that satisfies
+. type  - name of solver type, for example, `superlu_dist`, `petsc` (to use PETSc's solver if it is available), if this is `NULL`, then the first result that satisfies
           the other criteria is returned
 - ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
 
@@ -4932,8 +5011,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
           `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`,
           `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatInitializePackage()`,
           `MatLUFactorSymbolic()`, `MatCholeskyFactorSymbolic()`, `MatILUFactorSymbolic()`,
-          `MatICCFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactorNumeric()`, `MatILUFactorNumeric()`,
-          `MatICCFactorNumeric()`
+          `MatICCFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactorNumeric()`
 @*/
 PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Mat *f)
 {
@@ -4954,15 +5032,24 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(MatSolverTypeGet(type, ((PetscObject)mat)->type_name, ftype, &foundtype, &foundmtype, &conv));
-  if (!foundtype) {
-    if (type) {
-      SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate solver type %s for factorization type %s and matrix type %s. Perhaps you must ./configure with --download-%s", type, MatFactorTypes[ftype],
-              ((PetscObject)mat)->type_name, type);
-    } else {
-      SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate a solver type for factorization type %s and matrix type %s.", MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
+  if (!type) {
+    PetscBool foundbase;
+
+    /* First try exact MatType registrations in solver registration order. If all matching backends
+       decline this matrix instance by returning NULL, then try base-type registrations. */
+    PetscCall(MatGetFactor_Private(mat, ftype, PETSC_TRUE, &foundtype, f));
+    if (!*f) {
+      PetscCall(MatGetFactor_Private(mat, ftype, PETSC_FALSE, &foundbase, f));
+      foundtype = (PetscBool)(foundtype || foundbase);
     }
+    PetscCheck(foundtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate a solver type for factorization type %s and matrix type %s.", MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
+    if (mat->factorprefix) PetscCall(MatSetOptionsPrefix(*f, mat->factorprefix));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
+
+  PetscCall(MatSolverTypeGet(type, ((PetscObject)mat)->type_name, ftype, &foundtype, &foundmtype, &conv));
+  PetscCheck(foundtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "Could not locate%s solver type%s%s for factorization type %s and matrix type %s.%s%s", !type ? " a" : "", type ? " " : "", type ? type : "", MatFactorTypes[ftype],
+             ((PetscObject)mat)->type_name, type ? " Perhaps you must ./configure with --download-" : "", type ? type : "");
   PetscCheck(foundmtype, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "MatSolverType %s does not support matrix type %s", type, ((PetscObject)mat)->type_name);
   PetscCheck(conv, PetscObjectComm((PetscObject)mat), PETSC_ERR_MISSING_FACTOR, "MatSolverType %s does not support factorization type %s for matrix type %s", type, MatFactorTypes[ftype], ((PetscObject)mat)->type_name);
 
@@ -5623,7 +5710,7 @@ PetscErrorCode MatIsTranspose(Mat A, Mat B, PetscReal tol, PetscBool *flg)
 PetscErrorCode MatHermitianTranspose(Mat mat, MatReuse reuse, Mat *B)
 {
   PetscFunctionBegin;
-  PetscCall(MatTranspose_Private(mat, reuse, B, PETSC_TRUE));
+  PetscCall(MatTranspose_Private(mat, reuse, B, PetscDefined(USE_COMPLEX) ? PETSC_TRUE : PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5888,13 +5975,14 @@ PetscErrorCode MatScale(Mat mat, PetscScalar a)
 
   Level: intermediate
 
-.seealso: [](ch_matrices), `Mat`
+.seealso: [](ch_matrices), `Mat`, `MatNormApproximate()`
 @*/
 PetscErrorCode MatNorm(Mat mat, NormType type, PetscReal *nrm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscValidType(mat, 1);
+  PetscValidLogicalCollectiveEnum(mat, type, 2);
   PetscAssertPointer(nrm, 3);
 
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
@@ -5902,6 +5990,229 @@ PetscErrorCode MatNorm(Mat mat, NormType type, PetscReal *nrm)
   MatCheckPreallocated(mat, 1);
 
   PetscUseTypeMethod(mat, norm, type, nrm);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecSetFinalNormApp_Private(Vec x)
+{
+  PetscScalar *ax, nm1;
+  PetscInt     st, en, n;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetSize(x, &n));
+  if (n < 2) PetscFunctionReturn(PETSC_SUCCESS);
+  nm1 = n - 1;
+  PetscCall(VecGetOwnershipRange(x, &st, &en));
+  PetscCall(VecGetArrayWrite(x, &ax));
+  for (PetscInt i = st; i < en; i++) {
+    const PetscInt    ii = i - st;
+    const PetscScalar s  = i % 2 ? -1.0 : 1.0;
+
+    ax[ii] = s * (1.0 + i / nm1);
+  }
+  PetscCall(VecRestoreArrayWrite(x, &ax));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatNormApproximateForwardOnly_Private(Mat A, NormType normtype, PetscInt maxit, PetscBool boundtocpu, PetscReal *n)
+{
+  Vec         x, y;
+  PetscReal   normx, normy;
+  PetscInt    i, N;
+  PetscRandom rnd;
+
+  PetscFunctionBegin;
+  if (maxit < 0) maxit = 1;
+  PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)A), &rnd));
+  PetscCall(PetscRandomSetFromOptions(rnd));
+  PetscCall(MatCreateVecs(A, &x, &y));
+  PetscCall(VecBindToCPU(x, boundtocpu));
+  PetscCall(VecBindToCPU(y, boundtocpu));
+  PetscCall(VecGetSize(x, &N));
+  *n = 0.0;
+  for (i = 0; i < maxit; i++) {
+    PetscCall(VecSetRandom(x, rnd));
+    switch (normtype) {
+    case NORM_1:
+      PetscCall(VecNorm(x, NORM_1, &normx));
+      if (normx > 0.0) PetscCall(VecScale(x, 1.0 / normx));
+      break;
+    case NORM_INFINITY:
+      PetscCall(VecShift(x, -0.5));
+      PetscCall(VecPointwiseSign(x, x, VEC_SIGN_ZERO_TO_SIGNED_UNIT));
+      break;
+    case NORM_2:
+      PetscCall(VecNormalize(x, NULL));
+      break;
+    default:
+      PetscUnreachable();
+    }
+    PetscCall(MatMult(A, x, y));
+    PetscCall(VecNorm(y, normtype, &normy));
+    *n = PetscMax(*n, normy);
+    PetscCall(PetscInfo(A, "%s norm forward-only sample %" PetscInt_FMT " -> %g\n", NormTypes[normtype], i, (double)normy));
+  }
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&y));
+  PetscCall(PetscRandomDestroy(&rnd));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatNormApproximate - Approximate the norm of a matrix.
+
+  Collective
+
+  Input Parameters:
++ A        - the matrix
+. normtype - the `NormType`
+- maxit    - maximum number of iterations to use
+
+  Output Parameter:
+. n - the norm estimate
+
+  Level: intermediate
+
+  Notes:
+  Does not need access to the matrix entries; it just performs matrix-vector and transposed matrix-vector products {cite}`Higham1992`, {cite}`doi:10.1137/S0895479899356080`.
+
+  If `maxit` is negative, a default number of iterations (10 for `NORM_1` and `NORM_INFINITY` and 20 for `NORM_2`) is performed.
+
+.seealso: [](ch_matrices), `Mat`, `MatNorm()`
+@*/
+PetscErrorCode MatNormApproximate(Mat A, NormType normtype, PetscInt maxit, PetscReal *n)
+{
+  Vec         x, y, w, z;
+  PetscReal   normz, adot;
+  PetscScalar dot;
+  PetscInt    i, j, N, jold = -1;
+  PetscBool   boundtocpu = PETSC_TRUE, setherm, isherm, hasop;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscValidLogicalCollectiveEnum(A, normtype, 2);
+  PetscValidLogicalCollectiveInt(A, maxit, 3);
+  PetscAssertPointer(n, 4);
+#if PetscDefined(HAVE_DEVICE)
+  boundtocpu = A->boundtocpu;
+#endif
+  PetscCall(MatHasOperation(A, MATOP_MULT_HERMITIAN_TRANSPOSE, &hasop));
+  switch (normtype) {
+  case NORM_INFINITY:
+  case NORM_1:
+    if (!hasop) {
+      PetscCall(MatNormApproximateForwardOnly_Private(A, normtype, maxit, boundtocpu, n));
+      i = maxit;
+      break;
+    } else {
+      PetscCall(MatIsHermitianKnown(A, &setherm, &isherm));
+      if ((setherm && isherm) || normtype == NORM_1) PetscCall(PetscObjectReference((PetscObject)A));
+      else {
+        Mat B;
+
+        PetscCall(MatCreateHermitianTranspose(A, &B));
+        A = B;
+      }
+    }
+    if (maxit < 0) maxit = 10; /* pure guess */
+    PetscCall(MatCreateVecs(A, &x, &y));
+    PetscCall(MatCreateVecs(A, &z, &w));
+    PetscCall(VecBindToCPU(x, boundtocpu));
+    PetscCall(VecBindToCPU(y, boundtocpu));
+    PetscCall(VecBindToCPU(z, boundtocpu));
+    PetscCall(VecBindToCPU(w, boundtocpu));
+    PetscCall(VecGetSize(x, &N));
+    PetscCall(VecSet(x, 1. / N));
+    *n = 0.0;
+    for (i = 0; i < maxit; i++) {
+      PetscCall(MatMult(A, x, y));
+      PetscCall(VecNorm(y, NORM_1, n));
+      if (PetscDefined(USE_COMPLEX)) {
+        PetscCall(VecCopy(y, w));
+        PetscCall(VecAbs(w));
+        PetscCall(VecPointwiseDivide(w, y, w));
+      } else PetscCall(VecPointwiseSign(w, y, VEC_SIGN_ZERO_TO_SIGNED_UNIT));
+      PetscCall(MatMultHermitianTranspose(A, w, z));
+      PetscCall(VecRealPart(z));
+      PetscCall(VecNorm(z, NORM_INFINITY, &normz));
+      PetscCall(VecDot(x, z, &dot));
+      adot = PetscAbsScalar(dot);
+      PetscCall(PetscInfo(A, "%s norm it %" PetscInt_FMT " -> %g (%g %g)\n", NormTypes[normtype], i, (double)*n, (double)normz, (double)adot));
+      if (normz <= adot && i > 0) {
+        PetscCall(PetscInfo(A, "%s norm    converged\n", NormTypes[normtype]));
+        break;
+      }
+      PetscCall(VecAbs(z));
+      PetscCall(VecMax(z, &j, &normz));
+      if (j == jold) {
+        PetscCall(PetscInfo(A, "%s norm it %" PetscInt_FMT " -> breakdown (j==jold)\n", NormTypes[normtype], i));
+        break;
+      }
+      jold = j;
+      if (i < maxit - 1) PetscCall(VecSetStdBasis(x, j));
+    }
+    /* last check */
+    if (N > 1) {
+      PetscReal ny;
+
+      PetscCall(VecSetFinalNormApp_Private(x));
+      PetscCall(MatMult(A, x, y));
+      PetscCall(VecNorm(y, NORM_1, &ny));
+      ny = 2 * ny / (3 * N);
+      PetscCall(PetscInfo(A, "%s norm final check: current %g test %g\n", NormTypes[normtype], (double)*n, (double)ny));
+      *n = PetscMax(*n, ny);
+    }
+    PetscCall(MatDestroy(&A));
+    PetscCall(VecDestroy(&x));
+    PetscCall(VecDestroy(&w));
+    PetscCall(VecDestroy(&y));
+    PetscCall(VecDestroy(&z));
+    break;
+  case NORM_2:
+    if (!hasop) {
+      PetscCall(MatNormApproximateForwardOnly_Private(A, normtype, maxit, boundtocpu, n));
+      i = maxit;
+      break;
+    }
+    if (maxit < 0) maxit = 20; /* pure guess */
+    PetscCall(MatCreateVecs(A, &x, &y));
+    PetscCall(MatCreateVecs(A, &z, NULL));
+    PetscCall(VecBindToCPU(x, boundtocpu));
+    PetscCall(VecBindToCPU(y, boundtocpu));
+    PetscCall(VecBindToCPU(z, boundtocpu));
+    PetscCall(VecSetRandom(x, NULL));
+    PetscCall(VecNormalize(x, NULL));
+    *n = 0.0;
+    for (i = 0; i < maxit; i++) {
+      PetscCall(MatMult(A, x, y));
+      PetscCall(VecNormalize(y, n));
+      PetscCall(MatMultHermitianTranspose(A, y, z));
+      PetscCall(VecNorm(z, NORM_2, &normz));
+      PetscCall(VecDot(x, z, &dot));
+      adot = PetscAbsScalar(dot);
+      PetscCall(PetscInfo(A, "%s norm it %" PetscInt_FMT " -> %g (%g %g)\n", NormTypes[normtype], i, (double)*n, (double)normz, (double)adot));
+      if (normz <= adot) {
+        PetscCall(PetscInfo(A, "%s norm    converged\n", NormTypes[normtype]));
+        break;
+      }
+      if (i < maxit - 1) {
+        Vec t;
+
+        PetscCall(VecNormalize(z, NULL));
+        t = x;
+        x = z;
+        z = t;
+      }
+    }
+    PetscCall(VecDestroy(&x));
+    PetscCall(VecDestroy(&y));
+    PetscCall(VecDestroy(&z));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "%s norm not supported", NormTypes[normtype]);
+  }
+  PetscCall(PetscInfo(A, "%s norm %g computed in %" PetscInt_FMT " iterations\n", NormTypes[normtype], (double)*n, i));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -8569,7 +8880,7 @@ PetscErrorCode MatSetUnfactored(Mat mat)
 
   The index sets may not have duplicate entries.
 
-  The first time this is called you should use a cll of `MAT_INITIAL_MATRIX`,
+  The first time this is called you should use a `cll` of `MAT_INITIAL_MATRIX`,
   the `MatCreateSubMatrix()` routine will create the newmat for you. Any additional calls
   to this routine with a mat of the same nonzero structure and with a call of `MAT_REUSE_MATRIX`
   will reuse the matrix generated the first time.  You should call `MatDestroy()` on `newmat` when
@@ -9832,7 +10143,6 @@ PetscErrorCode MatFactorSetSchurIS(Mat mat, IS is)
   PetscCheck(mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Only for factored matrix");
   PetscCall(PetscObjectQueryFunction((PetscObject)mat, "MatFactorSetSchurIS_C", &f));
   PetscCheck(f, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "The selected MatSolverType does not support Schur complement computation. You should use MATSOLVERMUMPS or MATSOLVERMKL_PARDISO");
-  PetscCall(MatDestroy(&mat->schur));
   PetscCall((*f)(mat, is));
   PetscCheck(mat->schur, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Schur complement has not been created");
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -11333,7 +11643,13 @@ PetscErrorCode MatSetOperation(Mat mat, MatOperation op, PetscErrorCodeFn *f)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(mat, op, 2);
   if (op == MATOP_VIEW && !mat->ops->viewnative && f != (PetscErrorCodeFn *)mat->ops->view) mat->ops->viewnative = mat->ops->view;
+#if !defined(PETSC_USE_COMPLEX)
+  if (op == MATOP_MULT_HERMITIAN_TRANSPOSE) op = MATOP_MULT_TRANSPOSE;
+  else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
+  else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
+#endif
   (((PetscErrorCodeFn **)mat->ops)[op]) = f;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -11373,6 +11689,12 @@ PetscErrorCode MatGetOperation(Mat mat, MatOperation op, PetscErrorCodeFn **f)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(f, 3);
+#if !defined(PETSC_USE_COMPLEX)
+  if (op == MATOP_MULT_HERMITIAN_TRANSPOSE) op = MATOP_MULT_TRANSPOSE;
+  else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
+  else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
+#endif
   *f = (((PetscErrorCodeFn **)mat->ops)[op]);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -11401,6 +11723,11 @@ PetscErrorCode MatHasOperation(Mat mat, MatOperation op, PetscBool *has)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscAssertPointer(has, 3);
+#if !defined(PETSC_USE_COMPLEX)
+  if (op == MATOP_MULT_HERMITIAN_TRANSPOSE) op = MATOP_MULT_TRANSPOSE;
+  else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
+  else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
+#endif
   if (mat->ops->hasoperation) {
     PetscUseTypeMethod(mat, hasoperation, op, has);
   } else {
@@ -11471,7 +11798,7 @@ PetscErrorCode MatSetInf(Mat A)
 . sym     - `PETSC_TRUE` indicates that the graph should be symmetrized
 . scale   - `PETSC_TRUE` indicates that the graph edge weights should be symmetrically scaled with the diagonal entry
 . filter  - filter value - < 0: does nothing; == 0: removes only 0.0 entries; otherwise: removes entries with abs(entries) <= value
-. num_idx - size of 'index' array
+. num_idx - size of `index` array
 - index   - array of block indices to use for graph strength of connection weight
 
   Output Parameter:

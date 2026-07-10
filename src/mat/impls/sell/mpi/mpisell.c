@@ -378,6 +378,15 @@ static PetscErrorCode MatMult_MPISELL(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetMultPetscSF_MPISELL(Mat A, PetscSF *sf)
+{
+  Mat_MPISELL *a = (Mat_MPISELL *)A->data;
+
+  PetscFunctionBegin;
+  *sf = a->Mvctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatMultDiagonalBlock_MPISELL(Mat A, Vec bb, Vec xx)
 {
   Mat_MPISELL *a = (Mat_MPISELL *)A->data;
@@ -526,6 +535,7 @@ PetscErrorCode MatDestroy_MPISELL(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpisell_mpisellcuda_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalScaleLocal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatGetMultPetscSF_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1196,6 +1206,7 @@ static const struct _MatOps MatOps_Values = {MatSetValues_MPISELL,
                                              MatADot_Default,
                                              /*144*/ MatANorm_Default,
                                              NULL,
+                                             NULL,
                                              NULL};
 
 /*@C
@@ -1704,14 +1715,24 @@ PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat A, MatType newtype, MatReuse reuse,
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->A, MATSEQSELL, MAT_REUSE_MATRIX, &b->A));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->B, MATSEQSELL, MAT_REUSE_MATRIX, &b->B));
   } else {
+    PetscBool nooffprocentries_A = A->nooffprocentries, nooffprocentries_B = B->nooffprocentries;
+
     PetscCall(MatDestroy(&b->A));
     PetscCall(MatDestroy(&b->B));
+    /* Expand a->B from compacted local off-diag columns back to global columns so the new MPISELL's
+       MatAssemblyEnd() builds the correct garray/Mvctx for its off-diagonal block. */
+    PetscCall(MatDisAssemble_MPIAIJ(A, PETSC_FALSE));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->A, MATSEQSELL, MAT_INITIAL_MATRIX, &b->A));
     PetscCall(MatConvert_SeqAIJ_SeqSELL(a->B, MATSEQSELL, MAT_INITIAL_MATRIX, &b->B));
+    /* The locally-populated A and B have no stashed off-processor entries, so skip the stash scatter. */
+    A->nooffprocentries = PETSC_TRUE;
+    B->nooffprocentries = PETSC_TRUE;
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+    A->nooffprocentries = nooffprocentries_A;
+    B->nooffprocentries = nooffprocentries_B;
   }
 
   if (reuse == MAT_INPLACE_MATRIX) {
@@ -1846,6 +1867,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELL(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpisell_mpisellcuda_C", MatConvert_MPISELL_MPISELLCUDA));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatDiagonalScaleLocal_C", MatDiagonalScaleLocal_MPISELL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatGetMultPetscSF_C", MatGetMultPetscSF_MPISELL));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPISELL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

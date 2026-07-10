@@ -1303,7 +1303,7 @@ __attribute__((analyzer_noreturn))
 PETSC_EXTERN PetscErrorCode PetscError(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, ...) PETSC_ATTRIBUTE_COLD PETSC_ATTRIBUTE_FORMAT(7, 8);
 
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfInitialize(void);
-PETSC_EXTERN PetscErrorCode PetscErrorMessage(PetscErrorCode, const char *[], const char **);
+PETSC_EXTERN PetscErrorCode PetscErrorMessage(PetscErrorCode, const char *[], const char *[]);
 PETSC_EXTERN PetscErrorCode PetscTraceBackErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
 PETSC_EXTERN PetscErrorCode PetscEmacsClientErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
 PETSC_EXTERN PetscErrorCode PetscMPIAbortErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
@@ -1390,6 +1390,21 @@ PETSC_EXTERN PetscErrorCode PetscDetermineInitialFPTrap(void);
 */
 
 #define PETSCSTACKSIZE 64
+
+/*S
+  PetscStack - Fixed-size record of the chain of PETSc functions that are currently active on the calling thread;
+  maintained by `PetscFunctionBegin`/`PetscFunctionReturn` to provide meaningful PETSc-level back traces and to drive the SAWs stack viewer
+
+  Level: developer
+
+  Notes:
+  The global stack `petscstack` is maintained only when PETSc is configured `--with-debugging` and without thread safety;
+  in other configurations the stack-manipulation macros become no-ops. Inspect a stack with `PetscStackView()` or `PetscStackViewSAWs()`.
+
+  The depth is bounded by `PETSCSTACKSIZE`; deeper call chains silently saturate at that depth
+
+.seealso: `PetscFunctionBegin`, `PetscFunctionBeginUser`, `PetscFunctionReturn()`, `PetscStackView()`, `PetscStackViewSAWs()`, `PetscMallocGetStack()`
+S*/
 typedef struct {
   const char *function[PETSCSTACKSIZE];
   const char *file[PETSCSTACKSIZE];

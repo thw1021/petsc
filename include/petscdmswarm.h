@@ -6,15 +6,37 @@
 /* MANSEC = DM */
 /* SUBMANSEC = DMSwarm */
 
-typedef struct _p_DMSwarmDataField  *DMSwarmDataField;
+/*S
+  DMSwarmDataField - Opaque handle to a single named field of particle data stored inside a `DMSwarmDataBucket`
+
+  Level: developer
+
+  Note:
+  Each `DMSwarmDataField` records the field name, the per-particle data type and a contiguous storage block whose length matches the number of particles in the parent `DMSwarmDataBucket`.
+
+.seealso: `DMSWARM`, `DMSwarmDataBucket`, `DMSwarmDataBucketGetDMSwarmDataFieldByName()`, `DMSwarmDataFieldGetEntries()`
+S*/
+typedef struct _p_DMSwarmDataField *DMSwarmDataField;
+
+/*S
+  DMSwarmDataBucket - Opaque internal container that groups all of a `DMSWARM`'s per-particle fields (`DMSwarmDataField`) and the current particle count
+
+  Level: developer
+
+  Note:
+  Used internally by `DMSWARM` to store the particle state; user code normally interacts with the
+  `DMSWARM` API rather than this container directly.
+
+.seealso: `DMSWARM`, `DMSwarmDataField`, `DMSwarmRegisterPetscDatatypeField()`
+S*/
 typedef struct _p_DMSwarmDataBucket *DMSwarmDataBucket;
 
 /*S
-    DMSwarmSort - PETSc object for sorting `DMSWARM` particles into `DM` cells
+  DMSwarmSort - PETSc object for sorting `DMSWARM` particles into `DM` cells. Sort particles by their background cell index for fast cell-to-particle lookups.
 
-    Level: intermediate
+  Level: developer
 
-.seealso: [](ch_dmbase), `DM`, `DMSwarmSortGetAccess()`, `DMSwarmSortCreate()`, `DMSwarmSortDestroy()`
+.seealso: [](ch_dmbase), `DM`, `DMSWARM`, `DMSwarmSortGetAccess()`, `DMSwarmSortRestoreAccess()`, `DMSwarmSortGetIsValid()`, `DMSwarmSortCreate()`, `DMSwarmSortDestroy()`
 S*/
 typedef struct _p_DMSwarmSort *DMSwarmSort;
 PETSC_EXTERN PetscClassId      DMSWARMSORT_CLASSID;
@@ -40,6 +62,20 @@ typedef enum {
 } DMSwarmType;
 PETSC_EXTERN const char *DMSwarmTypeNames[];
 
+/*E
+   DMSwarmMigrateType - Selects the algorithm used by `DMSwarmMigrate()` to move particles between MPI processes
+
+   Values:
++   `DMSWARM_MIGRATE_BASIC`          - inspect each particle's owner rank and send it to that rank; assumes the user (or another code path) has already set the rank field correctly
+.   `DMSWARM_MIGRATE_DMCELLNSCATTER` - use the background `DM` to determine the target rank approximately, then scatter without verifying that the destination cell
+                                       contains the point (cheaper, can leave particles in neighbors)
+.   `DMSWARM_MIGRATE_DMCELLEXACT`    - use the background `DM` and perform an exact point-location step before sending (more expensive, guarantees correct placement)
+-   `DMSWARM_MIGRATE_USER`           - call a user-supplied migration function rather than one of the built-in strategies
+
+   Level: intermediate
+
+.seealso: [](ch_dmbase), `DM`, `DMSWARM`, `DMSwarmMigrate()`, `DMSwarmSetMigrateType()`, `DMSwarmGetMigrateType()`
+E*/
 typedef enum {
   DMSWARM_MIGRATE_BASIC,
   DMSWARM_MIGRATE_DMCELLNSCATTER,
@@ -48,6 +84,19 @@ typedef enum {
 } DMSwarmMigrateType;
 PETSC_EXTERN const char *DMSwarmMigrateTypeNames[];
 
+/*E
+   DMSwarmCollectType - Selects the algorithm used by `DMSwarmCollectViewCreate()` to gather particles from neighboring subdomains into a temporary view
+
+   Values:
++   `DMSWARM_COLLECT_BASIC`           - simply concatenate every particle from every other process (used mainly for testing)
+.   `DMSWARM_COLLECT_DMDABOUNDINGBOX` - collect particles that lie inside the local subdomain bounding box of an attached `DMDA`
+.   `DMSWARM_COLLECT_GENERAL`         - collect particles that lie inside a user-specified region of space
+-   `DMSWARM_COLLECT_USER`            - call a user-supplied collection function
+
+   Level: intermediate
+
+.seealso: [](ch_dmbase), `DM`, `DMSWARM`, `DMSwarmCollectViewCreate()`, `DMSwarmMigrate()`
+E*/
 typedef enum {
   DMSWARM_COLLECT_BASIC,
   DMSWARM_COLLECT_DMDABOUNDINGBOX,
@@ -56,6 +105,18 @@ typedef enum {
 } DMSwarmCollectType;
 PETSC_EXTERN const char *DMSwarmCollectTypeNames[];
 
+/*E
+   DMSwarmRemapType - Selects the remapping (resampling) scheme applied to a `DMSWARM` to maintain particle distribution quality
+
+   Values:
++   `DMSWARM_REMAP_NONE`    - do not remap particles
+.   `DMSWARM_REMAP_PFAK`    - the particle remapping method that uses projection to a continuum preserving the moments {cite}`adamsfinnknepleypusztay2025`
+-   `DMSWARM_REMAP_COLELLA` - the Colella remap that uses an interpolation-based redistribution suited to particle-in-cell methods
+
+   Level: intermediate
+
+.seealso: [](ch_dmbase), `DM`, `DMSWARM`
+E*/
 typedef enum {
   DMSWARM_REMAP_NONE    = 0,
   DMSWARM_REMAP_PFAK    = 1,
@@ -151,7 +212,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinates(DM, PetscInt, PetscReal *
 PETSC_EXTERN PetscErrorCode DMSwarmInsertPointsUsingCellDM(DM, DMSwarmPICLayoutType, PetscInt);
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinatesCellwise(DM, PetscInt, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinatesRandom(DM, PetscInt);
-PETSC_EXTERN PetscErrorCode DMSwarmViewFieldsXDMF(DM, const char *, PetscInt, const char **);
+PETSC_EXTERN PetscErrorCode DMSwarmViewFieldsXDMF(DM, const char *, PetscInt, const char *[]);
 PETSC_EXTERN PetscErrorCode DMSwarmViewXDMF(DM, const char *);
 
 PETSC_EXTERN PetscErrorCode DMSwarmSortDestroy(DMSwarmSort *);

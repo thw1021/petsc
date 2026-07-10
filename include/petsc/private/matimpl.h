@@ -9,11 +9,13 @@ PETSC_EXTERN PetscBool      MatSeqAIJRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatOrderingRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatColoringRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatPartitioningRegisterAllCalled;
+PETSC_EXTERN PetscBool      MatMeshToCellGraphRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatCoarsenRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode MatRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatOrderingRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatColoringRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatPartitioningRegisterAll(void);
+PETSC_EXTERN PetscErrorCode MatMeshToCellGraphRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatCoarsenRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRegisterAll(void);
 
@@ -211,6 +213,7 @@ struct _MatOps {
   PetscErrorCode (*anorm)(Mat, Vec, PetscReal *); /* induced vector norm */
   PetscErrorCode (*adot_local)(Mat, Vec, Vec, PetscScalar *);
   PetscErrorCode (*anorm_local)(Mat, Vec, PetscReal *);
+  PetscErrorCode (*getordering)(Mat, MatOrderingType, IS *, IS *);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -1482,7 +1485,7 @@ static inline PetscErrorCode PetscLLCondensedExpand_Scalable(PetscInt nlnk_max, 
 
   PetscFunctionBegin;
   PetscCall(PetscIntMultError(2, nlnk_max + 2, &lsize));
-  PetscCall(PetscRealloc(lsize * sizeof(PetscInt), lnk));
+  PetscCall(PetscRealloc((size_t)lsize * sizeof(PetscInt), lnk));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

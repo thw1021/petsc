@@ -3,7 +3,7 @@
 #include <petscblaslapack.h>
 #include <petsctime.h>
 
-const char *const DMPlexCoordMaps[] = {"none", "shear", "flare", "annulus", "shell", "sinusoid", "unknown", "DMPlexCoordMap", "DM_COORD_MAP_", NULL};
+const char *const DMPlexCoordMaps[] = {"none", "rotate", "shear", "flare", "annulus", "shell", "sinusoid", "torus", "unknown", "DMPlexCoordMap", "DM_COORD_MAP_", NULL};
 
 /*@
   DMPlexFindVertices - Try to find DAG points based on their coordinates.
@@ -2926,7 +2926,6 @@ PetscErrorCode DMPlexComputeCellGeometryFVM(DM dm, PetscInt cell, PetscReal *vol
   PetscFunctionBegin;
   PetscCall(DMPlexGetDepth(dm, &depth));
   PetscCall(DMGetDimension(dm, &dim));
-  PetscCheck(depth == dim, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh must be interpolated");
   PetscCall(DMPlexGetPointDepth(dm, cell, &depth));
   switch (depth) {
   case 0:
@@ -3527,16 +3526,14 @@ static PetscErrorCode DMPlexCoordinatesToReference_NewtonUpdate(PetscInt dimC, P
     }
   } else {
     char         transpose = PetscDefined(USE_COMPLEX) ? 'C' : 'T';
-    PetscBLASInt m, n, one = 1, worksize, info;
+    PetscBLASInt m, n, one = 1, worksize;
 
     PetscCall(PetscBLASIntCast(dimR, &m));
     PetscCall(PetscBLASIntCast(dimC, &n));
     PetscCall(PetscBLASIntCast(dimC * dimC, &worksize));
     for (l = 0; l < dimC; l++) invJ[l] = resNeg[l];
 
-    PetscCallBLAS("LAPACKgels", LAPACKgels_(&transpose, &m, &n, &one, J, &m, invJ, &n, work, &worksize, &info));
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Bad argument to GELS %" PetscBLASInt_FMT, info);
-
+    PetscCallLAPACKInfo("LAPACKgels", LAPACKgels_(&transpose, &m, &n, &one, J, &m, invJ, &n, work, &worksize, &info));
     for (l = 0; l < dimR; l++) guess[l] += PetscRealPart(invJ[l]);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -4000,6 +3997,46 @@ void coordMap_identity(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt
   for (c = 0; c < Nc; ++c) f0[c] = u[c];
 }
 
+/* Constants are
+     center location
+     axis vector
+     rotation angle
+ */
+void coordMap_rotate(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+{
+  const PetscInt     Nc     = PetscMin(uOff[1] - uOff[0], 3);
+  const PetscScalar *center = constants;
+  const PetscScalar *k      = &constants[Nc]; // The rotation axis k
+  const PetscReal    theta  = PetscRealPart(constants[Nc * 2]);
+  const PetscReal    ct     = PetscCosReal(theta);
+  const PetscReal    st     = PetscSinReal(theta);
+  PetscReal          v[3];
+
+  // Translate to coordinate with center at the origin
+  for (PetscInt d = 0; d < Nc; ++d) v[d] = PetscRealPart(u[d] - center[d]);
+  switch (dim) {
+  case 2:
+    /* Rotate point, axis is ignored in 2D
+       / ct -st \
+       \ st  ct / */
+    f0[0] = ct * v[0] - st * v[1];
+    f0[1] = st * v[0] + ct * v[1];
+    break;
+  case 3:
+    /* / ct + k_x^2 (1 - ct)       & k_x k_y (1 - ct) - k_z st & k_x k_z (1 - ct) + k_y st \
+       | k_y k_x (1 - ct) + k_z st & ct + k_y^2 (1 - ct)       & k_y k_z (1 - ct) - k_x st |
+       \ k_z k_x (1 - ct) - k_y st & k_z k_y (1 - ct) + k_x st & ct + k_z^2 (1 - ct)       / */
+    f0[0] = (ct + k[0] * k[0] * (1. - ct)) * v[0] + (k[0] * k[1] * (1. - ct) - k[2] * st) * v[1] + (k[0] * k[2] * (1. - ct) + k[1] * st) * v[2];
+    f0[1] = (k[1] * k[0] * (1. - ct) + k[2] * st) * v[0] + (ct + k[1] * k[1] * (1. - ct)) * v[1] + (k[1] * k[2] * (1. - ct) - k[0] * st) * v[2];
+    f0[2] = (k[2] * k[0] * (1. - ct) - k[1] * st) * v[0] + (k[2] * k[1] * (1. - ct) + k[0] * st) * v[1] + (ct + k[2] * k[2] * (1. - ct)) * v[2];
+    break;
+  default:
+    for (PetscInt d = 0; d < Nc; ++d) f0[d] = v[d];
+  }
+  // Translate back to original coordinates
+  for (PetscInt d = 0; d < Nc; ++d) f0[d] += center[d];
+}
+
 /* Shear applies the transformation, assuming we fix z,
   / 1  0  m_0 \
   | 0  1  m_1 |
@@ -4077,6 +4114,20 @@ void coordMap_sinusoid(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt
   xp[0] = x[0];
   xp[1] = x[1];
   if (dim > 2) xp[2] = c * PetscCosReal(2. * m * PETSC_PI * x[0]) * PetscCosReal(2. * n * PETSC_PI * x[1]);
+}
+
+/* This function maps the cylinder [0, r] x [0, 1] along z to the torus revolved around z with radius R,
+     x' = (R + y) cos(2 pi z)
+     y' = (R + y) sin(2 pi z)
+     z' = x
+*/
+void coordMap_torus(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar xp[])
+{
+  const PetscReal R = PetscRealPart(constants[0]);
+
+  xp[0] = (R + x[1]) * PetscCosReal(2 * PETSC_PI * x[2]);
+  xp[1] = (R + x[1]) * PetscSinReal(2 * PETSC_PI * x[2]);
+  xp[2] = x[0];
 }
 
 /*@C

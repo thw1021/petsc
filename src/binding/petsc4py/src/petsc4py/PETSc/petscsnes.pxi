@@ -240,7 +240,6 @@ cdef extern from * nogil:
     ctypedef const char* PetscSNESLineSearchType "SNESLineSearchType"
     PetscSNESLineSearchType SNESLINESEARCHBT
     PetscSNESLineSearchType SNESLINESEARCHNLEQERR
-    PetscSNESLineSearchType SNESLINESEARCHBASIC
     PetscSNESLineSearchType SNESLINESEARCHNONE
     PetscSNESLineSearchType SNESLINESEARCHSECANT
     PetscSNESLineSearchType SNESLINESEARCHCP

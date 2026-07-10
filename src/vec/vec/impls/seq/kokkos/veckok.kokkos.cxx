@@ -1020,7 +1020,7 @@ PetscErrorCode VecPointwiseDivide_SeqKokkos(Vec win, Vec xin, Vec yin)
     PetscCallCXX(Kokkos::parallel_for(
       Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, n), KOKKOS_LAMBDA(const PetscInt &i) {
         if (yv(i) != 0.0) wv(i) = xv(i) / yv(i);
-        else wv(i) = 0.0;
+        else wv(i) = ((xv(i) == 0.0) ? 1.0 : 0.0);
       }));
 
     PetscCall(VecRestoreArrayRead(xin, &xp));
@@ -1036,7 +1036,7 @@ PetscErrorCode VecPointwiseDivide_SeqKokkos(Vec win, Vec xin, Vec yin)
     PetscCallCXX(Kokkos::parallel_for(
       Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt &i) {
         if (yv(i) != 0.0) wv(i) = xv(i) / yv(i);
-        else wv(i) = 0.0;
+        else wv(i) = ((xv(i) == 0.0) ? 1.0 : 0.0);
       }));
     PetscCall(VecRestoreKokkosView(yin, &yv));
     PetscCall(VecRestoreKokkosView(xin, &xv));
@@ -1643,6 +1643,7 @@ static PetscErrorCode VecSetValuesCOO_SeqKokkos(Vec x, const PetscScalar v[], In
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
     PetscCallCXX(vv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstPetscScalarKokkosViewHost(v, vecseq->coo_n)));
+    PetscCall(PetscLogCpuToGpu(vecseq->coo_n * sizeof(PetscScalar)));
   } else {
     PetscCallCXX(vv = ConstPetscScalarKokkosView(v, vecseq->coo_n)); /* Directly use v[]'s memory */
   }

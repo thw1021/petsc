@@ -3363,6 +3363,16 @@
   petsc_uses    = {KSP}
 }
 
+@Article{         baumannkaus2015,
+  author        = {T.S. Baumann and Boris J.P. Kaus},
+  title         = {Geodynamic inversion to constrain the non-linear rheology of the lithosphere},
+  journal       = {Geophysical Journal International},
+  volume        = {202},
+  number        = {2},
+  pages         = {1289--1316},
+  year          = {2015}
+}
+
 @Article{         lechmannschmalholzhetenyimaykaus14,
   author        = {Lechmann, S. M. and Schmalholz, S. M. and Hetenyi, G. and May, D. A. and Kaus, B.
                   J. P.},
@@ -11805,16 +11815,6 @@
   year          = {2021}
 }
 
-@Article{         ipsen2001,
-  author        = {Ilse C. F. Ipsen},
-  journal       = {SIAM J. Sci. Comput.},
-  pages         = {1050--1051},
-  volume        = {23},
-  publisher     = {SIAM},
-  title         = {A Note on Preconditioning Nonsymmetric Matrices},
-  year          = {2001}
-}
-
 % Random papers on solvers for GPUs
 @InProceedings{   gpus-suck,
   author        = {Vuduc, R. and Chandramowlishwaran, A. and Choi, J. and Guney M. },
@@ -13916,6 +13916,40 @@
   pages         = {631-644}
 }
 
+@Article{         sleijpen:1993,
+  author        = {G. L. G. Sleijpen and D. R. Fokkema},
+  title         = {BiCGstab($\ell$) for linear equations involving unsymmetric
+                  matrices with complex spectrum},
+  journal       = {Electronic Transactions on Numerical Analysis},
+  volume        = {1},
+  pages         = {11--32},
+  year          = {1993}
+}
+
+@Article{         sleijpen:1995,
+  author        = {G. L. G. Sleijpen and H. A. van der Vorst},
+  title         = {An overview of approaches for the stable computation of
+                  hybrid {BiCG} methods},
+  journal       = {Applied Numerical Mathematics},
+  volume        = {19},
+  number        = {3},
+  pages         = {235--254},
+  year          = {1995},
+  doi           = {10.1016/0168-9274(95)00085-2}
+}
+
+@Article{         gijzen:2011,
+  author        = {M. B. Van Gijzen and P. Sonneveld},
+  title         = {Algorithm 913: An elegant {IDR(s)} variant that
+                  efficiently exploits biorthogonality properties},
+  journal       = {ACM Transactions on Mathematical Software},
+  volume        = {38},
+  number        = {1},
+  pages         = {1--19},
+  year          = {2011},
+  doi           = {10.1145/2049662.2049667}
+}
+
 @Article{         f:93,
   author        = {Roland W. Freund},
   title         = {A Transpose-Free Quasi-Minimal Residual Algorithm for Non-{H}ermitian Linear
@@ -14942,6 +14976,28 @@
   author        = {Carl R. {Sovinec et al.}},
   title         = {{NIMROD Web page}},
   howpublished  = {http://nimrodteam.org}
+}
+
+@Misc{            m3dc1,
+  title         = {M3D-C1},
+  author        = {Ferraro, Nate and Jardin, Stephen and Lyons, Brendan and Seol, Seegyoung and Chen, Jin and Zhou, Yao and Liu, Chang and Kleiner, Andreas and Breslau, Joshua},
+  abstractNote  = {M3D-C1 is a code for simulating the equilibrium, stability, and nonlinear evolution of magnetized fusion plasmas in toroidal geometry.},
+  doi           = {10.11578/dc.20180627.9},
+  url           = {https://doi.org/10.11578/dc.20180627.9},
+  howpublished  = {[Computer Software] \url{https://doi.org/10.11578/dc.20180627.9}},
+  month         = {jun},
+  year          = {2018}
+}
+
+@misc{            xgc1,
+  title         = {XGC},
+  author        = {Ku, Seung-Hoe and Hager, Robert and Scheinberg, Aaron and Dominski, Julien and Sharma, Amil and Churchill, Michael and Choi, Jong and Sturdevant, Ben and Mollén, Albert and Wilkie, George and Chang, Choong-Seock and Yoon, Eisung and Adams, Mark and Seo, Janghoon and Koh, Sehoon and D'Azevedo, Eduardo and Abbott, Steve and Worley, Patrick H. and Ethier, Stephane and Park, Gunyoung and Lang, Jianying and MacKie-Mason, Brian and Germaschewski, Kai and Suchyta, Eric and Carey, Varis and Cole, Michael and Trivedi, Pallavi and Chowdhury, Jugal},
+  abstractNote  = {XGC (X-point included gyrokinetic code), Version 3 Primary Author: Seunghoe Ku (PPPL, sku@pppl.gov), Robert Hager (PPPL, rhager@pppl.gov) 31 July 2017 XGC is a gyrokinetic particle-in-cell code, which is sepeciallized in tokamak edge simulatin. The simulation domain can include the magnetic separatrix, magnetic axis and the biased material wall. XGC can run in full-f, total-delta-f, and conventional delta-f mode. The ion is kinetic always except ETG simulation. The electron can be adiabatic, fluid, drift kinetic, or gyrokinetic (for ETG). XGC is written in Fortran 90 and is designed for HPCs utilizing MPI, OpenMP, CUDA (GPU), OpenACC (GPU), and vectorization (Intel MIC-KNL). The weak scaling is roughly linear to the maximal nodes of leading HPCs in US. There several versions of XGCs for different purpose: XGC0 is earlist version of XGC0 which is designed for neoclassical transport in the tokamak edge. It uses full-f method, and 00-mode electrostatic field is solved only. RMP and current response can be calculated with coupling with M3D. XGC1 is for turbulence simulation with low parallel wavenumber. Piecewise field following coordinates are used to handle low k-parallel perturbation with small (~64) number of toroidal resolution. In total-delta-f method, it utilizes phase space grid in addition to particles, to handel non-maxwellian distribution in the tokamak edge. XGCa is axisymmetric version of XGC1 to simulate neoclassical transport. References: [1] S. Ku et al., Nuclear Fusion 49, 115021 (2009) [2] S. Ku, R. Hager, C.S. Chang et al., J. Comp. Physics, 315, 467 (2016) https://doi.org/10.1016/j.jcp.2016.03.062 [2] R. Hager. E.S. Yoon. S.Ku et al., J. Comp. Physics, 315, 644 (2016) https://doi.org/10.1016/j.jcp.2016.03.064 [3] R. Hager, J. Lang et al., Phys. Plasmas 24,054508 (2017) http://dx.doi.org/10.1063/1.4983320},
+  doi           = {10.11578/dc.20180627.11},
+  url           = {https://doi.org/10.11578/dc.20180627.11},
+  howpublished  = {[Computer Software] \url{https://doi.org/10.11578/dc.20180627.11}},
+  month         = {jun},
+  year          = {2018}
 }
 
 @Misc{            grace-web-page,
@@ -39333,7 +39389,7 @@
 }
 
 @Article{         finnpusztayknepleyadams2026,
-  title         = {Structure Preservation using Discrete Gradients in the Vlasov-Poisson-Landau System},
+  title         = {Structure Preservation using {Discrete Gradients} in the {Vlasov-Poisson-Landau} System},
   author        = {Daniel S. Finn and Joseph V. Pusztay and Matthew G. Knepley and Mark F. Adams},
   journal       = {Journal of Computational Physics},
   pages         = {114749},
@@ -39354,7 +39410,7 @@
 }
 
 @InProceedings{   retfalviknepleydesjardin2025,
-  title         = {Performance Modeling and Scaling of PETSc based Direct Numerical Simulations for Hybrid Rocket Boundary Layers},
+  title         = {Performance Modeling and Scaling of {PETSc-based} Direct Numerical Simulations for Hybrid Rocket Boundary Layers},
   author        = {Kolos Retfalvi and Matthew G. Knepley and Paul E. DesJardin},
   booktitle     = {Proceedings of the ASME 2025, Fluids Engineering Division Summer Meeting},
   pages         = {V001T03A015},
@@ -39369,16 +39425,20 @@
   title         = {Direct Numerical Simulations for Hybrid Rocket Boundary Layers: Performance Modeling and Scaling},
   author        = {Kolos Retfalvi and Russell Whitesides and Matthew McGurn and Matthew G. Knepley and Paul E. DesJardin},
   journal       = {International Journal of High Performance Computing Applications},
+  volume        = {40},
+  number        = {2},
+  pages         = {142--157},
   doi           = {10.1177/10943420251374921},
-  year          = {2025}
+  year          = {2026}
 }
 
 @Article{         knepley2025,
   title         = {Transformations of Computational Meshes},
   author        = {Matthew G. Knepley},
   journal       = {Engineering with Computers},
+  volume        = {41},
+  pages         = {3451--3462},
   doi           = {10.1007/s00366-025-02175-3},
-  url           = {https://link.springer.com/content/pdf/10.1007/s00366-025-02175-3.pdf},
   year          = {2025},
   petsc_uses    = {DMPlex}
 }
@@ -39435,6 +39495,14 @@
   address       = {Buffalo, NY},
   month         = may,
   year          = {2022}
+}
+
+@Article{       dentonknepley2026,
+  title         = {Geometry-Aware Computational Meshing in PETSc},
+  author        = {Brandon L Denton and Matthew G Knepley},
+  journal       = {Computer-Aided Design and Applications},
+  note          = {Submitted},
+  year          = {2026}
 }
 
 @Book{            glassables2003,
@@ -39773,8 +39841,11 @@
   title         = {Development of a River Dynamical Core for E3sm to Simulate Compound Flooding on Exascale-Class Heterogeneous Supercomputers},
   author        = {Gautam Bisht and Donghui Xu and Jeffrey Johnson and Jed Brown and Matthew G. Knepley and  Mark F Adams and Dongyu Feng and Dalei Hao and Darren Engwirda and Mukesh Kumar and Zeli Tan},
   journal       = {Environmental Modelling \& Software},
-  note          = {Accepted},
-  year          = {2025}
+  volume        = {197},
+  pages         = {106804},
+  issn          = {1364-8152},
+  doi           = {10.1016/j.envsoft.2025.106804},
+  year          = {2026}
 }
 
 @Article{       scharfettergummel1969,
@@ -39919,4 +39990,71 @@
   doi           = {10.1063/5.0042460},
   eprint        = {https://pubs.aip.org/aip/pop/article-pdf/doi/10.1063/5.0042460/14932084/022110_1_online.pdf},
   year          = {2021}
+}
+
+@Article{         coquandhuet1988,
+  title         = {The calculus of constructions},
+  author        = {Thierry Coquand and Gérard Huet},
+  journal       = {Information and Computation},
+  volume        = {76},
+  number        = {2},
+  pages         = {95--120},
+  issn          = {0890-5401},
+  doi           = {10.1016/0890-5401(88)90005-3},
+  year          = {1988}
+}
+
+@Book{            jaynes2003,
+  title         = {Probability theory: The logic of science},
+  author        = {Edwin T Jaynes},
+  year          = {2003},
+  publisher     = {Cambridge university press}
+}
+
+@Article{         buithanhgirolami2014,
+  title         = {Solving large-scale PDE-constrained Bayesian inverse problems with Riemann manifold Hamiltonian Monte Carlo},
+  author        = {Tan Bui-Thanh and Mark Girolami},
+  journal       = {Inverse Problems},
+  volume        = {30},
+  number        = {11},
+  pages         = {114014},
+  year          = {2014}
+}
+
+@Article{         minson2024,
+  title         = {Cross-fade sampling: extremely efficient Bayesian inversion for a variety of geophysical problems},
+  author        = {Sarah E Minson},
+  journal       = {Geophysical Journal International},
+  volume        = {239},
+  number        = {3},
+  pages         = {1629--1649},
+  year          = {2024}
+}
+
+@Article{         wellsknepleygriffith2026,
+  title         = {{WING}: A Simple Windowed Nonorthogonalized Initial Guess Procedure for Repeated Matrix Solves},
+  author        = {David Wells and Matthew G. Knepley and Boyce Griffith},
+  journal       = {SIAM Journal on Scientific Computing},
+  note          = {Submitted},
+  year          = {2026}
+}
+
+@article{Higham1992,
+  author = {Higham, Nicholas J.},
+  journal = {Numerische Mathematik},
+  number = {4},
+  pages = {539--556},
+  title = {Estimating the matrix $p$-norm},
+  volume = {62},
+  year = {1992},
+}
+
+@article{doi:10.1137/S0895479899356080,
+  author = {Higham, Nicholas J. and Tisseur, Fran\c{c}oise},
+  title = {A Block Algorithm for Matrix 1-Norm Estimation, with an Application to 1-Norm Pseudospectra},
+  journal = {SIAM Journal on Matrix Analysis and Applications},
+  volume = {21},
+  number = {4},
+  pages = {1185--1201},
+  year = {2000},
 }

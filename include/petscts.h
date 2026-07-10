@@ -356,6 +356,18 @@ PETSC_EXTERN PetscErrorCode TSTrajectorySetDirname(TSTrajectory, const char[]);
 PETSC_EXTERN PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory, const char[]);
 PETSC_EXTERN PetscErrorCode TSGetTrajectory(TS, TSTrajectory *);
 
+/*E
+   TSTrajectoryMemoryType - Selects the in-memory checkpointing scheme used by `TSTRAJECTORYMEMORY` to store the forward states needed for an adjoint or sensitivity computation
+
+   Values:
++   `TJ_REVOLVE` - the Revolve binomial checkpointing schedule of Griewank & Walther
+.   `TJ_CAMS`    - the CAMS (cache-aware multistage) checkpointing schedule
+-   `TJ_PETSC`   - PETSc's own in-memory checkpointing implementation
+
+   Level: advanced
+
+.seealso: `TSTrajectory`, `TSTRAJECTORYMEMORY`, `TSTrajectoryMemorySetType()`, `TSSetSaveTrajectory()`
+E*/
 typedef enum {
   TJ_REVOLVE,
   TJ_CAMS,
@@ -488,6 +500,13 @@ PETSC_EXTERN PetscErrorCode TSMonitorWallClockTime(TS, PetscInt, PetscReal, Vec,
 PETSC_EXTERN PetscErrorCode TSMonitorWallClockTimeSetUp(TS, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TSMonitorExtreme(TS, PetscInt, PetscReal, Vec, PetscViewerAndFormat *);
 
+/*S
+  TSMonitorDrawCtx - Context object for the `TS` graphical monitor routines that draw the solution, phase plot or error using a `PetscDraw`
+
+  Level: developer
+
+.seealso: `TS`, `TSMonitorDrawCtxCreate()`, `TSMonitorDrawCtxDestroy()`, `TSMonitorDrawSolution()`, `TSMonitorDrawSolutionPhase()`, `TSMonitorDrawError()`, `TSMonitorDrawSolutionFunction()`
+S*/
 typedef struct _n_TSMonitorDrawCtx *TSMonitorDrawCtx;
 PETSC_EXTERN PetscErrorCode         TSMonitorDrawCtxCreate(MPI_Comm, const char[], const char[], int, int, int, int, PetscInt, TSMonitorDrawCtx *);
 PETSC_EXTERN PetscErrorCode         TSMonitorDrawCtxDestroy(TSMonitorDrawCtx *);
@@ -499,10 +518,24 @@ PETSC_EXTERN PetscErrorCode         TSMonitorDrawSolutionFunction(TS, PetscInt, 
 PETSC_EXTERN PetscErrorCode TSAdjointMonitorDefault(TS, PetscInt, PetscReal, Vec, PetscInt, Vec[], Vec[], PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TSAdjointMonitorDrawSensi(TS, PetscInt, PetscReal, Vec, PetscInt, Vec[], Vec[], PetscCtx);
 
+/*S
+  TSMonitorSolutionCtx - Context object for the `TS` `TSMonitorSolution()` monitor that views the solution at each time step using a `PetscViewer`
+
+  Level: developer
+
+.seealso: `TS`, `TSMonitorSet()`, `TSMonitorSolution()`, `TSMonitorSolutionSetup()`
+S*/
 typedef struct _n_TSMonitorSolutionCtx *TSMonitorSolutionCtx;
 PETSC_EXTERN PetscErrorCode             TSMonitorSolution(TS, PetscInt, PetscReal, Vec, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode             TSMonitorSolutionSetup(TS, PetscViewerAndFormat *);
 
+/*S
+  TSMonitorVTKCtx - Context object for the `TS` `TSMonitorSolutionVTK()` monitor that dumps the solution to VTK files at each time step
+
+  Level: developer
+
+.seealso: `TS`, `TSMonitorSet()`, `TSMonitorSolutionVTK()`, `TSMonitorSolutionVTKCtxCreate()`, `TSMonitorSolutionVTKDestroy()`
+S*/
 typedef struct _n_TSMonitorVTKCtx *TSMonitorVTKCtx;
 PETSC_EXTERN PetscErrorCode        TSMonitorSolutionVTK(TS, PetscInt, PetscReal, Vec, TSMonitorVTKCtx);
 PETSC_EXTERN PetscErrorCode        TSMonitorSolutionVTKDestroy(TSMonitorVTKCtx *);
@@ -990,7 +1023,22 @@ PETSC_EXTERN PetscErrorCode DMDATSSetRHSJacobianLocal(DM, DMDATSRHSJacobianLocal
 PETSC_EXTERN PetscErrorCode DMDATSSetIFunctionLocal(DM, InsertMode, DMDATSIFunctionLocalFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDATSSetIJacobianLocal(DM, DMDATSIJacobianLocalFn *, void *);
 
+/*S
+  TSMonitorLGCtx - Context object for `TS` line-graph monitor routines that plot residuals, iteration counts or solution components at each time step on a `PetscDrawLG`
+
+  Level: developer
+
+.seealso: `TS`, `TSMonitorLGCtxCreate()`, `TSMonitorLGCtxDestroy()`, `TSMonitorLGSolution()`, `TSMonitorLGTimeStep()`, `TSMonitorLGError()`
+S*/
 typedef struct _n_TSMonitorLGCtx *TSMonitorLGCtx;
+
+/*S
+  TSMonitorDMDARayCtx - Context object for `TSMonitorDMDARay()`
+
+  Level: developer
+
+.seealso: `TS`, `TSSetMonitor()`, `TSMonitorDMDARay()`, `TSMonitorDMDARayDestroy()`
+S*/
 typedef struct {
   Vec            ray;
   VecScatter     scatter;
@@ -1010,6 +1058,7 @@ PETSC_EXTERN PetscErrorCode    TSRegister(const char[], PetscErrorCode (*)(TS));
 PETSC_EXTERN PetscErrorCode TSGetSNES(TS, SNES *);
 PETSC_EXTERN PetscErrorCode TSSetSNES(TS, SNES);
 PETSC_EXTERN PetscErrorCode TSGetKSP(TS, KSP *);
+PETSC_EXTERN PetscErrorCode TSIsImplicit(TS, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode TSView(TS, PetscViewer);
 PETSC_EXTERN PetscErrorCode TSLoad(TS, PetscViewer);
@@ -1044,27 +1093,62 @@ struct _n_TSMonitorLGCtxNetwork {
   PetscBool    semilogy;
   PetscInt     howoften; /* when > 0 uses step % howoften, when negative only final solution plotted */
 };
+/*S
+  TSMonitorLGCtxNetwork - Context object for the `TSMonitorLGCtxNetworkSolution()` line-graph monitor that plots solution components on each subnetwork of a `DMNETWORK`
+
+  Level: developer
+
+.seealso: `TS`, `DMNETWORK`, `TSMonitorLGCtxNetworkCreate()`, `TSMonitorLGCtxNetworkDestroy()`, `TSMonitorLGCtxNetworkSolution()`
+S*/
 typedef struct _n_TSMonitorLGCtxNetwork *TSMonitorLGCtxNetwork;
 PETSC_EXTERN PetscErrorCode              TSMonitorLGCtxNetworkDestroy(TSMonitorLGCtxNetwork *);
 PETSC_EXTERN PetscErrorCode              TSMonitorLGCtxNetworkCreate(TS, const char[], const char[], int, int, int, int, PetscInt, TSMonitorLGCtxNetwork *);
 PETSC_EXTERN PetscErrorCode              TSMonitorLGCtxNetworkSolution(TS, PetscInt, PetscReal, Vec, void *);
 
+/*S
+  TSMonitorEnvelopeCtx - Context object for the `TSMonitorEnvelope()` monitor that tracks the per-component min/max envelope of the solution over a time integration
+
+  Level: developer
+
+.seealso: `TS`, `TSMonitorEnvelopeCtxCreate()`, `TSMonitorEnvelopeCtxDestroy()`, `TSMonitorEnvelope()`, `TSMonitorEnvelopeGetBounds()`
+S*/
 typedef struct _n_TSMonitorEnvelopeCtx *TSMonitorEnvelopeCtx;
 PETSC_EXTERN PetscErrorCode             TSMonitorEnvelopeCtxCreate(TS, TSMonitorEnvelopeCtx *);
 PETSC_EXTERN PetscErrorCode             TSMonitorEnvelope(TS, PetscInt, PetscReal, Vec, void *);
 PETSC_EXTERN PetscErrorCode             TSMonitorEnvelopeGetBounds(TS, Vec *, Vec *);
 PETSC_EXTERN PetscErrorCode             TSMonitorEnvelopeCtxDestroy(TSMonitorEnvelopeCtx *);
 
+/*S
+  TSMonitorSPEigCtx - Context object for the `TSMonitorSPEig()` monitor that displays an estimate of the spectrum of the operator using a `PetscDrawSP` scatter plot
+
+  Level: developer
+
+.seealso: `TS`, `TSMonitorSPEigCtxCreate()`, `TSMonitorSPEigCtxDestroy()`, `TSMonitorSPEig()`
+S*/
 typedef struct _n_TSMonitorSPEigCtx *TSMonitorSPEigCtx;
 PETSC_EXTERN PetscErrorCode          TSMonitorSPEigCtxCreate(MPI_Comm, const char[], const char[], int, int, int, int, PetscInt, TSMonitorSPEigCtx *);
 PETSC_EXTERN PetscErrorCode          TSMonitorSPEigCtxDestroy(TSMonitorSPEigCtx *);
 PETSC_EXTERN PetscErrorCode          TSMonitorSPEig(TS, PetscInt, PetscReal, Vec, void *);
 
+/*S
+  TSMonitorSPCtx - Context object for the `TSMonitorSPSwarmSolution()` scatter-plot monitor that draws the swarm particle positions at each time step on a `PetscDrawSP`
+
+  Level: developer
+
+.seealso: `TS`, `DMSWARM`, `TSMonitorSPCtxCreate()`, `TSMonitorSPCtxDestroy()`, `TSMonitorSPSwarmSolution()`
+S*/
 typedef struct _n_TSMonitorSPCtx *TSMonitorSPCtx;
 PETSC_EXTERN PetscErrorCode       TSMonitorSPCtxCreate(MPI_Comm, const char[], const char[], int, int, int, int, PetscInt, PetscInt, PetscBool, PetscBool, TSMonitorSPCtx *);
 PETSC_EXTERN PetscErrorCode       TSMonitorSPCtxDestroy(TSMonitorSPCtx *);
 PETSC_EXTERN PetscErrorCode       TSMonitorSPSwarmSolution(TS, PetscInt, PetscReal, Vec, void *);
 
+/*S
+  TSMonitorHGCtx - Context object for the `TSMonitorHGSwarmSolution()` histogram monitor that displays a histogram of `DMSWARM` particle quantities at each time step
+
+  Level: developer
+
+.seealso: `TS`, `DMSWARM`, `TSMonitorHGCtxCreate()`, `TSMonitorHGCtxDestroy()`, `TSMonitorHGSwarmSolution()`
+S*/
 typedef struct _n_TSMonitorHGCtx *TSMonitorHGCtx;
 PETSC_EXTERN PetscErrorCode       TSMonitorHGCtxCreate(MPI_Comm, const char[], const char[], int, int, int, int, PetscInt, PetscInt, PetscInt, PetscBool, TSMonitorHGCtx *);
 PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscReal, Vec, void *);
@@ -1510,6 +1594,18 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
+/*E
+   TSDGType - Selects the discrete-gradient flavor used by `TSDISCGRAD` when integrating gradient-system ODEs
+
+   Values:
++   `TS_DG_GONZALEZ` - Gonzalez's mid-point-style discrete gradient
+.   `TS_DG_AVERAGE`  - average vector field (AVF) discrete gradient
+-   `TS_DG_NONE`     - do not apply a discrete gradient correction; the integrator falls back to a standard mid-point rule
+
+   Level: advanced
+
+.seealso: `TS`, `TSDISCGRAD`, `TSDiscGradSetType()`, `TSDiscGradGetType()`, `TSDiscGradSetFormulation()`
+E*/
 typedef enum {
   TS_DG_GONZALEZ,
   TS_DG_AVERAGE,
@@ -1527,11 +1623,33 @@ PETSC_EXTERN PetscErrorCode TSDiscGradRestoreX0AndXdot(TS, DM, Vec *, Vec *);
        PETSc interface to Sundials
 */
 #ifdef PETSC_HAVE_SUNDIALS2
+/*E
+   TSSundialsLmmType - Selects which linear multistep method is used by the `TSSUNDIALS` interface to SUNDIALS' CVODE integrator
+
+   Values:
++   `SUNDIALS_ADAMS` - variable-order Adams methods (non-stiff problems)
+-   `SUNDIALS_BDF`   - variable-order backward differentiation formulas (stiff problems)
+
+   Level: intermediate
+
+.seealso: `TS`, `TSSUNDIALS`, `TSSundialsSetType()`, `TSSundialsGramSchmidtType`
+E*/
 typedef enum {
   SUNDIALS_ADAMS = 1,
   SUNDIALS_BDF   = 2
 } TSSundialsLmmType;
 PETSC_EXTERN const char *const TSSundialsLmmTypes[];
+/*E
+   TSSundialsGramSchmidtType - Selects the Gram--Schmidt orthogonalization variant used by SUNDIALS' internal GMRES inside `TSSUNDIALS`
+
+   Values:
++   `SUNDIALS_MODIFIED_GS`  - modified Gram--Schmidt (more stable)
+-   `SUNDIALS_CLASSICAL_GS` - classical Gram--Schmidt (cheaper, less stable)
+
+   Level: advanced
+
+.seealso: `TS`, `TSSUNDIALS`, `TSSundialsSetGramSchmidtType()`, `TSSundialsLmmType`
+E*/
 typedef enum {
   SUNDIALS_MODIFIED_GS  = 1,
   SUNDIALS_CLASSICAL_GS = 2

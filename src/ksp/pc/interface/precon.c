@@ -310,23 +310,23 @@ PetscErrorCode PCDiagonalScaleRight(PC pc, Vec in, Vec out)
 
 /*@
   PCSetUseAmat - Sets a flag to indicate that when the preconditioner needs to apply (part of) the
-  operator during the preconditioning process it applies the Amat provided to `TSSetRHSJacobian()`,
-  `TSSetIJacobian()`, `SNESSetJacobian()`, `KSPSetOperators()` or `PCSetOperators()` not the Pmat.
+  operator during the preconditioning process it applies the `Amat` provided to `TSSetRHSJacobian()`,
+  `TSSetIJacobian()`, `SNESSetJacobian()`, `KSPSetOperators()` or `PCSetOperators()` not the `Pmat`.
 
   Logically Collective
 
   Input Parameters:
 + pc  - the `PC` preconditioner context
-- flg - `PETSC_TRUE` to use the Amat, `PETSC_FALSE` to use the Pmat (default is false)
+- flg - `PETSC_TRUE` to use the `Amat`, `PETSC_FALSE` to use the `Pmat` (default is `PETSC_FALSE`)
 
   Options Database Key:
-. -pc_use_amat (true|false) - use the amat argument to `KSPSetOperators()` or `PCSetOperators()` to apply the operator
+. -pc_use_amat (true|false) - use the `Amat` argument to `KSPSetOperators()` or `PCSetOperators()` to apply the operator
 
   Level: intermediate
 
   Note:
   For the common case in which the linear system matrix and the matrix used to construct the
-  preconditioner are identical, this routine has no affect.
+  preconditioner are identical, this routine has no effect.
 
 .seealso: [](ch_ksp), `PC`, `PCGetUseAmat()`, `PCBJACOBI`, `PCMG`, `PCFIELDSPLIT`, `PCCOMPOSITE`,
           `KSPSetOperators()`, `PCSetOperators()`
@@ -369,9 +369,9 @@ PetscErrorCode PCSetErrorIfFailure(PC pc, PetscBool flg)
 }
 
 /*@
-  PCGetUseAmat - Gets a flag to indicate that when the preconditioner needs to apply (part of) the
-  operator during the preconditioning process it applies the Amat provided to `TSSetRHSJacobian()`,
-  `TSSetIJacobian()`, `SNESSetJacobian()`, `KSPSetOperators()` or `PCSetOperators()` not the Pmat.
+  PCGetUseAmat - Gets the flag that indicates that when the preconditioner needs to apply (part of) the
+  operator during the preconditioning process it applies the `Amat` provided to `TSSetRHSJacobian()`,
+  `TSSetIJacobian()`, `SNESSetJacobian()`, `KSPSetOperators()` or `PCSetOperators()` not the `Pmat`.
 
   Logically Collective
 
@@ -379,13 +379,9 @@ PetscErrorCode PCSetErrorIfFailure(PC pc, PetscBool flg)
 . pc - the `PC` preconditioner context
 
   Output Parameter:
-. flg - `PETSC_TRUE` to use the Amat, `PETSC_FALSE` to use the Pmat (default is false)
+. flg - `PETSC_TRUE` to use the `Amat`, `PETSC_FALSE` to use the `Pmat`
 
   Level: intermediate
-
-  Note:
-  For the common case in which the linear system matrix and the matrix used to construct the
-  preconditioner are identical, this routine is does nothing.
 
 .seealso: [](ch_ksp), `PC`, `PCSetUseAmat()`, `PCBJACOBI`, `PCMG`, `PCFIELDSPLIT`, `PCCOMPOSITE`
 @*/
@@ -1520,14 +1516,14 @@ PetscErrorCode PCFactorGetMatrix(PC pc, Mat *mat)
 + pc     - the `PC` preconditioner context
 - prefix - the prefix string to prepend to all `PC` option requests
 
+  Level: advanced
+
   Note:
   A hyphen (-) must NOT be given at the beginning of the prefix name.
   The first character of all runtime options is AUTOMATICALLY the
   hyphen.
 
-  Level: advanced
-
-.seealso: [](ch_ksp), `PC`, `PCSetFromOptions`, `PCAppendOptionsPrefix()`, `PCGetOptionsPrefix()`
+.seealso: [](ch_ksp), `PC`, `PCSetFromOptions()`, `PCAppendOptionsPrefix()`, `PCGetOptionsPrefix()`
 @*/
 PetscErrorCode PCSetOptionsPrefix(PC pc, const char prefix[])
 {
@@ -1547,14 +1543,14 @@ PetscErrorCode PCSetOptionsPrefix(PC pc, const char prefix[])
 + pc     - the `PC` preconditioner context
 - prefix - the prefix string to prepend to all `PC` option requests
 
+  Level: advanced
+
   Note:
   A hyphen (-) must NOT be given at the beginning of the prefix name.
   The first character of all runtime options is AUTOMATICALLY the
   hyphen.
 
-  Level: advanced
-
-.seealso: [](ch_ksp), `PC`, `PCSetFromOptions`, `PCSetOptionsPrefix()`, `PCGetOptionsPrefix()`
+.seealso: [](ch_ksp), `PC`, `PCSetFromOptions()`, `PCSetOptionsPrefix()`, `PCGetOptionsPrefix()`
 @*/
 PetscErrorCode PCAppendOptionsPrefix(PC pc, const char prefix[])
 {
@@ -1566,7 +1562,7 @@ PetscErrorCode PCAppendOptionsPrefix(PC pc, const char prefix[])
 
 /*@
   PCGetOptionsPrefix - Gets the prefix used for searching for all
-  PC options in the database.
+  `PC` options in the database.
 
   Not Collective
 
@@ -1578,7 +1574,7 @@ PetscErrorCode PCAppendOptionsPrefix(PC pc, const char prefix[])
 
   Level: advanced
 
-.seealso: [](ch_ksp), `PC`, `PCSetFromOptions`, `PCSetOptionsPrefix()`, `PCAppendOptionsPrefix()`
+.seealso: [](ch_ksp), `PC`, `PCSetFromOptions()`, `PCSetOptionsPrefix()`, `PCAppendOptionsPrefix()`
 @*/
 PetscErrorCode PCGetOptionsPrefix(PC pc, const char *prefix[])
 {

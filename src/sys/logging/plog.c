@@ -125,21 +125,54 @@ PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {
   #include <../src/sys/logging/handler/impls/default/logdefault.h>
 
   #if defined(PETSC_HAVE_THREADSAFETY)
-PetscErrorCode PetscAddLogDouble(PetscLogDouble *tot, PetscLogDouble *tot_th, PetscLogDouble tmp)
+/*@
+  PetscAddLogDouble - Atomically add a `PetscLogDouble` value to both a global counter and its per-thread counterpart
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ tot    - pointer to the global counter to update
+. tot_th - pointer to the per-thread counter to update
+- value  - the value to add to both counters
+
+  Level: developer
+
+  Note:
+  When PETSc is built without thread safety this is a fast macro that performs the same update without locking.
+
+.seealso: `PetscAddLogDoubleCnt()`, `PetscLogFlops()`, `PetscLogDouble`
+@*/
+PetscErrorCode PetscAddLogDouble(PetscLogDouble *tot, PetscLogDouble *tot_th, PetscLogDouble value)
 {
-  *tot_th += tmp;
+  *tot_th += value;
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  *tot += tmp;
+  *tot += value;
   PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode PetscAddLogDoubleCnt(PetscLogDouble *cnt, PetscLogDouble *tot, PetscLogDouble *cnt_th, PetscLogDouble *tot_th, PetscLogDouble tmp)
+/*@
+  PetscAddLogDoubleCnt - Atomically update both a count pair and a size pair of `PetscLogDouble` counters (global and per-thread)
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ cnt    - pointer to the global count counter to increment by one
+. tot    - pointer to the global size counter to update
+. cnt_th - pointer to the per-thread count counter to increment by one
+. tot_th - pointer to the per-thread size counter to update
+- value  - the size value to add to the size counters
+
+  Level: developer
+
+.seealso: `PetscAddLogDouble()`, `PetscLogFlops()`, `PetscLogDouble`
+@*/
+PetscErrorCode PetscAddLogDoubleCnt(PetscLogDouble *cnt, PetscLogDouble *tot, PetscLogDouble *cnt_th, PetscLogDouble *tot_th, PetscLogDouble value)
 {
   *cnt_th = *cnt_th + 1;
-  *tot_th += tmp;
+  *tot_th += value;
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  *tot += (PetscLogDouble)tmp;
+  *tot += (PetscLogDouble)value;
   *cnt += *cnt + 1;
   PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
   return PETSC_SUCCESS;
@@ -1883,7 +1916,7 @@ PetscErrorCode PetscLogClassGetClassId(const char name[], PetscClassId *classid)
 
 .seealso: [](ch_profiling), `PetscLogClassRegister()`, `PetscLogClassBegin()`, `PetscLogClassEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadClass()`
 @*/
-PetscErrorCode PetscLogClassIdGetName(PetscClassId classid, const char **name)
+PetscErrorCode PetscLogClassIdGetName(PetscClassId classid, const char *name[])
 {
   PetscLogClass     log_class;
   PetscLogClassInfo class_info;
@@ -1982,6 +2015,7 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
 . -log_view :filename.py:ascii_info_detail - Saves logging information from each process as a Python file
 . -log_view :filename.xml:ascii_xml        - Saves a summary of the logging information in a nested format (see below for how to view it)
 . -log_view :filename.txt:ascii_flamegraph - Saves logging information in a format suitable for visualising as a Flame Graph (see below for how to view it)
+. -log_view :filename.csv:ascii_csv        - Saves logging information as a comma-separated values file
 . -log_view_memory                         - Also display memory usage in each event
 . -log_view_gpu_time                       - Also display time in each event for GPU kernels (Note this may slow the computation)
 . -log_view_gpu_energy                     - Also display energy (estimated with power*gtime) in Joules for GPU kernels

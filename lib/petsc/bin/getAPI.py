@@ -929,7 +929,12 @@ def getFunctions(mansec, functiontoinclude, filename):
             argnames = []
             for i in args:
               arg = Argument()
-              if i.find('**') > -1 and not i.strip().startswith('void'): fun.opaque = True
+              if i.find('**') > -1 and not i.strip().startswith('void'):
+                if i.strip().startswith('const char **') and i.find('***') == -1 and i.find('[]') == -1:
+                  print('Argument declaration error in function declaration: use const char *[] not const char ** for arguments that return character strings')
+                  print(fun)
+                # eventually also check for other types besides char
+                fun.opaque = True
               if i.find('unsigned ') > -1: fun.opaque = True
               if i.count('const ') > 1: fun.opaque = True
               if i.count("const "): arg.const = True
@@ -1273,6 +1278,19 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   verbosePrint(verbose, 'Manual pages  --------------------------------')
   for i in manualpages.keys():
     verbosePrint(verbose, manualpages[i])
+
+  # All values for a given enum must be provided or none of them
+  for i in enums.keys():
+    givenvalue = 0
+    for j in enums[i].values:
+      if j.find('=') > -1:
+        if givenvalue == -1:
+          raise RuntimeError('Some enum values for ' + i + ' are set but others are not set')
+        givenvalue = 1
+      else:
+        if givenvalue == 1:
+          raise RuntimeError('Some enum values for ' + i + ' are set but others are not set')
+        givenvalue = -1
 
   #file = open('classes.data','wb')
   #pickle.dump(enums,file)

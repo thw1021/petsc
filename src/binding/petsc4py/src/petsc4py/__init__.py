@@ -16,7 +16,7 @@ communications.
 """
 
 __author__ = 'Lisandro Dalcin'
-__version__ = '3.25.1'
+__version__ = '3.25.3'
 __credits__ = 'PETSc Team <petsc-maint@mcs.anl.gov>'
 
 
@@ -40,12 +40,6 @@ def init(args=None, arch=None, comm=None):
     import petsc4py.lib
 
     PETSc = petsc4py.lib.ImportPETSc(arch)
-    if PETSc.Sys.isInitialized():
-        import warnings
-        warnings.warn(
-            "Calling petsc4py.init but PETSc has already been initialized",
-            stacklevel=2,
-        )
     args = petsc4py.lib.getInitArgs(args)
     PETSc._initialize(args, comm)
 

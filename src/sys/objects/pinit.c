@@ -104,7 +104,7 @@ extern PetscInt PetscNumBLASThreads;
   Turns off PETSc signal handling to allow Julia to manage signals
 
 .seealso: `PetscInitialize()`, `PetscInitializeFortran()`, `PetscInitializeNoArguments()`
-*/
+@*/
 PetscErrorCode PetscInitializeNoPointers(int argc, char **args, const char *filename, const char *help)
 {
   int    myargc = argc;
@@ -490,6 +490,22 @@ PetscErrorCode PetscCitationsInitialize(void)
 
 static char programname[PETSC_MAX_PATH_LEN] = ""; /* HP includes entire path in name */
 
+/*@C
+  PetscSetProgramName - Set the program name reported by `PetscGetProgramName()`
+
+  Not Collective
+
+  Input Parameter:
+. name - the program name to record
+
+  Level: developer
+
+  Note:
+  The program name is normally set automatically by `PetscInitialize()` from `argv[0]`; only call this directly when the
+  detected name is incorrect (for example when PETSc is embedded in a host application).
+
+.seealso: `PetscGetProgramName()`, `PetscInitialize()`
+@*/
 PetscErrorCode PetscSetProgramName(const char name[])
 {
   PetscFunctionBegin;
@@ -1208,6 +1224,36 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PetscSetMPIThreadRequiredType - Set the MPI required thread level for when `PetscInitialize()` initializes MPI.
+
+  Logically Collective
+
+  Input Parameter:
+. required - the desired thread support, one of `MPI_THREAD_SINGLE`, `MPI_THREAD_FUNNELED`, `MPI_THREAD_SERIALIZED`, or `MPI_THREAD_MULTIPLE`.
+
+  Level: intermediate
+
+  Notes:
+  This must be called before `PetscInitialize()`.
+
+  Defaults to `MPI_THREAD_FUNNELED` when the MPI implementation provides `MPI_Init_thread()`, otherwise `MPI_THREAD_SINGLE`.
+
+  This argument is used in the call to `MPI_Init_thread()` made by `PetscInitialize()`.
+
+  Packages such as SLATE may require `MPI_THREAD_MULTIPLE`.
+
+  The same value must be set on all MPI processes.
+
+.seealso: `PetscInitialize()`
+@*/
+PetscErrorCode PetscSetMPIThreadRequiredType(PetscMPIInt required)
+{
+  PetscFunctionBegin;
+  PETSC_MPI_THREAD_REQUIRED = required;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // "Unknown section 'Environmental Variables'"
 // PetscClangLinter pragma disable: -fdoc-section-header-unknown
 /*@C
@@ -1309,9 +1355,12 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 
   Level: beginner
 
-  Note:
+  Notes:
   If for some reason you must call `MPI_Init()` separately from `PetscInitialize()`, call
   it before `PetscInitialize()`.
+
+  If your program requires a particular level of thread support for MPI, see `MPI_Init_thread()`, you may call `PetscSetMPIThreadRequiredType()`
+  before `PetscInitialize()` to indicate this.
 
   Fortran Notes:
   In Fortran this routine can be called with
@@ -1328,7 +1377,8 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 . -checkfunctionlist - automatically checks that function lists associated with objects are correctly cleaned up. Produces messages of the form:
                        "function name: MatInodeGetInodeSizes_C" if they are not cleaned up. This flag is always set for the test harness (in framework.py)
 
-.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscInitializeNoArguments()`, `PetscLogGpuTime()`
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscInitializeNoArguments()`, `PetscLogGpuTime()`,
+          `PetscSetMPIThreadRequiredType()`
 @*/
 PetscErrorCode PetscInitialize(int *argc, char ***args, const char file[], const char help[])
 {

@@ -1,7 +1,7 @@
 /*
     Defines the vector component of PETSc. Vectors generally represent
   degrees of freedom for finite element/finite difference functions
-  on a grid. They have more mathematical structure then simple arrays.
+  on a grid. They have more mathematical structure than simple arrays.
 */
 #pragma once
 
@@ -56,7 +56,7 @@ typedef enum {
 M*/
 
 /*MC
-    SCATTER_REVERSE - Moves the values in the opposite direction then the directions indicated
+    SCATTER_REVERSE - Moves the values in the opposite direction than the directions indicated
                       in the `VecScatterCreate()` during `VecScatterBegin()` and `VecScatterEnd()`
 
     Level: beginner
@@ -76,7 +76,7 @@ M*/
 M*/
 
 /*MC
-    SCATTER_REVERSE_LOCAL - Moves the values in the opposite direction then the directions indicated
+    SCATTER_REVERSE_LOCAL - Moves the values in the opposite direction than the directions indicated
                            in the `VecScatterCreate()`  during `VecScatterBegin()` and `VecScatterEnd()` except NO parallel communication
                            is done. Any variables that have be moved between processes are ignored
 
@@ -327,6 +327,7 @@ PETSC_EXTERN PetscErrorCode VecCopy(Vec, Vec);
 PETSC_EXTERN PetscErrorCode VecSetRandom(Vec, PetscRandom);
 PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode VecSet(Vec, PetscScalar);
+PETSC_EXTERN PetscErrorCode VecSetStdBasis(Vec, PetscInt);
 PETSC_DEPRECATED_FUNCTION(3, 22, 0, "VecFlag()", ) PetscErrorCode VecSetInf(Vec);
 PETSC_EXTERN PetscErrorCode VecSwap(Vec, Vec);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec, PetscScalar, Vec);
@@ -577,11 +578,32 @@ PETSC_EXTERN PetscErrorCode VecGetPinnedMemoryMin(Vec, size_t *);
 
 PETSC_EXTERN PetscErrorCode VecGetOffloadMask(Vec, PetscOffloadMask *);
 
+/*E
+   VecOption - Options that may be set for a vector regarding entries passed to `VecSetValues()` and related routines
+
+   Values:
++   `VEC_IGNORE_OFF_PROC_ENTRIES` - causes `VecSetValues()` to ignore entries destined to be stored on a separate processor.
+                                    This can be used to eliminate the global reduction in `VecAssemblyBegin()` if you know that
+                                    you have only used `VecSetValues()` to set local elements
+.   `VEC_IGNORE_NEGATIVE_INDICES` - means you can pass negative indices in `ix` in calls to `VecSetValues()` or `VecGetValues()`.
+                                    These rows are simply ignored.
+-   `VEC_SUBSET_OFF_PROC_ENTRIES` - causes `VecAssemblyBegin()` to assume that the off-process entries will always be a subset
+                                    (possibly equal) of the off-process entries set on the first assembly which had a true
+                                    `VEC_SUBSET_OFF_PROC_ENTRIES` and the vector has not changed this flag afterwards. If this
+                                    assembly is not such first assembly, then this assembly can reuse the communication pattern
+                                    setup in that first assembly, thus avoiding a global reduction. Subsequent assemblies setting
+                                    off-process values should use the same `InsertMode` as the first assembly.
+
+   Level: beginner
+
+.seealso: [](ch_matrices), `Vec`, `MatSetOption()`, `VecSetOption()`, `VecSetValues()`, `VecAssemblyBegin()`
+E*/
 typedef enum {
   VEC_IGNORE_OFF_PROC_ENTRIES,
   VEC_IGNORE_NEGATIVE_INDICES,
   VEC_SUBSET_OFF_PROC_ENTRIES
 } VecOption;
+
 PETSC_EXTERN PetscErrorCode VecSetOption(Vec, VecOption, PetscBool);
 
 PETSC_EXTERN PetscErrorCode VecGetArray(Vec, PetscScalar *[]);
@@ -685,6 +707,26 @@ PETSC_DEPRECATED_FUNCTION(3, 11, 0, "VecLockReadPop()", ) static inline PetscErr
   return VecLockReadPop(v);
 }
 
+/*MC
+  VecLocked - Deprecated alias for `VecSetErrorIfLocked()`; raises an error if the `Vec` is currently locked for read
+
+  Synopsis:
+  #include <petscvec.h>
+  PetscErrorCode VecLocked(Vec x, int arg)
+
+  Not Collective; No Fortran Support
+
+  Input Parameters:
++ x   - the `Vec` to test
+- arg - the argument position of `x` in the caller (used in the error message)
+
+  Level: deprecated
+
+  Note:
+  Use `VecSetErrorIfLocked()` in new code; this macro is retained only for backwards compatibility.
+
+.seealso: `Vec`, `VecSetErrorIfLocked()`, `VecLockReadPush()`, `VecLockReadPop()`
+M*/
 #define VecLocked(x, arg) VecSetErrorIfLocked(x, arg) PETSC_DEPRECATED_MACRO(3, 11, 0, "VecSetErrorIfLocked()", )
 
 /*E
@@ -765,23 +807,22 @@ PETSC_EXTERN PetscErrorCode VecStepMaxBounded(Vec, Vec, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscViewerMathematicaGetVector(PetscViewer, Vec);
 PETSC_EXTERN PetscErrorCode PetscViewerMathematicaPutVector(PetscViewer, Vec);
 
-/*S
-   Vecs - Collection of vectors where the data for the vectors is stored in
-          one contiguous memory
-
-   Level: advanced
-
-   Notes:
-   Temporary construct for handling multiply right-hand side solves
-
-   This is faked by storing a single vector that has enough array space for
-   n vectors
-
-S*/
 struct _n_Vecs {
   PetscInt n;
   Vec      v;
 };
+/*S
+  Vecs - Collection of `Vec`s where the storage for the vectors is held in a single contiguous block of memory
+
+  Level: advanced
+
+  Notes:
+  Temporary construct for handling multiple right-hand side solves.
+
+  This is faked by storing a single `Vec` whose array is sized to hold `n` vectors back to back.
+
+.seealso: `Vec`, `VecsCreateSeq()`, `VecsCreateSeqWithArray()`, `VecsDuplicate()`, `VecsDestroy()`
+S*/
 typedef struct _n_Vecs     *Vecs;
 PETSC_EXTERN PetscErrorCode VecsDestroy(Vecs);
 PETSC_EXTERN PetscErrorCode VecsCreateSeq(MPI_Comm, PetscInt, PetscInt, Vecs *);
@@ -789,6 +830,13 @@ PETSC_EXTERN PetscErrorCode VecsCreateSeqWithArray(MPI_Comm, PetscInt, PetscInt,
 PETSC_EXTERN PetscErrorCode VecsDuplicate(Vecs, Vecs *);
 
 #if PetscDefined(HAVE_VIENNACL)
+/*S
+  PetscViennaCLIndices - Opaque handle to an index buffer used by PETSc's ViennaCL `VECVIENNACL` vector backend to perform partial scatters between CPU and GPU memory
+
+  Level: developer
+
+.seealso: `Vec`, `VECVIENNACL`, `VecCreateSeqViennaCL()`, `VecCreateMPIViennaCL()`, `VecViennaCLCopyToGPUSome_Public()`, `VecViennaCLCopyFromGPUSome_Public()`
+S*/
 typedef struct _p_PetscViennaCLIndices *PetscViennaCLIndices;
 PETSC_EXTERN PetscErrorCode             VecViennaCLCopyToGPUSome_Public(Vec, PetscViennaCLIndices);
 PETSC_EXTERN PetscErrorCode             VecViennaCLCopyFromGPUSome_Public(Vec, PetscViennaCLIndices);

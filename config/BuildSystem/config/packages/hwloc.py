@@ -4,8 +4,8 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version           = '2.13.0'
-    self.download          = ['https://download.open-mpi.org/release/hwloc/v2.13/hwloc-'+self.version+'.tar.gz',
+    self.version           = '2.14.0'
+    self.download          = ['https://download.open-mpi.org/release/hwloc/v2.14/hwloc-'+self.version+'.tar.gz',
                               'https://web.cels.anl.gov/projects/petsc/download/externalpackages/hwloc-'+self.version+'.tar.gz']
     self.functions         = ['hwloc_topology_init']
     self.includes          = ['hwloc.h']
@@ -39,6 +39,8 @@ class Configure(config.package.GNUPackage):
     args.append('--disable-opencl')
     args.append('--disable-cuda')
     args.append('--disable-nvml')
+    args.append('--disable-rsmi-amd')
+    args.append('--disable-rsmi-rocm')
     args.append('--disable-gl')
     args.append('CPPFLAGS="'+self.headers.toStringNoDupes(self.dinclude)+'"')
     args.append('LIBS="'+self.libraries.toStringNoDupes(self.dlib)+'"')

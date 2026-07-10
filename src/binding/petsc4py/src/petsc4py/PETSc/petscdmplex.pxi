@@ -113,7 +113,7 @@ cdef extern from * nogil:
     PetscErrorCode DMPlexMarkBoundaryFaces(PetscDM, PetscInt, PetscDMLabel)
     PetscErrorCode DMPlexLabelComplete(PetscDM, PetscDMLabel)
     PetscErrorCode DMPlexLabelCompleteStar(PetscDM, PetscDMLabel)
-    PetscErrorCode DMPlexLabelCohesiveComplete(PetscDM, PetscDMLabel, PetscDMLabel, PetscInt, PetscBool, PetscBool, PetscDM)
+    PetscErrorCode DMPlexLabelCohesiveComplete(PetscDM, PetscDMLabel, PetscDMLabel, PetscInt, PetscBool, PetscDM)
 
     PetscErrorCode DMPlexGetRefinementLimit(PetscDM, PetscReal*)
     PetscErrorCode DMPlexSetRefinementLimit(PetscDM, PetscReal)
@@ -124,6 +124,8 @@ cdef extern from * nogil:
 
     PetscErrorCode DMPlexCreateSection(PetscDM, PetscDMLabel[], const PetscInt[], const PetscInt[], PetscInt, const PetscInt[], const PetscIS[], const PetscIS[], PetscIS, PetscSection*)
 
+    PetscErrorCode DMPlexGetCellCoordinates(PetscDM, PetscInt, PetscBool*, PetscInt*, const PetscScalar *[], PetscScalar *[])
+    PetscErrorCode DMPlexRestoreCellCoordinates(PetscDM, PetscInt, PetscBool*, PetscInt*, const PetscScalar *[], PetscScalar *[])
     PetscErrorCode DMPlexComputeCellGeometryFVM(PetscDM, PetscInt, PetscReal*, PetscReal[], PetscReal[])
     PetscErrorCode DMPlexConstructGhostCells(PetscDM, const char[], PetscInt*, PetscDM*)
 

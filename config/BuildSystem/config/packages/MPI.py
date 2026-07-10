@@ -60,16 +60,17 @@ class Configure(config.package.Package):
     self.mpiexec           = None
     self.mpiexecExecutable = None
     self.mpiexecseq        = None
+    self.mpiexec_tail      = None
     return
 
   def setupHelp(self, help):
     config.package.Package.setupHelp(self,help)
     import nargs
     help.addArgument('MPI', '-with-mpiexec=<prog>',                              nargs.Arg(None, None, 'The utility used to launch MPI jobs. (should support "-n <np>" option)'))
-    help.addArgument('MPI', '-with-mpiexec-tail=<prog>',                         nargs.Arg(None, None, 'The utility you want to put at the very end of "mpiexec -n <np> ..." and right before your executable to launch MPI jobs.'))
+    help.addArgument('MPI', '-with-mpiexec-tail=<prog or options>',              nargs.Arg(None, None, 'The utility or options you want to put at the very end of "mpiexec -n <np> ..." and right before your executable to launch MPI jobs.'))
     help.addArgument('MPI', '-with-mpi-compilers=<bool>',                        nargs.ArgBool(None, 1, 'Try to use the MPI compilers, e.g. mpicc'))
     help.addArgument('MPI', '-known-mpi-shared-libraries=<bool>',                nargs.ArgBool(None, None, 'Indicates the MPI libraries are shared (the usual test will be skipped)'))
-    help.addArgument('MPI', '-with-mpi-ftn-module=<mpi or mpi_f08>',                      nargs.ArgString(None, "mpi", 'Specify the MPI Fortran module to build with'))
+    help.addArgument('MPI', '-with-mpi-ftn-module=<mpi or mpi_f08>',             nargs.ArgString(None, "mpi", 'Specify the MPI Fortran module to build with'))
     return
 
   def setupDependencies(self, framework):
@@ -188,15 +189,10 @@ shared libraries and run with --known-mpi-shared-libraries=1')
     return
 
   def configureMPIEXEC_TAIL(self):
-    '''Checking for location of mpiexec_tail'''
+    '''Checking for mpiexec_tail'''
     if 'with-mpiexec-tail' in self.argDB:
-      self.argDB['with-mpiexec-tail'] = os.path.expanduser(self.argDB['with-mpiexec-tail'])
-      # If found, the call below defines a make macro MPIEXEC_TAIL with full path
-      if not self.getExecutable(self.argDB['with-mpiexec-tail'], getFullPath=1, resultName = 'mpiexec_tail'):
-        raise RuntimeError('Invalid mpiexec-tail specified: '+str(self.argDB['with-mpiexec-tail']))
-    else:
-      self.mpiexec_tail =''
-      self.addMakeMacro('MPIEXEC_TAIL', '')
+      self.mpiexec_tail = self.argDB['with-mpiexec-tail']
+    self.addMakeMacro('MPIEXEC_TAIL', self.mpiexec_tail)
 
   def configureMPIEXEC(self):
     '''Checking for location of mpiexec'''
@@ -276,9 +272,9 @@ shared libraries and run with --known-mpi-shared-libraries=1')
     # using mpiexec environmental variables make sure mpiexec matches the MPI libraries and save the variables for testing in PetscInitialize()
     # the variable HAVE_MPIEXEC_ENVIRONMENTAL_VARIABLE is not currently used. PetscInitialize() can check the existence of the environmental variable to
     # determine if the program has been started with the correct mpiexec (will only be set for parallel runs so not clear how to check appropriately)
-    (out, err, ret) = Configure.executeShellCommand(self.mpiexec+' -n 1 printenv | grep -v KEY', checkCommand = noCheck, timeout = 120, threads = 1, log = self.log)
+    (out, err, ret) = Configure.executeShellCommand(self.mpiexec+' -n 1 printenv | grep -ve KEY -ve TOKEN -ve PASSWORD -ve SECRET -ve CRED', checkCommand = noCheck, timeout = 120, threads = 1, log = self.log, logOutputflg = False)
     if ret:
-      self.logWrite('Unable to run '+self.mpiexec+' with option "-n 1 printenv"\nThis could be ok, some MPI implementations such as SGI produce a non-zero status with non-MPI programs\n'+out+err)
+      self.logWrite('Unable to run '+self.mpiexec+' with option "-n 1 printenv"\nThis could be ok, some MPI implementations such as SGI produce a non-zero status with non-MPI programs\n'+err)
     else:
       if out.find('MPIR_CVAR_CH3') > -1:
         if hasattr(self,'ompi_major_version'): raise RuntimeError("Your libraries are from Open MPI but it appears your mpiexec is from MPICH");
@@ -712,6 +708,27 @@ Unable to run hostname to check the network')
     self.libraries.popLanguage()
     return 0
 
+  def configureMPIFortranCBool(self):
+    '''Determine whether MPI_C_BOOL is exposed to the Fortran MPI bindings.
+       MPI_C_BOOL is an MPI-2.2 C datatype; some MPIs (e.g. MS-MPI) declare it only in mpi.h, not
+       in mpif.h/the mpi module. If Fortran has it, define HAVE_MPI_C_BOOL_FORTRAN; otherwise PETSc
+       declares MPI_C_BOOL as a Fortran module variable populated at PetscInitialize() from C via
+       MPI_Type_c2f(MPI_C_BOOL).'''
+    if not hasattr(self.compilers, 'FC'):
+      return 0
+    self.libraries.pushLanguage('FC')
+    oldFlags = self.compilers.FPPFLAGS
+    self.compilers.FPPFLAGS += ' '+self.headers.toString(self.include)
+    self.log.write('Checking whether MPI_C_BOOL is available in the Fortran MPI bindings\n')
+    # Initialize a parameter from MPI_C_BOOL: if the name is undefined it becomes an implicit real
+    # variable, which is not a constant expression, so the compile fails. This avoids relying on
+    # implicit none placement around the include.
+    if self.libraries.check(self.lib, '', call = '#include "mpif.h"\n       integer, parameter :: petsc_test = MPI_C_BOOL'):
+      self.addDefine('HAVE_MPI_C_BOOL_FORTRAN', 1)
+    self.compilers.FPPFLAGS = oldFlags
+    self.libraries.popLanguage()
+    return 0
+
   def configureIO(self):
     '''Check for the functions in MPI/IO
        - Define HAVE_MPIIO if they are present
@@ -995,6 +1012,7 @@ You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to preve
     self.executeTest(self.SGIMPICheck)
     self.executeTest(self.CxxMPICheck)
     self.executeTest(self.FortranMPICheck) #depends on checkMPIDistro
+    self.executeTest(self.configureMPIFortranCBool) #depends on FortranMPICheck
     self.executeTest(self.configureIO) #depends on checkMPIDistro
     self.executeTest(self.findMPIIncludeAndLib)
     self.executeTest(self.PetscArchMPICheck)

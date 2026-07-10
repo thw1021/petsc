@@ -231,6 +231,17 @@ Even with the use of `clang-format` there are still many decisions about code fo
     else {YYY;}
     ```
 
+    When the controlled statement is a `for` or `while` loop, place it on its own line below the `if` or `else`:
+
+    ```
+    if ( )
+      for ( ; ; ) XXXX;
+    else
+      while ( ) YYY;
+    ```
+
+    `do { ... } while`, `switch`, and a plain single statement (including `else if`) are unaffected and stay on the same line.
+
 10. Do not leave sections of commented-out code or dead source code protected with `ifdef foo` in the source files.
 
 11. Use classic block comments (`/* There must be a space before the first word in the comment and a space at the end */`,
@@ -330,7 +341,7 @@ Even with the use of `clang-format` there are still many decisions about code fo
 
 05. Do not use the `register` directive.
 
-06. Use `if (v == NULL)` or `if (flg == PETSC_TRUE)`, instead of using `if (!v)` or `if (flg)` or `if (!flg)`.
+06. Compare pointers and `PetscBool` values explicitly instead of relying on an implicit truth test. For a pointer, use `if (v == NULL)` or `if (v != NULL)`, not `if (!v)` or `if (v)`. For a `PetscBool`, use `if (flg == PETSC_TRUE)` or `if (flg == PETSC_FALSE)`, not `if (flg)` or `if (!flg)`.
 
 07. Avoid `#ifdef` or `#ifndef` when possible. Rather, use `#if defined` or `#if
     !defined`. Better, use `PetscDefined()` (see below). The only exception to this

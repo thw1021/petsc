@@ -249,37 +249,43 @@ static PetscErrorCode DMPlexTransformView_Ascii(DMPlexTransform tr, PetscViewer 
     IS              trIS;
     PetscInt        cols = 8;
     PetscInt        Nrt  = 8, f, g;
+    PetscMPIInt     size, rank;
 
+    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)tr), &rank));
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)tr), &size));
+    PetscCall(PetscViewerASCIIPushSynchronized(v));
     if (tr->trType) PetscCall(DMLabelView(tr->trType, v));
-    PetscCall(PetscViewerASCIIPrintf(v, "Source Starts\n"));
-    for (g = 0; g <= cols; ++g) PetscCall(PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]));
-    PetscCall(PetscViewerASCIIPrintf(v, "\n"));
-    for (f = 0; f <= cols; ++f) PetscCall(PetscViewerASCIIPrintf(v, " %14" PetscInt_FMT, tr->ctStart[f]));
-    PetscCall(PetscViewerASCIIPrintf(v, "\n"));
-    PetscCall(PetscViewerASCIIPrintf(v, "Target Starts\n"));
-    for (g = 0; g <= cols; ++g) PetscCall(PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]));
-    PetscCall(PetscViewerASCIIPrintf(v, "\n"));
-    for (f = 0; f <= cols; ++f) PetscCall(PetscViewerASCIIPrintf(v, " %14" PetscInt_FMT, tr->ctStartNew[f]));
-    PetscCall(PetscViewerASCIIPrintf(v, "\n"));
+    if (size > 1) PetscCall(PetscViewerASCIISynchronizedPrintf(v, "Process: %d\n", rank));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "Source Starts\n"));
+    for (g = 0; g <= cols; ++g) PetscCall(PetscViewerASCIISynchronizedPrintf(v, " %14s", DMPolytopeTypes[g]));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "\n"));
+    for (f = 0; f <= cols; ++f) PetscCall(PetscViewerASCIISynchronizedPrintf(v, " %14" PetscInt_FMT, tr->ctStart[f]));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "\n"));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "Target Starts\n"));
+    for (g = 0; g <= cols; ++g) PetscCall(PetscViewerASCIISynchronizedPrintf(v, " %14s", DMPolytopeTypes[g]));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "\n"));
+    for (f = 0; f <= cols; ++f) PetscCall(PetscViewerASCIISynchronizedPrintf(v, " %14" PetscInt_FMT, tr->ctStartNew[f]));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "\n"));
 
     if (tr->trType) {
       PetscCall(DMLabelGetNumValues(tr->trType, &Nrt));
       PetscCall(DMLabelGetValueIS(tr->trType, &trIS));
       PetscCall(ISGetIndices(trIS, &trTypes));
     }
-    PetscCall(PetscViewerASCIIPrintf(v, "Offsets\n"));
-    PetscCall(PetscViewerASCIIPrintf(v, "     "));
-    for (g = 0; g < cols; ++g) PetscCall(PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]));
-    PetscCall(PetscViewerASCIIPrintf(v, "\n"));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "Offsets\n"));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "     "));
+    for (g = 0; g < cols; ++g) PetscCall(PetscViewerASCIISynchronizedPrintf(v, " %14s", DMPolytopeTypes[g]));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(v, "\n"));
     for (f = 0; f < Nrt; ++f) {
-      PetscCall(PetscViewerASCIIPrintf(v, "%2" PetscInt_FMT "  |", trTypes ? trTypes[f] : f));
-      for (g = 0; g < cols; ++g) PetscCall(PetscViewerASCIIPrintf(v, " %14" PetscInt_FMT, tr->offset[f * DM_NUM_POLYTOPES + g]));
-      PetscCall(PetscViewerASCIIPrintf(v, " |\n"));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "%2" PetscInt_FMT "  |", trTypes ? trTypes[f] : f));
+      for (g = 0; g < cols; ++g) PetscCall(PetscViewerASCIISynchronizedPrintf(v, " %14" PetscInt_FMT, tr->offset[f * DM_NUM_POLYTOPES + g]));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(v, " |\n"));
     }
     if (tr->trType) {
       PetscCall(ISRestoreIndices(trIS, &trTypes));
       PetscCall(ISDestroy(&trIS));
     }
+    PetscCall(PetscViewerFlush(v));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1046,14 +1052,17 @@ PetscErrorCode DMPlexTransformGetTargetPoint(DMPlexTransform tr, DMPolytopeType 
   newp += off;
   for (n = 0; n < Nct; ++n) {
     if (rct[n] == ctNew) {
-      if (rsize[n] && r >= rsize[n])
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " for point %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, p, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
+      PetscCheck(!rsize[n] || r < rsize[n], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " for point %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, p, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
       newp += rp * rsize[n] + r;
+      if (!(newp >= ctSN && newp <= ctEN)) {
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "Problem with point %" PetscInt_FMT " %s replica %" PetscInt_FMT "\n", p, DMPolytopeTypes[ct], r));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "  n %" PetscInt_FMT " rsize %" PetscInt_FMT " rt %" PetscInt_FMT " cind %" PetscInt_FMT " rp %" PetscInt_FMT "\n", n, rsize[n], rt, cind, rp));
+      }
       break;
     }
   }
 
-  PetscCheck(!(newp < ctSN) && !(newp >= ctEN), PETSC_COMM_SELF, PETSC_ERR_PLIB, "New point %" PetscInt_FMT " is not a %s [%" PetscInt_FMT ", %" PetscInt_FMT ")", newp, DMPolytopeTypes[ctNew], ctSN, ctEN);
+  PetscCheck(newp >= ctSN && newp < ctEN, PETSC_COMM_SELF, PETSC_ERR_PLIB, "New point %" PetscInt_FMT " is not a %s [%" PetscInt_FMT ", %" PetscInt_FMT ")", newp, DMPolytopeTypes[ctNew], ctSN, ctEN);
   *pNew = newp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1584,7 +1593,7 @@ static PetscErrorCode DMPlexTransformSetCones(DMPlexTransform tr, DM rdm)
   PetscCall(DMViewFromOptions(rdm, NULL, "-rdm_view"));
   PetscCall(DMPlexSymmetrize(rdm));
   PetscCall(DMPlexStratify(rdm));
-  PetscTryTypeMethod(tr, ordersupports, dm, rdm);
+  PetscCall(DMPlexTransformOrderSupports(tr, dm, rdm));
   PetscCall(PetscLogEventEnd(DMPLEXTRANSFORM_SetCones, tr, dm, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1824,6 +1833,30 @@ PetscErrorCode DMPlexTransformGetSubcellVertices(DMPlexTransform tr, DMPolytopeT
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMPlexTransformOrderSupports - Reorder newly introduced point supports
+
+  Collective
+
+  Input Parameters:
++ tr   - The `DMPlexTransform`
+. dm   - The original `DM`
+- trdm - The transformed `DM` which is reordered
+
+  Level: intermediate
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexTransform`, `DMPolytopeType`, `DMPlexTransformApply()`
+@*/
+PetscErrorCode DMPlexTransformOrderSupports(DMPlexTransform tr, DM dm, DM trdm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscValidHeaderSpecific(trdm, DM_CLASSID, 3);
+  PetscTryTypeMethod(tr, ordersupports, dm, trdm);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Computes new vertex as the barycenter, or centroid */
 PetscErrorCode DMPlexTransformMapCoordinatesBarycenter_Internal(DMPlexTransform tr, DMPolytopeType pct, DMPolytopeType ct, PetscInt p, PetscInt r, PetscInt Nv, PetscInt dE, const PetscScalar in[], PetscScalar out[])
 {
@@ -2039,7 +2072,7 @@ static PetscErrorCode DMPlexTransformCreateSF(DMPlexTransform tr, DM rdm)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   for (l = 0; l < numLeaves; ++l) {
-    const PetscInt  p = localPoints[l];
+    const PetscInt  p = localPoints ? localPoints[l] : l;
     DMPolytopeType  ct;
     DMPolytopeType *rct;
     PetscInt       *rsize, *rcone, *rornt;
@@ -2097,7 +2130,7 @@ static PetscErrorCode DMPlexTransformCreateSF(DMPlexTransform tr, DM rdm)
   PetscCall(PetscMalloc1(numLeavesNew, &localPointsNew));
   PetscCall(PetscMalloc1(numLeavesNew, &remotePointsNew));
   for (l = 0, m = 0; l < numLeaves; ++l) {
-    const PetscInt  p = localPoints[l];
+    const PetscInt  p = localPoints ? localPoints[l] : l;
     DMPolytopeType  ct;
     DMPolytopeType *rct;
     PetscInt       *rsize, *rcone, *rornt;

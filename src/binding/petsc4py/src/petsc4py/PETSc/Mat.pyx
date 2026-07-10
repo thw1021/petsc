@@ -750,7 +750,7 @@ cdef class Mat(Object):
         size: MatSizeSpec,
         bsize: MatBlockSizeSpec | None = None,
         nnz: NNZSpec | None = None,
-        csr: CSRIndicesSpec | None = None,
+        csr: CSRSpec | CSRIndicesSpec | None = None,
         comm: Comm | None = None) -> Self:
         """Create a sparse `Type.AIJ` matrix, optionally preallocating.
 
@@ -795,7 +795,7 @@ cdef class Mat(Object):
         size: MatSizeSpec,
         bsize: MatBlockSizeSpec,
         nnz: NNZSpec | None = None,
-        csr: CSRIndicesSpec | None = None,
+        csr: CSRSpec | CSRIndicesSpec | None = None,
         comm: Comm | None = None) -> Self:
         """Create a sparse blocked `Type.BAIJ` matrix, optionally preallocating.
 
@@ -839,7 +839,7 @@ cdef class Mat(Object):
         size: MatSizeSpec,
         bsize: MatBlockSizeSpec,
         nnz: NNZSpec | None = None,
-        csr: CSRIndicesSpec | None = None,
+        csr: CSRSpec | CSRIndicesSpec | None = None,
         comm: Comm | None = None) -> Self:
         """Create a sparse `Type.SBAIJ` matrix in symmetric block format.
 
@@ -883,7 +883,7 @@ cdef class Mat(Object):
         size: MatSizeSpec,
         bsize: MatBlockSizeSpec | None = None,
         nnz: NNZSpec | None = None,
-        csr: CSRIndicesSpec | None = None,
+        csr: CSRSpec | CSRIndicesSpec | None = None,
         comm: Comm | None = None) -> Self:
         """Create a sparse `Type.AIJCRL` matrix.
 
@@ -1015,7 +1015,7 @@ cdef class Mat(Object):
         CHKERR(MatSetPreallocationCOOLocal(self.mat, ncoo, ccoo_i, ccoo_j))
         return self
 
-    def setPreallocationCSR(self, csr: CSRIndicesSpec) -> Self:
+    def setPreallocationCSR(self, csr: CSRSpec | CSRIndicesSpec) -> Self:
         """Preallocate memory for the matrix with a CSR layout.
 
         Collective.
@@ -4144,6 +4144,32 @@ cdef class Mat(Object):
         CHKERR(PetscINCREF(submat.obj))
         return submat
 
+    def getMultPetscSF(self) -> SF:
+        """Return the `SF` used to communicate off-process entries in `mult`.
+
+        Not collective.
+
+        Returns the `SF` that gathers the off-process vector entries coupled to the
+        local rows for parallel matrix types such as `Type.MPIAIJ`, `Type.MPIBAIJ`,
+        `Type.MPISBAIJ`, `Type.MPIDENSE`, and `Type.MPISELL`. For `Type.MPIAIJ`,
+        `Type.MPIBAIJ`, `Type.MPIDENSE`, and `Type.MPISELL` this is the `SF` used
+        during `mult`; for `Type.MPISBAIJ` it is instead the off-process column
+        gather used by operations such as `Mat.diagonalScale`, since `mult` on that
+        type uses a separate, augmented scatter context. The `SF` is owned by the
+        matrix and is only valid while the matrix is assembled. For `Type.MPIDENSE`
+        the `SF` is built lazily on the first `mult`, so it may be `None` on an
+        assembled matrix that has not yet been multiplied.
+
+        See Also
+        --------
+        petsc.MatGetMultPetscSF
+
+        """
+        cdef SF sf = SF()
+        CHKERR(MatGetMultPetscSF(self.mat, &sf.sf))
+        CHKERR(PetscINCREF(sf.obj))
+        return sf
+
     def increaseOverlap(self, IS iset, overlap: int = 1) -> None:
         """Increase the overlap of a index set.
 
@@ -4369,6 +4395,37 @@ cdef class Mat(Object):
         CHKERR(MatNorm(self.mat, ntype, rval))
         if ntype != norm_1_2: return toReal(rval[0])
         else: return (toReal(rval[0]), toReal(rval[1]))
+
+    def normApproximate(self, norm_type: NormTypeSpec = None, max_it: int = DECIDE) -> float:
+        """Approximate the matrix norm.
+
+        Collective.
+
+        Parameters
+        ----------
+        norm_type
+            The type of norm, defaults to `NormType.NORM_2`
+        max_it
+            Maximum number of iterations used to approximate the norm.
+
+        Returns
+        -------
+        float
+            The estimated matrix norm.
+
+        See Also
+        --------
+        Mat.norm, petsc.MatNormApproximate
+
+        """
+        cdef PetscInt _max_it = asInt(max_it)
+        cdef PetscNormType ntype = PETSC_NORM_2
+        if norm_type is not None: ntype = norm_type
+        if ntype == PETSC_NORM_1_AND_2 or ntype == PETSC_NORM_FROBENIUS:
+            raise ValueError("NORM_1_AND_2 and NORM_FROBENIUS are not supported")
+        cdef PetscReal nrm = 0.0
+        CHKERR(MatNormApproximate(self.mat, ntype, _max_it, &nrm))
+        return toReal(nrm)
 
     def scale(self, alpha: Scalar) -> None:
         """Scale the matrix.

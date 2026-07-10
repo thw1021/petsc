@@ -366,6 +366,7 @@ cdef extern from * nogil:
     PetscErrorCode MatCreateSubMatrices(PetscMat, PetscInt, PetscIS[], PetscIS[], PetscMatReuse, PetscMat*[])
     PetscErrorCode MatIncreaseOverlap(PetscMat, PetscInt, PetscIS[], PetscInt)
     PetscErrorCode MatGetDiagonalBlock(PetscMat, PetscMat*)
+    PetscErrorCode MatGetMultPetscSF(PetscMat, PetscSF*)
     PetscErrorCode MatGetLocalSubMatrix(PetscMat, PetscIS, PetscIS, PetscMat*)
     PetscErrorCode MatRestoreLocalSubMatrix(PetscMat, PetscIS, PetscIS, PetscMat*)
     PetscErrorCode MatDestroyMatrices(PetscInt, PetscMat*[])
@@ -396,6 +397,7 @@ cdef extern from * nogil:
     PetscErrorCode MatGetColumnVector(PetscMat, PetscVec, PetscInt)
 
     PetscErrorCode MatNorm(PetscMat, PetscNormType, PetscReal*)
+    PetscErrorCode MatNormApproximate(PetscMat, PetscNormType, PetscInt, PetscReal*)
 
     PetscErrorCode MatMult(PetscMat, PetscVec, PetscVec)
     PetscErrorCode MatMultAdd(PetscMat, PetscVec, PetscVec, PetscVec)

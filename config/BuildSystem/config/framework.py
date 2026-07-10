@@ -211,11 +211,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.conda_active = True
       self.addMakeMacro('CONDA_ACTIVE',1)
 
-    buf = 'Environmental variables'
-    for key,val in os.environ.items():
-      if key.find('KEY') > -1: continue
-      buf += '\n'+str(key)+'='+str(val)
-    self.logPrint(buf)
     def logPrintFilesInPath(path):
       for d in path:
         try:

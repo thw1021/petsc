@@ -67,6 +67,7 @@ PETSC_EXTERN PetscErrorCode DMPlexEqual(DM, DM, PetscBool *);
 PETSC_EXTERN PetscErrorCode DMPlexOrientPoint(DM, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode DMPlexOrient(DM);
 PETSC_EXTERN PetscErrorCode DMPlexOrientLabel(DM, DMLabel);
+PETSC_EXTERN PetscErrorCode DMPlexCheckOrientationLabel(DM, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexPreallocateOperator(DM, PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscInt[], Mat, PetscBool);
 PETSC_EXTERN PetscErrorCode DMPlexGetPointLocal(DM, PetscInt, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexPointLocalRead(DM, PetscInt, const PetscScalar *, void *);
@@ -207,7 +208,13 @@ PETSC_EXTERN PetscErrorCode DMPlexCheckCellShape(DM, PetscBool, PetscReal);
 PETSC_EXTERN PetscErrorCode DMPlexComputeOrthogonalQuality(DM, PetscFV, PetscReal, Vec *, DMLabel *);
 
 PETSC_EXTERN PetscErrorCode DMPlexTriangleSetOptions(DM, const char *);
+PETSC_EXTERN PetscErrorCode DMPlexTriangleSetAngleBound(DM, PetscReal);
+PETSC_EXTERN PetscErrorCode DMPlexTriangleGetAngleBound(DM, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMPlexTetgenSetOptions(DM, const char *);
+PETSC_EXTERN PetscErrorCode DMPlexTetgenSetRadiusEdgeBound(DM, PetscReal);
+PETSC_EXTERN PetscErrorCode DMPlexTetgenGetRadiusEdgeBound(DM, PetscReal *);
+PETSC_EXTERN PetscErrorCode DMPlexTetgenSetDihedralBound(DM, PetscReal);
+PETSC_EXTERN PetscErrorCode DMPlexTetgenGetDihedralBound(DM, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode DMPlexCreateFromFile(MPI_Comm, const char[], const char[], PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateExodus(MPI_Comm, PetscExodusIIInt, PetscBool, DM *);
@@ -290,7 +297,8 @@ PETSC_EXTERN PetscErrorCode DMGetEnclosurePoint(DM, DM, DMEnclosureType, PetscIn
 
 PETSC_EXTERN PetscErrorCode DMPlexLabelComplete(DM, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexLabelCompleteStar(DM, DMLabel);
-PETSC_EXTERN PetscErrorCode DMPlexLabelCohesiveComplete(DM, DMLabel, DMLabel, PetscInt, PetscBool, PetscBool, DM);
+PETSC_EXTERN PetscErrorCode DMPlexLabelCohesiveComplete(DM, DMLabel, DMLabel, PetscInt, PetscBool, DM);
+PETSC_EXTERN PetscErrorCode DMPlexLabelCohesiveCheck(DM, DMLabel, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexCheckLabel(DM, MPI_Op, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexReconcileLabel(DM, MPI_Op, PetscInt, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexLabelAddCells(DM, DMLabel);
@@ -321,6 +329,13 @@ PETSC_EXTERN PetscErrorCode DMPlexComputeProjection3Dto1D(PetscScalar[], PetscRe
 PETSC_EXTERN PetscErrorCode DMPlexComputeProjection3Dto2D(PetscInt, PetscScalar[], PetscReal[]);
 
 /* Point Location */
+/*S
+  PetscGridHash - Opaque uniform-cell spatial hash used by `DMPLEX` to accelerate point location, by mapping query points to a bucket of candidate mesh cells
+
+  Level: developer
+
+.seealso: `DMPLEX`, `PetscGridHashCreate()`, `PetscGridHashDestroy()`, `PetscGridHashGetEnclosingBox()`, `PetscGridHashEnlarge()`
+S*/
 typedef struct _n_PetscGridHash *PetscGridHash;
 PETSC_EXTERN PetscErrorCode      PetscGridHashCreate(MPI_Comm, PetscInt, const PetscScalar[], PetscGridHash *);
 PETSC_EXTERN PetscErrorCode      PetscGridHashEnlarge(PetscGridHash, const PetscScalar[]);
@@ -402,6 +417,16 @@ PETSC_EXTERN PetscErrorCode DMPlexRestoreFaceGeometry(DM, PetscInt, PetscInt, Ve
 PETSC_EXTERN PetscErrorCode DMPlexGetScale(DM, PetscUnit, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMPlexSetScale(DM, PetscUnit, PetscReal);
 
+/*S
+   JacActionCtx - Application context used by matrix-free `DMPLEX` examples to compute the action of a Jacobian at a fixed base state on a vector
+
+   Level: developer
+
+   Note:
+   Holds the `DM` defining the discretization, the base state vector `u` at which the Jacobian is linearized, an optional assembled `J` used as a preconditioner or for testing, and a pointer to the user's own application context. Created and consumed by example codes rather than the core PETSc library.
+
+.seealso: `DMPLEX`, `Mat`, `MATSHELL`, `DMPlexComputeJacobianActionByKey()`
+S*/
 typedef struct {
   DM    dm;
   Vec   u; /* The base vector for the Jacobian action J(u) x */
@@ -587,6 +612,13 @@ PETSC_EXTERN PetscErrorCode DMPlexPointQueueEmptyCollective(PetscObject, DMPlexP
 struct _n_DMPlexStorageVersion {
   int major, minor, subminor;
 };
+/*S
+  DMPlexStorageVersion - Opaque handle wrapping the (major, minor, subminor) version of the on-disk HDF5 storage format used by `DMPLEX` for reading and writing meshes
+
+  Level: developer
+
+.seealso: `DMPLEX`, `PetscViewerHDF5GetDMPlexStorageVersionReading()`, `PetscViewerHDF5SetDMPlexStorageVersionReading()`, `PetscViewerHDF5GetDMPlexStorageVersionWriting()`, `PetscViewerHDF5SetDMPlexStorageVersionWriting()`
+S*/
 typedef struct _n_DMPlexStorageVersion *DMPlexStorageVersion;
 
 PETSC_EXTERN PetscErrorCode PetscViewerHDF5GetDMPlexStorageVersionReading(PetscViewer, DMPlexStorageVersion *);

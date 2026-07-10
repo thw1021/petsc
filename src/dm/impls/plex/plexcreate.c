@@ -95,6 +95,7 @@ PetscErrorCode DMPlexCopyFlags(DM dmin, DM dmout)
   ((DM_Plex *)dmout->data)->printFEM        = ((DM_Plex *)dmin->data)->printFEM;
   ((DM_Plex *)dmout->data)->printFVM        = ((DM_Plex *)dmin->data)->printFVM;
   ((DM_Plex *)dmout->data)->printL2         = ((DM_Plex *)dmin->data)->printL2;
+  ((DM_Plex *)dmout->data)->printOrient     = ((DM_Plex *)dmin->data)->printOrient;
   ((DM_Plex *)dmout->data)->printLocate     = ((DM_Plex *)dmin->data)->printLocate;
   ((DM_Plex *)dmout->data)->printProject    = ((DM_Plex *)dmin->data)->printProject;
   ((DM_Plex *)dmout->data)->printCohesive   = ((DM_Plex *)dmin->data)->printCohesive;
@@ -2147,7 +2148,7 @@ PetscErrorCode DMPlexCreateWedgeBoxMesh(MPI_Comm comm, const PetscInt faces[], c
 }
 
 /*
-  DMPlexTensorPointLexicographic_Private - Returns all tuples of size 'len' with nonnegative integers that are all less than or equal to 'max' for that dimension.
+  DMPlexTensorPointLexicographic_Private - Returns all tuples of size `len` with nonnegative integers that are all less than or equal to `max` for that dimension.
 
   Input Parameters:
 + len - The length of the tuple
@@ -4474,6 +4475,9 @@ static PetscErrorCode DMPlexCreateBallMesh_Internal(DM dm, PetscInt dim, PetscRe
   PetscCall(DMPlexCreateSphereMesh_Internal(sdm, dim - 1, PETSC_TRUE, R));
   PetscCall(DMSetFromOptions(sdm));
   PetscCall(DMViewFromOptions(sdm, NULL, "-dm_view"));
+  PetscCall(DMPlexTriangleSetAngleBound(sdm, 30.));
+  PetscCall(DMPlexTetgenSetRadiusEdgeBound(sdm, 1.4));
+  PetscCall(DMPlexTetgenSetDihedralBound(sdm, 20.));
   PetscCall(DMPlexGenerate(sdm, NULL, PETSC_TRUE, &vol));
   PetscCall(DMDestroy(&sdm));
   PetscCall(DMPlexReplace_Internal(dm, &vol));
@@ -4510,6 +4514,107 @@ PetscErrorCode DMPlexCreateBallMesh(MPI_Comm comm, PetscInt dim, PetscReal R, DM
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));
   PetscCall(DMPlexCreateBallMesh_Internal(*dm, dim, R));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Build a 1D DMPlex boundary (PSLG) from the DIIID wall coordinates
+#define DIIID_NPTS 40
+static const PetscReal DIIID_WALL[][2] = {
+  // Outboard midplane -> upper outboard
+  {2.370, 0.000 },
+  {2.360, 0.200 },
+  {2.340, 0.400 },
+  {2.300, 0.600 },
+  {2.240, 0.800 },
+  {2.150, 0.950 },
+  {2.040, 1.080 },
+  {1.900, 1.180 },
+  // Upper dome
+  {1.750, 1.250 },
+  {1.600, 1.300 },
+  {1.450, 1.330 },
+  {1.300, 1.350 },
+  // Upper inboard
+  {1.180, 1.320 },
+  {1.100, 1.250 },
+  {1.050, 1.150 },
+  {1.020, 1.000 },
+  // Inboard straight section
+  {1.010, 0.800 },
+  {1.010, 0.600 },
+  {1.010, 0.400 },
+  {1.010, 0.200 },
+  {1.010, 0.000 },
+  {1.010, -0.200},
+  {1.010, -0.400},
+  {1.010, -0.600},
+  {1.010, -0.800},
+  // Lower inboard
+  {1.020, -1.000},
+  {1.050, -1.150},
+  {1.100, -1.250},
+  {1.180, -1.320},
+  // Lower dome
+  {1.300, -1.350},
+  {1.450, -1.330},
+  {1.600, -1.300},
+  {1.750, -1.250},
+  // Lower outboard
+  {1.900, -1.180},
+  {2.040, -1.080},
+  {2.150, -0.950},
+  {2.240, -0.800},
+  {2.300, -0.600},
+  {2.340, -0.400},
+  {2.360, -0.200},
+};
+
+static PetscErrorCode DMPlexCreateDIIIDBoundary_Private(MPI_Comm comm, DM *boundary)
+{
+  const PetscInt Nv   = DIIID_NPTS;
+  const PetscInt dim  = 1;
+  const PetscInt cdim = 2;
+  PetscInt       edges[DIIID_NPTS * 2];
+  PetscReal      coords[DIIID_NPTS * 2];
+
+  PetscFunctionBegin;
+  for (PetscInt v = 0; v < Nv; ++v) {
+    edges[v * 2 + 0] = v;
+    edges[v * 2 + 1] = (v + 1) % Nv;
+  }
+  for (PetscInt v = 0; v < Nv; ++v) {
+    coords[v * 2 + 0] = DIIID_WALL[v][0];
+    coords[v * 2 + 1] = DIIID_WALL[v][1];
+  }
+  PetscCall(DMPlexCreateFromCellListPetsc(comm, dim, Nv, Nv, 2, PETSC_FALSE, edges, cdim, coords, boundary));
+  {
+    DMLabel  label;
+    PetscInt pStart, pEnd;
+
+    PetscCall(DMCreateLabel(*boundary, "marker"));
+    PetscCall(DMGetLabel(*boundary, "marker", &label));
+    PetscCall(DMPlexGetChart(*boundary, &pStart, &pEnd));
+    for (PetscInt p = pStart; p < pEnd; ++p) PetscCall(DMLabelSetValue(label, p, 1));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexCreateDIIIDMesh_Internal(DM dm)
+{
+  DM          sdm, vol;
+  const char *prefix;
+
+  PetscFunctionBegin;
+  PetscCall(DMPlexCreateDIIIDBoundary_Private(PetscObjectComm((PetscObject)dm), &sdm));
+  PetscCall(DMPlexDistributeSetDefault(sdm, PETSC_FALSE));
+  PetscCall(DMGetOptionsPrefix(dm, &prefix));
+  PetscCall(DMSetOptionsPrefix(sdm, prefix));
+  PetscCall(DMAppendOptionsPrefix(sdm, "bd_"));
+  PetscCall(DMSetFromOptions(sdm));
+  PetscCall(DMViewFromOptions(sdm, NULL, "-dm_view"));
+  PetscCall(DMPlexGenerate(sdm, NULL, PETSC_TRUE, &vol));
+  PetscCall(DMDestroy(&sdm));
+  PetscCall(DMPlexReplace_Internal(dm, &vol));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4744,7 +4849,7 @@ static PetscErrorCode ProcessCohesiveLabel_Faces(DM dm, DMLabel label, PetscInt 
 
 PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, const char pre[], const char name[], const char *option[], const char *value[], PetscBool *flg);
 
-const char *const DMPlexShapes[] = {"box", "box_surface", "ball", "sphere", "cylinder", "schwarz_p", "gyroid", "doublet", "annulus", "hypercubic", "zbox", "unknown", "DMPlexShape", "DM_SHAPE_", NULL};
+const char *const DMPlexShapes[] = {"box", "box_surface", "ball", "sphere", "cylinder", "schwarz_p", "gyroid", "doublet", "annulus", "hypercubic", "zbox", "diiid", "unknown", "DMPlexShape", "DM_SHAPE_", NULL};
 
 static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOptionsObject, PetscBool *useCoordSpace, DM dm)
 {
@@ -5008,6 +5113,9 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
       PetscCall(DMPlexCreateHypercubicMesh_Internal(dm, dim, lower, upper, edges, overlap, bdt));
       PetscCall(PetscFree4(edges, lower, upper, bdt));
     } break;
+    case DM_SHAPE_DIIID: {
+      PetscCall(DMPlexCreateDIIIDMesh_Internal(dm));
+    } break;
     default:
       SETERRQ(comm, PETSC_ERR_SUP, "Domain shape %s is unsupported", DMPlexShapes[shape]);
     }
@@ -5039,22 +5147,28 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
   //   Faces are input, completed, and all points are marked with their depth
   PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_cohesive_label_", &option, NULL, &flg));
   if (flg) {
-    DMLabel   label;
-    PetscInt  points[1024], n, pStart, pEnd, Nl = 1;
-    PetscBool noCreate = PETSC_FALSE;
-    char      fulloption[PETSC_MAX_PATH_LEN];
-    char      name[PETSC_MAX_PATH_LEN];
-    size_t    len;
+    DMLabel    label;
+    PetscInt   points[1024], n, pStart, pEnd, Nl = 1;
+    PetscBool  noCreate = PETSC_FALSE;
+    char       fulloption[PETSC_MAX_PATH_LEN];
+    char       name[PETSC_MAX_PATH_LEN];
+    const char opt[]  = "dm_plex_cohesive_label_";
+    char      *suffix = NULL;
+    size_t     len;
 
     PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
-    PetscCall(PetscStrncpy(name, &option[23], PETSC_MAX_PATH_LEN));
+    PetscCall(PetscStrstr(option, opt, &suffix));
+    PetscCheck(suffix, comm, PETSC_ERR_PLIB, "Unexpected option name '%s'", option);
+    PetscCall(PetscStrncpy(name, suffix + (sizeof(opt) - 1), sizeof(name)));
     PetscCall(PetscStrlen(name, &len));
     if (name[len - 1] == '0') Nl = 10;
     for (PetscInt l = 0; l < Nl; ++l) {
       if (l > 0) name[len - 1] = (char)('0' + l);
       fulloption[0] = 0;
-      PetscCall(PetscStrlcat(fulloption, "-dm_plex_cohesive_label_", 32));
-      PetscCall(PetscStrlcat(fulloption, name, PETSC_MAX_PATH_LEN - 32));
+      PetscCall(PetscStrlcat(fulloption, "-", sizeof(fulloption)));
+      if (((PetscObject)dm)->prefix) PetscCall(PetscStrlcat(fulloption, ((PetscObject)dm)->prefix, sizeof(fulloption)));
+      PetscCall(PetscStrlcat(fulloption, opt, sizeof(fulloption)));
+      PetscCall(PetscStrlcat(fulloption, name, sizeof(fulloption)));
       n = 1024;
       PetscCall(PetscOptionsGetIntArray(NULL, ((PetscObject)dm)->prefix, fulloption, points, &n, &flg));
       if (!flg) break;
@@ -5085,8 +5199,6 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
         if (pStart >= pEnd) n = 0;
         PetscCall(ProcessCohesiveLabel_Faces(dm, label, n, points));
       }
-      PetscCall(DMPlexOrientLabel(dm, label));
-      PetscCall(DMPlexLabelCohesiveComplete(dm, label, NULL, 1, PETSC_FALSE, PETSC_FALSE, NULL));
     }
   }
   PetscCall(DMViewFromOptions(dm, NULL, "-created_dm_view"));
@@ -5108,6 +5220,7 @@ PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems Petsc
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_fvm", "Debug output level for all fvm computations", "DMPlexSNESComputeResidualFVM", 0, &mesh->printFVM, NULL, 0));
   PetscCall(PetscOptionsReal("-dm_plex_print_tol", "Tolerance for FEM output", "DMPlexSNESComputeResidualFEM", mesh->printTol, &mesh->printTol, NULL));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_l2", "Debug output level all L2 diff computations", "DMComputeL2Diff", 0, &mesh->printL2, NULL, 0));
+  PetscCall(PetscOptionsBoundedInt("-dm_plex_print_orient", "Debug output level all orientation computations", "DMPlexOrient", 0, &mesh->printOrient, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_locate", "Debug output level all point location computations", "DMLocatePoints", 0, &mesh->printLocate, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_project", "Debug output level all projection computations", "DMPlexProject", 0, &mesh->printProject, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_cohesive", "Debug output level all cohesive computations", "DMPlexLabelCohesiveComplete", 0, &mesh->printCohesive, NULL, 0));
@@ -5215,6 +5328,7 @@ PetscErrorCode DMSetFromOptions_Overlap_Plex(DM dm, PetscOptionItems PetscOption
 static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptionsObject)
 {
   PetscFunctionList    ordlist;
+  const char          *option;
   char                 oname[256];
   char                 sublabelname[PETSC_MAX_PATH_LEN] = "";
   DMReorderDefaultFlag reorder;
@@ -5393,7 +5507,16 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
 
     PetscCall(PetscOptionsInt("-dm_coord_petscspace_degree", "FEM degree for coordinate space", "", degree, &degree, NULL));
     PetscCall(DMGetCoordinateDegree_Internal(dm, &deg));
-    if (coordSpace && deg <= 1) PetscCall(DMPlexCreateCoordinateSpace(dm, degree, PETSC_FALSE, PETSC_TRUE));
+    if (coordSpace && deg <= 1) {
+      PetscPointFn *coordFunc;
+
+      PetscCall(DMPlexCreateCoordinateSpace(dm, degree, PETSC_FALSE, PETSC_TRUE));
+      PetscCall(DMPlexGetCoordinateMap(dm, &coordFunc));
+      if (coordFunc) {
+        PetscCall(DMPlexRemapGeometry(dm, 0.0, coordFunc));
+        PetscCall(DMPlexSetCoordinateMap(dm, coordFunc));
+      }
+    }
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     if (!coordSpace) {
       PetscDS      cds;
@@ -5420,6 +5543,37 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
     PetscCall(PetscOptionsInt("-dm_localize_height", "Localize edges and faces in addition to cells", "", height, &height, &flg));
     if (flg) PetscCall(DMPlexSetMaxProjectionHeight(cdm, height));
     if (localize) PetscCall(DMLocalizeCoordinates(dm));
+  }
+  // Handle cohesive label orientation and completion (this must be done after distribution)
+  PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_cohesive_label_", &option, NULL, &flg));
+  if (flg) {
+    DMLabel    label;
+    PetscInt   points[1024], n, Nl = 1;
+    char       fulloption[PETSC_MAX_PATH_LEN];
+    char       name[PETSC_MAX_PATH_LEN];
+    const char opt[]  = "dm_plex_cohesive_label_";
+    char      *suffix = NULL;
+    size_t     len;
+
+    PetscCall(PetscStrstr(option, opt, &suffix));
+    PetscCheck(suffix, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Unexpected option name '%s'", option);
+    PetscCall(PetscStrncpy(name, suffix + (sizeof(opt) - 1), sizeof(name)));
+    PetscCall(PetscStrlen(name, &len));
+    if (name[len - 1] == '0') Nl = 10;
+    for (PetscInt l = 0; l < Nl; ++l) {
+      if (l > 0) name[len - 1] = (char)('0' + l);
+      fulloption[0] = 0;
+      PetscCall(PetscStrlcat(fulloption, "-", sizeof(fulloption)));
+      if (((PetscObject)dm)->prefix) PetscCall(PetscStrlcat(fulloption, ((PetscObject)dm)->prefix, sizeof(fulloption)));
+      PetscCall(PetscStrlcat(fulloption, opt, sizeof(fulloption)));
+      PetscCall(PetscStrlcat(fulloption, name, sizeof(fulloption)));
+      n = 1024;
+      PetscCall(PetscOptionsGetIntArray(NULL, ((PetscObject)dm)->prefix, fulloption, points, &n, &flg));
+      if (!flg) break;
+      PetscCall(DMGetLabel(dm, name, &label));
+      PetscCall(DMPlexOrientLabel(dm, label));
+      PetscCall(DMPlexLabelCohesiveComplete(dm, label, NULL, 1, PETSC_FALSE, NULL));
+    }
   }
   /* Handle DMPlex refinement */
   remap = PETSC_TRUE;
@@ -5522,6 +5676,16 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
       case DM_COORD_MAP_NONE:
         mapFunc = coordMap_identity;
         break;
+      case DM_COORD_MAP_ROTATE:
+        mapFunc = coordMap_rotate;
+        if (!Np) {
+          Np = cdim * 2 + 1;
+          for (PetscInt d = 0; d < cdim * 2; ++d) params[d] = 0.;
+          params[cdim * 2 - 1] = 1.;
+          params[cdim * 2 + 0] = 0.;
+        }
+        PetscCheck(Np == cdim * 2 + 1, comm, PETSC_ERR_ARG_WRONG, "The rotate coordinate map must have cdim * 2 + 1 = %" PetscInt_FMT " parameters, not %" PetscInt_FMT, cdim * 2 + 1, Np);
+        break;
       case DM_COORD_MAP_SHEAR:
         mapFunc = coordMap_shear;
         if (!Np) {
@@ -5567,6 +5731,14 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
           params[2] = 1.;
         }
         PetscCheck(Np == 3, comm, PETSC_ERR_ARG_WRONG, "The sinusoidal coordinate map must have 3 parameters, not %" PetscInt_FMT, Np);
+        break;
+      case DM_COORD_MAP_TORUS:
+        mapFunc = coordMap_torus;
+        if (!Np) {
+          Np        = 1;
+          params[0] = 2.;
+        }
+        PetscCheck(Np == 1, comm, PETSC_ERR_ARG_WRONG, "The toroidal coordinate map must have 1 parameter, not %" PetscInt_FMT, Np);
         break;
       default:
         mapFunc = coordMap_identity;

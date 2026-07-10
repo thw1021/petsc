@@ -63,6 +63,7 @@ PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
   PetscCall(PetscObjectChangeTypeName((PetscObject)mat, NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatStoreValues_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatRetrieveValues_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatGetMultPetscSF_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatIsTranspose_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatResetPreallocation_C", NULL));
@@ -2697,6 +2698,35 @@ static PetscErrorCode MatEliminateZeros_MPIAIJ(Mat A, PetscBool keep)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetOrdering_MPIAIJ(Mat A, MatOrderingType type, IS *rperm, IS *cperm)
+{
+  Mat_MPIAIJ     *a = (Mat_MPIAIJ *)A->data;
+  IS              lrowperm, lcolperm;
+  PetscInt        i, rstart, rend, *idx;
+  const PetscInt *lidx;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetOrdering(a->A, type, &lrowperm, &lcolperm));
+  PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
+  /* Remap row index set to global space */
+  PetscCall(ISGetIndices(lrowperm, &lidx));
+  PetscCall(PetscMalloc1(rend - rstart, &idx));
+  for (i = 0; i + rstart < rend; i++) idx[i] = rstart + lidx[i];
+  PetscCall(ISRestoreIndices(lrowperm, &lidx));
+  PetscCall(ISDestroy(&lrowperm));
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)A), rend - rstart, idx, PETSC_OWN_POINTER, rperm));
+  PetscCall(ISSetPermutation(*rperm));
+  /* Remap column index set to global space */
+  PetscCall(ISGetIndices(lcolperm, &lidx));
+  PetscCall(PetscMalloc1(rend - rstart, &idx));
+  for (i = 0; i + rstart < rend; i++) idx[i] = rstart + lidx[i];
+  PetscCall(ISRestoreIndices(lcolperm, &lidx));
+  PetscCall(ISDestroy(&lcolperm));
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)A), rend - rstart, idx, PETSC_OWN_POINTER, cperm));
+  PetscCall(ISSetPermutation(*cperm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        MatGetRow_MPIAIJ,
                                        MatRestoreRow_MPIAIJ,
@@ -2843,7 +2873,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        MatADot_Default,
                                        /*144*/ MatANorm_Default,
                                        NULL,
-                                       NULL};
+                                       NULL,
+                                       MatGetOrdering_MPIAIJ};
 
 static PetscErrorCode MatStoreValues_MPIAIJ(Mat mat)
 {
@@ -4561,6 +4592,15 @@ PetscErrorCode MatMPIAIJGetSeqAIJ(Mat A, Mat *Ad, Mat *Ao, const PetscInt *colma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetMultPetscSF_MPIAIJ(Mat A, PetscSF *sf)
+{
+  Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
+
+  PetscFunctionBegin;
+  *sf = a->Mvctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIAIJ(MPI_Comm comm, Mat inmat, PetscInt n, MatReuse scall, Mat *outmat)
 {
   PetscInt     m, N, i, rstart, nnz, Ii;
@@ -5720,30 +5760,32 @@ PetscErrorCode MatGetBrowsOfAcols(Mat A, Mat B, MatReuse scall, IS *rowb, IS *co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-sowing-chars
 /*
-    MatGetBrowsOfAoCols_MPIAIJ - Creates a `MATSEQAIJ` matrix by taking rows of B that equal to nonzero columns
-    of the OFF-DIAGONAL portion of local A
+  MatGetBrowsOfAoCols_MPIAIJ - Creates a `MATSEQAIJ` matrix by taking rows of B that equal to nonzero columns
+  of the OFF-DIAGONAL portion of local A
 
-    Collective
+  Collective
 
-   Input Parameters:
-+    A,B - the matrices in `MATMPIAIJ` format
--    scall - either `MAT_INITIAL_MATRIX` or `MAT_REUSE_MATRIX`
+  Input Parameters:
++ A     - the first matrix in `MATMPIAIJ` format
+. B     - the second matrix in `MATMPIAIJ` format
+- scall - either `MAT_INITIAL_MATRIX` or `MAT_REUSE_MATRIX`
 
-   Output Parameter:
-+    startsj_s - starting point in B's sending j-arrays, saved for MAT_REUSE (or NULL)
-.    startsj_r - starting point in B's receiving j-arrays, saved for MAT_REUSE (or NULL)
-.    bufa_ptr - array for sending matrix values, saved for MAT_REUSE (or NULL)
--    B_oth - the sequential matrix generated with size aBn=a->B->cmap->n by B->cmap->N
+  Output Parameters:
++ startsj_s - starting point in B's sending j-arrays, saved for MAT_REUSE (or NULL)
+. startsj_r - starting point in B's receiving j-arrays, saved for MAT_REUSE (or NULL)
+. bufa_ptr  - array for sending matrix values, saved for MAT_REUSE (or NULL)
+- B_oth     - the sequential matrix generated with size aBn=a->B->cmap->n by B->cmap->N
 
-    Developer Note:
-    This directly accesses information inside the VecScatter associated with the matrix-vector product
-     for this matrix. This is not desirable..
+  Level: developer
 
-    Level: developer
+  Developer Note:
+  This directly accesses information inside the VecScatter associated with the matrix-vector product
+  for this matrix. This is not desirable.
 
+.seealso: [](ch_mat), `Mat`, `MATMPIAIJ`
 */
-
 PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A, Mat B, MatReuse scall, PetscInt **startsj_s, PetscInt **startsj_r, MatScalar **bufa_ptr, Mat *B_oth)
 {
   Mat_MPIAIJ        *a = (Mat_MPIAIJ *)A->data;
@@ -6850,6 +6892,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaij_mpiaij_C", MatProductSetFromOptions_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatGetMultPetscSF_C", MatGetMultPetscSF_MPIAIJ));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPIAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -7702,17 +7745,24 @@ static inline PetscErrorCode MatCollapseRows(Mat Amat, PetscInt start, PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-sowing-chars
 /*
- MatCreateGraph_Simple_AIJ - create simple scalar matrix (graph) from potentially blocked matrix
+  MatCreateGraph_Simple_AIJ - create simple scalar matrix (graph) from potentially blocked matrix
 
- Input Parameter:
- . Amat - matrix
- - symmetrize - make the result symmetric
- + scale - scale with diagonal
+  Input Parameters:
++ Amat       - matrix
+. symmetrize - make the result symmetric
+. scale      - scale with diagonal
+. filter     - threshold for filter
+. index_size - length of `index`
+- index      - indices of unknown purpose
 
- Output Parameter:
- . a_Gmat - output scalar graph >= 0
+  Output Parameter:
+. a_Gmat - output scalar graph >= 0
 
+  Level: developer
+
+.seealso: `MATAIJ`
 */
 PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmetrize, PetscBool scale, PetscReal filter, PetscInt index_size, PetscInt index[], Mat *a_Gmat)
 {

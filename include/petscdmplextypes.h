@@ -16,7 +16,9 @@
 . `DM_SHAPE_GYROID`      - The Gyroid triply periodic minimal surface
 . `DM_SHAPE_DOUBLET`     - The mesh of two cells of a specified type
 . `DM_SHAPE_ANNULUS`     - The area between two concentric spheres in dimension d
-- `DM_SHAPE_HYPERCUBIC`  - The skeleton of the tensor product of the intervals
+. `DM_SHAPE_HYPERCUBIC`  - The skeleton of the tensor product of the intervals
+. `DM_SHAPE_ZBOX`        - The box, tensor product of the intervals, in tensor order
+- `DM_SHAPE_DIIID`       - The poloidal cross-section of the DIII tokamak
 
   Level: beginner
 
@@ -34,6 +36,7 @@ typedef enum {
   DM_SHAPE_ANNULUS,
   DM_SHAPE_HYPERCUBIC,
   DM_SHAPE_ZBOX,
+  DM_SHAPE_DIIID,
   DM_SHAPE_UNKNOWN
 } DMPlexShape;
 PETSC_EXTERN const char *const DMPlexShapes[];
@@ -43,11 +46,13 @@ PETSC_EXTERN const char *const DMPlexShapes[];
 
   Values:
 + `DM_COORD_MAP_NONE`     - The identity map
+. `DM_COORD_MAP_ROTATE`   - Rotation about some axis
 . `DM_COORD_MAP_SHEAR`    - The shear (additive) map along some dimension
 . `DM_COORD_MAP_FLARE`    - The flare (multiplicative) map along some dimension
 . `DM_COORD_MAP_ANNULUS`  - The map from a rectangle to an annulus
 . `DM_COORD_MAP_SHELL`    - The map from a rectangular solid to an spherical shell
-- `DM_COORD_MAP_SINUSOID` - The map from a flat rectangle to a sinusoidal surface
+. `DM_COORD_MAP_SINUSOID` - The map from a flat rectangle to a sinusoidal surface
+- `DM_COORD_MAP_TORUS`    - The map from a periodic cylinder to a torus
 
   Level: beginner
 
@@ -55,11 +60,13 @@ PETSC_EXTERN const char *const DMPlexShapes[];
 E*/
 typedef enum {
   DM_COORD_MAP_NONE,
+  DM_COORD_MAP_ROTATE,
   DM_COORD_MAP_SHEAR,
   DM_COORD_MAP_FLARE,
   DM_COORD_MAP_ANNULUS,
   DM_COORD_MAP_SHELL,
   DM_COORD_MAP_SINUSOID,
+  DM_COORD_MAP_TORUS,
   DM_COORD_MAP_UNKNOWN
 } DMPlexCoordMap;
 PETSC_EXTERN const char *const DMPlexCoordMaps[];
@@ -83,6 +90,13 @@ typedef enum {
 } DMPlexCSRAlgorithm;
 PETSC_EXTERN const char *const DMPlexCSRAlgorithms[];
 
+/*S
+  DMPlexPointQueue - Simple FIFO queue of `DMPLEX` mesh-point indices used by traversal helpers such as label propagation
+
+  Level: developer
+
+.seealso: `DMPLEX`, `DMPlexPointQueueCreate()`, `DMPlexPointQueueDestroy()`, `DMPlexPointQueueEnqueue()`, `DMPlexPointQueueDequeue()`, `DMPlexPointQueueEmpty()`
+S*/
 typedef struct _n_DMPlexPointQueue *DMPlexPointQueue;
 struct _n_DMPlexPointQueue {
   PetscInt  size;   /* Size of the storage array */
