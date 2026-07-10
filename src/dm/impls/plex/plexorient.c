@@ -316,13 +316,13 @@ static PetscErrorCode DMPlexOrient_Serial(DM dm, IS cellIS, IS faceIS, PetscInt 
 . dm - The `DM`
 
   Note:
-  The orientation data for the `DM` are change in-place.
+  The orientation data for the `DM` are changed in-place.
 
   This routine will fail for non-orientable surfaces, such as the Moebius strip.
 
   Level: advanced
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
+.seealso: `DMPlexOrientLabel()`, [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
 @*/
 PetscErrorCode DMPlexOrient(DM dm)
 {
@@ -725,6 +725,24 @@ static PetscErrorCode CreateCellAndFaceIS_Private(DM dm, DMLabel label, IS *cell
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMPlexOrientLabel - Give a consistent orientation to the hypersurface marked by the `DMLabel` in the input mesh
+
+  Collective on dm
+
+  Input Parameters:
++ dm    - The `DM`
+- label - The `DMLabel`
+
+  Note:
+  The orientation data for the `DM` are changed in-place.
+
+  This routine will fail for non-orientable surfaces, such as the Moebius strip.
+
+  Level: advanced
+
+.seealso: `DMPlexOrient()`, [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
+@*/
 PetscErrorCode DMPlexOrientLabel(DM dm, DMLabel label)
 {
   IS cellIS, faceIS;
