@@ -14,6 +14,7 @@
 
 ## Configure/Build
 
+- Add `--download-cudss` and `--with-cudss-dir` configure options to support the NVIDIA cuDSS GPU-accelerated sparse direct solver library
 
 ## Sys
 
@@ -61,6 +62,8 @@
 
 ## Mat
 
+- Add `MATSOLVERCUDSS`, a sparse direct solver type backed by the NVIDIA cuDSS library, supporting LU and Cholesky factorization for sequential matrices on CUDA devices; registered for both `MATSEQAIJ` and `MATSEQAIJCUSPARSE`
+- Add `MatCUDSSSetUserPermutation()` to supply a user-defined reordering permutation to the cuDSS sparse direct solver
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
 - Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
 - Change `MatSeqAIJCUSPARSEGetIJ()`, `MatSeqAIJCUSPARSERestoreIJ()`, `MatSeqAIJHIPSPARSEGetIJ()` and `MatSeqAIJHIPSPARSERestoreIJ()` to return `PetscInt` indices instead of `int`
