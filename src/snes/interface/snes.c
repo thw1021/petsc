@@ -1800,7 +1800,7 @@ PetscErrorCode SNESSetKSP(SNES snes, KSP ksp)
   Level: developer
 
   Developer Note:
-  This is called by all the `SNESCreate_XXX()` routines.
+  This is called by the `SNESCreate()` and `SNESSetType()`routines.
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESDestroy()`, `SNESSetLagPreconditioner()`, `SNESSetLagJacobian()`,
           `PetscObjectParameterSetDefault()`
@@ -5036,9 +5036,11 @@ PetscErrorCode SNESSetType(SNES snes, SNESType type)
   /* It may happen the user has customized the line search before calling SNESSetType */
   if (((PetscObject)snes)->type_name) PetscCall(SNESLineSearchDestroy(&snes->linesearch));
 
+  /* Reinitialize default parameters */
+  PetscCall(SNESParametersInitialize(snes));
+
   /* Call the SNESCreate_XXX routine for this particular Nonlinear solver */
   snes->setupcalled = PETSC_FALSE;
-
   PetscCall(PetscObjectChangeTypeName((PetscObject)snes, type));
   PetscCall((*r)(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
