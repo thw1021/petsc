@@ -83,10 +83,9 @@ static PetscErrorCode TaoSetUpEW_Private(Tao tao)
   Level: developer
 
   Developer Note:
-  This is called by all the `TaoCreate_XXX()` routines.
+  This is called by the `TaoCreate()` and `TaoSetType()` routines.
 
-.seealso: [](ch_snes), `Tao`, `TaoSolve()`, `TaoDestroy()`,
-          `PetscObjectParameterSetDefault()`
+.seealso: [](ch_snes), `Tao`, `TaoSolve()`, `TaoDestroy()`, `PetscObjectParameterSetDefault()`
 @*/
 PetscErrorCode TaoParametersInitialize(Tao tao)
 {
@@ -2321,6 +2320,8 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   tao->setupcalled           = PETSC_FALSE;
   tao->uses_gradient         = PETSC_FALSE;
   tao->uses_hessian_matrices = PETSC_FALSE;
+
+  PetscCall(TaoParametersInitialize(tao));
 
   PetscCall((*create_xxx)(tao));
   PetscCall(PetscObjectChangeTypeName((PetscObject)tao, type));
