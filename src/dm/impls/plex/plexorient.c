@@ -322,7 +322,7 @@ static PetscErrorCode DMPlexOrient_Serial(DM dm, IS cellIS, IS faceIS, PetscInt 
 
   Level: advanced
 
-.seealso: `DMPlexOrientLabel()`, [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`, `DMPlexOrientLabel()`
 @*/
 PetscErrorCode DMPlexOrient(DM dm)
 {
