@@ -3,7 +3,7 @@
 PetscErrorCode DMCoarsen_Plex(DM dm, MPI_Comm comm, DM *dmCoarsened)
 {
   PetscFunctionBegin;
-  if (!dm->coarseMesh) PetscCall(DMPlexCoarsen_Internal(dm, NULL, NULL, NULL, &dm->coarseMesh));
+  PetscCall(DMPlexCoarsen_Internal(dm, NULL, NULL, NULL, &dm->coarseMesh));
   PetscCall(PetscObjectReference((PetscObject)dm->coarseMesh));
   *dmCoarsened = dm->coarseMesh;
   PetscFunctionReturn(PETSC_SUCCESS);
