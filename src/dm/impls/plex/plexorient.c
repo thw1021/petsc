@@ -741,7 +741,7 @@ static PetscErrorCode CreateCellAndFaceIS_Private(DM dm, DMLabel label, IS *cell
 
   Level: advanced
 
-.seealso: `DMPlexOrient()`, [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`, `DMPlexOrient()`
 @*/
 PetscErrorCode DMPlexOrientLabel(DM dm, DMLabel label)
 {
