@@ -315,7 +315,7 @@ static PetscErrorCode DMPlexOrient_Serial(DM dm, IS cellIS, IS faceIS, PetscInt 
   Input Parameter:
 . dm - The `DM`
 
-  Note:
+  Notes:
   The orientation data for the `DM` are changed in-place.
 
   This routine will fail for non-orientable surfaces, such as the Moebius strip.
