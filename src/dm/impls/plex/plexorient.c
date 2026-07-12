@@ -725,6 +725,24 @@ static PetscErrorCode CreateCellAndFaceIS_Private(DM dm, DMLabel label, IS *cell
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMPlexOrientLabel - Give a consistent orientation to the mesh subset described by a `DMLabel`
+
+  Not Collective
+
+  Input Parameters:
++ dm    - The `DM`
+- label - A `DMLabel` whose strata identify the cell (highest depth value present in the label) and face
+          (depth minus one) subset to be oriented
+
+  Level: advanced
+
+  Note:
+  Only the cells and faces marked by `label` are traversed. Points outside the labeled subset are left
+  unchanged. This routine will fail for non-orientable surfaces, such as the Moebius strip.
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLabel`, `DMPlexOrient()`, `DMPlexOrientPoint()`
+@*/
 PetscErrorCode DMPlexOrientLabel(DM dm, DMLabel label)
 {
   IS cellIS, faceIS;
