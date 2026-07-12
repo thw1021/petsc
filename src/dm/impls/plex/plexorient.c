@@ -734,7 +734,7 @@ static PetscErrorCode CreateCellAndFaceIS_Private(DM dm, DMLabel label, IS *cell
 + dm    - The `DM`
 - label - The `DMLabel`
 
-  Note:
+  Notes:
   The orientation data for the `DM` are changed in-place.
 
   This routine will fail for non-orientable surfaces, such as the Moebius strip.
