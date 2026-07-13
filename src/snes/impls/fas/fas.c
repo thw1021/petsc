@@ -631,14 +631,11 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
     PetscCall(MatInterpolate(interpolate, X_c, Xhat));
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
     if (monitorCorrection) PetscCall(VecNorm(X, NORM_2, &xonorm));
+    /* only apply if the user has configured a line search; otherwise plain full-step correction */
     if (fas->fastype == SNES_FAS_MULTIPLICATIVE && snes->linesearch) {
-      /* only apply if the user has configured a line search */
       PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &snes->norm, Xhat));
       SNESCheckLineSearchFailure(snes);
-    } else {
-      /* plain full-step correction, no line search configured */
-      PetscCall(VecAXPY(X, -1.0, Xhat));
-    }
+    } else PetscCall(VecAXPY(X, -1.0, Xhat));
     if (monitorCorrection) {
       PetscReal xnorm, inorm;
 
