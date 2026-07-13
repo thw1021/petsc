@@ -622,6 +622,42 @@ cdef class SNES(Object):
         CHKERR(PetscINCREF(smooth.obj))
         return smooth
 
+    def setFASCoarseCorrectionLineSearch(
+        self,
+        level: int,
+        SNESLineSearch linesearch=None) -> None:
+        """Set the line search for coarse correction on a level of a multiplicative FAS cycle.
+
+        Logically collective.
+
+        See Also
+        --------
+        getFASCoarseCorrectionLineSearch
+        petsc.SNESFASSetCoarseCorrectionLineSearch, petsc.SNESFAS
+
+        """
+        cdef PetscInt clevel = asInt(level)
+        cdef PetscSNESLineSearch ls = NULL
+        if linesearch is not None: ls = linesearch.snesls
+        CHKERR(SNESFASSetCoarseCorrectionLineSearch(self.snes, clevel, ls))
+
+    def getFASCoarseCorrectionLineSearch(self, level: int) -> SNESLineSearch:
+        """Return the line search for coarse correction on a level of a multiplicative FAS cycle.
+
+        Not collective.
+
+        See Also
+        --------
+        setFASCoarseCorrectionLineSearch
+        petsc.SNESFASGetCoarseCorrectionLineSearch, petsc.SNESFAS
+
+        """
+        cdef PetscInt clevel = asInt(level)
+        cdef SNESLineSearch linesearch = SNESLineSearch()
+        CHKERR(SNESFASGetCoarseCorrectionLineSearch(self.snes, clevel, &linesearch.snesls))
+        CHKERR(PetscINCREF(linesearch.obj))
+        return linesearch
+
     def getFASSmoother(self, level: int) -> SNES:
         """Return the smoother used at a given level of the FAS hierarchy.
 
