@@ -1164,3 +1164,72 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
   *total = fas->full_total;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  SNESFASSetCoarseCorrectionLineSearch - Set the line search applied to the coarse correction update in a multiplicative `SNESFAS` cycle.
+
+  Logically Collective
+
+  Input Parameters:
++ snes - the `SNESFAS` nonlinear multigrid context
+- ls   - the `SNESLineSearch` object to apply to the correction
+
+  Options Database Key:
+. -snes_fas_coarse_correction_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - set the type of the line search applied to the coarse correction update in multiplicative cycles
+
+  Level: advanced
+
+  Notes:
+  The coarse correction line search defaults to `SNESLINESEARCHNONE` (unit step, lambda=1),
+  which is equivalent to the original FAS correction X += I(x^c - Rx).
+  Setting a non-trivial type enables the MG-Opt damping strategy {cite}`nash2000mgopt`,
+  which is useful when monotonic decrease in the residual norm or energy functional is desired
+  (e.g., non-convex problems where the full coarse correction may overshoot without an explicit
+  convergence control strategy).
+  Passing `NULL` resets the line search to `SNESLINESEARCHNONE`.
+
+.seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `SNESGetLineSearch()`
+@*/
+PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch ls)
+{
+  SNES_FAS *fas = (SNES_FAS *)snes->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
+  if (fas->fastype != SNES_FAS_MULTIPLICATIVE) PetscCall(PetscInfo(snes, "SNESFASSetCoarseCorrectionLineSearch() has no effect unless the current SNESFASType is SNES_FAS_MULTIPLICATIVE (currently %s)\n", SNESFASTypes[fas->fastype]));
+  if (ls) {
+    PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 2);
+    PetscCall(PetscObjectReference((PetscObject)ls));
+    PetscCall(SNESLineSearchDestroy(&snes->linesearch));
+    snes->linesearch = ls;
+    PetscCall(SNESLineSearchSetSNES(snes->linesearch, snes));
+  } else {
+    PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
+    PetscCall(SNESLineSearchSetType(snes->linesearch, SNESLINESEARCHNONE));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESFASGetCoarseCorrectionLineSearch - Get the line search applied to the coarse correction update in a multiplicative `SNESFAS` cycle.
+
+  Not Collective
+
+  Input Parameter:
+. snes - the `SNESFAS` nonlinear multigrid context
+
+  Output Parameter:
+. ls - the `SNESLineSearch` object; its type defaults to `SNESLINESEARCHNONE` once configured by `SNESSetFromOptions()` or the first coarse correction
+
+  Level: advanced
+
+.seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASSetCoarseCorrectionLineSearch()`, `SNESLineSearch`
+@*/
+PetscErrorCode SNESFASGetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch *ls)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
+  PetscAssertPointer(ls, 2);
+  PetscCall(SNESGetLineSearch(snes, ls));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
