@@ -112,7 +112,7 @@ $ cd petsc
 ```
 
 :::{note}
-If git is not available one can download a release tarball.
+If Git is not available, one can download a release tarball.
 See {ref}`download documentation <doc_download>` for additional details.
 :::
 
