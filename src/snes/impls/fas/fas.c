@@ -184,7 +184,7 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
   PetscBool      flg = PETSC_FALSE, upflg = PETSC_FALSE, downflg = PETSC_FALSE, monflg = PETSC_FALSE, galerkinflg = PETSC_FALSE, continuationflg = PETSC_FALSE;
   SNESFASType    fastype;
   const char    *optionsprefix;
-  SNESLineSearch linesearch;
+  SNESLineSearch linesearch = NULL;
   PetscInt       m, n_up, n_down;
   SNES           next;
   PetscBool      isFine, lsFlg = PETSC_FALSE;
@@ -245,9 +245,11 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
   }
   PetscCall(PetscOptionsBool("-snes_fas_monitor_correction", "View the tau correction at each iteration", "SNESFASCoarseCorrection", fas->monitorCorrection, &fas->monitorCorrection, &flg));
   if (fas->fastype == SNES_FAS_MULTIPLICATIVE) {
-    PetscCall(SNESGetLineSearch(snes, &linesearch));
-    if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
-    PetscCall(PetscOptionsFList("-snes_fas_coarse_correction_linesearch_type", "Line search type for the coarse correction update in multiplicative FAS", "SNESLineSearchSetType", SNESLineSearchList, ((PetscObject)linesearch)->type_name, lstype, sizeof(lstype), &lsFlg));
+    const char *deft = SNESLINESEARCHNONE;
+
+    /* peek at snes->linesearch directly to avoid creating it unnecessarily */
+    if (snes->linesearch && ((PetscObject)snes->linesearch)->type_name) deft = ((PetscObject)snes->linesearch)->type_name;
+    PetscCall(PetscOptionsFList("-snes_fas_coarse_correction_linesearch_type", "Line search type for the coarse correction update in multiplicative FAS", "SNESLineSearchSetType", SNESLineSearchList, deft, lstype, sizeof(lstype), &lsFlg));
   }
 
   PetscOptionsHeadEnd();
@@ -261,7 +263,10 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
     PetscCall(SNESGetLineSearch(snes, &linesearch));
     if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
   }
-  if (lsFlg) PetscCall(SNESLineSearchSetType(linesearch, lstype));
+  if (lsFlg) {
+    PetscCall(SNESGetLineSearch(snes, &linesearch));
+    PetscCall(SNESLineSearchSetType(linesearch, lstype));
+  }
 
   /* recursive option setting for the smoothers */
   PetscCall(SNESFASCycleGetCorrection(snes, &next));
@@ -558,7 +563,6 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
   Vec                 X_c, Xo_c, F_c, B_c, Xhat;
   SNESConvergedReason reason;
   SNES                next;
-  SNESLineSearch      linesearch;
   Mat                 restrct, interpolate;
   SNES_FAS           *fasc;
 
@@ -627,14 +631,12 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
     PetscCall(MatInterpolate(interpolate, X_c, Xhat));
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
     if (monitorCorrection) PetscCall(VecNorm(X, NORM_2, &xonorm));
-    if (fas->fastype == SNES_FAS_MULTIPLICATIVE) {
-      PetscCall(SNESGetLineSearch(snes, &linesearch));
-      if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
-      PetscCall(SNESLineSearchApply(linesearch, X, F, &snes->norm, Xhat));
+    if (fas->fastype == SNES_FAS_MULTIPLICATIVE && snes->linesearch) {
+      /* only apply if the user has configured a line search */
+      PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &snes->norm, Xhat));
       SNESCheckLineSearchFailure(snes);
     } else {
-      /* SNES_FAS_FULL and SNES_FAS_KASKADE keep the original unconditional full-step
-         correction; the coarse correction line search is scoped to multiplicative cycles only */
+      /* plain full-step correction, no line search configured */
       PetscCall(VecAXPY(X, -1.0, Xhat));
     }
     if (monitorCorrection) {

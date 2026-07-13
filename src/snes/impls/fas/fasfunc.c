@@ -1192,13 +1192,17 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
 @*/
 PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch ls)
 {
+  SNES_FAS *fas = (SNES_FAS *)snes->data;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
-  if (ls) PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 2);
+  if (fas->fastype != SNES_FAS_MULTIPLICATIVE) PetscCall(PetscInfo(snes, "SNESFASSetCoarseCorrectionLineSearch() has no effect unless the current SNESFASType is SNES_FAS_MULTIPLICATIVE (currently %s)\n", SNESFASTypes[fas->fastype]));
   if (ls) {
+    PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 2);
     PetscCall(PetscObjectReference((PetscObject)ls));
     PetscCall(SNESLineSearchDestroy(&snes->linesearch));
     snes->linesearch = ls;
+    PetscCall(SNESLineSearchSetSNES(snes->linesearch, snes));
   } else {
     PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
     PetscCall(SNESLineSearchSetType(snes->linesearch, SNESLINESEARCHNONE));
@@ -1215,7 +1219,7 @@ PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch ls
 . snes - the `SNESFAS` nonlinear multigrid context
 
   Output Parameter:
-. ls - the `SNESLineSearch` object (defaults to `SNESLINESEARCHNONE`)
+. ls - the `SNESLineSearch` object; its type defaults to `SNESLINESEARCHNONE` once configured by `SNESSetFromOptions()` or the first coarse correction
 
   Level: advanced
 

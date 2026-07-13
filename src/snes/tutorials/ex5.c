@@ -886,6 +886,16 @@ int main(int argc, char **argv)
      requires: !single
 
    test:
+     suffix: 5_fas_full
+     args: -da_refine 3 -snes_type fas -snes_fas_type full -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_monitor_short -snes_converged_reason -snes_max_it 20
+     requires: !single
+
+   test:
+     suffix: 5_fas_kaskade
+     args: -da_refine 3 -snes_type fas -snes_fas_type kaskade -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_monitor_short -snes_converged_reason -snes_max_it 40
+     requires: !single
+
+   test:
      suffix: 5_fas_monitor
      args: -da_refine 1 -snes_type fas -snes_fas_monitor
      requires: !single
