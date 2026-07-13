@@ -558,6 +558,7 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
   Vec                 X_c, Xo_c, F_c, B_c, Xhat;
   SNESConvergedReason reason;
   SNES                next;
+  SNESLineSearch      linesearch;
   Mat                 restrct, interpolate;
   SNES_FAS           *fasc;
 
@@ -626,8 +627,16 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
     PetscCall(MatInterpolate(interpolate, X_c, Xhat));
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
     if (monitorCorrection) PetscCall(VecNorm(X, NORM_2, &xonorm));
-    PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &snes->norm, Xhat));
-    SNESCheckLineSearchFailure(snes);
+    if (fas->fastype == SNES_FAS_MULTIPLICATIVE) {
+      PetscCall(SNESGetLineSearch(snes, &linesearch));
+      if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
+      PetscCall(SNESLineSearchApply(linesearch, X, F, &snes->norm, Xhat));
+      SNESCheckLineSearchFailure(snes);
+    } else {
+      /* SNES_FAS_FULL and SNES_FAS_KASKADE keep the original unconditional full-step
+         correction; the coarse correction line search is scoped to multiplicative cycles only */
+      PetscCall(VecAXPY(X, -1.0, Xhat));
+    }
     if (monitorCorrection) {
       PetscReal xnorm, inorm;
 

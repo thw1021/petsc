@@ -1174,6 +1174,9 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
 + snes - the `SNESFAS` nonlinear multigrid context
 - ls   - the `SNESLineSearch` object to apply to the correction
 
+  Options Database Key:
+. -snes_fas_coarse_correction_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - set the type of the line search applied to the coarse correction update in multiplicative cycles
+
   Level: advanced
 
   Notes:
@@ -1184,8 +1187,6 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
   (e.g., non-convex problems where the full coarse correction may overshoot without an explicit
   convergence control strategy).
   Passing `NULL` resets the line search to `SNESLINESEARCHNONE`.
-
-  The line search type can also be changed from the options database via `-snes_fas_coarse_correction_linesearch_type`.
 
 .seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `SNESGetLineSearch()`
 @*/
@@ -1225,6 +1226,6 @@ PetscErrorCode SNESFASGetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch *l
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
   PetscAssertPointer(ls, 2);
-  *ls = snes->linesearch;
+  PetscCall(SNESGetLineSearch(snes, ls));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
