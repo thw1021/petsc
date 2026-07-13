@@ -245,10 +245,9 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
   }
   PetscCall(PetscOptionsBool("-snes_fas_monitor_correction", "View the tau correction at each iteration", "SNESFASCoarseCorrection", fas->monitorCorrection, &fas->monitorCorrection, &flg));
   if (fas->fastype == SNES_FAS_MULTIPLICATIVE) {
-    const char *deft = SNESLINESEARCHNONE;
     PetscCall(SNESGetLineSearch(snes, &linesearch));
-    if (((PetscObject)linesearch)->type_name) deft = ((PetscObject)linesearch)->type_name;
-    PetscCall(PetscOptionsFList("-snes_fas_coarse_correction_linesearch_type", "Line search type for the coarse correction update in multiplicative FAS", "SNESLineSearchSetType", SNESLineSearchList, deft, lstype, sizeof(lstype), &lsFlg));
+    if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
+    PetscCall(PetscOptionsFList("-snes_fas_coarse_correction_linesearch_type", "Line search type for the coarse correction update in multiplicative FAS", "SNESLineSearchSetType", SNESLineSearchList, ((PetscObject)linesearch)->type_name, lstype, sizeof(lstype), &lsFlg));
   }
 
   PetscOptionsHeadEnd();
@@ -259,9 +258,8 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
 
   /* set up the default line search for coarse grid corrections */
   if (fas->fastype == SNES_FAS_ADDITIVE) {
-    PetscBool hasLinesearch = (PetscBool)(snes->linesearch != NULL);
     PetscCall(SNESGetLineSearch(snes, &linesearch));
-    if (!hasLinesearch) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
+    if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
   }
   if (lsFlg) PetscCall(SNESLineSearchSetType(linesearch, lstype));
 
@@ -554,8 +552,9 @@ b^c = F^c(Rx) - R(F(x) - b)
  */
 static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
 {
-  PetscBool           monitorCorrection = ((SNES_FAS *)snes->data)->monitorCorrection;
-  PetscReal           xonorm = 0.0;
+  SNES_FAS           *fas               = (SNES_FAS *)snes->data;
+  PetscBool           monitorCorrection = fas->monitorCorrection;
+  PetscReal           xonorm            = 0.0;
   Vec                 X_c, Xo_c, F_c, B_c, Xhat;
   SNESConvergedReason reason;
   SNES                next;
@@ -941,20 +940,20 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
    solution of the fine problem elicits no correction from the coarse problem.
 
    Options Database Keys and Prefixes:
-+   -snes_fas_levels l                                    - The number of levels
-.   -snes_fas_cycles (1|2)                                - The number of cycles -- 1 for V, 2 for W
-.   -snes_fas_type (additive|multiplicative|full|kaskade) - Additive or multiplicative cycle
-.   -snes_fas_galerkin (true|false)                       - Form coarse problems by projection back upon the fine problem
-.   -snes_fas_smoothup u                                  - The number of iterations of the post-smoother
-.   -snes_fas_smoothdown d                                - The number of iterations of the pre-smoother
-.   -snes_fas_monitor                                     - Monitor progress of all of the levels
-.   -snes_fas_full_downsweep (true|false)                 - call the downsmooth on the initial downsweep of full FAS
-.   -snes_fas_coarse_correction_linesearch_type <type>    - set the type of the line search applied to the coarse correction update in multiplicative cycles (see `SNESFASGetCoarseCorrectionLineSearch()`)
-.   -fas_levels_snes_                                     - prefix for `SNES` options for all smoothers
-.   -fas_levels_cycle_snes_                               - prefix for `SNES` options for all cycles
-.   -fas_levels_i_snes_                                   - prefix `SNES` options for the smoothers on level i
-.   -fas_levels_i_cycle_snes_                             - prefix for `SNES` options for the cycle on level i
--   -fas_coarse_snes_                                     - prefix for `SNES` options for the coarsest smoother
++   -snes_fas_levels l                                                                      - The number of levels
+.   -snes_fas_cycles (1|2)                                                                  - The number of cycles -- 1 for V, 2 for W
+.   -snes_fas_type (additive|multiplicative|full|kaskade)                                   - Additive or multiplicative cycle
+.   -snes_fas_galerkin (true|false)                                                         - Form coarse problems by projection back upon the fine problem
+.   -snes_fas_smoothup u                                                                    - The number of iterations of the post-smoother
+.   -snes_fas_smoothdown d                                                                  - The number of iterations of the pre-smoother
+.   -snes_fas_monitor                                                                       - Monitor progress of all of the levels
+.   -snes_fas_full_downsweep (true|false)                                                   - call the downsmooth on the initial downsweep of full FAS
+.   -snes_fas_coarse_correction_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - set the type of the line search applied to the coarse correction update in multiplicative cycles (see `SNESFASGetCoarseCorrectionLineSearch()`)
+.   -fas_levels_snes_                                                                       - prefix for `SNES` options for all smoothers
+.   -fas_levels_cycle_snes_                                                                 - prefix for `SNES` options for all cycles
+.   -fas_levels_i_snes_                                                                     - prefix `SNES` options for the smoothers on level i
+.   -fas_levels_i_cycle_snes_                                                               - prefix for `SNES` options for the cycle on level i
+-   -fas_coarse_snes_                                                                       - prefix for `SNES` options for the coarsest smoother
 
    Level: beginner
 
@@ -984,8 +983,7 @@ M*/
 
 PETSC_EXTERN PetscErrorCode SNESCreate_FAS(SNES snes)
 {
-  SNES_FAS      *fas;
-  SNESLineSearch linesearch;
+  SNES_FAS *fas;
 
   PetscFunctionBegin;
   snes->ops->destroy        = SNESDestroy_FAS;
@@ -1029,8 +1027,5 @@ PETSC_EXTERN PetscErrorCode SNESCreate_FAS(SNES snes)
   fas->eventsmoothsolve    = 0;
   fas->eventresidual       = 0;
   fas->eventinterprestrict = 0;
-
-  PetscCall(SNESGetLineSearch(snes, &linesearch));
-  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

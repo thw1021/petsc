@@ -1194,9 +1194,9 @@ PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, SNESLineSearch ls
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
   if (ls) PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 2);
-  PetscCall(PetscObjectReference((PetscObject)ls));
-  PetscCall(SNESLineSearchDestroy(&snes->linesearch));
   if (ls) {
+    PetscCall(PetscObjectReference((PetscObject)ls));
+    PetscCall(SNESLineSearchDestroy(&snes->linesearch));
     snes->linesearch = ls;
   } else {
     PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
