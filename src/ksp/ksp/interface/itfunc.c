@@ -821,59 +821,172 @@ static PetscErrorCode KSPMonitorPauseFinal_Internal(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
+typedef struct {
+  Mat              mat, pmat;
+  PetscObjectState mat_state, pmat_state;
+  PetscBool        mat_scaled, pmat_scaled;
+} KSPRightDiagonalScaleContext;
+
+static PetscErrorCode KSPRightDiagonalScaleGetInverse_Private(KSP ksp, Mat mat, Mat pmat, PetscObjectState *state)
 {
-  PetscBool    flg = PETSC_FALSE, inXisinB = PETSC_FALSE, guess_zero;
+  PetscInt          n, N, mn, mN;
+  PetscBool         local_invalid = PETSC_FALSE, invalid;
+  const PetscScalar *values;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectStateGet((PetscObject)ksp->right_diagonal_scale, state));
+  PetscCall(VecGetLocalSize(ksp->right_diagonal_scale, &n));
+  PetscCall(VecGetSize(ksp->right_diagonal_scale, &N));
+  PetscCall(MatGetLocalSize(mat, NULL, &mn));
+  PetscCall(MatGetSize(mat, NULL, &mN));
+  PetscCheck(n == mn && N == mN, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_SIZ, "Right diagonal scale sizes (%" PetscInt_FMT ",%" PetscInt_FMT ") do not match operator column sizes (%" PetscInt_FMT ",%" PetscInt_FMT ")", n, N, mn, mN);
+  if (pmat != mat) {
+    PetscCall(MatGetLocalSize(pmat, NULL, &mn));
+    PetscCall(MatGetSize(pmat, NULL, &mN));
+    PetscCheck(n == mn && N == mN, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_SIZ, "Right diagonal scale sizes (%" PetscInt_FMT ",%" PetscInt_FMT ") do not match preconditioning matrix column sizes (%" PetscInt_FMT ",%" PetscInt_FMT ")", n, N, mn, mN);
+  }
+  if (*state == ksp->right_diagonal_scale_inv_state) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(VecGetArrayRead(ksp->right_diagonal_scale, &values));
+  for (PetscInt i = 0; i < n; ++i) {
+    if (values[i] == (PetscScalar)0.0 || PetscIsInfOrNanScalar(values[i])) {
+      local_invalid = PETSC_TRUE;
+      break;
+    }
+  }
+  PetscCall(VecRestoreArrayRead(ksp->right_diagonal_scale, &values));
+  PetscCallMPI(MPIU_Allreduce(&local_invalid, &invalid, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)ksp)));
+  PetscCheck(!invalid, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Right diagonal scale entries must be finite and nonzero");
+
+  if (!ksp->right_diagonal_scale_inv) PetscCall(VecDuplicate(ksp->right_diagonal_scale, &ksp->right_diagonal_scale_inv));
+  PetscCall(VecCopy(ksp->right_diagonal_scale, ksp->right_diagonal_scale_inv));
+  PetscCall(VecReciprocal(ksp->right_diagonal_scale_inv));
+  ksp->right_diagonal_scale_inv_state = *state;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPRightDiagonalScaleRestoreMatrices_Private(KSPRightDiagonalScaleContext *ctx, Vec inv)
+{
+  PetscErrorCode ierr = PETSC_SUCCESS, ierr1;
+
+  PetscFunctionBegin;
+  if (ctx->mat_scaled) {
+    ierr1 = MatDiagonalScale(ctx->mat, NULL, inv);
+    if (!ierr1) ierr1 = PetscObjectStateSet((PetscObject)ctx->mat, ctx->mat_state);
+    if (!ierr) ierr = ierr1;
+  }
+  if (ctx->pmat_scaled) {
+    ierr1 = MatDiagonalScale(ctx->pmat, NULL, inv);
+    if (!ierr1) ierr1 = PetscObjectStateSet((PetscObject)ctx->pmat, ctx->pmat_state);
+    if (!ierr) ierr = ierr1;
+  }
+  PetscFunctionReturn(ierr);
+}
+
+static PetscErrorCode KSPRightDiagonalScaleSetTemporaryStates_Private(KSP ksp, KSPRightDiagonalScaleContext *ctx, PetscBool mat_changed, PetscBool pmat_changed, PetscObjectState *mat_scaled_state, PetscObjectState *pmat_scaled_state)
+{
+  PetscObjectState state;
+
+  PetscFunctionBegin;
+  if (pmat_changed) {
+    PetscCall(PetscObjectStateGet((PetscObject)ctx->pmat, &state));
+    if (ctx->pmat == ksp->right_diagonal_scale_pmat && state == ksp->right_diagonal_scale_pmat_scaled_state) {
+      PetscCall(PetscObjectStateIncrease((PetscObject)ctx->pmat));
+      PetscCall(PetscObjectStateGet((PetscObject)ctx->pmat, &state));
+    }
+    *pmat_scaled_state = state;
+  } else {
+    PetscCall(PetscObjectStateSet((PetscObject)ctx->pmat, ksp->right_diagonal_scale_pmat_scaled_state));
+    *pmat_scaled_state = ksp->right_diagonal_scale_pmat_scaled_state;
+  }
+
+  if (ctx->mat == ctx->pmat) {
+    *mat_scaled_state = *pmat_scaled_state;
+  } else if (mat_changed) {
+    PetscCall(PetscObjectStateGet((PetscObject)ctx->mat, &state));
+    if (ctx->mat == ksp->right_diagonal_scale_mat && state == ksp->right_diagonal_scale_mat_scaled_state) {
+      PetscCall(PetscObjectStateIncrease((PetscObject)ctx->mat));
+      PetscCall(PetscObjectStateGet((PetscObject)ctx->mat, &state));
+    }
+    *mat_scaled_state = state;
+  } else {
+    PetscCall(PetscObjectStateSet((PetscObject)ctx->mat, ksp->right_diagonal_scale_mat_scaled_state));
+    *mat_scaled_state = ksp->right_diagonal_scale_mat_scaled_state;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPRightDiagonalScaleBegin_Private(KSP ksp, KSPRightDiagonalScaleContext *ctx)
+{
+  PetscObjectState scale_state, mat_scaled_state, pmat_scaled_state;
+  PetscBool        mat_changed, pmat_changed;
+  PetscErrorCode   ierr, ierr1;
+
+  PetscFunctionBegin;
+  PetscCall(PetscMemzero(ctx, sizeof(*ctx)));
+  PetscCall(PCGetOperators(ksp->pc, &ctx->mat, &ctx->pmat));
+  PetscCall(PetscObjectStateGet((PetscObject)ctx->mat, &ctx->mat_state));
+  if (ctx->pmat == ctx->mat) ctx->pmat_state = ctx->mat_state;
+  else PetscCall(PetscObjectStateGet((PetscObject)ctx->pmat, &ctx->pmat_state));
+  PetscCall(KSPRightDiagonalScaleGetInverse_Private(ksp, ctx->mat, ctx->pmat, &scale_state));
+
+  mat_changed = (scale_state != ksp->right_diagonal_scale_solve_state || ctx->mat != ksp->right_diagonal_scale_mat || ctx->mat_state != ksp->right_diagonal_scale_mat_state) ? PETSC_TRUE : PETSC_FALSE;
+  pmat_changed = (scale_state != ksp->right_diagonal_scale_solve_state || ctx->pmat != ksp->right_diagonal_scale_pmat || ctx->pmat_state != ksp->right_diagonal_scale_pmat_state) ? PETSC_TRUE : PETSC_FALSE;
+  if ((mat_changed || pmat_changed) && ksp->setupstage == KSP_SETUP_NEWRHS) ksp->setupstage = KSP_SETUP_NEWMATRIX;
+
+  ierr = MatDiagonalScale(ctx->pmat, NULL, ksp->right_diagonal_scale);
+  if (ierr) PetscFunctionReturn(ierr);
+  ctx->pmat_scaled = PETSC_TRUE;
+  if (ctx->mat != ctx->pmat) {
+    ierr = MatDiagonalScale(ctx->mat, NULL, ksp->right_diagonal_scale);
+    if (ierr) {
+      ierr1 = KSPRightDiagonalScaleRestoreMatrices_Private(ctx, ksp->right_diagonal_scale_inv);
+      if (ierr1) PetscCall(ierr1);
+      PetscFunctionReturn(ierr);
+    }
+    ctx->mat_scaled = PETSC_TRUE;
+  }
+
+  ierr = KSPRightDiagonalScaleSetTemporaryStates_Private(ksp, ctx, mat_changed, pmat_changed, &mat_scaled_state, &pmat_scaled_state);
+  if (ierr) {
+    ierr1 = KSPRightDiagonalScaleRestoreMatrices_Private(ctx, ksp->right_diagonal_scale_inv);
+    if (ierr1) PetscCall(ierr1);
+    PetscFunctionReturn(ierr);
+  }
+
+  ksp->right_diagonal_scale_solve_state       = scale_state;
+  ksp->right_diagonal_scale_mat               = ctx->mat;
+  ksp->right_diagonal_scale_pmat              = ctx->pmat;
+  ksp->right_diagonal_scale_mat_state         = ctx->mat_state;
+  ksp->right_diagonal_scale_pmat_state        = ctx->pmat_state;
+  ksp->right_diagonal_scale_mat_scaled_state  = mat_scaled_state;
+  ksp->right_diagonal_scale_pmat_scaled_state = pmat_scaled_state;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPRightDiagonalScaleEnd_Private(KSP ksp, KSPRightDiagonalScaleContext *ctx, PetscBool solution_scaled)
+{
+  PetscErrorCode ierr = PETSC_SUCCESS, ierr1;
+
+  PetscFunctionBegin;
+  if (solution_scaled) ierr = VecPointwiseMult(ksp->vec_sol, ksp->vec_sol, ksp->right_diagonal_scale);
+  ierr1 = KSPRightDiagonalScaleRestoreMatrices_Private(ctx, ksp->right_diagonal_scale_inv);
+  if (ierr1) PetscCall(ierr1);
+  PetscFunctionReturn(ierr);
+}
+
+static PetscErrorCode KSPSolve_Private_Inner(KSP ksp, PetscBool setup, PetscBool defer_reporting, PetscBool *solution_scaled)
+{
+  PetscBool    flg = PETSC_FALSE, guess_zero;
   Mat          mat, pmat;
-  MPI_Comm     comm;
   MatNullSpace nullsp;
   Vec          btmp, vec_rhs = NULL;
 
   PetscFunctionBegin;
-  level++;
-  comm = PetscObjectComm((PetscObject)ksp);
-  if (x && x == b) {
-    PetscCheck(ksp->guess_zero, comm, PETSC_ERR_ARG_INCOMP, "Cannot use x == b with nonzero initial guess");
-    PetscCall(VecDuplicate(b, &x));
-    inXisinB = PETSC_TRUE;
+  if (setup) {
+    PetscCall(KSPSetUp(ksp));
+    PetscCall(KSPSetUpOnBlocks(ksp));
   }
-  if (b) {
-    PetscCall(PetscObjectReference((PetscObject)b));
-    PetscCall(VecDestroy(&ksp->vec_rhs));
-    ksp->vec_rhs = b;
-  }
-  if (x) {
-    PetscCall(PetscObjectReference((PetscObject)x));
-    PetscCall(VecDestroy(&ksp->vec_sol));
-    ksp->vec_sol = x;
-  }
-
-  if (ksp->viewPre) PetscCall(ObjectView((PetscObject)ksp, ksp->viewerPre, ksp->formatPre));
-
-  /* reset the residual history list if requested */
-  if (ksp->res_hist_reset) ksp->res_hist_len = 0;
-  if (ksp->err_hist_reset) ksp->err_hist_len = 0;
-
-  /* KSPSetUp() scales the matrix if needed */
-  PetscCall(KSPSetUp(ksp));
-  PetscCall(KSPSetUpOnBlocks(ksp));
-
-  if (ksp->guess) {
-    PetscObjectState ostate, state;
-
-    PetscCall(KSPGuessSetUp(ksp->guess));
-    PetscCall(PetscObjectStateGet((PetscObject)ksp->vec_sol, &ostate));
-    PetscCall(KSPGuessFormGuess(ksp->guess, ksp->vec_rhs, ksp->vec_sol));
-    PetscCall(PetscObjectStateGet((PetscObject)ksp->vec_sol, &state));
-    if (state != ostate) {
-      ksp->guess_zero = PETSC_FALSE;
-    } else {
-      PetscCall(PetscInfo(ksp, "Using zero initial guess since the KSPGuess object did not change the vector\n"));
-      ksp->guess_zero = PETSC_TRUE;
-    }
-  }
-
-  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   PetscCall(VecSetErrorIfLocked(ksp->vec_sol, 3));
 
@@ -884,8 +997,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
     PetscCall(VecPointwiseMult(ksp->vec_rhs, ksp->vec_rhs, ksp->diagonal));
     /* second time in, but matrix was scaled back to original */
     if (ksp->dscalefix && ksp->dscalefix2) {
-      Mat mat, pmat;
-
       PetscCall(PCGetOperators(ksp->pc, &mat, &pmat));
       PetscCall(MatDiagonalScale(pmat, ksp->diagonal, ksp->diagonal));
       if (mat != pmat) PetscCall(MatDiagonalScale(mat, ksp->diagonal, ksp->diagonal));
@@ -918,11 +1029,8 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
     PetscCall(VecNormAvailable(ksp->vec_sol, NORM_2, &flg, &norm));
     if (flg && !norm) ksp->guess_zero = PETSC_TRUE;
   }
-  if (ksp->transpose_solve) {
-    PetscCall(MatGetNullSpace(mat, &nullsp));
-  } else {
-    PetscCall(MatGetTransposeNullSpace(mat, &nullsp));
-  }
+  if (ksp->transpose_solve) PetscCall(MatGetNullSpace(mat, &nullsp));
+  else PetscCall(MatGetTransposeNullSpace(mat, &nullsp));
   if (nullsp) {
     PetscCall(VecDuplicate(ksp->vec_rhs, &btmp));
     PetscCall(VecCopy(ksp->vec_rhs, btmp));
@@ -931,9 +1039,9 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
     ksp->vec_rhs = btmp;
   }
   PetscCall(VecLockReadPush(ksp->vec_rhs));
+  if (solution_scaled) *solution_scaled = PETSC_TRUE;
   PetscUseTypeMethod(ksp, solve);
-  PetscCall(KSPMonitorPauseFinal_Internal(ksp));
-
+  if (!defer_reporting) PetscCall(KSPMonitorPauseFinal_Internal(ksp));
   PetscCall(VecLockReadPop(ksp->vec_rhs));
   if (nullsp) {
     ksp->vec_rhs = vec_rhs;
@@ -942,16 +1050,18 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   ksp->guess_zero = guess_zero;
 
-  PetscCheck(ksp->reason, comm, PETSC_ERR_PLIB, "Internal error, solver returned without setting converged reason");
+  PetscCheck(ksp->reason, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "Internal error, solver returned without setting converged reason");
   ksp->totalits += ksp->its;
 
-  PetscCall(KSPConvergedReasonViewFromOptions(ksp));
-
-  if (ksp->viewRate) {
-    PetscCall(PetscViewerPushFormat(ksp->viewerRate, ksp->formatRate));
-    PetscCall(KSPConvergedRateView(ksp, ksp->viewerRate));
-    PetscCall(PetscViewerPopFormat(ksp->viewerRate));
+  if (!defer_reporting) {
+    PetscCall(KSPConvergedReasonViewFromOptions(ksp));
+    if (ksp->viewRate) {
+      PetscCall(PetscViewerPushFormat(ksp->viewerRate, ksp->formatRate));
+      PetscCall(KSPConvergedRateView(ksp, ksp->viewerRate));
+      PetscCall(PetscViewerPopFormat(ksp->viewerRate));
+    }
   }
+
   PetscCall(PCPostSolve(ksp->pc, ksp));
 
   /* diagonal scale solution if called for */
@@ -959,8 +1069,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
     PetscCall(VecPointwiseMult(ksp->vec_sol, ksp->vec_sol, ksp->diagonal));
     /* unscale right-hand side and matrix */
     if (ksp->dscalefix) {
-      Mat mat, pmat;
-
       PetscCall(VecReciprocal(ksp->diagonal));
       PetscCall(VecPointwiseMult(ksp->vec_rhs, ksp->vec_rhs, ksp->diagonal));
       PetscCall(PCGetOperators(ksp->pc, &mat, &pmat));
@@ -971,6 +1079,95 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
     }
   }
   PetscCall(PetscLogEventEnd(!ksp->transpose_solve ? KSP_Solve : KSP_SolveTranspose, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
+{
+  PetscBool    inXisinB = PETSC_FALSE, solution_scaled = PETSC_FALSE;
+  Mat          mat, pmat;
+  MPI_Comm     comm;
+  PetscErrorCode ierr, ierr1;
+  KSPRightDiagonalScaleContext scale_ctx;
+
+  PetscFunctionBegin;
+  level++;
+  comm = PetscObjectComm((PetscObject)ksp);
+  if (x && x == b) {
+    PetscCheck(ksp->guess_zero, comm, PETSC_ERR_ARG_INCOMP, "Cannot use x == b with nonzero initial guess");
+    PetscCall(VecDuplicate(b, &x));
+    inXisinB = PETSC_TRUE;
+  }
+  if (b) {
+    PetscCall(PetscObjectReference((PetscObject)b));
+    PetscCall(VecDestroy(&ksp->vec_rhs));
+    ksp->vec_rhs = b;
+  }
+  if (x) {
+    PetscCall(PetscObjectReference((PetscObject)x));
+    PetscCall(VecDestroy(&ksp->vec_sol));
+    ksp->vec_sol = x;
+  }
+
+  if (ksp->viewPre) PetscCall(ObjectView((PetscObject)ksp, ksp->viewerPre, ksp->formatPre));
+
+  /* reset the residual history list if requested */
+  if (ksp->res_hist_reset) ksp->res_hist_len = 0;
+  if (ksp->err_hist_reset) ksp->err_hist_len = 0;
+
+  PetscCheck(!ksp->right_diagonal_scale || !ksp->dscale, comm, PETSC_ERR_SUP, "KSP right diagonal scaling cannot be combined with KSPSetDiagonalScale()");
+
+  /* Without right scaling, preserve the usual setup-before-guess ordering. */
+  if (!ksp->right_diagonal_scale) {
+    PetscCall(KSPSetUp(ksp));
+    PetscCall(KSPSetUpOnBlocks(ksp));
+  }
+
+  if (ksp->guess) {
+    PetscObjectState ostate, state;
+
+    PetscCall(KSPGuessSetUp(ksp->guess));
+    PetscCall(PetscObjectStateGet((PetscObject)ksp->vec_sol, &ostate));
+    PetscCall(KSPGuessFormGuess(ksp->guess, ksp->vec_rhs, ksp->vec_sol));
+    PetscCall(PetscObjectStateGet((PetscObject)ksp->vec_sol, &state));
+    if (state != ostate) {
+      ksp->guess_zero = PETSC_FALSE;
+    } else {
+      PetscCall(PetscInfo(ksp, "Using zero initial guess since the KSPGuess object did not change the vector\n"));
+      ksp->guess_zero = PETSC_TRUE;
+    }
+  }
+
+  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
+
+  if (ksp->right_diagonal_scale) {
+    PetscCall(KSPRightDiagonalScaleBegin_Private(ksp, &scale_ctx));
+    solution_scaled = PETSC_TRUE;
+    if (!ksp->guess_zero) {
+      ierr = VecPointwiseMult(ksp->vec_sol, ksp->vec_sol, ksp->right_diagonal_scale_inv);
+      if (ierr) {
+        ierr1 = KSPRightDiagonalScaleRestoreMatrices_Private(&scale_ctx, ksp->right_diagonal_scale_inv);
+        if (ierr1) PetscCall(ierr1);
+        PetscCall(ierr);
+      }
+    }
+    ierr  = KSPSolve_Private_Inner(ksp, PETSC_TRUE, PETSC_TRUE, &solution_scaled);
+    ierr1 = KSPRightDiagonalScaleEnd_Private(ksp, &scale_ctx, solution_scaled);
+    if (ierr1) PetscCall(ierr1);
+    PetscCall(ierr);
+  } else {
+    PetscCall(KSPSolve_Private_Inner(ksp, PETSC_FALSE, PETSC_FALSE, NULL));
+  }
+
+  if (ksp->right_diagonal_scale) {
+    PetscCall(KSPMonitorPauseFinal_Internal(ksp));
+    PetscCall(KSPConvergedReasonViewFromOptions(ksp));
+    if (ksp->viewRate) {
+      PetscCall(PetscViewerPushFormat(ksp->viewerRate, ksp->formatRate));
+      PetscCall(KSPConvergedRateView(ksp, ksp->viewerRate));
+      PetscCall(PetscViewerPopFormat(ksp->viewerRate));
+    }
+  }
   if (ksp->guess) PetscCall(KSPGuessUpdate(ksp->guess, ksp->vec_rhs, ksp->vec_sol));
   PetscCall(KSPPostSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
@@ -1171,6 +1368,7 @@ PetscErrorCode KSPSolveTranspose(KSP ksp, Vec b, Vec x)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (b) PetscValidHeaderSpecific(b, VEC_CLASSID, 2);
   if (x) PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
+  PetscCheck(!ksp->right_diagonal_scale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "KSPSolveTranspose() does not support KSP right diagonal scaling");
   if (ksp->transpose.use_explicittranspose) {
     Mat J, Jpre;
     PetscCall(KSPGetOperators(ksp, &J, &Jpre));
@@ -1340,6 +1538,8 @@ static PetscErrorCode KSPMatSolve_Private(KSP ksp, Mat B, Mat X)
 PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscCheck(!ksp->right_diagonal_scale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "KSPMatSolve() does not support KSP right diagonal scaling");
   ksp->transpose_solve = PETSC_FALSE;
   PetscCall(KSPMatSolve_Private(ksp, B, X));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1368,6 +1568,8 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 PetscErrorCode KSPMatSolveTranspose(KSP ksp, Mat B, Mat X)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscCheck(!ksp->right_diagonal_scale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "KSPMatSolveTranspose() does not support KSP right diagonal scaling");
   if (ksp->transpose.use_explicittranspose) PetscCall(KSPUseExplicitTranspose_Private(ksp));
   else ksp->transpose_solve = PETSC_TRUE;
   PetscCall(KSPMatSolve_Private(ksp, B, X));
@@ -1501,6 +1703,16 @@ PetscErrorCode KSPReset(KSP ksp)
   PetscCall(VecDestroy(&ksp->vec_sol));
   PetscCall(VecDestroy(&ksp->diagonal));
   PetscCall(VecDestroy(&ksp->truediagonal));
+  PetscCall(VecDestroy(&ksp->right_diagonal_scale_inv));
+
+  ksp->right_diagonal_scale_inv_state         = -1;
+  ksp->right_diagonal_scale_solve_state       = -1;
+  ksp->right_diagonal_scale_mat               = NULL;
+  ksp->right_diagonal_scale_pmat              = NULL;
+  ksp->right_diagonal_scale_mat_state         = -1;
+  ksp->right_diagonal_scale_pmat_state        = -1;
+  ksp->right_diagonal_scale_mat_scaled_state  = -1;
+  ksp->right_diagonal_scale_pmat_scaled_state = -1;
 
   ksp->setupstage = KSP_SETUP_NEW;
   ksp->nmax       = PETSC_DECIDE;
@@ -1552,6 +1764,7 @@ PetscErrorCode KSPDestroy(KSP *ksp)
   }
 
   PetscCall(KSPGuessDestroy(&(*ksp)->guess));
+  PetscCall(VecDestroy(&(*ksp)->right_diagonal_scale));
   PetscCall(DMDestroy(&(*ksp)->dm));
   PetscCall(PCDestroy(&(*ksp)->pc));
   PetscCall(PetscFree((*ksp)->res_hist_alloc));
@@ -3023,6 +3236,83 @@ PetscErrorCode KSPGetDiagonalScaleFix(KSP ksp, PetscBool *fix)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscAssertPointer(fix, 2);
   *fix = ksp->dscalefix;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPSetRightDiagonalScale - Sets a diagonal change of variables for `KSPSolve()`.
+
+  Logically Collective
+
+  Input Parameters:
++ ksp   - the `KSP` context
+- scale - the right diagonal scale, or `NULL` to clear it
+
+  Level: advanced
+
+  Notes:
+  With a scale $D$, `KSPSolve()` solves $A D y = b$ and returns $x = D y$. Both the
+  operator and preconditioning matrix are right scaled while the `KSP` and `PC` are set up and
+  used, then restored before application post-solve callbacks and views.
+
+  Every entry of `scale` must be finite and nonzero. The vector is referenced, not copied, and
+  changes made to it take effect on the next solve.
+
+  Null spaces and near null spaces attached to the matrices must be invariant under $D$.
+
+  `KSPSolveTranspose()`, `KSPMatSolve()`, and `KSPMatSolveTranspose()` are not supported while a
+  right diagonal scale is set.
+
+.seealso: [](ch_ksp), `KSPGetRightDiagonalScale()`, `KSPSolve()`, `KSPSetOperators()`, `MatDiagonalScale()`
+@*/
+PetscErrorCode KSPSetRightDiagonalScale(KSP ksp, Vec scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  if (scale) {
+    PetscValidHeaderSpecific(scale, VEC_CLASSID, 2);
+    PetscCheckSameComm(ksp, 1, scale, 2);
+  }
+  PetscCall(PetscObjectReference((PetscObject)scale));
+  PetscCall(VecDestroy(&ksp->right_diagonal_scale));
+  ksp->right_diagonal_scale = scale;
+  PetscCall(VecDestroy(&ksp->right_diagonal_scale_inv));
+  ksp->right_diagonal_scale_inv_state         = -1;
+  ksp->right_diagonal_scale_solve_state       = -1;
+  ksp->right_diagonal_scale_mat               = NULL;
+  ksp->right_diagonal_scale_pmat              = NULL;
+  ksp->right_diagonal_scale_mat_state         = -1;
+  ksp->right_diagonal_scale_pmat_state        = -1;
+  ksp->right_diagonal_scale_mat_scaled_state  = -1;
+  ksp->right_diagonal_scale_pmat_scaled_state = -1;
+  if (ksp->setupstage == KSP_SETUP_NEWRHS) ksp->setupstage = KSP_SETUP_NEWMATRIX;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPGetRightDiagonalScale - Gets the diagonal change of variables used by `KSPSolve()`.
+
+  Not Collective
+
+  Input Parameter:
+. ksp - the `KSP` context
+
+  Output Parameter:
+. scale - the right diagonal scale, or `NULL` if none is set
+
+  Level: advanced
+
+  Note:
+  The returned vector is borrowed and should not be destroyed by the caller.
+
+.seealso: [](ch_ksp), `KSPSetRightDiagonalScale()`, `KSPSolve()`
+@*/
+PetscErrorCode KSPGetRightDiagonalScale(KSP ksp, Vec *scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscAssertPointer(scale, 2);
+  *scale = ksp->right_diagonal_scale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
