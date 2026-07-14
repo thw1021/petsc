@@ -624,29 +624,21 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -options_left: dump list of unused options\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -options_left no: don't dump list of unused options\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -memory_view: print memory usage at end of run\n"));
-#if PetscDefined(USE_LOG)
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -get_total_flops: total flops over all processors\n"));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view [:filename:[format]]: logging objects and events\n"));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_trace [filename]: prints trace of all PETSc calls\n"));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_exclude classname1,classname2,...: exclude given classes from logging\n"));
-  #if PetscDefined(HAVE_DEVICE)
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view_gpu_time: log the GPU time for each event\n"));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view_gpu_energy: log the GPU energy (estimated) for each event\n"));
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view_gpu_energy_meter: log the GPU energy (readings from meters) for each event\n"));
-  #endif
-  #if PetscDefined(HAVE_MPE)
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_mpe: Also create logfile viewable through Jumpshot\n"));
-  #endif
-  #if PetscDefined(HAVE_CUDA)
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_nvtx: Create nvtx event ranges for Nsight\n"));
-  #endif
-  #if PetscDefined(HAVE_HIP)
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_roctx: Create roctx event ranges for rocprof\n"));
-  #endif
-#endif
-#if PetscDefined(USE_INFO)
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -info [filename][:[~]c1,c2,...[:[~]self]]: print verbose information. c1 and c2 are class names\n"));
-#endif
+    if (PetscDefined(USE_LOG)) {
+      PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -get_total_flops: total flops over all processors\n"));
+      PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view [:filename:[format]]: logging objects and events\n"));
+      PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_trace [filename]: prints trace of all PETSc calls\n"));
+      PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_exclude classname1,classname2,...: exclude given classes from logging\n"));
+      if (PetscDefined(HAVE_DEVICE)) {
+        PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view_gpu_time: log the GPU time for each event\n"));
+        PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view_gpu_energy: log the GPU energy (estimated) for each event\n"));
+        PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_view_gpu_energy_meter: log the GPU energy (readings from meters) for each event\n"));
+      }
+      if (PetscDefined(HAVE_MPE)) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_mpe: Also create logfile viewable through Jumpshot\n"));
+      if (PetscDefined(HAVE_CUDA)) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_nvtx: Create nvtx event ranges for Nsight\n"));
+      if (PetscDefined(HAVE_HIP)) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -log_roctx: Create roctx event ranges for rocprof\n"));
+    }
+    if (PetscDefined(USE_INFO)) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -info [filename][:[~]c1,c2,...[:[~]self]]: print verbose information. c1 and c2 are class names\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -options_file filename: reads options from file\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -options_monitor: monitor options to standard output, including that set previously e.g. in option files\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, " -options_monitor_cancel: cancels all hardwired option monitors\n"));

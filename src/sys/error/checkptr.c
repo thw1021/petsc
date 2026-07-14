@@ -79,10 +79,8 @@ PetscBool PetscCheckPointer(const void *ptr, PetscDataType dtype)
   if (petsc_checkpointer_intensity < 1) return PETSC_TRUE;
   if (PetscDefined(HAVE_SANITIZER)) return PETSC_TRUE;
 
-  #if PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY)
   /* Skip the verbose check if we are inside a hot function. */
-  if (petscstack.hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
-  #endif
+  if (PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY) && petscstack.hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
 
   PetscSegvJumpBuf_set = PETSC_TRUE;
 

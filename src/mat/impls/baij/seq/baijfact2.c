@@ -465,8 +465,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqBAIJ(Mat fact, Mat A, IS isrow, IS iscol,
   PetscCall(PetscFreeSpaceDestroy(free_space_lvl));
   PetscCall(PetscFree2(bj_ptr, bjlvl_ptr));
 
-#if PetscDefined(USE_INFO)
-  {
+  if (PetscDefined(USE_INFO)) {
     PetscReal af = ((PetscReal)(bdiag[0] + 1)) / ((PetscReal)ai[n]);
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
     PetscCall(PetscInfo(A, "Run with -[sub_]pc_factor_fill %g or use \n", (double)af));
@@ -474,7 +473,6 @@ PetscErrorCode MatILUFactorSymbolic_SeqBAIJ(Mat fact, Mat A, IS isrow, IS iscol,
     PetscCall(PetscInfo(A, "for best performance.\n"));
     if (diagonal_fill) PetscCall(PetscInfo(A, "Detected and replaced %" PetscInt_FMT " missing diagonals\n", dcount));
   }
-#endif
 
   /* put together the new matrix */
   PetscCall(MatSeqBAIJSetPreallocation(fact, bs, MAT_SKIP_ALLOCATION, NULL));

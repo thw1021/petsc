@@ -29,9 +29,7 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
   PetscCall(MatGetLocalSize(A, &am, &an));
   PetscCall(MatGetLocalSize(B, &bm, &bn));
   PetscCheck(am == bm && an == bn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, bm, an, bn);
-#if PetscDefined(USE_INFO)
-  sop = sops[add + 3 * t];
-#endif
+  if (PetscDefined(USE_INFO)) sop = sops[add + 3 * t];
   PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)A), &rctx));
   PetscCall(PetscRandomSetFromOptions(rctx));
   if (t) {
@@ -150,9 +148,7 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
   }
   PetscCheck(an == bm && am == cm && bn == cn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A, B, C local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, an, bm, bn, cm, cn);
 
-#if PetscDefined(USE_INFO)
-  sop = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
-#endif
+  if (PetscDefined(USE_INFO)) sop = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
   PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)C), &rctx));
   PetscCall(PetscRandomSetFromOptions(rctx));
   if (Bt) {
