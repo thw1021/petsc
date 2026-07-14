@@ -149,6 +149,7 @@ PetscErrorCode KSPView(KSP ksp, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
     if (ksp->dscale) PetscCall(PetscViewerASCIIPrintf(viewer, "  diagonally scaled system\n"));
+    if (ksp->right_diagonal_scale) PetscCall(PetscViewerASCIIPrintf(viewer, "  right diagonally scaled system\n"));
     if (ksp->converged == KSPConvergedSkip || ksp->normtype == KSP_NORM_NONE) PetscCall(PetscViewerASCIIPrintf(viewer, "  not checking for convergence\n"));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  using %s norm type for convergence test\n", KSPNormTypes[ksp->normtype]));
   } else if (isbinary) {
@@ -844,6 +845,17 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
   ksp->work       = NULL;
   ksp->reason     = KSP_CONVERGED_ITERATING;
   ksp->setupstage = KSP_SETUP_NEW;
+
+  ksp->right_diagonal_scale                    = NULL;
+  ksp->right_diagonal_scale_inv                = NULL;
+  ksp->right_diagonal_scale_inv_state          = -1;
+  ksp->right_diagonal_scale_solve_state        = -1;
+  ksp->right_diagonal_scale_mat                = NULL;
+  ksp->right_diagonal_scale_pmat               = NULL;
+  ksp->right_diagonal_scale_mat_state          = -1;
+  ksp->right_diagonal_scale_pmat_state         = -1;
+  ksp->right_diagonal_scale_mat_scaled_state   = -1;
+  ksp->right_diagonal_scale_pmat_scaled_state  = -1;
 
   PetscCall(KSPNormSupportTableReset_Private(ksp));
 
