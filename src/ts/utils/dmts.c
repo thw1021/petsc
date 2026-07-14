@@ -1,5 +1,6 @@
 #include <petsc/private/tsimpl.h> /*I "petscts.h" I*/
 #include <petsc/private/dmimpl.h>
+#include <petsc/private/petscfptimpl.h>
 
 static PetscErrorCode DMTSUnsetRHSFunctionContext_DMTS(DMTS tsdm)
 {
@@ -101,14 +102,14 @@ PetscErrorCode DMTSView(DMTS kdm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
   if (isascii) {
-#if PetscDefined(SERIALIZE_FUNCTIONS)
-    const char *fname;
+    if (PetscDefined(SERIALIZE_FUNCTIONS)) {
+      const char *fname;
 
-    PetscCall(PetscFPTFind(kdm->ops->ifunction, &fname));
-    if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "  IFunction used by TS: %s\n", fname));
-    PetscCall(PetscFPTFind(kdm->ops->ijacobian, &fname));
-    if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "  IJacobian function used by TS: %s\n", fname));
-#endif
+      PetscCall(PetscFPTFind(*(void **)&kdm->ops->ifunction, &fname));
+      if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "  IFunction used by TS: %s\n", fname));
+      PetscCall(PetscFPTFind(*(void **)&kdm->ops->ijacobian, &fname));
+      if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "  IJacobian function used by TS: %s\n", fname));
+    }
   } else if (isbinary) {
     struct {
       TSIFunctionFn *ifunction;
