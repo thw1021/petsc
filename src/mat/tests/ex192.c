@@ -39,24 +39,24 @@ int main(int argc, char **args)
   if (!data_provided) { /* get matrices from PETSc distribution */
     PetscCall(PetscStrncpy(file, "${PETSC_DIR}/share/petsc/datafiles/matrices/", sizeof(file)));
     if (symm) {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       PetscCall(PetscStrlcat(file, "hpd-complex-", sizeof(file)));
 #else
       PetscCall(PetscStrlcat(file, "spd-real-", sizeof(file)));
 #endif
     } else {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       PetscCall(PetscStrlcat(file, "nh-complex-", sizeof(file)));
 #else
       PetscCall(PetscStrlcat(file, "ns-real-", sizeof(file)));
 #endif
     }
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
     PetscCall(PetscStrlcat(file, "int64-", sizeof(file)));
 #else
     PetscCall(PetscStrlcat(file, "int32-", sizeof(file)));
 #endif
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
     PetscCall(PetscStrlcat(file, "float32", sizeof(file)));
 #else
     PetscCall(PetscStrlcat(file, "float64", sizeof(file)));
@@ -113,12 +113,12 @@ int main(int argc, char **args)
 
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-solver", &isolver, NULL));
   switch (isolver) {
-#if defined(PETSC_HAVE_MUMPS)
+#if PetscDefined(HAVE_MUMPS)
   case 0:
     PetscCall(PetscStrncpy(solver, MATSOLVERMUMPS, sizeof(solver)));
     break;
 #endif
-#if defined(PETSC_HAVE_MKL_PARDISO)
+#if PetscDefined(HAVE_MKL_PARDISO)
   case 1:
     PetscCall(PetscStrncpy(solver, MATSOLVERMKL_PARDISO, sizeof(solver)));
     break;
@@ -128,7 +128,7 @@ int main(int argc, char **args)
     break;
   }
 
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   if (isolver == 0 && symm && !data_provided) { /* MUMPS (5.0.0) does not have support for Hermitian matrices, so make them symmetric */
     PetscScalar im  = PetscSqrtScalar((PetscScalar)-1.);
     PetscScalar val = -1.0;
