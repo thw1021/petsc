@@ -79,10 +79,8 @@ PetscBool PetscCheckPointer(const void *ptr, PetscDataType dtype)
   if (petsc_checkpointer_intensity < 1) return PETSC_TRUE;
   if (PetscDefined(HAVE_SANITIZER)) return PETSC_TRUE;
 
-  #if PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY)
   /* Skip the verbose check if we are inside a hot function. */
-  if (petscstack.hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
-  #endif
+  if (PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY) && petscstack.hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
 
   PetscSegvJumpBuf_set = PETSC_TRUE;
 
@@ -96,9 +94,9 @@ PetscBool PetscCheckPointer(const void *ptr, PetscDataType dtype)
       PETSC_UNUSED PetscInt x = *(volatile PetscInt *)ptr;
       break;
     }
-  #if defined(PETSC_USE_COMPLEX)
+  #if PetscDefined(USE_COMPLEX)
     case PETSC_SCALAR: { /* C++ is seriously dysfunctional with volatile std::complex. */
-    #if defined(PETSC_USE_CXXCOMPLEX)
+    #if PetscDefined(USE_CXXCOMPLEX)
       PetscReal                         xreal = ((volatile PetscReal *)ptr)[0], ximag = ((volatile PetscReal *)ptr)[1];
       PETSC_UNUSED volatile PetscScalar x = xreal + PETSC_i * ximag;
     #else
