@@ -671,7 +671,7 @@ PetscErrorCode PetscHDF5DataTypeToPetscDataType(hid_t htype, PetscDataType *ptyp
 {
   PetscFunctionBegin;
   if (htype == H5T_NATIVE_INT) *ptype = PetscDefined(USE_64BIT_INDICES) ? PETSC_LONG : PETSC_INT;
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
   else if (htype == H5T_NATIVE_LLONG) *ptype = PETSC_INT;
 #endif
   else if (htype == H5T_NATIVE_DOUBLE) *ptype = PETSC_DOUBLE;
