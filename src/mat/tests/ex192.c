@@ -39,28 +39,16 @@ int main(int argc, char **args)
   if (!data_provided) { /* get matrices from PETSc distribution */
     PetscCall(PetscStrncpy(file, "${PETSC_DIR}/share/petsc/datafiles/matrices/", sizeof(file)));
     if (symm) {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(PetscStrlcat(file, "hpd-complex-", sizeof(file)));
-#else
-      PetscCall(PetscStrlcat(file, "spd-real-", sizeof(file)));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscStrlcat(file, "hpd-complex-", sizeof(file)));
+      else PetscCall(PetscStrlcat(file, "spd-real-", sizeof(file)));
     } else {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(PetscStrlcat(file, "nh-complex-", sizeof(file)));
-#else
-      PetscCall(PetscStrlcat(file, "ns-real-", sizeof(file)));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscStrlcat(file, "nh-complex-", sizeof(file)));
+      else PetscCall(PetscStrlcat(file, "ns-real-", sizeof(file)));
     }
-#if PetscDefined(USE_64BIT_INDICES)
-    PetscCall(PetscStrlcat(file, "int64-", sizeof(file)));
-#else
-    PetscCall(PetscStrlcat(file, "int32-", sizeof(file)));
-#endif
-#if PetscDefined(USE_REAL_SINGLE)
-    PetscCall(PetscStrlcat(file, "float32", sizeof(file)));
-#else
-    PetscCall(PetscStrlcat(file, "float64", sizeof(file)));
-#endif
+    if (PetscDefined(USE_64BIT_INDICES)) PetscCall(PetscStrlcat(file, "int64-", sizeof(file)));
+    else PetscCall(PetscStrlcat(file, "int32-", sizeof(file)));
+    if (PetscDefined(USE_REAL_SINGLE)) PetscCall(PetscStrlcat(file, "float32", sizeof(file)));
+    else PetscCall(PetscStrlcat(file, "float64", sizeof(file)));
   }
 
   /* Load matrix A */
@@ -128,8 +116,7 @@ int main(int argc, char **args)
     break;
   }
 
-#if PetscDefined(USE_COMPLEX)
-  if (isolver == 0 && symm && !data_provided) { /* MUMPS (5.0.0) does not have support for Hermitian matrices, so make them symmetric */
+  if (PetscDefined(USE_COMPLEX) && isolver == 0 && symm && !data_provided) { /* MUMPS (5.0.0) does not have support for Hermitian matrices, so make them symmetric */
     PetscScalar im  = PetscSqrtScalar((PetscScalar)-1.);
     PetscScalar val = -1.0;
     val             = val + im;
@@ -137,7 +124,6 @@ int main(int argc, char **args)
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   }
-#endif
 
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "Solving with %s: nrhs %" PetscInt_FMT ", sym %d, herm %d, size schur %" PetscInt_FMT ", size mat %" PetscInt_FMT "\n", solver, nrhs, symm, herm, size_schur, m));
 

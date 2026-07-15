@@ -1096,11 +1096,7 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%% Size = %" PetscInt_FMT " %" PetscInt_FMT " \n", m, A->cmap->n));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%% Nonzeros = %" PetscInt_FMT " \n", a->nz));
-#if PetscDefined(USE_COMPLEX)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = zeros(%" PetscInt_FMT ",4);\n", a->nz + nofinalvalue));
-#else
-    PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = zeros(%" PetscInt_FMT ",3);\n", a->nz + nofinalvalue));
-#endif
+    PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = zeros(%" PetscInt_FMT ",%d);\n", a->nz + nofinalvalue, PetscDefined(USE_COMPLEX) ? 4 : 3));
     PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = [\n"));
 
     for (i = 0; i < m; i++) {
@@ -1151,15 +1147,16 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
   } else if (format == PETSC_VIEWER_ASCII_DENSE) {
     PetscInt    cnt = 0, jcnt;
     PetscScalar value;
-#if PetscDefined(USE_COMPLEX)
-    PetscBool realonly = PETSC_TRUE;
-    for (i = 0; i < a->sliidx[a->totalslices]; i++) {
-      if (PetscImaginaryPart(a->val[i]) != 0.0) {
-        realonly = PETSC_FALSE;
-        break;
+    PetscBool   realonly = PETSC_TRUE;
+
+    if (PetscDefined(USE_COMPLEX)) {
+      for (i = 0; i < a->sliidx[a->totalslices]; i++) {
+        if (PetscImaginaryPart(a->val[i]) != 0.0) {
+          realonly = PETSC_FALSE;
+          break;
+        }
       }
     }
-#endif
 
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
     for (i = 0; i < m; i++) {
@@ -1172,15 +1169,11 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
         } else {
           value = 0.0;
         }
-#if PetscDefined(USE_COMPLEX)
-        if (realonly) {
+        if (!PetscDefined(USE_COMPLEX) || realonly) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " %7.5e ", (double)PetscRealPart(value)));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, " %7.5e+%7.5e i ", (double)PetscRealPart(value), (double)PetscImaginaryPart(value)));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " %7.5e ", (double)value));
-#endif
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     }
@@ -1188,11 +1181,7 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
   } else if (format == PETSC_VIEWER_ASCII_MATRIXMARKET) {
     PetscInt fshift = 1;
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-#if PetscDefined(USE_COMPLEX)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%%%%MatrixMarket matrix coordinate complex general\n"));
-#else
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%%%%MatrixMarket matrix coordinate real general\n"));
-#endif
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%%%%MatrixMarket matrix coordinate %s general\n", PetscDefined(USE_COMPLEX) ? "complex" : "real"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n", m, A->cmap->n, a->nz));
     for (i = 0; i < m; i++) {
       shift = a->sliidx[i / a->sliceheight] + i % a->sliceheight;
@@ -1210,17 +1199,13 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
       PetscInt row;
       PetscCall(PetscViewerASCIIPrintf(viewer, "slice %" PetscInt_FMT ": %" PetscInt_FMT " %" PetscInt_FMT "\n", i, a->sliidx[i], a->sliidx[i + 1]));
       for (j = a->sliidx[i], row = 0; j < a->sliidx[i + 1]; j++, row = (row + 1) % a->sliceheight) {
-#if PetscDefined(USE_COMPLEX)
-        if (PetscImaginaryPart(a->val[j]) > 0.0) {
+        if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) > 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  %" PetscInt_FMT " %" PetscInt_FMT " %g + %g i\n", a->sliceheight * i + row, a->colidx[j], (double)PetscRealPart(a->val[j]), (double)PetscImaginaryPart(a->val[j])));
-        } else if (PetscImaginaryPart(a->val[j]) < 0.0) {
+        } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) < 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  %" PetscInt_FMT " %" PetscInt_FMT " %g - %g i\n", a->sliceheight * i + row, a->colidx[j], (double)PetscRealPart(a->val[j]), -(double)PetscImaginaryPart(a->val[j])));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  %" PetscInt_FMT " %" PetscInt_FMT " %g\n", a->sliceheight * i + row, a->colidx[j], (double)PetscRealPart(a->val[j])));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  %" PetscInt_FMT " %" PetscInt_FMT " %g\n", a->sliceheight * i + row, a->colidx[j], (double)a->val[j]));
-#endif
       }
     }
   } else {
@@ -1231,45 +1216,33 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
         /* L part */
         for (j = shift; j < a->diag[i]; j += a->sliceheight) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->val[shift + a->sliceheight * j]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[shift + a->sliceheight * j]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->colidx[j], (double)PetscRealPart(a->val[j]), (double)PetscImaginaryPart(a->val[j])));
-          } else if (PetscImaginaryPart(a->val[shift + a->sliceheight * j]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[shift + a->sliceheight * j]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->colidx[j], (double)PetscRealPart(a->val[j]), (double)(-PetscImaginaryPart(a->val[j]))));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[j], (double)PetscRealPart(a->val[j])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[j], (double)a->val[j]));
-#endif
         }
         /* diagonal */
         j = a->diag[i];
-#if PetscDefined(USE_COMPLEX)
-        if (PetscImaginaryPart(a->val[j]) > 0.0) {
+        if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) > 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->colidx[j], (double)PetscRealPart(1.0 / a->val[j]), (double)PetscImaginaryPart(1.0 / a->val[j])));
-        } else if (PetscImaginaryPart(a->val[j]) < 0.0) {
+        } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) < 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->colidx[j], (double)PetscRealPart(1.0 / a->val[j]), (double)(-PetscImaginaryPart(1.0 / a->val[j]))));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[j], (double)PetscRealPart(1.0 / a->val[j])));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[j], (double)(1 / a->val[j])));
-#endif
 
         /* U part */
         for (j = a->diag[i] + 1; j < shift + a->sliceheight * a->rlen[i]; j += a->sliceheight) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->val[j]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->colidx[j], (double)PetscRealPart(a->val[j]), (double)PetscImaginaryPart(a->val[j])));
-          } else if (PetscImaginaryPart(a->val[j]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->colidx[j], (double)PetscRealPart(a->val[j]), (double)(-PetscImaginaryPart(a->val[j]))));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[j], (double)PetscRealPart(a->val[j])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[j], (double)a->val[j]));
-#endif
         }
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       }
@@ -1278,17 +1251,13 @@ static PetscErrorCode MatView_SeqSELL_ASCII(Mat A, PetscViewer viewer)
         shift = a->sliidx[i / a->sliceheight] + i % a->sliceheight;
         PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
         for (j = 0; j < a->rlen[i]; j++) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->val[j]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->colidx[shift + a->sliceheight * j], (double)PetscRealPart(a->val[shift + a->sliceheight * j]), (double)PetscImaginaryPart(a->val[shift + a->sliceheight * j])));
-          } else if (PetscImaginaryPart(a->val[j]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->val[j]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->colidx[shift + a->sliceheight * j], (double)PetscRealPart(a->val[shift + a->sliceheight * j]), (double)-PetscImaginaryPart(a->val[shift + a->sliceheight * j])));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[shift + a->sliceheight * j], (double)PetscRealPart(a->val[shift + a->sliceheight * j])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->colidx[shift + a->sliceheight * j], (double)a->val[shift + a->sliceheight * j]));
-#endif
         }
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       }

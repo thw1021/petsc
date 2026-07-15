@@ -159,11 +159,8 @@ static PetscErrorCode KSPGuessFormGuess_POD(KSPGuess guess, Vec b, Vec x)
   if (pod->monitor) {
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "  KSPGuessPOD alphas = "));
     for (i = 0; i < pod->nen; i++) {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g + %g i", (double)PetscRealPart(pod->swork[i]), (double)PetscImaginaryPart(pod->swork[i])));
-#else
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g ", (double)pod->swork[i]));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g + %g i", (double)PetscRealPart(pod->swork[i]), (double)PetscImaginaryPart(pod->swork[i])));
+      else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g ", (double)PetscRealPart(pod->swork[i])));
     }
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "\n"));
   }
@@ -194,11 +191,8 @@ static PetscErrorCode KSPGuessFormGuess_POD(KSPGuess guess, Vec b, Vec x)
   if (pod->monitor) {
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "  KSPGuessPOD sol = "));
     for (i = 0; i < pod->nen; i++) {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g + %g i", (double)PetscRealPart(pod->swork[i + pod->n]), (double)PetscImaginaryPart(pod->swork[i + pod->n])));
-#else
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g ", (double)pod->swork[i + pod->n]));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g + %g i", (double)PetscRealPart(pod->swork[i + pod->n]), (double)PetscImaginaryPart(pod->swork[i + pod->n])));
+      else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "%g ", (double)PetscRealPart(pod->swork[i + pod->n])));
     }
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess), "\n"));
   }
@@ -237,11 +231,8 @@ static PetscErrorCode KSPGuessUpdate_POD(KSPGuess guess, Vec b, Vec x)
     PetscInt  off;
     PetscBool set, herm;
 
-#if PetscDefined(USE_COMPLEX)
-    PetscCall(MatIsHermitianKnown(guess->A, &set, &herm));
-#else
-    PetscCall(MatIsSymmetricKnown(guess->A, &set, &herm));
-#endif
+    if (PetscDefined(USE_COMPLEX)) PetscCall(MatIsHermitianKnown(guess->A, &set, &herm));
+    else PetscCall(MatIsSymmetricKnown(guess->A, &set, &herm));
     off = (guess->ksp->transpose_solve && (!set || !herm)) ? 2 * pod->n : pod->n;
 
     /* TODO: we may want to use a user-defined dot for the correlation matrix */

@@ -95,18 +95,14 @@ static PetscErrorCode TestMatrix(Mat A, Vec X, Vec Y, Vec Z)
   PetscCall(VecView(W2, viewer));
   PetscCall(VecAXPY(W2, -1.0, diff));
   PetscCall(VecNorm(W2, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultAdd(A,x,x,y) produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultAdd(A,x,x,y) produces incorrect result");
 
   PetscCall(VecSet(W2, -1.0));
   PetscCall(MatMultAdd(A, W1, W2, W2));
   PetscCall(VecView(W2, viewer));
   PetscCall(VecAXPY(W2, -1.0, diff));
   PetscCall(VecNorm(W2, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultAdd(A,x,y,y) produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultAdd(A,x,y,y) produces incorrect result");
   PetscCall(VecDestroy(&diff));
 
   PetscCall(PetscViewerASCIIPrintf(viewer, "Testing MatMultTransposeAdd\n"));
@@ -117,18 +113,14 @@ static PetscErrorCode TestMatrix(Mat A, Vec X, Vec Y, Vec Z)
   PetscCall(VecView(W2, viewer));
   PetscCall(VecAXPY(W2, -1.0, diff));
   PetscCall(VecNorm(W2, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTransposeAdd(A,x,x,y) produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTransposeAdd(A,x,x,y) produces incorrect result");
 
   PetscCall(VecSet(W2, -1.0));
   PetscCall(MatMultTransposeAdd(A, W1, W2, W2));
   PetscCall(VecView(W2, viewer));
   PetscCall(VecAXPY(W2, -1.0, diff));
   PetscCall(VecNorm(W2, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTransposeAdd(A,x,y,y) produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTransposeAdd(A,x,y,y) produces incorrect result");
   PetscCall(VecDestroy(&diff));
 
   PetscCall(PetscViewerASCIIPrintf(viewer, "Testing MatMultHermitianTransposeAdd\n"));
@@ -140,9 +132,7 @@ static PetscErrorCode TestMatrix(Mat A, Vec X, Vec Y, Vec Z)
   PetscCall(VecView(W3, viewer));
   PetscCall(VecAXPY(W3, -1.0, diff));
   PetscCall(VecNorm(W3, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultHermitianTransposeAdd(A,x,x,y) produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultHermitianTransposeAdd(A,x,x,y) produces incorrect result");
 
   PetscCall(VecSet(W3, -1.0));
   PetscCall(MatMultHermitianTransposeAdd(A, W1, W3, W3));
@@ -150,9 +140,7 @@ static PetscErrorCode TestMatrix(Mat A, Vec X, Vec Y, Vec Z)
   PetscCall(VecView(W3, viewer));
   PetscCall(VecAXPY(W3, -1.0, diff));
   PetscCall(VecNorm(W3, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultHermitianTransposeAdd(A,x,y,y) produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultHermitianTransposeAdd(A,x,y,y) produces incorrect result");
   PetscCall(VecDestroy(&diff));
 
   PetscCall(PetscViewerASCIIPrintf(viewer, "Testing MatGetDiagonal\n"));
@@ -161,9 +149,7 @@ static PetscErrorCode TestMatrix(Mat A, Vec X, Vec Y, Vec Z)
   PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 1, 2, diag, &diff));
   PetscCall(VecAXPY(diff, -1.0, W2));
   PetscCall(VecNorm(diff, NORM_2, &nrm));
-#if PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)
-  PetscCheck(nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatGetDiagonal() produces incorrect result");
-#endif
+  PetscCheck(!(PetscDefined(USE_REAL_DOUBLE) || PetscDefined(USE_REAL___FLOAT128)) || nrm <= PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatGetDiagonal() produces incorrect result");
   PetscCall(VecDestroy(&diff));
 
   /* MATSHELL does not support MatDiagonalSet after MatScale */

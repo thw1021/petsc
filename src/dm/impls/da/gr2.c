@@ -479,12 +479,12 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
     chunkDims[dim] = dims[dim];
     ++dim;
   }
-  #if PetscDefined(USE_COMPLEX)
-  dims[dim]      = 2;
-  maxDims[dim]   = dims[dim];
-  chunkDims[dim] = dims[dim];
-  ++dim;
-  #endif
+  if (PetscDefined(USE_COMPLEX)) {
+    dims[dim]      = 2;
+    maxDims[dim]   = dims[dim];
+    chunkDims[dim] = dims[dim];
+    ++dim;
+  }
 
   PetscCall(VecGetHDF5ChunkSize(da, xin, dimension, timestep, chunkDims));
 
@@ -527,9 +527,7 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
   if (dimension > 1) PetscCall(PetscHDF5IntCast(da->ys, offset + dim++));
   PetscCall(PetscHDF5IntCast(da->xs / da->w, offset + dim++));
   if (da->w > 1 || dim2) offset[dim++] = 0;
-  #if PetscDefined(USE_COMPLEX)
-  offset[dim++] = 0;
-  #endif
+  if (PetscDefined(USE_COMPLEX)) offset[dim++] = 0;
   dim = 0;
   if (timestep >= 0) {
     count[dim] = 1;
@@ -539,9 +537,7 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
   if (dimension > 1) PetscCall(PetscHDF5IntCast(da->ye - da->ys, count + dim++));
   PetscCall(PetscHDF5IntCast((da->xe - da->xs) / da->w, count + dim++));
   if (da->w > 1 || dim2) PetscCall(PetscHDF5IntCast(da->w, count + dim++));
-  #if PetscDefined(USE_COMPLEX)
-  count[dim++] = 2;
-  #endif
+  if (PetscDefined(USE_COMPLEX)) count[dim++] = 2;
   PetscCallHDF5Return(memspace, H5Screate_simple, ((int)dim, count, NULL));
   PetscCallHDF5Return(filespace, H5Dget_space, (dset_id));
   PetscCallHDF5(H5Sselect_hyperslab, (filespace, H5S_SELECT_SET, offset, NULL, count, NULL));
@@ -551,12 +547,10 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
   PetscCallHDF5(H5Fflush, (file_id, H5F_SCOPE_GLOBAL));
   PetscCall(VecRestoreArrayRead(xin, &x));
 
-  #if PetscDefined(USE_COMPLEX)
-  {
+  if (PetscDefined(USE_COMPLEX)) {
     PetscBool tru = PETSC_TRUE;
     PetscCall(PetscViewerHDF5WriteObjectAttribute(viewer, (PetscObject)xin, "complex", PETSC_BOOL, &tru));
   }
-  #endif
   if (timestepping) PetscCall(PetscViewerHDF5WriteObjectAttribute(viewer, (PetscObject)xin, "timestepping", PETSC_BOOL, &timestepping));
 
   /* Close/release resources */
@@ -808,9 +802,7 @@ static PetscErrorCode VecLoad_HDF5_DA(Vec xin, PetscViewer viewer)
   dim = (int)dimension;
   if (dd->w > 1) ++dim;
   if (timestep >= 0) ++dim;
-  #if PetscDefined(USE_COMPLEX)
-  ++dim;
-  #endif
+  if (PetscDefined(USE_COMPLEX)) ++dim;
 
   /* In this case the input dataset have one extra, unexpected dimension. */
   if (rdim == dim + 1) {
@@ -848,11 +840,11 @@ static PetscErrorCode VecLoad_HDF5_DA(Vec xin, PetscViewer viewer)
     PetscCall(PetscHDF5IntCast(dd->w, count + dim));
     ++dim;
   }
-  #if PetscDefined(USE_COMPLEX)
-  offset[dim] = 0;
-  count[dim]  = 2;
-  ++dim;
-  #endif
+  if (PetscDefined(USE_COMPLEX)) {
+    offset[dim] = 0;
+    count[dim]  = 2;
+    ++dim;
+  }
 
   /* Create the memory and filespace */
   PetscCallHDF5Return(memspace, H5Screate_simple, (dim, count, NULL));

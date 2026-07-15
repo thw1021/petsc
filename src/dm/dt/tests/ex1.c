@@ -169,11 +169,8 @@ int main(int argc, char **argv)
     minpoints = 1;
     PetscCall(PetscOptionsInt("-minpoints", "minimum points for thorough Gauss-Jacobi quadrature tests", "", minpoints, &minpoints, NULL));
     maxpoints = 30;
-#if PetscDefined(USE_REAL_SINGLE)
-    maxpoints = 5;
-#elif PetscDefined(USE_REAL___FLOAT128)
-    maxpoints = 20; /* just to make test faster */
-#endif
+    if (PetscDefined(USE_REAL_SINGLE)) maxpoints = 5;
+    else if (PetscDefined(USE_REAL___FLOAT128)) maxpoints = 20; /* just to make test faster */
     PetscCall(PetscOptionsInt("-maxpoints", "maximum points for thorough Gauss-Jacobi quadrature tests", "", maxpoints, &maxpoints, NULL));
   }
   PetscOptionsEnd();

@@ -250,9 +250,7 @@ static PetscErrorCode MatMKLPardisoSolveSchur_Private(Mat F, PetscScalar *B, Pet
   PetscCall(MatBindToCPU(Bmat, S->boundtocpu));
 #endif
 
-#if PetscDefined(USE_COMPLEX)
-  PetscCheck(mpardiso->iparm[12 - 1] != 1, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Hermitian solve not implemented yet");
-#endif
+  PetscCheck(!PetscDefined(USE_COMPLEX) || mpardiso->iparm[12 - 1] != 1, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Hermitian solve not implemented yet");
 
   switch (schurstatus) {
   case MAT_FACTOR_SCHUR_FACTORED:
@@ -1014,11 +1012,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_aij_mkl_pardiso(Mat A, MatFactorType ft
       PetscCheck(!isSeqSBAIJ, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for MKL PARDISO LU factor with SEQSBAIJ format! Use MAT_FACTOR_CHOLESKY instead");
       SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for MKL PARDISO LU with %s format", ((PetscObject)A)->type_name);
     }
-#if PetscDefined(USE_COMPLEX)
-    mat_mkl_pardiso->mtype = 13;
-#else
-    mat_mkl_pardiso->mtype = 11;
-#endif
+    mat_mkl_pardiso->mtype = PetscDefined(USE_COMPLEX) ? 13 : 11;
   } else {
     B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_AIJMKL_PARDISO;
     B->factortype                  = MAT_FACTOR_CHOLESKY;

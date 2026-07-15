@@ -2818,25 +2818,23 @@ PetscErrorCode MatMultHermitianTranspose(Mat mat, Vec x, Vec y)
   MatCheckPreallocated(mat, 1);
 
   PetscCall(PetscLogEventBegin(MAT_MultHermitianTranspose, mat, x, y, 0));
-#if PetscDefined(USE_COMPLEX)
-  if (mat->ops->multhermitiantranspose || (mat->hermitian == PETSC_BOOL3_TRUE && mat->ops->mult)) {
-    PetscCall(VecLockReadPush(x));
-    if (mat->ops->multhermitiantranspose) PetscUseTypeMethod(mat, multhermitiantranspose, x, y);
-    else PetscUseTypeMethod(mat, mult, x, y);
-    PetscCall(VecLockReadPop(x));
-  } else {
-    Vec w;
-    PetscCall(VecDuplicate(x, &w));
-    PetscCall(VecCopy(x, w));
-    PetscCall(VecConjugate(w));
-    PetscCall(MatMultTranspose(mat, w, y));
-    PetscCall(VecDestroy(&w));
-    PetscCall(VecConjugate(y));
-  }
-  PetscCall(PetscObjectStateIncrease((PetscObject)y));
-#else
-  PetscCall(MatMultTranspose(mat, x, y));
-#endif
+  if (PetscDefined(USE_COMPLEX)) {
+    if (mat->ops->multhermitiantranspose || (mat->hermitian == PETSC_BOOL3_TRUE && mat->ops->mult)) {
+      PetscCall(VecLockReadPush(x));
+      if (mat->ops->multhermitiantranspose) PetscUseTypeMethod(mat, multhermitiantranspose, x, y);
+      else PetscUseTypeMethod(mat, mult, x, y);
+      PetscCall(VecLockReadPop(x));
+    } else {
+      Vec w;
+      PetscCall(VecDuplicate(x, &w));
+      PetscCall(VecCopy(x, w));
+      PetscCall(VecConjugate(w));
+      PetscCall(MatMultTranspose(mat, w, y));
+      PetscCall(VecDestroy(&w));
+      PetscCall(VecConjugate(y));
+    }
+    PetscCall(PetscObjectStateIncrease((PetscObject)y));
+  } else PetscCall(MatMultTranspose(mat, x, y));
   PetscCall(PetscLogEventEnd(MAT_MultHermitianTranspose, mat, x, y, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
