@@ -131,9 +131,7 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
   SNESLineSearch       linesearch;
   SNESConvergedReason  reason;
   PC                   pc;
-#if defined(PETSC_USE_INFO)
-  PetscReal gnorm;
-#endif
+  PetscReal            gnorm;
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -224,9 +222,7 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
 
     if (PetscLogPrintInfo) PetscCall(SNESNEWTONLSCheckResidual_Private(snes, snes->jacobian, F, Y));
 
-#if defined(PETSC_USE_INFO)
-    gnorm = fnorm;
-#endif
+    if (PetscDefined(USE_INFO)) gnorm = fnorm;
     /* Compute a (scaled) negative update in the line search routine:
          X <- X - lambda*Y
        and evaluate F = function(X) (depends on the line search).
