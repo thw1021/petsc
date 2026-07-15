@@ -164,11 +164,7 @@ int main(int argc, char **args)
   PetscCall(MatSetValue(A, 0, 1, -5.0, INSERT_VALUES));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-#if PetscDefined(USE_COMPLEX)
-  PetscCall(MatSetOption(A, MAT_HERMITIAN, PETSC_FALSE));
-#else
-  PetscCall(MatSetOption(A, MAT_SYMMETRIC, PETSC_FALSE));
-#endif
+  PetscCall(MatSetOption(A, PetscDefined(USE_COMPLEX) ? MAT_HERMITIAN : MAT_SYMMETRIC, PETSC_FALSE));
 
   PetscCall(TestMatrix("LU T nonsym", At, nrhs, inplace, PETSC_FALSE));
   PetscCall(TestMatrix("LU HT nonsym", Aht, nrhs, inplace, PETSC_FALSE));

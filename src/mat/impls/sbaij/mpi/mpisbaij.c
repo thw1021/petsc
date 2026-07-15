@@ -155,16 +155,12 @@ PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, Ma
 
     PetscCall(MatGetRow(A, r, &ncols, &row, &vals));
     PetscCall(MatSetValues(B, 1, &r, ncols, row, vals, INSERT_VALUES));
-#if PetscDefined(USE_COMPLEX)
-    if (A->hermitian == PETSC_BOOL3_TRUE) {
+    if (PetscDefined(USE_COMPLEX) && A->hermitian == PETSC_BOOL3_TRUE) {
       PetscInt i;
       for (i = 0; i < ncols; i++) PetscCall(MatSetValue(B, row[i], r, PetscConj(vals[i]), INSERT_VALUES));
     } else {
       PetscCall(MatSetValues(B, ncols, row, 1, &r, vals, INSERT_VALUES));
     }
-#else
-    PetscCall(MatSetValues(B, ncols, row, 1, &r, vals, INSERT_VALUES));
-#endif
     PetscCall(MatRestoreRow(A, r, &ncols, &row, &vals));
   }
   PetscCall(MatRestoreRowUpperTriangular(A));

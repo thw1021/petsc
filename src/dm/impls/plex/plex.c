@@ -8070,11 +8070,8 @@ static PetscErrorCode DMPlexPrintMatSetValues(PetscViewer viewer, Mat A, PetscIn
   for (PetscInt i = 0; i < numRIndices; i++) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "[%d]", rank));
     for (PetscInt j = 0; j < numCIndices; j++) {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(PetscViewerASCIIPrintf(viewer, " (%g,%g)", (double)PetscRealPart(values[i * numCIndices + j]), (double)PetscImaginaryPart(values[i * numCIndices + j])));
-#else
-      PetscCall(PetscViewerASCIIPrintf(viewer, " %g", (double)values[i * numCIndices + j]));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, " (%g,%g)", (double)PetscRealPart(values[i * numCIndices + j]), (double)PetscImaginaryPart(values[i * numCIndices + j])));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, " %g", (double)values[i * numCIndices + j]));
     }
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   }

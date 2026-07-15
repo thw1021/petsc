@@ -92,11 +92,7 @@ static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5R
     const PetscInt *range;
     MPI_Comm        comm;
 
-#if PetscDefined(USE_64BIT_INDICES)
-    inttype = H5T_NATIVE_LLONG;
-#else
-    inttype = H5T_NATIVE_INT;
-#endif
+    inttype = PetscDefined(USE_64BIT_INDICES) ? H5T_NATIVE_LLONG : H5T_NATIVE_INT;
     PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
     PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)viewer), &cmap));
     cmap->bs = 3;

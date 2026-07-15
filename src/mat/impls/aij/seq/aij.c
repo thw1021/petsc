@@ -740,28 +740,18 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%% Size = %" PetscInt_FMT " %" PetscInt_FMT " \n", m, A->cmap->n));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%% Nonzeros = %" PetscInt_FMT " \n", a->nz));
-#if PetscDefined(USE_COMPLEX)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = zeros(%" PetscInt_FMT ",4);\n", a->nz + nofinalvalue));
-#else
-    PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = zeros(%" PetscInt_FMT ",3);\n", a->nz + nofinalvalue));
-#endif
+    PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = zeros(%" PetscInt_FMT ",%d);\n", a->nz + nofinalvalue, PetscDefined(USE_COMPLEX) ? 4 : 3));
     PetscCall(PetscViewerASCIIPrintf(viewer, "zzz = [\n"));
 
     for (i = 0; i < m; i++) {
       for (j = a->i[i]; j < a->i[i + 1]; j++) {
-#if PetscDefined(USE_COMPLEX)
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e %18.16e\n", i + 1, a->j[j] + 1, (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e\n", i + 1, a->j[j] + 1, (double)a->a[j]));
-#endif
+        if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e %18.16e\n", i + 1, a->j[j] + 1, (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e\n", i + 1, a->j[j] + 1, (double)a->a[j]));
       }
     }
     if (nofinalvalue) {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e %18.16e\n", m, A->cmap->n, 0., 0.));
-#else
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e\n", m, A->cmap->n, 0.0));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e %18.16e\n", m, A->cmap->n, 0., 0.));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT "  %18.16e\n", m, A->cmap->n, 0.0));
     }
     PetscCall(PetscObjectGetName((PetscObject)A, &name));
     PetscCall(PetscViewerASCIIPrintf(viewer, "];\n %s = spconvert(zzz);\n", name));
@@ -771,17 +761,13 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
     for (i = 0; i < m; i++) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
       for (j = a->i[i]; j < a->i[i + 1]; j++) {
-#if PetscDefined(USE_COMPLEX)
-        if (PetscImaginaryPart(a->a[j]) > 0.0 && PetscRealPart(a->a[j]) != 0.0) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-        } else if (PetscImaginaryPart(a->a[j]) < 0.0 && PetscRealPart(a->a[j]) != 0.0) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)-PetscImaginaryPart(a->a[j])));
-        } else if (PetscRealPart(a->a[j]) != 0.0) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(a->a[j])));
-        }
-#else
-        if (a->a[j] != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)a->a[j]));
-#endif
+        if (PetscDefined(USE_COMPLEX)) {
+          if (PetscImaginaryPart(a->a[j]) > 0.0 && PetscRealPart(a->a[j]) != 0.0) {
+            PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
+          } else if (PetscImaginaryPart(a->a[j]) < 0.0 && PetscRealPart(a->a[j]) != 0.0) {
+            PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)-PetscImaginaryPart(a->a[j])));
+          } else if (PetscRealPart(a->a[j]) != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(a->a[j])));
+        } else if (a->a[j] != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)a->a[j]));
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     }
@@ -794,11 +780,7 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
       sptr[i] = nzd + 1;
       for (j = a->i[i]; j < a->i[i + 1]; j++) {
         if (a->j[j] >= i) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->a[j]) != 0.0 || PetscRealPart(a->a[j]) != 0.0) nzd++;
-#else
-          if (a->a[j] != 0.0) nzd++;
-#endif
+          if (PetscDefined(USE_COMPLEX) ? (PetscImaginaryPart(a->a[j]) != 0.0 || PetscRealPart(a->a[j]) != 0.0) : a->a[j] != 0.0) nzd++;
         }
       }
     }
@@ -831,11 +813,9 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
     for (i = 0; i < m; i++) {
       for (j = a->i[i]; j < a->i[i + 1]; j++) {
         if (a->j[j] >= i) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->a[j]) != 0.0 || PetscRealPart(a->a[j]) != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " %18.16e %18.16e ", (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-#else
-          if (a->a[j] != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " %18.16e ", (double)a->a[j]));
-#endif
+          if (PetscDefined(USE_COMPLEX)) {
+            if (PetscImaginaryPart(a->a[j]) != 0.0 || PetscRealPart(a->a[j]) != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " %18.16e %18.16e ", (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
+          } else if (a->a[j] != 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, " %18.16e ", (double)a->a[j]));
         }
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
@@ -844,16 +824,16 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
   } else if (format == PETSC_VIEWER_ASCII_DENSE) {
     PetscInt    cnt = 0, jcnt;
     PetscScalar value;
-#if PetscDefined(USE_COMPLEX)
-    PetscBool realonly = PETSC_TRUE;
+    PetscBool   realonly = PETSC_TRUE;
 
-    for (i = 0; i < a->i[m]; i++) {
-      if (PetscImaginaryPart(a->a[i]) != 0.0) {
-        realonly = PETSC_FALSE;
-        break;
+    if (PetscDefined(USE_COMPLEX)) {
+      for (i = 0; i < a->i[m]; i++) {
+        if (PetscImaginaryPart(a->a[i]) != 0.0) {
+          realonly = PETSC_FALSE;
+          break;
+        }
       }
     }
-#endif
 
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
     for (i = 0; i < m; i++) {
@@ -865,15 +845,11 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
         } else {
           value = 0.0;
         }
-#if PetscDefined(USE_COMPLEX)
-        if (realonly) {
+        if (!PetscDefined(USE_COMPLEX) || realonly) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " %7.5e ", (double)PetscRealPart(value)));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, " %7.5e+%7.5e i ", (double)PetscRealPart(value), (double)PetscImaginaryPart(value)));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " %7.5e ", (double)value));
-#endif
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     }
@@ -881,19 +857,12 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
   } else if (format == PETSC_VIEWER_ASCII_MATRIXMARKET) {
     PetscInt fshift = 1;
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-#if PetscDefined(USE_COMPLEX)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%%%%MatrixMarket matrix coordinate complex general\n"));
-#else
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%%%%MatrixMarket matrix coordinate real general\n"));
-#endif
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%%%%MatrixMarket matrix coordinate %s general\n", PetscDefined(USE_COMPLEX) ? "complex" : "real"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n", m, A->cmap->n, a->nz));
     for (i = 0; i < m; i++) {
       for (j = a->i[i]; j < a->i[i + 1]; j++) {
-#if PetscDefined(USE_COMPLEX)
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT " %g %g\n", i + fshift, a->j[j] + fshift, (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT " %g\n", i + fshift, a->j[j] + fshift, (double)a->a[j]));
-#endif
+        if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT " %g %g\n", i + fshift, a->j[j] + fshift, (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " %" PetscInt_FMT " %g\n", i + fshift, a->j[j] + fshift, (double)a->a[j]));
       }
     }
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
@@ -907,45 +876,33 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
         /* L part */
         for (j = a->i[i]; j < a->i[i + 1]; j++) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->a[j]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-          } else if (PetscImaginaryPart(a->a[j]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)(-PetscImaginaryPart(a->a[j]))));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(a->a[j])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)a->a[j]));
-#endif
         }
         /* diagonal */
         j = adiag[i];
-#if PetscDefined(USE_COMPLEX)
-        if (PetscImaginaryPart(a->a[j]) > 0.0) {
+        if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) > 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(1 / a->a[j]), (double)PetscImaginaryPart(1 / a->a[j])));
-        } else if (PetscImaginaryPart(a->a[j]) < 0.0) {
+        } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) < 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(1 / a->a[j]), (double)(-PetscImaginaryPart(1 / a->a[j]))));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(1 / a->a[j])));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)(1 / a->a[j])));
-#endif
 
         /* U part */
         for (j = adiag[i + 1] + 1; j < adiag[i]; j++) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->a[j]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-          } else if (PetscImaginaryPart(a->a[j]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)(-PetscImaginaryPart(a->a[j]))));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(a->a[j])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)a->a[j]));
-#endif
         }
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       }
@@ -953,17 +910,13 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
       for (i = 0; i < m; i++) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
         for (j = a->i[i]; j < a->i[i + 1]; j++) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->a[j]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)PetscImaginaryPart(a->a[j])));
-          } else if (PetscImaginaryPart(a->a[j]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[j]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(a->a[j]), (double)-PetscImaginaryPart(a->a[j])));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(a->a[j])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)a->a[j]));
-#endif
         }
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       }

@@ -491,9 +491,7 @@ PetscErrorCode PetscBinaryWrite(int fd, const void *p, PetscCount n, PetscDataTy
   if (!PetscBinaryBigEndian()) PetscCall(PetscByteSwap((void *)ptmp, wtype, n));
 
   if (type == PETSC_FUNCTION) free(fname);
-#if PetscDefined(USE_REAL___FLOAT128)
-  if ((type == PETSC_SCALAR || type == PETSC_REAL || type == PETSC_COMPLEX) && writedouble) PetscCall(PetscFree(ppp));
-#endif
+  if (PetscDefined(USE_REAL___FLOAT128) && (type == PETSC_SCALAR || type == PETSC_REAL || type == PETSC_COMPLEX) && writedouble) PetscCall(PetscFree(ppp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
