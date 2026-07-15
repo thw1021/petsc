@@ -180,7 +180,7 @@ template <typename D>
 inline PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(PetscOptionItems PetscOptionsObject, PetscInt *id, PetscBool *flag) noexcept
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionDeviceSelect(PetscOptionsObject, "Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-" PetscStringize(PETSC_DEVICE_MAX_DEVICES) ") for a specific device", "PetscDeviceCreate()", *id, id, flag, PETSC_DECIDE, PETSC_DEVICE_MAX_DEVICES));
+  PetscCall(PetscOptionDeviceSelect(PetscOptionsObject, "Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide, " PetscStringize(PETSC_DEVICE_TOPOLOGY_AWARE) " to use a topology-aware selection algorithm or (given they exist) [0-" PetscStringize(PETSC_DEVICE_MAX_DEVICES) "]) for a specific device", "PetscDeviceCreate()", *id, id, flag, PETSC_DEVICE_TOPOLOGY_AWARE, PETSC_DEVICE_MAX_DEVICES));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

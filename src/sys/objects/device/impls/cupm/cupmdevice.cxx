@@ -8,6 +8,10 @@
 #include <iterator>
 #include <type_traits>
 
+#if PetscDefined(HAVE_HWLOC)
+#include <hwloc.h>
+#endif
+
 namespace Petsc
 {
 
@@ -242,6 +246,150 @@ PETSC_NODISCARD static PETSC_CONSTEXPR_14 const char *CUPM_VISIBLE_DEVICES() noe
        PyTorch -- getenv("LOCAL_RANK")
 */
 template <DeviceType T>
+PetscErrorCode Device<T>::select_device_petsc_decide_(MPI_Comm comm, PetscInt ndev, std::pair<PetscInt, PetscBool> *initId) noexcept
+{
+  if (ndev) {
+    /* TORCHELASTIC_RUN_ID is used as a proxy to determine if the current process was launched with torchrun */
+    char *pytorch_exists = (char *)getenv("TORCHELASTIC_RUN_ID");
+    char *pytorch_rank   = (char *)getenv("LOCAL_RANK");
+
+    if (pytorch_exists && pytorch_rank) {
+      char *endptr;
+
+      initId->first = (PetscInt)strtol(pytorch_rank, &endptr, 10);
+      PetscCheck(initId->first < ndev, PETSC_COMM_SELF, PETSC_ERR_LIB, "PyTorch environmental variable LOCAL_RANK %s > number devices %d", pytorch_rank, ndev);
+    } else {
+      PetscMPIInt rank;
+
+      PetscCallMPI(MPI_Comm_rank(comm, &rank));
+      initId->first = rank % ndev;
+    }
+  } else initId->first = 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if PetscDefined(HAVE_HWLOC)
+template <DeviceType T>
+PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hwloc_cpuset_t superset_cpuset, hwloc_cpuset_t process_cpuset, PetscInt *relative_device_index) noexcept
+{
+  // hwloc_bitmap_weight returns the number of non-zero entires in a cpuset.
+  PetscInt cores_in_anc_obj = hwloc_bitmap_weight(superset_cpuset);
+  PetscInt ctr              = 0;
+  // Enumerate cpuset in topological order
+  for (auto icore = hwloc_bitmap_next(superset_cpuset, -1); icore != -1; icore = hwloc_bitmap_next(superset_cpuset, icore)) {
+    // If the first CPU core in this thread's cpuset is found, set relative_device_index and return.
+    if (icore == hwloc_bitmap_first(process_cpuset)) {
+      *relative_device_index = dev_count * ctr / cores_in_anc_obj;
+      break;
+    }
+    ctr++;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <DeviceType T>
+PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair<PetscInt, PetscBool> *initId) noexcept
+{
+  if ( ndev == 1 ) {
+    initId->first = 0;
+  } else {
+    initId->first = PETSC_DECIDE;
+    std::vector<std::string> device_addrs(ndev, std::string(32,0));
+    // Get PCI Bus addresses for each CUPM device
+    for ( PetscInt idev = 0; idev < ndev; idev++ ) {
+      PetscCallCUPM(cupmDeviceGetPCIBusId(device_addrs[idev].data(), 32, idev));
+    }
+    // Initialise hwloc topology object
+    hwloc_topology_t topology;
+    PetscCallExternal(hwloc_topology_init, &topology);
+    // Enables some internal optimisations in hwloc
+    PetscCallExternal(hwloc_topology_set_flags, topology, HWLOC_TOPOLOGY_FLAG_IS_THISSYSTEM);
+    // By default IO devices (i.e. GPUs, storage, etc.) are filtered out. GPUs are considered
+    // important. This filter makes sure those are included in the detected topology.
+    PetscCallExternal(hwloc_topology_set_io_types_filter, topology, HWLOC_TYPE_FILTER_KEEP_IMPORTANT);
+    PetscCallExternal(hwloc_topology_load, topology);
+
+    // Get the current thread's CPU binding mask
+    hwloc_cpuset_t cpuset_mine = nullptr;
+    cpuset_mine = hwloc_bitmap_alloc();
+    PetscCheck(cpuset_mine, PETSC_COMM_SELF, PETSC_ERR_LIB, "hwloc_bitmap_alloc() failed");
+    PetscCallExternal(hwloc_get_cpubind, topology, cpuset_mine, HWLOC_CPUBIND_THREAD);
+    // The cpuset returned from hwloc_get_cpubind is in OS-order, which is not necessarily
+    // the same as the topological order. Create a PU object from the first CPU detected
+    // in this cpuset. A PU object is the lowest object in any hwloc topology. It is not
+    // allowed to have any child objects.
+    hwloc_obj *first_cpu = hwloc_get_pu_obj_by_os_index(topology, hwloc_bitmap_first(cpuset_mine));
+    PetscCheck(first_cpu, PETSC_COMM_SELF, PETSC_ERR_LIB, "hwloc_get_pu_obj_by_os_index() failed");
+
+    std::vector<hwloc_obj_t> hwloc_devs(ndev);
+    std::vector<hwloc_obj_t> common_ancestors(ndev);
+    PetscInt selected_device = -1;
+    PetscInt max_depth = -1;
+    PetscInt max_count = 1;
+
+    for (PetscInt idev = 0; idev < ndev; idev++) {
+      // Use the PCI Bus address of each GPU to find it among the hwloc
+      // topology object
+      hwloc_devs[idev] =
+          hwloc_get_pcidev_by_busidstring(topology, device_addrs[idev].c_str());
+      PetscCheck(hwloc_devs[idev], PETSC_COMM_SELF, PETSC_ERR_LIB, "hwloc_get_pcidev_by_busidstring() failed");
+      // hwloc does not consider IO devices to have ancestor or child objects, therefore
+      // a call to hwloc_get_non_io_ancestor_obj is required for each device to find the
+      // nearest non-IO device that has the same locality as the GPU. hwloc_get_common_ancestor
+      // object returns the lowest-level object ('Group', CPU socket, Machine, etc) that contains
+      // both the GPU and the first CPU core in the current cpuset.
+      common_ancestors[idev] = hwloc_get_common_ancestor_obj(
+          topology, first_cpu,
+          hwloc_get_non_io_ancestor_obj(topology, hwloc_devs[idev]));
+      // Every object at depth n+1 contains a subset of the PU and IO objects at depth n. Therefore
+      // the smallest object containing both device idev and CPU core will have the largest
+      // 'depth' value.
+      if (common_ancestors[idev]->depth > max_depth) {
+        max_depth = common_ancestors[idev]->depth;
+        max_count = 1;
+        selected_device = idev;
+      // Prepare for the case where multiple devices are reported at the same depth level.
+      } else if (common_ancestors[idev]->depth == max_depth) {
+        max_count++;
+      }
+    }
+    initId->first = selected_device;
+    if (max_count > 1) {
+      // Handle the case where multiple devices are reported at the same depth level. Find
+      // all devices at the highest depth value.
+      std::vector<PetscInt> devices_at_max_depth(max_count);
+      PetscInt ctr = 0;
+      for (PetscInt idev = 0; idev < ndev; idev++) {
+        if (common_ancestors[idev]->depth == max_depth) {
+          devices_at_max_depth[ctr] = idev;
+          ctr++;
+        }
+      }
+      // Determine the cpuset of common ancestor of each device and the first CPU core
+      // of this thread's cpuset. Then enumerate the ancestor cpuset in topological
+      // order and determine how far through that cpuset the current core is bound.
+      // Use that to select a device id out of the devices at max_depth.
+      // Note that by the reasoning above, the common ancestor
+      // cpuset should be identical for each device, so this loop should always break
+      // in the first entry. If the loop does not break, initId->first has already been
+      // set to a sensible value.
+      for (PetscInt idev = 0; idev < max_count; idev++) {
+        hwloc_cpuset_t anc_cpuset =
+            common_ancestors[devices_at_max_depth[idev]]->cpuset;
+        if (hwloc_bitmap_isincluded(first_cpu->cpuset, anc_cpuset)) {
+          PetscInt relative_device_idx = 0;
+          PetscCall(get_device_placement_in_cpuset_(max_count, anc_cpuset, cpuset_mine, &relative_device_idx));
+          initId->first = devices_at_max_depth[relative_device_idx];
+          break;
+        }
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+template <DeviceType T>
 PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscBool *defaultView, PetscDeviceInitType *defaultInitType) noexcept
 {
   auto initId   = std::make_pair(*defaultDeviceId, PETSC_FALSE);
@@ -269,32 +417,25 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
 
   // check again for init type, since the device count may have changed it
   if (initType.first == PETSC_DEVICE_INIT_NONE) {
-    // id < 0 (excluding PETSC_DECIDE) indicates an error has occurred during setup
-    if ((initId.first > 0) || (initId.first == PETSC_DECIDE)) initId.first = PETSC_CUPM_DEVICE_NONE;
+    // id < 0 (excluding PETSC_DECIDE and PETSC_DEVICE_TOPOLOGY_AWARE) indicates an error has occurred during setup
+    if ((initId.first > 0) || (initId.first == PETSC_DECIDE) || (initId.first == PETSC_DEVICE_TOPOLOGY_AWARE)) initId.first = PETSC_CUPM_DEVICE_NONE;
     // initType overrides initView
     initView.first = PETSC_FALSE;
   } else {
     PetscCall(PetscDeviceCheckDeviceCount_Internal(ndev));
+#if PetscDefined(HAVE_HWLOC)
+    if (initId.first == PETSC_DEVICE_TOPOLOGY_AWARE) {
+      PetscCall(select_device_topology_aware_(ndev, &initId));
+    }
+    // If select_device_topology_aware_ fails, it will set initId.first to
+    // PETSC_DECIDE in order to fall through to the default algorithm
+#endif
     if (initId.first == PETSC_DECIDE) {
-      if (ndev) {
-        /* TORCHELASTIC_RUN_ID is used as a proxy to determine if the current process was launched with torchrun */
-        char *pytorch_exists = (char *)getenv("TORCHELASTIC_RUN_ID");
-        char *pytorch_rank   = (char *)getenv("LOCAL_RANK");
-
-        if (pytorch_exists && pytorch_rank) {
-          char *endptr;
-
-          initId.first = (PetscInt)strtol(pytorch_rank, &endptr, 10);
-          PetscCheck(initId.first < ndev, PETSC_COMM_SELF, PETSC_ERR_LIB, "PyTorch environmental variable LOCAL_RANK %s > number devices %d", pytorch_rank, ndev);
-        } else {
-          PetscMPIInt rank;
-
-          PetscCallMPI(MPI_Comm_rank(comm, &rank));
-          initId.first = rank % ndev;
-        }
-      } else initId.first = 0;
+      PetscCall(select_device_petsc_decide_(comm, ndev, &initId));
     }
     if (initView.first) initType.first = PETSC_DEVICE_INIT_EAGER;
+    PetscMPIInt rank;
+    PetscCallMPI(MPI_Comm_rank(comm, &rank));
   }
 
   static_assert(std::is_same<PetscMPIInt, decltype(defaultDevice_)>::value, "");
