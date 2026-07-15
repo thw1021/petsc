@@ -338,11 +338,8 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
 
   /* keep a record of the current differencing parameter h */
   ctx->currenth = h;
-#if PetscDefined(USE_COMPLEX)
-  PetscCall(PetscInfo(mat, "Current differencing parameter: %g + %g i\n", (double)PetscRealPart(h), (double)PetscImaginaryPart(h)));
-#else
-  PetscCall(PetscInfo(mat, "Current differencing parameter: %15.12e\n", (double)PetscRealPart(h)));
-#endif
+  if (PetscDefined(USE_COMPLEX)) PetscCall(PetscInfo(mat, "Current differencing parameter: %g + %g i\n", (double)PetscRealPart(h), (double)PetscImaginaryPart(h)));
+  else PetscCall(PetscInfo(mat, "Current differencing parameter: %15.12e\n", (double)PetscRealPart(h)));
   if (ctx->historyh && ctx->ncurrenth < ctx->maxcurrenth) ctx->historyh[ctx->ncurrenth] = h;
   ctx->ncurrenth++;
 

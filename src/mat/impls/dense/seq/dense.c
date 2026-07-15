@@ -1464,9 +1464,7 @@ static PetscErrorCode MatView_SeqDense_ASCII(Mat A, PetscViewer viewer)
   const char       *name;
   PetscScalar      *v, *av;
   PetscViewerFormat format;
-#if PetscDefined(USE_COMPLEX)
-  PetscBool allreal = PETSC_TRUE;
-#endif
+  PetscBool         allreal = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(MatDenseGetArrayRead(A, (const PetscScalar **)&av));
@@ -1479,15 +1477,11 @@ static PetscErrorCode MatView_SeqDense_ASCII(Mat A, PetscViewer viewer)
       v = av + i;
       PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
       for (j = 0; j < A->cmap->n; j++) {
-#if PetscDefined(USE_COMPLEX)
-        if (PetscRealPart(*v) != 0.0 && PetscImaginaryPart(*v) != 0.0) {
+        if (PetscDefined(USE_COMPLEX) && PetscRealPart(*v) != 0.0 && PetscImaginaryPart(*v) != 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", j, (double)PetscRealPart(*v), (double)PetscImaginaryPart(*v)));
         } else if (PetscRealPart(*v)) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", j, (double)PetscRealPart(*v)));
         }
-#else
-        if (*v) PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", j, (double)*v));
-#endif
         v += a->lda;
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
@@ -1495,18 +1489,18 @@ static PetscErrorCode MatView_SeqDense_ASCII(Mat A, PetscViewer viewer)
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
   } else {
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-#if PetscDefined(USE_COMPLEX)
-    /* determine if matrix has all real values */
-    for (j = 0; j < A->cmap->n; j++) {
-      v = av + j * a->lda;
-      for (i = 0; i < A->rmap->n; i++) {
-        if (PetscImaginaryPart(v[i])) {
-          allreal = PETSC_FALSE;
-          break;
+    if (PetscDefined(USE_COMPLEX)) {
+      /* determine if matrix has all real values */
+      for (j = 0; j < A->cmap->n; j++) {
+        v = av + j * a->lda;
+        for (i = 0; i < A->rmap->n; i++) {
+          if (PetscImaginaryPart(v[i])) {
+            allreal = PETSC_FALSE;
+            break;
+          }
         }
       }
     }
-#endif
     if (format == PETSC_VIEWER_ASCII_MATLAB) {
       PetscCall(PetscObjectGetName((PetscObject)A, &name));
       PetscCall(PetscViewerASCIIPrintf(viewer, "%% Size = %" PetscInt_FMT " %" PetscInt_FMT " \n", A->rmap->n, A->cmap->n));
@@ -1517,15 +1511,11 @@ static PetscErrorCode MatView_SeqDense_ASCII(Mat A, PetscViewer viewer)
     for (i = 0; i < A->rmap->n; i++) {
       v = av + i;
       for (j = 0; j < A->cmap->n; j++) {
-#if PetscDefined(USE_COMPLEX)
         if (allreal) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e ", (double)PetscRealPart(*v)));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e + %18.16ei ", (double)PetscRealPart(*v), (double)PetscImaginaryPart(*v)));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e ", (double)*v));
-#endif
         v += a->lda;
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
