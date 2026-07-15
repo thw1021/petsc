@@ -248,6 +248,7 @@ PETSC_NODISCARD static PETSC_CONSTEXPR_14 const char *CUPM_VISIBLE_DEVICES() noe
 template <DeviceType T>
 PetscErrorCode Device<T>::select_device_petsc_decide_(MPI_Comm comm, PetscInt ndev, std::pair<PetscInt, PetscBool> *initId) noexcept
 {
+  PetscFunctionBegin;
   if (ndev) {
     /* TORCHELASTIC_RUN_ID is used as a proxy to determine if the current process was launched with torchrun */
     char *pytorch_exists = (char *)getenv("TORCHELASTIC_RUN_ID");
@@ -275,6 +276,7 @@ PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hw
   // hwloc_bitmap_weight returns the number of non-zero entires in a cpuset.
   PetscInt cores_in_anc_obj = hwloc_bitmap_weight(superset_cpuset);
   PetscInt ctr              = 0;
+  PetscFunctionBegin;
   // Enumerate cpuset in topological order
   for (auto icore = hwloc_bitmap_next(superset_cpuset, -1); icore != -1; icore = hwloc_bitmap_next(superset_cpuset, icore)) {
     // If the first CPU core in this thread's cpuset is found, set relative_device_index and return.
@@ -290,6 +292,7 @@ PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hw
 template <DeviceType T>
 PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair<PetscInt, PetscBool> *initId) noexcept
 {
+  PetscFunctionBegin;
   if ( ndev == 1 ) {
     initId->first = 0;
   } else {
@@ -418,7 +421,11 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   // check again for init type, since the device count may have changed it
   if (initType.first == PETSC_DEVICE_INIT_NONE) {
     // id < 0 (excluding PETSC_DECIDE and PETSC_DEVICE_TOPOLOGY_AWARE) indicates an error has occurred during setup
+#if PetscDefined(HAVE_HWLOC)
     if ((initId.first > 0) || (initId.first == PETSC_DECIDE) || (initId.first == PETSC_DEVICE_TOPOLOGY_AWARE)) initId.first = PETSC_CUPM_DEVICE_NONE;
+#else
+    if ((initId.first > 0) || (initId.first == PETSC_DECIDE)) initId.first = PETSC_CUPM_DEVICE_NONE;
+#endif
     // initType overrides initView
     initView.first = PETSC_FALSE;
   } else {
