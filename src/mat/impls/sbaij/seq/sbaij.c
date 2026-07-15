@@ -322,30 +322,22 @@ static PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
       for (i = 0; i < a->mbs; i++) { /* for row block i */
         PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
         /* diagonal entry */
-#if PetscDefined(USE_COMPLEX)
-        if (PetscImaginaryPart(a->a[diag[i]]) > 0.0) {
+        if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[diag[i]]) > 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", a->j[diag[i]], (double)PetscRealPart(1.0 / a->a[diag[i]]), (double)PetscImaginaryPart(1.0 / a->a[diag[i]])));
-        } else if (PetscImaginaryPart(a->a[diag[i]]) < 0.0) {
+        } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[diag[i]]) < 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i) ", a->j[diag[i]], (double)PetscRealPart(1.0 / a->a[diag[i]]), -(double)PetscImaginaryPart(1.0 / a->a[diag[i]])));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)PetscRealPart(1.0 / a->a[diag[i]])));
         }
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)(1 / a->a[diag[i]])));
-#endif
         /* off-diagonal entries */
         for (k = a->i[i]; k < a->i[i + 1] - 1; k++) {
-#if PetscDefined(USE_COMPLEX)
-          if (PetscImaginaryPart(a->a[k]) > 0.0) {
+          if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[k]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", bs * a->j[k], (double)PetscRealPart(a->a[k]), (double)PetscImaginaryPart(a->a[k])));
-          } else if (PetscImaginaryPart(a->a[k]) < 0.0) {
+          } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[k]) < 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i) ", bs * a->j[k], (double)PetscRealPart(a->a[k]), -(double)PetscImaginaryPart(a->a[k])));
           } else {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", bs * a->j[k], (double)PetscRealPart(a->a[k])));
           }
-#else
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[k], (double)a->a[k]));
-#endif
         }
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       }
@@ -356,17 +348,13 @@ static PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i * bs + j));
           for (k = a->i[i]; k < a->i[i + 1]; k++) { /* for column block */
             for (l = 0; l < bs; l++) {              /* for column */
-#if PetscDefined(USE_COMPLEX)
-              if (PetscImaginaryPart(a->a[bs2 * k + l * bs + j]) > 0.0) {
+              if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[bs2 * k + l * bs + j]) > 0.0) {
                 PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", bs * a->j[k] + l, (double)PetscRealPart(a->a[bs2 * k + l * bs + j]), (double)PetscImaginaryPart(a->a[bs2 * k + l * bs + j])));
-              } else if (PetscImaginaryPart(a->a[bs2 * k + l * bs + j]) < 0.0) {
+              } else if (PetscDefined(USE_COMPLEX) && PetscImaginaryPart(a->a[bs2 * k + l * bs + j]) < 0.0) {
                 PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i) ", bs * a->j[k] + l, (double)PetscRealPart(a->a[bs2 * k + l * bs + j]), -(double)PetscImaginaryPart(a->a[bs2 * k + l * bs + j])));
               } else {
                 PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", bs * a->j[k] + l, (double)PetscRealPart(a->a[bs2 * k + l * bs + j])));
               }
-#else
-              PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", bs * a->j[k] + l, (double)a->a[bs2 * k + l * bs + j]));
-#endif
             }
           }
           PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));

@@ -17,11 +17,11 @@ int main(int argc, char **args)
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-f", file, sizeof(file), &flg));
-#if PetscDefined(USE_COMPLEX)
-  testptap       = PETSC_FALSE;
-  testmatmatmult = PETSC_FALSE;
-  PetscCall(PetscOptionsInsertString(NULL, "-options_left 0"));
-#endif
+  if (PetscDefined(USE_COMPLEX)) {
+    testptap       = PETSC_FALSE;
+    testmatmatmult = PETSC_FALSE;
+    PetscCall(PetscOptionsInsertString(NULL, "-options_left 0"));
+  }
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-ptap", &testptap, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-matmatmult", &testmatmatmult, NULL));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));

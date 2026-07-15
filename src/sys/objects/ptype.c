@@ -73,9 +73,7 @@ PetscErrorCode PetscMPIDataTypeToPetscDataType(MPI_Datatype mtype, PetscDataType
 {
   PetscFunctionBegin;
   if (mtype == MPIU_INT) *ptype = PETSC_INT;
-#if PetscDefined(USE_64BIT_INDICES)
-  else if (mtype == MPI_INT) *ptype = PETSC_ENUM;
-#endif
+  else if (PetscDefined(USE_64BIT_INDICES) && mtype == MPI_INT) *ptype = PETSC_ENUM;
   else if (mtype == MPIU_INT64) *ptype = PETSC_INT64;
   else if (mtype == MPIU_COUNT) *ptype = PETSC_COUNT;
   else if (mtype == MPIU_INT32) *ptype = PETSC_INT32;

@@ -548,12 +548,10 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
   if (!def->WtA) {
     if (def->Wt) PetscCall(MatMatMult(def->Wt, Amat, MAT_INITIAL_MATRIX, PETSC_CURRENT, &def->WtA));
     else {
-#if PetscDefined(USE_COMPLEX)
-      PetscCall(MatHermitianTranspose(def->W, MAT_INITIAL_MATRIX, &def->Wt));
-      PetscCall(MatMatMult(def->Wt, Amat, MAT_INITIAL_MATRIX, PETSC_CURRENT, &def->WtA));
-#else
-      PetscCall(MatTransposeMatMult(def->W, Amat, MAT_INITIAL_MATRIX, PETSC_CURRENT, &def->WtA));
-#endif
+      if (PetscDefined(USE_COMPLEX)) {
+        PetscCall(MatHermitianTranspose(def->W, MAT_INITIAL_MATRIX, &def->Wt));
+        PetscCall(MatMatMult(def->Wt, Amat, MAT_INITIAL_MATRIX, PETSC_CURRENT, &def->WtA));
+      } else PetscCall(MatTransposeMatMult(def->W, Amat, MAT_INITIAL_MATRIX, PETSC_CURRENT, &def->WtA));
     }
   }
   /* setup coarse problem */

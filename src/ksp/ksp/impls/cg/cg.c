@@ -567,9 +567,7 @@ PetscErrorCode KSPView_CG(KSP ksp, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-#if PetscDefined(USE_COMPLEX)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  variant %s\n", KSPCGTypes[cg->type]));
-#endif
+    if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, "  variant %s\n", KSPCGTypes[cg->type]));
     if (cg->singlereduction) PetscCall(PetscViewerASCIIPrintf(viewer, "  using single-reduction variant\n"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -586,9 +584,7 @@ PetscErrorCode KSPSetFromOptions_CG(KSP ksp, PetscOptionItems PetscOptionsObject
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "KSP CG and CGNE options");
-#if PetscDefined(USE_COMPLEX)
-  PetscCall(PetscOptionsEnum("-ksp_cg_type", "Matrix is Hermitian or complex symmetric", "KSPCGSetType", KSPCGTypes, (PetscEnum)cg->type, (PetscEnum *)&cg->type, NULL));
-#endif
+  if (PetscDefined(USE_COMPLEX)) PetscCall(PetscOptionsEnum("-ksp_cg_type", "Matrix is Hermitian or complex symmetric", "KSPCGSetType", KSPCGTypes, (PetscEnum)cg->type, (PetscEnum *)&cg->type, NULL));
   PetscCall(PetscOptionsBool("-ksp_cg_single_reduction", "Merge inner products into single MPI_Allreduce()", "KSPCGUseSingleReduction", cg->singlereduction, &cg->singlereduction, &flg));
   if (flg) PetscCall(KSPCGUseSingleReduction(ksp, cg->singlereduction));
   PetscOptionsHeadEnd();

@@ -4,6 +4,7 @@
 
 #define PETSC_DESIRE_FEATURE_TEST_MACROS /* for dlopen() */
 #include <petsc/private/petscimpl.h>
+#include <petsc/private/petscfptimpl.h>
 
 #if PetscDefined(HAVE_WINDOWS_H)
   #include <windows.h>
@@ -290,9 +291,7 @@ PetscErrorCode PetscDLSym(PetscDLHandle handle, const char symbol[], void **valu
 
   *value = *((void **)&dlsymbol);
 
-#if PetscDefined(SERIALIZE_FUNCTIONS)
-  if (*value) PetscCall(PetscFPTAdd(*value, symbol));
-#endif /* PETSC_SERIALIZE_FUNCTIONS */
+  if (PetscDefined(SERIALIZE_FUNCTIONS) && *value) PetscCall(PetscFPTAdd(*value, symbol));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
