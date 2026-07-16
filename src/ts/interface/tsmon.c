@@ -1090,7 +1090,7 @@ PetscErrorCode TSMonitorLGSolution(TS ts, PetscInt step, PetscReal ptime, Vec u,
     for (i = 0; i < ctx->ndisplayvariables; i++) ctx->displayvalues[i] = PetscRealPart(yy[ctx->displayvariables[i]]);
     PetscCall(PetscDrawLGAddCommonPoint(ctx->lg, ptime, ctx->displayvalues));
   } else {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     PetscInt   n;
     PetscReal *yreal;
     PetscCall(VecGetLocalSize(v, &n));
@@ -1378,7 +1378,7 @@ PetscErrorCode TSMonitorLGError(TS ts, PetscInt step, PetscReal ptime, Vec u, Pe
   PetscCall(TSComputeSolutionFunction(ts, ptime, y));
   PetscCall(VecAXPY(y, -1.0, u));
   PetscCall(VecGetArrayRead(y, &yy));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   {
     PetscReal *yreal;
     PetscInt   n;

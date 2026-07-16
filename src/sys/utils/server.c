@@ -8,7 +8,7 @@ PetscBool PCMPIServerActive    = PETSC_FALSE; // PETSc is running in server mode
 PetscBool PCMPIServerInSolve   = PETSC_FALSE; // A parallel server solve is occurring
 PetscBool PCMPIServerUseShmget = PETSC_TRUE;  // Use Unix shared memory for distributing objects
 
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   #include <sys/shm.h>
   #include <sys/mman.h>
   #include <errno.h>
@@ -46,7 +46,7 @@ typedef struct {
 PetscErrorCode PetscShmgetAddressesFinalize(void)
 {
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   PetscShmgetAllocation next = allocations, previous = NULL;
 
   while (next) {
@@ -65,7 +65,7 @@ PetscErrorCode PCMPIServerAddressesDestroy(PetscCtxRt ctx)
   PCMPIServerAddresses *addresses = *(PCMPIServerAddresses **)ctx;
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   PetscCall(PetscShmgetUnmapAddresses(addresses->n, addresses->addr));
   PetscCall(PetscFree(addresses));
 #else
@@ -96,7 +96,7 @@ PetscErrorCode PCMPIServerAddressesDestroy(PetscCtxRt ctx)
 PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **baseaddres, void **addres)
 {
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   if (PetscGlobalRank == 0) {
     BcastInfo bcastinfo = {
       {0, 0, 0},
@@ -173,7 +173,7 @@ PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **b
 PetscErrorCode PetscShmgetUnmapAddresses(PetscInt n, void **addres) PeNS
 {
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   if (PetscGlobalRank > 0) {
     for (PetscInt i = 0; i < n; i++) {
       PetscShmgetAllocation next = allocations, previous = NULL;
@@ -274,7 +274,7 @@ PetscErrorCode PetscShmgetAllocateArray(size_t sz, size_t asz, void *addr[])
 {
   PetscFunctionBegin;
   if (!PCMPIServerUseShmget || !PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscMalloc(sz * asz, addr));
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   else {
     PetscShmgetAllocation allocation;
     static int            shmkeys = 10;
@@ -326,7 +326,7 @@ PetscErrorCode PetscShmgetDeallocateArray(void *addr[])
   PetscFunctionBegin;
   if (!*addr) PetscFunctionReturn(PETSC_SUCCESS);
   if (!PCMPIServerUseShmget || !PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscFree(*addr));
-#if defined(PETSC_HAVE_SHMGET)
+#if PetscDefined(HAVE_SHMGET)
   else {
     PetscShmgetAllocation next = allocations, previous = NULL;
 
@@ -350,15 +350,15 @@ PetscErrorCode PetscShmgetDeallocateArray(void *addr[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_FORTRAN_BINDINGS)
+#if PetscDefined(USE_FORTRAN_BINDINGS)
   #include <petsc/private/ftnimpl.h>
 
-  #if defined(PETSC_HAVE_FORTRAN_CAPS)
+  #if PetscDefined(HAVE_FORTRAN_CAPS)
     #define petscshmgetallocatearrayscalar_   PETSCSHMGETALLOCATEARRAYSCALAR
     #define petscshmgetdeallocatearrayscalar_ PETSCSHMGETDEALLOCATEARRAYSCALAR
     #define petscshmgetallocatearrayint_      PETSCSHMGETALLOCATEARRAYINT
     #define petscshmgetdeallocatearrayint_    PETSCSHMGETDEALLOCATEARRAYINT
-  #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+  #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
     #define petscshmgetallocatearrayscalar_   petscshmgetallocatearrayscalar
     #define petscshmgetdeallocatearrayscalar_ petscshmgetdeallocatearrayscalar
     #define petscshmgetallocatearrayint_      petscshmgetallocatearrayint

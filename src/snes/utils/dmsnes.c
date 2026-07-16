@@ -1,5 +1,6 @@
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 #include <petsc/private/dmimpl.h>   /*I "petscdm.h" I*/
+#include <petsc/private/petscfptimpl.h>
 
 static PetscErrorCode DMSNESUnsetFunctionContext_DMSNES(DMSNES sdm)
 {
@@ -49,14 +50,14 @@ PetscErrorCode DMSNESView(DMSNES kdm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
   if (isascii) {
-#if defined(PETSC_SERIALIZE_FUNCTIONS)
-    const char *fname;
+    if (PetscDefined(SERIALIZE_FUNCTIONS)) {
+      const char *fname;
 
-    PetscCall(PetscFPTFind(kdm->ops->computefunction, &fname));
-    if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "Function used by SNES: %s\n", fname));
-    PetscCall(PetscFPTFind(kdm->ops->computejacobian, &fname));
-    if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "Jacobian function used by SNES: %s\n", fname));
-#endif
+      PetscCall(PetscFPTFind(*(void **)&kdm->ops->computefunction, &fname));
+      if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "Function used by SNES: %s\n", fname));
+      PetscCall(PetscFPTFind(*(void **)&kdm->ops->computejacobian, &fname));
+      if (fname) PetscCall(PetscViewerASCIIPrintf(viewer, "Jacobian function used by SNES: %s\n", fname));
+    }
   } else if (isbinary) {
     struct {
       SNESFunctionFn *func;

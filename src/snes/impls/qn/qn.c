@@ -70,9 +70,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
   PetscBool            powell, periodic, restart;
   PetscScalar          DolddotD, DolddotDold;
   SNESConvergedReason  reason;
-#if defined(PETSC_USE_INFO)
-  PetscReal gnorm;
-#endif
+  PetscReal            gnorm;
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -174,9 +172,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
 
     /* line search for lambda */
     ynorm = 1;
-#if defined(PETSC_USE_INFO)
-    gnorm = fnorm;
-#endif
+    if (PetscDefined(USE_INFO)) gnorm = fnorm;
     PetscCall(VecCopy(D, Dold));
     PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &fnorm, Y));
     if (snes->reason) break;
