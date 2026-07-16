@@ -6,6 +6,7 @@ class Configure(config.package.Package):
     config.package.Package.__init__(self, framework)
     self.functions         = []
     self.includes          = ['omp.h']
+    self.ompflags          = {}
     return
 
   def setupHelp(self, help):
@@ -49,6 +50,7 @@ class Configure(config.package.Package):
         for flag in oflags:
           if self.setCompilers.checkCompilerFlag(flag):
             ompflag = flag
+            self.ompflags[language] = ompflag
             self.found = 1
             # Flag is sometimes needed at preprocessor time so put it there and NOT in compiler flags
             flagsName = self.getPreprocessorFlagsName(language)
