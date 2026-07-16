@@ -15,3 +15,6 @@ If `glab mr list` returns 0 MRs, stop and report. If >1, ask which IID.
 `<source_branch>` comes from the GitLab API and is trusted (GitLab validates branch names; PETSc convention narrows further).
 - `git show-ref --verify --quiet refs/heads/<source_branch>` — if non-zero, skip.
 - Else `git rev-parse <source_branch>`; if it differs from `<MR_HEAD_SHA>`, warn that local and MR head diverge and recommend `/review-branch`.
+
+### 4. CI check
+- find CI_PIPELINE_ID in `env`
