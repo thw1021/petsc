@@ -2025,6 +2025,10 @@ class CMakePackage(Package):
       args.append('-DCMAKE_CXX_FLAGS:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
+      if hasattr(self,'openmp') and self.openmp.found:
+        # CMake's FindOpenMP lags IntelLLVM 2026.0.0
+        args.append('-DOpenMP_CXX_FLAGS:STRING='+self.openmp.ompflags['Cxx'])
+        args.append('-DOpenMP_CXX_LIB_NAMES:STRING=')
       langdialect = getattr(self.setCompilers,lang+'dialect',None)
       if langdialect:
         # langdialect is only set as an attribute if the user specifically chose a dialect
