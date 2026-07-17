@@ -117,6 +117,10 @@ PETSC_INTERN PetscErrorCode                MatMatMultNumeric_SeqDenseHIP_SeqDens
 PETSC_INTERN PetscErrorCode                MatConvert_SeqDense_SeqDenseHIP(Mat, MatType, MatReuse, Mat *);
 #endif
 
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+PETSC_INTERN PetscErrorCode MatConvert_SeqDense_SeqDenseKokkos(Mat, MatType, MatReuse, Mat *);
+#endif
+
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSeqDenseInvertFactors_Private(Mat);
 
 PETSC_INTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqDense(MPI_Comm, Mat, PetscInt, MatReuse, Mat *);

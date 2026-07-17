@@ -1745,6 +1745,12 @@ PetscErrorCode MatDestroy_SeqDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensehip_seqdense_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdense_seqdensehip_C", NULL));
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_seqdense_seqdensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensekokkos_seqdensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensekokkos_seqdense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdense_seqdensekokkos_C", NULL));
+#endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSeqDenseSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqaij_seqdense_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdense_seqdense_C", NULL));
@@ -3633,6 +3639,12 @@ PetscErrorCode MatCreate_SeqDense(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensehip_seqdensehip_C", MatProductSetFromOptions_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensehip_seqdense_C", MatProductSetFromOptions_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdense_seqdensehip_C", MatProductSetFromOptions_SeqDense));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqdense_seqdensekokkos_C", MatConvert_SeqDense_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensekokkos_seqdensekokkos_C", MatProductSetFromOptions_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensekokkos_seqdense_C", MatProductSetFromOptions_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdense_seqdensekokkos_C", MatProductSetFromOptions_SeqDense));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqDenseSetPreallocation_C", MatSeqDenseSetPreallocation_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqaij_seqdense_C", MatProductSetFromOptions_SeqAIJ_SeqDense));
