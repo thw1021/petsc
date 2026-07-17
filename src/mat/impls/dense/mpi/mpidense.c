@@ -773,6 +773,12 @@ static PetscErrorCode MatDestroy_MPIDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseHIPReplaceArray_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseHIPSetPreallocation_C", NULL));
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_mpidensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidensekokkos_mpidense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpiaij_mpidensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpidensekokkos_mpiaij_C", NULL));
+#endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumn_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumn_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumnVec_C", NULL));
@@ -1786,6 +1792,9 @@ PetscErrorCode MatCreate_MPIDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_mpidensehip_C", MatConvert_MPIDense_MPIDenseHIP));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpiaijhipsparse_mpidense_C", MatProductSetFromOptions_MPIAIJ_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpidense_mpiaijhipsparse_C", MatProductSetFromOptions_MPIDense_MPIAIJ));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_mpidensekokkos_C", MatConvert_MPIDense_MPIDenseKokkos));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumn_C", MatDenseGetColumn_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumn_C", MatDenseRestoreColumn_MPIDense));

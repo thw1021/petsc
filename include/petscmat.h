@@ -2793,6 +2793,8 @@ PETSC_EXTERN PetscErrorCode MatCreateAIJViennaCL(MPI_Comm, PetscInt, PetscInt, P
 #if PetscDefined(HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode MatCreateAIJKokkos(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJKokkos(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscInt[], Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateDenseKokkos(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar[], Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateSeqDenseKokkos(MPI_Comm, PetscInt, PetscInt, PetscScalar[], Mat *);
 #endif
 
 #if defined(PETSC_HAVE_FFTW)

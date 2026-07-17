@@ -371,6 +371,13 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_ILU, MatGetFactor_seqdense_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_CHOLESKY, MatGetFactor_seqdense_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_QR, MatGetFactor_seqdense_petsc));
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  /* MATSEQDENSEKOKKOS factors/solves on the host; the numeric phase auto-syncs device values through MatDenseGetArrayRead() */
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSEKOKKOS, MAT_FACTOR_LU, MatGetFactor_seqdense_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSEKOKKOS, MAT_FACTOR_ILU, MatGetFactor_seqdense_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSEKOKKOS, MAT_FACTOR_CHOLESKY, MatGetFactor_seqdense_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSEKOKKOS, MAT_FACTOR_QR, MatGetFactor_seqdense_petsc));
+#endif
 #if defined(PETSC_HAVE_CUDA)
   PetscCall(MatSolverTypeRegister_DENSECUDA());
 #endif
