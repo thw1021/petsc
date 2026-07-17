@@ -1,0 +1,1 @@
+All matrix-free Hessian call sequences are correct (cache is consistent in the Tao operator path)
