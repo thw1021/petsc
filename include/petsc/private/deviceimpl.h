@@ -161,7 +161,7 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
 #define PETSC_DEVICE_MAX_DEVICES 128
 
 #if PetscDefined(HAVE_HWLOC)
-#define PETSC_DEVICE_TOPOLOGY_AWARE -2
+  #define PETSC_DEVICE_TOPOLOGY_AWARE -2
 #endif
 
 /*

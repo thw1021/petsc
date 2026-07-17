@@ -8,10 +8,6 @@
 #include <iterator>
 #include <type_traits>
 
-#if PetscDefined(HAVE_HWLOC)
-#include <hwloc.h>
-#endif
-
 namespace Petsc
 {
 
