@@ -272,6 +272,7 @@ PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hw
   // hwloc_bitmap_weight returns the number of non-zero entires in a cpuset.
   PetscInt cores_in_anc_obj = hwloc_bitmap_weight(superset_cpuset);
   PetscInt ctr              = 0;
+
   PetscFunctionBegin;
   // Enumerate cpuset in topological order
   for (auto icore = hwloc_bitmap_next(superset_cpuset, -1); icore != -1; icore = hwloc_bitmap_next(superset_cpuset, icore)) {
