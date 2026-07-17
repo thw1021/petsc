@@ -1425,6 +1425,10 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
     TaoTermMapping *summand = &sum->terms[i];
     PetscBool       is_callback;
 
+    /* A Hessian-masked summand contributes nothing: TaoTermMappingComputeHessian() and
+       TaoTermMappingComputeHessianMult() both return before touching its matrices, so do
+       not require it to be able to create them (it may define no Hessian at all). */
+    if (TaoTermHessianMasked(summand->mask)) continue;
     if (H_is_shell && (!Hpre || term->Hpre_is_H)) sub_Hpre_is_H = PETSC_TRUE;
     else {
       PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMCALLBACKS, &is_callback));
