@@ -240,7 +240,7 @@ static PetscErrorCode PetscViewerAndFormatCreate_Internal(PetscViewer viewer, Pe
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char name[], PetscCtx ctx)
+'PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char name[], PetscCtx ctx)
 {
   PetscErrorCode (*mfunc)(KSP, PetscInt, PetscReal, void *);
   PetscErrorCode (*cfunc)(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **);
@@ -363,8 +363,8 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   /* Cancels all monitors hardwired into code before call to KSPSetFromOptions() */
   PetscCall(PetscOptionsBool("-ksp_monitor_cancel", "Remove any hardwired monitor routines", "KSPMonitorCancel", PETSC_FALSE, &flg, &set));
   if (set && flg) PetscCall(KSPMonitorCancel(ksp));
+  PetscCall(PetscOptionsDeprecated("-ksp_monitor_short", "-ksp_monitor", "3.26", NULL));
   PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor", "preconditioned_residual", NULL));
-  PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_short", "preconditioned_residual_short", NULL));
   PetscCall(KSPMonitorSetFromOptions(ksp, "-all_ksp_monitor", "preconditioned_residual", NULL));
   PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_range", "preconditioned_residual_range", NULL));
   PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_true_residual", "true_residual", NULL));
