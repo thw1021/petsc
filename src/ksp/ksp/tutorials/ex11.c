@@ -221,11 +221,11 @@ int main(int argc, char **args)
       requires: complex
 
    test:
-      args: -n 6 -norandom -pc_type none -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always
+      args: -n 6 -norandom -pc_type none -ksp_monitor -ksp_gmres_cgs_refinement_type refine_always
 
    testset:
       suffix: deflation
-      args: -norandom -pc_type deflation -ksp_monitor_short
+      args: -norandom -pc_type deflation -ksp_monitor
       requires: superlu_dist
 
       test:
