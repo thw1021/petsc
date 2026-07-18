@@ -35,7 +35,7 @@
 
    Synopsis:
    #include <petscsys.h>
-   void PetscCallBLAS(char *name,routine)
+   void PetscCallBLAS(char *name, routine)
 
    Not Collective
 
