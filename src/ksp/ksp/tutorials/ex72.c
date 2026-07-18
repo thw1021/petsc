@@ -347,11 +347,7 @@ int main(int argc, char **args)
         PetscCall(VecNorm(u, NORM_2, &norm));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Number of iterations = %3" PetscInt_FMT "\n", its));
         if (!PetscIsNanScalar(norm)) {
-          if (norm < 1.e-12) {
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm < 1.e-12\n"));
-          } else {
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm %g\n", (double)norm));
-          }
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm %g\n", (double)norm));
         }
       }
     } /* while (num_rhs--) */
@@ -394,11 +390,7 @@ int main(int argc, char **args)
     } else {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of iterations = %3" PetscInt_FMT "\n", its));
       if (!PetscIsNanReal(norm)) {
-        if (norm < 1.e-12) {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm < 1.e-12\n"));
-        } else {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Residual norm %g\n", (double)norm));
-        }
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Residual norm %g\n", (double)norm));
       }
     }
     PetscCall(PetscOptionsGetString(NULL, NULL, "-solution", file[3], sizeof(file[3]), &flg));

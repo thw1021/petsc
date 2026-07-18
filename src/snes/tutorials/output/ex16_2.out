@@ -55,7 +55,7 @@ lambda: 2.777778 mu: 4.166667
     6 KSP Residual norm 6.841e-11
     7 KSP Residual norm 3.188e-11
     8 KSP Residual norm 1.375e-11
-    9 KSP Residual norm < 1.e-11
-   10 KSP Residual norm < 1.e-11
-  4 SNES Function norm < 1.e-11
+    9 KSP Residual norm  1.e-11
+   10 KSP Residual norm  1.e-11
+  4 SNES Function norm  1.e-11
 Number of SNES iterations = 4

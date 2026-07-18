@@ -590,7 +590,7 @@ VR[2]: hit upper limit at time 1.0895
     1 SNES Function norm 0.0493311
     2 SNES Function norm 7.10241e-07
   0 SNES Function norm 6.14275
-  1 SNES Function norm < 1.e-11
+  1 SNES Function norm  1.e-11
 VR[2]: dVR_dt went negative on fault clearing at time 1.2
 121 TS dt 0.01 time 1.2
     0 SNES Function norm 60.9715
@@ -601,7 +601,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 137.649
     1 SNES Function norm 0.141729
     2 SNES Function norm 6.29781e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 122 TS dt 0.01 time 1.21
     0 SNES Function norm 61.7318
     1 SNES Function norm 0.0147082
@@ -621,7 +621,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 140.225
     1 SNES Function norm 0.117857
     2 SNES Function norm 4.9949e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 124 TS dt 0.01 time 1.23
     0 SNES Function norm 62.5162
     1 SNES Function norm 0.0123976
@@ -641,7 +641,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 140.805
     1 SNES Function norm 0.10215
     2 SNES Function norm 2.65559e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 126 TS dt 0.01 time 1.25
     0 SNES Function norm 62.5044
     1 SNES Function norm 0.0108976
@@ -651,7 +651,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 140.528
     1 SNES Function norm 0.0964783
     2 SNES Function norm 1.74516e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 127 TS dt 0.01 time 1.26
     0 SNES Function norm 62.2877
     1 SNES Function norm 0.0103497
@@ -706,7 +706,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.00839578
     2 SNES Function norm 1.01243e-08
     0 SNES Function norm 1.01243e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 134.683
     1 SNES Function norm 0.0748937
     2 SNES Function norm 9.8393e-07
@@ -734,11 +734,11 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.00795461
     2 SNES Function norm 2.0345e-08
     0 SNES Function norm 2.0345e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 131.737
     1 SNES Function norm 0.0712125
     2 SNES Function norm 1.76235e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 137 TS dt 0.01 time 1.36
     0 SNES Function norm 58.1585
     1 SNES Function norm 0.00788121
@@ -748,7 +748,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 130.539
     1 SNES Function norm 0.070655
     2 SNES Function norm 1.93931e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 138 TS dt 0.01 time 1.37
     0 SNES Function norm 57.5551
     1 SNES Function norm 0.00784486
@@ -778,7 +778,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 125.245
     1 SNES Function norm 0.0708239
     2 SNES Function norm 2.69098e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 141 TS dt 0.01 time 1.4
     0 SNES Function norm 54.8105
     1 SNES Function norm 0.00791954
@@ -818,7 +818,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 111.168
     1 SNES Function norm 0.072286
     2 SNES Function norm 4.3874e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 145 TS dt 0.01 time 1.44
     0 SNES Function norm 47.7762
     1 SNES Function norm 0.00803364
@@ -838,7 +838,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 100.915
     1 SNES Function norm 0.0714842
     2 SNES Function norm 4.73135e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 147 TS dt 0.01 time 1.46
     0 SNES Function norm 43.0723
     1 SNES Function norm 0.00789683
@@ -864,11 +864,11 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.00771671
     2 SNES Function norm 1.29583e-07
     0 SNES Function norm 1.29583e-07
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 87.0542
     1 SNES Function norm 0.0691206
     2 SNES Function norm 1.22066e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 150 TS dt 0.01 time 1.49
     0 SNES Function norm 37.9649
     1 SNES Function norm 0.00767597
@@ -888,7 +888,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 85.6269
     1 SNES Function norm 0.069217
     2 SNES Function norm 1.86335e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 152 TS dt 0.01 time 1.51
     0 SNES Function norm 38.9884
     1 SNES Function norm 0.00776622
@@ -898,7 +898,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 88.7354
     1 SNES Function norm 0.0700076
     2 SNES Function norm 2.05558e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 153 TS dt 0.01 time 1.52
     0 SNES Function norm 41.2028
     1 SNES Function norm 0.00787671
@@ -954,7 +954,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.00823414
     2 SNES Function norm 1.37463e-07
     0 SNES Function norm 1.37463e-07
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 137.151
     1 SNES Function norm 0.0739921
     2 SNES Function norm 1.03374e-05
@@ -988,13 +988,13 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 155.416
     1 SNES Function norm 0.072698
     2 SNES Function norm 3.89799e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 162 TS dt 0.01 time 1.61
     0 SNES Function norm 70.1284
     1 SNES Function norm 0.00802475
     2 SNES Function norm 3.82273e-08
     0 SNES Function norm 3.82273e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 158.275
     1 SNES Function norm 0.0718952
     2 SNES Function norm 2.822e-06
@@ -1008,7 +1008,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 159.257
     1 SNES Function norm 0.0709094
     2 SNES Function norm 2.21223e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 164 TS dt 0.01 time 1.63
     0 SNES Function norm 70.5647
     1 SNES Function norm 0.00779788
@@ -1038,7 +1038,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 150.415
     1 SNES Function norm 0.0672121
     2 SNES Function norm 2.61321e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 167 TS dt 0.01 time 1.66
     0 SNES Function norm 64.6904
     1 SNES Function norm 0.00738577
@@ -1048,7 +1048,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 143.64
     1 SNES Function norm 0.066088
     2 SNES Function norm 3.50984e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 168 TS dt 0.01 time 1.67
     0 SNES Function norm 61.102
     1 SNES Function norm 0.00728828
@@ -1078,7 +1078,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 114.231
     1 SNES Function norm 0.0660013
     2 SNES Function norm 8.60272e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 171 TS dt 0.01 time 1.7
     0 SNES Function norm 46.9276
     1 SNES Function norm 0.00747381
@@ -1108,7 +1108,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 80.7247
     1 SNES Function norm 0.0741963
     2 SNES Function norm 1.49235e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 174 TS dt 0.01 time 1.73
     0 SNES Function norm 33.0421
     1 SNES Function norm 0.00856749
@@ -1138,7 +1138,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 68.0077
     1 SNES Function norm 0.0856073
     2 SNES Function norm 1.48621e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 177 TS dt 0.01 time 1.76
     0 SNES Function norm 31.4939
     1 SNES Function norm 0.00975637
@@ -1148,7 +1148,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 72.2602
     1 SNES Function norm 0.0883797
     2 SNES Function norm 1.30335e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 178 TS dt 0.01 time 1.77
     0 SNES Function norm 34.5054
     1 SNES Function norm 0.0100015
@@ -1158,7 +1158,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 79.6969
     1 SNES Function norm 0.09032
     2 SNES Function norm 1.07286e-05
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 179 TS dt 0.01 time 1.78
     0 SNES Function norm 38.4733
     1 SNES Function norm 0.010155
@@ -1198,7 +1198,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 117.93
     1 SNES Function norm 0.0916975
     2 SNES Function norm 2.69495e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 183 TS dt 0.01 time 1.82
     0 SNES Function norm 55.2106
     1 SNES Function norm 0.0101839
@@ -1208,7 +1208,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 126.118
     1 SNES Function norm 0.0913593
     2 SNES Function norm 1.70494e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 184 TS dt 0.01 time 1.83
     0 SNES Function norm 58.4493
     1 SNES Function norm 0.0101485
@@ -1294,7 +1294,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 129.031
     1 SNES Function norm 0.101642
     2 SNES Function norm 1.72293e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 194 TS dt 0.01 time 1.93
     0 SNES Function norm 54.8178
     1 SNES Function norm 0.0115199
@@ -1344,7 +1344,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 79.9003
     1 SNES Function norm 0.117802
     2 SNES Function norm 6.2587e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 199 TS dt 0.01 time 1.98
     0 SNES Function norm 31.7402
     1 SNES Function norm 0.0134621
@@ -1374,13 +1374,13 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 49.9408
     1 SNES Function norm 0.131702
     2 SNES Function norm 9.81358e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 202 TS dt 0.01 time 2.01
     0 SNES Function norm 20.4806
     1 SNES Function norm 0.0150563
     2 SNES Function norm 1.18798e-07
     0 SNES Function norm 1.18798e-07
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 45.3649
     1 SNES Function norm 0.136611
     2 SNES Function norm 1.02001e-05
@@ -1414,7 +1414,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 58.4692
     1 SNES Function norm 0.149736
     2 SNES Function norm 8.03336e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 206 TS dt 0.01 time 2.05
     0 SNES Function norm 29.035
     1 SNES Function norm 0.0169393
@@ -1430,7 +1430,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.0172643
     2 SNES Function norm 6.49349e-08
     0 SNES Function norm 6.49349e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 77.0027
     1 SNES Function norm 0.155887
     2 SNES Function norm 5.10574e-06
@@ -1460,7 +1460,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.0178239
     2 SNES Function norm 2.16658e-08
     0 SNES Function norm 2.16658e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 100.429
     1 SNES Function norm 0.160459
     2 SNES Function norm 1.72009e-06
@@ -1548,7 +1548,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 93.4966
     1 SNES Function norm 0.147163
     2 SNES Function norm 1.14065e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 221 TS dt 0.01 time 2.2
     0 SNES Function norm 39.8486
     1 SNES Function norm 0.0161488
@@ -1564,11 +1564,11 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.0157666
     2 SNES Function norm 1.75935e-08
     0 SNES Function norm 1.75935e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 83.6094
     1 SNES Function norm 0.140392
     2 SNES Function norm 1.69713e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 223 TS dt 0.01 time 2.22
     0 SNES Function norm 35.8187
     1 SNES Function norm 0.0153356
@@ -1584,7 +1584,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     1 SNES Function norm 0.0148528
     2 SNES Function norm 2.41781e-08
     0 SNES Function norm 2.41781e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 77.132
     1 SNES Function norm 0.131856
     2 SNES Function norm 2.17367e-06
@@ -1598,7 +1598,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 76.2842
     1 SNES Function norm 0.126864
     2 SNES Function norm 2.29707e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 226 TS dt 0.01 time 2.25
     0 SNES Function norm 34.1858
     1 SNES Function norm 0.0137233
@@ -1608,7 +1608,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 77.3516
     1 SNES Function norm 0.12138
     2 SNES Function norm 2.30746e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 227 TS dt 0.01 time 2.26
     0 SNES Function norm 35.2842
     1 SNES Function norm 0.0130765
@@ -1618,23 +1618,23 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 80.2604
     1 SNES Function norm 0.115417
     2 SNES Function norm 2.19718e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 228 TS dt 0.01 time 2.27
     0 SNES Function norm 37.1055
     1 SNES Function norm 0.0123787
     2 SNES Function norm 2.4261e-08
     0 SNES Function norm 2.4261e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 84.6981
     1 SNES Function norm 0.109014
     2 SNES Function norm 1.97986e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 229 TS dt 0.01 time 2.28
     0 SNES Function norm 39.4583
     1 SNES Function norm 0.0116368
     2 SNES Function norm 2.1086e-08
     0 SNES Function norm 2.1086e-08
-    1 SNES Function norm < 1.e-11
+    1 SNES Function norm  1.e-11
     0 SNES Function norm 90.2095
     1 SNES Function norm 0.102244
     2 SNES Function norm 1.68856e-06
@@ -1784,7 +1784,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 55.8946
     1 SNES Function norm 0.0276306
     2 SNES Function norm 1.47436e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 247 TS dt 0.01 time 2.46
     0 SNES Function norm 20.6807
     1 SNES Function norm 0.0030034
@@ -1824,7 +1824,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 22.3861
     1 SNES Function norm 0.0259665
     2 SNES Function norm 1.90429e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 251 TS dt 0.01 time 2.5
     0 SNES Function norm 11.996
     1 SNES Function norm 0.00287522
@@ -1844,7 +1844,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 39.2303
     1 SNES Function norm 0.0253467
     2 SNES Function norm 1.40995e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 253 TS dt 0.01 time 2.52
     0 SNES Function norm 21.0214
     1 SNES Function norm 0.00277716
@@ -1864,7 +1864,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 60.1346
     1 SNES Function norm 0.0240256
     2 SNES Function norm 7.58691e-07
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 255 TS dt 0.01 time 2.54
     0 SNES Function norm 29.8671
     1 SNES Function norm 0.00261733
@@ -2038,7 +2038,7 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
     0 SNES Function norm 33.622
     1 SNES Function norm 0.0444942
     2 SNES Function norm 5.31526e-07
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm  1.e-11
 276 TS dt 0.01 time 2.75
     0 SNES Function norm 16.6001
     1 SNES Function norm 0.0048922
@@ -3723,8 +3723,8 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
 486 TS dt 0.01 time 4.85
     0 SNES Function norm 3.06423
     1 SNES Function norm 0.000350297
-    2 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
+    2 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
     0 SNES Function norm 6.98606
     1 SNES Function norm 0.00311451
     2 SNES Function norm 2.149e-10
@@ -3747,8 +3747,8 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
 489 TS dt 0.01 time 4.88
     0 SNES Function norm 3.70509
     1 SNES Function norm 0.000309627
-    2 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
+    2 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
     0 SNES Function norm 8.4737
     1 SNES Function norm 0.00274353
     2 SNES Function norm 1.851e-10
@@ -3771,8 +3771,8 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
 492 TS dt 0.01 time 4.91
     0 SNES Function norm 4.41818
     1 SNES Function norm 0.000265628
-    2 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
+    2 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
     0 SNES Function norm 10.0571
     1 SNES Function norm 0.00234644
     2 SNES Function norm 1.359e-10
@@ -3787,8 +3787,8 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
 494 TS dt 0.01 time 4.93
     0 SNES Function norm 4.7889
     1 SNES Function norm 0.000236381
-    2 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
+    2 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
     0 SNES Function norm 10.8558
     1 SNES Function norm 0.00208458
     2 SNES Function norm 9.939e-11
@@ -3803,8 +3803,8 @@ VR[2]: dVR_dt went negative on fault clearing at time 1.2
 496 TS dt 0.01 time 4.95
     0 SNES Function norm 5.01928
     1 SNES Function norm 0.000208411
-    2 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
+    2 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
     0 SNES Function norm 11.33
     1 SNES Function norm 0.0018355
     2 SNES Function norm 6.931e-11

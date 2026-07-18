@@ -1,9 +1,9 @@
   0 KSP Residual norm 3.16228
   1 KSP Residual norm 1.28654
   2 KSP Residual norm 0.820783
-  3 KSP Residual norm < 1.e-11
-  4 KSP Residual norm < 1.e-11
-  5 KSP Residual norm < 1.e-11
+  3 KSP Residual norm  1.e-11
+  4 KSP Residual norm  1.e-11
+  5 KSP Residual norm  1.e-11
 Linear solve did not converge due to DIVERGED_ITS iterations 5
 Iteratively computed eigenvalues
 -2.4641 + 0.i

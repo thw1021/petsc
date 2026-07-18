@@ -1,21 +1,25 @@
-iter =   0, Function value 1., Residual: 2.
-iter =   0, Function value 0.771065, Residual: 4.79162
-  iter =   0,   Function value 0.771065,   Residual: 4.79162
-  iter =   1,   Function value 0.711445,   Residual: 1.71092
-  iter =   2,   Function value 0.544103,   Residual: 2.82684
-  iter =   3,   Function value 0.430694,   Residual: 2.7076
-iter =   1, Function value 0.313526, Residual: 8.37407
-  iter =   0,   Function value 0.313526,   Residual: 8.37407
-  iter =   1,   Function value 0.200958,   Residual: 10.0005
-  iter =   2,   Function value 0.112319,   Residual: 0.40244
-  iter =   3,   Function value 0.0647673,   Residual: 1.98843
-iter =   2, Function value 0.0320676, Residual: 4.20341
-  iter =   0,   Function value 0.0320676,   Residual: 4.20341
-  iter =   1,   Function value 0.00612001,   Residual: 3.49835
-  iter =   2,   Function value 0.000185534,   Residual: 0.592852
-  iter =   3,   Function value 1.22515e-05,   Residual: 0.0805077
-iter =   3, Function value 2.18506e-08, Residual: 0.00385709
-  iter =   0,   Function value 2.18506e-08,   Residual: 0.00385709
-  iter =   1,   Function value 1.4342e-08,   Residual: 0.000111021
-  iter =   2,   Function value 1.42552e-08,   Residual: 0.000408734
-  iter =   3,   Function value 1.43885e-12,   Residual: 5.3099e-05
+  0 TAO,  Function value: 1.,  Residual: 2. 
+  0 TAO,  Function value: 0.771065,  Residual: 4.79162 
+    Iteration information for tao_bnk_cg_ solve.
+    0 TAO,    Function value: 0.771065,    Residual: 4.79162 
+    1 TAO,    Function value: 0.711445,    Residual: 1.7108 
+    2 TAO,    Function value: 0.543976,    Residual: 2.8265 
+    3 TAO,    Function value: 0.480062,    Residual: 5.1227 
+  1 TAO,  Function value: 0.305188,  Residual: 2.87585 
+    Iteration information for tao_bnk_cg_ solve.
+    0 TAO,    Function value: 0.305188,    Residual: 2.87585 
+    1 TAO,    Function value: 0.293047,    Residual: 0.837871 
+    2 TAO,    Function value: 0.20406,    Residual: 2.78894 
+    3 TAO,    Function value: 0.146055,    Residual: 4.76767 
+  2 TAO,  Function value: 0.0742808,  Residual: 1.95808 
+    Iteration information for tao_bnk_cg_ solve.
+    0 TAO,    Function value: 0.0742808,    Residual: 1.95808 
+    1 TAO,    Function value: 0.0711924,    Residual: 0.394663 
+    2 TAO,    Function value: 0.0570566,    Residual: 0.328396 
+    3 TAO,    Function value: 0.0200675,    Residual: 0.159374 
+  3 TAO,  Function value: 0.0128149,  Residual: 1.16842 
+    Iteration information for tao_bnk_cg_ solve.
+    0 TAO,    Function value: 0.0128149,    Residual: 1.16842 
+    1 TAO,    Function value: 0.0121778,    Residual: 0.584312 
+    2 TAO,    Function value: 0.0108486,    Residual: 0.101434 
+    3 TAO,    Function value: 0.00751251,    Residual: 1.64208 

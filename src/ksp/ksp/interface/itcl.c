@@ -240,7 +240,7 @@ static PetscErrorCode PetscViewerAndFormatCreate_Internal(PetscViewer viewer, Pe
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-'PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char name[], PetscCtx ctx)
+PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char name[], PetscCtx ctx)
 {
   PetscErrorCode (*mfunc)(KSP, PetscInt, PetscReal, void *);
   PetscErrorCode (*cfunc)(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **);
