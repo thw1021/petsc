@@ -5,11 +5,11 @@
 
      Synopsis:
      #include <petscviewer.h>
-     PetscViewerVTKWriteFunction(PetscObject object,PetscViewer viewer)
+     PetscViewerVTKWriteFunction(PetscObject object, PetscViewer viewer)
 
      Input Parameters:
-+      object - the PETSc object to be written
--      viewer - viewer it is to be written to
++    object - the PETSc object to be written
+-    viewer - viewer it is to be written to
 
    Level: developer
 
