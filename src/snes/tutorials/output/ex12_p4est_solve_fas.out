@@ -37,21 +37,21 @@
     4 SNES Function norm 0.000588161
       0 SNES Function norm 0.000492505
       1 SNES Function norm 1.24678e-07
-      2 SNES Function norm < 1.e-11
-      3 SNES Function norm < 1.e-11
-      4 SNES Function norm < 1.e-11
-        0 SNES Function norm < 1.e-11
-        1 SNES Function norm < 1.e-11
-      0 SNES Function norm < 1.e-11
-      1 SNES Function norm < 1.e-11
-      2 SNES Function norm < 1.e-11
-      3 SNES Function norm < 1.e-11
+      2 SNES Function norm  1.e-11
+      3 SNES Function norm  1.e-11
+      4 SNES Function norm  1.e-11
+        0 SNES Function norm  1.e-11
+        1 SNES Function norm  1.e-11
+      0 SNES Function norm  1.e-11
+      1 SNES Function norm  1.e-11
+      2 SNES Function norm  1.e-11
+      3 SNES Function norm  1.e-11
     0 SNES Function norm 0.000415292
     1 SNES Function norm 6.33274e-08
-    2 SNES Function norm < 1.e-11
-    3 SNES Function norm < 1.e-11
-    4 SNES Function norm < 1.e-11
-  2 SNES Function norm < 1.e-11
+    2 SNES Function norm  1.e-11
+    3 SNES Function norm  1.e-11
+    4 SNES Function norm  1.e-11
+  2 SNES Function norm  1.e-11
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
 SNES Object: 4 MPI processes
   type: fas
