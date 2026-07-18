@@ -1,17 +1,17 @@
-  0 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
-    1 SNES Function norm < 1.e-11
-      0 SNES Function norm < 1.e-11
-      1 SNES Function norm < 1.e-11
-        0 SNES Function norm < 1.e-11
-        1 SNES Function norm < 1.e-11
+  0 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
+    1 SNES Function norm  1.e-11
+      0 SNES Function norm  1.e-11
+      1 SNES Function norm  1.e-11
+        0 SNES Function norm  1.e-11
+        1 SNES Function norm  1.e-11
         Nonlinear fas_coarse_ solve converged due to CONVERGED_SNORM_RELATIVE iterations 1
-      0 SNES Function norm < 1.e-11
-      1 SNES Function norm < 1.e-11
-    0 SNES Function norm < 1.e-11
-    1 SNES Function norm < 1.e-11
-  1 SNES Function norm < 1.e-11
-  L_2 Error: < 1.0e-11
+      0 SNES Function norm  1.e-11
+      1 SNES Function norm  1.e-11
+    0 SNES Function norm  1.e-11
+    1 SNES Function norm  1.e-11
+  1 SNES Function norm  1.e-11
+  L_2 Error:  1.0e-11
   Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 1
 SNES Object: 4 MPI processes
   type: fas

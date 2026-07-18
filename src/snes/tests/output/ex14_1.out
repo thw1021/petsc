@@ -13,5 +13,5 @@
   5 SNES Function norm 1.52698e-05
   6 SNES Function norm 2.46267e-07
     Jacobian is built ...
-  7 SNES Function norm < 1.e-11
+  7 SNES Function norm  1.e-11
 Number of SNES iterations =     7

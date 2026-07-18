@@ -1720,7 +1720,7 @@ PetscErrorCode TaoMonitorCancel(Tao tao)
 
 .seealso: [](ch_tao), `Tao`, `TaoMonitorDefaultShort()`, `TaoMonitorSet()`
 @*/
-'PetscErrorCode TaoMonitorDefault(Tao tao, PetscViewerAndFormat *vf)
+PetscErrorCode TaoMonitorDefault(Tao tao, PetscViewerAndFormat *vf)
 {
   PetscViewer viewer = vf->viewer;
   PetscBool   isascii;

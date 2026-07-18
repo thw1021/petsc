@@ -5,7 +5,7 @@ atol=1e-50, rtol=1e-08, stol=1e-08, maxit=50, maxf=10000
   3 SNES Function norm 1.59392
   4 SNES Function norm 0.00931023
   5 SNES Function norm 5.02911e-07
-  6 SNES Function norm < 1.e-11
+  6 SNES Function norm  1.e-11
 SNES Object: 1 MPI process
   type: newtontrdc
     Trust region tolerance 1e-12

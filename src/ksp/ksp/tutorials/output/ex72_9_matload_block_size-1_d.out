@@ -24,11 +24,11 @@
  23 KSP Residual norm 8.320e-11
  24 KSP Residual norm 2.848e-11
  25 KSP Residual norm 1.295e-11
- 26 KSP Residual norm < 1.e-11
- 27 KSP Residual norm < 1.e-11
- 28 KSP Residual norm < 1.e-11
- 29 KSP Residual norm < 1.e-11
- 30 KSP Residual norm < 1.e-11
- 31 KSP Residual norm < 1.e-11
+ 26 KSP Residual norm  1.e-11
+ 27 KSP Residual norm  1.e-11
+ 28 KSP Residual norm  1.e-11
+ 29 KSP Residual norm  1.e-11
+ 30 KSP Residual norm  1.e-11
+ 31 KSP Residual norm  1.e-11
 Number of iterations =  31
-  Residual norm < 1.e-12
+  Residual norm  1.e-12
