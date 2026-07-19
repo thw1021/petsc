@@ -220,17 +220,20 @@ static PetscErrorCode PetscViewerAndFormatCreate_Internal(PetscViewer viewer, Pe
 }
 
 /*@C
-  KSPMonitorSetFromOptions - Sets a monitor function and viewer appropriate for the type indicated by the user in the options database
+  KSPMonitorSetFromOptions - Sets a monitor function, viewer, and viewer format based on the viewer specification in the options database
 
   Collective
 
   Input Parameters:
 + ksp  - `KSP` object you wish to monitor
-. opt  - the command line option for this monitor
-. name - the monitor type one is seeking
+. opt  - the command line option for this monitor, for example `-ksp_monitor`
+. name - the monitor type one is seeking, for example, "preconditioned_residual"
 - ctx  - An optional user context for the monitor, or `NULL`
 
   Level: developer
+
+  Note:
+  See `PetscOptionsCreateViewer()` for details on the viewer specification, for example, `-ksp_monitor ascii:myfile::append`
 
 .seealso: [](ch_ksp), `KSPMonitorRegister()`, `KSPMonitorSet()`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
@@ -286,43 +289,46 @@ PETSC_INTERN PetscErrorCode KSPCheckPCMPI(KSP);
 . ksp - the Krylov space context
 
   Options Database Keys:
-+ -ksp_rtol rtol                                                          - relative tolerance used in default determination of convergence, i.e.
-                                                                            if residual norm decreases by this factor than convergence is declared
-. -ksp_atol abstol                                                        - absolute tolerance used in default convergence test, i.e. if residual
-                                                                            norm is less than this then convergence is declared
-. -ksp_divtol tol                                                         - if residual norm increases by this factor than divergence is declared
-. -ksp_max_it maxits                                                      - maximum number of linear iterations
-. -ksp_min_it minits                                                      - minimum number of linear iterations to use, defaults to zero
-. -ksp_reuse_preconditioner (true|false)                                  - reuse the previously computed preconditioner
-. -ksp_converged_use_initial_residual_norm                                - see `KSPConvergedDefaultSetUIRNorm()`
-. -ksp_converged_use_min_initial_residual_norm                            - see `KSPConvergedDefaultSetUMIRNorm()`
-. -ksp_converged_maxits                                                   - see `KSPConvergedDefaultSetConvergedMaxits()`
-. -ksp_norm_type (none|preconditioned|unpreconditioned|natural)           - see `KSPSetNormType()`
-. -ksp_check_norm_iteration it                                            - do not compute residual norm until iteration number it (does compute at 0th iteration)
-                                                                            works only for `KSPBCGS`, `KSPIBCGS`, and `KSPCG`
-. -ksp_lag_norm                                                           - compute the norm of the residual for the ith iteration on the i+1 iteration;
-                                                                            this means that one can use the norm of the residual for convergence test WITHOUT
-                                                                            an extra `MPI_Allreduce()` limiting global synchronizations.
-                                                                            This will require 1 more iteration of the solver than usual.
-. -ksp_guess_type                                                         - Type of initial guess generator for repeated linear solves
-. -ksp_fischer_guess model,size                                           - uses the Fischer initial guess generator for repeated linear solves
-. -ksp_constant_null_space                                                - assume the operator (matrix) has the constant vector in its null space
-. -ksp_test_null_space                                                    - tests the null space set with `MatSetNullSpace()` to see if it truly is a null space
-. -ksp_knoll                                                              - compute initial guess by applying the preconditioner to the right-hand side
-. -ksp_monitor_cancel                                                     - cancel all previous convergene monitor routines set
-. -ksp_monitor                                                            - print residual norm at each iteration
-. -ksp_monitor draw::draw_lg                                              - plot residual norm at each iteration, see `KSPMonitorResidual()`
-. -ksp_monitor_true_residual                                              - print the true l2 residual norm at each iteration, see `KSPMonitorTrueResidual()`
-. -all_ksp_monitor optional_filename                                      - print residual norm at each iteration for ALL KSP solves, regardless of their prefix. This is
-                                                                            useful for `PCFIELDSPLIT`, `PCMG`, etc that have inner solvers and
-                                                                            you wish to track the convergence of all the solvers
-. -ksp_monitor_solution [ascii binary or draw][:filename][:format option] - plot solution at each iteration
-. -ksp_monitor_singular_value                                             - monitor extreme singular values at each iteration
-. -ksp_converged_reason                                                   - view the convergence state at the end of the solve
-. -ksp_use_explicittranspose                                              - transpose the system explicitly in `KSPSolveTranspose()`
-. -ksp_error_if_not_converged                                             - stop the program as soon as an error is detected in a `KSPSolve()`, `KSP_DIVERGED_ITS`
-                                                                            is not treated as an error on inner solves
-- -ksp_converged_rate                                                     - view the convergence rate at the end of the solve
++ -ksp_rtol rtol                                                - relative tolerance used in default determination of convergence, i.e.
+                                                                  if residual norm decreases by this factor than convergence is declared
+. -ksp_atol abstol                                              - absolute tolerance used in default convergence test, i.e. if residual
+                                                                  norm is less than this then convergence is declared
+. -ksp_divtol tol                                               - if residual norm increases by this factor than divergence is declared
+. -ksp_max_it maxits                                            - maximum number of linear iterations
+. -ksp_min_it minits                                            - minimum number of linear iterations to use, defaults to zero
+. -ksp_reuse_preconditioner (true|false)                        - reuse the previously computed preconditioner
+. -ksp_converged_use_initial_residual_norm                      - see `KSPConvergedDefaultSetUIRNorm()`
+. -ksp_converged_use_min_initial_residual_norm                  - see `KSPConvergedDefaultSetUMIRNorm()`
+. -ksp_converged_maxits                                         - see `KSPConvergedDefaultSetConvergedMaxits()`
+. -ksp_norm_type (none|preconditioned|unpreconditioned|natural) - see `KSPSetNormType()`
+. -ksp_check_norm_iteration it                                  - do not compute residual norm until iteration number it (does compute at 0th iteration)
+                                                                  works only for `KSPBCGS`, `KSPIBCGS`, and `KSPCG`
+. -ksp_lag_norm                                                 - compute the norm of the residual for the ith iteration on the i+1 iteration;
+                                                                  this means that one can use the norm of the residual for convergence test WITHOUT
+                                                                  an extra `MPI_Allreduce()` limiting global synchronizations.
+                                                                  This will require 1 more iteration of the solver than usual.
+. -ksp_guess_type                                               - type of initial guess generator for repeated linear solves
+. -ksp_fischer_guess model,size                                 - uses the Fischer initial guess generator for repeated linear solves
+. -ksp_constant_null_space                                      - assume the operator (matrix) has the constant vector in its null space
+. -ksp_knoll                                                    - compute initial guess by applying the preconditioner to the right-hand side
+. -ksp_converged_reason viewer_specification                    - view the convergence state at the end of the solve, see `PetscOptionsCreateViewer()` for the values of `viewer_specification`
+. -ksp_use_explicittranspose                                    - transpose the system explicitly in `KSPSolveTranspose()`
+. -ksp_error_if_not_converged                                   - stop the program as soon as an error is detected in a `KSPSolve()`, `KSP_DIVERGED_ITS`
+                                                                  is not treated as an error on inner solves
+- -ksp_converged_rate viewer_specfication                       - view the convergence rate at the end of the solve, see `PetscOptionsCreateViewer()` for the values of `viewer_specification`
+
+  Options Database Keys for monitoring at each iteration (see `PetscOptionsCreateViewer()` for the values of `viewer_specification`):
++ -ksp_monitor_cancel                              - cancel all previous convergence monitor routines set
+. -ksp_monitor viewer_specfication                 - the (preconditioned) residual norm
+. -ksp_monitor_true_residual viewer_specfication   - the true l2 residual norm, see `KSPMonitorTrueResidual()`
+. -ksp_monitor_solution viewer_specification       - the solution, see `PetscOptionsCreateViewer()`
+. -ksp_monitor_singular_value viewer_specification - the extreme singular values at each iteration
+. -ksp_monitor_range viewer_specification          - the range of values in the (preconditioned) residual
+. -ksp_monitor_max viewer_specification            - the maximum value in the (preconditioned) residual
+. -ksp_monitor_error viewer_specification          - the error or its l2 norm, see `KSPMonitorError()`, `KSPMonitorErrorDraw()`, and `KSPMonitorErrorDrawLG()`
+- -all_ksp_monitor viewer_specfication             - the (preconditioned) residual norm for all `KSP` solves, regardless of their prefix. This is
+                                                     useful for `PCFIELDSPLIT`, `PCMG`, etc that have inner solvers and
+                                                     you wish to track the convergence of all the solvers.
 
   Level: beginner
 
