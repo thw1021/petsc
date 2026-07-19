@@ -341,8 +341,8 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
     PetscCall(PetscOptionsHelpPrintedCheck(PetscOptionsHelpPrintedSingleton, pre, name, &found));
     if (!found && viewer) {
       PetscCall((*PetscHelpPrintf)(comm, "----------------------------------------\nViewer (-%s%s) options:\n", pre ? pre : "", name + 1));
-      PetscCall((*PetscHelpPrintf)(comm, "  -%s%s ascii[:[filename][:[format][:append]]]: %s (%s)\n", pre ? pre : "", name + 1, "Prints object to stdout or ASCII file", func_name));
-      PetscCall((*PetscHelpPrintf)(comm, "  -%s%s binary[:[filename][:[format][:append]]]: %s (%s)\n", pre ? pre : "", name + 1, "Saves object to a binary file", func_name));
+      PetscCall((*PetscHelpPrintf)(comm, "  -%s%s ascii[:[filename][:[format][:filemode]]]: %s (%s)\n", pre ? pre : "", name + 1, "Prints object to stdout or ASCII file", func_name));
+      PetscCall((*PetscHelpPrintf)(comm, "  -%s%s binary[:[filename][:[format][:filemode]]]: %s (%s)\n", pre ? pre : "", name + 1, "Saves object to a binary file", func_name));
       PetscCall((*PetscHelpPrintf)(comm, "  -%s%s draw[:[drawtype][:filename|format]] %s (%s)\n", pre ? pre : "", name + 1, "Draws object", func_name));
       PetscCall((*PetscHelpPrintf)(comm, "  -%s%s socket[:port]: %s (%s)\n", pre ? pre : "", name + 1, "Pushes object to a Unix socket", func_name));
       PetscCall((*PetscHelpPrintf)(comm, "  -%s%s saws[:communicatorname]: %s (%s)\n", pre ? pre : "", name + 1, "Publishes object to SAWs", func_name));
@@ -398,15 +398,16 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-section-header-unknown
 /*@C
-  PetscOptionsCreateViewer - Creates a viewer appropriate for the type indicated by the user
+  PetscOptionsCreateViewer - Creates a `PetscViewer` and `PetscViewerFormat` based on a viewer specification in the options database
 
   Collective
 
   Input Parameters:
 + comm    - the communicator to own the viewer
 . options - options database, use `NULL` for default global database
-. pre     - the string to prepend to the name or `NULL`
+. prefix  - the string to prepend to the name (may be `NULL`)
 - name    - the options database name that will be checked for
 
   Output Parameters:
@@ -416,44 +417,46 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
 
   Level: intermediate
 
+  Viewer specification:
++ ascii[:[filename][:[format][:filemode]]]  - `filename` defaults to `stdout`
+. binary[:[filename][:[format][:filemode]]] - defaults to the `filename` of `binaryoutput`
+. hdf5[:[filename][:filemode]]              - HDF5 input and output, `PETSCVIEWERHDF5`
+. draw[:drawtype[:[filename][:filemode]]]   - for example, `draw:tikz`, `draw:tikz:figure.tex`,  or `draw:x`
+. socket[:port]                             - defaults to the standard socket output port of 5005, see `PetscViewerSocketOpen()`
+. saws[:communicatorname]                   - publishes object to the Scientific Application Webserver (SAWs)
+- vtk:filename.vts                          - VTK output, `PETSCVIEWERVTK`
+
   Notes:
-  The argument has the following form
-.vb
-    type:filename:format:filemode
-.ve
-  where all parts are optional, but you need to include the colon to access the next part. The mode argument must a valid `PetscFileMode`, i.e. read, write, append, update, or append_update. For example, to read from an HDF5 file, use
-.vb
-    hdf5:sol.h5::read
-.ve
+  See `PetscViewerType` for a list of all available viewer types (the string before the first `:`
 
-  If no value is provided ascii:stdout is used
-+       ascii[:[filename][:[format][:append]]]  -  defaults to stdout - format can be one of ascii_info, ascii_info_detail, or ascii_matlab,
-  for example ascii::ascii_info prints just the information about the object not all details
-  unless :append is given filename opens in write mode, overwriting what was already there
-.       binary[:[filename][:[format][:append]]] -  defaults to the file binaryoutput
-.       draw[:drawtype[:filename]]              -  for example, draw:tikz, draw:tikz:figure.tex  or draw:x
-.       socket[:port]                           -  defaults to the standard output port
--       saws[:communicatorname]                 -   publishes object to the Scientific Application Webserver (SAWs)
+  See `PetscViewerFormat` for the possible values of `format`
 
-  You can control whether calls to this function create a viewer (or return early with *set of `PETSC_FALSE`) with
-  `PetscOptionsPushCreateViewerOff()`.  This is useful if calling many small subsolves, in which case XXXViewFromOptions can take
-  an appreciable fraction of the runtime.
+  See `PetscFileMode` for the possible values of `filemode`
 
-  If PETSc is configured with `--with-viewfromoptions=0` this function always returns with *set of `PETSC_FALSE`
+  If no viewer type is indicated before the first `:`, then `ascii` is used
+
+  Unless `filemode` is `append` or `append_update` any files are opened in write mode, overwriting any previous file
+
+  You can control whether calls to this function return early with a value of set of `PETSC_FALSE` using `PetscOptionsPushCreateViewerOff()`.
+  This is useful if calling many small subsolves, in which case `XXXViewFromOptions()` calls can take an appreciable fraction of the runtime.
 
   This routine is thread-safe for accessing predefined `PetscViewer`s like `PETSC_VIEWER_STDOUT_SELF` but not for accessing
   files by name.
 
-.seealso: [](sec_viewers), `PetscViewerDestroy()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
+  This routine is used by `KSPMonitorSetFromOptions()`, `SNESMonitorSetFromOptions()`, `TSMonitorSetFromOptions()`, `TaoMonitorSetFromOptions()`, and `DMMonitorSetFromOptions()`,
+  as well as `PetscObjectViewFromOptions()` and all functions, such as `VecViewFromOptions()` that call it.
+
+.seealso: [](sec_viewers), `PetscViewerFormat`, `PetscViewerDestroy()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
           `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
           `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
           `PetscOptionsStringArray()`, `PetscOptionsRealArray()`, `PetscOptionsScalar()`,
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `PetscOptionsPushCreateViewerOff()`, `PetscOptionsPopCreateViewerOff()`,
-          `PetscOptionsCreateViewerOff()`
+          `PetscOptionsCreateViewerOff()`, `KSPMonitorSetFromOptions()`, `SNESMonitorSetFromOptions()`, `TSMonitorSetFromOptions()`,
+          `TaoMonitorSetFromOptions()`, `DMMonitorSetFromOptions()`, `PetscObjectViewFromOptions()`, `VecViewFromOptions()`
 @*/
-PetscErrorCode PetscOptionsCreateViewer(MPI_Comm comm, PetscOptions options, const char pre[], const char name[], PetscViewer *viewer, PetscViewerFormat *format, PetscBool *set)
+PetscErrorCode PetscOptionsCreateViewer(MPI_Comm comm, PetscOptions options, const char prefix[], const char name[], PetscViewer *viewer, PetscViewerFormat *format, PetscBool *set)
 {
   PetscInt  n_max = 1;
   PetscBool set_internal;
@@ -461,23 +464,23 @@ PetscErrorCode PetscOptionsCreateViewer(MPI_Comm comm, PetscOptions options, con
   PetscFunctionBegin;
   if (viewer) *viewer = NULL;
   if (format) *format = PETSC_VIEWER_DEFAULT;
-  PetscCall(PetscOptionsCreateViewers_Internal(comm, options, pre, name, &n_max, viewer, format, &set_internal, PETSC_FUNCTION_NAME, PETSC_FALSE));
+  PetscCall(PetscOptionsCreateViewers_Internal(comm, options, prefix, name, &n_max, viewer, format, &set_internal, PETSC_FUNCTION_NAME, PETSC_FALSE));
   if (set_internal) PetscAssert(n_max == 1, comm, PETSC_ERR_PLIB, "Unexpected: %" PetscInt_FMT " != 1 viewers set", n_max);
   if (set) *set = set_internal;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscOptionsCreateViewers - Create multiple viewers from a comma-separated list in the options database
+  PetscOptionsCreateViewers - Create multiple viewers from a comma-separated list of viewer specifications in the options database
 
   Collective
 
   Input Parameters:
 + comm    - the communicator to own the viewers
 . options - options database, use `NULL` for default global database
-. pre     - the string to prepend to the name or `NULL`
+. prefix  - the string to prepend to the name (may be `NULL`)
 . name    - the options database name that will be checked for
-- n_max   - on input: the maximum number of viewers; on output: the number of viewers in the comma-separated list
+- n_max   - on input: the maximum number of viewers; on output: the number of viewers found in the comma-separated list
 
   Output Parameters:
 + viewers - an array to hold at least `n_max` `PetscViewer`s, or `NULL` if not needed; on output: if not `NULL`, the
@@ -489,18 +492,16 @@ PetscErrorCode PetscOptionsCreateViewer(MPI_Comm comm, PetscOptions options, con
   Level: intermediate
 
   Note:
-  See `PetscOptionsCreateViewer()` for how the format strings for the viewers are interpreted.
+  See `PetscOptionsCreateViewer()` for how the viewer specifications are interpreted.
 
-  Use `PetscViewerDestroy()` on each viewer, otherwise a memory leak will occur.
-
-  If PETSc is configured with `--with-viewfromoptions=0` this function always returns with `n_max` of 0 and `set` of `PETSC_FALSE`
+  Use `PetscViewerDestroy()` on each viewer.
 
 .seealso: [](sec_viewers), `PetscOptionsCreateViewer()`
 @*/
-PetscErrorCode PetscOptionsCreateViewers(MPI_Comm comm, PetscOptions options, const char pre[], const char name[], PetscInt *n_max, PetscViewer viewers[], PetscViewerFormat formats[], PetscBool *set)
+PetscErrorCode PetscOptionsCreateViewers(MPI_Comm comm, PetscOptions options, const char prefix[], const char name[], PetscInt *n_max, PetscViewer viewers[], PetscViewerFormat formats[], PetscBool *set)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsCreateViewers_Internal(comm, options, pre, name, n_max, viewers, formats, set, PETSC_FUNCTION_NAME, PETSC_TRUE));
+  PetscCall(PetscOptionsCreateViewers_Internal(comm, options, prefix, name, n_max, viewers, formats, set, PETSC_FUNCTION_NAME, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
