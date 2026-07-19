@@ -448,6 +448,7 @@ static PetscErrorCode KSPGuessFischerSetModel_Fischer(KSPGuess guess, PetscInt m
     KSPGuessSetType(guess,KSPGUESSFISCHER);
     KSPGuessFischerSetModel(guess,model,basis);
     KSPGuessSetTolerance(guess,PETSC_MACHINE_EPSILON);
+    KSPGuessSetFromOptions(guess);
 .ve
     The default tolerance (which is only used in Method 3) is 32*`PETSC_MACHINE_EPSILON`. This value was chosen
     empirically by trying a range of tolerances and picking the one that lowered the solver iteration count the most
@@ -462,7 +463,7 @@ static PetscErrorCode KSPGuessFischerSetModel_Fischer(KSPGuess guess, PetscInt m
     Developer Note:
     The option `-ksp_fischer_guess <int,int>` is still available for backward compatibility
 
-.seealso: [](ch_ksp), `KSPGuess`, `KSPGuessType`, `KSP`
+.seealso: [](ch_ksp), `KSPGuess`, `KSPGuessType`, `KSP`, `KSPGuessSetFromOptions()`, `KSPGuessCreate()`
 M*/
 
 PetscErrorCode KSPGuessCreate_Fischer(KSPGuess guess)
