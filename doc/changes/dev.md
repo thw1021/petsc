@@ -105,6 +105,8 @@
 - Add support for nonlinear preconditioners with a `DM` different from the parent `SNES` `DM`. Calling `SNESSetNPC()` will no longer enforce default parameters on the npc.
 - Change `-snes_mf` to respect an explicitly set `PC` type instead of silently overriding it with `PCNONE`; an explicitly requested `PC` that requires an assembled matrix now errors
 - Deprecate `SNESMonitorDefaultShort()` and `-snes_monitor_short`
+- Add support for nonlinear preconditioners with a `DM` different from the parent `SNES` `DM`. Calling `SNESSetNPC()` will no longer enforce default parameters on the `npc`.
+- Add `SNESLineSearchViewFromOptions()`
 
 ## SNESLineSearch
 
