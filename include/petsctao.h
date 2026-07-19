@@ -28,7 +28,6 @@ typedef enum {
   TAO_SUBSET_MASK,
   TAO_SUBSET_MATRIXFREE
 } TaoSubsetType;
-PETSC_EXTERN const char *const TaoSubsetTypes[];
 
 /*E
   TaoADMMUpdateType - Determine the spectral penalty update routine for the Lagrange augmented term for `TAOADMM`.
@@ -452,7 +451,6 @@ PETSC_EXTERN PetscErrorCode TaoAddLineSearchCounts(Tao);
 PETSC_EXTERN PetscErrorCode TaoDefaultConvergenceTest(Tao, PetscCtx);
 PETSC_EXTERN PetscErrorCode TaoSetConvergenceTest(Tao, PetscErrorCode (*)(Tao, PetscCtx), PetscCtx);
 
-PETSC_EXTERN PetscErrorCode TaoLCLSetStateDesignIS(Tao, IS, IS);
 PETSC_EXTERN PetscErrorCode TaoMonitor(Tao, PetscInt, PetscReal, PetscReal, PetscReal, PetscReal);
 /*S
   TaoMonitorDrawCtx - Context object for the `Tao` graphical monitor routines that draw convergence information on a `PetscDraw`

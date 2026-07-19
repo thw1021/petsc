@@ -34,7 +34,6 @@ typedef enum {
   PETSCDUALSPACE_REFCELL_SIMPLEX,
   PETSCDUALSPACE_REFCELL_TENSOR
 } PetscDualSpaceReferenceCell;
-PETSC_EXTERN const char *const PetscDualSpaceReferenceCells[];
 
 /*MC
   PetscDualSpaceTransformType - The type of function transform
@@ -113,7 +112,6 @@ PETSC_EXTERN PetscErrorCode    PetscDualSpaceViewFromOptions(PetscDualSpace, Pet
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceView(PetscDualSpace, PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceRegister(const char[], PetscErrorCode (*)(PetscDualSpace));
-PETSC_EXTERN PetscErrorCode PetscDualSpaceRegisterDestroy(void);
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceGetDimension(PetscDualSpace, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceGetInteriorDimension(PetscDualSpace, PetscInt *);
