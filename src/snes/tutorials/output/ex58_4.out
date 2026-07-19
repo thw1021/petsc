@@ -81,7 +81,7 @@
     0 KSP Residual norm 2.67217e-07
     1 KSP Residual norm 4.244e-10
     2 KSP Residual norm 2.136e-11
-    3 KSP Residual norm < 1.e-11
+    3 KSP Residual norm  1.e-11
         Line search: abs(fty)/||y|| = 3.66829e-15 <= atol = 1e-06
  12 SNES VI Function norm 1.94053e-12 Active lower constraints 198/198 upper constraints 0/0 Percent of total 0.0210437 Percent of bounded 0.
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 12
