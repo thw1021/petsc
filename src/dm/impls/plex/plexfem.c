@@ -1865,7 +1865,7 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
 
   Level: developer
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMPlexComputeL2FieldDiff()`, `DMComputeL2GradientDiff()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMComputeL2GradientDiff()`
 @*/
 PetscErrorCode DMPlexComputeL2DiffVec(DM dm, PetscReal time, PetscErrorCode (**funcs)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *), void **ctxs, Vec X, Vec D)
 {
@@ -1994,7 +1994,7 @@ PetscErrorCode DMPlexComputeL2DiffVec(DM dm, PetscReal time, PetscErrorCode (**f
 
   This is usually used to get an error estimate for the primal solution, using the flux from a mixed solution.
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeL2FluxDiffVec()`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMPlexComputeL2FieldDiff()`, `DMComputeL2GradientDiff()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeL2FluxDiffVec()`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMComputeL2GradientDiff()`
 @*/
 PetscErrorCode DMPlexComputeL2FluxDiffVecLocal(Vec lu, PetscInt f, Vec lmu, PetscInt mf, Vec eFlux)
 {
@@ -2096,7 +2096,7 @@ PetscErrorCode DMPlexComputeL2FluxDiffVecLocal(Vec lu, PetscInt f, Vec lmu, Pets
 
   This is usually used to get an error estimate for the primal solution, using the flux from a mixed solution.
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeL2FluxDiffVecLocal()`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMPlexComputeL2FieldDiff()`, `DMComputeL2GradientDiff()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeL2FluxDiffVecLocal()`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMComputeL2GradientDiff()`
 @*/
 PetscErrorCode DMPlexComputeL2FluxDiffVec(Vec u, PetscInt f, Vec mu, PetscInt mf, Vec eFlux)
 {
@@ -2138,7 +2138,7 @@ PetscErrorCode DMPlexComputeL2FluxDiffVec(Vec u, PetscInt f, Vec mu, PetscInt mf
   Note:
   $ u_h(v_i) = \sum_{T_i \in support(v_i)} |T_i| u_h(T_i) / \sum_{T_i \in support(v_i)} |T_i| $ where $ |T_i| $ is the cell volume
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMPlexComputeL2FieldDiff()`, `DMComputeL2GradientDiff()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMComputeL2GradientDiff()`
 @*/
 PetscErrorCode DMPlexComputeClementInterpolant(DM dm, Vec locX, Vec locC)
 {
@@ -2270,7 +2270,7 @@ PetscErrorCode DMPlexComputeClementInterpolant(DM dm, Vec locX, Vec locC)
   Note:
   $\nabla u_h(v_i) = \sum_{T_i \in support(v_i)} |T_i| \nabla u_h(T_i) / \sum_{T_i \in support(v_i)} |T_i| $ where $ |T_i| $ is the cell volume
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMPlexComputeL2FieldDiff()`, `DMComputeL2GradientDiff()`
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMProjectFunction()`, `DMComputeL2Diff()`, `DMComputeL2GradientDiff()`
 @*/
 PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC)
 {
