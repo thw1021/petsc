@@ -4,9 +4,9 @@
   3 KSP Residual norm 4.23521e-06
   4 KSP Residual norm 9.82574e-08
   5 KSP Residual norm 1.11627e-09
-  6 KSP Residual norm < 1.e-11
-  7 KSP Residual norm < 1.e-11
-  8 KSP Residual norm < 1.e-11
-  9 KSP Residual norm < 1.e-11
+  6 KSP Residual norm  1.e-11
+  7 KSP Residual norm  1.e-11
+  8 KSP Residual norm  1.e-11
+  9 KSP Residual norm  1.e-11
 Number of iterations =   9
-  Residual norm < 1.e-12
+  Residual norm  1.e-12

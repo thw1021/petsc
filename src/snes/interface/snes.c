@@ -1075,7 +1075,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   if (set && flg) PetscCall(SNESMonitorCancel(snes));
 
   PetscCall(SNESMonitorSetFromOptions(snes, "-snes_monitor", "Monitor norm of function", "SNESMonitorDefault", SNESMonitorDefault, SNESMonitorDefaultSetUp));
-  PetscCall(SNESMonitorSetFromOptions(snes, "-snes_monitor_short", "Monitor norm of function with fewer digits", "SNESMonitorDefaultShort", SNESMonitorDefaultShort, NULL));
+  PetscCall(PetscOptionsDeprecated("-snes_monitor_short", "-snes_monitor", "3.26", NULL));
   PetscCall(SNESMonitorSetFromOptions(snes, "-snes_monitor_range", "Monitor range of elements of function", "SNESMonitorRange", SNESMonitorRange, NULL));
 
   PetscCall(SNESMonitorSetFromOptions(snes, "-snes_monitor_ratio", "Monitor ratios of the norm of function for consecutive steps", "SNESMonitorRatio", SNESMonitorRatio, SNESMonitorRatioSetUp));
