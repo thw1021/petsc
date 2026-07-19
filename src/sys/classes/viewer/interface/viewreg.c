@@ -425,7 +425,7 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
   This routine is thread-safe for accessing predefined `PetscViewer`s like `PETSC_VIEWER_STDOUT_SELF` but not for accessing
   files by name.
 
-  This routine is used by `KSPMonitorSetFromOptions()`, `SNESMonitorSetFromOptions()`, `TSMonitorSetFromOptions()`, `TaoMonitorSetFromOptions()`, and `DMMonitorSetFromOptions()`
+  This routine is used by `KSPMonitorSetFromOptions()`, `SNESMonitorSetFromOptions()`, `TSMonitorSetFromOptions()`, `TaoMonitorSetFromOptions()`, and `DMMonitorSetFromOptions()`.
 
 .seealso: [](sec_viewers), `PetscViewerDestroy()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
@@ -459,7 +459,7 @@ PetscErrorCode PetscOptionsCreateViewer(MPI_Comm comm, PetscOptions options, con
   Input Parameters:
 + comm    - the communicator to own the viewers
 . options - options database, use `NULL` for default global database
-. prefix  - the string to prepend to the name or `NULL`
+. prefix  - the string to prepend to the name (may be `NULL`)
 . name    - the options database name that will be checked for
 - n_max   - on input: the maximum number of viewers; on output: the number of viewers in the comma-separated list
 
