@@ -1124,7 +1124,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateSetLocal(ISLocalToGlobalMappping map,PetscInt nrows, PetscInt *rows,PetscInt ncols, PetscInt *cols,PetscInt *dnz, PetscInt *onz)
+   PetscErrorCode MatPreallocateSetLocal(ISLocalToGlobalMappping map, PetscInt nrows, PetscInt *rows, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
@@ -1158,7 +1158,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateSetLocalRemoveDups(ISLocalToGlobalMappping map,PetscInt nrows, PetscInt *rows,PetscInt ncols, PetscInt *cols,PetscInt *dnz, PetscInt *onz)
+   PetscErrorCode MatPreallocateSetLocalRemoveDups(ISLocalToGlobalMappping map, PetscInt nrows, PetscInt *rows, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
@@ -1192,7 +1192,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateSetLocalBlock(ISLocalToGlobalMappping map,PetscInt nrows, PetscInt *rows,PetscInt ncols, PetscInt *cols,PetscInt *dnz, PetscInt *onz)
+   PetscErrorCode MatPreallocateSetLocalBlock(ISLocalToGlobalMappping map, PetscInt nrows, PetscInt *rows, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
@@ -1226,7 +1226,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateSymmetricSetLocalBlock(ISLocalToGlobalMappping map,PetscInt nrows, PetscInt *rows,PetscInt ncols, PetscInt *cols,PetscInt *dnz, PetscInt *onz)
+   PetscErrorCode MatPreallocateSymmetricSetLocalBlock(ISLocalToGlobalMappping map, PetscInt nrows, PetscInt *rows, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
@@ -1259,7 +1259,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateSet(PetscInt nrows, PetscInt *rows,PetscInt ncols, PetscInt *cols,PetscInt *dnz, PetscInt *onz)
+   PetscErrorCode MatPreallocateSet(PetscInt nrows, PetscInt *rows, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
@@ -1297,7 +1297,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateSymmetricSetBlock(PetscInt nrows, PetscInt *rows,PetscInt ncols, PetscInt *cols,PetscInt *dnz, PetscInt *onz)
+   PetscErrorCode MatPreallocateSymmetricSetBlock(PetscInt nrows, PetscInt *rows, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
@@ -1333,7 +1333,7 @@ M*/
 
    Synopsis:
    #include <petscmat.h>
-   PetscErrorCode MatPreallocateLocations(Mat A,PetscInt row,PetscInt ncols,PetscInt *cols,PetscInt *dnz,PetscInt *onz)
+   PetscErrorCode MatPreallocateLocations(Mat A, PetscInt row, PetscInt ncols, PetscInt *cols, PetscInt *dnz, PetscInt *onz)
 
    Not Collective
 
