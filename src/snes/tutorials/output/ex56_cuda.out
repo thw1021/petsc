@@ -22,9 +22,9 @@ Labels:
     7 KSP Residual norm 1.27168e-05
     8 KSP Residual norm 3.20202e-07
     9 KSP Residual norm 1.24856e-08
-   10 KSP Residual norm < 1.e-11
+   10 KSP Residual norm  1.e-11
   Linear solve converged due to CONVERGED_RTOL iterations 10
-  1 SNES Function norm < 1.e-11
+  1 SNES Function norm  1.e-11
 DM Object: Mesh 4 MPI processes
   type: plex
 Mesh in 3 dimensions:

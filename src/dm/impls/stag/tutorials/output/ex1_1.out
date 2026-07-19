@@ -107,7 +107,7 @@ Elementwise ghost stencil: STAR, width 1
  19 KSP Residual norm 9.20827
  20 KSP Residual norm 8.53107
  21 KSP Residual norm 8.52094
- 22 KSP Residual norm < 1.e-11
+ 22 KSP Residual norm  1.e-11
 DM Object: 7 MPI processes
   type: stag
 Dimension: 1

@@ -4,9 +4,9 @@
       0 SNES Function norm 6.89596e-05
       1 SNES Function norm 4.693e-10
         0 SNES Function norm 4.180e-10
-        1 SNES Function norm < 1.e-11
+        1 SNES Function norm  1.e-11
       0 SNES Function norm 4.663e-10
-      1 SNES Function norm < 1.e-11
+      1 SNES Function norm  1.e-11
     0 SNES Function norm 7.21962e-05
     1 SNES Function norm 5.178e-10
   1 SNES Function norm 5.178e-10

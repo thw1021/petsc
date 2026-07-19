@@ -196,36 +196,36 @@ PC Object: 1 MPI process
    41 KSP Residual norm 2.065e-11
    42 KSP Residual norm 2.426e-11
    43 KSP Residual norm 1.079e-11
-   44 KSP Residual norm < 1.e-11
-   45 KSP Residual norm < 1.e-11
-   46 KSP Residual norm < 1.e-11
-   47 KSP Residual norm < 1.e-11
+   44 KSP Residual norm  1.e-11
+   45 KSP Residual norm  1.e-11
+   46 KSP Residual norm  1.e-11
+   47 KSP Residual norm  1.e-11
    48 KSP Residual norm 2.996e-11
-   49 KSP Residual norm < 1.e-11
-   50 KSP Residual norm < 1.e-11
-   51 KSP Residual norm < 1.e-11
-   52 KSP Residual norm < 1.e-11
-   53 KSP Residual norm < 1.e-11
-   54 KSP Residual norm < 1.e-11
-   55 KSP Residual norm < 1.e-11
-   56 KSP Residual norm < 1.e-11
-   57 KSP Residual norm < 1.e-11
-   58 KSP Residual norm < 1.e-11
-   59 KSP Residual norm < 1.e-11
-   60 KSP Residual norm < 1.e-11
-   61 KSP Residual norm < 1.e-11
-   62 KSP Residual norm < 1.e-11
-   63 KSP Residual norm < 1.e-11
-   64 KSP Residual norm < 1.e-11
-   65 KSP Residual norm < 1.e-11
-   66 KSP Residual norm < 1.e-11
-   67 KSP Residual norm < 1.e-11
-   68 KSP Residual norm < 1.e-11
-   69 KSP Residual norm < 1.e-11
-   70 KSP Residual norm < 1.e-11
-   71 KSP Residual norm < 1.e-11
-   72 KSP Residual norm < 1.e-11
-   73 KSP Residual norm < 1.e-11
+   49 KSP Residual norm  1.e-11
+   50 KSP Residual norm  1.e-11
+   51 KSP Residual norm  1.e-11
+   52 KSP Residual norm  1.e-11
+   53 KSP Residual norm  1.e-11
+   54 KSP Residual norm  1.e-11
+   55 KSP Residual norm  1.e-11
+   56 KSP Residual norm  1.e-11
+   57 KSP Residual norm  1.e-11
+   58 KSP Residual norm  1.e-11
+   59 KSP Residual norm  1.e-11
+   60 KSP Residual norm  1.e-11
+   61 KSP Residual norm  1.e-11
+   62 KSP Residual norm  1.e-11
+   63 KSP Residual norm  1.e-11
+   64 KSP Residual norm  1.e-11
+   65 KSP Residual norm  1.e-11
+   66 KSP Residual norm  1.e-11
+   67 KSP Residual norm  1.e-11
+   68 KSP Residual norm  1.e-11
+   69 KSP Residual norm  1.e-11
+   70 KSP Residual norm  1.e-11
+   71 KSP Residual norm  1.e-11
+   72 KSP Residual norm  1.e-11
+   73 KSP Residual norm  1.e-11
   Linear solve converged due to CONVERGED_RTOL iterations 73
 KSP Object: 1 MPI process
   type: cgne
