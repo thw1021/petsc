@@ -207,9 +207,6 @@ typedef struct {
 
 PETSC_EXTERN PetscErrorCode DMDAGetLocalInfo(DM, DMDALocalInfo *);
 
-PETSC_EXTERN PetscErrorCode MatRegisterDAAD(void);
-PETSC_EXTERN PetscErrorCode MatCreateSeqUSFFT(Vec, DM, Mat *);
-
 PETSC_EXTERN PetscErrorCode DMDASetGetMatrix(DM, PetscErrorCode (*)(DM, Mat *));
 PETSC_EXTERN PetscErrorCode DMDASetBlockFills(DM, const PetscInt *, const PetscInt *);
 PETSC_EXTERN PetscErrorCode DMDASetBlockFillsSparse(DM, const PetscInt *, const PetscInt *);
