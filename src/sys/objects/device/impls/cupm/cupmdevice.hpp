@@ -6,6 +6,10 @@
 
 #include "../impldevicebase.hpp" /* I "petscdevice.h" */
 
+#if PetscDefined(HAVE_HWLOC)
+  #include <hwloc.h>
+#endif
+
 namespace Petsc
 {
 
@@ -52,6 +56,11 @@ private:
   static PetscErrorCode configure_device_(PetscDevice) noexcept;
   static PetscErrorCode view_device_(PetscDevice, PetscViewer) noexcept;
   static PetscErrorCode get_attribute_(PetscInt, PetscDeviceAttribute, void *) noexcept;
+  static PetscErrorCode select_device_petsc_decide_(MPI_Comm, PetscInt, std::pair<PetscInt, PetscBool> *) noexcept;
+#if PetscDefined(HAVE_HWLOC)
+  static PetscErrorCode get_device_placement_in_cpuset_(PetscInt, hwloc_cpuset_t, hwloc_cpuset_t, PetscInt *) noexcept;
+  static PetscErrorCode select_device_topology_aware_(PetscInt, std::pair<PetscInt, PetscBool> *) noexcept;
+#endif
 };
 
 // define static variables
