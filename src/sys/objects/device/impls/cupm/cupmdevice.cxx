@@ -254,7 +254,7 @@ PetscErrorCode Device<T>::select_device_petsc_decide_(MPI_Comm comm, PetscInt nd
       char *endptr;
 
       initId->first = (PetscInt)strtol(pytorch_rank, &endptr, 10);
-      PetscCheck(initId->first < ndev, PETSC_COMM_SELF, PETSC_ERR_LIB, "PyTorch environmental variable LOCAL_RANK %s > number devices %d", pytorch_rank, ndev);
+      PetscCheck(initId->first < ndev, PETSC_COMM_SELF, PETSC_ERR_LIB, "PyTorch environmental variable LOCAL_RANK %s > number devices %" PetscInt_FMT, pytorch_rank, ndev);
     } else {
       PetscMPIInt rank;
 
@@ -437,7 +437,7 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
       PetscCall(select_device_petsc_decide_(comm, ndev, &initId));
     }
     if (initView.first) initType.first = PETSC_DEVICE_INIT_EAGER;
-    PetscCall(PetscInfo(nullptr, "GPU device id selected: %d\n", initId.first));
+    PetscCall(PetscInfo(nullptr, "GPU device id selected: %" PetscInt_FMT "\n", initId.first));
   }
 
   static_assert(std::is_same<PetscMPIInt, decltype(defaultDevice_)>::value, "");
