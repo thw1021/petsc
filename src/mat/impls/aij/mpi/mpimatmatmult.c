@@ -388,7 +388,7 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIDense(Mat C)
 }
 
 typedef struct {
-  Mat           workB, workB1;
+  Mat           workB;
   MPI_Request  *rwaits, *swaits;
   PetscInt      nsends, nrecvs;
   MPI_Datatype *stype, *rtype;
@@ -401,7 +401,6 @@ static PetscErrorCode MatMPIAIJ_MPIDenseDestroy(PetscCtxRt ctx)
 
   PetscFunctionBegin;
   PetscCall(MatDestroy(&contents->workB));
-  PetscCall(MatDestroy(&contents->workB1));
   for (PetscInt i = 0; i < contents->nsends; i++) PetscCallMPI(MPI_Type_free(&contents->stype[i]));
   for (PetscInt i = 0; i < contents->nrecvs; i++) PetscCallMPI(MPI_Type_free(&contents->rtype[i]));
   PetscCall(PetscFree4(contents->stype, contents->rtype, contents->rwaits, contents->swaits));
@@ -415,12 +414,12 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A, Mat B, PetscReal
   PetscInt         nz  = aij->B->cmap->n, blda, m, M, n, N;
   MPIAIJ_MPIDense *contents;
   VecScatter       ctx = aij->Mvctx;
-  PetscInt         Am = A->rmap->n, Bm = B->rmap->n, BN = B->cmap->N, Bbn, Bbn1, bs, numBb;
+  PetscInt         Am = A->rmap->n, Bm = B->rmap->n, BN = B->cmap->N, Bbn, bs, numBb;
   MPI_Comm         comm;
   MPI_Datatype     type1, *stype, *rtype;
   const PetscInt  *sindices, *sstarts, *rstarts;
   PetscMPIInt     *disp, nsends, nrecvs, nrows_to, nrows_from;
-  PetscBool        cisdense;
+  PetscBool        cisdense, set;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -442,38 +441,30 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A, Mat B, PetscReal
   /* Create column block of B and C for memory scalability when BN is too large */
   /* Estimate Bbn, column size of Bb */
   if (nz) {
-    Bbn1 = 2 * Am * BN / nz;
-    if (!Bbn1) Bbn1 = 1;
-  } else Bbn1 = BN;
+    Bbn = 2 * Am * BN / nz;
+    if (!Bbn) Bbn = 1;
+  } else Bbn = BN;
 
-  bs   = B->cmap->bs;
-  Bbn1 = Bbn1 / bs * bs; /* Bbn1 is a multiple of bs */
-  if (Bbn1 > BN) Bbn1 = BN;
-  PetscCallMPI(MPIU_Allreduce(&Bbn1, &Bbn, 1, MPIU_INT, MPI_MAX, comm));
+  bs  = B->cmap->bs;
+  Bbn = Bbn / bs * bs; /* Bbn is a multiple of bs */
+  if (Bbn > BN) Bbn = BN;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &Bbn, 1, MPIU_INT, MPI_MAX, comm));
+  Bbn = PetscMax(Bbn, 1);
 
   /* Enable runtime option for Bbn */
   PetscOptionsBegin(comm, ((PetscObject)C)->prefix, "MatProduct", "Mat");
   PetscCall(PetscOptionsDeprecated("-matmatmult_Bbn", "-matproduct_batch_size", "3.25", NULL));
-  PetscCall(PetscOptionsInt("-matproduct_batch_size", "Number of columns in Bb", "MatProduct", Bbn, &Bbn, NULL));
+  PetscCall(PetscOptionsBoundedInt("-matproduct_batch_size", "Number of columns in Bb", "MatProduct", Bbn, &Bbn, &set, 1));
   PetscOptionsEnd();
-  Bbn = PetscMin(Bbn, BN);
+  Bbn = set ? PetscMin(Bbn, BN) : 0;
 
-  if (Bbn > 0 && Bbn < BN) {
-    numBb = BN / Bbn;
-    Bbn1  = BN - numBb * Bbn;
-  } else numBb = 0;
+  if (Bbn > 0 && Bbn < BN) numBb = BN / Bbn;
+  else numBb = 0;
 
-  if (numBb) {
-    PetscCall(PetscInfo(C, "use Bb, BN=%" PetscInt_FMT ", Bbn=%" PetscInt_FMT "; numBb=%" PetscInt_FMT "\n", BN, Bbn, numBb));
-    if (Bbn1) { /* Create workB1 for the remaining columns */
-      PetscCall(PetscInfo(C, "use Bb1, BN=%" PetscInt_FMT ", Bbn1=%" PetscInt_FMT "\n", BN, Bbn1));
-      /* Create work matrix used to store off processor rows of B needed for local product */
-      PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, nz, Bbn1, NULL, &contents->workB1));
-    } else contents->workB1 = NULL;
-  }
+  if (numBb) PetscCall(PetscInfo(C, "use Bb, BN=%" PetscInt_FMT ", Bbn=%" PetscInt_FMT "; numBb=%" PetscInt_FMT "\n", BN, Bbn, numBb));
 
   /* Create work matrix used to store off processor rows of B needed for local product */
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, nz, Bbn, NULL, &contents->workB));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, nz, Bbn ? Bbn : BN, NULL, &contents->workB));
 
   /* Use MPI derived data type to reduce memory required by the send/recv buffers */
   PetscCall(PetscMalloc4(nsends, &stype, nrecvs, &rtype, nrecvs, &contents->rwaits, nsends, &contents->swaits));
@@ -528,54 +519,37 @@ PETSC_INTERN PetscErrorCode MatMatMultNumericAdd_SeqAIJ_SeqDense(Mat, Mat, Mat, 
 /*
     Performs an efficient scatter on the rows of B needed by this process; this is
     a modification of the VecScatterBegin_() routines.
-
-    Input: If Bbidx = 0, uses B = Bb, else B = Bb1, see MatMatMultSymbolic_MPIAIJ_MPIDense()
 */
 
-static PetscErrorCode MatMPIDenseScatter(Mat A, Mat B, PetscInt Bbidx, Mat C, Mat *outworkB)
+PETSC_INTERN PetscErrorCode MatMPIDenseScatter_Private(VecScatter ctx, PetscInt nrows, PetscInt bs, Mat workB, PetscInt cblda, MPI_Datatype *rtype, MPI_Datatype *stype, MPI_Request *swaits, MPI_Request *rwaits, Mat B, Mat C)
 {
-  Mat_MPIAIJ        *aij = (Mat_MPIAIJ *)A->data;
   const PetscScalar *b;
   PetscScalar       *rvalues;
-  VecScatter         ctx = aij->Mvctx;
   const PetscInt    *sindices, *sstarts, *rstarts;
   const PetscMPIInt *sprocs, *rprocs;
   PetscMPIInt        nsends, nrecvs;
-  MPI_Request       *swaits, *rwaits;
   MPI_Comm           comm;
-  PetscMPIInt        tag = ((PetscObject)ctx)->tag, ncols, nrows, nsends_mpi, nrecvs_mpi;
-  MPIAIJ_MPIDense   *contents;
-  Mat                workB;
-  MPI_Datatype      *stype, *rtype;
+  PetscMPIInt        tag = ((PetscObject)ctx)->tag, ncols, nsends_mpi, nrecvs_mpi;
   PetscInt           blda;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
   PetscCall(PetscMPIIntCast(B->cmap->N, &ncols));
-  PetscCall(PetscMPIIntCast(aij->B->cmap->n, &nrows));
-  contents = (MPIAIJ_MPIDense *)C->product->data;
   PetscCall(VecScatterGetRemote_Private(ctx, PETSC_TRUE /*send*/, &nsends, &sstarts, &sindices, &sprocs, NULL /*bs*/));
   PetscCall(VecScatterGetRemoteOrdered_Private(ctx, PETSC_FALSE /*recv*/, &nrecvs, &rstarts, NULL, &rprocs, NULL /*bs*/));
   PetscCall(PetscMPIIntCast(nsends, &nsends_mpi));
   PetscCall(PetscMPIIntCast(nrecvs, &nrecvs_mpi));
-  if (Bbidx == 0) workB = *outworkB = contents->workB;
-  else workB = *outworkB = contents->workB1;
-  PetscCheck(nrows == workB->rmap->n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of rows of workB %" PetscInt_FMT " not equal to columns of aij->B %d", workB->cmap->n, nrows);
-  swaits = contents->swaits;
-  rwaits = contents->rwaits;
+  PetscCheck(nrows == workB->rmap->n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of rows of workB %" PetscInt_FMT " not equal to columns of off-diagonal block %" PetscInt_FMT, workB->rmap->n, nrows);
 
   PetscCall(MatDenseGetArrayRead(B, &b));
   PetscCall(MatDenseGetLDA(B, &blda));
-  PetscCheck(blda == contents->blda, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot reuse an input matrix with lda %" PetscInt_FMT " != %" PetscInt_FMT, blda, contents->blda);
+  PetscCheck(blda == cblda, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot reuse an input matrix with lda %" PetscInt_FMT " != %" PetscInt_FMT, blda, cblda);
   PetscCall(MatDenseGetArray(workB, &rvalues));
 
   /* Post recv, use MPI derived data type to save memory */
   PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
-  rtype = contents->rtype;
-  for (PetscMPIInt i = 0; i < nrecvs; i++) PetscCallMPI(MPIU_Irecv(rvalues + (rstarts[i] - rstarts[0]), ncols, rtype[i], rprocs[i], tag, comm, rwaits + i));
-
-  stype = contents->stype;
+  for (PetscMPIInt i = 0; i < nrecvs; i++) PetscCallMPI(MPIU_Irecv(rvalues + ((rstarts[i] - rstarts[0]) * bs), ncols, rtype[i], rprocs[i], tag, comm, rwaits + i));
   for (PetscMPIInt i = 0; i < nsends; i++) PetscCallMPI(MPIU_Isend(b, ncols, stype[i], sprocs[i], tag, comm, swaits + i));
 
   if (nrecvs) PetscCallMPI(MPI_Waitall(nrecvs_mpi, rwaits, MPI_STATUSES_IGNORE));
@@ -585,6 +559,17 @@ static PetscErrorCode MatMPIDenseScatter(Mat A, Mat B, PetscInt Bbidx, Mat C, Ma
   PetscCall(VecScatterRestoreRemoteOrdered_Private(ctx, PETSC_FALSE /*recv*/, &nrecvs, &rstarts, NULL, &rprocs, NULL));
   PetscCall(MatDenseRestoreArrayRead(B, &b));
   PetscCall(MatDenseRestoreArray(workB, &rvalues));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMPIDenseScatter(Mat A, Mat B, Mat workB, Mat C)
+{
+  Mat_MPIAIJ      *aij = (Mat_MPIAIJ *)A->data;
+  MPIAIJ_MPIDense *contents;
+
+  PetscFunctionBegin;
+  contents = (MPIAIJ_MPIDense *)C->product->data;
+  PetscCall(MatMPIDenseScatter_Private(aij->Mvctx, aij->B->cmap->n, 1, workB, contents->blda, contents->rtype, contents->stype, contents->swaits, contents->rwaits, B, C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -617,13 +602,14 @@ static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A, Mat B, Mat C)
   PetscCall(MatProductNumeric(cdense->A));
   if (contents->workB->cmap->n == B->cmap->N) {
     /* get off processor parts of B needed to complete C=A*B */
-    PetscCall(MatMPIDenseScatter(A, B, 0, C, &workB));
+    workB = contents->workB;
+    PetscCall(MatMPIDenseScatter(A, B, workB, C));
 
     /* off-diagonal block of A times nonlocal rows of B */
     PetscCall(MatMatMultNumericAdd_SeqAIJ_SeqDense(aij->B, workB, cdense->A, PETSC_TRUE));
   } else {
     Mat       Bb, Cb;
-    PetscInt  BN = B->cmap->N, n = contents->workB->cmap->n;
+    PetscInt  BN = B->cmap->N, n = contents->workB->cmap->n, cols;
     PetscBool ccpu;
 
     PetscCheck(n > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Column block size %" PetscInt_FMT " must be positive", n);
@@ -633,15 +619,19 @@ static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A, Mat B, Mat C)
     PetscCall(MatBoundToCPU(C, &ccpu));
     PetscCall(MatBindToCPU(C, PETSC_TRUE));
     for (PetscInt i = 0; i < BN; i += n) {
-      PetscCall(MatDenseGetSubMatrix(B, PETSC_DECIDE, PETSC_DECIDE, i, PetscMin(i + n, BN), &Bb));
-      PetscCall(MatDenseGetSubMatrix(C, PETSC_DECIDE, PETSC_DECIDE, i, PetscMin(i + n, BN), &Cb));
+      cols  = PetscMin(n, BN - i);
+      workB = contents->workB;
+      if (cols != n) PetscCall(MatDenseGetSubMatrix(contents->workB, PETSC_DECIDE, PETSC_DECIDE, 0, cols, &workB));
+      PetscCall(MatDenseGetSubMatrix(B, PETSC_DECIDE, PETSC_DECIDE, i, i + cols, &Bb));
+      PetscCall(MatDenseGetSubMatrix(C, PETSC_DECIDE, PETSC_DECIDE, i, i + cols, &Cb));
 
       /* get off processor parts of B needed to complete C=A*B */
-      PetscCall(MatMPIDenseScatter(A, Bb, (i + n) > BN, C, &workB));
+      PetscCall(MatMPIDenseScatter(A, Bb, workB, C));
 
       /* off-diagonal block of A times nonlocal rows of B */
       cdense = (Mat_MPIDense *)Cb->data;
       PetscCall(MatMatMultNumericAdd_SeqAIJ_SeqDense(aij->B, workB, cdense->A, PETSC_TRUE));
+      if (cols != n) PetscCall(MatDenseRestoreSubMatrix(contents->workB, &workB));
       PetscCall(MatDenseRestoreSubMatrix(B, &Bb));
       PetscCall(MatDenseRestoreSubMatrix(C, &Cb));
     }
