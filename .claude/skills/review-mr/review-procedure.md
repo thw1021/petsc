@@ -6,9 +6,9 @@
   - Code quality, style, and documentation: check against conventions in @doc/developers/style.md
   - Missing error handling
 - Never review `.out` file *contents*; do flag mismatches between a code change and its reference output (missing update, unjustified regeneration, orphan file).
-- PETSc error model: treat `PetscCall()`, `PetscCheck()`, `SETERRQ` as terminal — don't report leaks/un-restored arrays on fatal paths. Do report bugs on non-error paths or before the error fires.
+- PETSc error model: treat `PetscCall()`, `PetscCheck()`, `SETERRQ` as terminal — don't list leaks/un-restored arrays on fatal paths. Do list bugs on non-error paths or before the error fires.
 - Classify each finding: CRITICAL / HIGH / MEDIUM / Style / LOW. Don't praise the MR.
-- Enumerate exhaustively: list every occurrence of each issue, not a representative example. If a pattern (e.g. missing `PetscCall`, brace-on-single-statement, hoisted-decl violation) appears in N places, report all N with file:line. Do not collapse repeats into "and similar elsewhere"; do not stop at "enough" findings. Scan every changed hunk before reporting.
+- Enumerate exhaustively: list every occurrence of each issue, not a representative example. If a pattern (e.g. missing `PetscCall`, brace-on-single-statement, hoisted-decl violation) appears in N places, list all N with file:line. Do not collapse repeats into "and similar elsewhere"; do not stop at "enough" findings. Scan every changed hunk before reporting.
 
 Severity weights for PETSc:
 - **CRITICAL / HIGH / MEDIUM** — correctness, performance, real bugs.
@@ -16,8 +16,8 @@ Severity weights for PETSc:
 - **LOW** — count, do not list. End the report with `(N LOW findings suppressed; ask to show them.)` when `N > 0`. List individual LOW items only if asked.
 
 ### 5. Verify each finding before reporting
-After generating the review, treat every finding at Style or above as tentative. For each one: reopen the cited code in the current working tree and confirm it matches what the finding describes; reread that code and confirm the issue is real, not a misread or speculation; and confirm it is actionable. Drop findings that fail any check; report only those that survive.
+After generating the review, treat every finding at Style or above as tentative. For each one: reopen the cited code in the current working tree and confirm it matches what the finding describes; reread that code and confirm the issue is real, not a misread or speculation; and confirm it is actionable. Drop findings that fail any check; list only those that survive.
 
 ### 6. Report
 - Per finding: severity, file:line, description, suggested fix. Order CRITICAL → HIGH → MEDIUM → Style. If nothing at or above Style is found, say so explicitly.
-- If CI_PIPELINE_ID is available: add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID; and write the report as a standalone HTML document (with a title) to ai-review.html.
+- If CI_PIPELINE_ID is in the environment: always write the report as a standalone HTML document (with a title) to ai-review.html — create the report document even when nothing is found. Add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID.
