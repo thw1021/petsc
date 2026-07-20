@@ -3,6 +3,23 @@
 const char *const TSConvergedReasons_Shifted[] = {"ADJOINT_DIVERGED_LINEAR_SOLVE", "FORWARD_DIVERGED_LINEAR_SOLVE", "DIVERGED_STEP_REJECTED", "DIVERGED_NONLINEAR_SOLVE", "CONVERGED_ITERATING", "CONVERGED_TIME", "CONVERGED_ITS", "CONVERGED_USER", "CONVERGED_EVENT", "CONVERGED_PSEUDO_FATOL", "CONVERGED_PSEUDO_FATOL", "TSConvergedReason", "TS_", NULL};
 const char *const *TSConvergedReasons = TSConvergedReasons_Shifted + 4;
 
+static const char *const TSEquationTypes_Shifted[] = {
+  [TS_EQ_UNSPECIFIED + 1]               = "UNSPECIFIED",
+  [TS_EQ_EXPLICIT + 1]                  = "EXPLICIT",
+  [TS_EQ_ODE_EXPLICIT + 1]              = "ODE_EXPLICIT",
+  [TS_EQ_DAE_SEMI_EXPLICIT_INDEX1 + 1]  = "DAE_SEMI_EXPLICIT_INDEX1",
+  [TS_EQ_DAE_SEMI_EXPLICIT_INDEX2 + 1]  = "DAE_SEMI_EXPLICIT_INDEX2",
+  [TS_EQ_DAE_SEMI_EXPLICIT_INDEX3 + 1]  = "DAE_SEMI_EXPLICIT_INDEX3",
+  [TS_EQ_DAE_SEMI_EXPLICIT_INDEXHI + 1] = "DAE_SEMI_EXPLICIT_INDEXHI",
+  [TS_EQ_IMPLICIT + 1]                  = "IMPLICIT",
+  [TS_EQ_ODE_IMPLICIT + 1]              = "ODE_IMPLICIT",
+  [TS_EQ_DAE_IMPLICIT_INDEX1 + 1]       = "DAE_IMPLICIT_INDEX1",
+  [TS_EQ_DAE_IMPLICIT_INDEX2 + 1]       = "DAE_IMPLICIT_INDEX2",
+  [TS_EQ_DAE_IMPLICIT_INDEX3 + 1]       = "DAE_IMPLICIT_INDEX3",
+  [TS_EQ_DAE_IMPLICIT_INDEXHI + 1]      = "DAE_IMPLICIT_INDEXHI",
+};
+const char *const *TSEquationTypes = TSEquationTypes_Shifted + 1;
+
 /*@
   TSCreate - This function creates an empty timestepper. The problem type can then be set with `TSSetProblemType()` and the
   type of solver can then be set with `TSSetType()`.
