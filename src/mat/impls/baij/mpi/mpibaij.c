@@ -1,8 +1,13 @@
 #include <../src/mat/impls/baij/mpi/mpibaij.h> /*I  "petscmat.h"  I*/
 
 #include <petsc/private/hashseti.h>
+#include <petsc/private/sfimpl.h>
 #include <petscblaslapack.h>
 #include <petscsf.h>
+
+#if defined(PETSC_HAVE_LIBXSMM)
+PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIBAIJLIBXSMM(Mat, MatType, MatReuse, Mat *);
+#endif
 
 static PetscErrorCode MatDestroy_MPIBAIJ(Mat mat)
 {
@@ -36,6 +41,7 @@ static PetscErrorCode MatDestroy_MPIBAIJ(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIBAIJSetPreallocationCSR_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalScaleLocal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSetHashTableFactor_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpibaij_mpidense_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaij_mpisbaij_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaij_mpiadj_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaij_mpiaij_C", NULL));
@@ -43,6 +49,11 @@ static PetscErrorCode MatDestroy_MPIBAIJ(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaij_hypre_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaij_is_C", NULL));
+#if defined(PETSC_HAVE_LIBXSMM)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaij_mpibaijlibxsmm_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpibaijlibxsmm_mpidense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpibaijlibxsmm_mpibaij_C", NULL));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2846,6 +2857,232 @@ M*/
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIBSTRM(Mat, MatType, MatReuse, Mat *);
 
+typedef struct {
+  Mat           workB, workC;
+  MPI_Request  *rwaits, *swaits;
+  PetscInt      nsends, nrecvs;
+  MPI_Datatype *stype, *rtype;
+  PetscInt      blda;
+} MPIBAIJ_MPIDense;
+
+static PetscErrorCode MatMPIBAIJ_MPIDenseDestroy(PetscCtxRt ctx)
+{
+  MPIBAIJ_MPIDense *data = *(MPIBAIJ_MPIDense **)ctx;
+
+  PetscFunctionBegin;
+  PetscCall(MatDestroy(&data->workC));
+  PetscCall(MatDestroy(&data->workB));
+  for (PetscInt i = 0; i < data->nsends; i++) PetscCallMPI(MPI_Type_free(&data->stype[i]));
+  for (PetscInt i = 0; i < data->nrecvs; i++) PetscCallMPI(MPI_Type_free(&data->rtype[i]));
+  PetscCall(PetscFree4(data->stype, data->rtype, data->rwaits, data->swaits));
+  PetscCall(PetscFree(data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMPIDenseScatter_MPIBAIJ(Mat A, Mat B, Mat workB, Mat C)
+{
+  Mat_MPIBAIJ      *baij = (Mat_MPIBAIJ *)A->data;
+  MPIBAIJ_MPIDense *data = (MPIBAIJ_MPIDense *)C->product->data;
+  PetscInt          bs;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetBlockSize(A, &bs));
+  PetscCall(MatMPIDenseScatter_Private(baij->Mvctx, baij->B->cmap->n, bs, workB, data->blda, data->rtype, data->stype, data->swaits, data->rwaits, B, C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMatMultNumeric_MPIBAIJ_MPIDense(Mat A, Mat B, Mat C)
+{
+  Mat_MPIBAIJ      *baij   = (Mat_MPIBAIJ *)A->data;
+  Mat_MPIDense     *bdense = (Mat_MPIDense *)B->data;
+  Mat_MPIDense     *cdense = (Mat_MPIDense *)C->data;
+  Mat               workB;
+  MPIBAIJ_MPIDense *data;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 3);
+  PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
+  data = (MPIBAIJ_MPIDense *)C->product->data;
+  if (!cdense->A->product) {
+    PetscCall(MatProductCreateWithMat(baij->A, bdense->A, NULL, cdense->A));
+    PetscCall(MatProductSetType(cdense->A, MATPRODUCT_AB));
+    PetscCall(MatProductSetFromOptions(cdense->A));
+    PetscCall(MatProductSymbolic(cdense->A));
+  } else PetscCall(MatProductReplaceMats(baij->A, bdense->A, NULL, cdense->A));
+  PetscCall(MatProductNumeric(cdense->A));
+
+  if (data->workB->cmap->n == B->cmap->N) {
+    workB = data->workB;
+    PetscCall(MatMPIDenseScatter_MPIBAIJ(A, B, workB, C));
+    if (data->workC) {
+      PetscCall(MatProductReplaceMats(baij->B, workB, NULL, data->workC));
+      PetscCall(MatProductNumeric(data->workC));
+      PetscCall(MatAXPY(cdense->A, 1.0, data->workC, SAME_NONZERO_PATTERN));
+    }
+  } else {
+    Mat           Bb, Cb, workC;
+    Mat_MPIDense *cbdense;
+    PetscInt      BN = B->cmap->N, n = data->workB->cmap->n, cols;
+
+    PetscCheck(n > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Column batch size must be positive");
+    for (PetscInt i = 0; i < BN; i += n) {
+      cols  = PetscMin(n, BN - i);
+      workB = data->workB;
+      workC = data->workC;
+      if (cols != n) {
+        PetscCall(MatDenseGetSubMatrix(data->workB, PETSC_DECIDE, PETSC_DECIDE, 0, cols, &workB));
+        if (workC) PetscCall(MatDenseGetSubMatrix(data->workC, PETSC_DECIDE, PETSC_DECIDE, 0, cols, &workC));
+      }
+      PetscCall(MatDenseGetSubMatrix(B, PETSC_DECIDE, PETSC_DECIDE, i, i + cols, &Bb));
+      PetscCall(MatDenseGetSubMatrix(C, PETSC_DECIDE, PETSC_DECIDE, i, i + cols, &Cb));
+      PetscCall(MatMPIDenseScatter_MPIBAIJ(A, Bb, workB, C));
+      if (workC) {
+        cbdense = (Mat_MPIDense *)Cb->data;
+        PetscCall(MatProductReplaceMats(baij->B, workB, NULL, workC));
+        PetscCall(MatProductNumeric(workC));
+        PetscCall(MatAXPY(cbdense->A, 1.0, workC, SAME_NONZERO_PATTERN));
+      }
+      if (cols != n) {
+        if (workC) PetscCall(MatDenseRestoreSubMatrix(data->workC, &workC));
+        PetscCall(MatDenseRestoreSubMatrix(data->workB, &workB));
+      }
+      PetscCall(MatDenseRestoreSubMatrix(B, &Bb));
+      PetscCall(MatDenseRestoreSubMatrix(C, &Cb));
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMatMultSymbolic_MPIBAIJ_MPIDense(Mat A, Mat B, PetscReal fill, Mat C)
+{
+  Mat_MPIBAIJ      *baij = (Mat_MPIBAIJ *)A->data;
+  MPIBAIJ_MPIDense *data;
+  VecScatter        ctx = baij->Mvctx;
+  PetscInt          nz  = baij->B->cmap->n, blda, m, M, n, N, bs, Bbs;
+  PetscInt          Am = A->rmap->n, Bm = B->rmap->n, BN = B->cmap->N, Bbn, numBb;
+  MPI_Comm          comm;
+  MPI_Datatype      type1, *stype, *rtype;
+  Mat               workB1, workC1;
+  const PetscInt   *sindices, *sstarts, *rstarts;
+  PetscMPIInt      *disp, nsends, nrecvs, nrows_to, nrows_from;
+  PetscBool         cisdense;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 4);
+  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)C, MATMPIDENSE, &cisdense));
+  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  PetscCall(MatGetLocalSize(C, &m, &n));
+  PetscCall(MatGetSize(C, &M, &N));
+  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) PetscCall(MatSetSizes(C, Am, B->cmap->n, A->rmap->N, BN));
+  PetscCall(MatSetBlockSizesFromMats(C, A, B));
+  PetscCall(MatSetUp(C));
+  PetscCall(MatDenseGetLDA(B, &blda));
+  PetscCall(MatGetBlockSize(A, &bs));
+  PetscCall(PetscNew(&data));
+  PetscCall(VecScatterGetRemote_Private(ctx, PETSC_TRUE, &nsends, &sstarts, &sindices, NULL, NULL));
+  PetscCall(VecScatterGetRemoteOrdered_Private(ctx, PETSC_FALSE, &nrecvs, &rstarts, NULL, NULL, NULL));
+
+  if (nz) {
+    Bbn = 2 * Am * BN / nz;
+    if (!Bbn) Bbn = 1;
+  } else Bbn = BN;
+  Bbs = B->cmap->bs;
+  Bbn = Bbn / Bbs * Bbs;
+  if (Bbn > BN) Bbn = BN;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &Bbn, 1, MPIU_INT, MPI_MAX, comm));
+  Bbn = PetscMax(Bbn, 1);
+
+  PetscOptionsBegin(comm, ((PetscObject)C)->prefix, "MatProduct", "Mat");
+  PetscCall(PetscOptionsDeprecated("-matmatmult_Bbn", "-matproduct_batch_size", "3.25", NULL));
+  PetscCall(PetscOptionsBoundedInt("-matproduct_batch_size", "Number of dense columns per batch", "MatProduct", Bbn, &Bbn, NULL, 1));
+  PetscOptionsEnd();
+  Bbn = PetscMin(Bbn, BN);
+
+  if (Bbn > 0 && Bbn < BN) numBb = BN / Bbn;
+  else numBb = 0;
+  if (numBb) PetscCall(PetscInfo(C, "Using column batches of size %" PetscInt_FMT " for %" PetscInt_FMT " dense columns\n", Bbn, BN));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, nz, Bbn ? Bbn : BN, NULL, &data->workB));
+
+  PetscCall(PetscMalloc4(nsends, &stype, nrecvs, &rtype, nrecvs, &data->rwaits, nsends, &data->swaits));
+  data->stype  = stype;
+  data->nsends = nsends;
+  data->rtype  = rtype;
+  data->nrecvs = nrecvs;
+  data->blda   = blda;
+  PetscCall(PetscMalloc1(Bm, &disp));
+  for (PetscMPIInt i = 0; i < nsends; i++) {
+    PetscCall(PetscMPIIntCast(sstarts[i + 1] - sstarts[i], &nrows_to));
+    for (PetscInt j = 0; j < nrows_to; j++) PetscCall(PetscMPIIntCast(sindices[sstarts[i] + j] * bs, &disp[j]));
+    PetscCallMPI(MPI_Type_create_indexed_block(nrows_to, bs, disp, MPIU_SCALAR, &type1));
+    PetscCallMPI(MPI_Type_create_resized(type1, 0, blda * sizeof(PetscScalar), &stype[i]));
+    PetscCallMPI(MPI_Type_commit(&stype[i]));
+    PetscCallMPI(MPI_Type_free(&type1));
+  }
+  for (PetscMPIInt i = 0; i < nrecvs; i++) {
+    PetscCall(PetscMPIIntCast((rstarts[i + 1] - rstarts[i]) * bs, &nrows_from));
+    disp[0] = 0;
+    PetscCallMPI(MPI_Type_create_indexed_block(1, nrows_from, disp, MPIU_SCALAR, &type1));
+    PetscCallMPI(MPI_Type_create_resized(type1, 0, nz * sizeof(PetscScalar), &rtype[i]));
+    PetscCallMPI(MPI_Type_commit(&rtype[i]));
+    PetscCallMPI(MPI_Type_free(&type1));
+  }
+  PetscCall(PetscFree(disp));
+  PetscCall(VecScatterRestoreRemote_Private(ctx, PETSC_TRUE, &nsends, &sstarts, &sindices, NULL, NULL));
+  PetscCall(VecScatterRestoreRemoteOrdered_Private(ctx, PETSC_FALSE, &nrecvs, &rstarts, NULL, NULL, NULL));
+
+  PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+  PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatProductClear(baij->A));
+  PetscCall(MatProductClear(((Mat_MPIDense *)B->data)->A));
+  PetscCall(MatProductClear(((Mat_MPIDense *)C->data)->A));
+  PetscCall(MatProductCreateWithMat(baij->A, ((Mat_MPIDense *)B->data)->A, NULL, ((Mat_MPIDense *)C->data)->A));
+  PetscCall(MatProductSetType(((Mat_MPIDense *)C->data)->A, MATPRODUCT_AB));
+  PetscCall(MatProductSetFromOptions(((Mat_MPIDense *)C->data)->A));
+  PetscCall(MatProductSymbolic(((Mat_MPIDense *)C->data)->A));
+
+  if (nz) {
+    PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, Am, Bbn ? Bbn : BN, NULL, &data->workC));
+    PetscCall(MatProductCreateWithMat(baij->B, data->workB, NULL, data->workC));
+    PetscCall(MatProductSetType(data->workC, MATPRODUCT_AB));
+    PetscCall(MatProductSetFromOptions(data->workC));
+    PetscCall(MatProductSymbolic(data->workC));
+    if (numBb && BN % Bbn) {
+      PetscCall(MatDenseGetSubMatrix(data->workB, PETSC_DECIDE, PETSC_DECIDE, 0, BN % Bbn, &workB1));
+      PetscCall(MatDenseGetSubMatrix(data->workC, PETSC_DECIDE, PETSC_DECIDE, 0, BN % Bbn, &workC1));
+      PetscCall(MatProductCreateWithMat(baij->B, workB1, NULL, workC1));
+      PetscCall(MatProductSetType(workC1, MATPRODUCT_AB));
+      PetscCall(MatProductSetFromOptions(workC1));
+      PetscCall(MatProductSymbolic(workC1));
+      PetscCall(MatDenseRestoreSubMatrix(data->workC, &workC1));
+      PetscCall(MatDenseRestoreSubMatrix(data->workB, &workB1));
+    }
+  }
+
+  C->product->data       = data;
+  C->product->destroy    = MatMPIBAIJ_MPIDenseDestroy;
+  C->ops->matmultnumeric = MatMatMultNumeric_MPIBAIJ_MPIDense;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIBAIJ_MPIDense(Mat C)
+{
+  Mat_Product *product = C->product;
+  Mat          A = product->A, B = product->B;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  if (product->type == MATPRODUCT_AB) {
+    PetscCheck(A->cmap->rstart == B->rmap->rstart && A->cmap->rend == B->rmap->rend, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Matrix local dimensions are incompatible, (%" PetscInt_FMT ",%" PetscInt_FMT ") != (%" PetscInt_FMT ",%" PetscInt_FMT ")",
+               A->cmap->rstart, A->cmap->rend, B->rmap->rstart, B->rmap->rend);
+    C->ops->matmultsymbolic = MatMatMultSymbolic_MPIBAIJ_MPIDense;
+    C->ops->productsymbolic = MatProductSymbolic_AB;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatGetMultPetscSF_MPIBAIJ(Mat A, PetscSF *sf)
 {
   Mat_MPIBAIJ *a = (Mat_MPIBAIJ *)A->data;
@@ -2919,6 +3156,10 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetHashTableFactor_C", MatSetHashTableFactor_MPIBAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpibaij_is_C", MatConvert_XAIJ_IS));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatGetMultPetscSF_C", MatGetMultPetscSF_MPIBAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpibaij_mpidense_C", MatProductSetFromOptions_MPIBAIJ_MPIDense));
+#if defined(PETSC_HAVE_LIBXSMM)
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpibaij_mpibaijlibxsmm_C", MatConvert_MPIBAIJ_MPIBAIJLIBXSMM));
+#endif
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPIBAIJ));
 
   PetscOptionsBegin(PetscObjectComm((PetscObject)B), NULL, "Options for loading MPIBAIJ matrix 1", "Mat");
