@@ -21,3 +21,4 @@ After generating the review, treat every finding at Style or above as tentative.
 ### 6. Report
 - Per finding: severity, file:line, description, suggested fix. Order CRITICAL → HIGH → MEDIUM → Style. If nothing at or above Style is found, say so explicitly.
 - If CI_PIPELINE_ID is in the environment: always write the report as a standalone HTML document (with a title) to ai-review.html — create the report document even when nothing is found. Add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID.
+- Report a measure of the session's cost and token usage. In a CI/headless `claude -p` run, use the harness-emitted usage summary (e.g. `--output-format json` reports `total_cost_usd` and `usage`); interactively, the `/cost` command prints the same figures — include them in the report.
