@@ -1110,9 +1110,12 @@ typedef struct _p_KSPGuess *KSPGuess;
  + `KSPGUESSFISCHER` - methodology developed by Paul Fischer
  - `KSPGUESSPOD`     - methodology based on proper orthogonal decomposition (POD)
 
+   Options Database Key:
+. -ksp_guess_type (fischer|pod) - set the type
+
    Level: intermediate
 
-.seealso: [](ch_ksp), `KSP`, `KSPGuess`
+.seealso: [](ch_ksp), `KSP`, `KSPGuess`, `KSPGuessSetType()`
 J*/
 typedef const char *KSPGuessType;
 #define KSPGUESSFISCHER "fischer"
