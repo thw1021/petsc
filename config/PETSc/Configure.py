@@ -211,7 +211,7 @@ class Configure(config.base.Configure):
       fd.write('Description: Library to solve ODEs and algebraic equations\n')
       fd.write('Version: %s\n' % self.petscdir.version)
       fd.write('Cflags: ' + ' '.join([self.setCompilers.CPPFLAGS] + cflags_inc) + '\n')
-      fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
+      fd.write('Libs: '+self.PETSC_PC_LIBS+'\n')
       # Remove RPATH flags from library list.  User can add them using
       # pkg-config --variable=ldflag_rpath and pkg-config --libs-only-L
       fd.write('Libs.private: '+self.libraries.toStringNoDupes([f for f in self.packagelibs+self.complibs if not f.startswith(self.setCompilers.CSharedLinkerFlag)], with_rpath=False)+'\n')
@@ -429,6 +429,31 @@ prepend-path PATH "%s"
     petscincludes_install = [os.path.join(self.installdir.dir, 'include')] if self.framework.argDB['prefix'] else petscincludes
     includes = []
     self.packagelibs = []
+    self.kokkospackagelibs = []
+    self.kokkosarchivelibs = []
+    kokkosArchivePackageNames = {'KOKKOS', 'KOKKOS-KERNELS'}
+    def splitArchiveLibs(libs):
+      archives = []
+      externals = []
+      libdir = ''
+      externalLibdir = ''
+      for lib in libs:
+        if lib.startswith('-L'):
+          libdir = lib[2:]
+        elif lib.endswith('.a'):
+          archives.append(lib if os.path.isabs(lib) or not libdir else os.path.join(libdir, lib))
+        else:
+          if libdir and externalLibdir != libdir:
+            externals.append('-L'+libdir)
+            externalLibdir = libdir
+          externals.append(lib)
+      return archives, externals
+    def orderedUnique(libs):
+      unique = []
+      for lib in libs:
+        if lib not in unique:
+          unique.append(lib)
+      return unique
     for i in self.framework.packages:
       if not i.required:
         if i.devicePackage:
@@ -439,7 +464,13 @@ prepend-path PATH "%s"
         self.addDefine('HAVE_'+i.PACKAGE.replace('-','_'), 1)  # ONLY list package if it is used directly by PETSc (and not only by another package)
       if not isinstance(i.lib, list):
         i.lib = [i.lib]
-      if i.linkedbypetsc: self.packagelibs.extend(i.lib)
+      if i.linkedbypetsc:
+        if i.PACKAGE in kokkosArchivePackageNames:
+          archives, externals = splitArchiveLibs(i.lib)
+          self.kokkosarchivelibs.extend(archives)
+          self.kokkospackagelibs.extend(externals)
+        else:
+          self.packagelibs.extend(i.lib)
       self.addMakeMacro(i.PACKAGE.replace('-','_')+'_LIB', self.libraries.toStringNoDupes(i.lib))
       if hasattr(i,'include'):
         if not isinstance(i.include,list):
@@ -454,9 +485,15 @@ prepend-path PATH "%s"
       self.addMakeMacro('DEVICELANGUAGE',self.languages.devicelanguage.upper())
 
     self.complibs = self.compilers.flibs+self.compilers.cxxlibs+self.compilers.LIBS.split()
+    self.kokkospackagelibs = orderedUnique(self.kokkospackagelibs)
+    self.kokkosarchivelibs = orderedUnique(self.kokkosarchivelibs)
     self.PETSC_EXTERNAL_LIB_BASIC = self.libraries.toStringNoDupes(self.packagelibs+self.complibs)
+    self.PETSC_KOKKOS_EXTERNAL_LIB_BASIC = self.libraries.toStringNoDupes(self.kokkospackagelibs)
+    self.PETSC_KOKKOS_ARCHIVE_LIBS = ' '.join(self.kokkosarchivelibs)
 
     self.addMakeMacro('PETSC_EXTERNAL_LIB_BASIC',self.PETSC_EXTERNAL_LIB_BASIC)
+    self.addMakeMacro('PETSC_KOKKOS_EXTERNAL_LIB_BASIC',self.PETSC_KOKKOS_EXTERNAL_LIB_BASIC)
+    self.addMakeMacro('PETSC_KOKKOS_ARCHIVE_LIBS',self.PETSC_KOKKOS_ARCHIVE_LIBS)
     allincludes = petscincludes + includes
     allincludes_install = petscincludes_install + includes
     self.PETSC_CC_INCLUDES = self.headers.toStringNoDupes(allincludes)
@@ -477,6 +514,33 @@ prepend-path PATH "%s"
     self.LIB_NAME_SUFFIX = self.framework.argDB['with-library-name-suffix']
     self.addMakeMacro('LIB_NAME_SUFFIX', self.LIB_NAME_SUFFIX)
     self.addDefine('LIB_NAME_SUFFIX', '"'+self.LIB_NAME_SUFFIX+'"')
+    self.petsckokkoslib = '-lpetsckokkos'+self.LIB_NAME_SUFFIX if self.kokkospackagelibs or self.kokkosarchivelibs else ''
+    self.petsckokkosdlinklib = '-lpetsckokkosdlink'+self.LIB_NAME_SUFFIX if self.petsckokkoslib and getattr(self.kokkos, 'kokkosRDC', None) == 'cuda' and not self.cuda.cudaclang else ''
+    self.petsckokkoslibs_pkgconfig = []
+    if self.petsckokkoslib:
+      if self.petsckokkosdlinklib:
+        self.petsckokkoslibs_pkgconfig.append(self.petsckokkosdlinklib)
+      self.petsckokkoslibs_pkgconfig.append(self.petsckokkoslib)
+    self.petsckokkoslibs_basic = (['-L'+PREINSTALL_LIB_DIR]+self.petsckokkoslibs_pkgconfig if self.petsckokkoslibs_pkgconfig else [])
+    self.petsckokkoslibs = self.petsckokkoslibs_basic+self.kokkospackagelibs
+    self.PETSC_WITH_KOKKOS_LIB = self.libraries.toStringNoDupes(self.petsckokkoslibs)
+    self.PETSC_WITH_KOKKOS_DLINK_LIB = self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR, self.petsckokkosdlinklib] if self.petsckokkosdlinklib else [])
+    self.addMakeMacro('PETSC_KOKKOS_LIB_BASIC',self.petsckokkoslib)
+    self.addMakeMacro('PETSC_KOKKOS_DLINK_LIB_BASIC',self.petsckokkosdlinklib)
+    self.addMakeMacro('PETSC_WITH_KOKKOS_DLINK_LIB',self.PETSC_WITH_KOKKOS_DLINK_LIB)
+    self.addMakeMacro('PETSC_KOKKOS_DLINK_LIB','${PETSC_WITH_KOKKOS_DLINK_LIB}')
+    self.addMakeMacro('PETSC_WITH_KOKKOS_LIB',self.PETSC_WITH_KOKKOS_LIB)
+    self.addMakeMacro('PETSC_KOKKOS_LIB','${PETSC_WITH_KOKKOS_LIB}')
+
+    def addKokkosSidecar(libs, libDir = PREINSTALL_LIB_DIR):
+      if not self.petsckokkoslib:
+        return libs
+      kokkoslibs = ['-L'+libDir]+self.petsckokkoslibs_pkgconfig
+      # libpetsckokkos has circular static dependencies with PETSc component libraries,
+      # and the CUDA dlink object must be considered with the RDC objects that define its fatbins.
+      if self.setCompilers.isDarwin(self.log):
+        return kokkoslibs+libs+kokkoslibs+self.kokkospackagelibs
+      return ['-L'+libDir, '-Wl,--start-group']+self.petsckokkoslibs_pkgconfig+libs+['-Wl,--end-group']+self.kokkospackagelibs
 
     if self.framework.argDB['with-single-library']:
       self.petsclib = '-lpetsc'+self.LIB_NAME_SUFFIX
@@ -497,8 +561,15 @@ prepend-path PATH "%s"
       pkgs = ['ml', 'tao', 'ts', 'snes', 'ksp', 'dm', 'mat', 'vec', 'sys']
       def liblist_basic(libs):
         return [ '-lpetsc'+lib+self.LIB_NAME_SUFFIX for lib in libs]
-      def liblist(libs):
+      def liblist_no_kokkos_sidecar(libs):
         return self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR]+liblist_basic(libs)+self.packagelibs+self.complibs)
+      def liblist(libs):
+        # libpetsckokkos is a single sidecar archive for all Kokkos sources,
+        # so its CUDA dlink object can pull Kokkos objects from any PETSc
+        # package.  Group it with all component libraries, even when exporting
+        # a component-specific link macro such as PETSC_TS_LIB.
+        petsclibs = pkgs if self.petsckokkoslib else libs
+        return self.libraries.toStringNoDupes(addKokkosSidecar(['-L'+PREINSTALL_LIB_DIR]+liblist_basic(petsclibs))+self.packagelibs+self.complibs)
       self.petsclib = ' '.join(liblist_basic(pkgs))
       self.addMakeMacro('PETSC_SYS_LIB', liblist(pkgs[-1:]))
       self.addMakeMacro('PETSC_VEC_LIB', liblist(pkgs[-2:]))
@@ -509,8 +580,10 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_TS_LIB',  liblist(pkgs[-7:]))
       self.addMakeMacro('PETSC_TAO_LIB', liblist(pkgs[-8:]))
       self.addMakeMacro('PETSC_ML_LIB', liblist(pkgs[-9:]))
+      self.addMakeMacro('PETSC_SNES_LIB_NO_KOKKOS_SIDECAR',liblist_no_kokkos_sidecar(pkgs[-6:]))
     self.addMakeMacro('PETSC_LIB','${PETSC_ML_LIB}')
     self.addMakeMacro('PETSC_LIB_BASIC',self.petsclib)
+    self.PETSC_PC_LIBS = self.libraries.toStringNoDupes(addKokkosSidecar(['-L${libdir}']+self.petsclib.split(), '${libdir}'), with_rpath=False)
 
     if not os.path.exists(os.path.join(self.petscdir.dir,self.arch.arch,'lib')):
       os.makedirs(os.path.join(self.petscdir.dir,self.arch.arch,'lib'))
@@ -577,7 +650,7 @@ prepend-path PATH "%s"
       self.setCompilers.pushLanguage('FC')
       fd.write('\"Using Fortran linker: %s\\n\"\n' % (escape(self.setCompilers.getLinker())))
       self.setCompilers.popLanguage()
-    fd.write('\"Using libraries: %s%s -L%s %s %s\\n\"\n' % (escape(self.setCompilers.CSharedLinkerFlag), escape(os.path.join(self.installdir.petscDir, self.installdir.petscArch, 'lib')), escape(os.path.join(self.installdir.petscDir, self.installdir.petscArch, 'lib')), escape(self.petsclib), escape(self.PETSC_EXTERNAL_LIB_BASIC)))
+    fd.write('\"Using libraries: %s%s -L%s %s %s %s\\n\"\n' % (escape(self.setCompilers.CSharedLinkerFlag), escape(os.path.join(self.installdir.petscDir, self.installdir.petscArch, 'lib')), escape(os.path.join(self.installdir.petscDir, self.installdir.petscArch, 'lib')), escape(self.petsclib), escape(self.PETSC_WITH_KOKKOS_LIB), escape(self.PETSC_EXTERNAL_LIB_BASIC)))
     fd.write('\"-----------------------------------------\\n\";\n')
     fd.close()
     return

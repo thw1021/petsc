@@ -36,6 +36,21 @@ class Configure(config.package.CMakePackage):
     import nargs
     config.package.CMakePackage.setupHelp(self, help)
     help.addArgument('KOKKOS', '-download-kokkos-cxx-std-threads=<bool>',  nargs.ArgBool(None, False, 'Build kokkos for C++ threads'))
+    help.addArgument('KOKKOS', '-download-kokkos-rdc=<bool>',              nargs.ArgBool(None, False, 'Enable Kokkos relocatable device code and build static Kokkos libraries'))
+    return
+
+  def setupCudaRDC(self):
+    self.requireMultiLibraryForRDC()
+    self.kokkosRDC  = 'cuda'
+    self.deviceLink = 'CUDA'
+    self.addMakeMacro('PETSC_KOKKOS_RDC', 1)
+    self.addDefine('KOKKOS_RDC', 1)
+    return
+
+  def requireMultiLibraryForRDC(self):
+    if self.argDB['with-single-library']:
+      raise RuntimeError('Kokkos RDC requires --with-single-library=0 so libpetsckokkos can link PETSc internals through '
+                         'PETSC_SINGLE_LIBRARY_INTERN')
     return
 
   def setupDependencies(self, framework):
@@ -182,7 +197,6 @@ class Configure(config.package.CMakePackage):
       # See https://kokkos.org/kokkos-core-wiki/keywords.html#amd-gpus, AMD_GFX is preferred over VEGA
       deviceArchName = 'AMD_' + self.hip.hipArch.upper()
       if self.hip.unifiedMemory: deviceArchName += '_APU'
-      args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
     elif self.sycl.found:
       lang = 'sycl'
       self.system.append('SYCL')
@@ -201,6 +215,19 @@ class Configure(config.package.CMakePackage):
 
     if deviceArchName: args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
 
+    if self.argDB['download-kokkos-rdc'] and lang != 'cxx':
+      self.requireMultiLibraryForRDC()
+      args = self.rmArgsStartsWith(args, '-DBUILD_SHARED_LIBS')
+      args = self.rmArgsStartsWith(args, '-DBUILD_STATIC_LIBS')
+      args = self.rmArgsStartsWith(args, '-DCMAKE_POSITION_INDEPENDENT_CODE')
+      args.append('-DKokkos_ENABLE_'+lang.upper()+'_RELOCATABLE_DEVICE_CODE:BOOL=ON')
+      args.append('-DBUILD_SHARED_LIBS:BOOL=OFF')
+      args.append('-DBUILD_STATIC_LIBS:BOOL=ON')
+      args.append('-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON')
+      self.kokkosRDC = lang
+      if lang == 'cuda':
+        self.setupCudaRDC()
+
     langdialect = getattr(self.setCompilers,lang+'dialect',None)
     if langdialect:
       # langdialect is only set as an attribute if the user specifically chose a dialect
@@ -211,13 +238,15 @@ class Configure(config.package.CMakePackage):
 
   def configureLibrary(self):
     import os
+    oldFlags       = self.setCompilers.CUDAPPFLAGS
+    extraCudaFlags = []
     if self.cuda.found:
       self.buildLanguages = ['CUDA']
       if self.cuda.cudaclang:
         self.addMakeMacro('KOKKOS_USE_CUDACLANG_COMPILER',1) # use the clang compiler to compile PETSc Kokkos code
       else:
         self.addMakeMacro('KOKKOS_USE_CUDA_COMPILER',1) # use the CUDA compiler to compile PETSc Kokkos code
-        self.setCompilers.CUDAPPFLAGS += " -ccbin " + self.getCompiler('Cxx')
+        extraCudaFlags.extend(['-ccbin', self.getCompiler('Cxx')])
     elif self.hip.found:
       self.buildLanguages= ['HIP']
       self.addMakeMacro('KOKKOS_USE_HIP_COMPILER',1)  # use the HIP compiler to compile PETSc Kokkos code
@@ -229,6 +258,14 @@ class Configure(config.package.CMakePackage):
     else:
       self.addDefine('HAVE_KOKKOS_WITHOUT_GPU', 1) # Kokkos is used without GPUs (i.e., host only)
 
-    config.package.CMakePackage.configureLibrary(self)
+    if self.argDB['download-kokkos-rdc'] and self.cuda.found:
+      self.setupCudaRDC()
+      extraCudaFlags.append('--relocatable-device-code=true')
+    if extraCudaFlags:
+      self.setCompilers.CUDAPPFLAGS += ' ' + ' '.join(extraCudaFlags)
+    try:
+      config.package.CMakePackage.configureLibrary(self)
+    finally:
+      self.setCompilers.CUDAPPFLAGS = oldFlags
 
     self.addMakeMacro('KOKKOS_BIN',os.path.join(self.directory,'bin'))

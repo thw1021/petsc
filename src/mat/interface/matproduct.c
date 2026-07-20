@@ -1217,7 +1217,7 @@ static PetscErrorCode MatProductNumeric_ABC_Basic(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
 {
   Mat_Product                    *product = mat->product;
   Mat                             A, B, C;

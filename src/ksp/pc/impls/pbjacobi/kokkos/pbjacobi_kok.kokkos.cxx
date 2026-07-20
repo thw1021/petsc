@@ -79,7 +79,7 @@ static PetscErrorCode PCDestroy_PBJacobi_Kokkos(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PCSetUp_PBJacobi_Kokkos(PC pc, Mat diagPB)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCSetUp_PBJacobi_Kokkos(PC pc, Mat diagPB)
 {
   PC_PBJacobi *jac = (PC_PBJacobi *)pc->data;
   PetscInt     len;

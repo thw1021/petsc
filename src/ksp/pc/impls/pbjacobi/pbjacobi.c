@@ -245,7 +245,7 @@ static PetscErrorCode PCApplyTranspose_PBJacobi(PC pc, Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PCSetUp_PBJacobi_Host(PC pc, Mat diagPB)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCSetUp_PBJacobi_Host(PC pc, Mat diagPB)
 {
   PC_PBJacobi   *jac = (PC_PBJacobi *)pc->data;
   Mat            A   = diagPB ? diagPB : pc->pmat;
@@ -303,7 +303,7 @@ static PetscErrorCode PCSetUp_PBJacobi(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCDestroy_PBJacobi(PC pc)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCDestroy_PBJacobi(PC pc)
 {
   PC_PBJacobi *jac = (PC_PBJacobi *)pc->data;
 

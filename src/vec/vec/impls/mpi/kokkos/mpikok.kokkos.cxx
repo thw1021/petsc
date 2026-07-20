@@ -270,7 +270,7 @@ static PetscErrorCode VecCreate_MPIKokkos_Common(Vec v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode VecConvert_MPI_MPIKokkos_inplace(Vec v)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecConvert_MPI_MPIKokkos_inplace(Vec v)
 {
   Vec_MPI *vecmpi;
 
@@ -355,7 +355,7 @@ static PetscErrorCode VecDuplicateVecs_MPIKokkos_GEMV(Vec w, PetscInt m, Vec *V[
 
 .seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIKokkosWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`
 M*/
-PetscErrorCode VecCreate_MPIKokkos(Vec v)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_MPIKokkos(Vec v)
 {
   PetscBool                 mdot_use_gemv  = PETSC_TRUE;
   PetscBool                 maxpy_use_gemv = PETSC_FALSE; // default is false as we saw bad performance with vendors' GEMV with tall skinny matrices.
@@ -499,7 +499,7 @@ PetscErrorCode VecCreateMPIKokkosWithArray(MPI_Comm comm, PetscInt bs, PetscInt 
    PETSc does NOT free the array when the vector is destroyed via VecDestroy().
    The user should not free the array until the vector is destroyed.
 */
-PetscErrorCode VecCreateMPIKokkosWithArrays_Private(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, const PetscScalar harray[], const PetscScalar darray[], Vec *v)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreateMPIKokkosWithArrays_Private(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, const PetscScalar harray[], const PetscScalar darray[], Vec *v)
 {
   Vec w;
 
@@ -528,7 +528,7 @@ PetscErrorCode VecCreateMPIKokkosWithArrays_Private(MPI_Comm comm, PetscInt bs, 
 
 .seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIKokkosWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`
 M*/
-PetscErrorCode VecCreate_Kokkos(Vec v)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_Kokkos(Vec v)
 {
   PetscMPIInt size;
 

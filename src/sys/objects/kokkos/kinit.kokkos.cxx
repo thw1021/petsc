@@ -4,13 +4,13 @@
 #include <petsc_kokkos.hpp>
 #include <petscdevice_cupm.h>
 
-PetscBool    PetscKokkosInitialized = PETSC_FALSE; // Has Kokkos been initialized (either by PETSc or by users)?
+PETSC_VISIBILITY_PUBLIC PetscBool PetscKokkosInitialized = PETSC_FALSE; // Has Kokkos been initialized (either by PETSc or by users)?
 PetscScalar *PetscScalarPool        = nullptr;
 PetscInt     PetscScalarPoolSize    = 0;
 
 Kokkos::DefaultExecutionSpace *PetscKokkosExecutionSpacePtr = nullptr;
 
-PetscErrorCode PetscKokkosFinalize_Private(void)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscKokkosFinalize_Private(void)
 {
   PetscFunctionBegin;
   PetscCallCXX(delete PetscKokkosExecutionSpacePtr);
@@ -24,7 +24,7 @@ PetscErrorCode PetscKokkosFinalize_Private(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
 {
   PetscFunctionBegin;
   *isInitialized = Kokkos::is_initialized() ? PETSC_TRUE : PETSC_FALSE;

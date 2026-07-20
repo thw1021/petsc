@@ -583,7 +583,19 @@ class Configure(script.Script):
   def filterLinkOutput(self, output, filterAlways = 0):
     return self.framework.filterLinkOutput(output, filterAlways = filterAlways)
 
-  def outputLink(self, includes, body, cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None,flag=''):
+  def getDeviceLinkerCmd(self, deviceLink, objects, outputFile, linkLanguage = None, libs = None):
+    if deviceLink == 'CUDA':
+      compiler = self.framework.getCompilerObject('CUDA')
+      compiler.checkSetup()
+      linker = self.framework.getLinkerObject(linkLanguage if linkLanguage else self.language[-1])
+      linker.checkSetup()
+      flags = ' '.join([flag for flag in compiler.getFlags().split() if flag != '--device-c'])
+      if libs is None: libs = linker.extraArguments
+      libs = ' '.join([arg for arg in libs.split() if not arg.startswith('-Wl')])
+      return compiler.getProcessor()+' '+' '.join(objects)+' '+flags+' --device-link '+libs+' -o '+outputFile
+    raise RuntimeError('Unknown device linker language: '+str(deviceLink))
+
+  def outputLink(self, includes, body, cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None,flag='', deviceLink=None, deviceLinkLibs=None):
     import sys
 
     (out, err, ret) = self.outputCompile(includes, body, cleanup = 0, codeBegin = codeBegin, codeEnd = codeEnd)
@@ -595,37 +607,64 @@ class Configure(script.Script):
       return (out, ret)
 
     cleanup = cleanup and self.framework.doCleanup
+    rdcObj = None
 
-    langPushed = 0
-    if linkLanguage is not None and linkLanguage != self.language[-1]:
-      self.pushLanguage(linkLanguage)
-      langPushed = 1
-    if shared == 'dynamic':
-      cmd = self.getDynamicLinkerCmd()
-    elif shared:
-      cmd = self.getSharedLinkerCmd()
-    else:
-      cmd = self.getLinkerCmd()
-    if langPushed:
-      self.popLanguage()
+    try:
+      if deviceLink:
+        if shared:
+          raise RuntimeError('Device linking is only supported for executable configure links')
+        rdcObj = os.path.join(self.tmpDir, 'conftest-rdc.o')
+        def reportDeviceLink(command, status, output, error):
+          if error or status:
+            self.logError(str(deviceLink)+' device linker', status, output, error)
+            examineOutput(status, output, error)
+          return
+        cmd = self.getDeviceLinkerCmd(deviceLink, [self.compilerObj], rdcObj, linkLanguage, libs=deviceLinkLibs)
+        (out, err, ret) = Configure.executeShellCommand(cmd, checkCommand = reportDeviceLink, log = self.log)
+        output = self.filterLinkOutput(out+'\n'+err)
+        if ret or len(output):
+          self.log.write(str(deviceLink)+' device linker failure:\n'+str(ret)+' '+output+'\n')
+          self.linkerObj = ''
+          return (out+'\n'+err, ret)
 
-    linkerObj = self.linkerObj
-    def report(command, status, output, error):
-      if error or status:
-        self.logError('linker', status, output, error)
-        examineOutput(status, output, error)
-      return
-    (out, err, ret) = Configure.executeShellCommand(cmd, checkCommand = report, log = self.log)
-    self.linkerObj = linkerObj
-    if os.path.isfile(self.compilerObj): os.remove(self.compilerObj)
-    if cleanup:
-      if os.path.isfile(self.linkerObj):os.remove(self.linkerObj)
-      pdbfile = os.path.splitext(self.linkerObj)[0]+'.pdb'
-      if os.path.isfile(pdbfile): os.remove(pdbfile)
+      langPushed = 0
+      if linkLanguage is not None and linkLanguage != self.language[-1]:
+        self.pushLanguage(linkLanguage)
+        langPushed = 1
+      if shared == 'dynamic':
+        cmd = self.getDynamicLinkerCmd()
+      elif shared:
+        cmd = self.getSharedLinkerCmd()
+      elif rdcObj:
+        self.getLinker()
+        linker = self.framework.getLinkerObject(self.language[-1])
+        linker.checkSetup()
+        cmd = linker.getCommand([self.linkerSource, rdcObj], self.linkerObj)
+      else:
+        cmd = self.getLinkerCmd()
+      if langPushed:
+        self.popLanguage()
+
+      linkerObj = self.linkerObj
+      def report(command, status, output, error):
+        if error or status:
+          self.logError('linker', status, output, error)
+          examineOutput(status, output, error)
+        return
+      (out, err, ret) = Configure.executeShellCommand(cmd, checkCommand = report, log = self.log)
+      self.linkerObj = linkerObj
+    finally:
+      if os.path.isfile(self.compilerObj): os.remove(self.compilerObj)
+      if rdcObj and os.path.isfile(rdcObj): os.remove(rdcObj)
+      if cleanup:
+        linkerObj = getattr(self, 'linkerObj', '')
+        if linkerObj and os.path.isfile(linkerObj):os.remove(linkerObj)
+        pdbfile = os.path.splitext(linkerObj)[0]+'.pdb'
+        if os.path.isfile(pdbfile): os.remove(pdbfile)
     return (out+'\n'+err, ret)
 
-  def checkLink(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None):
-    (output, returnCode) = self.outputLink(includes, body, cleanup, codeBegin, codeEnd, shared, linkLanguage, examineOutput)
+  def checkLink(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None, deviceLink=None, deviceLinkLibs=None):
+    (output, returnCode) = self.outputLink(includes, body, cleanup, codeBegin, codeEnd, shared, linkLanguage, examineOutput, deviceLink=deviceLink, deviceLinkLibs=deviceLinkLibs)
     output = self.filterLinkOutput(output)
     if returnCode or len(output): self.log.write("Linker failure:\n"+str(returnCode)+' '+output+'\n')
     return not (returnCode or len(output))

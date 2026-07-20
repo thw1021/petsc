@@ -292,7 +292,7 @@ static PetscErrorCode PCView_VPBJacobi(PC pc, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PCDestroy_VPBJacobi(PC pc)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCDestroy_VPBJacobi(PC pc)
 {
   PC_VPBJacobi *jac = (PC_VPBJacobi *)pc->data;
 

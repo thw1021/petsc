@@ -26,7 +26,7 @@ PetscMPIInt PetscGlobalRank = -1;
 PetscMPIInt PetscGlobalSize = -1;
 
 #if defined(PETSC_HAVE_KOKKOS)
-PetscBool PetscBeganKokkos = PETSC_FALSE;
+PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL PetscBool PetscBeganKokkos = PETSC_FALSE;
 #endif
 
 #if defined(PETSC_HAVE_NVSHMEM)

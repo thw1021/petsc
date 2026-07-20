@@ -13,12 +13,12 @@ typedef struct {
 } PC_PBJacobi;
 
 #if defined(PETSC_HAVE_CUDA)
-PETSC_INTERN PetscErrorCode PCSetUp_PBJacobi_CUDA(PC, Mat);
+PETSC_INTERN PetscErrorCode                PCSetUp_PBJacobi_CUDA(PC, Mat);
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_INTERN PetscErrorCode PCSetUp_PBJacobi_Kokkos(PC, Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCSetUp_PBJacobi_Kokkos(PC, Mat);
 #endif
 
-PETSC_INTERN PetscErrorCode PCSetUp_PBJacobi_Host(PC, Mat);
-PETSC_INTERN PetscErrorCode PCDestroy_PBJacobi(PC);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCSetUp_PBJacobi_Host(PC, Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PCDestroy_PBJacobi(PC);

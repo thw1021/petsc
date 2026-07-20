@@ -2383,7 +2383,7 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_ABC(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ(Mat C)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ(Mat C)
 {
   Mat_Product *product = C->product;
 

@@ -255,7 +255,7 @@ PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_HIP(PetscSF, PetscSFLink, MPI_Datat
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF, PetscSFLink, MPI_Datatype);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF, PetscSFLink, MPI_Datatype);
 #endif
 
 #if defined(PETSC_HAVE_NVSHMEM)

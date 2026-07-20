@@ -199,8 +199,9 @@ else
   KOKKOS_LINK = $(CXXLINKER) $(CXX_FLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 endif
 
+PETSC_KOKKOS_RDC_FLAGS = $(if $(PETSC_KOKKOS_RDC),--relocatable-device-code=true,)
 # Why do we filter out -fvisibility=hidden? See comments in gmakefile.test on PETSC_COMPILE.kokkos.cxx
-PETSC_KOKKOSCOMPILE_SINGLE = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE_SINGLE))))
+PETSC_KOKKOSCOMPILE_SINGLE = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE_SINGLE) $(PETSC_KOKKOS_RDC_FLAGS))))
 LINK.kokkos.cxx = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_LINK))))
 
 LINK.hip.cxx = $(HIPC) $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
@@ -212,6 +213,7 @@ else
 endif
 
 LDLIBS += $(PRELIBS) $(PETSC_LIB) $(LIBS)
+LDLIBS_KOKKOS = $(LDLIBS)
 
 % : %.c
 	$(subst $@, $@.o, ${PETSC_COMPILE_SINGLE}) $<
@@ -221,7 +223,7 @@ LDLIBS += $(PRELIBS) $(PETSC_LIB) $(LIBS)
 	${LINK.F} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
 % : %.kokkos.cxx
 	$(subst $@, $@.o, $(PETSC_KOKKOSCOMPILE_SINGLE)) $<
-	${LINK.kokkos.cxx} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
+	${LINK.kokkos.cxx} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS_KOKKOS)
 % : %.cxx
 	$(subst $@, $@.o, ${PETSC_CXXCOMPILE_SINGLE}) $<
 	${LINK.cc} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
@@ -229,7 +231,7 @@ LDLIBS += $(PRELIBS) $(PETSC_LIB) $(LIBS)
 	$(subst $@, $@.o, ${PETSC_HIPCOMPILE_SINGLE}) $<
 	${LINK.hip.cxx} -o $@ $@.o $(filter-out $@.o $<, $^) $(LOADLIBES) $(LDLIBS)
 
-# We don't have % : %.cu target as we can't use nvcc as linker - due to difference in linker options [wrt CLINKER etc.]. For example, nvcc does not accept -Wl,-rpath
+# We don't have a % : %.cu target as we can't use nvcc as linker - due to difference in linker options [wrt CLINKER etc.]. For example, nvcc does not accept -Wl,-rpath
 # % : %.cu
 
 #  makes an Emscripten https://emscripten.org/ executable from a PETSc C main program

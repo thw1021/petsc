@@ -679,7 +679,7 @@ PetscErrorCode VecDuplicate_Seq(Vec win, Vec *V)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecReplaceArray_Default_GEMV_Error(Vec v, const PetscScalar *a)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecReplaceArray_Default_GEMV_Error(Vec v, const PetscScalar *a)
 {
   PetscFunctionBegin;
   PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "VecReplaceArray() is not supported on the first Vec obtained from VecDuplicateVecs(). \

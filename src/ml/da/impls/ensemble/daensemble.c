@@ -27,7 +27,7 @@
   The matrix lives on PETSC_COMM_SELF so the caller is responsible for any cross-rank reduction
   on gram_host before calling.
 */
-PETSC_INTERN PetscErrorCode PetscDAEnsembleTFactorFromGram(PetscDA da, PetscInt m, const PetscScalar *gram_host)
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDAEnsembleTFactorFromGram(PetscDA da, PetscInt m, const PetscScalar *gram_host)
 {
   PetscDA_Ensemble *en = (PetscDA_Ensemble *)da->data;
   PetscScalar      *dst;

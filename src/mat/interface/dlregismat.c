@@ -75,7 +75,7 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_CUSPARSE(void);
 PETSC_INTERN PetscErrorCode MatSolverTypeRegister_HIPSPARSE(void);
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_INTERN PetscErrorCode MatSolverTypeRegister_Kokkos(void);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSolverTypeRegister_Kokkos(void);
 #endif
 #if defined(PETSC_HAVE_VIENNACL)
 PETSC_INTERN PetscErrorCode MatSolverTypeRegister_ViennaCL(void);

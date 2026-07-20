@@ -72,9 +72,12 @@ class Configure(config.package.Package):
       self.lib = [os.path.join(prefix,'lib','libslepc')]
     else:
       self.lib = [os.path.join(prefix,'lib','libslepclme'),'-lslepcmfn -lslepcnep -lslepcpep -lslepcsvd -lslepceps -lslepcsys']
+    buildarg = barg
+    if not self.argDB['with-single-library']:
+      buildarg += ' PETSC_SNES_LIB="${PETSC_SNES_LIB_NO_KOKKOS_SIDECAR}"'
     self.addPost(self.packageDir,[carg + ' ' + self.python.pyexe + ' ./configure --prefix=' + prefix + ' ' + configargs,
-                                  barg + ' ${OMAKE} ' + barg,
-                                  barg + ' ${OMAKE} ' + barg + ' install'])
+                                  buildarg + ' ${OMAKE} ' + buildarg,
+                                  buildarg + ' ${OMAKE} ' + buildarg + ' install'])
     self.addMakeCheck(self.packageDir, '${OMAKE} ' + checkarg + ' check')
     self.addTest(self.packageDir, barg + ' ${OMAKE} ' + barg + ' test')
     self.logPrintBox('SLEPc examples are available at '+os.path.join(self.packageDir,'src','*','tutorials'))

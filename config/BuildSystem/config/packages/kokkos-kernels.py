@@ -131,16 +131,28 @@ class Configure(config.package.CMakePackage):
     args = self.rmArgsStartsWith(args,'-DCMAKE_C_FLAGS')
     args = self.rmArgsStartsWith(args,'-DCMAKE_AR')
     args = self.rmArgsStartsWith(args,'-DCMAKE_RANLIB')
+    if getattr(self.kokkos, 'kokkosRDC', None):
+      args = self.rmArgsStartsWith(args, '-DBUILD_SHARED_LIBS')
+      args = self.rmArgsStartsWith(args, '-DBUILD_STATIC_LIBS')
+      args = self.rmArgsStartsWith(args, '-DCMAKE_POSITION_INDEPENDENT_CODE')
+      args.append('-DBUILD_SHARED_LIBS:BOOL=OFF')
+      args.append('-DBUILD_STATIC_LIBS:BOOL=ON')
+      args.append('-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON')
     return args
 
   def configureLibrary(self):
-    needRestore = False
     self.buildLanguages= self.kokkos.buildLanguages
+    self.deviceLink = getattr(self.kokkos, 'deviceLink', None)
+    oldFlags = self.setCompilers.CUDAPPFLAGS
+    extraFlags = []
     if self.cuda.found and not self.cuda.cudaclang:
-        oldFlags = self.setCompilers.CUDAPPFLAGS
-        self.setCompilers.CUDAPPFLAGS += " -ccbin " + self.getCompiler('Cxx')
-        needRestore = True
+        extraFlags.extend(['-ccbin', self.getCompiler('Cxx')])
+    if getattr(self.kokkos, 'kokkosRDC', None) == 'cuda':
+        extraFlags.append('--relocatable-device-code=true')
+    if extraFlags:
+        self.setCompilers.CUDAPPFLAGS += ' ' + ' '.join(extraFlags)
 
-    config.package.CMakePackage.configureLibrary(self)
-
-    if needRestore: self.setCompilers.CUDAPPFLAGS = oldFlags
+    try:
+      config.package.CMakePackage.configureLibrary(self)
+    finally:
+      self.setCompilers.CUDAPPFLAGS = oldFlags
