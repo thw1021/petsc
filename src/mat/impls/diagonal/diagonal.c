@@ -741,7 +741,26 @@ PetscErrorCode MatCreateDiagonal(Vec diag, Mat *J)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductNumeric_Diagonal_Dense(Mat C)
+static PetscErrorCode MatProduct_AB_SetUpMat_Private(Mat A, Mat B, MatType type, Mat C)
+{
+  PetscInt n, N, m, M;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetLocalSize(C, &m, &n));
+  PetscCall(MatGetSize(C, &M, &N));
+  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
+    PetscCall(MatGetLocalSize(B, NULL, &n));
+    PetscCall(MatGetSize(B, NULL, &N));
+    PetscCall(MatGetLocalSize(A, &m, NULL));
+    PetscCall(MatGetSize(A, &M, NULL));
+    PetscCall(MatSetSizes(C, m, n, M, N));
+  }
+  PetscCall(MatSetType(C, type));
+  PetscCall(MatSetUp(C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductNumeric_AB_Diagonal_Dense(Mat C)
 {
   Mat                A, B;
   Mat_Diagonal      *a;
@@ -769,28 +788,13 @@ static PetscErrorCode MatProductNumeric_Diagonal_Dense(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductSymbolic_Diagonal_Dense(Mat C)
+static PetscErrorCode MatProductSymbolic_AB_Diagonal_Dense(Mat C)
 {
-  Mat      A, B;
-  PetscInt n, N, m, M;
-
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  A = C->product->A;
-  B = C->product->B;
-  PetscCall(MatGetLocalSize(C, &m, &n));
-  PetscCall(MatGetSize(C, &M, &N));
-  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
-    PetscCall(MatGetLocalSize(B, NULL, &n));
-    PetscCall(MatGetSize(B, NULL, &N));
-    PetscCall(MatGetLocalSize(A, &m, NULL));
-    PetscCall(MatGetSize(A, &M, NULL));
-    PetscCall(MatSetSizes(C, m, n, M, N));
-  }
-  PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
-  PetscCall(MatSetUp(C));
-  C->ops->productnumeric = MatProductNumeric_Diagonal_Dense;
+  PetscCall(MatProduct_AB_SetUpMat_Private(C->product->A, C->product->B, ((PetscObject)C->product->B)->type_name, C));
+  C->ops->productnumeric = MatProductNumeric_AB_Diagonal_Dense;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -970,17 +974,10 @@ static PetscErrorCode MatProductNumeric_AB_Diagonal_Anytype(Mat C)
 
 static PetscErrorCode MatProductSymbolic_AB_Diagonal_Anytype(Mat C)
 {
-  Mat          B       = C->product->B;
-  Mat_Product *product = C->product;
-  Mat          Cwork;
-
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &Cwork));
-  C->product = NULL;
-  PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product             = product;
+  PetscCall(MatProduct_AB_SetUpMat_Private(C->product->A, C->product->B, ((PetscObject)C->product->B)->type_name, C));
   C->ops->productnumeric = MatProductNumeric_AB_Diagonal_Anytype;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1001,17 +998,10 @@ static PetscErrorCode MatProductNumeric_AB_Anytype_Diagonal(Mat C)
 
 static PetscErrorCode MatProductSymbolic_AB_Anytype_Diagonal(Mat C)
 {
-  Mat          A       = C->product->A;
-  Mat_Product *product = C->product;
-  Mat          Cwork;
-
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Cwork));
-  C->product = NULL;
-  PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product             = product;
+  PetscCall(MatProduct_AB_SetUpMat_Private(C->product->A, C->product->B, ((PetscObject)C->product->A)->type_name, C));
   C->ops->productnumeric = MatProductNumeric_AB_Anytype_Diagonal;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1066,7 +1056,7 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Diagonal(Mat C)
 static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense_AB(Mat C)
 {
   PetscFunctionBegin;
-  C->ops->productsymbolic = MatProductSymbolic_Diagonal_Dense;
+  C->ops->productsymbolic = MatProductSymbolic_AB_Diagonal_Dense;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

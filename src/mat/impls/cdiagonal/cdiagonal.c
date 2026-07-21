@@ -499,6 +499,25 @@ static PetscErrorCode MatProductCtxDestroy_PtAP_ConstDiag_Anytype(PetscCtxRt dat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatProduct_AB_SetUpMat_Private(Mat A, Mat B, MatType type, Mat C)
+{
+  PetscInt n, N, m, M;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetLocalSize(C, &m, &n));
+  PetscCall(MatGetSize(C, &M, &N));
+  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
+    PetscCall(MatGetLocalSize(B, NULL, &n));
+    PetscCall(MatGetSize(B, NULL, &N));
+    PetscCall(MatGetLocalSize(A, &m, NULL));
+    PetscCall(MatGetSize(A, &M, NULL));
+    PetscCall(MatSetSizes(C, m, n, M, N));
+  }
+  PetscCall(MatSetType(C, type));
+  PetscCall(MatSetUp(C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatProductNumeric_PtAP_ConstDiag_Anytype(Mat C)
 {
   Mat_Product                          *product = C->product;
@@ -578,17 +597,10 @@ static PetscErrorCode MatProductNumeric_AB_ConstDiag_Anytype(Mat C)
 
 static PetscErrorCode MatProductSymbolic_AB_ConstDiag_Anytype(Mat C)
 {
-  Mat          B       = C->product->B;
-  Mat_Product *product = C->product;
-  Mat          Cwork;
-
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &Cwork));
-  C->product = NULL;
-  PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product             = product;
+  PetscCall(MatProduct_AB_SetUpMat_Private(C->product->A, C->product->B, ((PetscObject)C->product->B)->type_name, C));
   C->ops->productnumeric = MatProductNumeric_AB_ConstDiag_Anytype;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -608,17 +620,10 @@ static PetscErrorCode MatProductNumeric_AB_Anytype_ConstDiag(Mat C)
 
 static PetscErrorCode MatProductSymbolic_AB_Anytype_ConstDiag(Mat C)
 {
-  Mat          A       = C->product->A;
-  Mat_Product *product = C->product;
-  Mat          Cwork;
-
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Cwork));
-  C->product = NULL;
-  PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product             = product;
+  PetscCall(MatProduct_AB_SetUpMat_Private(C->product->A, C->product->B, ((PetscObject)C->product->A)->type_name, C));
   C->ops->productnumeric = MatProductNumeric_AB_Anytype_ConstDiag;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
