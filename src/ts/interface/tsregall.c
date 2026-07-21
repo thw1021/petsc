@@ -2,7 +2,9 @@
 PETSC_EXTERN PetscErrorCode TSCreate_Euler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS);
-PETSC_EXTERN PetscErrorCode TSCreate_Sundials(TS);
+#if PetscDefined(HAVE_ANCIENTSUNDIALS)
+PETSC_EXTERN PetscErrorCode TSCreate_AncientSundials(TS);
+#endif
 PETSC_EXTERN PetscErrorCode TSCreate_Radau5(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_CN(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS);
@@ -47,8 +49,8 @@ PetscErrorCode TSRegisterAll(void)
   PetscCall(TSRegister(TSTHETA, TSCreate_Theta));
   PetscCall(TSRegister(TSALPHA, TSCreate_Alpha));
   PetscCall(TSRegister(TSALPHA2, TSCreate_Alpha2));
-#if defined(PETSC_HAVE_SUNDIALS2)
-  PetscCall(TSRegister(TSSUNDIALS, TSCreate_Sundials));
+#if PetscDefined(HAVE_ANCIENTSUNDIALS)
+  PetscCall(TSRegister(TSANCIENTSUNDIALS, TSCreate_AncientSundials));
 #endif
 #if defined(PETSC_HAVE_RADAU5)
   PetscCall(TSRegister(TSRADAU5, TSCreate_Radau5));

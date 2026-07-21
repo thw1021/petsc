@@ -24,8 +24,8 @@ configure_options = [
   '--download-parms=1',
   # no with-cxx-dialect=C++11 support '--download-elemental=1',
   #'--download-hdf5',
-  '--download-sundials2=1',
   '--download-hypre=1',
+  '--download-sundials',
   #'--download-suitesparse=1', requires gnumake
   '--download-chaco=1',
   '--download-spai=1',

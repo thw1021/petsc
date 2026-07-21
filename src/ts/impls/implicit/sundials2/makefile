@@ -1,5 +1,5 @@
 -include ../../../../../petscdir.mk
-#requirespackage   'PETSC_HAVE_SUNDIALS2'
+#requirespackage   'PETSC_HAVE_ANCIENTSUNDIALS'
 
 MANSEC   = TS
 
