@@ -267,7 +267,7 @@ PetscErrorCode Device<T>::select_device_petsc_decide_(MPI_Comm comm, PetscInt nd
 
 #if PetscDefined(HAVE_HWLOC)
 template <DeviceType T>
-PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hwloc_cpuset_t superset_cpuset, hwloc_cpuset_t process_cpuset, PetscInt *relative_device_index) noexcept
+PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hwloc_cpuset_t superset_cpuset, hwloc_obj *process_cpu_obj, hwloc_topology_t topology, PetscInt *relative_device_index) noexcept
 {
   // hwloc_bitmap_weight returns the number of non-zero entires in a cpuset.
   PetscInt cores_in_anc_obj = hwloc_bitmap_weight(superset_cpuset);
@@ -275,9 +275,9 @@ PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hw
 
   PetscFunctionBegin;
   // Enumerate cpuset in topological order
-  for (auto icore = hwloc_bitmap_next(superset_cpuset, -1); icore != -1; icore = hwloc_bitmap_next(superset_cpuset, icore)) {
+  for (auto this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(topology, superset_cpuset, HWLOC_OBJ_PU, nullptr); this_cpu; this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(topology, superset_cpuset, HWLOC_OBJ_PU, this_cpu)) {
     // If the first CPU core in this thread's cpuset is found, set relative_device_index and return.
-    if (icore == hwloc_bitmap_first(process_cpuset)) {
+    if (this_cpu->logical_index == process_cpu_obj->logical_index) {
       *relative_device_index = dev_count * ctr / cores_in_anc_obj;
       break;
     }
@@ -376,7 +376,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
         hwloc_cpuset_t anc_cpuset = common_ancestors[devices_at_max_depth[idev]]->cpuset;
         if (hwloc_bitmap_isincluded(first_cpu->cpuset, anc_cpuset)) {
           PetscInt relative_device_idx = 0;
-          PetscCall(get_device_placement_in_cpuset_(max_count, anc_cpuset, cpuset_mine, &relative_device_idx));
+          PetscCall(get_device_placement_in_cpuset_(max_count, anc_cpuset, first_cpu, topology, &relative_device_idx));
           initId->first = devices_at_max_depth[relative_device_idx];
           break;
         }
