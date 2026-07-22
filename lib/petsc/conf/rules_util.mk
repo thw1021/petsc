@@ -193,7 +193,7 @@ checkbadSource:
 	-@echo "----- Fortran: use of dble -----------------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n "dble(" -- ${GITFSRC} >> checkbadSource.out;true
 	-@echo "----- Missing space after comma in Synopsis ------------------------" >> checkbadSource.out
-	-@git ls-files ${GITCFSRC} | grep -v " " | xargs awk 'FNR>2 { if (p2 ~ /^[ \t]*Synopsis:/ && p1 ~ /^[ \t]*#include[ \t]*<[^>]+>/ && ($$0 ~ /,[^ ]/ || $$0 ~ /,  +/)) print FILENAME ":" FNR " " $$0 } { p2=p1; p1=$$0 }' >> checkbadSource.out;true
+	-@git ls-files -z ${GITCFSRC} | xargs -0 awk 'FNR>2 { if (p2 ~ /^[ \t]*Synopsis:/ && p1 ~ /^[ \t]*#include[ \t]*<[^>]+>/ && ($$0 ~ /,[^ ]/ || $$0 ~ /,  +/)) print FILENAME ":" FNR " " $$0 } { p2=p1; p1=$$0 }' >> checkbadSource.out;true
 	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 50` ;\
          if [ $$l -gt 0 ] ; then \
            echo $$l " files with errors detected in source code formatting" ;\
