@@ -5,6 +5,7 @@ static const char help[] = "Tests for adaptive refinement";
 
 typedef struct {
   PetscBool metric;  /* Flag to use metric adaptation, instead of tagging */
+  PetscInt  iter;    /* Number of adaptation generations */
   PetscInt *refcell; /* A cell to be refined on each process */
 } AppCtx;
 
@@ -15,12 +16,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
   PetscFunctionBeginUser;
   options->metric = PETSC_FALSE;
+  options->iter   = 1;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscCalloc1(size, &options->refcell));
   n = size;
 
   PetscOptionsBegin(comm, "", "Parallel Mesh Adaptation Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-metric", "Flag for metric refinement", "ex41.c", options->metric, &options->metric, NULL));
+  PetscCall(PetscOptionsInt("-adapt_iter", "Number of adaptation generations", "ex41.c", options->iter, &options->iter, NULL));
   PetscCall(PetscOptionsIntArray("-refcell", "The cell to be refined", "ex41.c", options->refcell, &n, NULL));
   if (n) PetscCheck(n == size, comm, PETSC_ERR_ARG_SIZ, "Only gave %" PetscInt_FMT " cells to refine, must give one for all %d processes", n, size);
   PetscOptionsEnd();
@@ -48,16 +51,14 @@ static PetscErrorCode CreateAdaptLabel(DM dm, AppCtx *ctx, DMLabel *adaptLabel)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ConstructRefineTree(DM dm)
+static PetscErrorCode ConstructRefineTree(DM dm, DM odm)
 {
   DMPlexTransform tr;
-  DM              odm;
   PetscInt        cStart, cEnd;
 
   PetscFunctionBegin;
   PetscCall(DMPlexGetTransform(dm, &tr));
   if (!tr) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(DMPlexTransformGetDM(tr, &odm));
   PetscCall(DMPlexGetHeightStratum(odm, 0, &cStart, &cEnd));
   for (PetscInt c = cStart; c < cEnd; ++c) {
     DMPolytopeType  ct;
@@ -83,7 +84,7 @@ static PetscErrorCode ConstructRefineTree(DM dm)
 
 int main(int argc, char **argv)
 {
-  DM      dm, dma;
+  DM      dm, dma = NULL;
   DMLabel adaptLabel;
   AppCtx  ctx;
 
@@ -91,13 +92,20 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &ctx));
   PetscCall(CreateMesh(PETSC_COMM_WORLD, &ctx, &dm));
-  PetscCall(CreateAdaptLabel(dm, &ctx, &adaptLabel));
-  PetscCall(DMAdaptLabel(dm, adaptLabel, &dma));
-  PetscCall(PetscObjectSetName((PetscObject)dma, "Adapted Mesh"));
-  PetscCall(DMLabelDestroy(&adaptLabel));
+  for (PetscInt i = 0; i < ctx.iter; ++i) {
+    PetscCall(CreateAdaptLabel(dm, &ctx, &adaptLabel));
+    PetscCall(DMAdaptLabel(dm, adaptLabel, &dma));
+    PetscCall(PetscObjectSetName((PetscObject)dma, "Adapted Mesh"));
+    PetscCall(DMLabelDestroy(&adaptLabel));
+    PetscCall(DMPlexCheck(dma));
+    PetscCall(DMViewFromOptions(dma, NULL, "-adapt_dm_view"));
+    if (i < ctx.iter - 1) {
+      PetscCall(DMDestroy(&dm));
+      dm = dma;
+    }
+  }
+  PetscCall(ConstructRefineTree(dma, dm));
   PetscCall(DMDestroy(&dm));
-  PetscCall(DMViewFromOptions(dma, NULL, "-adapt_dm_view"));
-  PetscCall(ConstructRefineTree(dma));
   PetscCall(DMDestroy(&dma));
   PetscCall(PetscFree(ctx.refcell));
   PetscCall(PetscFinalize());
@@ -129,5 +137,24 @@ int main(int argc, char **argv)
       requires: triangle
       nsize: 2
       args: -refcell 2,-1 -petscpartitioner_type simple -dm_view -adapt_dm_view
+
+    # Refine one tetrahedron of two, the example of Fig. 6 of Plaza & Carey (2000), and validate
+    # the subdivision generator against the enumeration of Table 4 of the paper
+    test:
+      suffix: 3
+      args: -dm_plex_shape doublet -dm_plex_dim 3 -dm_plex_simplex 1 -refcell 0 \
+            -dm_plex_transform_sbr_validate -dm_view -adapt_dm_view
+
+    # Keep refining the first cell of each generation, verifying mesh validity each time
+    test:
+      suffix: 4
+      args: -dm_plex_shape doublet -dm_plex_dim 3 -dm_plex_simplex 1 -refcell 0 -adapt_iter 4 -adapt_dm_view
+
+    # One tetrahedron per process, exercising the conformity closure across the shared face
+    test:
+      suffix: 5
+      nsize: 2
+      args: -dm_plex_shape doublet -dm_plex_dim 3 -dm_plex_simplex 1 -refcell 0,-1 -adapt_iter 2 \
+            -petscpartitioner_type simple -dm_distribute -dm_view -adapt_dm_view
 
 TEST*/

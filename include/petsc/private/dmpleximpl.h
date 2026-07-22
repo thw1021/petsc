@@ -7,7 +7,7 @@
 #include <petscsf.h>
 #include <petsc/private/dmimpl.h>
 
-#if defined(PETSC_HAVE_EXODUSII)
+#if PetscDefined(HAVE_EXODUSII)
   #include <exodusII.h>
 #endif
 
@@ -165,10 +165,13 @@ typedef struct {
   PetscBool regularRefinement; /* This flag signals that we are a regular refinement of coarseMesh */
 
   /* Generation */
-  char            *tetgenOpts;
-  char            *triangleOpts;
-  PetscPartitioner partitioner;
-  PetscBool        partitionBalance; /* Evenly divide partition overlap when distributing */
+  char            *tetgenOpts;            // COmmand line options for Tetgen
+  PetscReal        tetgenRadiusEdgeBound; // Maximum tetgen radius-edge ratio
+  PetscReal        tetgenDihedralBound;   // Minimum tetgen dihedral angle
+  char            *triangleOpts;          // Comand line options for Triangle
+  PetscReal        triangleAngBound;      // Minimum triangle angle
+  PetscPartitioner partitioner;           // Partitioner object
+  PetscBool        partitionBalance;      // Evenly divide partition overlap when distributing
   PetscBool        remeshBd;
 
   /* Submesh */
@@ -253,8 +256,10 @@ typedef struct {
   PetscInt  printFEM;
   PetscInt  printFVM;
   PetscInt  printL2;
+  PetscInt  printOrient;
   PetscInt  printLocate;
   PetscInt  printProject;
+  PetscInt  printCohesive;
   PetscReal printTol;
 } DM_Plex;
 
@@ -274,7 +279,7 @@ PETSC_INTERN PetscErrorCode DMPlexGetFieldTypes_Internal(DM, PetscSection, Petsc
 PETSC_INTERN PetscErrorCode DMPlexRestoreFieldTypes_Internal(DM, PetscSection, PetscInt, PetscInt *, PetscInt **, PetscInt **, PetscViewerVTKFieldType **);
 PETSC_INTERN PetscErrorCode DMPlexView_GLVis(DM, PetscViewer);
 PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_Plex(PetscObject, PetscViewer);
-#if defined(PETSC_HAVE_HDF5)
+#if PetscDefined(HAVE_HDF5)
 PETSC_EXTERN PetscErrorCode VecView_Plex_Local_HDF5(Vec, PetscViewer);
 PETSC_EXTERN PetscErrorCode VecView_Plex_HDF5(Vec, PetscViewer);
 PETSC_EXTERN PetscErrorCode VecLoad_Plex_HDF5(Vec, PetscViewer);
@@ -303,7 +308,7 @@ PETSC_INTERN PetscErrorCode VecLoad_Plex_HDF5_Internal(Vec, PetscViewer);
 PETSC_INTERN PetscErrorCode VecLoad_Plex_HDF5_Native_Internal(Vec, PetscViewer);
 #endif
 PETSC_EXTERN PetscErrorCode VecView_Plex_Local_CGNS(Vec, PetscViewer);
-#if defined(PETSC_HAVE_CGNS)
+#if PetscDefined(HAVE_CGNS)
 PETSC_EXTERN PetscErrorCode VecLoad_Plex_CGNS_Internal(Vec, PetscViewer);
 #endif
 
@@ -329,7 +334,7 @@ PETSC_INTERN PetscErrorCode DMComputeL2GradientDiff_Plex(DM, PetscReal, PetscErr
 PETSC_INTERN PetscErrorCode DMComputeL2FieldDiff_Plex(DM, PetscReal, PetscErrorCode (**)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *), void **, Vec, PetscReal *);
 PETSC_INTERN PetscErrorCode DMLocatePoints_Plex(DM, Vec, DMPointLocationType, PetscSF);
 
-#if defined(PETSC_HAVE_EXODUSII)
+#if PetscDefined(HAVE_EXODUSII)
 PETSC_INTERN PetscErrorCode DMView_PlexExodusII(DM, PetscViewer);
 PETSC_INTERN PetscErrorCode VecView_PlexExodusII_Internal(Vec, PetscViewer);
 PETSC_INTERN PetscErrorCode VecLoad_PlexExodusII_Internal(Vec, PetscViewer);
@@ -852,14 +857,17 @@ PETSC_INTERN PetscErrorCode DMCreateSuperDM_Plex(DM dms[], PetscInt len, IS **is
 PETSC_INTERN PetscErrorCode DMCreateDomainDecompositionScatters_Plex(DM, PetscInt, DM *, VecScatter **, VecScatter **, VecScatter **);
 PETSC_INTERN PetscErrorCode DMCreateDomainDecomposition_Plex(DM, PetscInt *, char ***, IS **, IS **, DM **);
 PETSC_INTERN PetscErrorCode DMCreateSectionPermutation_Plex(DM dm, IS *permutation, PetscBT *blockStarts);
+PETSC_INTERN PetscErrorCode DMPlexCellUnsplitVertices_Internal(DM, PetscInt, DMPolytopeType, PetscInt *);
 
 // Coordinate mapping functions
 PETSC_INTERN void coordMap_identity(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+PETSC_INTERN void coordMap_rotate(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_shear(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_flare(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_annulus(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_shell(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_sinusoid(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+PETSC_INTERN void coordMap_torus(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 
 PETSC_INTERN PetscErrorCode DMSnapToGeomModel_EGADS(DM, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
 

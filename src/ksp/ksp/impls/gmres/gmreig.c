@@ -5,7 +5,7 @@ PetscErrorCode KSPComputeExtremeSingularValues_GMRES(KSP ksp, PetscReal *emax, P
 {
   KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
   PetscInt     n = gmres->it + 1, i, N = gmres->max_k + 2;
-  PetscBLASInt bn, bN, lwork, idummy, lierr;
+  PetscBLASInt bn, bN, lwork, idummy;
   PetscScalar *R = gmres->Rsvd, *work = R + N * N, sdummy = 0;
   PetscReal   *realpart = gmres->Dsvd;
 
@@ -26,12 +26,11 @@ PetscErrorCode KSPComputeExtremeSingularValues_GMRES(KSP ksp, PetscReal *emax, P
 
   /* compute Singular Values */
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if !defined(PETSC_USE_COMPLEX)
-  PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("N", "N", &bn, &bn, R, &bN, realpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &lierr));
+#if !PetscDefined(USE_COMPLEX)
+  PetscCallLAPACKInfo("LAPACKgesvd", LAPACKgesvd_("N", "N", &bn, &bn, R, &bN, realpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &info));
 #else
-  PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("N", "N", &bn, &bn, R, &bN, realpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, realpart + N, &lierr));
+  PetscCallLAPACKInfo("LAPACKgesvd", LAPACKgesvd_("N", "N", &bn, &bn, R, &bN, realpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, realpart + N, &info));
 #endif
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SVD Lapack routine %" PetscBLASInt_FMT, lierr);
   PetscCall(PetscFPTrapPop());
 
   *emin = realpart[n - 1];
@@ -41,10 +40,10 @@ PetscErrorCode KSPComputeExtremeSingularValues_GMRES(KSP ksp, PetscReal *emax, P
 
 PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp, PetscInt nmax, PetscReal *r, PetscReal *c, PetscInt *neig)
 {
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
   PetscInt     n = gmres->it + 1, N = gmres->max_k + 1, i, *perm;
-  PetscBLASInt bn, bN, lwork, idummy, lierr = -1;
+  PetscBLASInt bn, bN, lwork, idummy;
   PetscScalar *R = gmres->Rsvd, *work = R + N * N;
   PetscScalar *realpart = gmres->Dsvd, *imagpart = realpart + N, sdummy = 0;
 
@@ -63,8 +62,7 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp, PetscInt nmax, PetscReal *r,
 
   /* compute eigenvalues */
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "N", &bn, R, &bN, realpart, imagpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
+  PetscCallLAPACKInfo("LAPACKgeev", LAPACKgeev_("N", "N", &bn, R, &bN, realpart, imagpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &info));
   PetscCall(PetscFPTrapPop());
   PetscCall(PetscMalloc1(n, &perm));
   for (i = 0; i < n; i++) perm[i] = i;
@@ -78,7 +76,7 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp, PetscInt nmax, PetscReal *r,
   KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
   PetscInt     n = gmres->it + 1, N = gmres->max_k + 1, i, *perm;
   PetscScalar *R = gmres->Rsvd, *work = R + N * N, *eigs = work + 5 * N, sdummy;
-  PetscBLASInt bn, bN, lwork, idummy, lierr = -1;
+  PetscBLASInt bn, bN, lwork, idummy;
 
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(n, &bn));
@@ -95,8 +93,7 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp, PetscInt nmax, PetscReal *r,
 
   /* compute eigenvalues */
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "N", &bn, R, &bN, eigs, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, gmres->Dsvd, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine");
+  PetscCallLAPACKInfo("LAPACKgeev", LAPACKgeev_("N", "N", &bn, R, &bN, eigs, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, gmres->Dsvd, &info));
   PetscCall(PetscFPTrapPop());
   PetscCall(PetscMalloc1(n, &perm));
   for (i = 0; i < n; i++) perm[i] = i;
@@ -157,12 +154,10 @@ PetscErrorCode KSPComputeRitz_GMRES(KSP ksp, PetscBool ritz, PetscBool small, Pe
 
     /* Call the LAPACK routine dgesv to compute t = H^{-T}*t */
     {
-      PetscBLASInt  info;
       PetscBLASInt  nrhs = 1;
       PetscBLASInt *ipiv;
       PetscCall(PetscMalloc1(bn, &ipiv));
-      PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&bn, &nrhs, Ht, &bn, ipiv, t, &bn, &info));
-      PetscCheck(!info, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "Error while calling the Lapack routine DGESV");
+      PetscCallLAPACKInfo("LAPACKgesv", LAPACKgesv_(&bn, &nrhs, Ht, &bn, ipiv, t, &bn, &info));
       PetscCall(PetscFree(ipiv));
       PetscCall(PetscFree(Ht));
     }
@@ -177,26 +172,24 @@ PetscErrorCode KSPComputeRitz_GMRES(KSP ksp, PetscBool ritz, PetscBool small, Pe
     For a complex Ritz pair of eigenvectors at wr(j), wi(j), wr(j+1), and wi(j+1), Q(:,j) + i Q(:,j+1) and Q(:,j) - i Q(:,j+1) are the two eigenvectors
   */
   {
-    PetscBLASInt info;
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     PetscReal *rwork = NULL;
 #endif
     PetscCall(PetscMalloc1(lwork, &work));
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if !defined(PETSC_USE_COMPLEX)
-    PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "V", &bn, H, &bN, wr, wi, &sdummy, &idummy, Q, &bn, work, &lwork, &info));
+#if !PetscDefined(USE_COMPLEX)
+    PetscCallLAPACKInfo("LAPACKgeev", LAPACKgeev_("N", "V", &bn, H, &bN, wr, wi, &sdummy, &idummy, Q, &bn, work, &lwork, &info));
 #else
     PetscCall(PetscMalloc1(2 * n, &rwork));
-    PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "V", &bn, H, &bN, wr, &sdummy, &idummy, Q, &bn, work, &lwork, rwork, &info));
+    PetscCallLAPACKInfo("LAPACKgeev", LAPACKgeev_("N", "V", &bn, H, &bN, wr, &sdummy, &idummy, Q, &bn, work, &lwork, rwork, &info));
     PetscCall(PetscFree(rwork));
 #endif
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine");
     PetscCall(PetscFPTrapPop());
     PetscCall(PetscFree(work));
   }
   /* sort the (Harmonic) Ritz values */
   PetscCall(PetscMalloc2(bn, &modul, bn, &perm));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   for (i = 0; i < bn; i++) modul[i] = PetscAbsScalar(wr[i]);
 #else
   for (i = 0; i < bn; i++) modul[i] = PetscSqrtReal(wr[i] * wr[i] + wi[i] * wi[i]);
@@ -204,7 +197,7 @@ PetscErrorCode KSPComputeRitz_GMRES(KSP ksp, PetscBool ritz, PetscBool small, Pe
   for (i = 0; i < bn; i++) perm[i] = i;
   PetscCall(PetscSortRealWithPermutation(bn, modul, perm));
 
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   /* sort extracted (Harmonic) Ritz pairs */
   nb = NbrRitz;
   PetscCall(PetscMalloc1(nb * bn, &SR));

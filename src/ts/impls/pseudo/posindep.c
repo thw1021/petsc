@@ -38,7 +38,7 @@ typedef struct {
   PetscObjectState Xstate; /* state of vector given to TSComputeIFunction() with 0 Xdot to compute `residual`*/
 } TS_Pseudo_Residual;
 
-static PetscErrorCode TSPseudoResidualDestroy(PetscCtx ctx)
+static PetscErrorCode TSPseudoResidualDestroy(PetscCtxRt ctx)
 {
   TS_Pseudo_Residual *pseudo_residual = *(TS_Pseudo_Residual **)ctx;
 
@@ -757,7 +757,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS ts)
   pseudo->increment_dt_from_initial_dt = PETSC_FALSE;
   pseudo->fnorm_initial                = -1;
   pseudo->fnorm_previous               = -1;
-#if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_REAL_SINGLE)
   pseudo->fatol = 1.e-25;
   pseudo->frtol = 1.e-5;
 #else

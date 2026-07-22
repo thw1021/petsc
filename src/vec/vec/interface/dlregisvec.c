@@ -168,7 +168,6 @@ PetscErrorCode VecInitializePackage(void)
 {
   char      logList[256];
   PetscBool opt, pkg;
-  PetscInt  i;
 
   PetscFunctionBegin;
   if (VecPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
@@ -215,30 +214,30 @@ PetscErrorCode VecInitializePackage(void)
   PetscCall(PetscLogEventRegister("VecReduceBegin", VEC_CLASSID, &VEC_ReduceBegin));
   PetscCall(PetscLogEventRegister("VecReduceEnd", VEC_CLASSID, &VEC_ReduceEnd));
   PetscCall(PetscLogEventRegister("VecNormalize", VEC_CLASSID, &VEC_Normalize));
-#if defined(PETSC_HAVE_VIENNACL)
+#if PetscDefined(HAVE_VIENNACL)
   PetscCall(PetscLogEventRegister("VecVCLCopyTo", VEC_CLASSID, &VEC_ViennaCLCopyToGPU));
   PetscCall(PetscLogEventRegister("VecVCLCopyFrom", VEC_CLASSID, &VEC_ViennaCLCopyFromGPU));
 #endif
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   PetscCall(PetscLogEventRegister("VecCUDACopyTo", VEC_CLASSID, &VEC_CUDACopyToGPU));
   PetscCall(PetscLogEventRegister("VecCUDACopyFrom", VEC_CLASSID, &VEC_CUDACopyFromGPU));
 #endif
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
   PetscCall(PetscLogEventRegister("VecHIPCopyTo", VEC_CLASSID, &VEC_HIPCopyToGPU));
   PetscCall(PetscLogEventRegister("VecHIPCopyFrom", VEC_CLASSID, &VEC_HIPCopyFromGPU));
 #endif
 
   /* Mark non-collective events */
   PetscCall(PetscLogEventSetCollective(VEC_SetValues, PETSC_FALSE));
-#if defined(PETSC_HAVE_VIENNACL)
+#if PetscDefined(HAVE_VIENNACL)
   PetscCall(PetscLogEventSetCollective(VEC_ViennaCLCopyToGPU, PETSC_FALSE));
   PetscCall(PetscLogEventSetCollective(VEC_ViennaCLCopyFromGPU, PETSC_FALSE));
 #endif
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   PetscCall(PetscLogEventSetCollective(VEC_CUDACopyToGPU, PETSC_FALSE));
   PetscCall(PetscLogEventSetCollective(VEC_CUDACopyFromGPU, PETSC_FALSE));
 #endif
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
   PetscCall(PetscLogEventSetCollective(VEC_HIPCopyToGPU, PETSC_FALSE));
   PetscCall(PetscLogEventSetCollective(VEC_HIPCopyFromGPU, PETSC_FALSE));
 #endif
@@ -267,7 +266,7 @@ PetscErrorCode VecInitializePackage(void)
   PetscCallMPI(MPI_Op_create(MPIU_MinIndex_Local, 1, &MPIU_MINLOC));
 
   /* Register the different norm types for cached norms */
-  for (i = 0; i < 4; i++) PetscCall(PetscObjectComposedDataRegister(NormIds + i));
+  for (PetscInt i = 0; i < 4; i++) PetscCall(PetscObjectComposedDataRegister(NormIds + i));
 
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(VecFinalizePackage));
@@ -295,7 +294,7 @@ PetscErrorCode VecFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
+#if PetscDefined(HAVE_DYNAMIC_LIBRARIES)
 /*
   PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
 

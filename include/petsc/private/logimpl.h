@@ -169,7 +169,7 @@ typedef struct _n_PetscLogGlobalNames *PetscLogGlobalNames;
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesCreate(MPI_Comm, PetscInt, const char **, PetscLogGlobalNames *);
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesDestroy(PetscLogGlobalNames *);
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesGetSize(PetscLogGlobalNames, PetscInt *, PetscInt *);
-PETSC_INTERN PetscErrorCode PetscLogGlobalNamesGlobalGetName(PetscLogGlobalNames, PetscInt, const char **);
+PETSC_INTERN PetscErrorCode PetscLogGlobalNamesGlobalGetName(PetscLogGlobalNames, PetscInt, const char *[]);
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesGlobalGetLocal(PetscLogGlobalNames, PetscInt, PetscInt *);
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesLocalGetGlobal(PetscLogGlobalNames, PetscInt, PetscInt *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
@@ -187,7 +187,7 @@ struct _n_PetscIntStack {
 /* SpinLock for shared Log variables */
 PETSC_INTERN PetscSpinlock PetscLogSpinLock;
 
-#if defined(PETSC_HAVE_THREADSAFETY)
+#if PetscDefined(HAVE_THREADSAFETY)
   #if defined(__cplusplus)
     #define PETSC_TLS thread_local
   #else

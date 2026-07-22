@@ -457,7 +457,7 @@ static PetscErrorCode GLLStuffs(DomainData dd, GLLData *glldata)
 {
   PetscReal   *M, si;
   PetscScalar  x, z0, z1, z2, Lpj, Lpr, rhoGLj, rhoGLk;
-  PetscBLASInt pm1, lierr;
+  PetscBLASInt pm1;
   PetscInt     i, j, n, k, s, r, q, ii, jj, p = dd.p;
   PetscInt     xloc, yloc, zloc, xyloc, xyzloc;
 
@@ -477,8 +477,7 @@ static PetscErrorCode GLLStuffs(DomainData dd, GLLData *glldata)
       }
       pm1 = (PetscBLASInt)(p - 1);
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-      PetscCallBLAS("LAPACKsteqr", LAPACKsteqr_("N", &pm1, &glldata->zGL[1], M, &x, &pm1, M, &lierr));
-      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in STERF Lapack routine %d", (int)lierr);
+      PetscCallLAPACKInfo("LAPACKsteqr", LAPACKsteqr_("N", &pm1, &glldata->zGL[1], M, &x, &pm1, M, &info));
       PetscCall(PetscFPTrapPop());
       PetscCall(PetscFree(M));
     }
@@ -1028,7 +1027,7 @@ int main(int argc, char **args)
   /* create KSP/PC for FETIDP */
   if (testfetidp) PetscCall(ComputeKSPFETIDP(dd, KSPwithBDDC, &KSPwithFETIDP));
   /* create random exact solution */
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   PetscCall(VecSet(exact_solution, 1.0 + PETSC_i));
 #else
   PetscCall(VecSetRandom(exact_solution, NULL));
@@ -1075,7 +1074,6 @@ int main(int argc, char **args)
       PetscCall(KSPGetOperators(KSPwithFETIDP, &F, NULL));
       PetscCall(MatCreateVecs(F, &fetidp_solution, &fetidp_rhs));
       PetscCall(PCBDDCMatFETIDPGetRHS(F, bddc_rhs, fetidp_rhs));
-      PetscCall(VecSet(fetidp_solution, 0.0));
       /* test ksp with FETIDP */
       PetscCall(KSPSolve(KSPwithFETIDP, fetidp_rhs, fetidp_solution));
       /* assemble fetidp solution on physical domain */

@@ -3,7 +3,7 @@
   by taking advantage of rows with identical nonzero structure (I-nodes).
 */
 #include <../src/mat/impls/aij/seq/aij.h>
-#if defined(PETSC_HAVE_XMMINTRIN_H)
+#if PetscDefined(HAVE_XMMINTRIN_H)
   #include <xmmintrin.h>
 #endif
 
@@ -375,7 +375,7 @@ PetscErrorCode MatMult_SeqAIJ_Inode(Mat A, Vec xx, Vec yy)
     PetscScalar      sum1, sum2, sum3, sum4, sum5, tmp0, tmp1;
     const PetscInt  *idx;
 
-#if defined(PETSC_HAVE_PRAGMA_DISJOINT)
+#if PetscDefined(HAVE_PRAGMA_DISJOINT)
   #pragma disjoint(*x, *y, *v1, *v2, *v3, *v4, *v5)
 #endif
     row = ns[i];
@@ -4026,16 +4026,15 @@ PetscErrorCode MatDuplicate_SeqAIJ_Inode(Mat A, MatDuplicateOption cpvalues, Mat
 
 static inline PetscErrorCode MatGetRow_FactoredLU(PetscInt *cols, PetscInt nzl, PetscInt nzu, PetscInt nz, const PetscInt *ai, const PetscInt *aj, const PetscInt *adiag, PetscInt row)
 {
-  PetscInt        k;
   const PetscInt *vi;
 
   PetscFunctionBegin;
   vi = aj + ai[row];
-  for (k = 0; k < nzl; k++) cols[k] = vi[k];
+  for (PetscInt k = 0; k < nzl; k++) cols[k] = vi[k];
   vi        = aj + adiag[row];
   cols[nzl] = vi[0];
   vi        = aj + adiag[row + 1] + 1;
-  for (k = 0; k < nzu; k++) cols[nzl + 1 + k] = vi[k];
+  for (PetscInt k = 0; k < nzu; k++) cols[nzl + 1 + k] = vi[k];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*

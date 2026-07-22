@@ -162,22 +162,22 @@ PetscErrorCode MatGetColumnSumsImaginaryPart(Mat A, PetscReal sums[])
 @*/
 PetscErrorCode MatGetColumnSums(Mat A, PetscScalar sums[])
 {
-#if defined(PETSC_USE_COMPLEX)
-  PetscInt   i, n;
+#if PetscDefined(USE_COMPLEX)
+  PetscInt   n;
   PetscReal *work;
 #endif
 
   PetscFunctionBegin;
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   PetscCall(MatGetColumnSumsRealPart(A, sums));
 #else
   PetscCall(MatGetSize(A, NULL, &n));
   PetscCall(PetscArrayzero(sums, n));
   PetscCall(PetscCalloc1(n, &work));
   PetscCall(MatGetColumnSumsRealPart(A, work));
-  for (i = 0; i < n; i++) sums[i] = work[i];
+  for (PetscInt i = 0; i < n; i++) sums[i] = work[i];
   PetscCall(MatGetColumnSumsImaginaryPart(A, work));
-  for (i = 0; i < n; i++) sums[i] += work[i] * PETSC_i;
+  for (PetscInt i = 0; i < n; i++) sums[i] += work[i] * PETSC_i;
   PetscCall(PetscFree(work));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -250,22 +250,22 @@ PetscErrorCode MatGetColumnMeansImaginaryPart(Mat A, PetscReal means[])
 @*/
 PetscErrorCode MatGetColumnMeans(Mat A, PetscScalar means[])
 {
-#if defined(PETSC_USE_COMPLEX)
-  PetscInt   i, n;
+#if PetscDefined(USE_COMPLEX)
+  PetscInt   n;
   PetscReal *work;
 #endif
 
   PetscFunctionBegin;
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   PetscCall(MatGetColumnMeansRealPart(A, means));
 #else
   PetscCall(MatGetSize(A, NULL, &n));
   PetscCall(PetscArrayzero(means, n));
   PetscCall(PetscCalloc1(n, &work));
   PetscCall(MatGetColumnMeansRealPart(A, work));
-  for (i = 0; i < n; i++) means[i] = work[i];
+  for (PetscInt i = 0; i < n; i++) means[i] = work[i];
   PetscCall(MatGetColumnMeansImaginaryPart(A, work));
-  for (i = 0; i < n; i++) means[i] += work[i] * PETSC_i;
+  for (PetscInt i = 0; i < n; i++) means[i] += work[i] * PETSC_i;
   PetscCall(PetscFree(work));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);

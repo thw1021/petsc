@@ -38,9 +38,9 @@ static PetscErrorCode KSPSetUp_IBCGS(KSP ksp)
 #define zn_1 zn
 static PetscErrorCode KSPSolve_IBCGS(KSP ksp)
 {
-  PetscInt  i, N;
+  PetscInt  N;
   PetscReal rnorm = 0.0, rnormin = 0.0;
-#if defined(PETSC_HAVE_MPI_LONG_DOUBLE) && !defined(PETSC_USE_COMPLEX) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
+#if PetscDefined(HAVE_MPI_LONG_DOUBLE) && !PetscDefined(USE_COMPLEX) && (PetscDefined(USE_REAL_SINGLE) || PetscDefined(USE_REAL_DOUBLE))
   /* Because of possible instabilities in the algorithm (as indicated by different residual histories for the same problem
      on the same number of processes  with different runs) we support computing the inner products using Intel's 80 bit arithmetic
      rather than just 64-bit. Thus we copy our double precision values into long doubles (hoping this keeps the 16 extra bits)
@@ -66,7 +66,7 @@ static PetscErrorCode KSPSolve_IBCGS(KSP ksp)
   PetscFunctionBegin;
   PetscCheck(ksp->vec_rhs->petscnative, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Only coded for PETSc vectors");
 
-#if defined(PETSC_HAVE_MPI_LONG_DOUBLE) && !defined(PETSC_USE_COMPLEX) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
+#if PetscDefined(HAVE_MPI_LONG_DOUBLE) && !PetscDefined(USE_COMPLEX) && (PetscDefined(USE_REAL_SINGLE) || PetscDefined(USE_REAL_DOUBLE))
   /* since 80 bit long doubls do not fill the upper bits, we fill them initially so that
      valgrind won't detect MPI_Allreduce() with uninitialized data */
   PetscCall(PetscMemzero(insums, sizeof(insums)));
@@ -175,7 +175,7 @@ static PetscErrorCode KSPSolve_IBCGS(KSP ksp)
     PetscCall(PetscLogEventBegin(VEC_Ops, 0, 0, 0, 0));
     tmp1 = (alphan / alphan_1) * betan;
     tmp2 = alphan * deltan;
-    for (i = 0; i < N; i++) {
+    for (PetscInt i = 0; i < N; i++) {
       zn[i] = alphan * rn_1[i] + tmp1 * zn_1[i] - tmp2 * vn_1[i];
       vn[i] = un_1[i] + betan * vn_1[i] - deltan * qn_1[i];
       sn[i] = rn_1[i] - alphan * vn[i];
@@ -203,7 +203,7 @@ static PetscErrorCode KSPSolve_IBCGS(KSP ksp)
     */
     PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic, 0, 0, 0, 0));
     phin = pin = gamman = etan = thetan = kappan = 0.0;
-    for (i = 0; i < N; i++) {
+    for (PetscInt i = 0; i < N; i++) {
       phin += r0[i] * sn[i];
       pin += r0[i] * qn[i];
       gamman += f0[i] * sn[i];
@@ -223,7 +223,7 @@ static PetscErrorCode KSPSolve_IBCGS(KSP ksp)
     insums[6] = rnormin;
 
     PetscCall(PetscLogEventBegin(VEC_ReduceCommunication, 0, 0, 0, 0));
-#if defined(PETSC_HAVE_MPI_LONG_DOUBLE) && !defined(PETSC_USE_COMPLEX) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
+#if PetscDefined(HAVE_MPI_LONG_DOUBLE) && !PetscDefined(USE_COMPLEX) && (PetscDefined(USE_REAL_SINGLE) || PetscDefined(USE_REAL_DOUBLE))
     if (ksp->lagnorm && ksp->its > 1) {
       PetscCallMPI(MPIU_Allreduce(insums, outsums, 7, MPI_LONG_DOUBLE, MPI_SUM, PetscObjectComm((PetscObject)ksp)));
     } else {
@@ -264,7 +264,7 @@ static PetscErrorCode KSPSolve_IBCGS(KSP ksp)
     */
     PetscCall(PetscLogEventBegin(VEC_Ops, 0, 0, 0, 0));
     rnormin = 0.0;
-    for (i = 0; i < N; i++) {
+    for (PetscInt i = 0; i < N; i++) {
       rn[i] = sn[i] - omegan * tn[i];
       rnormin += PetscRealPart(PetscConj(rn[i]) * rn[i]);
       xn[i] += zn[i] + omegan * sn[i];

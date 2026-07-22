@@ -11,7 +11,7 @@ static PetscErrorCode DMView_DA_1d(DM da, PetscViewer viewer)
   PetscMPIInt rank;
   PetscBool   isascii, isdraw, isglvis, isbinary;
   DM_DA      *dd = (DM_DA *)da->data;
-#if defined(PETSC_HAVE_MATLAB)
+#if PetscDefined(HAVE_MATLAB)
   PetscBool ismatlab;
 #endif
 
@@ -22,7 +22,7 @@ static PetscErrorCode DMView_DA_1d(DM da, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERGLVIS, &isglvis));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
-#if defined(PETSC_HAVE_MATLAB)
+#if PetscDefined(HAVE_MATLAB)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERMATLAB, &ismatlab));
 #endif
   if (isascii) {
@@ -75,10 +75,9 @@ static PetscErrorCode DMView_DA_1d(DM da, PetscViewer viewer)
     PetscDrawCollectiveBegin(draw);
     /* first processor draws all node lines */
     if (rank == 0) {
-      PetscInt xmin_tmp;
       ymin = 0.0;
       ymax = 0.3;
-      for (xmin_tmp = 0; xmin_tmp < dd->M; xmin_tmp++) PetscCall(PetscDrawLine(draw, (double)xmin_tmp, ymin, (double)xmin_tmp, ymax, PETSC_DRAW_BLACK));
+      for (PetscInt xmin_tmp = 0; xmin_tmp < dd->M; xmin_tmp++) PetscCall(PetscDrawLine(draw, (double)xmin_tmp, ymin, (double)xmin_tmp, ymax, PETSC_DRAW_BLACK));
       xmin = 0.0;
       xmax = dd->M - 1;
       PetscCall(PetscDrawLine(draw, xmin, ymin, xmax, ymin, PETSC_DRAW_BLACK));
@@ -112,7 +111,7 @@ static PetscErrorCode DMView_DA_1d(DM da, PetscViewer viewer)
     PetscCall(DMView_DA_GLVis(da, viewer));
   } else if (isbinary) {
     PetscCall(DMView_DA_Binary(da, viewer));
-#if defined(PETSC_HAVE_MATLAB)
+#if PetscDefined(HAVE_MATLAB)
   } else if (ismatlab) {
     PetscCall(DMView_DA_Matlab(da, viewer));
 #endif

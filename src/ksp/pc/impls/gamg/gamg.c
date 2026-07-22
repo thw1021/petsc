@@ -4,11 +4,11 @@
 #include <../src/ksp/pc/impls/gamg/gamg.h>            /*I "petscpc.h" I*/
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   #include <petscdevice_cuda.h>
 #endif
 
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
   #include <petscdevice_hip.h>
 #endif
 
@@ -86,7 +86,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
   }
   /* get number of PEs to make active 'new_size', reduce, can be any integer 1-P */
   if (pc_gamg->level_reduction_factors[pc_gamg->current_level] == 0 && PetscDefined(HAVE_CUDA) && pc_gamg->current_level == 0) { /* 0 turns reducing to 1 process/device on; do for HIP, etc. */
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
     PetscShmComm pshmcomm;
     PetscMPIInt  locrank;
     MPI_Comm     loccomm;
@@ -127,7 +127,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
     PetscCall(PetscInfo(pc, "%s: Force coarsest grid reduction to %d active processes\n", ((PetscObject)pc)->prefix, new_size));
   } else {
     PetscInt ncrs_eq_glob;
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   HEURISTIC:
 #endif
     PetscCall(MatGetSize(Pold, NULL, &ncrs_eq_glob));
@@ -421,7 +421,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
     if (Cmat) { /* repartitioning from Cmat adjacency case */
       Mat       mat;
       PetscBool isset, isspd, isher;
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
       PetscBool issym;
 #endif
 
@@ -432,7 +432,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         PetscCall(MatIsHermitianKnown(Cmat, &isset, &isher));
         if (isset) PetscCall(MatSetOption(mat, MAT_HERMITIAN, isher));
         else {
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
           PetscCall(MatIsSymmetricKnown(Cmat, &isset, &issym));
           if (isset) PetscCall(MatSetOption(mat, MAT_SYMMETRIC, issym));
 #endif
@@ -474,7 +474,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
 
     /* pinning on reduced grids, not a bad heuristic and optimization gets folded into process reduction optimization */
     if (pc_gamg->cpu_pin_coarse_grids) {
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_VIENNACL) || PetscDefined(HAVE_CUDA)
       static PetscInt llev = 2;
       PetscCall(PetscInfo(pc, "%s: Pinning level %" PetscInt_FMT " to the CPU\n", ((PetscObject)pc)->prefix, llev++));
 #endif
@@ -546,7 +546,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
   Mat         Aarr[PETSC_MG_MAXLEVELS], Parr[PETSC_MG_MAXLEVELS];
   IS         *ASMLocalIDsArr[PETSC_MG_MAXLEVELS];
   PetscBool   is_last = PETSC_FALSE;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   PetscLogDouble nnz0 = 0., nnztot = 0.;
   MatInfo        info;
 #endif
@@ -649,7 +649,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
   PetscCall(MatGetBlockSize(Pmat, &bs));
   PetscCall(MatGetSize(Pmat, &M, NULL));
 
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   PetscCall(MatGetInfo(Pmat, MAT_GLOBAL_SUM, &info)); /* global reduction */
   nnz0   = info.nz_used;
   nnztot = info.nz_used;
@@ -810,7 +810,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
     PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_LEVEL], 0, 0, 0, 0));
 
     PetscCall(MatGetSize(Aarr[level1], &M, &N)); /* M is loop test variables */
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
     PetscCall(MatGetInfo(Aarr[level1], MAT_GLOBAL_SUM, &info));
     nnztot += info.nz_used;
 #endif
@@ -871,9 +871,8 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(PCASMSetLocalSubdomains(subpc, 1, NULL, &is));
           PetscCall(ISDestroy(&is));
         } else {
-          PetscInt kk;
           PetscCall(PCASMSetLocalSubdomains(subpc, sz, iss, NULL));
-          for (kk = 0; kk < sz; kk++) PetscCall(ISDestroy(&iss[kk]));
+          for (PetscInt kk = 0; kk < sz; kk++) PetscCall(ISDestroy(&iss[kk]));
           PetscCall(PetscFree(iss));
         }
         ASMLocalIDsArr[level] = NULL;
@@ -1911,7 +1910,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCCreate()`, `PCSetType()`,
           `MatSetBlockSize()`,
-          `PCMGType`, `PCSetCoordinates()`, `MatSetNearNullSpace()`, `PCGAMGSetType()`, `PCGAMGAGG`, `PCGAMGGEO`, `PCGAMGCLASSICAL`, `PCGAMGSetProcEqLim()`,
+          `PCMGType`, `PCSetCoordinates()`, `MatSetNearNullSpace()`, `PCGAMGSetType()`, `PCAIR`, `PCGAMGAGG`, `PCGAMGGEO`, `PCGAMGCLASSICAL`, `PCGAMGSetProcEqLim()`,
           `PCGAMGSetCoarseEqLim()`, `PCGAMGSetRepartition()`, `PCGAMGRegister()`, `PCGAMGSetReuseInterpolation()`, `PCGAMGASMSetUseAggs()`,
           `PCGAMGSetParallelCoarseGridSolve()`, `PCGAMGSetNlevels()`, `PCGAMGSetThreshold()`, `PCGAMGGetType()`, `PCGAMGSetUseSAEstEig()`
 M*/
@@ -1937,8 +1936,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   PetscCall(PetscNew(&pc_gamg->ops));
 
   /* these should be in subctx but repartitioning needs simple arrays */
-  pc_gamg->data_sz = 0;
-  pc_gamg->data    = NULL;
+  pc_gamg->prolongator_filter = 0.0;
+  pc_gamg->data_sz            = 0;
+  pc_gamg->data               = NULL;
 
   /* overwrite the pointers of PCMG by the functions of base class PCGAMG */
   pc->ops->setfromoptions = PCSetFromOptions_GAMG;
@@ -2001,8 +2001,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
 @*/
 PetscErrorCode PCGAMGInitializePackage(void)
 {
-  PetscInt l;
-
   PetscFunctionBegin;
   if (PCGAMGPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   PCGAMGPackageInitialized = PETSC_TRUE;
@@ -2028,7 +2026,7 @@ PetscErrorCode PCGAMGInitializePackage(void)
   /* PetscCall(PetscLogEventRegister("   GAMG Inv-Srt", PC_CLASSID, &petsc_gamg_setup_events[SET13])); */
   /* PetscCall(PetscLogEventRegister("   GAMG Move A", PC_CLASSID, &petsc_gamg_setup_events[SET14])); */
   /* PetscCall(PetscLogEventRegister("   GAMG Move P", PC_CLASSID, &petsc_gamg_setup_events[SET15])); */
-  for (l = 0; l < PETSC_MG_MAXLEVELS; l++) {
+  for (PetscInt l = 0; l < PETSC_MG_MAXLEVELS; l++) {
     char ename[32];
 
     PetscCall(PetscSNPrintf(ename, sizeof(ename), "PCGAMG Squ l%02" PetscInt_FMT, l));

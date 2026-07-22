@@ -110,7 +110,6 @@ PetscErrorCode HeaderlessBinaryRead(const char name[])
 {
   int         fdes;
   PetscScalar buffer[VEC_LEN];
-  PetscInt    i;
   PetscMPIInt rank;
   PetscBool   dataverified = PETSC_TRUE;
 
@@ -121,20 +120,16 @@ PetscErrorCode HeaderlessBinaryRead(const char name[])
     PetscCall(PetscBinaryRead(fdes, buffer, VEC_LEN, NULL, PETSC_SCALAR));
     PetscCall(PetscBinaryClose(fdes));
 
-    for (i = 0; i < VEC_LEN; i++) {
+    for (PetscInt i = 0; i < VEC_LEN; i++) {
       PetscScalar v;
       v = PetscAbsScalar(test_values[i] - buffer[i]);
-#if defined(PETSC_USE_COMPLEX)
-      if ((PetscRealPart(v) > 1.0e-10) || (PetscImaginaryPart(v) > 1.0e-10)) {
+      if (PetscDefined(USE_COMPLEX) && ((PetscRealPart(v) > 1.0e-10) || (PetscImaginaryPart(v) > 1.0e-10))) {
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR: Difference > 1.0e-10 occurred (delta = (%+1.12e,%+1.12e) [loc %" PetscInt_FMT "])\n", (double)PetscRealPart(buffer[i]), (double)PetscImaginaryPart(buffer[i]), i));
         dataverified = PETSC_FALSE;
-      }
-#else
-      if (PetscRealPart(v) > 1.0e-10) {
+      } else if (PetscRealPart(v) > 1.0e-10) {
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR: Difference > 1.0e-10 occurred (delta = %+1.12e [loc %" PetscInt_FMT "])\n", (double)PetscRealPart(buffer[i]), i));
         dataverified = PETSC_FALSE;
       }
-#endif
     }
     if (dataverified) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Headerless read of data verified\n"));
   }
@@ -168,7 +163,7 @@ PetscErrorCode TestBinary(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_MPIIO)
+#if PetscDefined(HAVE_MPIIO)
 PetscErrorCode TestBinaryMPIIO(void)
 {
   Vec       x, y;
@@ -207,7 +202,7 @@ int main(int argc, char **args)
   if (!usempiio) {
     PetscCall(TestBinary());
   } else {
-#if defined(PETSC_HAVE_MPIIO)
+#if PetscDefined(HAVE_MPIIO)
     PetscCall(TestBinaryMPIIO());
 #else
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Executing TestBinaryMPIIO() requires a working MPI-2 implementation\n"));

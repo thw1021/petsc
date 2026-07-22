@@ -5,7 +5,7 @@
 
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   #define DBL_CMPLX
 #else
   #define DBL
@@ -623,7 +623,7 @@ PetscErrorCode PCPARMSSetFill(PC pc, PetscInt lfil0, PetscInt lfil1, PetscInt lf
 
    Level: intermediate
 
-.seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCMG`, `PCGAMG`, `PCHYPRE`, `PCPARMSSetGlobal()`,
+.seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCMG`, `PCGAMG`, `PCHYPRE`, `PCAIR`, `PCPARMSSetGlobal()`,
           `PCPARMSSetLocal()`, `PCPARMSSetSolveTolerances()`, `PCPARMSSetSolveRestart()`, `PCPARMSSetNonsymPerm()`,
           `PCPARMSSetFill()`
 M*/

@@ -1,11 +1,11 @@
 #include <petsc/private/dmpleximpl.h> /*I      "petscdmplex.h"   I*/
 
-#ifdef PETSC_HAVE_EGADS
+#if PetscDefined(HAVE_EGADS)
   #include <egads.h>
   #include <egads_lite.h>
 #endif
 
-#if defined(PETSC_HAVE_TETGEN_TETLIBRARY_NEEDED)
+#if PetscDefined(HAVE_TETGEN_TETLIBRARY_NEEDED)
   #define TETLIBRARY
 #endif
 #if defined(__clang__)
@@ -146,10 +146,18 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Tetgen(DM boundary, PetscBool interpo
     char     args[32];
 
     /* Take away 'Q' for verbose output */
-#ifdef PETSC_HAVE_EGADS
-    PetscCall(PetscStrncpy(args, "pYqezQY", sizeof(args)));
+#if PetscDefined(HAVE_EGADS)
+    if (mesh->tetgenRadiusEdgeBound > 0.) {
+      PetscCall(PetscSNPrintf(args, sizeof(args), "pYq%.2f/%.0fezQY", (double)mesh->tetgenRadiusEdgeBound, (double)mesh->tetgenDihedralBound));
+    } else {
+      PetscCall(PetscStrncpy(args, "pYqezQY", sizeof(args)));
+    }
 #else
-    PetscCall(PetscStrncpy(args, "pqezQ", sizeof(args)));
+    if (mesh->tetgenRadiusEdgeBound > 0.) {
+      PetscCall(PetscSNPrintf(args, sizeof(args), "pq%.2f/%.0fezQ", (double)mesh->tetgenRadiusEdgeBound, (double)mesh->tetgenDihedralBound));
+    } else {
+      PetscCall(PetscStrncpy(args, "pqezQ", sizeof(args)));
+    }
 #endif
     if (mesh->tetgenOpts) {
       ::tetrahedralize(mesh->tetgenOpts, &in, &out);
@@ -222,7 +230,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Tetgen(DM boundary, PetscBool interpo
     if (!modelObj) PetscCall(PetscObjectQuery((PetscObject)boundary, "EGADSlite Model", (PetscObject *)&modelObj));
 
     if (modelObj) {
-#ifdef PETSC_HAVE_EGADS
+#if PetscDefined(HAVE_EGADS)
       DMLabel   bodyLabel;
       PetscInt  cStart, cEnd, c, eStart, eEnd, fStart, fEnd;
       PetscBool islite = PETSC_FALSE;
@@ -501,7 +509,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_Tetgen(DM dm, double *maxVolumes, DM *d
 
     PetscCall(PetscObjectQuery((PetscObject)dm, "EGADS Model", (PetscObject *)&modelObj));
     if (modelObj) {
-#ifdef PETSC_HAVE_EGADS
+#if PetscDefined(HAVE_EGADS)
       DMLabel   bodyLabel;
       PetscInt  cStart, cEnd, c, eStart, eEnd, fStart, fEnd;
       PetscBool islite = PETSC_FALSE;

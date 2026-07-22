@@ -55,15 +55,15 @@ PetscErrorCode VecTaggerView_Simple(VecTagger tagger, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscInt    bs, i;
+    PetscInt    bs;
     const char *name;
 
     PetscCall(PetscObjectGetType((PetscObject)tagger, &name));
     PetscCall(VecTaggerGetBlockSize(tagger, &bs));
     PetscCall(PetscViewerASCIIPrintf(viewer, " %s box=[", name));
-    for (i = 0; i < bs; i++) {
+    for (PetscInt i = 0; i < bs; i++) {
       if (i) PetscCall(PetscViewerASCIIPrintf(viewer, "; "));
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
       PetscCall(PetscViewerASCIIPrintf(viewer, "%g,%g", (double)smpl->box[i].min, (double)smpl->box[i].max));
 #else
       // If the imaginary parts coincide, this is intended to be a real interval
@@ -87,12 +87,12 @@ PetscErrorCode VecTaggerSetBox_Simple(VecTagger tagger, VecTaggerBox *box)
   PetscValidHeaderSpecific(tagger, VEC_TAGGER_CLASSID, 1);
   PetscAssertPointer(box, 2);
   if (box != smpl->box) {
-    PetscInt bs, i;
+    PetscInt bs;
 
     PetscCall(VecTaggerGetBlockSize(tagger, &bs));
     PetscCall(PetscFree(smpl->box));
     PetscCall(PetscMalloc1(bs, &smpl->box));
-    for (i = 0; i < bs; i++) smpl->box[i] = box[i];
+    for (PetscInt i = 0; i < bs; i++) smpl->box[i] = box[i];
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

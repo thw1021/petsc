@@ -1,4 +1,5 @@
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
+#include <petscconfiginfo.h>
 
 /*@C
   PetscGetVersion - Gets the PETSc version information in a string.
@@ -16,7 +17,7 @@
   Note:
   For doing runtime checking of supported versions we recommend using `PetscGetVersionNumber()` instead of this routine.
 
-.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`
+.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`, `PetscGetConfiguration()`
 @*/
 PetscErrorCode PetscGetVersion(char version[], size_t len)
 {
@@ -58,13 +59,33 @@ PetscErrorCode PetscGetVersionNumber(PetscInt *major, PetscInt *minor, PetscInt 
   if (release) *release = PETSC_VERSION_RELEASE;
   return PETSC_SUCCESS;
 }
-#if defined(PETSC_HAVE_BLI_THREAD_SET_NUM_THREADS)
+
+/*@C
+  PetscGetConfiguration - Gets the PETSc configuration information in a string.
+
+  Not Collective
+
+  Output Parameter:
+. configuration - configuration string
+
+  Level: developer
+
+.seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`, `PetscGetVersion()`
+@*/
+PetscErrorCode PetscGetConfiguration(const char *configuration[])
+{
+  PetscFunctionBegin;
+  *configuration = petscconfigureoptions;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if PetscDefined(HAVE_BLI_THREAD_SET_NUM_THREADS)
 EXTERN_C_BEGIN
 void bli_thread_set_num_threads(int);
 EXTERN_C_END
-#elif defined(PETSC_HAVE_MKL_SET_NUM_THREADS)
+#elif PetscDefined(HAVE_MKL_SET_NUM_THREADS)
   #include <mkl.h>
-#elif defined(PETSC_HAVE_OPENBLAS_SET_NUM_THREADS)
+#elif PetscDefined(HAVE_OPENBLAS_SET_NUM_THREADS)
 EXTERN_C_BEGIN
 void openblas_set_num_threads(int);
 EXTERN_C_END
@@ -96,13 +117,13 @@ PetscErrorCode PetscBLASSetNumThreads(PetscInt nt)
 {
   PetscFunctionBegin;
   PetscNumBLASThreads = nt;
-#if defined(PETSC_HAVE_BLI_THREAD_SET_NUM_THREADS)
+#if PetscDefined(HAVE_BLI_THREAD_SET_NUM_THREADS)
   bli_thread_set_num_threads(nt);
   PetscCall(PetscInfo(NULL, "Setting number of threads used for BLIS provided BLAS %" PetscInt_FMT "\n", PetscNumBLASThreads));
-#elif defined(PETSC_HAVE_MKL_SET_NUM_THREADS)
+#elif PetscDefined(HAVE_MKL_SET_NUM_THREADS)
   mkl_set_num_threads((int)nt);
   PetscCall(PetscInfo(NULL, "Setting number of threads used for MKL provided BLAS %" PetscInt_FMT "\n", PetscNumBLASThreads));
-#elif defined(PETSC_HAVE_OPENBLAS_SET_NUM_THREADS)
+#elif PetscDefined(HAVE_OPENBLAS_SET_NUM_THREADS)
   openblas_set_num_threads((int)nt);
   PetscCall(PetscInfo(NULL, "Setting number of threads used for OpenBLAS provided BLAS %" PetscInt_FMT "\n", PetscNumBLASThreads));
 #else

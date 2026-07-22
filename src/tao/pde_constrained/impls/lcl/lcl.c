@@ -110,8 +110,6 @@ static PetscErrorCode TaoSetup_LCL(Tao tao)
   PetscCall(VecDuplicate(tao->constraints, &lclP->lambda0));
   PetscCall(VecDuplicate(tao->constraints, &lclP->con1));
 
-  PetscCall(VecSet(lclP->lambda, 0.0));
-
   PetscCall(VecGetSize(tao->solution, &lclP->n));
   PetscCall(VecGetSize(tao->constraints, &lclP->m));
 
@@ -582,7 +580,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_LCL(Tao tao)
   tao->uses_gradient = PETSC_TRUE;
 
   /* Override default settings (unless already changed) */
-  PetscCall(TaoParametersInitialize(tao));
   PetscObjectParameterSetDefault(tao, max_it, 200);
   PetscObjectParameterSetDefault(tao, catol, 1.0e-4);
   PetscObjectParameterSetDefault(tao, gttol, 1.0e-4);

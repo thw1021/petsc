@@ -153,9 +153,7 @@ static PetscErrorCode PetscParallelSampleSelect(PetscLayout mapin, PetscLayout m
   for (i = keys_per[rank]; i < max_keys_per; i++) pivots[i] = PETSC_INT_MAX;
   PetscCallMPI(MPI_Allgather(pivots, max_keys_per, MPIU_INT, finalpivots, max_keys_per, MPIU_INT, mapin->comm));
   for (i = 0, count = 0; i < size; i++) {
-    PetscInt j;
-
-    for (j = 0; j < max_keys_per; j++) {
+    for (PetscInt j = 0; j < max_keys_per; j++) {
       if (j < keys_per[i]) finalpivots[count++] = finalpivots[i * max_keys_per + j];
     }
   }
@@ -271,14 +269,12 @@ static PetscErrorCode PetscParallelSortInt_Samplesort(PetscLayout mapin, PetscLa
 
   /* local sort */
   PetscCall(PetscSortInt(nrecv, buffer));
-#if defined(PETSC_USE_DEBUG)
-  {
+  if (PetscDefined(USE_DEBUG)) {
     PetscBool sorted;
 
     PetscCall(PetscParallelSortedInt(mapin->comm, nrecv, buffer, &sorted));
     PetscCheck(sorted, mapin->comm, PETSC_ERR_PLIB, "samplesort (pre-redistribute) sort failed");
   }
-#endif
 
   /* redistribute to the desired order */
   PetscCall(PetscParallelRedistribute(mapout, nrecv, buffer, keysout));
@@ -345,14 +341,12 @@ PetscErrorCode PetscParallelSortInt(PetscLayout mapin, PetscLayout mapout, Petsc
     keysin = keysincopy;
   }
   PetscCall(PetscParallelSortInt_Samplesort(mapin, mapout, keysin, keysout));
-#if defined(PETSC_USE_DEBUG)
-  {
+  if (PetscDefined(USE_DEBUG)) {
     PetscBool sorted;
 
     PetscCall(PetscParallelSortedInt(mapout->comm, mapout->n, keysout, &sorted));
     PetscCheck(sorted, mapout->comm, PETSC_ERR_PLIB, "samplesort sort failed");
   }
-#endif
   PetscCall(PetscFree(keysincopy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

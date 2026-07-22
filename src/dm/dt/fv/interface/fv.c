@@ -1116,8 +1116,6 @@ PetscErrorCode PetscFVSetUp(PetscFV fvm)
 @*/
 PetscErrorCode PetscFVDestroy(PetscFV *fvm)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   if (!*fvm) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*fvm, PETSCFV_CLASSID, 1);
@@ -1128,7 +1126,7 @@ PetscErrorCode PetscFVDestroy(PetscFV *fvm)
   }
   ((PetscObject)*fvm)->refct = 0;
 
-  for (i = 0; i < (*fvm)->numComponents; i++) PetscCall(PetscFree((*fvm)->componentNames[i]));
+  for (PetscInt i = 0; i < (*fvm)->numComponents; i++) PetscCall(PetscFree((*fvm)->componentNames[i]));
   PetscCall(PetscFree((*fvm)->componentNames));
   PetscCall(PetscLimiterDestroy(&(*fvm)->limiter));
   PetscCall(PetscDualSpaceDestroy(&(*fvm)->dualSpace));
@@ -1243,9 +1241,7 @@ PetscErrorCode PetscFVSetNumComponents(PetscFV fvm, PetscInt comp)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
   if (fvm->numComponents != comp) {
-    PetscInt i;
-
-    for (i = 0; i < fvm->numComponents; i++) PetscCall(PetscFree(fvm->componentNames[i]));
+    for (PetscInt i = 0; i < fvm->numComponents; i++) PetscCall(PetscFree(fvm->componentNames[i]));
     PetscCall(PetscFree(fvm->componentNames));
     PetscCall(PetscCalloc1(comp, &fvm->componentNames));
   }
@@ -1865,7 +1861,7 @@ static PetscErrorCode PetscFVDestroy_Upwind(PetscFV fvm)
 
 static PetscErrorCode PetscFVView_Upwind_Ascii(PetscFV fv, PetscViewer viewer)
 {
-  PetscInt          Nc, c;
+  PetscInt          Nc;
   PetscViewerFormat format;
 
   PetscFunctionBegin;
@@ -1873,7 +1869,7 @@ static PetscErrorCode PetscFVView_Upwind_Ascii(PetscFV fv, PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Upwind Finite Volume:\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
-  for (c = 0; c < Nc; c++) {
+  for (PetscInt c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1981,7 +1977,7 @@ static PetscErrorCode PetscFVDestroy_LeastSquares(PetscFV fvm)
 
 static PetscErrorCode PetscFVView_LeastSquares_Ascii(PetscFV fv, PetscViewer viewer)
 {
-  PetscInt          Nc, c;
+  PetscInt          Nc;
   PetscViewerFormat format;
 
   PetscFunctionBegin;
@@ -1989,7 +1985,7 @@ static PetscErrorCode PetscFVView_LeastSquares_Ascii(PetscFV fv, PetscViewer vie
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Finite Volume with Least Squares Reconstruction:\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
-  for (c = 0; c < Nc; c++) {
+  for (PetscInt c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2011,7 +2007,7 @@ static PetscErrorCode PetscFVView_LeastSquares(PetscFV fv, PetscViewer viewer)
 static PetscErrorCode PetscFVLeastSquaresPseudoInverse_Static(PetscInt m, PetscInt mstride, PetscInt n, PetscScalar *A, PetscScalar *Ainv, PetscScalar *tau, PetscInt worksize, PetscScalar *work)
 {
   PetscBool    debug = PETSC_FALSE;
-  PetscBLASInt M, N, K, lda, ldb, ldwork, info;
+  PetscBLASInt M, N, K, lda, ldb, ldwork;
   PetscScalar *R, *Q, *Aback, Alpha;
 
   PetscFunctionBegin;
@@ -2025,17 +2021,15 @@ static PetscErrorCode PetscFVLeastSquaresPseudoInverse_Static(PetscInt m, PetscI
   PetscCall(PetscBLASIntCast(mstride, &lda));
   PetscCall(PetscBLASIntCast(worksize, &ldwork));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&M, &N, A, &lda, tau, work, &ldwork, &info));
+  PetscCallLAPACKInfo("LAPACKgeqrf", LAPACKgeqrf_(&M, &N, A, &lda, tau, work, &ldwork, &info));
   PetscCall(PetscFPTrapPop());
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xGEQRF error");
   R = A; /* Upper triangular part of A now contains R, the rest contains the elementary reflectors */
 
   /* Extract an explicit representation of Q */
   Q = Ainv;
   PetscCall(PetscArraycpy(Q, A, mstride * n));
   K = N; /* full rank */
-  PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&M, &N, &K, Q, &lda, tau, work, &ldwork, &info));
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xORGQR/xUNGQR error");
+  PetscCallLAPACKInfo("LAPACKorgqr", LAPACKorgqr_(&M, &N, &K, Q, &lda, tau, work, &ldwork, &info));
 
   /* Compute A^{-T} = (R^{-1} Q^T)^T = Q R^{-T} */
   Alpha = 1.0;
@@ -2061,13 +2055,13 @@ static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m, Pet
   PetscScalar *Brhs;
   PetscScalar *tmpwork;
   PetscReal    rcond;
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   PetscInt   rworkSize;
   PetscReal *rwork, *rtau;
 #endif
   PetscInt     i, j, maxmn;
   PetscBLASInt M, N, lda, ldb, ldwork;
-  PetscBLASInt nrhs, irank, info;
+  PetscBLASInt nrhs, irank;
 
   PetscFunctionBegin;
   /* initialize to identity */
@@ -2085,12 +2079,12 @@ static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m, Pet
   PetscCall(PetscBLASIntCast(worksize, &ldwork));
   rcond = -1;
   nrhs  = M;
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   rworkSize = 5 * PetscMin(M, N);
   PetscCall(PetscMalloc1(rworkSize, &rwork));
   PetscCall(PetscMalloc1(PetscMin(M, N), &rtau));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKgelss", LAPACKgelss_(&M, &N, &nrhs, A, &lda, Brhs, &ldb, rtau, &rcond, &irank, tmpwork, &ldwork, rwork, &info));
+  PetscCallLAPACKInfo("LAPACKgelss", LAPACKgelss_(&M, &N, &nrhs, A, &lda, Brhs, &ldb, rtau, &rcond, &irank, tmpwork, &ldwork, rwork, &info));
   PetscCall(PetscFPTrapPop());
   PetscCall(PetscFree(rwork));
   for (i = 0; i < PetscMin(M, N); i++) tau[i] = rtau[i];
@@ -2098,10 +2092,9 @@ static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m, Pet
 #else
   nrhs = M;
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKgelss", LAPACKgelss_(&M, &N, &nrhs, A, &lda, Brhs, &ldb, tau, &rcond, &irank, tmpwork, &ldwork, &info));
+  PetscCallLAPACKInfo("LAPACKgelss", LAPACKgelss_(&M, &N, &nrhs, A, &lda, Brhs, &ldb, tau, &rcond, &irank, tmpwork, &ldwork, &info));
   PetscCall(PetscFPTrapPop());
 #endif
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xGELSS error");
   /* The following check should be turned into a diagnostic as soon as someone wants to do this intentionally */
   PetscCheck(irank >= PetscMin(M, N), PETSC_COMM_SELF, PETSC_ERR_USER, "Rank deficient least squares fit, indicates an isolated cell with two collinear points");
   PetscFunctionReturn(PETSC_SUCCESS);

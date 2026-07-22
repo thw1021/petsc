@@ -5,7 +5,7 @@ static BIO *bio_err = NULL;
 
 #define PASSWORD "password"
 
-#if defined(PETSC_USE_SSL_CERTIFICATE)
+#if PetscDefined(USE_SSL_CERTIFICATE)
 static int password_cb(char *buf, int num, int rwflag, void *userdata)
 {
   if (num < strlen(PASSWORD) + 1) return 0;
@@ -38,7 +38,7 @@ static void sigpipe_handle(int x) { }
 PetscErrorCode PetscSSLInitializeContext(SSL_CTX **octx)
 {
   SSL_CTX *ctx;
-#if defined(PETSC_USE_SSL_CERTIFICATE)
+#if PetscDefined(USE_SSL_CERTIFICATE)
   char      keyfile[PETSC_MAX_PATH_LEN];
   PetscBool exists;
 #endif
@@ -61,7 +61,7 @@ PetscErrorCode PetscSSLInitializeContext(SSL_CTX **octx)
 #endif
   SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 
-#if defined(PETSC_USE_SSL_CERTIFICATE)
+#if PetscDefined(USE_SSL_CERTIFICATE)
   /* Locate keyfile */
   PetscCall(PetscStrncpy(keyfile, "sslclient.pem", sizeof(keyfile)));
   PetscCall(PetscTestFile(keyfile, 'r', &exists));
@@ -393,11 +393,9 @@ PetscErrorCode PetscPushJSONValue(char buff[], const char key[], const char valu
   if (!special) PetscCall(PetscStrcmp(value, "true", &special));
   if (!special) PetscCall(PetscStrcmp(value, "false", &special));
   if (!special) {
-    PetscInt i;
-
     PetscCall(PetscStrlen(value, &len));
     special = PETSC_TRUE;
-    for (i = 0; i < (int)len; i++) {
+    for (PetscInt i = 0; i < (int)len; i++) {
       if (!isdigit(value[i])) {
         special = PETSC_FALSE;
         break;

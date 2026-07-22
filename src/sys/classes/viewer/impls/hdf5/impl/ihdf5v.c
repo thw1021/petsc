@@ -26,7 +26,6 @@ static PetscErrorCode PetscViewerHDF5Traverse_Internal(PetscViewer viewer, const
   const char rootGroupName[] = "/";
   hid_t      h5;
   PetscBool  exists = PETSC_FALSE;
-  PetscInt   i;
   int        n;
   char     **hierarchy;
   char       buf[PETSC_MAX_PATH_LEN] = "";
@@ -60,7 +59,7 @@ static PetscErrorCode PetscViewerHDF5Traverse_Internal(PetscViewer viewer, const
     PetscCall(PetscStrToArrayDestroy(n, hierarchy));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  for (i = 0; i < n; i++) {
+  for (PetscInt i = 0; i < n; i++) {
     PetscCall(PetscStrlcat(buf, "/", sizeof(buf)));
     PetscCall(PetscStrlcat(buf, hierarchy[i], sizeof(buf)));
     PetscCall(PetscViewerHDF5Traverse_Inner_Internal(h5, buf, createGroup, &exists));
@@ -672,9 +671,7 @@ PetscErrorCode PetscHDF5DataTypeToPetscDataType(hid_t htype, PetscDataType *ptyp
 {
   PetscFunctionBegin;
   if (htype == H5T_NATIVE_INT) *ptype = PetscDefined(USE_64BIT_INDICES) ? PETSC_LONG : PETSC_INT;
-#if defined(PETSC_USE_64BIT_INDICES)
-  else if (htype == H5T_NATIVE_LLONG) *ptype = PETSC_INT;
-#endif
+  else if (PetscDefined(USE_64BIT_INDICES) && htype == H5T_NATIVE_LLONG) *ptype = PETSC_INT;
   else if (htype == H5T_NATIVE_DOUBLE) *ptype = PETSC_DOUBLE;
   else if (htype == H5T_NATIVE_LONG) *ptype = PETSC_LONG;
   else if (htype == H5T_NATIVE_SHORT) *ptype = PETSC_SHORT;

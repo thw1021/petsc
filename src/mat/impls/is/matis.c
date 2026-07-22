@@ -382,9 +382,7 @@ static PetscErrorCode MatISScaleDisassembling_Private(Mat A)
   PetscCall(MatSeqAIJGetArray(matis->A, &aa));
   for (i = 0; i < n; i++) {
     if (ecount[i] > 1) {
-      PetscInt j;
-
-      for (j = ii[i]; j < ii[i + 1]; j++) {
+      for (PetscInt j = ii[i]; j < ii[i + 1]; j++) {
         PetscInt  i2   = jj[j], p, p2;
         PetscReal scal = 0.0;
 
@@ -1812,15 +1810,13 @@ static PetscErrorCode MatISSetPreallocation_IS(Mat B, PetscInt d_nz, const Petsc
 
   for (i = 0; i < matis->sf->nleaves; i++) matis->sf_leafdata[i] = PetscMin(matis->sf_leafdata[i], nlocalcols);
   PetscCall(MatSeqAIJSetPreallocation(matis->A, 0, matis->sf_leafdata));
-#if defined(PETSC_HAVE_HYPRE)
+#if PetscDefined(HAVE_HYPRE)
   PetscCall(MatHYPRESetPreallocation(matis->A, 0, matis->sf_leafdata, 0, NULL));
 #endif
 
   for (i = 0; i < matis->sf->nleaves / bs; i++) {
-    PetscInt b;
-
     matis->sf_leafdata[i] = matis->sf_leafdata[i * bs] / bs;
-    for (b = 1; b < bs; b++) matis->sf_leafdata[i] = PetscMax(matis->sf_leafdata[i], matis->sf_leafdata[i * bs + b] / bs);
+    for (PetscInt b = 1; b < bs; b++) matis->sf_leafdata[i] = PetscMax(matis->sf_leafdata[i], matis->sf_leafdata[i * bs + b] / bs);
   }
   PetscCall(MatSeqBAIJSetPreallocation(matis->A, bs, 0, matis->sf_leafdata));
 

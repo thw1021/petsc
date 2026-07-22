@@ -149,6 +149,8 @@ PetscErrorCode DMPlexGetTransformType(DM dm, DMPlexTransformType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petsc/private/dmplextransformimpl.h>
+
 /*@
   DMPlexSetTransform - Set the `DMPlexTransform` cached on the `DM`
 
@@ -175,6 +177,8 @@ PetscErrorCode DMPlexSetTransform(DM dm, DMPlexTransform tr)
   if (tr) PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)tr));
   PetscCall(DMPlexTransformDestroy(&mesh->transform));
+  // We need to remove the DM because we replace that exact DM with the transformed one in plexcreate.c
+  if (tr) PetscCall(DMPlexTransformSetDM(tr, NULL));
   mesh->transform = tr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -472,14 +476,13 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
 PetscErrorCode DMRefineHierarchy_Plex(DM dm, PetscInt nlevels, DM rdm[])
 {
   DM        cdm = dm;
-  PetscInt  r;
   PetscBool isUniform, localized, useCeed;
 
   PetscFunctionBegin;
   PetscCall(DMPlexGetRefinementUniform(dm, &isUniform));
   PetscCall(DMGetCoordinatesLocalized(dm, &localized));
   if (isUniform) {
-    for (r = 0; r < nlevels; ++r) {
+    for (PetscInt r = 0; r < nlevels; ++r) {
       DMPlexTransform tr;
       DM              codm, rcodm;
       const char     *prefix;
@@ -517,7 +520,7 @@ PetscErrorCode DMRefineHierarchy_Plex(DM dm, PetscInt nlevels, DM rdm[])
       PetscCall(DMPlexTransformDestroy(&tr));
     }
   } else {
-    for (r = 0; r < nlevels; ++r) {
+    for (PetscInt r = 0; r < nlevels; ++r) {
       PetscCall(DMRefine(cdm, PetscObjectComm((PetscObject)dm), &rdm[r]));
       PetscCall(DMPlexGetUseCeed(dm, &useCeed));
       PetscCall(DMPlexSetUseCeed(rdm[r], useCeed));

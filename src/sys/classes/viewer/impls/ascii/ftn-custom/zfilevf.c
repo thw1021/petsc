@@ -1,23 +1,22 @@
 #include <petsc/private/ftnimpl.h>
 #include <petscviewer.h>
 
-#if defined(PETSC_HAVE_FORTRAN_CAPS)
+#if PetscDefined(HAVE_FORTRAN_CAPS)
   #define petscviewerasciiprintf_             PETSCVIEWERASCIIPRINTF
   #define petscviewerasciisynchronizedprintf_ PETSCVIEWERASCIISYNCHRONIZEDPRINTF
-#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+#elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define petscviewerasciiprintf_             petscviewerasciiprintf
   #define petscviewerasciisynchronizedprintf_ petscviewerasciisynchronizedprintf
 #endif
 
 static PetscErrorCode PetscFixSlashN(const char *in, char **out)
 {
-  PetscInt i;
-  size_t   len;
+  size_t len;
 
   PetscFunctionBegin;
   PetscCall(PetscStrallocpy(in, out));
   PetscCall(PetscStrlen(*out, &len));
-  for (i = 0; i < (int)len - 1; i++) {
+  for (PetscInt i = 0; i < (int)len - 1; i++) {
     if ((*out)[i] == '\\' && (*out)[i + 1] == 'n') {
       (*out)[i]     = ' ';
       (*out)[i + 1] = '\n';

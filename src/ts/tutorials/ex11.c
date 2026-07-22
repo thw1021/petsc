@@ -91,7 +91,7 @@ struct _n_User {
   PetscBool vtkmon;
 };
 
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
 // Free a plain data context that was allocated using PETSc; returning libCEED error codes
 static int FreeContextPetsc(void *data)
 {
@@ -199,8 +199,7 @@ static void PhysicsRiemann_Advect(PetscInt dim, PetscInt Nf, const PetscReal *qp
     }
   } break;
   default: {
-    PetscInt i;
-    for (i = 0; i < DIM; ++i) wind[i] = 0.0;
+    for (PetscInt i = 0; i < DIM; ++i) wind[i] = 0.0;
   }
     /* default: SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for solution type %s",AdvectSolBumpTypes[advect->soltype]); */
   }
@@ -384,7 +383,7 @@ static PetscErrorCode SetUpBC_SW(DM dm, PetscDS prob, Physics phys)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
 static PetscErrorCode CreateQFunctionContext_SW(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
 {
   Physics_SW *in = (Physics_SW *)phys->data;
@@ -405,13 +404,13 @@ static PetscErrorCode CreateQFunctionContext_SW(Physics phys, Ceed ceed, CeedQFu
 
 static PetscErrorCode SetupCEED_SW(DM dm, Physics physics)
 {
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   Ceed                 ceed;
   CeedQFunctionContext qfCtx;
 #endif
 
   PetscFunctionBegin;
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscCall(DMGetCeed(dm, &ceed));
   PetscCall(CreateQFunctionContext_SW(physics, ceed, &qfCtx));
   PetscCall(DMCeedCreateFVM(dm, PETSC_TRUE, PhysicsRiemann_SW_Rusanov_CEED, PhysicsRiemann_SW_Rusanov_CEED_loc, qfCtx));
@@ -434,7 +433,7 @@ static PetscErrorCode PhysicsCreate_SW(Model mod, Physics phys, PetscOptionItems
 
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_SW, "rusanov", PhysicsRiemann_SW_Rusanov));
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_SW, "hll", PhysicsRiemann_SW_HLL));
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_SW, "rusanov_ceed", PhysicsRiemann_SW_Rusanov_CEED));
 #endif
 
@@ -591,7 +590,7 @@ static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob, Physics phys)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
 static PetscErrorCode CreateQFunctionContext_Euler(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
 {
   Physics_Euler *in = (Physics_Euler *)phys->data;
@@ -612,13 +611,13 @@ static PetscErrorCode CreateQFunctionContext_Euler(Physics phys, Ceed ceed, Ceed
 
 static PetscErrorCode SetupCEED_Euler(DM dm, Physics physics)
 {
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   Ceed                 ceed;
   CeedQFunctionContext qfCtx;
 #endif
 
   PetscFunctionBegin;
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscCall(DMGetCeed(dm, &ceed));
   PetscCall(CreateQFunctionContext_Euler(physics, ceed, &qfCtx));
   PetscCall(DMCeedCreateFVM(dm, PETSC_TRUE, PhysicsRiemann_Euler_Godunov_CEED, PhysicsRiemann_Euler_Godunov_CEED_loc, qfCtx));
@@ -640,7 +639,7 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod, Physics phys, PetscOptionIt
   mod->setupCEED = SetupCEED_Euler;
 
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_Euler, "godunov", PhysicsRiemann_Euler_Godunov));
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_Euler, "godunov_ceed", PhysicsRiemann_Euler_Godunov_CEED));
 #endif
 
@@ -704,11 +703,10 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod, Physics phys, PetscOptionIt
 static PetscErrorCode ErrorIndicator_Simple(PetscInt dim, PetscReal volume, PetscInt numComps, const PetscScalar u[], const PetscScalar grad[], PetscReal *error, PetscCtx ctx)
 {
   PetscReal err = 0.;
-  PetscInt  i, j;
 
   PetscFunctionBeginUser;
-  for (i = 0; i < numComps; i++) {
-    for (j = 0; j < dim; j++) err += PetscSqr(PetscRealPart(grad[i * dim + j]));
+  for (PetscInt i = 0; i < numComps; i++) {
+    for (PetscInt j = 0; j < dim; j++) err += PetscSqr(PetscRealPart(grad[i * dim + j]));
   }
   *error = volume * err;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -858,7 +856,7 @@ static PetscErrorCode ModelFunctionalRegister(Model mod, const char *name, Petsc
 
 static PetscErrorCode ModelFunctionalSetFromOptions(Model mod, PetscOptionItems PetscOptionsObject)
 {
-  PetscInt       i, j;
+  PetscInt       i;
   FunctionalLink link;
   char          *names[256];
 
@@ -878,7 +876,7 @@ static PetscErrorCode ModelFunctionalSetFromOptions(Model mod, PetscOptionItems 
     }
     PetscCheck(link, mod->comm, PETSC_ERR_USER, "No known functional '%s'", names[i]);
     mod->functionalMonitored[i] = link;
-    for (j = 0; j < i; j++) {
+    for (PetscInt j = 0; j < i; j++) {
       if (mod->functionalCall[j]->func == link->func && mod->functionalCall[j]->ctx == link->ctx) goto next_name;
     }
     mod->functionalCall[mod->numCall++] = link; /* Just points to the first link using the result. There may be more results. */
@@ -1068,7 +1066,7 @@ static PetscErrorCode MonitorVTK(TS ts, PetscInt stepnum, PetscReal time, Vec X,
 
 static PetscErrorCode initializeTS(DM dm, User user, TS *ts)
 {
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscBool useCeed;
 #endif
 
@@ -1078,7 +1076,7 @@ static PetscErrorCode initializeTS(DM dm, User user, TS *ts)
   PetscCall(TSSetDM(*ts, dm));
   if (user->vtkmon) PetscCall(TSMonitorSet(*ts, MonitorVTK, user, NULL));
   PetscCall(DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, user));
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscCall(DMPlexGetUseCeed(dm, &useCeed));
   if (useCeed) PetscCall(DMTSSetRHSFunctionLocal(dm, DMPlexTSComputeRHSFunctionFVMCEED, user));
   else
@@ -1349,7 +1347,7 @@ int main(int argc, char **argv)
       PetscOptionsEnd();
       /* TODO Rewrite this with Mark, and remove grid_bounds at that time */
       if (flg2) {
-        PetscInt     dimEmbed, i;
+        PetscInt     dimEmbed;
         PetscInt     nCoords;
         PetscScalar *coords;
         Vec          coordinates;
@@ -1359,11 +1357,9 @@ int main(int argc, char **argv)
         PetscCall(VecGetLocalSize(coordinates, &nCoords));
         PetscCheck(!(nCoords % dimEmbed), PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Coordinate vector the wrong size");
         PetscCall(VecGetArray(coordinates, &coords));
-        for (i = 0; i < nCoords; i += dimEmbed) {
-          PetscInt j;
-
+        for (PetscInt i = 0; i < nCoords; i += dimEmbed) {
           PetscScalar *coord = &coords[i];
-          for (j = 0; j < dimEmbed; j++) {
+          for (PetscInt j = 0; j < dimEmbed; j++) {
             coord[j] = mod->bounds[2 * j] + coord[j] * (mod->bounds[2 * j + 1] - mod->bounds[2 * j]);
             if (dim == 2 && cells[1] == 1 && j == 0 && skew) {
               if (cells[0] == 2 && i == 8) {
@@ -1409,9 +1405,7 @@ int main(int argc, char **argv)
 
       if (newDof == 1) PetscCall(PetscFVSetComponentName(fvm, dof, phys->field_desc[f].name));
       else {
-        PetscInt j;
-
-        for (j = 0; j < newDof; j++) {
+        for (PetscInt j = 0; j < newDof; j++) {
           char compName[256] = "Unknown";
 
           PetscCall(PetscSNPrintf(compName, sizeof(compName), "%s_%" PetscInt_FMT, phys->field_desc[f].name, j));
@@ -1448,7 +1442,7 @@ int main(int argc, char **argv)
       }
     }
   }
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   {
     PetscBool useCeed;
     PetscCall(DMPlexGetUseCeed(dm, &useCeed));
@@ -1462,8 +1456,6 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)X, "solution"));
   PetscCall(SetInitialCondition(dm, X, user));
   if (useAMR) {
-    PetscInt adaptIter;
-
     /* use no limiting when reconstructing gradients for adaptivity */
     PetscCall(PetscFVGetLimiter(fvm, &limiter));
     PetscCall(PetscObjectReference((PetscObject)limiter));
@@ -1481,7 +1473,7 @@ int main(int argc, char **argv)
     tctx.cfl         = cfl;
 
     /* Do some initial refinement steps */
-    for (adaptIter = 0;; ++adaptIter) {
+    for (PetscInt adaptIter = 0;; ++adaptIter) {
       PetscLogDouble bytes;
       PetscBool      resize;
 

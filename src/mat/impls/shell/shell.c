@@ -1498,9 +1498,9 @@ static struct _MatOps MatOps_Values = {NULL,
                                        NULL,
                                        NULL,
                                        NULL,
+                                       MatADot_Default,
+                                       /*144*/ MatANorm_Default,
                                        NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
                                        NULL,
                                        NULL};
 
@@ -2010,7 +2010,7 @@ PetscErrorCode MatShellGetScalingShifts(Mat A, PetscScalar *vshift, PetscScalar 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscTryMethod(A, "MatShellGetScalingShifts_C", (Mat, PetscScalar *, PetscScalar *, Vec *, Vec *, Vec *, Mat *, IS *, IS *), (A, vshift, vscale, dshift, left, right, axpy, zrows, zcols));
+  PetscUseMethod(A, "MatShellGetScalingShifts_C", (Mat, PetscScalar *, PetscScalar *, Vec *, Vec *, Vec *, Mat *, IS *, IS *), (A, vshift, vscale, dshift, left, right, axpy, zrows, zcols));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

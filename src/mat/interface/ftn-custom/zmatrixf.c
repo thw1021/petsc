@@ -2,14 +2,14 @@
 #include <petscmat.h>
 #include <petscviewer.h>
 
-#if defined(PETSC_HAVE_FORTRAN_CAPS)
+#if PetscDefined(HAVE_FORTRAN_CAPS)
   #define matdestroymatrices_      MATDESTROYMATRICES
   #define matdestroysubmatrices_   MATDESTROYSUBMATRICES
   #define matcreatesubmatrices_    MATCREATESUBMATRICES
   #define matcreatesubmatricesmpi_ MATCREATESUBMATRICESMPI
   #define matnullspacesetfunction_ MATNULLSPACESETFUNCTION
   #define matfindnonzerorows_      MATFINDNONZEROROWS
-#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+#elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define matdestroymatrices_      matdestroymatrices
   #define matdestroysubmatrices_   matdestroysubmatrices
   #define matcreatesubmatrices_    matcreatesubmatrices
@@ -62,12 +62,11 @@ PETSC_EXTERN void matcreatesubmatricesmpi_(Mat *mat, PetscInt *n, IS *isrow, IS 
 
 PETSC_EXTERN void matdestroymatrices_(PetscInt *n, F90Array1d *ptr, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
-  PetscInt i;
-  Mat     *lsmat;
+  Mat *lsmat;
 
   *ierr = F90Array1dAccess(ptr, MPIU_FORTRANADDR, (void **)&lsmat PETSC_F90_2PTR_PARAM(ptrd));
   if (*ierr) return;
-  for (i = 0; i < *n; i++) {
+  for (PetscInt i = 0; i < *n; i++) {
     PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(&lsmat[i]);
     *ierr = MatDestroy(&lsmat[i]);
     if (*ierr) return;

@@ -65,7 +65,7 @@ There are two compile-time options:
 #endif
 #include <ctype.h> /* toupper() */
 
-#if defined(__cplusplus) || defined(PETSC_HAVE_WINDOWS_COMPILERS) || defined(__PGI)
+#if defined(__cplusplus) || PetscDefined(HAVE_WINDOWS_COMPILERS) || defined(__PGI)
   /*  c++ cannot handle  [_restrict_] notation like C does */
   #undef PETSC_RESTRICT
   #define PETSC_RESTRICT
@@ -76,7 +76,7 @@ There are two compile-time options:
 #endif
 
 /* The SSE2 kernels are only for PetscScalar=double on architectures that support it */
-#if !defined(NO_SSE2) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_REAL_SINGLE) && !defined(PETSC_USE_REAL___FLOAT128) && !defined(PETSC_USE_REAL___FP16) && defined(__SSE2__)
+#if !defined(NO_SSE2) && !PetscDefined(USE_COMPLEX) && !PetscDefined(USE_REAL_SINGLE) && !PetscDefined(USE_REAL___FLOAT128) && !PetscDefined(USE_REAL___FP16) && defined(__SSE2__)
   #define USE_SSE2_KERNELS 1
 #else
   #define USE_SSE2_KERNELS 0
@@ -291,8 +291,7 @@ static void PrmHexGetZ(const PrmNode pn[], PetscInt k, PetscInt zm, PetscReal zn
 {
   const PetscScalar zm1 = zm - 1, znl[8] = {pn[0].b + pn[0].h * (PetscScalar)k / zm1,       pn[1].b + pn[1].h * (PetscScalar)k / zm1,       pn[2].b + pn[2].h * (PetscScalar)k / zm1,       pn[3].b + pn[3].h * (PetscScalar)k / zm1,
                                             pn[0].b + pn[0].h * (PetscScalar)(k + 1) / zm1, pn[1].b + pn[1].h * (PetscScalar)(k + 1) / zm1, pn[2].b + pn[2].h * (PetscScalar)(k + 1) / zm1, pn[3].b + pn[3].h * (PetscScalar)(k + 1) / zm1};
-  PetscInt          i;
-  for (i = 0; i < 8; i++) zn[i] = PetscRealPart(znl[i]);
+  for (PetscInt i = 0; i < 8; i++) zn[i] = PetscRealPart(znl[i]);
 }
 
 /* Tests A and C are from the ISMIP-HOM paper (Pattyn et al. 2008) */

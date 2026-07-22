@@ -87,9 +87,8 @@ This is also possible with the automated path
   -adapt_vec_view hdf5:${PWD}/mesh.h5::append
 */
 
-#include <petsc/private/petscfeimpl.h>
-#include <petscdmplex.h>
 #include <petscsnes.h>
+#include <petscdmplex.h>
 #include <petscdmadaptor.h>
 #include <petscds.h>
 #include <petscviewerhdf5.h>
@@ -120,17 +119,14 @@ typedef struct {
 /* Exact solution: u = x^2 + y^2 */
 static PetscErrorCode quadratic_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
-  PetscInt d;
-
   u[0] = 0.0;
-  for (d = 0; d < dim; ++d) u[0] += x[d] * x[d];
+  for (PetscInt d = 0; d < dim; ++d) u[0] += x[d] * x[d];
   return PETSC_SUCCESS;
 }
 /* Exact solution: q = (2x, 2y) */
 static PetscErrorCode quadratic_q(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
-  PetscInt c;
-  for (c = 0; c < Nc; ++c) u[c] = 2.0 * x[c];
+  for (PetscInt c = 0; c < Nc; ++c) u[c] = 2.0 * x[c];
   return PETSC_SUCCESS;
 }
 
@@ -670,7 +666,6 @@ int main(int argc, char **argv)
   PetscCall(SetupPrimalDiscretization(dm, &user));
   PetscCall(SetupPrimalProblem(dm, &user));
   PetscCall(DMCreateGlobalVector(dm, &u));
-  PetscCall(VecSet(u, 0.0));
   PetscCall(DMPlexSetSNESLocalFEM(dm, PETSC_FALSE, &user));
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(DMSNESCheckFromOptions(snes, u));
@@ -702,7 +697,6 @@ int main(int argc, char **argv)
     PetscCall(SetupMixedDiscretization(mdm, &user));
     PetscCall(SetupMixedProblem(mdm, &user));
     PetscCall(DMCreateGlobalVector(mdm, &mu));
-    PetscCall(VecSet(mu, 0.0));
     PetscCall(DMPlexSetSNESLocalFEM(mdm, PETSC_FALSE, &user));
     PetscCall(SNESSetFromOptions(msnes));
 

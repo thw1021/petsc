@@ -1064,25 +1064,6 @@ PetscErrorCode DMPlexMetricDeterminantCreate(DM dm, PetscInt f, Vec *determinant
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode LAPACKsyevFail(PetscInt dim, PetscScalar Mpos[])
-{
-  PetscInt i, j;
-
-  PetscFunctionBegin;
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Failed to apply LAPACKsyev to the matrix\n"));
-  for (i = 0; i < dim; ++i) {
-    if (i == 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, "    [["));
-    else PetscCall(PetscPrintf(PETSC_COMM_SELF, "     ["));
-    for (j = 0; j < dim; ++j) {
-      if (j < dim - 1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "%15.8e, ", (double)PetscAbsScalar(Mpos[i * dim + j])));
-      else PetscCall(PetscPrintf(PETSC_COMM_SELF, "%15.8e", (double)PetscAbsScalar(Mpos[i * dim + j])));
-    }
-    if (i < dim - 1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "]\n"));
-    else PetscCall(PetscPrintf(PETSC_COMM_SELF, "]]\n"));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode DMPlexMetricModify_Private(PetscInt dim, PetscReal h_min, PetscReal h_max, PetscReal a_max, PetscScalar Mp[], PetscScalar *detMp)
 {
   PetscInt     i, j, k;
@@ -1114,32 +1095,20 @@ static PetscErrorCode DMPlexMetricModify_Private(PetscInt dim, PetscReal h_min, 
     PetscCall(PetscBLASIntCast(5 * dim, &lwork));
     PetscCall(PetscMalloc1(5 * dim, &work));
     {
-      PetscBLASInt lierr;
       PetscBLASInt nb;
 
       PetscCall(PetscBLASIntCast(dim, &nb));
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       {
         PetscReal *rwork;
         PetscCall(PetscMalloc1(3 * dim, &rwork));
-        PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, Mpos, &nb, eigs, work, &lwork, rwork, &lierr));
+        PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("V", "U", &nb, Mpos, &nb, eigs, work, &lwork, rwork, &info));
         PetscCall(PetscFree(rwork));
       }
 #else
-      PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, Mpos, &nb, eigs, work, &lwork, &lierr));
+      PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("V", "U", &nb, Mpos, &nb, eigs, work, &lwork, &info));
 #endif
-      if (lierr) {
-        for (i = 0; i < dim; ++i) {
-          Mpos[i * dim + i] = Mp[i * dim + i];
-          for (j = i + 1; j < dim; ++j) {
-            Mpos[i * dim + j] = 0.5 * (Mp[i * dim + j] + Mp[j * dim + i]);
-            Mpos[j * dim + i] = Mpos[i * dim + j];
-          }
-        }
-        PetscCall(LAPACKsyevFail(dim, Mpos));
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
-      }
       PetscCall(PetscFPTrapPop());
     }
     PetscCall(PetscFree(work));
@@ -1521,26 +1490,22 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
     PetscCall(PetscBLASIntCast(5 * dim, &lwork));
     PetscCall(PetscMalloc1(5 * dim, &work));
     {
-      PetscBLASInt lierr, nb;
+      PetscBLASInt nb;
       PetscReal    sqrtj;
 
       /* Compute eigendecomposition of M1 */
       PetscCall(PetscBLASIntCast(dim, &nb));
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       {
         PetscReal *rwork;
         PetscCall(PetscMalloc1(3 * dim, &rwork));
-        PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, rwork, &lierr));
+        PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, rwork, &info));
         PetscCall(PetscFree(rwork));
       }
 #else
-      PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, &lierr));
+      PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, &info));
 #endif
-      if (lierr) {
-        PetscCall(LAPACKsyevFail(dim, M1));
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
-      }
       PetscCall(PetscFPTrapPop());
 
       /* Compute square root and the reciprocal thereof */
@@ -1568,28 +1533,16 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
 
       /* Compute eigendecomposition */
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
       {
         PetscReal *rwork;
         PetscCall(PetscMalloc1(3 * dim, &rwork));
-        PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, rwork, &lierr));
+        PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, rwork, &info));
         PetscCall(PetscFree(rwork));
       }
 #else
-      PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, &lierr));
+      PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals, work, &lwork, &info));
 #endif
-      if (lierr) {
-        for (i = 0; i < dim; ++i) {
-          for (l = 0; l < dim; ++l) {
-            evecs[i * dim + l] = 0.0;
-            for (j = 0; j < dim; ++j) {
-              for (k = 0; k < dim; ++k) evecs[i * dim + l] += isqrtM1[j * dim + i] * M2[j * dim + k] * isqrtM1[k * dim + l];
-            }
-          }
-        }
-        PetscCall(LAPACKsyevFail(dim, evecs));
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
-      }
       PetscCall(PetscFPTrapPop());
 
       /* Modify eigenvalues */

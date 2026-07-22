@@ -15,7 +15,7 @@ static char help[] = "Grid based Landau collision operator with PIC interface wi
 #include <petscdmswarm.h>
 #include <petscksp.h>
 #include <petsc/private/petscimpl.h>
-#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+#if PetscDefined(HAVE_OPENMP) && PetscDefined(HAVE_THREADSAFETY)
   #include <omp.h>
 #endif
 #include <petsclandau.h>
@@ -347,18 +347,17 @@ PetscErrorCode gridToParticles_private(DM grid_dm[], DM globSwarmArray[], const 
 
 static void maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt_m, PetscReal n, PetscReal shift, PetscScalar *u)
 {
-  PetscInt  i;
   PetscReal v2 = 0, theta = 2.0 * kt_m; /* theta = 2kT/mc^2 */
 
   if (shift != 0.) {
     v2 = 0;
-    for (i = 0; i < dim - 1; ++i) v2 += x[i] * x[i];
+    for (PetscInt i = 0; i < dim - 1; ++i) v2 += x[i] * x[i];
     v2 += (x[dim - 1] - shift) * (x[dim - 1] - shift);
     /* evaluate the shifted Maxwellian */
     u[0] += n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
   } else {
     /* compute the exponents, v^2 */
-    for (i = 0; i < dim; ++i) v2 += x[i] * x[i];
+    for (PetscInt i = 0; i < dim; ++i) v2 += x[i] * x[i];
     /* evaluate the Maxwellian */
     u[0] += n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
   }
@@ -463,7 +462,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
   Vec            t_fhat[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS];
   PetscInt       nDMs;
   PetscErrorCode ierr = (PetscErrorCode)0; // used for inside thread loops
-#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+#if PetscDefined(HAVE_OPENMP) && PetscDefined(HAVE_THREADSAFETY)
   PetscInt numthreads = PetscNumOMPThreads;
 #else
   PetscInt numthreads = 1;

@@ -1,7 +1,7 @@
 #include <petsc/private/viewerimpl.h> /* "petscsys.h" */
 #include <mathematica.h>
 
-#if defined(PETSC_HAVE__SNPRINTF) && !defined(PETSC_HAVE_SNPRINTF)
+#if PetscDefined(HAVE__SNPRINTF) && !PetscDefined(HAVE_SNPRINTF)
   #define snprintf _snprintf
 #endif
 
@@ -410,7 +410,7 @@ PetscErrorCode PetscViewerMathematicaSkipPackets(PetscViewer viewer, int type)
 
 .seealso: `PETSCVIEWERMATHEMATICA`, `PetscViewerMathematicaSetName()`, `PetscViewerMathematicaClearName()`
 @*/
-PetscErrorCode PetscViewerMathematicaGetName(PetscViewer viewer, const char **name)
+PetscErrorCode PetscViewerMathematicaGetName(PetscViewer viewer, const char *name[])
 {
   PetscViewer_Mathematica *vmath = (PetscViewer_Mathematica *)viewer->data;
 

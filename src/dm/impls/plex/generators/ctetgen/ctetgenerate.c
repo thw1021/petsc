@@ -1,6 +1,6 @@
 #include <petsc/private/dmpleximpl.h> /*I      "petscdmplex.h"   I*/
 
-#ifdef PETSC_HAVE_EGADS
+#if PetscDefined(HAVE_EGADS)
   #include <egads.h>
 #endif
 
@@ -123,6 +123,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
   }
   if (rank == 0) {
     TetGenOpts t;
+    PetscReal  minratio, mindihedral;
 
     PetscCall(TetGenOptsInitialize(&t));
     t.in        = boundary; /* Should go away */
@@ -132,8 +133,12 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
     t.zeroindex = 1;
     t.quiet     = 1;
     t.verbose   = verbose;
+    PetscCall(DMPlexTetgenGetRadiusEdgeBound(boundary, &minratio));
+    PetscCall(DMPlexTetgenGetDihedralBound(boundary, &mindihedral));
+    if (minratio > 0.) t.minratio = minratio;
+    if (mindihedral > 0.) t.mindihedral = mindihedral;
 #if 0
-  #ifdef PETSC_HAVE_EGADS
+  #if PetscDefined(HAVE_EGADS)
     /* Need to add in more TetGen code */
     t.nobisect  = 1; /* Add Y to preserve Surface Mesh for EGADS */
   #endif
@@ -152,18 +157,14 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
     if (sizeof(PetscReal) == sizeof(out->pointlist[0])) {
       meshCoords = (PetscReal *)out->pointlist;
     } else {
-      PetscInt i;
-
       PetscCall(PetscMalloc1(dim * numVertices, &meshCoords));
-      for (i = 0; i < dim * numVertices; ++i) meshCoords[i] = (PetscReal)out->pointlist[i];
+      for (PetscInt i = 0; i < dim * numVertices; ++i) meshCoords[i] = (PetscReal)out->pointlist[i];
     }
     if (sizeof(PetscInt) == sizeof(out->tetrahedronlist[0])) {
       cells = (PetscInt *)out->tetrahedronlist;
     } else {
-      PetscInt i;
-
       PetscCall(PetscMalloc1(numCells * numCorners, &cells));
-      for (i = 0; i < numCells * numCorners; i++) cells[i] = (PetscInt)out->tetrahedronlist[i];
+      for (PetscInt i = 0; i < numCells * numCorners; i++) cells[i] = (PetscInt)out->tetrahedronlist[i];
     }
 
     PetscCall(DMPlexInvertCells_CTetgen(numCells, numCorners, cells));
@@ -177,9 +178,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
       if (out->pointmarkerlist[v]) PetscCall(DMUniversalLabelSetLabelValue(universal, *dm, PETSC_TRUE, v + numCells, out->pointmarkerlist[v]));
     }
     if (interpolate) {
-      PetscInt e;
-
-      for (e = 0; e < out->numberofedges; e++) {
+      for (PetscInt e = 0; e < out->numberofedges; e++) {
         if (out->edgemarkerlist[e]) {
           const PetscInt  vertices[2] = {out->edgelist[e * 2 + 0] + numCells, out->edgelist[e * 2 + 1] + numCells};
           const PetscInt *edges;
@@ -205,7 +204,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
       }
     }
 
-#ifdef PETSC_HAVE_EGADS
+#if PetscDefined(HAVE_EGADS)
     {
       DMLabel        bodyLabel;
       PetscContainer modelObj;
@@ -427,18 +426,14 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_CTetgen(DM dm, PetscReal *maxVolumes, D
     if (sizeof(PetscReal) == sizeof(out->pointlist[0])) {
       meshCoords = (PetscReal *)out->pointlist;
     } else {
-      PetscInt i;
-
       PetscCall(PetscMalloc1(dim * numVertices, &meshCoords));
-      for (i = 0; i < dim * numVertices; ++i) meshCoords[i] = (PetscReal)out->pointlist[i];
+      for (PetscInt i = 0; i < dim * numVertices; ++i) meshCoords[i] = (PetscReal)out->pointlist[i];
     }
     if (sizeof(PetscInt) == sizeof(out->tetrahedronlist[0])) {
       cells = (PetscInt *)out->tetrahedronlist;
     } else {
-      PetscInt i;
-
       PetscCall(PetscMalloc1(numCells * numCorners, &cells));
-      for (i = 0; i < numCells * numCorners; ++i) cells[i] = (PetscInt)out->tetrahedronlist[i];
+      for (PetscInt i = 0; i < numCells * numCorners; ++i) cells[i] = (PetscInt)out->tetrahedronlist[i];
     }
 
     PetscCall(DMPlexInvertCells_CTetgen(numCells, numCorners, cells));
@@ -452,9 +447,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_CTetgen(DM dm, PetscReal *maxVolumes, D
       if (out->pointmarkerlist[v]) PetscCall(DMUniversalLabelSetLabelValue(universal, *dmRefined, PETSC_TRUE, v + numCells, out->pointmarkerlist[v]));
     }
     if (interpolate) {
-      PetscInt e, f;
-
-      for (e = 0; e < out->numberofedges; e++) {
+      for (PetscInt e = 0; e < out->numberofedges; e++) {
         if (out->edgemarkerlist[e]) {
           const PetscInt  vertices[2] = {out->edgelist[e * 2 + 0] + numCells, out->edgelist[e * 2 + 1] + numCells};
           const PetscInt *edges;
@@ -466,7 +459,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_CTetgen(DM dm, PetscReal *maxVolumes, D
           PetscCall(DMPlexRestoreJoin(*dmRefined, 2, vertices, &numEdges, &edges));
         }
       }
-      for (f = 0; f < out->numberoftrifaces; f++) {
+      for (PetscInt f = 0; f < out->numberoftrifaces; f++) {
         if (out->trifacemarkerlist[f]) {
           const PetscInt  vertices[3] = {out->trifacelist[f * 3 + 0] + numCells, out->trifacelist[f * 3 + 1] + numCells, out->trifacelist[f * 3 + 2] + numCells};
           const PetscInt *faces;
@@ -480,7 +473,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_CTetgen(DM dm, PetscReal *maxVolumes, D
       }
     }
 
-#ifdef PETSC_HAVE_EGADS
+#if PetscDefined(HAVE_EGADS)
     {
       DMLabel        bodyLabel;
       PetscContainer modelObj;

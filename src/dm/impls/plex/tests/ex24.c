@@ -4,7 +4,7 @@ static char FILENAME[] = "ex24.c";
 #include <petscdmplex.h>
 #include <petscviewerhdf5.h>
 
-#if defined(PETSC_HAVE_PTSCOTCH)
+#if PetscDefined(HAVE_PTSCOTCH)
 EXTERN_C_BEGIN
   #include <ptscotch.h>
 EXTERN_C_END
@@ -46,7 +46,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode ScotchResetRandomSeed()
 {
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_PTSCOTCH)
+#if PetscDefined(HAVE_PTSCOTCH)
   SCOTCH_randomReset();
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -74,7 +74,6 @@ int main(int argc, char **argv)
   IS                     is1 = NULL, is2 = NULL;
   IS                     is1g, is2g;
   PetscSection           s1 = NULL, s2 = NULL, tpws = NULL;
-  PetscInt               i;
   PetscBool              flg;
   PetscMPIInt            size;
 
@@ -91,7 +90,7 @@ int main(int argc, char **argv)
 
     PetscCall(PetscSectionCreate(comm, &tpws));
     PetscCall(PetscSectionSetChart(tpws, 0, size));
-    for (i = 0; i < size; i++) {
+    for (PetscInt i = 0; i < size; i++) {
       PetscInt tdof = i % 2 ? 2 * i - 1 : i + 2;
       PetscCall(PetscSectionSetDof(tpws, i, tdof));
     }
@@ -176,7 +175,7 @@ int main(int argc, char **argv)
   if (user.tpw) {
     PetscCall(PetscSectionCreate(comm, &tpws));
     PetscCall(PetscSectionSetChart(tpws, 0, size));
-    for (i = 0; i < size; i++) {
+    for (PetscInt i = 0; i < size; i++) {
       PetscInt tdof = i % 2 ? i + 1 : size - i;
       PetscCall(PetscSectionSetDof(tpws, i, tdof));
     }

@@ -12,7 +12,7 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
   PetscInt     bs = mat->rmap->bs, *stmp;
   IS           from, to;
   Vec          gvec;
-#if defined(PETSC_USE_CTABLE)
+#if PetscDefined(USE_CTABLE)
   PetscHMapI    gid1_lid1 = NULL;
   PetscHashIter tpos;
   PetscInt      gid, lid;
@@ -21,7 +21,7 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
 #endif
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_CTABLE)
+#if PetscDefined(USE_CTABLE)
   /* use a table - Mark Adams */
   PetscCall(PetscHMapICreateWithSize(B->mbs, &gid1_lid1));
   for (i = 0; i < B->mbs; i++) {
@@ -139,7 +139,7 @@ PetscErrorCode MatDisAssemble_MPIBAIJ(Mat A)
   PetscCall(VecDestroy(&baij->lvec));
   PetscCall(VecScatterDestroy(&baij->Mvctx));
   if (baij->colmap) {
-#if defined(PETSC_USE_CTABLE)
+#if PetscDefined(USE_CTABLE)
     PetscCall(PetscHMapIDestroy(&baij->colmap));
 #else
     PetscCall(PetscFree(baij->colmap));
@@ -251,7 +251,7 @@ static PetscErrorCode MatMPIBAIJDiagonalScaleLocalSetUp(Mat inA, Vec scale)
 PetscErrorCode MatDiagonalScaleLocal_MPIBAIJ(Mat A, Vec scale)
 {
   Mat_MPIBAIJ       *a = (Mat_MPIBAIJ *)A->data; /*access private part of matrix */
-  PetscInt           n, i;
+  PetscInt           n;
   PetscScalar       *d, *o;
   const PetscScalar *s;
 
@@ -262,14 +262,14 @@ PetscErrorCode MatDiagonalScaleLocal_MPIBAIJ(Mat A, Vec scale)
 
   PetscCall(VecGetLocalSize(uglydd, &n));
   PetscCall(VecGetArray(uglydd, &d));
-  for (i = 0; i < n; i++) d[i] = s[uglyrmapd[i]]; /* copy "diagonal" (true local) portion of scale into dd vector */
+  for (PetscInt i = 0; i < n; i++) d[i] = s[uglyrmapd[i]]; /* copy "diagonal" (true local) portion of scale into dd vector */
   PetscCall(VecRestoreArray(uglydd, &d));
   /* column scale "diagonal" portion of local matrix */
   PetscCall(MatDiagonalScale(a->A, NULL, uglydd));
 
   PetscCall(VecGetLocalSize(uglyoo, &n));
   PetscCall(VecGetArray(uglyoo, &o));
-  for (i = 0; i < n; i++) o[i] = s[uglyrmapo[i]]; /* copy "off-diagonal" portion of scale into oo vector */
+  for (PetscInt i = 0; i < n; i++) o[i] = s[uglyrmapo[i]]; /* copy "off-diagonal" portion of scale into oo vector */
   PetscCall(VecRestoreArrayRead(scale, &s));
   PetscCall(VecRestoreArray(uglyoo, &o));
   /* column scale "off-diagonal" portion of local matrix */

@@ -4,7 +4,38 @@ static char help[] = "Tests MATPYTHON from C\n\n";
 /* MATPYTHON has support for wrapping these operations
    MatHasOperation_Python inspects the user's Python class and checks
    if the methods are provided */
-MatOperation optenum[] = {MATOP_MULT, MATOP_MULT_ADD, MATOP_MULT_TRANSPOSE, MATOP_MULT_TRANSPOSE_ADD, MATOP_SOLVE, MATOP_SOLVE_ADD, MATOP_SOLVE_TRANSPOSE, MATOP_SOLVE_TRANSPOSE_ADD, MATOP_SOR, MATOP_GET_DIAGONAL, MATOP_DIAGONAL_SCALE, MATOP_NORM, MATOP_ZERO_ENTRIES, MATOP_GET_DIAGONAL_BLOCK, MATOP_DUPLICATE, MATOP_COPY, MATOP_SCALE, MATOP_SHIFT, MATOP_DIAGONAL_SET, MATOP_ZERO_ROWS_COLUMNS, MATOP_CREATE_SUBMATRIX, MATOP_CREATE_VECS, MATOP_CONJUGATE, MATOP_REAL_PART, MATOP_IMAGINARY_PART, MATOP_MULT_DIAGONAL_BLOCK, MATOP_MULT_HERMITIAN_TRANSPOSE, MATOP_MULT_HERMITIAN_TRANS_ADD};
+MatOperation optenum[] = {MATOP_MULT,
+                          MATOP_MULT_ADD,
+                          MATOP_MULT_TRANSPOSE,
+                          MATOP_MULT_TRANSPOSE_ADD,
+                          MATOP_SOLVE,
+                          MATOP_SOLVE_ADD,
+                          MATOP_SOLVE_TRANSPOSE,
+                          MATOP_SOLVE_TRANSPOSE_ADD,
+                          MATOP_SOR,
+                          MATOP_GET_DIAGONAL,
+                          MATOP_DIAGONAL_SCALE,
+                          MATOP_NORM,
+                          MATOP_ZERO_ENTRIES,
+                          MATOP_GET_DIAGONAL_BLOCK,
+                          MATOP_DUPLICATE,
+                          MATOP_COPY,
+                          MATOP_SCALE,
+                          MATOP_SHIFT,
+                          MATOP_DIAGONAL_SET,
+                          MATOP_ZERO_ROWS_COLUMNS,
+                          MATOP_CREATE_SUBMATRIX,
+                          MATOP_CREATE_VECS,
+                          MATOP_CONJUGATE,
+                          MATOP_REAL_PART,
+                          MATOP_IMAGINARY_PART,
+#if PetscDefined(USE_COMPLEX)
+                          MATOP_MULT_DIAGONAL_BLOCK,
+                          MATOP_MULT_HERMITIAN_TRANSPOSE,
+                          MATOP_MULT_HERMITIAN_TRANS_ADD};
+#else
+                          MATOP_MULT_DIAGONAL_BLOCK};
+#endif
 
 /* Name of the methods in the user's Python class */
 const char *const optstr[] = {"mult",
@@ -32,9 +63,13 @@ const char *const optstr[] = {"mult",
                               "conjugate",
                               "realPart",
                               "imagPart",
+#if PetscDefined(USE_COMPLEX)
                               "multDiagonalBlock",
                               "multHermitian",
                               "multHermitianAdd"};
+#else
+                              "multDiagonalBlock"};
+#endif
 
 PetscErrorCode RunHasOperationTest(void)
 {
@@ -45,7 +80,6 @@ PetscErrorCode RunHasOperationTest(void)
   for (matop = 0; matop < nop; matop++) {
     char      opts[256];
     PetscBool hasop;
-    PetscInt  i;
 
     PetscCall(PetscSNPrintf(opts, 256, "-enable %s", optstr[matop]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Testing with %s\n", opts));
@@ -54,7 +88,7 @@ PetscErrorCode RunHasOperationTest(void)
     PetscCall(MatSetType(A, MATPYTHON));
     PetscCall(MatPythonSetType(A, "ex140.py:Matrix"));
     /* default case, no user implementation */
-    for (i = 0; i < nop; i++) {
+    for (PetscInt i = 0; i < nop; i++) {
       PetscCall(MatHasOperation(A, optenum[i], &hasop));
       if (hasop) {
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Error: %s present\n", optstr[i]));
@@ -65,7 +99,7 @@ PetscErrorCode RunHasOperationTest(void)
     /* customize Matrix class at a later stage and add support for optenum[matop] */
     PetscCall(PetscOptionsInsertString(NULL, opts));
     PetscCall(MatSetFromOptions(A));
-    for (i = 0; i < nop; i++) {
+    for (PetscInt i = 0; i < nop; i++) {
       PetscCall(MatHasOperation(A, optenum[i], &hasop));
       if (hasop && i != matop) {
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Error: %s present\n", optstr[i]));
@@ -95,7 +129,15 @@ int main(int argc, char **argv)
 /*TEST
 
    test:
-      requires: petsc4py
+      suffix: real
+      requires: petsc4py !complex
       localrunfiles: ex140.py
+      output_file: output/ex140_real.out
+
+   test:
+      suffix: complex
+      requires: petsc4py complex
+      localrunfiles: ex140.py
+      output_file: output/ex140_complex.out
 
 TEST*/

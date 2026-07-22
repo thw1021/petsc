@@ -289,7 +289,6 @@ static PetscErrorCode IPMInitializeBounds(Tao tao)
     PetscCall(VecDuplicate(ipmP->s, &ipmP->save_s));
     PetscCall(VecDuplicate(ipmP->s, &ipmP->rpi));
     PetscCall(VecDuplicate(ipmP->s, &ipmP->Zero_nb));
-    PetscCall(VecSet(ipmP->Zero_nb, 0.0));
     PetscCall(VecDuplicate(ipmP->s, &ipmP->One_nb));
     PetscCall(VecSet(ipmP->One_nb, 1.0));
     PetscCall(VecDuplicate(ipmP->s, &ipmP->Inf_nb));
@@ -1058,15 +1057,13 @@ PETSC_EXTERN PetscErrorCode TaoCreate_IPM(Tao tao)
   tao->data = (void *)ipmP;
 
   /* Override default settings (unless already changed) */
-  PetscCall(TaoParametersInitialize(tao));
   PetscObjectParameterSetDefault(tao, max_it, 200);
   PetscObjectParameterSetDefault(tao, max_funcs, 500);
 
-  ipmP->dec        = 10000; /* line search criteria */
-  ipmP->taumin     = 0.995;
-  ipmP->monitorkkt = PETSC_FALSE;
-  ipmP->pushs      = 100;
-  ipmP->pushnu     = 100;
+  ipmP->dec    = 10000; /* line search criteria */
+  ipmP->taumin = 0.995;
+  ipmP->pushs  = 100;
+  ipmP->pushnu = 100;
   PetscCall(KSPCreate(((PetscObject)tao)->comm, &tao->ksp));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)tao->ksp, (PetscObject)tao, 1));
   PetscCall(KSPSetOptionsPrefix(tao->ksp, tao->hdr.prefix));

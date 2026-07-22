@@ -260,7 +260,7 @@ static PetscErrorCode GNHookFunction(Tao tao, PetscInt iter, PetscCtx ctx)
   }
 
   /* Call general purpose update function */
-  if (gn->parent->ops->update) PetscCall((*gn->parent->ops->update)(gn->parent, gn->parent->niter, gn->parent->user_update));
+  PetscTryTypeMethod(gn->parent, update, gn->parent->niter, gn->parent->user_update);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -423,10 +423,7 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
   if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (!gn->x_work) PetscCall(VecDuplicate(tao->solution, &gn->x_work));
   if (!gn->r_work) PetscCall(VecDuplicate(tao->ls_res, &gn->r_work));
-  if (!gn->x_old) {
-    PetscCall(VecDuplicate(tao->solution, &gn->x_old));
-    PetscCall(VecSet(gn->x_old, 0.0));
-  }
+  if (!gn->x_old) PetscCall(VecDuplicate(tao->solution, &gn->x_old));
 
   if (TAOBRGN_REGULARIZATION_L1DICT == gn->reg_type) {
     if (!gn->y) {
@@ -436,13 +433,9 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
       } else {
         PetscCall(VecDuplicate(tao->solution, &gn->y)); /* If user does not setup dict matrix, use identity matrix, K=N */
       }
-      PetscCall(VecSet(gn->y, 0.0));
     }
     if (!gn->y_work) PetscCall(VecDuplicate(gn->y, &gn->y_work));
-    if (!gn->diag) {
-      PetscCall(VecDuplicate(gn->y, &gn->diag));
-      PetscCall(VecSet(gn->diag, 0.0));
-    }
+    if (!gn->diag) PetscCall(VecDuplicate(gn->y, &gn->diag));
   }
   if (TAOBRGN_REGULARIZATION_LM == gn->reg_type) {
     if (!gn->diag) PetscCall(MatCreateVecs(tao->ls_jac, &gn->diag, NULL));
@@ -762,8 +755,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   tao->ops->view           = TaoView_BRGN;
   tao->ops->solve          = TaoSolve_BRGN;
   tao->uses_gradient       = PETSC_TRUE;
-
-  PetscCall(TaoParametersInitialize(tao));
 
   tao->data                  = gn;
   gn->reg_type               = TAOBRGN_REGULARIZATION_L2PROX;

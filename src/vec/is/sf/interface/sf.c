@@ -3,18 +3,18 @@
 #include <petsc/private/viewerimpl.h>
 #include <petsc/private/hashmapi.h>
 
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   #include <petscdevice_cuda.h>
 #endif
 
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
   #include <hip/hip_runtime.h>
 #endif
 
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#if PetscDefined(CLANG_STATIC_ANALYZER)
 extern void PetscSFCheckGraphSet(PetscSF, int);
 #else
-  #if defined(PETSC_USE_DEBUG)
+  #if PetscDefined(USE_DEBUG)
     #define PetscSFCheckGraphSet(sf, arg) PetscCheck((sf)->graphset, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call PetscSFSetGraph() or PetscSFSetGraphWithPattern() on argument %d \"%s\" before %s()", (arg), #sf, PETSC_FUNCTION_NAME)
   #else
     #define PetscSFCheckGraphSet(sf, arg) \
@@ -68,19 +68,19 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm, PetscSF *sf)
   b->ingroup   = MPI_GROUP_NULL;
   b->outgroup  = MPI_GROUP_NULL;
   b->graphset  = PETSC_FALSE;
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   b->use_gpu_aware_mpi    = use_gpu_aware_mpi;
   b->use_stream_aware_mpi = PETSC_FALSE;
   b->unknown_input_stream = PETSC_FALSE;
-  #if defined(PETSC_HAVE_KOKKOS) /* Prefer kokkos over cuda*/
+  #if PetscDefined(HAVE_KOKKOS) /* Prefer kokkos over cuda*/
   b->backend = PETSCSF_BACKEND_KOKKOS;
-  #elif defined(PETSC_HAVE_CUDA)
+  #elif PetscDefined(HAVE_CUDA)
   b->backend = PETSCSF_BACKEND_CUDA;
-  #elif defined(PETSC_HAVE_HIP)
+  #elif PetscDefined(HAVE_HIP)
   b->backend = PETSCSF_BACKEND_HIP;
   #endif
 
-  #if defined(PETSC_HAVE_NVSHMEM)
+  #if PetscDefined(HAVE_NVSHMEM)
   b->use_nvshmem     = PETSC_FALSE; /* Default is not to try NVSHMEM */
   b->use_nvshmem_get = PETSC_FALSE; /* Default is to use nvshmem_put based protocol */
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_nvshmem", &b->use_nvshmem, NULL));
@@ -134,7 +134,7 @@ PetscErrorCode PetscSFReset(PetscSF sf)
 
   PetscCall(PetscLayoutDestroy(&sf->map));
 
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   for (PetscInt i = 0; i < 2; i++) PetscCall(PetscSFFree(sf, PETSC_MEMTYPE_DEVICE, sf->rmine_d[i]));
 #endif
 
@@ -236,7 +236,7 @@ PetscErrorCode PetscSFDestroy(PetscSF *sf)
   PetscTryTypeMethod(*sf, Destroy);
   PetscCall(PetscSFDestroy(&(*sf)->vscat.lsf));
   if ((*sf)->vscat.bs > 1) PetscCallMPI(MPI_Type_free(&(*sf)->vscat.unit));
-#if defined(PETSC_HAVE_CUDA) && defined(PETSC_HAVE_MPIX_STREAM)
+#if PetscDefined(HAVE_CUDA) && PetscDefined(HAVE_MPIX_STREAM)
   if ((*sf)->use_stream_aware_mpi) {
     PetscCallMPI(MPIX_Stream_free(&(*sf)->mpi_stream));
     PetscCallMPI(MPI_Comm_free(&(*sf)->stream_comm));
@@ -248,7 +248,7 @@ PetscErrorCode PetscSFDestroy(PetscSF *sf)
 
 static PetscErrorCode PetscSFCheckGraphValid_Private(PetscSF sf)
 {
-  PetscInt           i, nleaves;
+  PetscInt           nleaves;
   PetscMPIInt        size;
   const PetscInt    *ilocal;
   const PetscSFNode *iremote;
@@ -257,7 +257,7 @@ static PetscErrorCode PetscSFCheckGraphValid_Private(PetscSF sf)
   if (!sf->graphset || !PetscDefined(USE_DEBUG)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscSFGetGraph(sf, NULL, &nleaves, &ilocal, &iremote));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sf), &size));
-  for (i = 0; i < nleaves; i++) {
+  for (PetscInt i = 0; i < nleaves; i++) {
     const PetscInt rank   = iremote[i].rank;
     const PetscInt remote = iremote[i].index;
     const PetscInt leaf   = ilocal ? ilocal[i] : i;
@@ -290,20 +290,20 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
   PetscCall(PetscSFCheckGraphValid_Private(sf));
   if (!((PetscObject)sf)->type_name) PetscCall(PetscSFSetType(sf, PETSCSFBASIC)); /* Zero all sf->ops */
   PetscTryTypeMethod(sf, SetUp);
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   if (sf->backend == PETSCSF_BACKEND_CUDA) {
     sf->ops->Malloc = PetscSFMalloc_CUDA;
     sf->ops->Free   = PetscSFFree_CUDA;
   }
 #endif
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
   if (sf->backend == PETSCSF_BACKEND_HIP) {
     sf->ops->Malloc = PetscSFMalloc_HIP;
     sf->ops->Free   = PetscSFFree_HIP;
   }
 #endif
 
-#if defined(PETSC_HAVE_KOKKOS)
+#if PetscDefined(HAVE_KOKKOS)
   if (sf->backend == PETSCSF_BACKEND_KOKKOS) {
     sf->ops->Malloc = PetscSFMalloc_Kokkos;
     sf->ops->Free   = PetscSFFree_Kokkos;
@@ -351,7 +351,7 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
   PetscCall(PetscSFSetType(sf, flg ? type : deft));
   PetscCall(PetscOptionsBool("-sf_rank_order", "sort composite points for gathers and scatters in rank order, gathers are non-deterministic otherwise", "PetscSFSetRankOrder", sf->rankorder, &sf->rankorder, NULL));
   PetscCall(PetscOptionsBool("-sf_monitor", "monitor the MPI communication in sf", NULL, sf->monitor, &sf->monitor, NULL));
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   {
     char      backendstr[32] = {0};
     PetscBool isCuda = PETSC_FALSE, isHip = PETSC_FALSE, isKokkos = PETSC_FALSE, set;
@@ -362,16 +362,16 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
     PetscCall(PetscStrcasecmp("cuda", backendstr, &isCuda));
     PetscCall(PetscStrcasecmp("kokkos", backendstr, &isKokkos));
     PetscCall(PetscStrcasecmp("hip", backendstr, &isHip));
-  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  #if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
     if (isCuda) sf->backend = PETSCSF_BACKEND_CUDA;
     else if (isKokkos) sf->backend = PETSCSF_BACKEND_KOKKOS;
     else if (isHip) sf->backend = PETSCSF_BACKEND_HIP;
     else PetscCheck(!set, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "-sf_backend %s is not supported. You may choose cuda, hip or kokkos (if installed)", backendstr);
-  #elif defined(PETSC_HAVE_KOKKOS)
+  #elif PetscDefined(HAVE_KOKKOS)
     PetscCheck(!set || isKokkos, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "-sf_backend %s is not supported. You can only choose kokkos", backendstr);
   #endif
 
-  #if defined(PETSC_HAVE_CUDA) && defined(PETSC_HAVE_MPIX_STREAM)
+  #if PetscDefined(HAVE_CUDA) && PetscDefined(HAVE_MPIX_STREAM)
     if (sf->use_stream_aware_mpi) {
       MPI_Info info;
 
@@ -760,7 +760,7 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf, PetscSFDuplicateOption opt, PetscSF 
   (*newsf)->vscat.from_n = sf->vscat.from_n;
   /* Do not copy lsf. Build it on demand since it is rarely used */
 
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   (*newsf)->backend              = sf->backend;
   (*newsf)->unknown_input_stream = sf->unknown_input_stream;
   (*newsf)->use_gpu_aware_mpi    = sf->use_gpu_aware_mpi;
@@ -890,7 +890,6 @@ PetscErrorCode PetscSFView(PetscSF sf, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii && viewer->format != PETSC_VIEWER_ASCII_MATLAB) {
     PetscMPIInt rank;
-    PetscInt    j;
 
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)sf, viewer));
     PetscCall(PetscViewerASCIIPushTab(viewer));
@@ -918,7 +917,7 @@ PetscErrorCode PetscSFView(PetscSF sf, PetscViewer viewer)
           PetscMPIInt i = perm[ii];
 
           PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] %d: %" PetscInt_FMT " edges\n", rank, sf->ranks[i], sf->roffset[i + 1] - sf->roffset[i]));
-          for (j = sf->roffset[i]; j < sf->roffset[i + 1]; j++) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d]    %" PetscInt_FMT " <- %" PetscInt_FMT "\n", rank, sf->rmine[j], sf->rremote[j]));
+          for (PetscInt j = sf->roffset[i]; j < sf->roffset[i + 1]; j++) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d]    %" PetscInt_FMT " <- %" PetscInt_FMT "\n", rank, sf->rmine[j], sf->rremote[j]));
         }
         PetscCall(PetscFree2(tmpranks, perm));
       }
@@ -1290,10 +1289,9 @@ PetscErrorCode PetscSFGetMultiSF(PetscSF sf, PetscSF *multi)
       PetscCall(PetscSFReduceEnd(sf->multi, MPIU_INT, outranks, inranks, MPI_REPLACE));
       /* Sort the incoming ranks at each vertex, build the inverse map */
       for (i = 0; i < sf->nroots; i++) {
-        PetscInt j;
-        for (j = 0; j < indegree[i]; j++) tmpoffset[j] = j;
+        for (PetscInt j = 0; j < indegree[i]; j++) tmpoffset[j] = j;
         PetscCall(PetscSortIntWithArray(indegree[i], PetscSafePointerPlusOffset(inranks, inoffset[i]), tmpoffset));
-        for (j = 0; j < indegree[i]; j++) newoffset[inoffset[i] + tmpoffset[j]] = inoffset[i] + j;
+        for (PetscInt j = 0; j < indegree[i]; j++) newoffset[inoffset[i] + tmpoffset[j]] = inoffset[i] + j;
       }
       PetscCall(PetscSFBcastBegin(sf->multi, MPIU_INT, newoffset, newoutoffset, MPI_REPLACE));
       PetscCall(PetscSFBcastEnd(sf->multi, MPIU_INT, newoffset, newoutoffset, MPI_REPLACE));
@@ -2150,7 +2148,7 @@ PetscErrorCode PetscSFComposeInverse(PetscSF sfA, PetscSF sfB, PetscSF *sfBA)
   PetscSFNode       *reorderedRemotePointsA = NULL;
   PetscInt           i, numRootsA, numLeavesA, numLeavesBA, numRootsB, numLeavesB, minleaf, maxleaf, *localPointsBA;
   MPI_Op             op;
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
   PetscBool iswin;
 #endif
 
@@ -2174,7 +2172,7 @@ PetscErrorCode PetscSFComposeInverse(PetscSF sfA, PetscSF sfB, PetscSF *sfBA)
      the root condition is not meet.
    */
   op = MPI_MAXLOC;
-#if defined(PETSC_USE_64BIT_INDICES)
+#if PetscDefined(USE_64BIT_INDICES)
   /* we accept a non-deterministic output (if any) with PETSCSFWINDOW, since MPI_MAXLOC cannot operate on MPIU_2INT with MPI_Accumulate */
   PetscCall(PetscObjectTypeCompare((PetscObject)sfB, PETSCSFWINDOW, &iswin));
   if (iswin) op = MPI_REPLACE;
@@ -2561,10 +2559,10 @@ PetscErrorCode PetscSFConcatenate(MPI_Comm comm, PetscInt nsfs, PetscSF sfs[], P
     for (s = 0; s < nsfs; s++) {
       const PetscInt *ilocal;
       PetscInt       *ilocal_l = PetscSafePointerPlusOffset(ilocal_new, leafArrayOffsets[s]);
-      PetscInt        i, nleaves_l;
+      PetscInt        nleaves_l;
 
       PetscCall(PetscSFGetGraph(sfs[s], NULL, &nleaves_l, &ilocal, NULL));
-      for (i = 0; i < nleaves_l; i++) ilocal_l[i] = (ilocal ? ilocal[i] : i) + leafOffsets[s];
+      for (PetscInt i = 0; i < nleaves_l; i++) ilocal_l[i] = (ilocal ? ilocal[i] : i) + leafOffsets[s];
     }
   }
 

@@ -461,7 +461,7 @@ PETSC_EXTERN PetscErrorCode SNESConvergedDefault(SNES, PetscInt, PetscReal, Pets
 PETSC_EXTERN PetscErrorCode SNESConvergedSkip(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, PetscCtx);
 PETSC_EXTERN PetscErrorCode SNESConvergedCorrectPressure(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, PetscCtx);
 PETSC_EXTERN PetscErrorCode SNESGetConvergedReason(SNES, SNESConvergedReason *);
-PETSC_EXTERN PetscErrorCode SNESGetConvergedReasonString(SNES, const char **);
+PETSC_EXTERN PetscErrorCode SNESGetConvergedReasonString(SNES, const char *[]);
 PETSC_EXTERN PetscErrorCode SNESSetConvergedReason(SNES, SNESConvergedReason);
 
 PETSC_DEPRECATED_FUNCTION(3, 5, 0, "SNESConvergedSkip()", ) static inline void SNESSkipConverged(void)
@@ -739,14 +739,14 @@ PETSC_EXTERN PetscErrorCode SNESShellSetSolve(SNES, PetscErrorCode (*)(SNES, Vec
 
 .seealso: [](ch_snes), `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetType()`, `SNES`
 S*/
-typedef struct _p_LineSearch *SNESLineSearch;
+typedef struct _p_SNESLineSearch *SNESLineSearch;
 
 /*J
    SNESLineSearchType - String with the name of a PETSc line search method `SNESLineSearch`. Provides all the linesearches for the nonlinear solvers, `SNES`,
                         in PETSc.
 
    Values:
-+  `SNESLINESEARCHBASIC`     - (or equivalently `SNESLINESEARCHNONE`) Simple damping line search, defaults to using the full Newton step
++  `SNESLINESEARCHNONE`      - Simple damping line search, defaults to using the full Newton step
 .  `SNESLINESEARCHBT`        - Backtracking line search over the L2 norm of the function or an objective function
 .  `SNESLINESEARCHSECANT`    - Secant line search over the L2 norm of the function or an objective function
 .  `SNESLINESEARCHCP`        - Critical point secant line search assuming $F(x) = \nabla G(x)$ for some unknown $G(x)$
@@ -765,10 +765,10 @@ J*/
 typedef const char *SNESLineSearchType;
 #define SNESLINESEARCHBT        "bt"
 #define SNESLINESEARCHNLEQERR   "nleqerr"
-#define SNESLINESEARCHBASIC     "basic"
 #define SNESLINESEARCHNONE      "none"
+#define SNESLINESEARCHBASIC     PETSC_DEPRECATED_MACRO(3, 26, 0, "SNESLINESEARCHNONE", ) SNESLINESEARCHNONE
 #define SNESLINESEARCHSECANT    "secant"
-#define SNESLINESEARCHL2        PETSC_DEPRECATED_MACRO(3, 24, 0, "SNESLINESEARCHSECANT", ) "secant"
+#define SNESLINESEARCHL2        PETSC_DEPRECATED_MACRO(3, 24, 0, "SNESLINESEARCHSECANT", ) SNESLINESEARCHSECANT
 #define SNESLINESEARCHCP        "cp"
 #define SNESLINESEARCHSHELL     "shell"
 #define SNESLINESEARCHNCGLINEAR "ncglinear"

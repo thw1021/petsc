@@ -1781,11 +1781,9 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
   MatStructure                               structure  = UNKNOWN_NONZERO_PATTERN;
   PetscBool                                  subdomains = PETSC_FALSE, flg = PETSC_FALSE, ismatis, swap = PETSC_FALSE, algebraic = PETSC_FALSE, block = PETSC_FALSE;
   DM                                         dm;
-  std::tuple<PC[2], Mat[2], PCSide, Vec[3]> *ctx = nullptr;
-#if PetscDefined(USE_DEBUG)
-  IS  dis  = nullptr;
-  Mat daux = nullptr;
-#endif
+  std::tuple<PC[2], Mat[2], PCSide, Vec[3]> *ctx  = nullptr;
+  IS                                         dis  = nullptr;
+  Mat                                        daux = nullptr;
 
   PetscFunctionBegin;
   PetscCheck(data->levels && data->levels[0], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not a single level allocated");
@@ -2248,10 +2246,10 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       }
     }
   }
-#if PetscDefined(USE_DEBUG)
-  if (data->is) PetscCall(ISDuplicate(data->is, &dis));
-  if (data->aux) PetscCall(MatDuplicate(data->aux, MAT_COPY_VALUES, &daux));
-#endif
+  if (PetscDefined(USE_DEBUG)) {
+    if (data->is) PetscCall(ISDuplicate(data->is, &dis));
+    if (data->aux) PetscCall(MatDuplicate(data->aux, MAT_COPY_VALUES, &daux));
+  }
   if (data->is || (ismatis && data->N > 1)) {
     if (ismatis) {
       std::initializer_list<std::string> list = {MATSEQBAIJ, MATSEQSBAIJ};
@@ -2308,7 +2306,11 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       else if (ismatis) PetscCall(PetscInfo(pc, "Cannot share subdomain KSP between SLEPc and PETSc with a Pmat of type MATIS\n"));
       else if (!algebraic && structure != SAME_NONZERO_PATTERN)
         PetscCall(PetscInfo(pc, "Cannot share subdomain KSP between SLEPc and PETSc since -%spc_hpddm_levels_1_st_matstructure %s (!= %s)\n", pcpre ? pcpre : "", MatStructures[structure], MatStructures[SAME_NONZERO_PATTERN]));
-      else data->share = PETSC_TRUE;
+      else {
+        PetscCall(PetscObjectTypeCompare((PetscObject)P, MATHTOOL, &flg));
+        if (flg) PetscCall(PetscInfo(pc, "Cannot share subdomain KSP between SLEPc and PETSc since Pmat is of type MATHTOOL\n"));
+        else data->share = PETSC_TRUE;
+      }
       if (!data->share) {
         PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "-%spc_hpddm_levels_1_st_share_sub_ksp", pcpre ? pcpre : ""));
         PetscCall(PetscOptionsClearValue(((PetscObject)pc)->options, prefix));
@@ -2794,10 +2796,10 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
           PetscCall(MatDestroy(&C));
           PetscCall(ISDestroy(&uis));
           PetscCall(PetscFree(ctx));
-#if PetscDefined(USE_DEBUG)
-          PetscCall(ISDestroy(&dis));
-          PetscCall(MatDestroy(&daux));
-#endif
+          if (PetscDefined(USE_DEBUG)) {
+            PetscCall(ISDestroy(&dis));
+            PetscCall(MatDestroy(&daux));
+          }
           PetscFunctionReturn(PETSC_SUCCESS);
         }
       }
@@ -3013,20 +3015,20 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
     PetscCall(ISCopy(unsorted, data->is));
     PetscCall(ISDestroy(&unsorted));
   }
-#if PetscDefined(USE_DEBUG)
-  PetscCheck((data->is && dis) || (!data->is && !dis), PETSC_COMM_SELF, PETSC_ERR_PLIB, "An IS pointer is NULL but not the other: input IS pointer (%p) v. output IS pointer (%p)", (void *)dis, (void *)data->is);
-  if (data->is) {
-    PetscCall(ISEqualUnsorted(data->is, dis, &flg));
-    PetscCall(ISDestroy(&dis));
-    PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Input IS and output IS are not equal");
+  if (PetscDefined(USE_DEBUG)) {
+    PetscCheck((data->is && dis) || (!data->is && !dis), PETSC_COMM_SELF, PETSC_ERR_PLIB, "An IS pointer is NULL but not the other: input IS pointer (%p) v. output IS pointer (%p)", (void *)dis, (void *)data->is);
+    if (data->is) {
+      PetscCall(ISEqualUnsorted(data->is, dis, &flg));
+      PetscCall(ISDestroy(&dis));
+      PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Input IS and output IS are not equal");
+    }
+    PetscCheck((data->aux && daux) || (!data->aux && !daux), PETSC_COMM_SELF, PETSC_ERR_PLIB, "A Mat pointer is NULL but not the other: input Mat pointer (%p) v. output Mat pointer (%p)", (void *)daux, (void *)data->aux);
+    if (data->aux) {
+      PetscCall(MatMultEqual(data->aux, daux, 20, &flg));
+      PetscCall(MatDestroy(&daux));
+      PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Input Mat and output Mat are not equal");
+    }
   }
-  PetscCheck((data->aux && daux) || (!data->aux && !daux), PETSC_COMM_SELF, PETSC_ERR_PLIB, "A Mat pointer is NULL but not the other: input Mat pointer (%p) v. output Mat pointer (%p)", (void *)daux, (void *)data->aux);
-  if (data->aux) {
-    PetscCall(MatMultEqual(data->aux, daux, 20, &flg));
-    PetscCall(MatDestroy(&daux));
-    PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Input Mat and output Mat are not equal");
-  }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

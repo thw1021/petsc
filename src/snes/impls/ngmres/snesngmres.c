@@ -24,7 +24,7 @@ PetscErrorCode SNESDestroy_NGMRES(SNES snes)
   PetscCall(SNESReset_NGMRES(snes));
   PetscCall(PetscFree4(ngmres->h, ngmres->beta, ngmres->xi, ngmres->q));
   PetscCall(PetscFree3(ngmres->xnorms, ngmres->fnorms, ngmres->s));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   PetscCall(PetscFree(ngmres->rwork));
 #endif
   PetscCall(PetscFree(ngmres->work));
@@ -65,7 +65,7 @@ PetscErrorCode SNESSetUp_NGMRES(SNES snes)
     PetscCall(PetscBLASIntCast(msize, &ngmres->lda));
     PetscCall(PetscBLASIntCast(msize, &ngmres->ldb));
     PetscCall(PetscBLASIntCast(12 * msize, &ngmres->lwork));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     PetscCall(PetscMalloc1(ngmres->lwork, &ngmres->rwork));
 #endif
     PetscCall(PetscMalloc1(ngmres->lwork, &ngmres->work));
@@ -470,19 +470,19 @@ static PetscErrorCode SNESNGMRESSetRestartType_NGMRES(SNES snes, SNESNGMRESResta
    Level: beginner
 
    Options Database Keys:
-+  -snes_ngmres_select_type (difference|none|linesearch)                   - choose the select between candidate and combined solution
-.  -snes_ngmres_restart_type (difference|none|periodic)                    - choose the restart conditions
-.  -snes_ngmres_candidate                                                  - Use `SNESNGMRES` variant which combines candidate solutions instead of actual solutions
-.  -snes_ngmres_m m                                                        - Number of stored previous solutions and residuals
-.  -snes_ngmres_restart_it it                                              - Number of iterations the restart conditions hold before restart
-.  -snes_ngmres_gammaA gammaA                                              - Residual tolerance for solution select between the candidate and combination
-.  -snes_ngmres_gammaC gammaB                                              - Residual tolerance for restart
-.  -snes_ngmres_epsilonB epsilonB                                          - Difference tolerance between subsequent solutions triggering restart
-.  -snes_ngmres_deltaB deltaB                                              - Difference tolerance between residuals triggering restart
-.  -snes_ngmres_restart_fm_rise (true|false)                               - Restart on residual rise from $x_M$ step
-.  -snes_ngmres_monitor                                                    - Prints relevant information about the nonlinear GNMRES iterations
-.  -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell) - Line search type used for the default smoother, see `SNESLineSearchType`
--  -snes_ngmres_additive_snes_linesearch_type type                         - line search type used to select between the candidate and combined solution with additive select type, see `SNESLineSearchType`
++  -snes_ngmres_select_type (difference|none|linesearch)             - Choose the select between candidate and combined solution
+.  -snes_ngmres_restart_type (difference|none|periodic)              - Choose the restart conditions
+.  -snes_ngmres_candidate                                            - Use `SNESNGMRES` variant which combines candidate solutions instead of actual solutions
+.  -snes_ngmres_m m                                                  - Number of stored previous solutions and residuals
+.  -snes_ngmres_restart_it it                                        - Number of iterations the restart conditions hold before restart
+.  -snes_ngmres_gammaA gammaA                                        - Residual tolerance for solution select between the candidate and combination
+.  -snes_ngmres_gammaC gammaB                                        - Residual tolerance for restart
+.  -snes_ngmres_epsilonB epsilonB                                    - Difference tolerance between subsequent solutions triggering restart
+.  -snes_ngmres_deltaB deltaB                                        - Difference tolerance between residuals triggering restart
+.  -snes_ngmres_restart_fm_rise (true|false)                         - Restart on residual rise from $x_M$ step
+.  -snes_ngmres_monitor                                              - Prints relevant information about the nonlinear GNMRES iterations
+.  -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - Line search type used for the default smoother, see `SNESLineSearchType`
+-  -snes_ngmres_additive_snes_linesearch_type type                   - Line search type used to select between the candidate and combined solution with additive select type, see `SNESLineSearchType`
 
    Notes:
    The N-GMRES method combines m previous solutions into a minimum-residual solution by solving a small linearized
@@ -520,31 +520,24 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NGMRES(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
-  PetscCall(PetscNew(&ngmres));
-  snes->data    = (void *)ngmres;
-  ngmres->msize = 30;
-
-  PetscCall(SNESParametersInitialize(snes));
   PetscObjectParameterSetDefault(snes, max_funcs, 30000);
   PetscObjectParameterSetDefault(snes, max_its, 10000);
 
-  ngmres->candidate = PETSC_FALSE;
-
   PetscCall(SNESGetLineSearch(snes, &linesearch));
-  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
+  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
 
-  ngmres->additive_linesearch = NULL;
-  ngmres->approxfunc          = PETSC_FALSE;
-  ngmres->restart_it          = 2;
-  ngmres->restart_periodic    = 30;
-  ngmres->gammaA              = 2.0;
-  ngmres->gammaC              = 2.0;
-  ngmres->deltaB              = 0.9;
-  ngmres->epsilonB            = 0.1;
-  ngmres->restart_fm_rise     = PETSC_FALSE;
+  PetscCall(PetscNew(&ngmres));
+  snes->data = (void *)ngmres;
 
-  ngmres->restart_type = SNES_NGMRES_RESTART_DIFFERENCE;
-  ngmres->select_type  = SNES_NGMRES_SELECT_DIFFERENCE;
+  ngmres->msize            = 30;
+  ngmres->restart_it       = 2;
+  ngmres->restart_periodic = 30;
+  ngmres->gammaA           = 2.0;
+  ngmres->gammaC           = 2.0;
+  ngmres->deltaB           = 0.9;
+  ngmres->epsilonB         = 0.1;
+  ngmres->restart_type     = SNES_NGMRES_RESTART_DIFFERENCE;
+  ngmres->select_type      = SNES_NGMRES_SELECT_DIFFERENCE;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESNGMRESSetSelectType_C", SNESNGMRESSetSelectType_NGMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESNGMRESSetRestartType_C", SNESNGMRESSetRestartType_NGMRES));

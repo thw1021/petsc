@@ -6,21 +6,21 @@
 #include <../src/mat/impls/sbaij/seq/sbaij.h>
 #include <../src/mat/impls/sbaij/mpi/mpisbaij.h>
 
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   #define _H_COMPLEX
 #endif
 
 #include <pastix.h>
 
-#if defined(PETSC_USE_COMPLEX)
-  #if defined(PETSC_USE_REAL_SINGLE)
+#if PetscDefined(USE_COMPLEX)
+  #if PetscDefined(USE_REAL_SINGLE)
     #define SPM_FLTTYPE SpmComplex32
   #else
     #define SPM_FLTTYPE SpmComplex64
   #endif
 #else /* PETSC_USE_COMPLEX */
 
-  #if defined(PETSC_USE_REAL_SINGLE)
+  #if PetscDefined(USE_REAL_SINGLE)
     #define SPM_FLTTYPE SpmFloat
   #else
     #define SPM_FLTTYPE SpmDouble
@@ -55,7 +55,7 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
 {
   Mat                A_loc, A_aij;
   const PetscInt    *row, *col;
-  PetscInt           n, i;
+  PetscInt           n;
   const PetscScalar *val;
   PetscBool          ismpiaij, isseqaij, ismpisbaij, isseqsbaij;
   PetscBool          flag;
@@ -96,7 +96,7 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
 
   /* Get data distribution */
   if (!spm->replicated) {
-    for (i = A->rmap->rstart; i < A->rmap->rend; i++) spm->loc2glob[i - A->rmap->rstart] = i;
+    for (PetscInt i = A->rmap->rstart; i < A->rmap->rend; i++) spm->loc2glob[i - A->rmap->rstart] = i;
   }
 
   /* Copy  arrays */

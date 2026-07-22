@@ -73,7 +73,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscCall(DMSetType(*dm, DMPLEX));
   } else {
     /* TODO Eliminate this in favor of DMLoad() in new code */
-#if defined(PETSC_HAVE_HDF5)
+#if PetscDefined(HAVE_HDF5)
     const PetscInt vertices_per_cell = 3;
     PetscViewer    viewer;
     Vec            coordinates;
@@ -83,7 +83,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscScalar   *coords;
     PetscScalar   *topo_f;
     PetscInt      *cells;
-    PetscInt       j;
     DMLabel        label;
 
     /* Read in FEniCS HDF5 output */
@@ -114,7 +113,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscCall(VecGetArray(topology, &topo_f));
     /* and now we have to convert the double representation to integers to pass over, argh */
     PetscCall(PetscMalloc1(numCells * vertices_per_cell, &cells));
-    for (j = 0; j < numCells * vertices_per_cell; j++) cells[j] = (PetscInt)topo_f[j];
+    for (PetscInt j = 0; j < numCells * vertices_per_cell; j++) cells[j] = (PetscInt)topo_f[j];
 
     /* Now create the DM */
     PetscCall(DMPlexCreateFromCellListPetsc(comm, dim, numCells, numVertices, vertices_per_cell, PETSC_TRUE, cells, dim, coords, dm));
@@ -339,10 +338,8 @@ int main(int argc, char **argv)
   PetscCall(CreateCtx(dm, &user));
 
   PetscCall(DMCreateGlobalVector(dm, &u));
-  PetscCall(VecSet(u, 0.0));
   PetscCall(VecDuplicate(u, &lb));
   PetscCall(VecDuplicate(u, &ub));
-  PetscCall(VecSet(lb, 0.0)); /* satisfied at the minimum anyway */
   PetscCall(VecSet(ub, 0.8)); /* a nontrivial upper bound */
 
   PetscCall(TaoCreate(PETSC_COMM_WORLD, &tao));

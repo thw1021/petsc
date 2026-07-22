@@ -2,7 +2,7 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h> /*I  "petscmat.h"  I*/
 #include <../src/mat/impls/sbaij/mpi/mpisbaij.h>
 
-#if defined(PETSC_HAVE_MKL_INTEL_ILP64)
+#if PetscDefined(HAVE_MKL_INTEL_ILP64)
   #define MKL_ILP64
 #endif
 #include <mkl.h>
@@ -720,7 +720,6 @@ static PetscErrorCode MatView_MKL_CPARDISO(Mat A, PetscViewer viewer)
   PetscBool         isascii;
   PetscViewerFormat format;
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
-  PetscInt          i;
 
   PetscFunctionBegin;
   /* check if matrix is mkl_cpardiso type */
@@ -732,7 +731,7 @@ static PetscErrorCode MatView_MKL_CPARDISO(Mat A, PetscViewer viewer)
     if (format == PETSC_VIEWER_ASCII_INFO) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO run parameters:\n"));
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO phase:             %d \n", mat_mkl_cpardiso->phase));
-      for (i = 1; i <= 64; i++) PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO iparm[%d]:     %d \n", i, mat_mkl_cpardiso->iparm[i - 1]));
+      for (PetscInt i = 1; i <= 64; i++) PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO iparm[%d]:     %d \n", i, mat_mkl_cpardiso->iparm[i - 1]));
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO maxfct:     %d \n", mat_mkl_cpardiso->maxfct));
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO mnum:     %d \n", mat_mkl_cpardiso->mnum));
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL Cluster PARDISO mtype:     %d \n", mat_mkl_cpardiso->mtype));

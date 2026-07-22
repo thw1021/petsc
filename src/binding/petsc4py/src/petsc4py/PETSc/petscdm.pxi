@@ -116,6 +116,7 @@ cdef extern from * nogil:
     PetscErrorCode DMGetCoordinates(PetscDM, PetscVec*)
     PetscErrorCode DMSetCoordinatesLocal(PetscDM, PetscVec)
     PetscErrorCode DMGetCoordinatesLocal(PetscDM, PetscVec*)
+    PetscErrorCode DMGetCoordinatesLocalSetUp(PetscDM)
     PetscErrorCode DMGetCoordinateDim(PetscDM, PetscInt*)
     PetscErrorCode DMSetCoordinateDim(PetscDM, PetscInt)
     PetscErrorCode DMLocalizeCoordinates(PetscDM)
@@ -200,7 +201,8 @@ cdef extern from * nogil:
     PetscErrorCode DMShellSetGlobalVector(PetscDM, PetscVec)
     PetscErrorCode DMShellSetLocalVector(PetscDM, PetscVec)
 
-    PetscErrorCode DMKSPSetComputeOperators(PetscDM, PetscKSPComputeOpsFunction, void*)
+    PetscErrorCode DMKSPSetComputeOperators(PetscDM, PetscKSPComputeOperatorsFunction, void*)
+    PetscErrorCode DMKSPSetCreateOperators(PetscDM, PetscKSPCreateOperatorsFunction, void*)
 
     PetscErrorCode DMCreateFieldDecomposition(PetscDM, PetscInt*, char***, PetscIS**, PetscDM**)
 

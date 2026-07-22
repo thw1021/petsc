@@ -45,6 +45,7 @@ PETSC_EXTERN PetscErrorCode PCCreate(MPI_Comm, PC *);
 PETSC_EXTERN PetscErrorCode PCSetType(PC, PCType);
 PETSC_EXTERN PetscErrorCode PCGetType(PC, PCType *);
 PETSC_EXTERN PetscErrorCode PCSetUp(PC);
+PETSC_EXTERN PetscErrorCode PCParametersInitialize(PC);
 
 PETSC_EXTERN PetscErrorCode PCSetKSPNestLevel(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCGetKSPNestLevel(PC, PetscInt *);
@@ -373,6 +374,8 @@ PETSC_EXTERN PetscErrorCode PCGAMGMISkSetAggressive(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCGAMGASMSetHEM(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCGAMGSetLowMemoryFilter(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetGraphSymmetrize(PC, PetscBool);
+PETSC_EXTERN PetscErrorCode PCGAMGSetProlongatorFilter(PC, PetscReal);
+PETSC_EXTERN PetscErrorCode PCGAMGGetProlongatorFilter(PC, PetscReal *);
 PETSC_EXTERN PetscErrorCode PCGAMGSetInjectionIndex(PC, PetscInt, PetscInt[]);
 
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalSetType(PC, PCGAMGClassicalType);

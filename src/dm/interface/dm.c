@@ -8,7 +8,7 @@
 #include <petscsf.h>
 #include <petscds.h>
 
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   #include <petscfeceed.h>
 #endif
 
@@ -775,7 +775,7 @@ PetscErrorCode DMDestroy(DM *dm)
   PetscTryTypeMethod(*dm, destroy);
   PetscCall(DMMonitorCancel(*dm));
   PetscCall(DMCeedDestroy(&(*dm)->dmceed));
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
   PetscCallCEED(CeedElemRestrictionDestroy(&(*dm)->ceedERestrict));
   PetscCallCEED(CeedDestroy(&(*dm)->ceed));
 #endif
@@ -1156,11 +1156,8 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm, ISLocalToGlobalMapping *ltog)
       bsLocal[0] = bs < 0 ? PETSC_INT_MAX : bs;
       bsLocal[1] = bs;
       PetscCall(PetscGlobalMinMaxInt(PetscObjectComm((PetscObject)dm), bsLocal, bsMinMax));
-      if (bsMinMax[0] != bsMinMax[1]) {
-        bs = 1;
-      } else {
-        bs = bsMinMax[0];
-      }
+      if (bsMinMax[0] != bsMinMax[1]) bs = 1;
+      else bs = bsMinMax[0];
       bs = bs < 0 ? 1 : bs;
       /* Must reduce indices by blocksize */
       if (bs > 1) {
@@ -1273,7 +1270,7 @@ PetscErrorCode DMCreateInterpolationScale(DM dac, DM daf, Mat mat, Vec *scale)
 {
   Vec         fine;
   PetscScalar one = 1.0;
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   PetscBool bindingpropagates, isbound;
 #endif
 
@@ -1281,7 +1278,7 @@ PetscErrorCode DMCreateInterpolationScale(DM dac, DM daf, Mat mat, Vec *scale)
   PetscCall(DMCreateGlobalVector(daf, &fine));
   PetscCall(DMCreateGlobalVector(dac, scale));
   PetscCall(VecSet(fine, one));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /* If the 'fine' Vec is bound to the CPU, it makes sense to bind 'mat' as well.
    * Note that we only do this for the CUDA case, right now, but if we add support for MatMultTranspose() via ViennaCL,
    * we'll need to do it for that case, too.*/
@@ -1548,10 +1545,10 @@ PetscErrorCode DMCreateMatrix(DM dm, Mat *mat)
   /* Handle nullspace and near nullspace */
   if (dm->Nf) {
     MatNullSpace nullSpace;
-    PetscInt     Nf, f;
+    PetscInt     Nf;
 
     PetscCall(DMGetNumFields(dm, &Nf));
-    for (f = 0; f < Nf; ++f) {
+    for (PetscInt f = 0; f < Nf; ++f) {
       if (dm->nullspaceConstructors && dm->nullspaceConstructors[f]) {
         PetscCall((*dm->nullspaceConstructors[f])(dm, f, f, &nullSpace));
         PetscCall(MatSetNullSpace(*mat, nullSpace));
@@ -1559,7 +1556,7 @@ PetscErrorCode DMCreateMatrix(DM dm, Mat *mat)
         break;
       }
     }
-    for (f = 0; f < Nf; ++f) {
+    for (PetscInt f = 0; f < Nf; ++f) {
       if (dm->nearnullspaceConstructors && dm->nearnullspaceConstructors[f]) {
         PetscCall((*dm->nearnullspaceConstructors[f])(dm, f, f, &nullSpace));
         PetscCall(MatSetNearNullSpace(*mat, nullSpace));
@@ -1737,12 +1734,8 @@ PetscErrorCode DMGetWorkArray(DM dm, PetscInt count, MPI_Datatype dtype, void *m
      Get size directly */
   if (dtype == MPIU_INT) dsize = sizeof(PetscInt);
   else if (dtype == MPIU_REAL) dsize = sizeof(PetscReal);
-#if defined(PETSC_USE_64BIT_INDICES)
-  else if (dtype == MPI_INT) dsize = sizeof(int);
-#endif
-#if defined(PETSC_USE_COMPLEX)
-  else if (dtype == MPIU_SCALAR) dsize = sizeof(PetscScalar);
-#endif
+  else if (PetscDefined(USE_64BIT_INDICES) && dtype == MPI_INT) dsize = sizeof(int);
+  else if (PetscDefined(USE_COMPLEX) && dtype == MPIU_SCALAR) dsize = sizeof(PetscScalar);
   else PetscCallMPI(MPI_Type_size(dtype, &dsize));
 
   if (((size_t)dsize * count) > link->bytes) {
@@ -2125,7 +2118,7 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
   PetscCheck(dm->setupcalled, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Decomposition defined only after DMSetUp");
   if (!dm->ops->createfielddecomposition) {
     PetscSection section;
-    PetscInt     numFields, f;
+    PetscInt     numFields;
 
     PetscCall(DMGetLocalSection(dm, &section));
     if (section) PetscCall(PetscSectionGetNumFields(section, &numFields));
@@ -2134,7 +2127,7 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
       if (namelist) PetscCall(PetscMalloc1(numFields, namelist));
       if (islist) PetscCall(PetscMalloc1(numFields, islist));
       if (dmlist) PetscCall(PetscMalloc1(numFields, dmlist));
-      for (f = 0; f < numFields; ++f) {
+      for (PetscInt f = 0; f < numFields; ++f) {
         const char *fieldName;
 
         PetscCall(DMCreateSubDM(dm, 1, &f, islist ? &(*islist)[f] : NULL, dmlist ? &(*dmlist)[f] : NULL));
@@ -2207,11 +2200,9 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 @*/
 PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   PetscAssertPointer(dms, 1);
-  for (i = 0; i < n; ++i) PetscValidHeaderSpecific(dms[i], DM_CLASSID, 1);
+  for (PetscInt i = 0; i < n; ++i) PetscValidHeaderSpecific(dms[i], DM_CLASSID, 1);
   if (is) PetscAssertPointer(is, 3);
   PetscAssertPointer(superdm, 4);
   PetscCheck(n >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of DMs must be nonnegative: %" PetscInt_FMT, n);
@@ -2263,7 +2254,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char **namelist[], IS *innerislist[], IS *outerislist[], DM *dmlist[])
 {
   DMSubDomainHookLink link;
-  PetscInt            i, l;
+  PetscInt            l;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2297,7 +2288,7 @@ PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char **namelist[]
     PetscUseTypeMethod(dm, createdomaindecomposition, &l, namelist, innerislist, outerislist, dmlist);
     /* copy subdomain hooks and context over to the subdomain DMs */
     if (dmlist && *dmlist) {
-      for (i = 0; i < l; i++) {
+      for (PetscInt i = 0; i < l; i++) {
         for (link = dm->subdomainhook; link; link = link->next) {
           if (link->ddhook) PetscCall((*link->ddhook)(dm, (*dmlist)[i], link->ctx));
         }
@@ -3758,10 +3749,8 @@ PetscErrorCode DMRefineHierarchy(DM dm, PetscInt nlevels, DM dmf[])
   if (nlevels == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssertPointer(dmf, 3);
   if (dm->ops->refine && !dm->ops->refinehierarchy) {
-    PetscInt i;
-
     PetscCall(DMRefine(dm, PetscObjectComm((PetscObject)dm), &dmf[0]));
-    for (i = 1; i < nlevels; i++) PetscCall(DMRefine(dmf[i - 1], PetscObjectComm((PetscObject)dm), &dmf[i]));
+    for (PetscInt i = 1; i < nlevels; i++) PetscCall(DMRefine(dmf[i - 1], PetscObjectComm((PetscObject)dm), &dmf[i]));
   } else PetscUseTypeMethod(dm, refinehierarchy, nlevels, dmf);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3790,10 +3779,8 @@ PetscErrorCode DMCoarsenHierarchy(DM dm, PetscInt nlevels, DM dmc[])
   if (nlevels == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssertPointer(dmc, 3);
   if (dm->ops->coarsen && !dm->ops->coarsenhierarchy) {
-    PetscInt i;
-
     PetscCall(DMCoarsen(dm, PetscObjectComm((PetscObject)dm), &dmc[0]));
-    for (i = 1; i < nlevels; i++) PetscCall(DMCoarsen(dmc[i - 1], PetscObjectComm((PetscObject)dm), &dmc[i]));
+    for (PetscInt i = 1; i < nlevels; i++) PetscCall(DMCoarsen(dmc[i - 1], PetscObjectComm((PetscObject)dm), &dmc[i]));
   } else PetscUseTypeMethod(dm, coarsenhierarchy, nlevels, dmc);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -4395,11 +4382,9 @@ PetscErrorCode DMPrintCellVector(PetscInt c, const char name[], PetscInt len, co
 @*/
 PetscErrorCode DMPrintCellVectorReal(PetscInt c, const char name[], PetscInt len, const PetscReal x[])
 {
-  PetscInt f;
-
   PetscFunctionBegin;
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT " Element %s\n", c, name));
-  for (f = 0; f < len; ++f) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", (double)x[f]));
+  for (PetscInt f = 0; f < len; ++f) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", (double)x[f]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4424,13 +4409,11 @@ PetscErrorCode DMPrintCellVectorReal(PetscInt c, const char name[], PetscInt len
 @*/
 PetscErrorCode DMPrintCellMatrix(PetscInt c, const char name[], PetscInt rows, PetscInt cols, const PetscScalar A[])
 {
-  PetscInt f, g;
-
   PetscFunctionBegin;
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT " Element %s\n", c, name));
-  for (f = 0; f < rows; ++f) {
+  for (PetscInt f = 0; f < rows; ++f) {
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "  |"));
-    for (g = 0; g < cols; ++g) PetscCall(PetscPrintf(PETSC_COMM_SELF, " % 9.5g", (double)PetscRealPart(A[f * cols + g])));
+    for (PetscInt g = 0; g < cols; ++g) PetscCall(PetscPrintf(PETSC_COMM_SELF, " % 9.5g", (double)PetscRealPart(A[f * cols + g])));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, " |\n"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -4484,6 +4467,44 @@ PetscErrorCode DMPrintLocalVec(DM dm, const char name[], PetscReal tol, Vec X)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode DMViewDSFromOptions_Internal(DM dm, const char opt[])
+{
+  PetscObject       obj = (PetscObject)dm;
+  PetscViewer       viewer;
+  PetscViewerFormat format;
+  PetscBool         flg;
+
+  PetscFunctionBegin;
+  PetscCall(PetscOptionsCreateViewer(PetscObjectComm(obj), obj->options, obj->prefix, opt, &viewer, &format, &flg));
+  if (flg) {
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    for (PetscInt d = 0; d < dm->Nds; ++d) PetscCall(PetscDSView(dm->probs[d].ds, viewer));
+    PetscCall(PetscViewerFlush(viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMViewSectionFromOptions_Internal(DM dm, const char opt[])
+{
+  PetscObject       obj = (PetscObject)dm;
+  PetscViewer       viewer;
+  PetscViewerFormat format;
+  PetscBool         flg;
+
+  PetscFunctionBegin;
+  PetscCall(PetscOptionsCreateViewer(PetscObjectComm(obj), obj->options, obj->prefix, opt, &viewer, &format, &flg));
+  if (flg) {
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    if (dm->localSection) PetscCall(PetscSectionView(dm->localSection, viewer));
+    PetscCall(PetscViewerFlush(viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMGetLocalSection - Get the `PetscSection` encoding the local data layout for the `DM`.
 
@@ -4509,25 +4530,9 @@ PetscErrorCode DMGetLocalSection(DM dm, PetscSection *section)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(section, 2);
   if (!dm->localSection && dm->ops->createlocalsection) {
-    PetscInt d;
-
     if (dm->setfromoptionscalled) {
-      PetscObject       obj = (PetscObject)dm;
-      PetscViewer       viewer;
-      PetscViewerFormat format;
-      PetscBool         flg;
-
-      PetscCall(PetscOptionsCreateViewer(PetscObjectComm(obj), obj->options, obj->prefix, "-dm_petscds_view", &viewer, &format, &flg));
-      if (flg) PetscCall(PetscViewerPushFormat(viewer, format));
-      for (d = 0; d < dm->Nds; ++d) {
-        PetscCall(PetscDSSetFromOptions(dm->probs[d].ds));
-        if (flg) PetscCall(PetscDSView(dm->probs[d].ds, viewer));
-      }
-      if (flg) {
-        PetscCall(PetscViewerFlush(viewer));
-        PetscCall(PetscViewerPopFormat(viewer));
-        PetscCall(PetscViewerDestroy(&viewer));
-      }
+      for (PetscInt d = 0; d < dm->Nds; ++d) PetscCall(PetscDSSetFromOptions(dm->probs[d].ds));
+      PetscCall(DMViewDSFromOptions_Internal(dm, "-dm_petscds_view"));
     }
     PetscUseTypeMethod(dm, createlocalsection);
     if (dm->localSection) PetscCall(PetscObjectViewFromOptions((PetscObject)dm->localSection, NULL, "-dm_petscsection_view"));
@@ -4553,7 +4558,6 @@ PetscErrorCode DMGetLocalSection(DM dm, PetscSection *section)
 PetscErrorCode DMSetLocalSection(DM dm, PetscSection section)
 {
   PetscInt numFields = 0;
-  PetscInt f;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -4564,7 +4568,7 @@ PetscErrorCode DMSetLocalSection(DM dm, PetscSection section)
   if (section) PetscCall(PetscSectionGetNumFields(dm->localSection, &numFields));
   if (numFields) {
     PetscCall(DMSetNumFields(dm, numFields));
-    for (f = 0; f < numFields; ++f) {
+    for (PetscInt f = 0; f < numFields; ++f) {
       PetscObject disc;
       const char *name;
 
@@ -4696,7 +4700,6 @@ PetscErrorCode DMSetDefaultConstraints(DM dm, PetscSection section, Mat mat, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_DEBUG)
 /*
   DMDefaultSectionCheckConsistency - Check the consistentcy of the global and local sections. Generates and error if they are not consistent.
 
@@ -4772,7 +4775,6 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif
 
 PetscErrorCode DMGetIsoperiodicPointSF_Internal(DM dm, PetscSF *sf)
 {
@@ -4849,9 +4851,7 @@ PetscErrorCode DMSetGlobalSection(DM dm, PetscSection section)
   PetscCall(PetscObjectReference((PetscObject)section));
   PetscCall(PetscSectionDestroy(&dm->globalSection));
   dm->globalSection = section;
-#if defined(PETSC_USE_DEBUG)
-  if (section) PetscCall(DMDefaultSectionCheckConsistency_Internal(dm, dm->localSection, section));
-#endif
+  if (PetscDefined(USE_DEBUG) && section) PetscCall(DMDefaultSectionCheckConsistency_Internal(dm, dm->localSection, section));
   /* Clear global scratch vectors and sectionSF */
   PetscCall(PetscSFDestroy(&dm->sectionSF));
   PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &dm->sectionSF));
@@ -5155,12 +5155,12 @@ PetscErrorCode DMGetNumFields(DM dm, PetscInt *numFields)
 @*/
 PetscErrorCode DMSetNumFields(DM dm, PetscInt numFields)
 {
-  PetscInt Nf, f;
+  PetscInt Nf;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetNumFields(dm, &Nf));
-  for (f = Nf; f < numFields; ++f) {
+  for (PetscInt f = Nf; f < numFields; ++f) {
     PetscContainer obj;
 
     PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)dm), &obj));
@@ -5354,13 +5354,13 @@ PetscErrorCode DMGetFieldAvoidTensor(DM dm, PetscInt f, PetscBool *avoidTensor)
 @*/
 PetscErrorCode DMCopyFields(DM dm, PetscInt minDegree, PetscInt maxDegree, DM newdm)
 {
-  PetscInt Nf, f;
+  PetscInt Nf;
 
   PetscFunctionBegin;
   if (dm == newdm) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(DMGetNumFields(dm, &Nf));
   PetscCall(DMClearFields(newdm));
-  for (f = 0; f < Nf; ++f) {
+  for (PetscInt f = 0; f < Nf; ++f) {
     DMLabel      label;
     PetscObject  field;
     PetscClassId id;
@@ -5578,11 +5578,11 @@ PetscErrorCode DMCompleteBCLabels_Internal(DM dm)
   /* Get list of labels to be completed */
   for (s = 0; s < Nds; ++s) {
     PetscDS  dsBC;
-    PetscInt numBd, bd;
+    PetscInt numBd;
 
     PetscCall(DMGetRegionNumDS(dm, s, NULL, NULL, &dsBC, NULL));
     PetscCall(PetscDSGetNumBoundary(dsBC, &numBd));
-    for (bd = 0; bd < numBd; ++bd) {
+    for (PetscInt bd = 0; bd < numBd; ++bd) {
       DMLabel      label;
       PetscInt     field;
       PetscObject  obj;
@@ -6105,7 +6105,7 @@ PetscErrorCode DMCreateDS(DM dm)
     DMLabel  label = dm->fields[f].label;
     PetscInt l;
 
-#ifdef PETSC_HAVE_LIBCEED
+#if PetscDefined(HAVE_LIBCEED)
     /* Move CEED context to discretizations */
     {
       PetscClassId id;
@@ -6313,10 +6313,10 @@ PetscErrorCode DMCreateDS(DM dm)
     for (s = 0; s < dm->Nds; ++s) {
       PetscDS  ds   = dm->probs[s].ds;
       PetscDS  dsIn = dm->probs[s].dsIn;
-      PetscInt Nf, f;
+      PetscInt Nf;
 
       PetscCall(PetscDSGetNumFields(ds, &Nf));
-      for (f = 0; f < Nf; ++f) {
+      for (PetscInt f = 0; f < Nf; ++f) {
         PetscCall(PetscDSSetJetDegree(ds, f, k));
         if (dsIn) PetscCall(PetscDSSetJetDegree(dsIn, f, k));
       }
@@ -6428,7 +6428,7 @@ PetscErrorCode DMComputeExactSolution(DM dm, PetscReal time, Vec u, Vec u_t)
     DMLabel         label;
     IS              fieldIS;
     const PetscInt *fields, id = 1;
-    PetscInt        dsNf, f;
+    PetscInt        dsNf;
 
     PetscCall(DMGetRegionNumDS(dm, s, &label, &fieldIS, &ds, NULL));
     PetscCall(PetscDSGetNumFields(ds, &dsNf));
@@ -6436,14 +6436,14 @@ PetscErrorCode DMComputeExactSolution(DM dm, PetscReal time, Vec u, Vec u_t)
     PetscCall(PetscArrayzero(exacts, Nf));
     PetscCall(PetscArrayzero(ectxs, Nf));
     if (u) {
-      for (f = 0; f < dsNf; ++f) PetscCall(PetscDSGetExactSolution(ds, fields[f], &exacts[fields[f]], &ectxs[fields[f]]));
+      for (PetscInt f = 0; f < dsNf; ++f) PetscCall(PetscDSGetExactSolution(ds, fields[f], &exacts[fields[f]], &ectxs[fields[f]]));
       if (label) PetscCall(DMProjectFunctionLabelLocal(dm, time, label, 1, &id, 0, NULL, exacts, ectxs, INSERT_ALL_VALUES, locu));
       else PetscCall(DMProjectFunctionLocal(dm, time, exacts, ectxs, INSERT_ALL_VALUES, locu));
     }
     if (u_t) {
       PetscCall(PetscArrayzero(exacts, Nf));
       PetscCall(PetscArrayzero(ectxs, Nf));
-      for (f = 0; f < dsNf; ++f) PetscCall(PetscDSGetExactSolutionTimeDerivative(ds, fields[f], &exacts[fields[f]], &ectxs[fields[f]]));
+      for (PetscInt f = 0; f < dsNf; ++f) PetscCall(PetscDSGetExactSolutionTimeDerivative(ds, fields[f], &exacts[fields[f]], &ectxs[fields[f]]));
       if (label) PetscCall(DMProjectFunctionLabelLocal(dm, time, label, 1, &id, 0, NULL, exacts, ectxs, INSERT_ALL_VALUES, locu_t));
       else PetscCall(DMProjectFunctionLocal(dm, time, exacts, ectxs, INSERT_ALL_VALUES, locu_t));
     }
@@ -6507,17 +6507,17 @@ static PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, Pet
 @*/
 PetscErrorCode DMCopyDS(DM dm, PetscInt minDegree, PetscInt maxDegree, DM newdm)
 {
-  PetscInt Nds, s;
+  PetscInt Nds;
 
   PetscFunctionBegin;
   if (dm == newdm) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(DMGetNumDS(dm, &Nds));
   PetscCall(DMClearDS(newdm));
-  for (s = 0; s < Nds; ++s) {
+  for (PetscInt s = 0; s < Nds; ++s) {
     DMLabel  label;
     IS       fields;
     PetscDS  ds, dsIn, newds;
-    PetscInt Nbd, bd;
+    PetscInt Nbd;
 
     PetscCall(DMGetRegionNumDS(dm, s, &label, &fields, &ds, &dsIn));
     /* TODO: We need to change all keys from labels in the old DM to labels in the new DM */
@@ -6525,7 +6525,7 @@ PetscErrorCode DMCopyDS(DM dm, PetscInt minDegree, PetscInt maxDegree, DM newdm)
     /* Complete new labels in the new DS */
     PetscCall(DMGetRegionDS(newdm, label, NULL, &newds, NULL));
     PetscCall(PetscDSGetNumBoundary(newds, &Nbd));
-    for (bd = 0; bd < Nbd; ++bd) {
+    for (PetscInt bd = 0; bd < Nbd; ++bd) {
       PetscWeakForm wf;
       DMLabel       label;
       PetscInt      field;
@@ -6604,7 +6604,7 @@ PetscErrorCode DMGetDimension(DM dm, PetscInt *dim)
 PetscErrorCode DMSetDimension(DM dm, PetscInt dim)
 {
   PetscDS  ds;
-  PetscInt Nds, n;
+  PetscInt Nds;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -6613,7 +6613,7 @@ PetscErrorCode DMSetDimension(DM dm, PetscInt dim)
   dm->dim = dim;
   if (dm->dim >= 0) {
     PetscCall(DMGetNumDS(dm, &Nds));
-    for (n = 0; n < Nds; ++n) {
+    for (PetscInt n = 0; n < Nds; ++n) {
       PetscCall(DMGetRegionNumDS(dm, n, NULL, NULL, &ds, NULL));
       if (ds->dimEmbed < 0) PetscCall(PetscDSSetCoordinateDimension(ds, dim));
     }
@@ -6812,7 +6812,7 @@ PetscErrorCode DMOutputSequenceLoad(DM dm, PetscViewer viewer, const char name[]
   PetscAssertPointer(val, 5);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCheck(ishdf5, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid viewer; open viewer with PetscViewerHDF5Open()");
-#if defined(PETSC_HAVE_HDF5)
+#if PetscDefined(HAVE_HDF5)
   PetscScalar value;
 
   PetscCall(DMSequenceLoad_HDF5_Internal(dm, name, num, &value, viewer));
@@ -6854,7 +6854,7 @@ PetscErrorCode DMGetOutputSequenceLength(DM dm, PetscViewer viewer, const char n
   PetscAssertPointer(len, 4);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCheck(ishdf5, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid viewer; open viewer with PetscViewerHDF5Open()");
-#if defined(PETSC_HAVE_HDF5)
+#if PetscDefined(HAVE_HDF5)
   PetscCall(DMSequenceGetLength_HDF5_Internal(dm, name, len, viewer));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -7822,7 +7822,7 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
 @*/
 PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *equal, char *message[]) PeNS
 {
-  PetscInt    n, i;
+  PetscInt    n;
   char        msg[PETSC_MAX_PATH_LEN] = "";
   PetscBool   eq;
   MPI_Comm    comm;
@@ -7846,7 +7846,7 @@ PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *equal, char *message[]
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &eq, 1, MPI_C_BOOL, MPI_LAND, comm));
     if (!eq) goto finish;
   }
-  for (i = 0; i < n; i++) {
+  for (PetscInt i = 0; i < n; i++) {
     DMLabel     l0, l1;
     const char *name;
     char       *msgInner;
@@ -7946,24 +7946,22 @@ PetscErrorCode DMUniversalLabelCreate(DM dm, DMUniversalLabel *universal)
     ul->bits[l]    = ul->bits[l - 1] + ul->bits[l];
   }
   for (l = 0; l < ul->Nl; ++l) {
-    PetscInt b;
-
     ul->masks[l] = 0;
-    for (b = ul->bits[l]; b < ul->bits[l + 1]; ++b) ul->masks[l] |= 1 << b;
+    for (PetscInt b = ul->bits[l]; b < ul->bits[l + 1]; ++b) ul->masks[l] |= 1 << b;
   }
   PetscCall(PetscMalloc1(ul->Nv, &ul->values));
   for (l = 0, m = 0; l < Nl; ++l) {
     DMLabel         label;
     IS              valueIS;
     const PetscInt *varr;
-    PetscInt        nv, v;
+    PetscInt        nv;
 
     if (!active[l]) continue;
     PetscCall(DMGetLabelByNum(dm, l, &label));
     PetscCall(DMLabelGetNumValues(label, &nv));
     PetscCall(DMLabelGetValueIS(label, &valueIS));
     PetscCall(ISGetIndices(valueIS, &varr));
-    for (v = 0; v < nv; ++v) ul->values[ul->offsets[m] + v] = varr[v];
+    for (PetscInt v = 0; v < nv; ++v) ul->values[ul->offsets[m] + v] = varr[v];
     PetscCall(ISRestoreIndices(valueIS, &varr));
     PetscCall(ISDestroy(&valueIS));
     PetscCall(PetscSortInt(nv, &ul->values[ul->offsets[m]]));
@@ -8047,10 +8045,8 @@ PetscErrorCode DMUniversalLabelCreateLabels(DMUniversalLabel ul, PetscBool prese
 
 PetscErrorCode DMUniversalLabelSetLabelValue(DMUniversalLabel ul, DM dm, PetscBool useIndex, PetscInt p, PetscInt value)
 {
-  PetscInt l;
-
   PetscFunctionBegin;
-  for (l = 0; l < ul->Nl; ++l) {
+  for (PetscInt l = 0; l < ul->Nl; ++l) {
     DMLabel  label;
     PetscInt lval = (value & ul->masks[l]) >> ul->bits[l];
 
@@ -8326,10 +8322,9 @@ PetscErrorCode DMIsBoundaryPoint(DM dm, PetscInt point, PetscBool *isBd)
   while (b && !*isBd) {
     DMLabel    label = b->label;
     DSBoundary dsb   = b->dsboundary;
-    PetscInt   i;
 
     if (label) {
-      for (i = 0; i < dsb->Nv && !*isBd; ++i) PetscCall(DMLabelStratumHasPoint(label, dsb->values[i], point, isBd));
+      for (PetscInt i = 0; i < dsb->Nv && !*isBd; ++i) PetscCall(DMLabelStratumHasPoint(label, dsb->values[i], point, isBd));
     }
     b = b->next;
   }
@@ -9214,11 +9209,9 @@ PetscErrorCode DMMonitorSet(DM dm, PetscErrorCode (*f)(DM, void *), void *mctx, 
 @*/
 PetscErrorCode DMMonitorCancel(DM dm)
 {
-  PetscInt m;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  for (m = 0; m < dm->numbermonitors; ++m) {
+  for (PetscInt m = 0; m < dm->numbermonitors; ++m) {
     if (dm->monitordestroy[m]) PetscCall((*dm->monitordestroy[m])(&dm->monitorcontext[m]));
   }
   dm->numbermonitors = 0;
@@ -9297,12 +9290,10 @@ PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help
 @*/
 PetscErrorCode DMMonitor(DM dm)
 {
-  PetscInt m;
-
   PetscFunctionBegin;
   if (!dm) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  for (m = 0; m < dm->numbermonitors; ++m) PetscCall((*dm->monitor[m])(dm, dm->monitorcontext[m]));
+  for (PetscInt m = 0; m < dm->numbermonitors; ++m) PetscCall((*dm->monitor[m])(dm, dm->monitorcontext[m]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -9792,14 +9783,13 @@ PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType ct, const PetscInt 
 PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], PetscBool *inside)
 {
   PetscReal sum = 0.0;
-  PetscInt  d;
 
   PetscFunctionBegin;
   *inside = PETSC_TRUE;
   switch (ct) {
   case DM_POLYTOPE_TRIANGLE:
   case DM_POLYTOPE_TETRAHEDRON:
-    for (d = 0; d < DMPolytopeTypeGetDim(ct); ++d) {
+    for (PetscInt d = 0; d < DMPolytopeTypeGetDim(ct); ++d) {
       if (point[d] < -1.0) {
         *inside = PETSC_FALSE;
         break;
@@ -9813,7 +9803,7 @@ PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], 
     break;
   case DM_POLYTOPE_QUADRILATERAL:
   case DM_POLYTOPE_HEXAHEDRON:
-    for (d = 0; d < DMPolytopeTypeGetDim(ct); ++d)
+    for (PetscInt d = 0; d < DMPolytopeTypeGetDim(ct); ++d)
       if (PetscAbsReal(point[d]) > 1. + PETSC_SMALL) {
         *inside = PETSC_FALSE;
         break;

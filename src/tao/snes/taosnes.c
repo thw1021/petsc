@@ -130,11 +130,15 @@ PETSC_EXTERN PetscErrorCode TaoCreate_SNES(Tao tao)
   tao->uses_gradient         = PETSC_TRUE;
   tao->uses_hessian_matrices = PETSC_TRUE;
 
-  PetscCall(TaoParametersInitialize(tao));
-
   PetscCall(PetscNew(&taosnes));
   tao->data = (void *)taosnes;
   PetscCall(SNESCreate(PetscObjectComm((PetscObject)tao), &taosnes->snes));
+  {
+    DM dm;
+
+    PetscCall(TaoGetDM(tao, &dm));
+    PetscCall(SNESSetDM(taosnes->snes, dm));
+  }
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)taosnes->snes, (PetscObject)tao, 1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

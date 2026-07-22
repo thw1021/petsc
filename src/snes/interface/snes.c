@@ -319,7 +319,7 @@ PetscErrorCode SNESLoad(SNES snes, PetscViewer viewer)
 }
 
 #include <petscdraw.h>
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   #include <petscviewersaws.h>
 #endif
 
@@ -387,10 +387,11 @@ PetscErrorCode SNESView(SNES snes, PetscViewer viewer)
 {
   SNESKSPEW     *kctx;
   KSP            ksp;
+  Vec            u;
   SNESLineSearch linesearch;
   PetscBool      isascii, isstring, isbinary, isdraw;
   DMSNES         dmsnes;
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   PetscBool issaws;
 #endif
 
@@ -404,7 +405,7 @@ PetscErrorCode SNESView(SNES snes, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSAWS, &issaws));
 #endif
   if (isascii) {
@@ -504,7 +505,7 @@ PetscErrorCode SNESView(SNES snes, PetscViewer viewer)
     bottom = y - h;
     PetscCall(PetscDrawPushCurrentPoint(draw, x, bottom));
     PetscTryTypeMethod(snes, view, viewer);
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   } else if (issaws) {
     PetscMPIInt rank;
     const char *name;
@@ -543,6 +544,19 @@ PetscErrorCode SNESView(SNES snes, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(KSPView(ksp, viewer));
     PetscCall(PetscViewerASCIIPopTab(viewer));
+  } else {
+    PetscViewerFormat format;
+
+    PetscCall(SNESGetSolution(snes, &u));
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (u && isascii) {
+      if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector:\n"));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(VecView(u, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+      if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerPopFormat(viewer));
+    }
   }
   if (isdraw) {
     PetscDraw draw;
@@ -604,7 +618,7 @@ static PetscErrorCode SNESSetUpMatrixFree_Private(SNES snes, PetscBool hasOperat
     /* TODO: the version 2 code should be merged into the MatCreateSNESMF() and MatCreateMFFD() infrastructure and then removed */
   } else /* if (version == 2) */ {
     PetscCheck(snes->vec_func, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "SNESSetFunction() must be called first");
-#if !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_REAL_SINGLE) && !defined(PETSC_USE_REAL___FLOAT128) && !defined(PETSC_USE_REAL___FP16)
+#if !PetscDefined(USE_COMPLEX) && !PetscDefined(USE_REAL_SINGLE) && !PetscDefined(USE_REAL___FLOAT128) && !PetscDefined(USE_REAL___FP16)
     PetscCall(MatCreateSNESMFMore(snes, snes->vec_func, &J));
 #else
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "matrix-free operator routines (version 2)");
@@ -1136,7 +1150,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   PetscCall(PetscOptionsEnum("-snes_npc_side", "SNES nonlinear preconditioner side", "SNESSetNPCSide", PCSides, (PetscEnum)pcside, (PetscEnum *)&pcside, &flg));
   if (flg) PetscCall(SNESSetNPCSide(snes, pcside));
 
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   /*
     Publish convergence information using SAWs
   */
@@ -1148,7 +1162,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
     PetscCall(SNESMonitorSet(snes, SNESMonitorSAWs, ctx, SNESMonitorSAWsDestroy));
   }
 #endif
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   {
     PetscBool set;
     flg = PETSC_FALSE;
@@ -1179,7 +1193,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   /* if user has set the SNES NPC type via options database, create it. */
   PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
   PetscCall(PetscOptionsHasName(((PetscObject)snes)->options, optionsprefix, "-npc_snes_type", &pcset));
-  if (pcset && (!snes->npc)) PetscCall(SNESGetNPC(snes, &snes->npc));
+  if (pcset && !snes->npc) PetscCall(SNESGetNPC(snes, &snes->npc));
   if (snes->npc) PetscCall(SNESSetFromOptions(snes->npc));
   snes->setfromoptionscalled++;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1775,18 +1789,24 @@ PetscErrorCode SNESSetKSP(SNES snes, KSP ksp)
 }
 
 /*@
-  SNESParametersInitialize - Sets all the parameters in `snes` to their default value (when `SNESCreate()` was called) if they
-  currently contain default values
+  SNESParametersInitialize - Sets the base defaults for parameters in `snes`, updating a parameter's current value when it matches its previously recorded default.
 
-  Collective
+  Logically collective
 
   Input Parameter:
 . snes - the `SNES` object
 
   Level: developer
 
-  Developer Note:
-  This is called by all the `SNESCreate_XXX()` routines.
+  Notes:
+
+  The base defaults are the non-type-specific values established when the `SNES` is created. A `SNESType` constructor may subsequently replace them with type-specific defaults.
+
+  Developer Notes:
+
+  `SNESCreate()` calls this routine to establish the base defaults. `SNESSetType()` calls it before constructing a new `SNESType`, so the recorded defaults associated with the previous type are replaced before the new type installs its own defaults.
+
+  Default tracking is based on value equality, not on whether a setter was called. Consequently, an explicitly assigned value that equals the recorded default may be updated when the type changes.
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESDestroy()`, `SNESSetLagPreconditioner()`, `SNESSetLagJacobian()`,
           `PetscObjectParameterSetDefault()`
@@ -1960,8 +1980,12 @@ PetscErrorCode SNESSetFunction(SNES snes, Vec r, SNESFunctionFn *f, PetscCtx ctx
     PetscCall(VecDestroy(&snes->vec_func));
     snes->vec_func = r;
   }
+  /* update DMSNES
+     We support incremental information; so update the function context only if r is not specified
+     (which allows to disable the callbacks when both f and ctx are NULL),
+     or, if r is specified, when at least one of f and ctx is not NULL */
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMSNESSetFunction(dm, f, ctx));
+  if (!r || f || ctx) PetscCall(DMSNESSetFunction(dm, f, ctx));
   if (f == SNESPicardComputeFunction) PetscCall(DMSNESSetMFFunction(dm, SNESPicardComputeMFFunction, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2033,6 +2057,7 @@ PetscErrorCode SNESSetNormSchedule(SNES snes, SNESNormSchedule normschedule)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(snes, normschedule, 2);
   snes->normschedule = normschedule;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3033,9 +3058,18 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (snes->npc && snes->npcside == PC_LEFT) {
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-    PetscFunctionReturn(PETSC_SUCCESS);
+    /* SNESASPIN uses SNESNASM as the nonlinear preconditioner. When SNESNASM
+       is done solving the sub-systems it calls the user-provided Jacobian function
+       (corresponding to the unpreconditioned residual) retrieved through the DM.
+       Consequently it would be redundant to call the Jacobian function here. In
+       the future we may move the outer Jacobian function call out of SNESNASM
+       in which case no special casing will be required here. */
+    PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESASPIN, &flag));
+    if (flag) {
+      PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
 
   PetscCall(PetscLogEventBegin(SNES_JacobianEval, snes, X, A, B));
@@ -3292,8 +3326,12 @@ PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, SNESJacobianFn *J,
   if (Pmat) PetscValidHeaderSpecific(Pmat, MAT_CLASSID, 3);
   if (Amat) PetscCheckSameComm(snes, 1, Amat, 2);
   if (Pmat) PetscCheckSameComm(snes, 1, Pmat, 3);
+  /* update DMSNES
+     We support incremental information; so update the function context only if both Amat and Pmat are not specified
+     (which allows to disable the callbacks when both J and ctx are NULL),
+     or, if any of the mats is specified, when at least one of J and ctx is not NULL */
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMSNESSetJacobian(dm, J, ctx));
+  if ((!Amat && !Pmat) || J || ctx) PetscCall(DMSNESSetJacobian(dm, J, ctx));
   if (Amat) {
     PetscCall(PetscObjectReference((PetscObject)Amat));
     PetscCall(MatDestroy(&snes->jacobian));
@@ -3413,7 +3451,7 @@ PetscErrorCode SNESSetUp(SNES snes)
 
   if (!snes->vec_func) PetscCall(DMCreateGlobalVector(dm, &snes->vec_func));
 
-  if (!snes->ksp) PetscCall(SNESGetKSP(snes, &snes->ksp));
+  if (snes->usesksp && !snes->ksp) PetscCall(SNESGetKSP(snes, &snes->ksp));
 
   if (snes->linesearch) {
     PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
@@ -3425,36 +3463,51 @@ PetscErrorCode SNESSetUp(SNES snes)
     snes->mf          = PETSC_TRUE;
     snes->mf_operator = PETSC_FALSE;
   }
+  if (snes->ops->ctxcompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->ctxcompute)(snes, &snes->ctx));
+  if (snes->mf) PetscCall(SNESSetUpMatrixFree_Private(snes, snes->mf_operator, snes->mf_version));
 
   if (snes->npc) {
-    /* copy the DM over */
-    PetscCall(SNESGetDM(snes, &dm));
-    PetscCall(SNESSetDM(snes->npc, dm));
+    SNESNormSchedule npc_norm_schedule;
 
-    PetscCall(SNESGetFunction(snes, &f, &func, &funcctx));
-    PetscCall(VecDuplicate(f, &fpc));
-    PetscCall(SNESSetFunction(snes->npc, fpc, func, funcctx));
-    PetscCall(SNESGetJacobian(snes, &j, &jpre, &jac, &jacctx));
-    PetscCall(SNESSetJacobian(snes->npc, j, jpre, jac, jacctx));
-    PetscCall(SNESGetApplicationContext(snes, &appctx));
-    PetscCall(SNESSetApplicationContext(snes->npc, appctx));
-    PetscCall(SNESSetUseMatrixFree(snes->npc, mf_operator, mf));
-    PetscCall(VecDestroy(&fpc));
+    /* copy the DM over and the functions if NPC DM is not present */
+    if (!snes->npc->dm) {
+      PetscCall(SNESGetDM(snes, &dm));
+      PetscCall(SNESSetDM(snes->npc, dm));
 
-    /* copy the function pointers over */
-    PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)snes, (PetscObject)snes->npc));
+      PetscCall(SNESGetFunction(snes, &f, &func, &funcctx));
+      PetscCall(VecDuplicate(f, &fpc));
+      PetscCall(SNESSetFunction(snes->npc, fpc, func, funcctx));
+      PetscCall(SNESGetJacobian(snes, &j, &jpre, &jac, &jacctx));
+      PetscCall(SNESSetJacobian(snes->npc, j, jpre, jac, jacctx));
+      PetscCall(SNESSetUseMatrixFree(snes->npc, mf_operator, mf));
+      PetscCall(VecDestroy(&fpc));
 
-    /* default to 1 iteration */
-    PetscCall(SNESSetTolerances(snes->npc, 0.0, 0.0, 0.0, 1, snes->npc->max_funcs));
-    if (snes->npcside == PC_RIGHT) {
-      PetscCall(SNESSetNormSchedule(snes->npc, SNES_NORM_FINAL_ONLY));
-    } else {
-      PetscCall(SNESSetNormSchedule(snes->npc, SNES_NORM_NONE));
+      /* copy the function pointers over */
+      PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)snes, (PetscObject)snes->npc));
+
+      /* Propagate app context if not present */
+      PetscCall(SNESGetApplicationContext(snes->npc, &appctx));
+      if (!appctx && !snes->npc->ops->ctxcompute) {
+        if (snes->ops->ctxcompute) {
+          PetscCall(SNESSetComputeApplicationContext(snes->npc, snes->ops->ctxcompute, snes->ops->ctxdestroy));
+        } else {
+          PetscCall(SNESGetApplicationContext(snes, &appctx));
+          PetscCall(SNESSetApplicationContext(snes->npc, appctx));
+        }
+      }
     }
+
+    /* Set default norm schedule for NPC if not yet set */
+    PetscCall(SNESGetNormSchedule(snes->npc, &npc_norm_schedule));
+    if (npc_norm_schedule == SNES_NORM_DEFAULT) {
+      if (snes->npcside == PC_RIGHT) PetscCall(SNESSetNormSchedule(snes->npc, SNES_NORM_FINAL_ONLY));
+      else if (snes->npcside == PC_LEFT) PetscCall(SNESSetNormSchedule(snes->npc, SNES_NORM_NONE));
+    }
+
     PetscCall(SNESSetFromOptions(snes->npc));
 
     /* copy the line search context over */
-    if (snes->linesearch && snes->npc->linesearch) {
+    if (snes->dm == snes->npc->dm && snes->linesearch && snes->npc->linesearch) {
       PetscCall(SNESGetLineSearch(snes, &linesearch));
       PetscCall(SNESGetLineSearch(snes->npc, &pclinesearch));
       PetscCall(SNESLineSearchGetPreCheck(linesearch, &precheck, &lsprectx));
@@ -3464,8 +3517,6 @@ PetscErrorCode SNESSetUp(SNES snes)
       PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)linesearch, (PetscObject)pclinesearch));
     }
   }
-  if (snes->mf) PetscCall(SNESSetUpMatrixFree_Private(snes, snes->mf_operator, snes->mf_version));
-  if (snes->ops->ctxcompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->ctxcompute)(snes, &snes->ctx));
 
   snes->jac_iter = 0;
   snes->pre_iter = 0;
@@ -3553,11 +3604,9 @@ PetscErrorCode SNESReset(SNES snes)
 @*/
 PetscErrorCode SNESConvergedReasonViewCancel(SNES snes)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  for (i = 0; i < snes->numberreasonviews; i++) {
+  for (PetscInt i = 0; i < snes->numberreasonviews; i++) {
     if (snes->reasonviewdestroy[i]) PetscCall((*snes->reasonviewdestroy[i])(&snes->reasonviewcontext[i]));
   }
   snes->numberreasonviews = 0;
@@ -3650,9 +3699,9 @@ PetscErrorCode SNESSetLagPreconditioner(SNES snes, PetscInt lag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(snes, lag, 2);
   PetscCheck(lag >= -2, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Lag must be -2, -1, 1 or greater");
   PetscCheck(lag, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Lag cannot be 0");
-  PetscValidLogicalCollectiveInt(snes, lag, 2);
   snes->lagpreconditioner = lag;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -4362,11 +4411,9 @@ PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES snes, PetscInt
 @*/
 PetscErrorCode SNESMonitorCancel(SNES snes)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  for (i = 0; i < snes->numbermonitors; i++) {
+  for (PetscInt i = 0; i < snes->numbermonitors; i++) {
     if (snes->monitordestroy[i]) PetscCall((*snes->monitordestroy[i])(&snes->monitorcontext[i]));
   }
   snes->numbermonitors = 0;
@@ -4455,7 +4502,7 @@ PetscErrorCode SNESGetConvergedReason(SNES snes, SNESConvergedReason *reason)
 
 .seealso: [](ch_snes), `SNES`, `SNESGetConvergedReason()`
 @*/
-PetscErrorCode SNESGetConvergedReasonString(SNES snes, const char **strreason)
+PetscErrorCode SNESGetConvergedReasonString(SNES snes, const char *strreason[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -4536,19 +4583,18 @@ PetscErrorCode SNESSetConvergenceHistory(SNES snes, PetscReal a[], PetscInt its[
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_MATLAB)
+#if PetscDefined(HAVE_MATLAB)
   #include <engine.h> /* MATLAB include file */
   #include <mex.h>    /* MATLAB include file */
 
 PETSC_EXTERN mxArray *SNESGetConvergenceHistoryMatlab(SNES snes)
 {
   mxArray   *mat;
-  PetscInt   i;
   PetscReal *ar;
 
   mat = mxCreateDoubleMatrix(snes->conv_hist_len, 1, mxREAL);
   ar  = (PetscReal *)mxGetData(mat);
-  for (i = 0; i < snes->conv_hist_len; i++) ar[i] = snes->conv_hist[i];
+  for (PetscInt i = 0; i < snes->conv_hist_len; i++) ar[i] = snes->conv_hist[i];
   return mat;
 }
 #endif
@@ -4686,7 +4732,7 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
       DM       dm;
       Vec      u;
       PetscDS  prob;
-      PetscInt Nf, f;
+      PetscInt Nf;
       PetscErrorCode (**exactSol)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
       void    **exactCtx;
       PetscReal error;
@@ -4696,7 +4742,7 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
       PetscCall(DMGetDS(dm, &prob));
       PetscCall(PetscDSGetNumFields(prob, &Nf));
       PetscCall(PetscMalloc2(Nf, &exactSol, Nf, &exactCtx));
-      for (f = 0; f < Nf; ++f) PetscCall(PetscDSGetExactSolution(prob, f, &exactSol[f], &exactCtx[f]));
+      for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscDSGetExactSolution(prob, f, &exactSol[f], &exactCtx[f]));
       PetscCall(DMComputeL2Diff(dm, 0.0, exactSol, exactCtx, u, &error));
       PetscCall(PetscFree2(exactSol, exactCtx));
       if (error < 1.0e-11) PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: < 1.0e-11\n"));
@@ -4829,7 +4875,6 @@ PetscErrorCode SNESConvergedReasonViewFromOptions(SNES snes)
 PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
 {
   PetscBool flg;
-  PetscInt  grid;
   Vec       xcreated = NULL;
   DM        dm;
 
@@ -4920,8 +4965,8 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
   }
   PetscCall(SNESViewFromOptions(snes, NULL, "-snes_view_pre"));
 
-  for (grid = 0; grid < snes->gridsequence; grid++) PetscCall(PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes))));
-  for (grid = 0; grid < snes->gridsequence + 1; grid++) {
+  for (PetscInt grid = 0; grid < snes->gridsequence; grid++) PetscCall(PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes))));
+  for (PetscInt grid = 0; grid < snes->gridsequence + 1; grid++) {
     /* set solution vector */
     if (!grid) PetscCall(PetscObjectReference((PetscObject)x));
     PetscCall(VecDestroy(&snes->vec_sol));
@@ -5067,9 +5112,11 @@ PetscErrorCode SNESSetType(SNES snes, SNESType type)
   /* It may happen the user has customized the line search before calling SNESSetType */
   if (((PetscObject)snes)->type_name) PetscCall(SNESLineSearchDestroy(&snes->linesearch));
 
+  /* Reinitialize default parameters */
+  PetscCall(SNESParametersInitialize(snes));
+
   /* Call the SNESCreate_XXX routine for this particular Nonlinear solver */
   snes->setupcalled = PETSC_FALSE;
-
   PetscCall(PetscObjectChangeTypeName((PetscObject)snes, type));
   PetscCall((*r)(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5725,6 +5772,7 @@ PetscErrorCode KSPPostSolve_SNESEW(KSP ksp, Vec b, Vec x, PetscCtx ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petsc/private/kspimpl.h>
 /*@
   SNESGetKSP - Returns the `KSP` context for a `SNES` solver.
 
@@ -5757,8 +5805,10 @@ PetscErrorCode SNESGetKSP(SNES snes, KSP *ksp)
     PetscCall(KSPCreate(PetscObjectComm((PetscObject)snes), &snes->ksp));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)snes->ksp, (PetscObject)snes, 1));
 
-    PetscCall(KSPSetPreSolve(snes->ksp, KSPPreSolve_SNESEW, snes));
-    PetscCall(KSPSetPostSolve(snes->ksp, KSPPostSolve_SNESEW, snes));
+    snes->ksp->presolve_ew  = KSPPreSolve_SNESEW;
+    snes->ksp->prectx_ew    = snes;
+    snes->ksp->postsolve_ew = KSPPostSolve_SNESEW;
+    snes->ksp->postctx_ew   = snes;
 
     PetscCall(KSPMonitorSetFromOptions(snes->ksp, "-snes_monitor_ksp", "snes_preconditioned_residual", snes));
     PetscCall(PetscObjectSetOptions((PetscObject)snes->ksp, ((PetscObject)snes)->options));
@@ -5790,11 +5840,13 @@ PetscErrorCode SNESSetDM(SNES snes, DM dm)
 {
   KSP    ksp;
   DMSNES sdm;
+  DM     odm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)dm));
+  odm = snes->dm;
   if (snes->dm) { /* Move the DMSNES context over to the new DM unless the new DM already has one */
     if (snes->dm->dmsnes && !dm->dmsnes) {
       PetscCall(DMCopyDMSNES(snes->dm, dm));
@@ -5810,10 +5862,9 @@ PetscErrorCode SNESSetDM(SNES snes, DM dm)
   PetscCall(SNESGetKSP(snes, &ksp));
   PetscCall(KSPSetDM(ksp, dm));
   PetscCall(KSPSetDMActive(ksp, KSP_DMACTIVE_ALL, PETSC_FALSE));
-  if (snes->npc) {
-    PetscCall(SNESSetDM(snes->npc, snes->dm));
-    PetscCall(SNESSetNPCSide(snes, snes->npcside));
-  }
+  /* Propagate DM to NPC if npc does not have one yet or
+     if it has the same DM SNES had before (like for gridsequencing) */
+  if (snes->npc && (!snes->npc->dm || snes->npc->dm == odm)) PetscCall(SNESSetDM(snes->npc, snes->dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5853,9 +5904,6 @@ PetscErrorCode SNESGetDM(SNES snes, DM *dm)
 + snes - iterative context obtained from `SNESCreate()`
 - npc  - the `SNES` nonlinear preconditioner object
 
-  Options Database Key:
-. -npc_snes_type type - set the type of the `SNES` to use as the nonlinear preconditioner
-
   Level: developer
 
   Notes:
@@ -5880,13 +5928,13 @@ PetscErrorCode SNESSetNPC(SNES snes, SNES npc)
 /*@
   SNESGetNPC - Gets a nonlinear preconditioning solver SNES` to be used to precondition the original nonlinear solver.
 
-  Not Collective; but any changes to the obtained the `pc` object must be applied collectively
+  Collective the first time it is called if the `SNES` has no NPC set.
 
   Input Parameter:
 . snes - iterative context obtained from `SNESCreate()`
 
   Output Parameter:
-. pc - the `SNES` preconditioner context
+. npc - the `SNES` preconditioner context
 
   Options Database Key:
 . -npc_snes_type type - set the type of the `SNES` to use as the nonlinear preconditioner
@@ -5894,40 +5942,37 @@ PetscErrorCode SNESSetNPC(SNES snes, SNES npc)
   Level: advanced
 
   Notes:
-  If a `SNES` was previously set with `SNESSetNPC()` then that value is returned, otherwise a new `SNES` object is created that will
-  be used as the nonlinear preconditioner for the current `SNES`.
+  If a `SNES` was previously set with `SNESSetNPC()` then that object is returned, otherwise a new `SNES` object is created that will
+  be used as the nonlinear preconditioner for the current `SNES` if no nonlinear preconditioner is present.
 
   The (preconditioner) `SNES` returned automatically inherits the same nonlinear function and Jacobian supplied to the original
-  `SNES`. These may be overwritten if needed.
+  `SNES`. These may be overwritten if needed by calling `SNESSetDM()` on the nonlinear preconditioner followed by `SNESSetFunction()`
+  and `SNESSetJacobian()`.
 
-  Use the options database prefixes `-npc_snes`, `-npc_ksp`, etc., to control the configuration of the nonlinear preconditioner
+  The default preconditioner uses the options database prefixes `-npc_snes`, `-npc_ksp`, etc., to control the configuration.
 
 .seealso: [](ch_snes), `SNESSetNPC()`, `SNESHasNPC()`, `SNES`, `SNESCreate()`
 @*/
-PetscErrorCode SNESGetNPC(SNES snes, SNES *pc)
+PetscErrorCode SNESGetNPC(SNES snes, SNES *npc)
 {
   const char *optionsprefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscAssertPointer(pc, 2);
+  PetscAssertPointer(npc, 2);
   if (!snes->npc) {
-    PetscCtx ctx;
-
     PetscCall(SNESCreate(PetscObjectComm((PetscObject)snes), &snes->npc));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)snes->npc, (PetscObject)snes, 1));
     PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
     PetscCall(SNESSetOptionsPrefix(snes->npc, optionsprefix));
     PetscCall(SNESAppendOptionsPrefix(snes->npc, "npc_"));
-    if (snes->ops->ctxcompute) {
-      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->ctxcompute, snes->ops->ctxdestroy));
-    } else {
-      PetscCall(SNESGetApplicationContext(snes, &ctx));
-      PetscCall(SNESSetApplicationContext(snes->npc, ctx));
-    }
     PetscCall(SNESSetCountersReset(snes->npc, PETSC_FALSE));
+    PetscCall(SNESSetNormSchedule(snes->npc, SNES_NORM_DEFAULT));
+
+    /* default to 1 iteration */
+    PetscCall(SNESSetTolerances(snes->npc, 0.0, 0.0, 0.0, 1, snes->npc->max_funcs));
   }
-  *pc = snes->npc;
+  *npc = snes->npc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

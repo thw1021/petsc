@@ -9,11 +9,13 @@ PETSC_EXTERN PetscBool      MatSeqAIJRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatOrderingRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatColoringRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatPartitioningRegisterAllCalled;
+PETSC_EXTERN PetscBool      MatMeshToCellGraphRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatCoarsenRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode MatRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatOrderingRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatColoringRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatPartitioningRegisterAll(void);
+PETSC_EXTERN PetscErrorCode MatMeshToCellGraphRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatCoarsenRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRegisterAll(void);
 
@@ -178,40 +180,40 @@ struct _MatOps {
   PetscErrorCode (*invertvariableblockdiagonal)(Mat, PetscInt, const PetscInt *, PetscScalar *);
   PetscErrorCode (*createsubmatricesmpi)(Mat, PetscInt, const IS[], const IS[], MatReuse, Mat **);
   /*119*/
-  PetscErrorCode (*setvaluesbatch)(Mat, PetscInt, PetscInt, PetscInt *, const PetscScalar *);
   PetscErrorCode (*transposematmultsymbolic)(Mat, Mat, PetscReal, Mat);
   PetscErrorCode (*transposematmultnumeric)(Mat, Mat, Mat);
   PetscErrorCode (*transposecoloringcreate)(Mat, ISColoring, MatTransposeColoring);
   PetscErrorCode (*transcoloringapplysptoden)(MatTransposeColoring, Mat, Mat);
-  /*124*/
   PetscErrorCode (*transcoloringapplydentosp)(MatTransposeColoring, Mat, Mat);
+  /*124*/
   PetscErrorCode (*rartnumeric)(Mat, Mat, Mat); /* double dispatch wrapper routine */
   PetscErrorCode (*setblocksizes)(Mat, PetscInt, PetscInt);
   PetscErrorCode (*residual)(Mat, Vec, Vec, Vec);
   PetscErrorCode (*fdcoloringsetup)(Mat, ISColoring, MatFDColoring);
-  /*129*/
   PetscErrorCode (*findoffblockdiagonalentries)(Mat, IS *);
+  /*129*/
   PetscErrorCode (*creatempimatconcatenateseqmat)(MPI_Comm, Mat, PetscInt, MatReuse, Mat *);
   PetscErrorCode (*destroysubmatrices)(PetscInt, Mat *[]);
   PetscErrorCode (*mattransposesolve)(Mat, Mat, Mat);
   PetscErrorCode (*getvalueslocal)(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], PetscScalar[]);
-  /*134*/
   PetscErrorCode (*creategraph)(Mat, PetscBool, PetscBool, PetscReal, PetscInt, PetscInt[], Mat *);
+  /*134*/
   PetscErrorCode (*transposesymbolic)(Mat, Mat *);
   PetscErrorCode (*eliminatezeros)(Mat, PetscBool);
   PetscErrorCode (*getrowsumabs)(Mat, Vec);
   PetscErrorCode (*getfactor)(Mat, MatSolverType, MatFactorType, Mat *);
+  PetscErrorCode (*getblockdiagonal)(Mat, Mat *); // NOTE: the caller of get{block, vblock}diagonal owns the returned matrix;
   /*139*/
-  PetscErrorCode (*getblockdiagonal)(Mat, Mat *);  // NOTE: the caller of get{block, vblock}diagonal owns the returned matrix;
   PetscErrorCode (*getvblockdiagonal)(Mat, Mat *); // they must destroy it after use
   PetscErrorCode (*copyhashtoxaij)(Mat, Mat);
   PetscErrorCode (*getcurrentmemtype)(Mat, PetscMemType *);
   PetscErrorCode (*zerorowscolumnslocal)(Mat, PetscInt, const PetscInt[], PetscScalar, Vec, Vec);
-  /*144*/
   PetscErrorCode (*adot)(Mat, Vec, Vec, PetscScalar *); /* induced vector inner product */
-  PetscErrorCode (*anorm)(Mat, Vec, PetscReal *);       /* induced vector norm */
+  /*144*/
+  PetscErrorCode (*anorm)(Mat, Vec, PetscReal *); /* induced vector norm */
   PetscErrorCode (*adot_local)(Mat, Vec, Vec, PetscScalar *);
   PetscErrorCode (*anorm_local)(Mat, Vec, PetscReal *);
+  PetscErrorCode (*getordering)(Mat, MatOrderingType, IS *, IS *);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -247,7 +249,7 @@ PETSC_INTERN PetscErrorCode MatShellSetContextDestroy_Immutable(Mat, PetscCtxDes
 PETSC_INTERN PetscErrorCode MatShellSetManageScalingShifts_Immutable(Mat);
 PETSC_INTERN PetscErrorCode MatCopy_Basic(Mat, Mat, MatStructure);
 PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat, Vec, InsertMode);
-#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
+#if PetscDefined(HAVE_SCALAPACK) && (PetscDefined(USE_REAL_SINGLE) || PetscDefined(USE_REAL_DOUBLE))
 PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
 #endif
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
@@ -282,7 +284,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 /* CreateGraph is common to AIJ seq and mpi */
 PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat, PetscBool, PetscBool, PetscReal, PetscInt, PetscInt[], Mat *);
 
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#if PetscDefined(CLANG_STATIC_ANALYZER)
 template <typename Tm>
 extern void MatCheckPreallocated(Tm, int);
 template <typename Tm>
@@ -293,7 +295,7 @@ extern void MatCheckProduct(Tm, int);
       if (!(A)->preallocated) PetscCall(MatSetUp(A)); \
     } while (0)
 
-  #if defined(PETSC_USE_DEBUG)
+  #if PetscDefined(USE_DEBUG)
     #define MatCheckProduct(A, arg) \
       do { \
         PetscCheck((A)->product, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Argument %d \"%s\" is not a matrix obtained from MatProductCreate()", (arg), #A); \
@@ -396,7 +398,7 @@ struct _MatStash {
   InsertMode     *insertmode; /* Pointer to check mat->insertmode and set upon message arrival in case no local values have been set. */
 };
 
-#if !defined(PETSC_HAVE_MPIUNI)
+#if !PetscDefined(HAVE_MPIUNI)
 PETSC_INTERN PetscErrorCode MatStashScatterDestroy_BTS(MatStash *);
 #endif
 PETSC_INTERN PetscErrorCode MatStashCreate_Private(MPI_Comm, PetscInt, MatStash *);
@@ -488,7 +490,7 @@ struct _p_Mat {
   PetscBool        structure_only;
   PetscBool        sortedfull;      /* full, sorted rows are inserted */
   PetscBool        force_diagonals; /* set by MAT_FORCE_DIAGONAL_ENTRIES */
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   PetscOffloadMask offloadmask; /* a mask which indicates where the valid matrix data is (GPU, CPU or both) */
   PetscBool        boundtocpu;
   PetscBool        bindingpropagates;
@@ -1300,7 +1302,7 @@ static inline PetscErrorCode PetscIncompleteLLClean(PetscInt idx_start, PetscInt
 */
 #define PetscIncompleteLLDestroy(lnk, bt) ((PetscErrorCode)(PetscFree(lnk) || PetscBTDestroy(&(bt))))
 
-#if !defined(PETSC_CLANG_STATIC_ANALYZER)
+#if !PetscDefined(CLANG_STATIC_ANALYZER)
   #define MatCheckSameLocalSize(A, ar1, B, ar2) \
     do { \
       PetscCheckSameComm(A, ar1, B, ar2); \
@@ -1483,7 +1485,7 @@ static inline PetscErrorCode PetscLLCondensedExpand_Scalable(PetscInt nlnk_max, 
 
   PetscFunctionBegin;
   PetscCall(PetscIntMultError(2, nlnk_max + 2, &lsize));
-  PetscCall(PetscRealloc(lsize * sizeof(PetscInt), lnk));
+  PetscCall(PetscRealloc((size_t)lsize * sizeof(PetscInt), lnk));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1819,7 +1821,7 @@ PETSC_EXTERN PetscLogEvent MAT_H2Opus_LR;
 PETSC_EXTERN PetscLogEvent MAT_CUDACopyToGPU;
 PETSC_EXTERN PetscLogEvent MAT_HIPCopyToGPU;
 
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#if PetscDefined(CLANG_STATIC_ANALYZER)
   #define MatGetDiagonalMarkers(SeqXXX, bs)
 #else
   /*

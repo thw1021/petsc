@@ -678,7 +678,7 @@ static PetscErrorCode MatDestroy_SeqAIJKokkos(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", NULL));
-#if defined(PETSC_HAVE_HYPRE)
+#if PetscDefined(HAVE_HYPRE)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijkokkos_hypre_C", NULL));
 #endif
   PetscCall(MatDestroy_SeqAIJ(A));
@@ -1173,7 +1173,7 @@ static PetscErrorCode MatGetDiagonal_SeqAIJKokkos(Mat A, Vec x)
 }
 
 /* Get a Kokkos View from a mat of type MatSeqAIJKokkos */
-PetscErrorCode MatSeqAIJGetKokkosView(Mat A, ConstMatScalarKokkosView *kv)
+PetscErrorCode MatSeqAIJGetKokkosView(Mat A, Kokkos::View<const PetscScalar *> *kv)
 {
   Mat_SeqAIJKokkos *aijkok;
 
@@ -1187,7 +1187,7 @@ PetscErrorCode MatSeqAIJGetKokkosView(Mat A, ConstMatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, ConstMatScalarKokkosView *kv)
+PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, Kokkos::View<const PetscScalar *> *kv)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -1196,7 +1196,7 @@ PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, ConstMatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSeqAIJGetKokkosView(Mat A, MatScalarKokkosView *kv)
+PetscErrorCode MatSeqAIJGetKokkosView(Mat A, Kokkos::View<PetscScalar *> *kv)
 {
   Mat_SeqAIJKokkos *aijkok;
 
@@ -1210,7 +1210,7 @@ PetscErrorCode MatSeqAIJGetKokkosView(Mat A, MatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, MatScalarKokkosView *kv)
+PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, Kokkos::View<PetscScalar *> *kv)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -1220,7 +1220,7 @@ PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, MatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSeqAIJGetKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
+PetscErrorCode MatSeqAIJGetKokkosViewWrite(Mat A, Kokkos::View<PetscScalar *> *kv)
 {
   Mat_SeqAIJKokkos *aijkok;
 
@@ -1233,7 +1233,7 @@ PetscErrorCode MatSeqAIJGetKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
+PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, Kokkos::View<PetscScalar *> *kv)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -1391,11 +1391,11 @@ static PetscErrorCode MatSetPreallocationCOO_SeqAIJKokkos(Mat mat, PetscCount co
 
 static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[], InsertMode imode)
 {
-  MatScalarKokkosView        Aa;
-  ConstMatScalarKokkosView   kv;
-  PetscMemType               memtype;
-  PetscContainer             container;
-  MatCOOStruct_SeqAIJKokkos *coo;
+  Kokkos::View<PetscScalar *> Aa;
+  ConstMatScalarKokkosView    kv;
+  PetscMemType                memtype;
+  PetscContainer              container;
+  MatCOOStruct_SeqAIJKokkos  *coo;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
@@ -1409,6 +1409,7 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[],
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
     kv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstMatScalarKokkosViewHost(v, n));
+    PetscCall(PetscLogCpuToGpu(n * sizeof(PetscScalar)));
   } else {
     kv = ConstMatScalarKokkosView(v, n); /* Directly use v[]'s memory */
   }
@@ -1476,7 +1477,7 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_SeqAIJKokkos));
-#if defined(PETSC_HAVE_HYPRE)
+#if PetscDefined(HAVE_HYPRE)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijkokkos_hypre_C", MatConvert_AIJ_HYPRE));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -27,16 +27,42 @@ typedef struct {
 PETSC_INTERN PetscErrorCode MatMatMultSymbolic_ScaLAPACK(Mat, Mat, PetscReal, Mat);
 PETSC_INTERN PetscErrorCode MatMatMultNumeric_ScaLAPACK(Mat, Mat, Mat);
 
-/* Macro to check nonzero info after ScaLAPACK call */
-#define PetscCheckScaLapackInfo(routine, info) \
+/*MC
+  PetscCallScaLAPACKInfo - Calls a ScaLAPACK routine that has an `info` return flag so that the stack trace returned from any signal received
+                        inside the function call includes the name of the ScaLAPACK routine. Also checks the `info` flag.
+
+  Synopsis:
+  #include <petscscalapack.h>
+  void PetscCallScaLAPACKInfo(char *name, routine)
+
+  Not Collective
+
+  Input Parameters:
++  name    - string that gives the name of the function being called
+-  routine - actual call to the routine including its arguments
+
+  Level: developer
+
+  Notes:
+  The calling routine should not declare the argument `info` but must call it `info` in the calling sequence.
+
+  In a small number of cases, calls to ScaLAPACK routines that return a positive `info` code are allowed without ending the PETSc program.
+  In these situations the macro `PetscCallBLAS()` should be used, not `PetscCallScaLAPACKInfo()`.
+
+.seealso: `PetscCall()`, `PetscCallBLAS()`, `PetscCallLAPACKInfo()`
+M*/
+#define PetscCallScaLAPACKInfo(name, routine) \
   do { \
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in ScaLAPACK subroutine %s: info=%d", routine, (int)info); \
+    PetscBLASInt info = -1000; \
+    PetscCallBLAS(name, routine); \
+    PetscCheck(info >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "ScaLAPACK routine %s %" PetscBLASInt_FMT "-th argument had an illegal value", name, -info); \
+    PetscCheck(info <= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ScaLAPACK routine %s failed with INFO = %" PetscBLASInt_FMT ". Search at https://www.netlib.org/scalapack/explore-html/index.html to decode the error code.", name, info); \
   } while (0)
 
 #define PETSC_PASTE4_(a, b, c, d) a##b##c##d
 #define PETSC_PASTE4(a, b, c, d)  PETSC_PASTE4_(a, b, c, d)
 
-#if defined(PETSC_BLASLAPACK_CAPS)
+#if PetscDefined(BLASLAPACK_CAPS)
   #define PETSC_SCALAPACK_PREFIX_ P
   #define PETSCBLASNOTYPE(x, X)   PETSC_PASTE2(X, PETSC_BLASLAPACK_SUFFIX_)
   #define PETSCSCALAPACK(x, X)    PETSC_PASTE4(PETSC_SCALAPACK_PREFIX_, PETSC_BLASLAPACK_PREFIX_, X, PETSC_BLASLAPACK_SUFFIX_)
@@ -62,7 +88,7 @@ BLAS_EXTERN void         Cdgsum2d(PetscBLASInt ctxt, const char *scope, const ch
 /* PBLAS */
 #define PBLASgemv_ PETSCSCALAPACK(gemv, GEMV)
 #define PBLASgemm_ PETSCSCALAPACK(gemm, GEMM)
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   #define PBLAStran_ PETSCSCALAPACK(tranc, TRANC)
 #else
   #define PBLAStran_ PETSCSCALAPACK(tran, TRAN)
@@ -105,7 +131,7 @@ BLAS_EXTERN void         SCALAPACKelget_(const char *, const char *, PetscScalar
 /*
     Macros to test valid arguments
 */
-#if !defined(PETSC_USE_DEBUG)
+#if !PetscDefined(USE_DEBUG)
 
   #define MatScaLAPACKCheckDistribution(a, arga, b, argb) \
     do { \

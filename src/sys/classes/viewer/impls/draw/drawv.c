@@ -24,11 +24,10 @@ static PetscErrorCode PetscViewerDestroy_Draw(PetscViewer v)
 
 static PetscErrorCode PetscViewerFlush_Draw(PetscViewer v)
 {
-  PetscInt          i;
   PetscViewer_Draw *vdraw = (PetscViewer_Draw *)v->data;
 
   PetscFunctionBegin;
-  for (i = 0; i < vdraw->draw_max; i++) {
+  for (PetscInt i = 0; i < vdraw->draw_max; i++) {
     if (vdraw->draw[i]) PetscCall(PetscDrawFlush(vdraw->draw[i]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -456,7 +455,6 @@ PetscErrorCode PetscViewerDrawClear(PetscViewer viewer)
 {
   PetscViewer_Draw *vdraw;
   PetscBool         isdraw;
-  PetscInt          i;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -464,7 +462,7 @@ PetscErrorCode PetscViewerDrawClear(PetscViewer viewer)
   if (!isdraw) PetscFunctionReturn(PETSC_SUCCESS);
   vdraw = (PetscViewer_Draw *)viewer->data;
 
-  for (i = 0; i < vdraw->draw_max; i++) {
+  for (PetscInt i = 0; i < vdraw->draw_max; i++) {
     if (vdraw->draw[i]) PetscCall(PetscDrawClear(vdraw->draw[i]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -489,7 +487,6 @@ PetscErrorCode PetscViewerDrawGetPause(PetscViewer viewer, PetscReal *pause)
 {
   PetscViewer_Draw *vdraw;
   PetscBool         isdraw;
-  PetscInt          i;
   PetscDraw         draw;
 
   PetscFunctionBegin;
@@ -501,7 +498,7 @@ PetscErrorCode PetscViewerDrawGetPause(PetscViewer viewer, PetscReal *pause)
   }
   vdraw = (PetscViewer_Draw *)viewer->data;
 
-  for (i = 0; i < vdraw->draw_max; i++) {
+  for (PetscInt i = 0; i < vdraw->draw_max; i++) {
     if (vdraw->draw[i]) {
       PetscCall(PetscDrawGetPause(vdraw->draw[i], pause));
       PetscFunctionReturn(PETSC_SUCCESS);
@@ -530,7 +527,6 @@ PetscErrorCode PetscViewerDrawSetPause(PetscViewer viewer, PetscReal pause)
 {
   PetscViewer_Draw *vdraw;
   PetscBool         isdraw;
-  PetscInt          i;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -539,7 +535,7 @@ PetscErrorCode PetscViewerDrawSetPause(PetscViewer viewer, PetscReal pause)
   vdraw = (PetscViewer_Draw *)viewer->data;
 
   vdraw->pause = pause;
-  for (i = 0; i < vdraw->draw_max; i++) {
+  for (PetscInt i = 0; i < vdraw->draw_max; i++) {
     if (vdraw->draw[i]) PetscCall(PetscDrawSetPause(vdraw->draw[i], pause));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

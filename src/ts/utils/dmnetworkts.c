@@ -133,7 +133,7 @@ PetscErrorCode TSMonitorLGCtxNetworkCreate(TS ts, const char host[], const char 
 @*/
 PetscErrorCode TSMonitorLGCtxNetworkSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, void *dctx)
 {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 #else
@@ -158,13 +158,13 @@ PetscErrorCode TSMonitorLGCtxNetworkSolution(TS ts, PetscInt step, PetscReal pti
   }
 
   if (ctx->semilogy) {
-    PetscInt n, j;
+    PetscInt n;
 
     PetscCall(VecDuplicate(u, &uv));
     PetscCall(VecCopy(u, uv));
     PetscCall(VecGetArray(uv, &yv));
     PetscCall(VecGetLocalSize(uv, &n));
-    for (j = 0; j < n; j++) {
+    for (PetscInt j = 0; j < n; j++) {
       if (PetscRealPart(yv[j]) <= 0.0) yv[j] = -12;
       else yv[j] = PetscLog10Real(PetscRealPart(yv[j]));
     }

@@ -68,7 +68,7 @@ static PetscErrorCode CholmodSetOptions(Mat F)
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "CHOLMOD Options", "Mat");
   CHOLMOD_OPTION_INT(nmethods, "Number of different ordering methods to try");
 
-#if defined(PETSC_USE_SUITESPARSE_GPU)
+#if PetscDefined(USE_SUITESPARSE_GPU)
   c->useGPU = 1;
   CHOLMOD_OPTION_INT(useGPU, "Use GPU for BLAS 1, otherwise 0");
   CHOLMOD_OPTION_SIZE_T(maxGpuMemBytes, "Maximum memory to allocate on the GPU");
@@ -149,13 +149,12 @@ static PetscErrorCode MatWrapCholmod_seqsbaij(Mat A, PetscBool values, cholmod_s
   C->p     = sbaij->i;
   C->i     = sbaij->j;
   if (values) {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     /* we need to pass CHOLMOD the conjugate matrix */
     PetscScalar *v;
-    PetscInt     i;
 
     PetscCall(PetscMalloc1(sbaij->maxnz, &v));
-    for (i = 0; i < sbaij->maxnz; i++) v[i] = PetscConj(sbaij->a[i]);
+    for (PetscInt i = 0; i < sbaij->maxnz; i++) v[i] = PetscConj(sbaij->a[i]);
     C->x     = v;
     vallocin = PETSC_TRUE;
 #else
@@ -299,7 +298,6 @@ static PetscErrorCode MatView_Info_CHOLMOD(Mat F, PetscViewer viewer)
 {
   Mat_CHOLMOD          *chol = (Mat_CHOLMOD *)F->data;
   const cholmod_common *c    = chol->common;
-  PetscInt              i;
 
   PetscFunctionBegin;
   if (F->ops->solve != MatSolve_CHOLMOD) PetscFunctionReturn(PETSC_SUCCESS);
@@ -323,7 +321,7 @@ static PetscErrorCode MatView_Info_CHOLMOD(Mat F, PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.nrelax            [%u,%u,%u]\n", (unsigned)c->nrelax[0], (unsigned)c->nrelax[1], (unsigned)c->nrelax[2]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.prefer_upper      %d\n", c->prefer_upper));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.print             %d\n", c->print));
-  for (i = 0; i < c->nmethods; i++) {
+  for (PetscInt i = 0; i < c->nmethods; i++) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "Ordering method %" PetscInt_FMT "%s:\n", i, i == c->selected ? " [SELECTED]" : ""));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  lnz %g, fl %g, prune_dense %g, prune_dense2 %g\n", c->method[i].lnz, c->method[i].fl, c->method[i].prune_dense, c->method[i].prune_dense2));
   }
@@ -342,7 +340,7 @@ static PetscErrorCode MatView_Info_CHOLMOD(Mat F, PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.ndbounds_hit      %g (number of times diagonal was modified by dbound)\n", c->ndbounds_hit));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.rowfacfl          %g (number of flops in last call to cholmod_rowfac)\n", c->rowfacfl));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.aatfl             %g (number of flops to compute A(:,f)*A(:,f)')\n", c->aatfl));
-#if defined(PETSC_USE_SUITESPARSE_GPU)
+#if PetscDefined(USE_SUITESPARSE_GPU)
   PetscCall(PetscViewerASCIIPrintf(viewer, "Common.useGPU            %d\n", c->useGPU));
 #endif
   PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -420,7 +418,7 @@ static PetscErrorCode MatCholeskyFactorNumeric_CHOLMOD(Mat F, Mat A, const MatFa
   PetscCall(PetscLogFlops(chol->common->fl));
   if (aijalloc) PetscCall(PetscFree2(cholA.p, cholA.i));
   if (valloc) PetscCall(PetscFree(cholA.x));
-#if defined(PETSC_USE_SUITESPARSE_GPU)
+#if PetscDefined(USE_SUITESPARSE_GPU)
   PetscCall(PetscLogGpuTimeAdd(chol->common->CHOLMOD_GPU_GEMM_TIME + chol->common->CHOLMOD_GPU_SYRK_TIME + chol->common->CHOLMOD_GPU_TRSM_TIME + chol->common->CHOLMOD_GPU_POTRF_TIME));
 #endif
 

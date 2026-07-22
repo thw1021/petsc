@@ -1,5 +1,7 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 #include <petsc/private/snesimpl.h>
+#include <petsc/private/kspimpl.h>
+#include <petscdmshell.h>
 
 PetscBool         TaoRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoList              = NULL;
@@ -56,8 +58,11 @@ static PetscErrorCode TaoSetUpEW_Private(Tao tao)
   if (tao->ksp_ewconv) {
     if (!tao->snes_ewdummy) PetscCall(SNESCreate(PetscObjectComm((PetscObject)tao), &tao->snes_ewdummy));
     tao->snes_ewdummy->ksp_ewconv = PETSC_TRUE;
-    PetscCall(KSPSetPreSolve(tao->ksp, KSPPreSolve_TAOEW_Private, tao));
-    PetscCall(KSPSetPostSolve(tao->ksp, KSPPostSolve_TAOEW_Private, tao));
+
+    tao->ksp->presolve_ew  = KSPPreSolve_TAOEW_Private;
+    tao->ksp->prectx_ew    = tao;
+    tao->ksp->postsolve_ew = KSPPostSolve_TAOEW_Private;
+    tao->ksp->postctx_ew   = tao;
 
     PetscCall(KSPGetOptionsPrefix(tao->ksp, &ewprefix));
     kctx = (SNESKSPEW *)tao->snes_ewdummy->kspconvctx;
@@ -67,21 +72,26 @@ static PetscErrorCode TaoSetUpEW_Private(Tao tao)
 }
 
 /*@
-  TaoParametersInitialize - Sets all the parameters in `tao` to their default value (when `TaoCreate()` was called) if they
-  currently contain default values. Default values are the parameter values when the object's type is set.
+  TaoParametersInitialize - Sets the base defaults for parameters in `tao`, updating a parameter's current value when it matches its previously recorded default.
 
-  Collective
+  Logically collective
 
   Input Parameter:
 . tao - the `Tao` object
 
   Level: developer
 
-  Developer Note:
-  This is called by all the `TaoCreate_XXX()` routines.
+  Notes:
 
-.seealso: [](ch_snes), `Tao`, `TaoSolve()`, `TaoDestroy()`,
-          `PetscObjectParameterSetDefault()`
+  The base defaults are the non-type-specific values established when the `Tao` is created. A `TaoType` constructor may subsequently replace them with type-specific defaults.
+
+  Developer Notes:
+
+  `TaoCreate()` calls this routine to establish the base defaults. `TaoSetType()` calls it before constructing a new `TaoType`, so the recorded defaults associated with the previous type are replaced before the new type installs its own defaults.
+
+  Default tracking is based on value equality, not on whether a setter was called. Consequently, an explicitly assigned value that equals the recorded default may be updated when the type changes.
+
+.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoDestroy()`, `PetscObjectParameterSetDefault()`
 @*/
 PetscErrorCode TaoParametersInitialize(Tao tao)
 {
@@ -126,10 +136,10 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   PetscCall(TaoLineSearchInitializePackage());
 
   PetscCall(PetscHeaderCreate(tao, TAO_CLASSID, "Tao", "Optimization solver", "Tao", comm, TaoDestroy, TaoView));
-  tao->ops->convergencetest = TaoDefaultConvergenceTest;
-
+  PetscCall(TaoParametersInitialize(tao));
   tao->hist_reset = PETSC_TRUE;
-  tao->term_set   = PETSC_FALSE;
+
+  tao->ops->convergencetest = TaoDefaultConvergenceTest;
 
   PetscCall(TaoTermCreateCallbacks(tao, &tao->callbacks));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao->callbacks, "callbacks_"));
@@ -280,6 +290,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(TaoTermMappingReset(&(*tao)->objective_term));
   PetscCall(VecDestroy(&(*tao)->objective_parameters));
   PetscCall(TaoTermDestroy(&(*tao)->callbacks));
+  PetscCall(DMDestroy(&(*tao)->dm));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));
@@ -1681,11 +1692,9 @@ PetscErrorCode TaoMonitorSet(Tao tao, PetscErrorCode (*func)(Tao tao, PetscCtx c
 @*/
 PetscErrorCode TaoMonitorCancel(Tao tao)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  for (i = 0; i < tao->numbermonitors; i++) {
+  for (PetscInt i = 0; i < tao->numbermonitors; i++) {
     if (tao->monitordestroy[i]) PetscCall((*tao->monitordestroy[i])(&tao->monitorcontext[i]));
   }
   tao->numbermonitors = 0;
@@ -2318,6 +2327,8 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   tao->uses_gradient         = PETSC_FALSE;
   tao->uses_hessian_matrices = PETSC_FALSE;
 
+  PetscCall(TaoParametersInitialize(tao));
+
   PetscCall((*create_xxx)(tao));
   PetscCall(PetscObjectChangeTypeName((PetscObject)tao, type));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2652,8 +2663,6 @@ PetscErrorCode TaoGetType(Tao tao, TaoType *type)
 @*/
 PetscErrorCode TaoMonitor(Tao tao, PetscInt its, PetscReal f, PetscReal res, PetscReal cnorm, PetscReal steplength)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   tao->fc       = f;
@@ -2665,7 +2674,7 @@ PetscErrorCode TaoMonitor(Tao tao, PetscInt its, PetscReal f, PetscReal res, Pet
     tao->gnorm0 = res;
   }
   PetscCall(VecLockReadPush(tao->solution));
-  for (i = 0; i < tao->numbermonitors; i++) PetscCall((*tao->monitor[i])(tao, tao->monitorcontext[i]));
+  for (PetscInt i = 0; i < tao->numbermonitors; i++) PetscCall((*tao->monitor[i])(tao, tao->monitorcontext[i]));
   PetscCall(VecLockReadPop(tao->solution));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3174,5 +3183,67 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     for (PetscInt i = 0; i < num_terms; i++) PetscCall(VecDestroy(&vec_list[i]));
     PetscCall(PetscFree(vec_list));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetDM - Sets the `DM` that may be used by some `TAO` solvers or their underlying solvers and preconditioners
+
+  Logically Collective
+
+  Input Parameters:
++ tao - the nonlinear solver context
+- dm  - the `DM`, cannot be `NULL`
+
+  Level: intermediate
+
+  Note:
+  A `DM` can only be used for solving one problem at a time because information about the problem is stored on the `DM`,
+  even when not using interfaces like `DMSNESSetFunction()`.  Use `DMClone()` to get a distinct `DM` when solving different
+  problems using the same function space.
+
+.seealso: [](ch_snes), `DM`, `TAO`, `TaoGetDM()`, `SNESSetDM()`, `SNESGetDM()`, `KSPSetDM()`, `KSPGetDM()`
+@*/
+PetscErrorCode TaoSetDM(Tao tao, DM dm)
+{
+  KSP ksp;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscCall(PetscObjectReference((PetscObject)dm));
+  PetscCall(DMDestroy(&tao->dm));
+  tao->dm = dm;
+
+  PetscCall(TaoGetKSP(tao, &ksp));
+  if (ksp) {
+    PetscCall(KSPSetDM(ksp, dm));
+    PetscCall(KSPSetDMActive(ksp, KSP_DMACTIVE_ALL, PETSC_FALSE));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetDM - Gets the `DM` that may be used by some `TAO` solvers or their underlying solvers and preconditioners
+
+  Not Collective but `dm` obtained is parallel on `tao`
+
+  Input Parameter:
+. tao - the `TAO` context
+
+  Output Parameter:
+. dm - the `DM`
+
+  Level: intermediate
+
+.seealso: [](ch_snes), `DM`, `TAO`, `TaoSetDM()`, `SNESSetDM()`, `SNESGetDM()`, `KSPSetDM()`, `KSPGetDM()`
+@*/
+PetscErrorCode TaoGetDM(Tao tao, DM *dm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(dm, 2);
+  if (!tao->dm) PetscCall(DMShellCreate(PetscObjectComm((PetscObject)tao), &tao->dm));
+  *dm = tao->dm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

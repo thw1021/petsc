@@ -199,8 +199,8 @@ static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
   PetscInt         i, j, m;
   PetscReal       *s_values;
   PetscScalar     *corr, *work, *scratch_vec, zero = 0.0, one = 1.0;
-  PetscBLASInt     blas_m, blas_info, blas_rank = 0, blas_lwork, blas_one = 1;
-#if defined(PETSC_USE_COMPLEX)
+  PetscBLASInt     blas_m, blas_rank = 0, blas_lwork, blas_one = 1, info;
+#if PetscDefined(USE_COMPLEX)
   PetscReal *rwork;
 #endif
 
@@ -213,7 +213,7 @@ static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
   if (m > 0) {
     PetscCall(PetscBLASIntCast(m, &blas_m));
     blas_lwork = (/* assume a block size of m */ blas_m + 2) * blas_m;
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     PetscCall(PetscCalloc5(m * m, &corr, m, &s_values, blas_lwork, &work, 3 * m - 2, &rwork, m, &scratch_vec));
 #else
     PetscCall(PetscCalloc4(m * m, &corr, m, &s_values, blas_lwork, &work, m, &scratch_vec));
@@ -224,13 +224,13 @@ static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
     }
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
     PetscReal max_s_value = 0.0;
-#if defined(PETSC_USE_COMPLEX)
-    PetscCallBLAS("LAPACKheev", LAPACKheev_("V", "L", &blas_m, corr, &blas_m, s_values, work, &blas_lwork, rwork, &blas_info));
+#if PetscDefined(USE_COMPLEX)
+    PetscCallBLAS("LAPACKheev", LAPACKheev_("V", "L", &blas_m, corr, &blas_m, s_values, work, &blas_lwork, rwork, &info));
 #else
-    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "L", &blas_m, corr, &blas_m, s_values, work, &blas_lwork, &blas_info));
+    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "L", &blas_m, corr, &blas_m, s_values, work, &blas_lwork, &info));
 #endif
 
-    if (blas_info == 0) {
+    if (info == 0) {
       /* make corr store singular vectors and s_values store singular values */
       for (j = 0; j < m; ++j) {
         if (s_values[j] < 0.0) {
@@ -253,12 +253,12 @@ static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
       PetscCallBLAS("BLASgemv", BLASgemv_("N", &blas_m, &blas_m, &one, corr, &blas_m, scratch_vec, &blas_one, &zero, itg->alpha, &blas_one));
 
     } else {
-      PetscCall(PetscInfo(guess, "Warning eigenvalue solver failed with error code %" PetscBLASInt_FMT " - setting initial guess to zero\n", blas_info));
+      PetscCall(PetscInfo(guess, "Warning eigenvalue solver failed with error code %" PetscBLASInt_FMT " - setting initial guess to zero\n", info));
       PetscCall(PetscMemzero(itg->alpha, sizeof(*itg->alpha) * itg->maxl));
     }
     PetscCall(PetscFPTrapPop());
 
-    if (itg->monitor && blas_info == 0) {
+    if (itg->monitor && info == 0) {
       PetscCall(PetscPrintf(((PetscObject)guess)->comm, "KSPFischerGuess correlation rank = %" PetscBLASInt_FMT "\n", blas_rank));
       PetscCall(PetscPrintf(((PetscObject)guess)->comm, "KSPFischerGuess singular values = "));
       for (i = 0; i < itg->curl; i++) PetscCall(PetscPrintf(((PetscObject)guess)->comm, " %g", (double)s_values[i]));
@@ -270,7 +270,7 @@ static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
     }
     /* Form the initial guess by using b's projection coefficients with the xs */
     PetscCall(VecMAXPY(x, itg->curl, itg->alpha, itg->xtilde));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     PetscCall(PetscFree5(corr, s_values, work, rwork, scratch_vec));
 #else
     PetscCall(PetscFree4(corr, s_values, work, scratch_vec));
@@ -283,7 +283,6 @@ static PetscErrorCode KSPGuessUpdate_Fischer_3(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer *itg    = (KSPGuessFischer *)guess->data;
   PetscBool        rotate = itg->curl == itg->maxl ? PETSC_TRUE : PETSC_FALSE;
-  PetscInt         i, j;
   PetscObjectState b_state;
   PetscScalar     *last_column;
   Vec              oldest;
@@ -292,17 +291,17 @@ static PetscErrorCode KSPGuessUpdate_Fischer_3(KSPGuess guess, Vec b, Vec x)
   if (rotate) {
     /* we have the maximum number of vectors so rotate: oldest vector is at index 0 */
     oldest = itg->xtilde[0];
-    for (i = 1; i < itg->curl; ++i) itg->xtilde[i - 1] = itg->xtilde[i];
+    for (PetscInt i = 1; i < itg->curl; ++i) itg->xtilde[i - 1] = itg->xtilde[i];
     itg->xtilde[itg->curl - 1] = oldest;
     PetscCall(VecCopy(x, itg->xtilde[itg->curl - 1]));
 
     oldest = itg->btilde[0];
-    for (i = 1; i < itg->curl; ++i) itg->btilde[i - 1] = itg->btilde[i];
+    for (PetscInt i = 1; i < itg->curl; ++i) itg->btilde[i - 1] = itg->btilde[i];
     itg->btilde[itg->curl - 1] = oldest;
     PetscCall(VecCopy(b, itg->btilde[itg->curl - 1]));
     /* shift correlation matrix up and left */
-    for (j = 1; j < itg->maxl; ++j) {
-      for (i = 1; i < itg->maxl; ++i) itg->corr[(j - 1) * itg->maxl + i - 1] = itg->corr[j * itg->maxl + i];
+    for (PetscInt j = 1; j < itg->maxl; ++j) {
+      for (PetscInt i = 1; i < itg->maxl; ++i) itg->corr[(j - 1) * itg->maxl + i - 1] = itg->corr[j * itg->maxl + i];
     }
   } else {
     /* append new vectors */
@@ -321,14 +320,14 @@ static PetscErrorCode KSPGuessUpdate_Fischer_3(KSPGuess guess, Vec b, Vec x)
   PetscCall(PetscObjectStateGet((PetscObject)b, &b_state));
   if (b_state == itg->last_b_state && b == itg->last_b) {
     if (rotate) {
-      for (i = 1; i < itg->maxl; ++i) itg->last_b_coefs[i - 1] = itg->last_b_coefs[i];
+      for (PetscInt i = 1; i < itg->maxl; ++i) itg->last_b_coefs[i - 1] = itg->last_b_coefs[i];
     }
     PetscCall(VecDot(b, b, &itg->last_b_coefs[itg->curl - 1]));
     PetscCall(PetscArraycpy(last_column, itg->last_b_coefs, itg->curl));
   } else {
     PetscCall(VecMDot(b, itg->curl, itg->btilde, last_column));
   }
-  for (i = 0; i < itg->curl; ++i) itg->corr[i * itg->maxl + itg->curl - 1] = last_column[i];
+  for (PetscInt i = 0; i < itg->curl; ++i) itg->corr[i * itg->maxl + itg->curl - 1] = last_column[i];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -62,7 +62,7 @@ static PetscErrorCode PetscFESetUp_Composite(PetscFE fem)
   /* Construct the change of basis from prime basis to nodal basis for each subelement */
   PetscCall(PetscMalloc1(cmp->numSubelements * spdim * spdim, &fem->invV));
   PetscCall(PetscMalloc2(spdim, &pivots, spdim, &work));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   PetscCall(PetscMalloc1(cmp->numSubelements * spdim * spdim, &invVscalar));
 #else
   invVscalar = fem->invV;
@@ -86,10 +86,11 @@ static PetscErrorCode PetscFESetUp_Composite(PetscFE fem)
       PetscCall(PetscFree(Bf));
     }
     PetscCall(PetscBLASIntCast(spdim, &n));
+    // The next two lines are likely long-standing incorrect code. Do not check info as it was not previously checked but is nonzero
     PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&n, &n, &invVscalar[s * spdim * spdim], &n, pivots, &info));
     PetscCallBLAS("LAPACKgetri", LAPACKgetri_(&n, &invVscalar[s * spdim * spdim], &n, pivots, work, &n, &info));
   }
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   for (s = 0; s < cmp->numSubelements * spdim * spdim; s++) fem->invV[s] = PetscRealPart(invVscalar[s]);
   PetscCall(PetscFree(invVscalar));
 #endif

@@ -28,14 +28,8 @@ static PetscErrorCode DMDAGetFieldsNamed(DM da, PetscBool *fieldsnamed)
 
 static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
 {
-  const char *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
-#if defined(PETSC_USE_REAL_SINGLE)
-  const char precision[] = "Float32";
-#elif defined(PETSC_USE_REAL_DOUBLE)
-  const char precision[] = "Float64";
-#else
-  const char precision[] = "UnknownPrecision";
-#endif
+  const char              *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
+  const char              *precision  = PetscDefined(USE_REAL_SINGLE) ? "Float32" : (PetscDefined(USE_REAL_DOUBLE) ? "Float64" : "UnknownPrecision");
   MPI_Comm                 comm;
   Vec                      Coords;
   PetscViewer_VTK         *vtk = (PetscViewer_VTK *)viewer->data;
@@ -106,7 +100,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
     PetscCall(PetscFPrintf(comm, fp, "      <PointData Scalars=\"ScalarPointData\">\n"));
     for (link = vtk->link; link; link = link->next) {
       Vec         X = (Vec)link->vec;
-      PetscInt    bs, f;
+      PetscInt    bs;
       DM          daCurr;
       PetscBool   fieldsnamed;
       const char *vecname = "Unnamed";
@@ -120,7 +114,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
       /* If any fields are named, add scalar fields. Otherwise, add a vector field */
       PetscCall(DMDAGetFieldsNamed(daCurr, &fieldsnamed));
       if (fieldsnamed) {
-        for (f = 0; f < bs; f++) {
+        for (PetscInt f = 0; f < bs; f++) {
           char        buf[256];
           const char *fieldname;
           PetscCall(DMDAGetFieldName(daCurr, f, &fieldname));
@@ -208,7 +202,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
     for (link = vtk->link; link; link = link->next) {
       Vec                X = (Vec)link->vec;
       const PetscScalar *x;
-      PetscInt           bs, f;
+      PetscInt           bs;
       DM                 daCurr;
       PetscBool          fieldsnamed;
       PetscCall(VecGetDM(X, &daCurr));
@@ -226,7 +220,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
         /* If any fields are named, add scalar fields. Otherwise, add a vector field */
         PetscCall(DMDAGetFieldsNamed(daCurr, &fieldsnamed));
         if (fieldsnamed) {
-          for (f = 0; f < bs; f++) {
+          for (PetscInt f = 0; f < bs; f++) {
             /* Extract and transpose the f'th field */
             for (k = 0; k < zm; k++) {
               for (j = 0; j < ym; j++) {
@@ -254,14 +248,8 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da, PetscViewer viewer)
 
 static PetscErrorCode DMDAVTKWriteAll_VTR(DM da, PetscViewer viewer)
 {
-  const char *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
-#if defined(PETSC_USE_REAL_SINGLE)
-  const char precision[] = "Float32";
-#elif defined(PETSC_USE_REAL_DOUBLE)
-  const char precision[] = "Float64";
-#else
-  const char precision[] = "UnknownPrecision";
-#endif
+  const char              *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
+  const char              *precision  = PetscDefined(USE_REAL_SINGLE) ? "Float32" : (PetscDefined(USE_REAL_DOUBLE) ? "Float64" : "UnknownPrecision");
   MPI_Comm                 comm;
   PetscViewer_VTK         *vtk = (PetscViewer_VTK *)viewer->data;
   PetscViewerVTKObjectLink link;
@@ -323,7 +311,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da, PetscViewer viewer)
     PetscCall(PetscFPrintf(comm, fp, "      <PointData Scalars=\"ScalarPointData\">\n"));
     for (link = vtk->link; link; link = link->next) {
       Vec         X = (Vec)link->vec;
-      PetscInt    bs, f;
+      PetscInt    bs;
       DM          daCurr;
       PetscBool   fieldsnamed;
       const char *vecname = "Unnamed";
@@ -336,7 +324,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da, PetscViewer viewer)
       /* If any fields are named, add scalar fields. Otherwise, add a vector field */
       PetscCall(DMDAGetFieldsNamed(daCurr, &fieldsnamed));
       if (fieldsnamed) {
-        for (f = 0; f < bs; f++) {
+        for (PetscInt f = 0; f < bs; f++) {
           char        buf[256];
           const char *fieldname;
           PetscCall(DMDAGetFieldName(daCurr, f, &fieldname));
@@ -449,7 +437,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da, PetscViewer viewer)
     for (link = vtk->link; link; link = link->next) {
       Vec                X = (Vec)link->vec;
       const PetscScalar *x;
-      PetscInt           bs, f;
+      PetscInt           bs;
       DM                 daCurr;
       PetscBool          fieldsnamed;
 
@@ -468,7 +456,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da, PetscViewer viewer)
         /* If any fields are named, add scalar fields. Otherwise, add a vector field */
         PetscCall(DMDAGetFieldsNamed(daCurr, &fieldsnamed));
         if (fieldsnamed) {
-          for (f = 0; f < bs; f++) {
+          for (PetscInt f = 0; f < bs; f++) {
             /* Extract and transpose the f'th field */
             for (k = 0; k < zm; k++) {
               for (j = 0; j < ym; j++) {

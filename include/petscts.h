@@ -862,6 +862,7 @@ PETSC_EXTERN PetscErrorCode TSComputeLinearStability(TS, PetscReal, PetscReal, P
 PETSC_EXTERN PetscErrorCode TSVISetVariableBounds(TS, Vec, Vec);
 
 PETSC_EXTERN PetscErrorCode DMTSSetBoundaryLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, PetscCtx), PetscCtx);
+PETSC_EXTERN PetscErrorCode DMTSSetIFunctionPre(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, PetscCtx), PetscCtx);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunction(DM, TSRHSFunctionFn *, PetscCtx);
 PETSC_EXTERN PetscErrorCode DMTSGetRHSFunction(DM, TSRHSFunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunctionContextDestroy(DM, PetscCtxDestroyFn *);
@@ -1057,6 +1058,7 @@ PETSC_EXTERN PetscErrorCode    TSRegister(const char[], PetscErrorCode (*)(TS));
 PETSC_EXTERN PetscErrorCode TSGetSNES(TS, SNES *);
 PETSC_EXTERN PetscErrorCode TSSetSNES(TS, SNES);
 PETSC_EXTERN PetscErrorCode TSGetKSP(TS, KSP *);
+PETSC_EXTERN PetscErrorCode TSIsImplicit(TS, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode TSView(TS, PetscViewer);
 PETSC_EXTERN PetscErrorCode TSLoad(TS, PetscViewer);
@@ -1611,13 +1613,16 @@ typedef enum {
 } TSDGType;
 PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode (*)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (*)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (*)(TS, PetscReal, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode TSDiscGradGetFormulation(TS, PetscErrorCode (**)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (**)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (**)(TS, PetscReal, Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode TSDiscGradSetImplicitFormulation(TS, PetscErrorCode (*)(TS, PetscReal, Vec, Vec, Vec, void *), PetscErrorCode (*)(TS, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *));
 PETSC_EXTERN PetscErrorCode TSDiscGradSetType(TS, TSDGType);
 PETSC_EXTERN PetscErrorCode TSDiscGradGetType(TS, TSDGType *);
+PETSC_EXTERN PetscErrorCode TSDiscGradGetX0AndXdot(TS, DM, Vec *, Vec *);
+PETSC_EXTERN PetscErrorCode TSDiscGradRestoreX0AndXdot(TS, DM, Vec *, Vec *);
 
 /*
        PETSc interface to Sundials
 */
-#ifdef PETSC_HAVE_SUNDIALS2
+#if PetscDefined(HAVE_SUNDIALS2)
 /*E
    TSSundialsLmmType - Selects which linear multistep method is used by the `TSSUNDIALS` interface to SUNDIALS' CVODE integrator
 

@@ -52,9 +52,9 @@ static PetscErrorCode MatMult_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
   PetscCall(VecGetLocalSize(xx, &nt));
   PetscCheck(nt == mat->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible partition of mat (%" PetscInt_FMT ") and xx (%" PetscInt_FMT ")", mat->cmap->n, nt);
   PetscCall(VecScatterBegin(mpiaij->Mvctx, xx, mpiaij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*mpiaij->A->ops->mult)(mpiaij->A, xx, yy));
+  PetscUseTypeMethod(mpiaij->A, mult, xx, yy);
   PetscCall(VecScatterEnd(mpiaij->Mvctx, xx, mpiaij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*mpiaij->B->ops->multadd)(mpiaij->B, mpiaij->lvec, yy, yy));
+  PetscUseTypeMethod(mpiaij->B, multadd, mpiaij->lvec, yy, yy);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -67,9 +67,9 @@ static PetscErrorCode MatMultAdd_MPIAIJKokkos(Mat mat, Vec xx, Vec yy, Vec zz)
   PetscCall(VecGetLocalSize(xx, &nt));
   PetscCheck(nt == mat->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible partition of mat (%" PetscInt_FMT ") and xx (%" PetscInt_FMT ")", mat->cmap->n, nt);
   PetscCall(VecScatterBegin(mpiaij->Mvctx, xx, mpiaij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*mpiaij->A->ops->multadd)(mpiaij->A, xx, yy, zz));
+  PetscUseTypeMethod(mpiaij->A, multadd, xx, yy, zz);
   PetscCall(VecScatterEnd(mpiaij->Mvctx, xx, mpiaij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*mpiaij->B->ops->multadd)(mpiaij->B, mpiaij->lvec, zz, zz));
+  PetscUseTypeMethod(mpiaij->B, multadd, mpiaij->lvec, zz, zz);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -81,8 +81,8 @@ static PetscErrorCode MatMultTranspose_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(xx, &nt));
   PetscCheck(nt == mat->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible partition of mat (%" PetscInt_FMT ") and xx (%" PetscInt_FMT ")", mat->rmap->n, nt);
-  PetscCall((*mpiaij->B->ops->multtranspose)(mpiaij->B, xx, mpiaij->lvec));
-  PetscCall((*mpiaij->A->ops->multtranspose)(mpiaij->A, xx, yy));
+  PetscUseTypeMethod(mpiaij->B, multtranspose, xx, mpiaij->lvec);
+  PetscUseTypeMethod(mpiaij->A, multtranspose, xx, yy);
   PetscCall(VecScatterBegin(mpiaij->Mvctx, mpiaij->lvec, yy, ADD_VALUES, SCATTER_REVERSE));
   PetscCall(VecScatterEnd(mpiaij->Mvctx, mpiaij->lvec, yy, ADD_VALUES, SCATTER_REVERSE));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1578,7 +1578,7 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJKokkos(Mat mat, const PetscScalar v[
 {
   Mat_MPIAIJ                   *mpiaij = static_cast<Mat_MPIAIJ *>(mat->data);
   Mat                           A = mpiaij->A, B = mpiaij->B;
-  MatScalarKokkosView           Aa, Ba;
+  Kokkos::View<PetscScalar *>   Aa, Ba;
   MatScalarKokkosView           v1;
   PetscMemType                  memtype;
   PetscContainer                container;
@@ -1611,6 +1611,7 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJKokkos(Mat mat, const PetscScalar v[
   PetscCall(PetscGetMemType(v, &memtype)); /* Return PETSC_MEMTYPE_HOST when v is NULL */
   if (PetscMemTypeHost(memtype)) {         /* If user gave v[] in host, we need to copy it to device if any */
     v1 = Kokkos::create_mirror_view_and_copy(exec, MatScalarKokkosViewHost((PetscScalar *)v, n));
+    PetscCall(PetscLogCpuToGpu(n * sizeof(PetscScalar)));
   } else {
     v1 = MatScalarKokkosView((PetscScalar *)v, n); /* Directly use v[]'s memory */
   }
@@ -1673,7 +1674,7 @@ static PetscErrorCode MatDestroy_MPIAIJKokkos(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", NULL));
-#if defined(PETSC_HAVE_HYPRE)
+#if PetscDefined(HAVE_HYPRE)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpiaijkokkos_hypre_C", NULL));
 #endif
   PetscCall(MatDestroy_MPIAIJ(A));
@@ -1713,7 +1714,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJKokkos));
-#if defined(PETSC_HAVE_HYPRE)
+#if PetscDefined(HAVE_HYPRE)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpiaijkokkos_hypre_C", MatConvert_AIJ_HYPRE));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);

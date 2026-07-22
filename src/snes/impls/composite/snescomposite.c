@@ -38,7 +38,6 @@ typedef struct {
   PetscScalar *work;      /* the work vector */
   PetscReal   *rwork;     /* the real work vector used for complex */
   PetscBLASInt lwork;     /* the size of the work vector */
-  PetscBLASInt info;      /* the output condition */
 
   PetscReal rtol; /* restart tolerance for accepting the combination */
   PetscReal stol; /* restart tolerance for the combination */
@@ -186,7 +185,7 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes, Vec X, Vec B
   SNES_Composite     *jac  = (SNES_Composite *)snes->data;
   SNES_CompositeLink  next = jac->head;
   Vec                *Xes = jac->Xes, *Fes = jac->Fes;
-  PetscInt            i, j;
+  PetscInt            i;
   PetscScalar         tot, total, ftf;
   PetscReal           min_fnorm;
   PetscInt            min_i;
@@ -233,12 +232,12 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes, Vec X, Vec B
 
   /* all the solutions are collected; combine optimally */
   for (i = 0; i < jac->n; i++) {
-    for (j = 0; j < i + 1; j++) PetscCall(VecDotBegin(Fes[i], Fes[j], &jac->h[i + j * jac->n]));
+    for (PetscInt j = 0; j < i + 1; j++) PetscCall(VecDotBegin(Fes[i], Fes[j], &jac->h[i + j * jac->n]));
     PetscCall(VecDotBegin(Fes[i], F, &jac->g[i]));
   }
 
   for (i = 0; i < jac->n; i++) {
-    for (j = 0; j < i + 1; j++) {
+    for (PetscInt j = 0; j < i + 1; j++) {
       PetscCall(VecDotEnd(Fes[i], Fes[j], &jac->h[i + j * jac->n]));
       if (i == j) jac->fnorms[i] = PetscSqrtReal(PetscRealPart(jac->h[i + j * jac->n]));
     }
@@ -248,25 +247,22 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes, Vec X, Vec B
   ftf = (*fnorm) * (*fnorm);
 
   for (i = 0; i < jac->n; i++) {
-    for (j = i + 1; j < jac->n; j++) jac->h[i + j * jac->n] = jac->h[j + i * jac->n];
+    for (PetscInt j = i + 1; j < jac->n; j++) jac->h[i + j * jac->n] = jac->h[j + i * jac->n];
   }
 
   for (i = 0; i < jac->n; i++) {
-    for (j = 0; j < jac->n; j++) jac->h[i + j * jac->n] = jac->h[i + j * jac->n] - jac->g[j] - jac->g[i] + ftf;
+    for (PetscInt j = 0; j < jac->n; j++) jac->h[i + j * jac->n] = jac->h[i + j * jac->n] - jac->g[j] - jac->g[i] + ftf;
     jac->beta[i] = ftf - jac->g[i];
   }
 
-  jac->info  = 0;
   jac->rcond = -1.;
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-#if defined(PETSC_USE_COMPLEX)
-  PetscCallBLAS("LAPACKgelss", LAPACKgelss_(&jac->n, &jac->n, &jac->nrhs, jac->h, &jac->lda, jac->beta, &jac->lda, jac->s, &jac->rcond, &jac->rank, jac->work, &jac->lwork, jac->rwork, &jac->info));
+#if PetscDefined(USE_COMPLEX)
+  PetscCallLAPACKInfo("LAPACKgelss", LAPACKgelss_(&jac->n, &jac->n, &jac->nrhs, jac->h, &jac->lda, jac->beta, &jac->lda, jac->s, &jac->rcond, &jac->rank, jac->work, &jac->lwork, jac->rwork, &info));
 #else
-  PetscCallBLAS("LAPACKgelss", LAPACKgelss_(&jac->n, &jac->n, &jac->nrhs, jac->h, &jac->lda, jac->beta, &jac->lda, jac->s, &jac->rcond, &jac->rank, jac->work, &jac->lwork, &jac->info));
+  PetscCallLAPACKInfo("LAPACKgelss", LAPACKgelss_(&jac->n, &jac->n, &jac->nrhs, jac->h, &jac->lda, jac->beta, &jac->lda, jac->s, &jac->rcond, &jac->rank, jac->work, &jac->lwork, &info));
 #endif
   PetscCall(PetscFPTrapPop());
-  PetscCheck(jac->info >= 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_LIB, "Bad argument to GELSS");
-  PetscCheck(jac->info <= 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_LIB, "SVD failed to converge");
   tot   = 0.;
   total = 0.;
   for (i = 0; i < jac->n; i++) {
@@ -361,7 +357,7 @@ static PetscErrorCode SNESSetUp_Composite(SNES snes)
 
     PetscCall(PetscMalloc4(jac->n * jac->n, &jac->h, jac->n, &jac->beta, jac->n, &jac->s, jac->n, &jac->g));
     jac->lwork = 12 * jac->n;
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
     PetscCall(PetscMalloc1(jac->lwork, &jac->rwork));
 #endif
     PetscCall(PetscMalloc1(jac->lwork, &jac->work));
@@ -528,12 +524,11 @@ static PetscErrorCode SNESCompositeGetSNES_Composite(SNES snes, PetscInt n, SNES
 {
   SNES_Composite    *jac;
   SNES_CompositeLink next;
-  PetscInt           i;
 
   PetscFunctionBegin;
   jac  = (SNES_Composite *)snes->data;
   next = jac->head;
-  for (i = 0; i < n; i++) {
+  for (PetscInt i = 0; i < n; i++) {
     PetscCheck(next->next, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Not enough SNESes in composite preconditioner");
     next = next->next;
   }
@@ -649,12 +644,11 @@ static PetscErrorCode SNESCompositeSetDamping_Composite(SNES snes, PetscInt n, P
 {
   SNES_Composite    *jac;
   SNES_CompositeLink next;
-  PetscInt           i;
 
   PetscFunctionBegin;
   jac  = (SNES_Composite *)snes->data;
   next = jac->head;
-  for (i = 0; i < n; i++) {
+  for (PetscInt i = 0; i < n; i++) {
     PetscCheck(next->next, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Not enough SNESes in composite preconditioner");
     next = next->next;
   }
@@ -688,7 +682,6 @@ PetscErrorCode SNESCompositeSetDamping(SNES snes, PetscInt n, PetscReal dmp)
 static PetscErrorCode SNESSolve_Composite(SNES snes)
 {
   Vec              F, X, B, Y;
-  PetscInt         i;
   PetscReal        fnorm = 0.0, xnorm = 0.0, snorm = 0.0;
   SNESNormSchedule normtype;
   SNES_Composite  *comp = (SNES_Composite *)snes->data;
@@ -732,7 +725,7 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
     PetscCall(SNESMonitor(snes, 0, snes->norm));
   }
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (PetscInt i = 0; i < snes->max_its; i++) {
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
@@ -824,8 +817,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Composite(SNES snes)
   snes->usesksp = PETSC_FALSE;
 
   snes->alwayscomputesfinalresidual = PETSC_FALSE;
-
-  PetscCall(SNESParametersInitialize(snes));
 
   snes->data  = (void *)jac;
   jac->type   = SNES_COMPOSITE_ADDITIVEOPTIMAL;

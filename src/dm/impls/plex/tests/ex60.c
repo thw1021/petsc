@@ -4,10 +4,8 @@ static char help[] = "Test metric utils in the uniform, isotropic case.\n\n";
 
 static PetscErrorCode bowl(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
-  PetscInt d;
-
   *u = 0.0;
-  for (d = 0; d < dim; d++) *u += 0.5 * (x[d] - 0.5) * (x[d] - 0.5);
+  for (PetscInt d = 0; d < dim; d++) *u += 0.5 * (x[d] - 0.5) * (x[d] - 0.5);
 
   return PETSC_SUCCESS;
 }
@@ -163,10 +161,8 @@ int main(int argc, char **argv)
     Vec       metrics[2];
 
     PetscCall(VecDuplicate(metric, &metric1));
-    PetscCall(VecSet(metric1, 0));
     PetscCall(VecAXPY(metric1, 0.625, metric));
     PetscCall(VecDuplicate(metric, &metric2));
-    PetscCall(VecSet(metric2, 0));
     PetscCall(VecAXPY(metric2, 2.5, metric));
     metrics[0] = metric1;
     metrics[1] = metric2;

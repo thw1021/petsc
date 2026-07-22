@@ -70,7 +70,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
   PetscBool            powell, periodic, restart;
   PetscScalar          DolddotD, DolddotDold;
   SNESConvergedReason  reason;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   PetscReal gnorm;
 #endif
 
@@ -174,7 +174,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
 
     /* line search for lambda */
     ynorm = 1;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
     gnorm = fnorm;
 #endif
     PetscCall(VecCopy(D, Dold));
@@ -344,7 +344,7 @@ static PetscErrorCode SNESSetFromOptions_QN(SNES snes, PetscOptionItems PetscOpt
       if (qn->type == SNES_QN_LBFGS) {
         PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHCP));
       } else if (qn->type == SNES_QN_BROYDEN) {
-        PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
+        PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHNONE));
       } else {
         PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
       }
@@ -475,14 +475,14 @@ static PetscErrorCode SNESQNSetType_QN(SNES snes, SNESQNType qtype)
       SNESQN - Limited-Memory Quasi-Newton methods for the solution of nonlinear systems.
 
       Options Database Keys:
-+     -snes_qn_m m                                                            - Number of past states saved for the L-Broyden methods.
-.     -snes_qn_restart_type (powell|periodic|none)                            - set the restart type
-.     -snes_qn_powell_gamma gamma                                             - Angle condition for restart.
-.     -snes_qn_powell_descent                                                 - Descent condition for restart.
-.     -snes_qn_type (lbfgs|broyden|badbroyden)                                - QN type
-.     -snes_qn_scale_type (diagonal|none|scalar|jacobian)                     - scaling performed on inner Jacobian
-.     -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
--     -snes_qn_monitor                                                        - Monitors the quasi-newton Jacobian.
++     -snes_qn_m m                                                      - Number of past states saved for the L-Broyden methods.
+.     -snes_qn_restart_type (powell|periodic|none)                      - Set the restart type
+.     -snes_qn_powell_gamma gamma                                       - Angle condition for restart.
+.     -snes_qn_powell_descent                                           - Descent condition for restart.
+.     -snes_qn_type (lbfgs|broyden|badbroyden)                          - QN type
+.     -snes_qn_scale_type (diagonal|none|scalar|jacobian)               - Scaling performed on inner Jacobian
+.     -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
+-     -snes_qn_monitor                                                  - Monitors the quasi-Newton Jacobian.
 
       Level: beginner
 
@@ -523,7 +523,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_QN(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
-  PetscCall(SNESParametersInitialize(snes));
   PetscObjectParameterSetDefault(snes, max_funcs, 30000);
   PetscObjectParameterSetDefault(snes, max_its, 10000);
 
@@ -531,8 +530,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_QN(SNES snes)
   snes->data       = (void *)qn;
   qn->m            = 10;
   qn->scaling      = 1.0;
-  qn->monitor      = NULL;
-  qn->monflg       = PETSC_FALSE;
   qn->powell_gamma = 0.9999;
   qn->scale_type   = SNES_QN_SCALE_DEFAULT;
   qn->restart_type = SNES_QN_RESTART_DEFAULT;

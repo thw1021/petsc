@@ -420,11 +420,9 @@ static PetscErrorCode SNESView_Multiblock(SNES snes, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPushTab(viewer));
     while (blocks) {
       if (blocks->fields) {
-        PetscInt j;
-
         PetscCall(PetscViewerASCIIPrintf(viewer, "  Block %s Fields ", blocks->name));
         PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-        for (j = 0; j < blocks->nfields; ++j) {
+        for (PetscInt j = 0; j < blocks->nfields; ++j) {
           if (j > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ","));
           PetscCall(PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT, blocks->fields[j]));
         }
@@ -446,7 +444,7 @@ static PetscErrorCode SNESSolve_Multiblock(SNES snes)
   SNES_Multiblock *mb = (SNES_Multiblock *)snes->data;
   Vec              X, Y, F;
   PetscReal        fnorm;
-  PetscInt         maxits, i;
+  PetscInt         maxits;
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -481,7 +479,7 @@ static PetscErrorCode SNESSolve_Multiblock(SNES snes)
   PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  for (i = 0; i < maxits; i++) {
+  for (PetscInt i = 0; i < maxits; i++) {
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
     /* Compute X^{new} from subsolves */
@@ -536,14 +534,13 @@ static PetscErrorCode SNESMultiblockSetFields_Default(SNES snes, const char name
   SNES_Multiblock *mb = (SNES_Multiblock *)snes->data;
   BlockDesc        newblock, next = mb->blocks;
   char             prefix[128];
-  PetscInt         i;
 
   PetscFunctionBegin;
   if (mb->defined) {
     PetscCall(PetscInfo(snes, "Ignoring new block \"%s\" because the blocks have already been defined\n", name));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  for (i = 0; i < n; ++i) {
+  for (PetscInt i = 0; i < n; ++i) {
     PetscCheck(fields[i] < mb->bs, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field %" PetscInt_FMT " requested but only %" PetscInt_FMT " exist", fields[i], mb->bs);
     PetscCheck(fields[i] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Negative field %" PetscInt_FMT " requested", fields[i]);
   }
@@ -859,14 +856,10 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Multiblock(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
-  PetscCall(SNESParametersInitialize(snes));
-
   PetscCall(PetscNew(&mb));
-  snes->data    = (void *)mb;
-  mb->defined   = PETSC_FALSE;
-  mb->numBlocks = 0;
-  mb->bs        = -1;
-  mb->type      = PC_COMPOSITE_MULTIPLICATIVE;
+  snes->data = (void *)mb;
+  mb->bs     = -1;
+  mb->type   = PC_COMPOSITE_MULTIPLICATIVE;
 
   /* We attach functions so that they can be called on another PC without crashing the program */
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESMultiblockSetFields_C", SNESMultiblockSetFields_Default));

@@ -4,7 +4,7 @@
 #include <h2opusconf.h>
 
 /* Use GPU only if H2OPUS is configured for GPU */
-#if defined(PETSC_HAVE_CUDA) && defined(H2OPUS_USE_GPU)
+#if PetscDefined(HAVE_CUDA) && defined(H2OPUS_USE_GPU)
   #define PETSC_H2OPUS_USE_GPU
 #endif
 
@@ -362,7 +362,6 @@ static PetscErrorCode MatMatMultKernel_Hyper(Mat M, Mat X, Mat Y, PetscBool t)
   PC         pc;
   Mat        A;
   PC_H2OPUS *pch2opus;
-  PetscInt   i;
 
   PetscFunctionBegin;
   PetscCall(MatShellGetContext(M, &pc));
@@ -387,7 +386,7 @@ static PetscErrorCode MatMatMultKernel_Hyper(Mat M, Mat X, Mat Y, PetscBool t)
   PetscCall(MatCopy(X, pch2opus->wnsmat[0], SAME_NONZERO_PATTERN));
   PetscCall(MatCopy(X, pch2opus->wnsmat[3], SAME_NONZERO_PATTERN));
   if (t) {
-    for (i = 0; i < pch2opus->hyperorder - 1; i++) {
+    for (PetscInt i = 0; i < pch2opus->hyperorder - 1; i++) {
       PetscCall(MatTransposeMatMult(A, pch2opus->wnsmat[0], MAT_REUSE_MATRIX, PETSC_CURRENT, &pch2opus->wnsmat[1]));
       PetscCall(PCApplyTransposeMat_H2OPUS(pc, pch2opus->wnsmat[1], pch2opus->wnsmat[2]));
       PetscCall(MatAXPY(pch2opus->wnsmat[0], -1., pch2opus->wnsmat[2], SAME_NONZERO_PATTERN));
@@ -395,7 +394,7 @@ static PetscErrorCode MatMatMultKernel_Hyper(Mat M, Mat X, Mat Y, PetscBool t)
     }
     PetscCall(PCApplyTransposeMat_H2OPUS(pc, pch2opus->wnsmat[3], Y));
   } else {
-    for (i = 0; i < pch2opus->hyperorder - 1; i++) {
+    for (PetscInt i = 0; i < pch2opus->hyperorder - 1; i++) {
       PetscCall(PCApplyMat_H2OPUS(pc, pch2opus->wnsmat[0], pch2opus->wnsmat[1]));
       PetscCall(MatMatMult(A, pch2opus->wnsmat[1], MAT_REUSE_MATRIX, PETSC_CURRENT, &pch2opus->wnsmat[2]));
       PetscCall(MatAXPY(pch2opus->wnsmat[0], -1., pch2opus->wnsmat[2], SAME_NONZERO_PATTERN));
@@ -510,7 +509,7 @@ static PetscErrorCode PCH2OpusSetUpSampler_Private(PC pc)
     PetscCall(MatGetLocalSize(A, &m, &n));
     PetscCall(MatCreateShell(PetscObjectComm((PetscObject)A), m, n, M, N, pc, &pch2opus->S));
     PetscCall(MatSetBlockSizesFromMats(pch2opus->S, A, A));
-#if defined(PETSC_H2OPUS_USE_GPU)
+#if PetscDefined(H2OPUS_USE_GPU)
     PetscCall(MatShellSetVecType(pch2opus->S, VECCUDA));
 #endif
   }
@@ -553,7 +552,7 @@ static PetscErrorCode PCSetUp_H2OPUS(PC pc)
     PetscCall(MatShellSetOperation(pch2opus->T, MATOP_MULT, (PetscErrorCodeFn *)MatMult_MAmI));
     PetscCall(MatShellSetOperation(pch2opus->T, MATOP_MULT_TRANSPOSE, (PetscErrorCodeFn *)MatMultTranspose_MAmI));
     PetscCall(MatShellSetOperation(pch2opus->T, MATOP_NORM, (PetscErrorCodeFn *)MatNorm_H2OPUS));
-#if defined(PETSC_H2OPUS_USE_GPU)
+#if PetscDefined(H2OPUS_USE_GPU)
     PetscCall(MatShellSetVecType(pch2opus->T, VECCUDA));
 #endif
     PetscCall(MatSetOptionsPrefix(pch2opus->T, prefix));
@@ -584,7 +583,7 @@ static PetscErrorCode PCSetUp_H2OPUS(PC pc)
     /* always perform construction on the GPU unless forcecpu is true */
     PetscCall(MatBindToCPU(pch2opus->A, pch2opus->forcecpu));
   }
-#if defined(PETSC_H2OPUS_USE_GPU)
+#if PetscDefined(H2OPUS_USE_GPU)
   pch2opus->boundtocpu = pch2opus->forcecpu ? PETSC_TRUE : pch2opus->A->boundtocpu;
 #endif
   PetscCall(MatBindToCPU(pch2opus->T, pch2opus->boundtocpu));
@@ -613,10 +612,8 @@ static PetscErrorCode PCSetUp_H2OPUS(PC pc)
   err = initerr;
   if (pch2opus->monitor) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)pc), "%" PetscInt_FMT ": ||M*A - I|| NORM%s abs %g rel %g\n", 0, NormTypes[norm], (double)err, (double)(err / initerr)));
   if (initerr > pch2opus->atol && !pc->failedreason) {
-    PetscInt i;
-
     PetscCall(PCH2OpusSetUpSampler_Private(pc));
-    for (i = 0; i < pch2opus->maxits; i++) {
+    for (PetscInt i = 0; i < pch2opus->maxits; i++) {
       Mat         M;
       const char *prefix;
 

@@ -4,7 +4,7 @@ import os
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.minversion        = '7.5'
+    self.minversion        = '11.4'
     self.versionname       = 'CUDA_VERSION'
     self.versioninclude    = 'cuda.h'
     self.requiresversion   = 1
@@ -501,9 +501,6 @@ class Configure(config.package.Package):
       |         ^
 
     """
-    if not self.argDB['with-cuda']:
-      return
-
     assert self.version_tuple
     assert isinstance(self.version_tuple, tuple)
     assert isinstance(self.version_tuple[0], int)
@@ -534,5 +531,8 @@ class Configure(config.package.Package):
 
   def configure(self, *args, **kwargs):
     super().configure(*args, **kwargs)
-    self.executeTest(self.checkKnownBadCUDAHostCompilerCombo)
+    if self.argDB['with-cuda']:
+      self.executeTest(self.checkKnownBadCUDAHostCompilerCombo)
+      if self.defaultIndexSize == 64 and self.version_tuple[0] < 13:
+        raise RuntimeError('Configuring PETSc with 64-bit indices requires CUDA-13 and above')
     return

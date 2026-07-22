@@ -435,7 +435,7 @@ static PetscErrorCode MatDestroy_HT(Mat N)
   PetscCall(MatShellGetContext(N, &A));
   PetscCall(MatDestroy(&A));
   PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatHermitianTransposeGetMat_C", NULL));
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatTransposeGetMat_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatProductSetFromOptions_anytype_C", NULL));
@@ -581,6 +581,42 @@ static PetscErrorCode MatConvert_HT(Mat N, MatType newtype, MatReuse reuse, Mat 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatCreateSubMatrix_HT(Mat N, IS isrow, IS iscol, MatReuse reuse, Mat *newmat)
+{
+  Mat         A, B;
+  IS          aisrow = iscol;
+  PetscScalar vscale, vshift;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(N, &A));
+  PetscCall(MatShellGetScalingShifts(N, &vshift, &vscale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+  if (!aisrow) {
+    PetscInt rstart, rend;
+
+    PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
+    PetscCall(ISCreateStride(PetscObjectComm((PetscObject)A), rend - rstart, rstart, 1, &aisrow));
+  }
+  if (reuse == MAT_INITIAL_MATRIX) {
+    PetscCall(MatCreateSubMatrix(A, aisrow, isrow, MAT_INITIAL_MATRIX, &B));
+    PetscCall(MatCreateHermitianTranspose(B, newmat));
+    PetscCall(MatDestroy(&B));
+    PetscCall(MatScale(*newmat, vscale));
+    PetscCall(MatShift(*newmat, vshift));
+  } else {
+    PetscScalar oldvscale, oldvshift, alpha;
+
+    PetscCall(MatHermitianTransposeGetMat(*newmat, &B));
+    PetscCall(MatCreateSubMatrix(A, aisrow, isrow, MAT_REUSE_MATRIX, &B));
+    PetscCall(MatShellGetScalingShifts(*newmat, &oldvshift, &oldvscale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+    PetscCheck(oldvscale != 0.0 || vscale == 0.0, PetscObjectComm((PetscObject)N), PETSC_ERR_SUP, "Cannot reuse a scaled-to-zero submatrix for a nonzero parent scale");
+    alpha = oldvscale == 0.0 ? 1.0 : vscale / oldvscale;
+    PetscCall(MatScale(*newmat, alpha));
+    PetscCall(MatShift(*newmat, vshift - alpha * oldvshift));
+  }
+  if (!iscol) PetscCall(ISDestroy(&aisrow));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    MATHERMITIANTRANSPOSEVIRTUAL - "hermitiantranspose" - A matrix type that represents a virtual transpose of a matrix
 
@@ -630,7 +666,7 @@ PetscErrorCode MatCreateHermitianTranspose(Mat A, Mat *N)
   PetscCall(MatSetBlockSizes(*N, A->cmap->bs, A->rmap->bs));
   PetscCall(MatGetVecType(A, &vtype));
   PetscCall(MatSetVecType(*N, vtype));
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   PetscCall(MatBindToCPU(*N, A->boundtocpu));
 #endif
   PetscCall(MatSetUp(*N));
@@ -638,7 +674,7 @@ PetscErrorCode MatCreateHermitianTranspose(Mat A, Mat *N)
   PetscCall(MatShellSetOperation(*N, MATOP_DESTROY, (PetscErrorCodeFn *)MatDestroy_HT));
   PetscCall(MatShellSetOperation(*N, MATOP_MULT, (PetscErrorCodeFn *)MatMult_HT));
   PetscCall(MatShellSetOperation(*N, MATOP_MULT_HERMITIAN_TRANSPOSE, (PetscErrorCodeFn *)MatMultHermitianTranspose_HT));
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   PetscCall(MatShellSetOperation(*N, MATOP_MULT_TRANSPOSE, (PetscErrorCodeFn *)MatMultHermitianTranspose_HT));
 #endif
   PetscCall(MatShellSetOperation(*N, MATOP_LUFACTOR, (PetscErrorCodeFn *)MatLUFactor_HT));
@@ -650,9 +686,10 @@ PetscErrorCode MatCreateHermitianTranspose(Mat A, Mat *N)
   PetscCall(MatShellSetOperation(*N, MATOP_GET_DIAGONAL, (PetscErrorCodeFn *)MatGetDiagonal_HT));
   PetscCall(MatShellSetOperation(*N, MATOP_COPY, (PetscErrorCodeFn *)MatCopy_HT));
   PetscCall(MatShellSetOperation(*N, MATOP_CONVERT, (PetscErrorCodeFn *)MatConvert_HT));
+  PetscCall(MatShellSetOperation(*N, MATOP_CREATE_SUBMATRIX, (PetscErrorCodeFn *)MatCreateSubMatrix_HT));
 
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatHermitianTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_HT));

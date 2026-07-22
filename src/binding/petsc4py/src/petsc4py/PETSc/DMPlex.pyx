@@ -1509,25 +1509,31 @@ cdef class DMPlex(DM):
         CHKERR(DMGetLabel(self.dm, cval, &clbl))
         CHKERR(DMPlexMarkBoundaryFaces(self.dm, ival, clbl))
 
-    def labelComplete(self, DMLabel label) -> None:
-        """Add the transitive closure to the surface.
+    def labelComplete(self, DMLabel label, useCone: bool = True) -> None:
+        """Add the transitive closure or the star of each point in the label.
 
         Not collective.
 
         Parameters
         ----------
         label
-            A `DMLabel` marking the surface points.
+            A `DMLabel` marking the points.
+        useCone
+            `True` for the closure, otherwise return the star.
 
         See Also
         --------
         DM, DMPlex, DMPlex.labelCohesiveComplete, petsc.DMPlexLabelComplete
+        petsc.DMPlexLabelCompleteStar
 
         """
-        CHKERR(DMPlexLabelComplete(self.dm, label.dmlabel))
+        if useCone:
+            CHKERR(DMPlexLabelComplete(self.dm, label.dmlabel))
+        else:
+            CHKERR(DMPlexLabelCompleteStar(self.dm, label.dmlabel))
 
     def labelCohesiveComplete(self, DMLabel label, DMLabel bdlabel, bdvalue: int,
-                              flip: bool, split: bool, DMPlex subdm) -> None:
+                              flip: bool, DMPlex subdm) -> None:
         """Add all other mesh pieces to complete the surface.
 
         Not collective.
@@ -1544,9 +1550,6 @@ cdef class DMPlex(DM):
         flip
             Flag to flip the submesh normal and replace points
             on the other side.
-        split
-            Flag to split faces incident on the surface boundary,
-            rather than clamping those faces to the boundary
         subdm
             The `DMPlex` associated with the label.
 
@@ -1556,10 +1559,9 @@ cdef class DMPlex(DM):
         petsc.DMPlexLabelCohesiveComplete
 
         """
-        cdef PetscBool flg  = flip
-        cdef PetscBool flg2 = split
-        cdef PetscInt  val  = asInt(bdvalue)
-        CHKERR(DMPlexLabelCohesiveComplete(self.dm, label.dmlabel, bdlabel.dmlabel, val, flg, flg2, subdm.dm))
+        cdef PetscBool flg = flip
+        cdef PetscInt  val = asInt(bdvalue)
+        CHKERR(DMPlexLabelCohesiveComplete(self.dm, label.dmlabel, bdlabel.dmlabel, val, flg, subdm.dm))
 
     def setAdjacencyUseAnchors(self, useAnchors: bool = True) -> None:
         """Define adjacency in the mesh using the point-to-point constraints.
@@ -2346,6 +2348,43 @@ cdef class DMPlex(DM):
         return
 
     #
+
+    def getCellCoordinates(self, cell: int) -> tuple[bool, ArrayScalar]:
+        """Get coordinates for a cell, taking into account periodicity.
+
+        Not collective.
+
+        Parameters
+        ----------
+        cell
+            The cell.
+
+        Returns
+        -------
+        isDG : bool
+            Flag for discontinuous coordinates.
+        coords : ArrayScalar
+            The cell coordinates.
+
+        See Also
+        --------
+        DMPlex, DM.getCoordinateSection, DM.getCoordinates
+        petsc.DMPlexComputeCellGeometryFVM
+
+        """
+        cdef PetscInt dims[2]
+        CHKERR(DMGetCoordinateDim(self.dm, &dims[1]))
+        cdef PetscInt ccell = asInt(cell)
+        cdef PetscBool isDG = PETSC_FALSE
+        cdef const PetscScalar *array = NULL
+        cdef PetscScalar *coords = NULL
+        CHKERR(DMPlexGetCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
+        dims[0] /= dims[1]
+        try:
+            out = array_sd(2, dims, coords)
+        finally:
+            CHKERR(DMPlexRestoreCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
+        return (toBool(isDG), out)
 
     def computeCellGeometryFVM(self, cell: int) -> tuple[float, ArrayReal, ArrayReal]:
         """Compute the volume for a given cell.

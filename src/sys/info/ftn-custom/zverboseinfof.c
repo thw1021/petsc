@@ -1,20 +1,19 @@
 #include <petsc/private/ftnimpl.h>
 
-#if defined(PETSC_HAVE_FORTRAN_CAPS)
+#if PetscDefined(HAVE_FORTRAN_CAPS)
   #define petscinfo_ PETSCINFO
-#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+#elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define petscinfo_ petscinfo
 #endif
 
 static PetscErrorCode PetscFixSlashN(const char *in, char **out)
 {
-  PetscInt i;
-  size_t   len;
+  size_t len;
 
   PetscFunctionBegin;
   PetscCall(PetscStrallocpy(in, out));
   PetscCall(PetscStrlen(*out, &len));
-  for (i = 0; i < (int)len - 1; i++) {
+  for (PetscInt i = 0; i < (int)len - 1; i++) {
     if ((*out)[i] == '\\' && (*out)[i + 1] == 'n') {
       (*out)[i]     = ' ';
       (*out)[i + 1] = '\n';

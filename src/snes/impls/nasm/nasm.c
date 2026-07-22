@@ -344,7 +344,6 @@ PetscErrorCode SNESNASMSetSubdomains(SNES snes, PetscInt n, SNES subsnes[], VecS
 
 static PetscErrorCode SNESNASMSetSubdomains_NASM(SNES snes, PetscInt n, SNES subsnes[], VecScatter iscatter[], VecScatter oscatter[], VecScatter gscatter[])
 {
-  PetscInt   i;
   SNES_NASM *nasm = (SNES_NASM *)snes->data;
 
   PetscFunctionBegin;
@@ -355,34 +354,34 @@ static PetscErrorCode SNESNASMSetSubdomains_NASM(SNES snes, PetscInt n, SNES sub
 
   nasm->n = n;
   if (oscatter) {
-    for (i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)oscatter[i]));
+    for (PetscInt i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)oscatter[i]));
   }
   if (iscatter) {
-    for (i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)iscatter[i]));
+    for (PetscInt i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)iscatter[i]));
   }
   if (gscatter) {
-    for (i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)gscatter[i]));
+    for (PetscInt i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)gscatter[i]));
   }
   if (oscatter) {
     PetscCall(PetscMalloc1(n, &nasm->oscatter));
     PetscCall(PetscMalloc1(n, &nasm->oscatter_copy));
-    for (i = 0; i < n; i++) {
+    for (PetscInt i = 0; i < n; i++) {
       nasm->oscatter[i] = oscatter[i];
       PetscCall(VecScatterCopy(oscatter[i], &nasm->oscatter_copy[i]));
     }
   }
   if (iscatter) {
     PetscCall(PetscMalloc1(n, &nasm->iscatter));
-    for (i = 0; i < n; i++) nasm->iscatter[i] = iscatter[i];
+    for (PetscInt i = 0; i < n; i++) nasm->iscatter[i] = iscatter[i];
   }
   if (gscatter) {
     PetscCall(PetscMalloc1(n, &nasm->gscatter));
-    for (i = 0; i < n; i++) nasm->gscatter[i] = gscatter[i];
+    for (PetscInt i = 0; i < n; i++) nasm->gscatter[i] = gscatter[i];
   }
 
   if (subsnes) {
     PetscCall(PetscMalloc1(n, &nasm->subsnes));
-    for (i = 0; i < n; i++) nasm->subsnes[i] = subsnes[i];
+    for (PetscInt i = 0; i < n; i++) nasm->subsnes[i] = subsnes[i];
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -720,7 +719,6 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   Vec              X;
   Vec              B;
   Vec              Y;
-  PetscInt         i;
   PetscReal        fnorm = 0.0;
   SNESNormSchedule normschedule;
   SNES_NASM       *nasm = (SNES_NASM *)snes->data;
@@ -768,7 +766,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   /* copy the initial solution over for later */
   if (nasm->fjtype == 2) PetscCall(VecCopy(X, nasm->xinit));
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (PetscInt i = 0; i < snes->max_its; i++) {
     PetscCall(SNESNASMSolveLocal_Private(snes, B, Y, X));
     if (normschedule == SNES_NORM_ALWAYS || ((i == snes->max_its - 1) && (normschedule == SNES_NORM_INITIAL_FINAL_ONLY || normschedule == SNES_NORM_FINAL_ONLY))) {
       PetscCall(SNESComputeFunction(snes, X, F));
@@ -836,21 +834,9 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NASM(SNES snes)
   PetscCall(PetscNew(&nasm));
   snes->data = (void *)nasm;
 
-  nasm->n             = PETSC_DECIDE;
-  nasm->subsnes       = NULL;
-  nasm->x             = NULL;
-  nasm->xl            = NULL;
-  nasm->y             = NULL;
-  nasm->b             = NULL;
-  nasm->oscatter      = NULL;
-  nasm->oscatter_copy = NULL;
-  nasm->iscatter      = NULL;
-  nasm->gscatter      = NULL;
-  nasm->damping       = 1.;
-
-  nasm->type          = PC_ASM_BASIC;
-  nasm->finaljacobian = PETSC_FALSE;
-  nasm->weight_set    = PETSC_FALSE;
+  nasm->n       = PETSC_DECIDE;
+  nasm->damping = 1.;
+  nasm->type    = PC_ASM_BASIC;
 
   snes->ops->destroy        = SNESDestroy_NASM;
   snes->ops->setup          = SNESSetUp_NASM;
@@ -864,12 +850,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NASM(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_FALSE;
 
-  nasm->fjtype              = 0;
-  nasm->xinit               = NULL;
-  nasm->eventrestrictinterp = 0;
-  nasm->eventsubsolve       = 0;
-
-  PetscCall(SNESParametersInitialize(snes));
   PetscObjectParameterSetDefault(snes, max_funcs, 10000);
   PetscObjectParameterSetDefault(snes, max_its, 10000);
 

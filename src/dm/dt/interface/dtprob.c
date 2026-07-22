@@ -193,17 +193,16 @@ PetscErrorCode PetscPDFSampleGaussian1D(const PetscReal p[], const PetscReal unu
   const PetscReal q       = 2 * p[0] - 1.;
   const PetscInt  maxIter = 100;
   PetscReal       ck[100], r = 0.;
-  PetscInt        k, m;
 
   PetscFunctionBeginHot;
   /* Transform input to [-1, 1] since the code below computes the inverse error function */
-  for (k = 0; k < maxIter; ++k) ck[k] = 0.;
+  for (PetscInt k = 0; k < maxIter; ++k) ck[k] = 0.;
   ck[0] = 1;
   r     = ck[0] * (PetscSqrtReal(PETSC_PI) / 2.) * q;
-  for (k = 1; k < maxIter; ++k) {
+  for (PetscInt k = 1; k < maxIter; ++k) {
     const PetscReal temp = 2. * k + 1.;
 
-    for (m = 0; m <= k - 1; ++m) {
+    for (PetscInt m = 0; m <= k - 1; ++m) {
       PetscReal denom = (m + 1.) * (2. * m + 1.);
 
       ck[k] += (ck[m] * ck[k - 1 - m]) / denom;
@@ -614,7 +613,7 @@ PetscErrorCode PetscProbCreateFromOptions(PetscInt dim, const char prefix[], con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#ifdef PETSC_HAVE_KS
+#if PetscDefined(HAVE_KS)
 EXTERN_C_BEGIN
   #include <KolmogorovSmirnovDist.h>
 EXTERN_C_END
@@ -663,7 +662,7 @@ static PetscErrorCode KSViewerDestroy(PetscViewer *viewer)
 
 static PetscErrorCode PetscProbComputeKSStatistic_Internal(MPI_Comm comm, PetscInt n, PetscReal val[], PetscReal wgt[], PetscProbFn *cdf, PetscReal *alpha, OutputType outputType, PetscViewer viewer)
 {
-#if !defined(PETSC_HAVE_KS)
+#if !PetscDefined(HAVE_KS)
   SETERRQ(comm, PETSC_ERR_SUP, "No support for Kolmogorov-Smirnov test.\nReconfigure using --download-ks");
 #else
   PetscDraw     draw;

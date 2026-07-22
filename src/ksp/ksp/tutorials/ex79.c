@@ -1,10 +1,10 @@
+static char help[] = "Solves a linear system with a block of right-hand sides, apply a preconditioner to the same block.\n\n";
+
 #include <petsc.h>
 
 #if PetscDefined(HAVE_HYPRE_DEVICE)
   #include <petsc/private/petschypre.h>
 #endif
-
-static char help[] = "Solves a linear system with a block of right-hand sides, apply a preconditioner to the same block.\n\n";
 
 PetscErrorCode MatApply(PC pc, Mat X, Mat Y)
 {
@@ -62,7 +62,7 @@ int main(int argc, char **args)
     PetscCall(PCFieldSplitSetIS(pc, NULL, is));
     PetscCall(ISDestroy(&is));
   }
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
+#if PetscDefined(HAVE_HYPRE_DEVICE)
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCHYPRE, &flg));
   if (flg) {
     HYPRE_MemoryLocation hmem;

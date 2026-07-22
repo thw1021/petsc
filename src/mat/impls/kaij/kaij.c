@@ -585,11 +585,8 @@ static PetscErrorCode MatView_KAIJ(Mat A, PetscViewer viewer)
     } else if (format == PETSC_VIEWER_ASCII_IMPL) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "Entries of S are "));
       for (i = 0; i < (a->p * a->q); i++) {
-#if defined(PETSC_USE_COMPLEX)
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e %18.16e ", (double)PetscRealPart(a->S[i]), (double)PetscImaginaryPart(a->S[i])));
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e ", (double)PetscRealPart(a->S[i])));
-#endif
+        if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e %18.16e ", (double)PetscRealPart(a->S[i]), (double)PetscImaginaryPart(a->S[i])));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e ", (double)PetscRealPart(a->S[i])));
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     }
@@ -602,11 +599,8 @@ static PetscErrorCode MatView_KAIJ(Mat A, PetscViewer viewer)
     } else if (format == PETSC_VIEWER_ASCII_IMPL) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "Entries of T are "));
       for (i = 0; i < (a->p * a->q); i++) {
-#if defined(PETSC_USE_COMPLEX)
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e %18.16e ", (double)PetscRealPart(a->T[i]), (double)PetscImaginaryPart(a->T[i])));
-#else
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e ", (double)PetscRealPart(a->T[i])));
-#endif
+        if (PetscDefined(USE_COMPLEX)) PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e %18.16e ", (double)PetscRealPart(a->T[i]), (double)PetscImaginaryPart(a->T[i])));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e ", (double)PetscRealPart(a->T[i])));
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     }
@@ -1147,9 +1141,9 @@ static PetscErrorCode MatMultAdd_MPIKAIJ(Mat A, Vec xx, Vec yy, Vec zz)
   PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ and b->OAIJ are up to date. */
   /* start the scatter */
   PetscCall(VecScatterBegin(b->ctx, xx, b->w, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*b->AIJ->ops->multadd)(b->AIJ, xx, zz, zz));
+  PetscUseTypeMethod(b->AIJ, multadd, xx, zz, zz);
   PetscCall(VecScatterEnd(b->ctx, xx, b->w, INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall((*b->OAIJ->ops->multadd)(b->OAIJ, b->w, zz, zz));
+  PetscUseTypeMethod(b->OAIJ, multadd, b->w, zz, zz);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1166,7 +1160,7 @@ static PetscErrorCode MatInvertBlockDiagonal_MPIKAIJ(Mat A, const PetscScalar **
 
   PetscFunctionBegin;
   PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ is up to date. */
-  PetscCall((*b->AIJ->ops->invertblockdiagonal)(b->AIJ, values));
+  PetscUseTypeMethod(b->AIJ, invertblockdiagonal, values);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

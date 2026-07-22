@@ -3363,6 +3363,16 @@
   petsc_uses    = {KSP}
 }
 
+@Article{         baumannkaus2015,
+  author        = {T.S. Baumann and Boris J.P. Kaus},
+  title         = {Geodynamic inversion to constrain the non-linear rheology of the lithosphere},
+  journal       = {Geophysical Journal International},
+  volume        = {202},
+  number        = {2},
+  pages         = {1289--1316},
+  year          = {2015}
+}
+
 @Article{         lechmannschmalholzhetenyimaykaus14,
   author        = {Lechmann, S. M. and Schmalholz, S. M. and Hetenyi, G. and May, D. A. and Kaus, B.
                   J. P.},
@@ -11805,16 +11815,6 @@
   year          = {2021}
 }
 
-@Article{         ipsen2001,
-  author        = {Ilse C. F. Ipsen},
-  journal       = {SIAM J. Sci. Comput.},
-  pages         = {1050--1051},
-  volume        = {23},
-  publisher     = {SIAM},
-  title         = {A Note on Preconditioning Nonsymmetric Matrices},
-  year          = {2001}
-}
-
 % Random papers on solvers for GPUs
 @InProceedings{   gpus-suck,
   author        = {Vuduc, R. and Chandramowlishwaran, A. and Choi, J. and Guney M. },
@@ -13914,6 +13914,40 @@
   volume        = {13},
   year          = {1992},
   pages         = {631-644}
+}
+
+@Article{         sleijpen:1993,
+  author        = {G. L. G. Sleijpen and D. R. Fokkema},
+  title         = {BiCGstab($\ell$) for linear equations involving unsymmetric
+                  matrices with complex spectrum},
+  journal       = {Electronic Transactions on Numerical Analysis},
+  volume        = {1},
+  pages         = {11--32},
+  year          = {1993}
+}
+
+@Article{         sleijpen:1995,
+  author        = {G. L. G. Sleijpen and H. A. van der Vorst},
+  title         = {An overview of approaches for the stable computation of
+                  hybrid {BiCG} methods},
+  journal       = {Applied Numerical Mathematics},
+  volume        = {19},
+  number        = {3},
+  pages         = {235--254},
+  year          = {1995},
+  doi           = {10.1016/0168-9274(95)00085-2}
+}
+
+@Article{         gijzen:2011,
+  author        = {M. B. Van Gijzen and P. Sonneveld},
+  title         = {Algorithm 913: An elegant {IDR(s)} variant that
+                  efficiently exploits biorthogonality properties},
+  journal       = {ACM Transactions on Mathematical Software},
+  volume        = {38},
+  number        = {1},
+  pages         = {1--19},
+  year          = {2011},
+  doi           = {10.1145/2049662.2049667}
 }
 
 @Article{         f:93,
@@ -39250,7 +39284,8 @@
   volume        = {34},
   pages         = {064105},
   doi           = {10.1063/5.0089752},
-  year          = {2022}
+  year          = {2022},
+  petsc_uses    = {DMPlex}
 }
 
 @InProceedings{   nathawaniknepley2022b,
@@ -39260,7 +39295,8 @@
                   (ICCFD11)},
   editor        = {Christoph Brehm and Shishir Pandya},
   number        = {4103},
-  year          = {2022}
+  year          = {2022},
+  petsc_uses    = {DMPlex}
 }
 
 @Article{         nathawaniknepley2023,
@@ -39269,16 +39305,30 @@
   journal       = {Theoretical and Computational Fluid Dynamics},
   url           = {https://rdcu.be/dFtlR},
   doi           = {10.1007/s00162-024-00690-5},
-  year          = {2024}
+  year          = {2024},
+  petsc_uses    = {DMPlex}
 }
 
 @InProceedings{   georgalisnathawaniknepleypatra2023,
   title         = {Uncertainty Quantification of Shear-induced Paraffin Droplet Pinch-off in Hybrid Rocket Motors},
   author        = {Georgios Georgalis and Darsh K. Nathawani and Matthew G. Knepley and Abani
                   Patra},
-  booktitle = {AIAA SciTech 2024},
+  booktitle     = {AIAA SciTech 2024},
   note          = {Accepted},
   year          = {2023}
+}
+
+@Article{         fluids11070169,
+  author        = {Darsh Nathawani and Matthew G. Knepley},
+  title         = {Error Estimation for Adaptive Mesh Refinement in Droplet Simulations},
+  journal       = {Fluids},
+  volume        = {11},
+  number        = {7},
+  url           = {https://www.mdpi.com/2311-5521/11/7/169},
+  issn          = {2311-5521},
+  doi           = {10.3390/fluids11070169},
+  year          = {2026},
+  petsc_uses    = {DMPlex}
 }
 
 @Article{         brownbarrabeamsghaffariknepleymosesshakeristengelthompsonzhang2022,
@@ -39355,7 +39405,7 @@
 }
 
 @Article{         finnpusztayknepleyadams2026,
-  title         = {Structure Preservation using Discrete Gradients in the Vlasov-Poisson-Landau System},
+  title         = {Structure Preservation using {Discrete Gradients} in the {Vlasov-Poisson-Landau} System},
   author        = {Daniel S. Finn and Joseph V. Pusztay and Matthew G. Knepley and Mark F. Adams},
   journal       = {Journal of Computational Physics},
   pages         = {114749},
@@ -39376,7 +39426,7 @@
 }
 
 @InProceedings{   retfalviknepleydesjardin2025,
-  title         = {Performance Modeling and Scaling of PETSc based Direct Numerical Simulations for Hybrid Rocket Boundary Layers},
+  title         = {Performance Modeling and Scaling of {PETSc-based} Direct Numerical Simulations for Hybrid Rocket Boundary Layers},
   author        = {Kolos Retfalvi and Matthew G. Knepley and Paul E. DesJardin},
   booktitle     = {Proceedings of the ASME 2025, Fluids Engineering Division Summer Meeting},
   pages         = {V001T03A015},
@@ -39391,16 +39441,20 @@
   title         = {Direct Numerical Simulations for Hybrid Rocket Boundary Layers: Performance Modeling and Scaling},
   author        = {Kolos Retfalvi and Russell Whitesides and Matthew McGurn and Matthew G. Knepley and Paul E. DesJardin},
   journal       = {International Journal of High Performance Computing Applications},
+  volume        = {40},
+  number        = {2},
+  pages         = {142--157},
   doi           = {10.1177/10943420251374921},
-  year          = {2025}
+  year          = {2026}
 }
 
 @Article{         knepley2025,
   title         = {Transformations of Computational Meshes},
   author        = {Matthew G. Knepley},
   journal       = {Engineering with Computers},
+  volume        = {41},
+  pages         = {3451--3462},
   doi           = {10.1007/s00366-025-02175-3},
-  url           = {https://link.springer.com/content/pdf/10.1007/s00366-025-02175-3.pdf},
   year          = {2025},
   petsc_uses    = {DMPlex}
 }
@@ -39457,6 +39511,14 @@
   address       = {Buffalo, NY},
   month         = may,
   year          = {2022}
+}
+
+@Article{       dentonknepley2026,
+  title         = {Geometry-Aware Computational Meshing in PETSc},
+  author        = {Brandon L Denton and Matthew G Knepley},
+  journal       = {Computer-Aided Design and Applications},
+  note          = {Submitted},
+  year          = {2026}
 }
 
 @Book{            glassables2003,
@@ -39795,8 +39857,11 @@
   title         = {Development of a River Dynamical Core for E3sm to Simulate Compound Flooding on Exascale-Class Heterogeneous Supercomputers},
   author        = {Gautam Bisht and Donghui Xu and Jeffrey Johnson and Jed Brown and Matthew G. Knepley and  Mark F Adams and Dongyu Feng and Dalei Hao and Darren Engwirda and Mukesh Kumar and Zeli Tan},
   journal       = {Environmental Modelling \& Software},
-  note          = {Accepted},
-  year          = {2025}
+  volume        = {197},
+  pages         = {106804},
+  issn          = {1364-8152},
+  doi           = {10.1016/j.envsoft.2025.106804},
+  year          = {2026}
 }
 
 @Article{       scharfettergummel1969,
@@ -39941,4 +40006,198 @@
   doi           = {10.1063/5.0042460},
   eprint        = {https://pubs.aip.org/aip/pop/article-pdf/doi/10.1063/5.0042460/14932084/022110_1_online.pdf},
   year          = {2021}
+}
+
+@Article{         coquandhuet1988,
+  title         = {The calculus of constructions},
+  author        = {Thierry Coquand and Gérard Huet},
+  journal       = {Information and Computation},
+  volume        = {76},
+  number        = {2},
+  pages         = {95--120},
+  issn          = {0890-5401},
+  doi           = {10.1016/0890-5401(88)90005-3},
+  year          = {1988}
+}
+
+@Book{            jaynes2003,
+  title         = {Probability theory: The logic of science},
+  author        = {Edwin T Jaynes},
+  year          = {2003},
+  publisher     = {Cambridge university press}
+}
+
+@Article{         buithanhgirolami2014,
+  title         = {Solving large-scale PDE-constrained Bayesian inverse problems with Riemann manifold Hamiltonian Monte Carlo},
+  author        = {Tan Bui-Thanh and Mark Girolami},
+  journal       = {Inverse Problems},
+  volume        = {30},
+  number        = {11},
+  pages         = {114014},
+  year          = {2014}
+}
+
+@Article{         minson2024,
+  title         = {Cross-fade sampling: extremely efficient Bayesian inversion for a variety of geophysical problems},
+  author        = {Sarah E Minson},
+  journal       = {Geophysical Journal International},
+  volume        = {239},
+  number        = {3},
+  pages         = {1629--1649},
+  year          = {2024}
+}
+
+@Article{         wellsknepleygriffith2026,
+  title         = {{WING}: A Simple Windowed Nonorthogonalized Initial Guess Procedure for Repeated Matrix Solves},
+  author        = {David Wells and Matthew G. Knepley and Boyce Griffith},
+  journal       = {SIAM Journal on Scientific Computing},
+  note          = {Submitted},
+  year          = {2026}
+}
+
+@article{Higham1992,
+  author = {Higham, Nicholas J.},
+  journal = {Numerische Mathematik},
+  number = {4},
+  pages = {539--556},
+  title = {Estimating the matrix $p$-norm},
+  volume = {62},
+  year = {1992},
+}
+
+@article{doi:10.1137/S0895479899356080,
+  author = {Higham, Nicholas J. and Tisseur, Fran\c{c}oise},
+  title = {A Block Algorithm for Matrix 1-Norm Estimation, with an Application to 1-Norm Pseudospectra},
+  journal = {SIAM Journal on Matrix Analysis and Applications},
+  volume = {21},
+  number = {4},
+  pages = {1185--1201},
+  year = {2000},
+}
+
+@Article{         mokhov2017,
+  title         = {Algebraic graphs with class (functional pearl)},
+  author        = {Andrey Mokhov},
+  journal       = {SIGPLAN Notices},
+  volume        = {52},
+  number        = {10},
+  pages         = {2--13},
+  numpages      = {12},
+  issn          = {0362-1340},
+  url           = {https://doi.org/10.1145/3156695.3122956},
+  doi           = {10.1145/3156695.3122956},
+  issue_date    = {October 2017},
+  publisher     = {Association for Computing Machinery},
+  year          = {2017}
+}
+
+@Article{         freyalauzet2005,
+  title         = {Anisotropic mesh adaptation for CFD computations},
+  author        = {Pascal-Jean Frey and Fr{\'e}d{\'e}ric Alauzet},
+  journal       = {Computer methods in applied mechanics and engineering},
+  volume        = {194},
+  number        = {48-49},
+  pages         = {5068--5082},
+  year          = {2005}
+}
+
+@Incollection{    loseille2017,
+  title         = {Unstructured mesh generation and adaptation},
+  author        = {Adrien Loseille},
+  booktitle     = {Handbook of Numerical Analysis},
+  volume        = {18},
+  pages         = {263--302},
+  year          = {2017}
+}
+
+@Article{         dapognydobrzynskifrey2014,
+  title         = {Three-dimensional adaptive domain remeshing, implicit domain meshing, and applications to free and moving boundary problems},
+  author        = {Charles Dapogny and C{\'e}cile Dobrzynski and Pascal Frey},
+  journal       = {Journal of computational physics},
+  volume        = {262},
+  pages         = {358--378},
+  year          = {2014}
+}
+
+@Article{         ibanezseolsmithshepard2016,
+  title         = {PUMI: Parallel unstructured mesh infrastructure},
+  author        = {Daniel A Ibanez and E Seegyoung Seol and Cameron W Smith and Mark S Shephard},
+  journal       = {ACM Transactions on Mathematical Software (TOMS)},
+  volume        = {42},
+  number        = {3},
+  pages         = {1--28},
+  year          = {2016}
+}
+
+@Book{            rozenberg1997,
+  title         = {Handbook of graph grammars and computing by graph transformation},
+  author        = {Grzegorz Rozenberg},
+  volume        = {1},
+  publisher     = {World scientific},
+  year          = {1997}
+}
+
+@Inproceedings{   paszynskapaszynskigrabska2009,
+  title         = {Graph transformations for modeling hp-adaptive finite element method with mixed triangular and rectangular elements},
+  author        = {Anna Paszy{\'n}ska and Maciej Paszy{\'n}ski and Ewa Grabska},
+  booktitle     = {Computational Science--ICCS 2009: 9th International Conference Baton Rouge, LA, USA, May 25-27, 2009 Proceedings, Part II 9},
+  pages         = {875--884},
+  organization  = {Springer},
+  year          = {2009}
+}
+
+@Article{         strugpaszynskapaszynskigrabska2013,
+  title         = {Using a graph grammar system in the finite element method},
+  author        = {Barbara Strug and Anna Paszy{\'n}ska and Maciej Paszy{\'n}ski and Ewa Grabska},
+  journal       = {International Journal of Applied Mathematics and Computer Science},
+  volume        = {23},
+  number        = {4},
+  pages         = {839--853},
+  year          = {2013}
+}
+
+@Article{         berneppsteingilbert1994,
+  title         = {Provably good mesh generation},
+  author        = {Marshall Bern and David Eppstein and John Gilbert},
+  journal       = {Journal of computer and system sciences},
+  volume        = {48},
+  number        = {3},
+  pages         = {384--409},
+  year          = {1994}
+}
+
+@Article{         boissonnatoudot2005,
+  title         = {Provably good sampling and meshing of surfaces},
+  author        = {Jean-Daniel Boissonnat and Steve Oudot},
+  journal       = {Graphical Models},
+  volume        = {67},
+  number        = {5},
+  pages         = {405--451},
+  year          = {2005}
+}
+
+@Article{         mohringmuller2000,
+  title         = {Complexity and modeling aspects of mesh refinement into quadrilaterals},
+  author        = {Rolf H Mohring and Matthias M{\"u}ller-Hannemann},
+  journal       = {Algorithmica},
+  volume        = {26},
+  number        = {1},
+  pages         = {148--171},
+  year          = {2000}
+}
+
+@Inproceedings{   amentaattalidevillers2007,
+  title         = {Complexity of delaunay triangulation for points on lower-dimensional\~{} polyhedra},
+  author        = {Nina Amenta and Dominique Attali and Olivier Devillers},
+  booktitle     = {ACM-SIAM Symposium on Discrete Algorithms},
+  pages         = {1106--1113},
+  year          = {2007}
+}
+
+@Inproceedings{   erickson2001,
+  title         = {Nice point sets can have nasty Delaunay triangulations},
+  author        = {Jeff Erickson},
+  booktitle     = {Proceedings of the seventeenth annual symposium on Computational geometry},
+  pages         = {96--105},
+  year          = {2001}
 }

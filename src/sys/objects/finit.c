@@ -1,13 +1,13 @@
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
 
-#if defined(PETSC_USE_FORTRAN_BINDINGS)
-  #if defined(PETSC_HAVE_FORTRAN_CAPS)
+#if PetscDefined(USE_FORTRAN_BINDINGS)
+  #if PetscDefined(HAVE_FORTRAN_CAPS)
     #define petscinitializefortran_     PETSCINITIALIZEFORTRAN
     #define petscsetmoduleblock_        PETSCSETMODULEBLOCK
     #define petscsetmoduleblockmpi_     PETSCSETMODULEBLOCKMPI
     #define petscsetmoduleblocknumeric_ PETSCSETMODULEBLOCKNUMERIC
     #define petscsetcomm_               PETSCSETCOMM
-  #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+  #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
     #define petscinitializefortran_     petscinitializefortran
     #define petscsetmoduleblock_        petscsetmoduleblock
     #define petscsetmoduleblockmpi_     petscsetmoduleblockmpi
@@ -16,7 +16,7 @@
   #endif
 
 PETSC_EXTERN void petscsetmoduleblock_(void);
-PETSC_EXTERN void petscsetmoduleblockmpi_(MPI_Fint *, MPI_Fint *, MPI_Fint *, MPI_Fint *);
+PETSC_EXTERN void petscsetmoduleblockmpi_(MPI_Fint *, MPI_Fint *, MPI_Fint *, MPI_Fint *, MPI_Fint *);
 PETSC_EXTERN void petscsetmoduleblocknumeric_(PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *);
 PETSC_EXTERN void petscsetcomm_(MPI_Fint *, MPI_Fint *);
 #endif
@@ -45,7 +45,7 @@ PETSC_EXTERN void petscsetcomm_(MPI_Fint *, MPI_Fint *);
 @*/
 PetscErrorCode PetscInitializeFortran(void)
 {
-#if defined(PETSC_USE_FORTRAN_BINDINGS)
+#if PetscDefined(USE_FORTRAN_BINDINGS)
   MPI_Fint c1 = 0, c2 = 0;
 
   if (PETSC_COMM_WORLD) c1 = MPI_Comm_c2f(PETSC_COMM_WORLD);
@@ -54,12 +54,13 @@ PetscErrorCode PetscInitializeFortran(void)
   petscsetcomm_(&c1, &c2);
 
   {
-    MPI_Fint freal, fscalar, fsum, fint;
+    MPI_Fint freal, fscalar, fsum, fint, fcbool;
     freal   = MPI_Type_c2f(MPIU_REAL);
     fscalar = MPI_Type_c2f(MPIU_SCALAR);
     fsum    = MPI_Op_c2f(MPIU_SUM);
     fint    = MPI_Type_c2f(MPIU_INT);
-    petscsetmoduleblockmpi_(&freal, &fscalar, &fsum, &fint);
+    fcbool  = MPI_Type_c2f(MPI_C_BOOL);
+    petscsetmoduleblockmpi_(&freal, &fscalar, &fsum, &fint, &fcbool);
   }
 
   {

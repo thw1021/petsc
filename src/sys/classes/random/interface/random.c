@@ -161,8 +161,7 @@ PetscErrorCode PetscRandomGetValuesReal(PetscRandom r, PetscInt n, PetscReal *va
   PetscValidHeaderSpecific(r, PETSC_RANDOM_CLASSID, 1);
   PetscValidType(r, 1);
   if (!r->ops->getvaluesreal) {
-    PetscInt i;
-    for (i = 0; i < n; i++) PetscUseTypeMethod(r, getvaluereal, val + i);
+    for (PetscInt i = 0; i < n; i++) PetscUseTypeMethod(r, getvaluereal, val + i);
   } else PetscUseTypeMethod(r, getvaluesreal, n, val);
   PetscCall(PetscObjectStateIncrease((PetscObject)r));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -224,12 +223,10 @@ PetscErrorCode PetscRandomSetInterval(PetscRandom r, PetscScalar low, PetscScala
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(r, PETSC_RANDOM_CLASSID, 1);
-#if defined(PETSC_USE_COMPLEX)
-  PetscCheck(PetscRealPart(low) <= PetscRealPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high");
-  PetscCheck(PetscImaginaryPart(low) <= PetscImaginaryPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high");
-#else
-  PetscCheck(low < high, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high: Instead %g %g", (double)low, (double)high);
-#endif
+  if (PetscDefined(USE_COMPLEX)) {
+    PetscCheck(PetscRealPart(low) <= PetscRealPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high");
+    PetscCheck(PetscImaginaryPart(low) <= PetscImaginaryPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low <= high");
+  } else PetscCheck(PetscRealPart(low) < PetscRealPart(high), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "only low < high: Instead %g %g", (double)PetscRealPart(low), (double)PetscRealPart(high));
   r->low   = low;
   r->width = high - low;
   r->iset  = PETSC_TRUE;

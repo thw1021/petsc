@@ -569,6 +569,42 @@ PetscErrorCode VecSet(Vec x, PetscScalar alpha)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  VecSetStdBasis - Set the vector to the i-th standard basis vector
+
+  Logically Collective
+
+  Input Parameters:
++ x - the vector
+- i - the component to be set to one
+
+  Level: beginner
+
+  Note:
+  This function sets x[i] = 1, and 0 otherwise.
+
+.seealso: [](ch_vectors), `Vec`, `VecSetValues()`
+@*/
+PetscErrorCode VecSetStdBasis(Vec x, PetscInt i)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(x, i, 2);
+  PetscCall(VecSetErrorIfLocked(x, 1));
+  if (x->ops->setstdbasis) PetscUseTypeMethod(x, setstdbasis, i);
+  else {
+    PetscInt st, en;
+
+    PetscCall(VecGetOwnershipRange(x, &st, &en));
+    PetscCall(VecSet(x, 0.));
+    if (st <= i && i < en) PetscCall(VecSetValue(x, i, 1.0, INSERT_VALUES));
+    PetscCall(VecAssemblyBegin(x));
+    PetscCall(VecAssemblyEnd(x));
+  }
+  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode VecAXPYAsync_Private(Vec y, PetscScalar alpha, Vec x, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
@@ -595,6 +631,7 @@ PetscErrorCode VecAXPYAsync_Private(Vec y, PetscScalar alpha, Vec x, PetscDevice
   PetscCall(PetscObjectStateIncrease((PetscObject)y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*@
   VecAXPY - Computes `y = alpha x + y`.
 
@@ -1610,7 +1647,7 @@ PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y)
       PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &iscuda, VECSEQCUDA, VECMPICUDA, ""));
       PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &iship, VECSEQHIP, VECMPIHIP, ""));
       if (iscuda) {
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
         const PetscScalar *x_d;
         PetscMPIInt        size;
         PetscOffloadMask   flg;
@@ -1629,7 +1666,7 @@ PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y)
         Z->offloadmask = flg;
 #endif
       } else if (iship) {
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
         const PetscScalar *x_d;
         PetscMPIInt        size;
         PetscOffloadMask   flg;
@@ -1731,7 +1768,7 @@ PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y)
         PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &iship, VECSEQHIP, VECMPIHIP, ""));
 
         if (iscuda) {
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
           PetscOffloadMask ymask = (*Y)->offloadmask;
 
           /* The offloadmask of X dictates where to move memory
@@ -1757,7 +1794,7 @@ PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y)
           }
 #endif
         } else if (iship) {
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
           PetscOffloadMask ymask = (*Y)->offloadmask;
 
           /* The offloadmask of X dictates where to move memory
@@ -2283,7 +2320,6 @@ PetscErrorCode VecGetArrays(const Vec x[], PetscInt n, PetscScalar **a[])
 @*/
 PetscErrorCode VecRestoreArrays(const Vec x[], PetscInt n, PetscScalar **a[])
 {
-  PetscInt      i;
   PetscScalar **q = *a;
 
   PetscFunctionBegin;
@@ -2291,7 +2327,7 @@ PetscErrorCode VecRestoreArrays(const Vec x[], PetscInt n, PetscScalar **a[])
   PetscValidHeaderSpecific(*x, VEC_CLASSID, 1);
   PetscAssertPointer(a, 3);
 
-  for (i = 0; i < n; ++i) PetscCall(VecRestoreArray(x[i], &q[i]));
+  for (PetscInt i = 0; i < n; ++i) PetscCall(VecRestoreArray(x[i], &q[i]));
   PetscCall(PetscFree(q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

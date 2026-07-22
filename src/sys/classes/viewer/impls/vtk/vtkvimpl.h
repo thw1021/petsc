@@ -15,12 +15,12 @@ typedef struct {
   PetscFileMode            btype;
   PetscObject              dm;
   PetscViewerVTKObjectLink link;
-  PetscErrorCode (*write)(PetscObject, PetscViewer);
+  PetscViewerVTKWriteFn   *write;
 } PetscViewer_VTK;
 
 PETSC_EXTERN PetscErrorCode PetscViewerVTKFWrite(PetscViewer, FILE *, const void *, PetscCount, MPI_Datatype);
 
-#if defined(PETSC_HAVE_STDINT_H) /* The VTK format requires a 32-bit integer */
+#if PetscDefined(HAVE_STDINT_H) /* The VTK format requires a 32-bit integer */
 typedef int32_t PetscVTKInt;
 #else /* Hope int is 32-bits */
 typedef int PetscVTKInt;

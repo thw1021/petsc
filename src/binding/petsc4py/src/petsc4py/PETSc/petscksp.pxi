@@ -49,6 +49,7 @@ cdef extern from * nogil:
     PetscKSPType KSPCGLS
     PetscKSPType KSPFETIDP
     PetscKSPType KSPHPDDM
+    PetscKSPType KSPIDR
 
     ctypedef enum PetscKSPNormType "KSPNormType":
         KSP_NORM_DEFAULT
@@ -114,10 +115,15 @@ cdef extern from * nogil:
                                                           PetscVec,
                                                           void*) except PETSC_ERR_PYTHON
 
-    ctypedef PetscErrorCode (*PetscKSPComputeOpsFunction)(PetscKSP,
-                                                          PetscMat,
-                                                          PetscMat,
-                                                          void*) except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode (*PetscKSPComputeOperatorsFunction)(PetscKSP,
+                                                                PetscMat,
+                                                                PetscMat,
+                                                                void*) except PETSC_ERR_PYTHON
+
+    ctypedef PetscErrorCode (*PetscKSPCreateOperatorsFunction)(PetscKSP,
+                                                               PetscMat*,
+                                                               PetscMat*,
+                                                               void*) except PETSC_ERR_PYTHON
 
     ctypedef PetscErrorCode (*PetscKSPPreSolveFunction)(PetscKSP,
                                                         PetscVec,
@@ -175,7 +181,7 @@ cdef extern from * nogil:
     PetscErrorCode KSPSetComputeSingularValues(PetscKSP, PetscBool)
 
     PetscErrorCode KSPSetComputeRHS(PetscKSP, PetscKSPComputeRHSFunction, void*)
-    PetscErrorCode KSPSetComputeOperators(PetscKSP, PetscKSPComputeOpsFunction, void*)
+    PetscErrorCode KSPSetComputeOperators(PetscKSP, PetscKSPComputeOperatorsFunction, void*)
     PetscErrorCode KSPSetOperators(PetscKSP, PetscMat, PetscMat)
     PetscErrorCode KSPGetOperators(PetscKSP, PetscMat*, PetscMat*)
     PetscErrorCode KSPGetOperatorsSet(PetscKSP, PetscBool*, PetscBool*)
@@ -210,6 +216,9 @@ cdef extern from * nogil:
     PetscErrorCode KSPBuildResidual(PetscKSP, PetscVec, PetscVec, PetscVec*)
     PetscErrorCode KSPBuildResidualDefault(PetscKSP, PetscVec, PetscVec, PetscVec*)
 
+    PetscErrorCode KSPPreSolve(PetscKSP, PetscVec, PetscVec)
+    PetscErrorCode KSPPostSolve(PetscKSP, PetscVec, PetscVec)
+
     PetscErrorCode KSPSetDiagonalScale(PetscKSP, PetscBool)
     PetscErrorCode KSPGetDiagonalScale(PetscKSP, PetscBool*)
     PetscErrorCode KSPSetDiagonalScaleFix(PetscKSP, PetscBool)
@@ -222,6 +231,13 @@ cdef extern from * nogil:
     PetscErrorCode KSPCreateVecs(PetscKSP, PetscInt, PetscVec**, PetscInt, PetscVec**)
 
     PetscErrorCode KSPGMRESSetRestart(PetscKSP, PetscInt)
+
+    PetscErrorCode KSPIDRSetS(PetscKSP, PetscInt)
+    PetscErrorCode KSPIDRGetS(PetscKSP, PetscInt*)
+    PetscErrorCode KSPIDRSetCosine(PetscKSP, PetscReal)
+    PetscErrorCode KSPIDRGetCosine(PetscKSP, PetscReal*)
+    PetscErrorCode KSPIDRSetRandom(PetscKSP, PetscRandom)
+    PetscErrorCode KSPIDRGetRandom(PetscKSP, PetscRandom*)
 
     PetscErrorCode KSPCGGetObjFcn(PetscKSP, PetscReal*)
 
@@ -295,7 +311,7 @@ cdef PetscErrorCode KSP_ComputeRHS(
     computerhs(Ksp, Rhs, *args, **kargs)
     return PETSC_SUCCESS
 
-cdef PetscErrorCode KSP_ComputeOps(
+cdef PetscErrorCode KSP_ComputeOperators(
     PetscKSP ksp,
     PetscMat A,
     PetscMat B,
@@ -309,6 +325,41 @@ cdef PetscErrorCode KSP_ComputeOps(
     assert context is not None and type(context) is tuple # sanity check
     (computeops, args, kargs) = context
     computeops(Ksp, Amat, Bmat, *args, **kargs)
+    return PETSC_SUCCESS
+
+cdef PetscErrorCode KSP_CreateOperators(
+    PetscKSP ksp,
+    PetscMat *A,
+    PetscMat *B,
+    void     *ctx,
+   ) except PETSC_ERR_PYTHON with gil:
+    cdef KSP Ksp = ref_KSP(ksp)
+    cdef Mat Amat
+    cdef Mat Bmat
+    cdef object operators
+    cdef object context = Ksp.get_attr('__create_operators__')
+    if context is None and ctx != NULL: context = <object>ctx
+    assert context is not None and type(context) is tuple # sanity check
+    (createops, args, kargs) = context
+    operators = createops(Ksp, *args, **kargs)
+    if type(operators) in [tuple, list]:
+        try:
+            Amat, Bmat = operators
+        except (TypeError, ValueError):
+            raise TypeError("KSP create operators callback must return a pair (A, P)")
+    else:
+        Amat = operators
+        Bmat = None
+    if not isinstance(Amat, Mat):
+        raise TypeError("Amat is of type %s, not a PETSc Mat" % (type(Amat),))
+    if Bmat is not None and not isinstance(Bmat, Mat):
+        raise TypeError("Bmat is of type %s, not a PETSc Mat" % (type(Bmat),))
+    CHKERR(PetscINCREF(Amat.obj))
+    A[0] = Amat.mat
+    B[0] = NULL
+    if Bmat is not None and Bmat.mat != Amat.mat:
+        CHKERR(PetscINCREF(Bmat.obj))
+        B[0] = Bmat.mat
     return PETSC_SUCCESS
 
 # -----------------------------------------------------------------------------

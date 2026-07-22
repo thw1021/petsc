@@ -13,7 +13,7 @@
 
 /* General logging of information; different from event logging */
 PETSC_EXTERN PetscErrorCode PetscInfo_Private(const char[], PetscObject, const char[], ...) PETSC_ATTRIBUTE_FORMAT(3, 4);
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   #define PetscInfo(A, ...) PetscInfo_Private(PETSC_FUNCTION_NAME, ((PetscObject)A), __VA_ARGS__)
 #else
   #define PetscInfo(A, ...) PETSC_SUCCESS
@@ -197,7 +197,7 @@ typedef struct _n_PetscLogHandlerHot {
 } PetscLogHandlerHot;
 
 /* Handle multithreading */
-#if defined(PETSC_HAVE_THREADSAFETY)
+#if PetscDefined(HAVE_THREADSAFETY)
   #if defined(__cplusplus)
     #define PETSC_TLS thread_local
   #else
@@ -208,7 +208,7 @@ typedef struct _n_PetscLogHandlerHot {
   #define PETSC_EXTERN_TLS PETSC_EXTERN
   #define PETSC_TLS
 #endif
-#if defined(PETSC_HAVE_THREADSAFETY) && defined(PETSC_USE_LOG)
+#if PetscDefined(HAVE_THREADSAFETY) && PetscDefined(USE_LOG)
 PETSC_EXTERN PetscErrorCode PetscAddLogDouble(PetscLogDouble *, PetscLogDouble *, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscAddLogDoubleCnt(PetscLogDouble *, PetscLogDouble *, PetscLogDouble *, PetscLogDouble *, PetscLogDouble);
 #else
@@ -322,7 +322,7 @@ PETSC_EXTERN PetscLogState petsc_log_state;
 #define PETSC_LOG_HANDLER_MAX 4
 PETSC_EXTERN PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX];
 
-#if defined(PETSC_USE_LOG) /* --- Logging is turned on --------------------------------*/
+#if PetscDefined(USE_LOG) /* --- Logging is turned on --------------------------------*/
 PETSC_EXTERN PetscErrorCode PetscGetFlops(PetscLogDouble *);
 
 PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject, const char[], ...) PETSC_ATTRIBUTE_FORMAT(2, 3);
@@ -361,7 +361,7 @@ PETSC_EXTERN PetscErrorCode PetscLogStageGetActive(PetscLogStage, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscLogStageSetVisible(PetscLogStage, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetVisible(PetscLogStage, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetId(const char[], PetscLogStage *);
-PETSC_EXTERN PetscErrorCode PetscLogStageGetName(PetscLogEvent, const char **);
+PETSC_EXTERN PetscErrorCode PetscLogStageGetName(PetscLogEvent, const char *[]);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetPerfInfo(PetscLogStage, PetscEventPerfInfo *);
 
 /* Event functions */
@@ -377,7 +377,7 @@ PETSC_EXTERN PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogEventActivateClass(PetscClassId);
 PETSC_EXTERN PetscErrorCode PetscLogEventDeactivateClass(PetscClassId);
 PETSC_EXTERN PetscErrorCode PetscLogEventGetId(const char[], PetscLogEvent *);
-PETSC_EXTERN PetscErrorCode PetscLogEventGetName(PetscLogEvent, const char **);
+PETSC_EXTERN PetscErrorCode PetscLogEventGetName(PetscLogEvent, const char *[]);
 PETSC_EXTERN PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage, PetscLogEvent, PetscEventPerfInfo *);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetDof(PetscLogEvent, PetscInt, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetError(PetscLogEvent, PetscInt, PetscLogDouble);
@@ -386,7 +386,7 @@ PETSC_EXTERN PetscErrorCode PetscLogEventsResume(void);
 
 /* Class functions */
 PETSC_EXTERN PetscErrorCode PetscLogClassGetClassId(const char[], PetscClassId *);
-PETSC_EXTERN PetscErrorCode PetscLogClassIdGetName(PetscClassId, const char **);
+PETSC_EXTERN PetscErrorCode PetscLogClassIdGetName(PetscClassId, const char *[]);
 
 /*@C
   PetscLogEventSync - Synchronize an `MPI_Comm` so that the wall-clock time spent waiting at the implicit barrier is not attributed to a subsequent event
@@ -569,7 +569,7 @@ static inline PetscErrorCode PetscLogObjectDestroy(PetscObject o)
    among the various arithmetic operations.
  */
 
-  #if defined(PETSC_USE_COMPLEX)
+  #if PetscDefined(USE_COMPLEX)
     #define PETSC_FLOPS_PER_OP 4.0
   #else
     #define PETSC_FLOPS_PER_OP 1.0
@@ -608,7 +608,7 @@ static inline PetscErrorCode PetscLogFlops(PetscLogDouble n)
 
      It does not work with Windows because winmpich lacks MPI_Type_size()
 */
-  #if !defined(MPIUNI_H) && !defined(PETSC_HAVE_BROKEN_RECURSIVE_MACRO)
+  #if !defined(MPIUNI_H) && !PetscDefined(HAVE_BROKEN_RECURSIVE_MACRO)
 /*
    Logging of MPI activities
 */
@@ -937,7 +937,7 @@ M*/
 PETSC_EXTERN PetscBool PetscPreLoadingUsed; /* true if we are or have done preloading */
 PETSC_EXTERN PetscBool PetscPreLoadingOn;   /* true if we are currently in a preloading calculation */
 
-#if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
 
 PETSC_EXTERN PetscErrorCode PetscLogGpuTime(void);
 PETSC_EXTERN PetscErrorCode PetscLogGpuTimeBegin(void);
@@ -1070,13 +1070,13 @@ static inline PetscErrorCode PetscLogGpuToCpuScalar(PetscLogDouble size)
 }
 #else
 
-  #define PetscLogCpuToGpu(a)       PETSC_SUCCESS
-  #define PetscLogGpuToCpu(a)       PETSC_SUCCESS
-  #define PetscLogCpuToGpuScalar(a) PETSC_SUCCESS
-  #define PetscLogGpuToCpuScalar(a) PETSC_SUCCESS
-  #define PetscLogGpuFlops(a)       PETSC_SUCCESS
+  #define PetscLogCpuToGpu(a)       ((void)(a), PETSC_SUCCESS)
+  #define PetscLogGpuToCpu(a)       ((void)(a), PETSC_SUCCESS)
+  #define PetscLogCpuToGpuScalar(a) ((void)(a), PETSC_SUCCESS)
+  #define PetscLogGpuToCpuScalar(a) ((void)(a), PETSC_SUCCESS)
+  #define PetscLogGpuFlops(a)       ((void)(a), PETSC_SUCCESS)
+  #define PetscLogGpuTimeAdd(a)     ((void)(a), PETSC_SUCCESS)
   #define PetscLogGpuTime()         PETSC_SUCCESS
-  #define PetscLogGpuTimeAdd(a)     PETSC_SUCCESS
   #define PetscLogGpuTimeBegin()    PETSC_SUCCESS
   #define PetscLogGpuTimeEnd()      PETSC_SUCCESS
 

@@ -843,9 +843,9 @@ PETSC_EXTERN PetscErrorCode KSPCreate_MINRES(KSP ksp)
   PetscCall(PetscNew(&minres));
 
   /* this parameter is arbitrary and belongs to the old implementation; but e-50 didn't work for __float128 in one example */
-#if defined(PETSC_USE_REAL___FLOAT128)
+#if PetscDefined(USE_REAL___FLOAT128)
   minres->haptol = 1.e-100;
-#elif defined(PETSC_USE_REAL_SINGLE)
+#elif PetscDefined(USE_REAL_SINGLE)
   minres->haptol = 1.e-25;
 #else
   minres->haptol = 1.e-50;
@@ -875,7 +875,7 @@ PetscErrorCode KSPComputeEigenvalues_MINRES(KSP ksp, PetscInt nmax, PetscReal *r
   PetscScalar *d, *e;
   PetscReal   *ee;
   PetscInt     n = ksp->its;
-  PetscBLASInt bn, lierr = 0, ldz = 1;
+  PetscBLASInt bn, ldz = 1;
 
   PetscFunctionBegin;
   PetscCheck(nmax >= n, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_SIZ, "Not enough room in work space r and c for eigenvalues");
@@ -895,8 +895,7 @@ PetscErrorCode KSPComputeEigenvalues_MINRES(KSP ksp, PetscInt nmax, PetscReal *r
 
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
+  PetscCallLAPACKInfo("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, ee, NULL, &ldz, NULL, &info));
   PetscCall(PetscFPTrapPop());
   PetscCall(PetscSortReal(n, r));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -908,7 +907,7 @@ PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP ksp, PetscReal *emax, 
   PetscScalar *d, *e;
   PetscReal   *dd, *ee;
   PetscInt     n = ksp->its;
-  PetscBLASInt bn, lierr = 0, ldz = 1;
+  PetscBLASInt bn, ldz = 1;
 
   PetscFunctionBegin;
   if (!n) {
@@ -928,8 +927,7 @@ PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP ksp, PetscReal *emax, 
 
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, ee, NULL, &ldz, NULL, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
+  PetscCallLAPACKInfo("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, ee, NULL, &ldz, NULL, &info));
   PetscCall(PetscFPTrapPop());
   for (PetscInt j = 0; j < n; j++) dd[j] = PetscAbsReal(dd[j]);
   PetscCall(PetscSortReal(n, dd));

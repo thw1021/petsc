@@ -41,15 +41,16 @@ PETSC_EXTERN PetscErrorCode KSPCreate_LCD(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_GCR(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEGCR(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PGMRES(KSP);
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
 PETSC_EXTERN PetscErrorCode KSPCreate_DGMRES(KSP);
 #endif
 PETSC_EXTERN PetscErrorCode KSPCreate_TSIRM(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_CGLS(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_FETIDP(KSP);
-#if defined(PETSC_HAVE_HPDDM)
+#if PetscDefined(HAVE_HPDDM)
 PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP);
 #endif
+PETSC_EXTERN PetscErrorCode KSPCreate_IDR(KSP);
 
 /*@C
   KSPRegisterAll - Registers all of the Krylov subspace methods in the `KSP` package.
@@ -108,15 +109,16 @@ PetscErrorCode KSPRegisterAll(void)
   PetscCall(KSPRegister(KSPGCR, KSPCreate_GCR));
   PetscCall(KSPRegister(KSPPIPEGCR, KSPCreate_PIPEGCR));
   PetscCall(KSPRegister(KSPPGMRES, KSPCreate_PGMRES));
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
   PetscCall(KSPRegister(KSPDGMRES, KSPCreate_DGMRES));
 #endif
   PetscCall(KSPRegister(KSPTSIRM, KSPCreate_TSIRM));
   PetscCall(KSPRegister(KSPCGLS, KSPCreate_CGLS));
   PetscCall(KSPRegister(KSPFETIDP, KSPCreate_FETIDP));
-#if defined(PETSC_HAVE_HPDDM)
+#if PetscDefined(HAVE_HPDDM)
   PetscCall(KSPRegister(KSPHPDDM, KSPCreate_HPDDM));
 #endif
+  PetscCall(KSPRegister(KSPIDR, KSPCreate_IDR));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -137,8 +139,12 @@ PetscErrorCode KSPMonitorRegisterAll(void)
 
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidual, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERHDF5, PETSC_VIEWER_DEFAULT, KSPMonitorResidualView, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERHDF5, PETSC_VIEWER_HDF5_VIZ, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorResidualDrawLG, KSPMonitorResidualDrawLGCreate, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTS, KSPMonitorResidualView, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTR, KSPMonitorResidualView, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTU, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual_short", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidualShort, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual_range", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidualRange, NULL, NULL));
   PetscCall(KSPMonitorRegister("true_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorTrueResidual, NULL, NULL));

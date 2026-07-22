@@ -4,7 +4,7 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '5.0.0'
+    self.version          = '5.0.1'
     self.download         = ['https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
                              'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz', # does not always work from Python? So add in web.cels URL below
                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages'+'/mpich-'+self.version+'.tar.gz']
@@ -22,9 +22,10 @@ class Configure(config.package.GNUPackage):
     self.compilerFlags   = framework.require('config.compilerFlags',self)
     self.cuda            = framework.require('config.packages.CUDA',self)
     self.hip             = framework.require('config.packages.HIP',self)
+    self.sycl            = framework.require('config.packages.SYCL',self)
     self.hwloc           = framework.require('config.packages.hwloc',self)
     self.python          = framework.require('config.packages.Python',self)
-    self.odeps           = [self.cuda, self.hip, self.hwloc]
+    self.odeps           = [self.cuda, self.hip, self.sycl, self.hwloc]
     return
 
   def versionToStandardForm(self,ver):
@@ -67,11 +68,13 @@ class Configure(config.package.GNUPackage):
       args.append('--without-hwloc')
     else:
       args.append('--with-hwloc=embedded')
+    args.append('--enable-fast=""') # set to empty so that --with-debugging=1, -O0 is not there twice (since it is already in PETSc CFLAGS), and --with-debugging=0, -O2 (set by MPICH if there is no --enable-fast configure option) does not shadow what is in PETSc COPTFLAGS (usually -O3)
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
-      args.append("--enable-fast=no")
-      args.append("--enable-error-messages=all")
       mpich_device = 'ch3:sock'
+      # meminit: preinitialize memory associated structures and unions to eliminate access warnings from programs like Valgrind
+      # dbg: add compiler flag, -g, to all internal compiler flag, i.e., MPICHLIB_CFLAGS, MPICHLIB_CXXFLAGS, MPICHLIB_FFLAGS, and MPICHLIB_FCFLAGS, to make debugging easier
+      args.append('--enable-g=meminit,dbg')
     else:
       mpich_device = 'ch3:nemesis'
     if self.cuda.found:
@@ -86,14 +89,17 @@ class Configure(config.package.GNUPackage):
       mpich_device = 'ch4:ucx'
     elif self.hip.found:
       args.append('--with-hip='+self.hip.hipDir)
-      mpich_device = 'ch4:ofi' # per https://github.com/pmodels/mpich/wiki/Using-MPICH-on-Crusher@OLCF
+      mpich_device = 'ch4:ucx'
 
     if 'download-mpich-device' in self.argDB:
       mpich_device = self.argDB['download-mpich-device']
     args.append('--with-device='+mpich_device)
-    # meminit: preinitialize memory associated structures and unions to eliminate access warnings from programs like valgrind
-    # dbg: add compiler flag, -g, to all internal compiler flag i.e. MPICHLIB_CFLAGS, MPICHLIB_CXXFLAGS, MPICHLIB_FFLAGS, and MPICHLIB_FCFLAGS, to make debugging easier
-    args.append('--enable-g=meminit,dbg')
+
+    # Don't let MPICH build with devices we didn't ask for
+    if not self.cuda.found: args.append('--without-cuda')
+    if not self.hip.found: args.append('--without-hip')
+    if not self.sycl.found: args.append('--without-ze')
+
     if not self.setCompilers.isDarwin(self.log) and config.setCompilers.Configure.isClang(self.setCompilers.CC, self.log):
       args.append('pac_cv_have_float16=no')
     if config.setCompilers.Configure.isDarwin(self.log):

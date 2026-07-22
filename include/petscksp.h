@@ -90,6 +90,7 @@ typedef const char *KSPType;
 #define KSPCGLS       "cgls"
 #define KSPFETIDP     "fetidp"
 #define KSPHPDDM      "hpddm"
+#define KSPIDR        "idr"
 
 /* Logging support */
 PETSC_EXTERN PetscClassId KSP_CLASSID;
@@ -221,6 +222,8 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPPSolveFn(KSP ksp, Vec rhs, Vec x,
 
 PETSC_EXTERN PetscErrorCode KSPSetPreSolve(KSP, KSPPSolveFn *, PetscCtx);
 PETSC_EXTERN PetscErrorCode KSPSetPostSolve(KSP, KSPPSolveFn *, PetscCtx);
+PETSC_EXTERN PetscErrorCode KSPPreSolve(KSP, Vec, Vec);
+PETSC_EXTERN PetscErrorCode KSPPostSolve(KSP, Vec, Vec);
 
 PETSC_EXTERN PetscErrorCode KSPSetPC(KSP, PC);
 PETSC_EXTERN PetscErrorCode KSPGetPC(KSP, PC *);
@@ -414,6 +417,13 @@ PETSC_EXTERN PetscErrorCode KSPPIPEFGMRESSetShift(KSP, PetscScalar);
 
 PETSC_EXTERN PetscErrorCode KSPGCRSetRestart(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPGCRGetRestart(KSP, PetscInt *);
+
+PETSC_EXTERN PetscErrorCode KSPIDRSetS(KSP, PetscInt);
+PETSC_EXTERN PetscErrorCode KSPIDRGetS(KSP, PetscInt *);
+PETSC_EXTERN PetscErrorCode KSPIDRSetCosine(KSP, PetscReal);
+PETSC_EXTERN PetscErrorCode KSPIDRGetCosine(KSP, PetscReal *);
+PETSC_EXTERN PetscErrorCode KSPIDRSetRandom(KSP, PetscRandom);
+PETSC_EXTERN PetscErrorCode KSPIDRGetRandom(KSP, PetscRandom *);
 
 PETSC_DEPRECATED_FUNCTION(3, 25, 0, "KSPFlexibleSetModifyPC()", ) static inline PetscErrorCode KSPGCRSetModifyPC(KSP ksp, KSPFlexibleModifyPCFn *fun, PetscCtx ctx, PetscCtxDestroyFn *dfun)
 {
@@ -1335,6 +1345,26 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeOperatorsFn(KSP ksp, Mat A
 PETSC_EXTERN PetscErrorCode KSPSetComputeOperators(KSP, KSPComputeOperatorsFn, void *);
 
 /*S
+  KSPCreateOperatorsFn - A prototype of a `KSP` operator creation function that would be passed to `DMKSPSetCreateOperators()`
+
+  Calling Sequence:
++ ksp - `KSP` context
+. A   - the created operator that defines the linear system
+. P   - the created operator from which to build the preconditioner, often the same as `A`
+- ctx - [optional] user-defined function context
+
+  Level: developer
+
+  Notes:
+  The returned matrices are owned by the caller, similar to `DMCreateMatrix()`.
+
+  `A` and `P` may be the same object. In such a case, users do not need to increase the reference count of `A`. If `P` is not returned, then we assume it is the same of `A`.
+
+.seealso: [](ch_ksp), `DMKSPSetCreateOperators()`, `DMKSPGetCreateOperators()`, `KSPComputeOperatorsFn`, `KSPSetOperators()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPCreateOperatorsFn(KSP ksp, Mat *A, Mat *P, PetscCtx ctx);
+
+/*S
   KSPComputeInitialGuessFn - A prototype of a `KSP` evaluation function that would be passed to `KSPSetComputeInitialGuess()`
 
   Calling Sequence:
@@ -1351,6 +1381,8 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeInitialGuessFn(KSP ksp, Ve
 PETSC_EXTERN PetscErrorCode KSPSetComputeInitialGuess(KSP, KSPComputeInitialGuessFn *, void *);
 PETSC_EXTERN PetscErrorCode DMKSPSetComputeOperators(DM, KSPComputeOperatorsFn *, void *);
 PETSC_EXTERN PetscErrorCode DMKSPGetComputeOperators(DM, KSPComputeOperatorsFn **, void *);
+PETSC_EXTERN PetscErrorCode DMKSPSetCreateOperators(DM, KSPCreateOperatorsFn *, void *);
+PETSC_EXTERN PetscErrorCode DMKSPGetCreateOperators(DM, KSPCreateOperatorsFn **, void *);
 PETSC_EXTERN PetscErrorCode DMKSPSetComputeRHS(DM, KSPComputeRHSFn *, void *);
 PETSC_EXTERN PetscErrorCode DMKSPGetComputeRHS(DM, KSPComputeRHSFn **, void *);
 PETSC_EXTERN PetscErrorCode DMKSPSetComputeInitialGuess(DM, KSPComputeInitialGuessFn *, void *);

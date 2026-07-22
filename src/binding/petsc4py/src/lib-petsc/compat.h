@@ -10,9 +10,7 @@
 #include "compat/hip.h"
 #include "compat/tao.h"
 #include "compat/regressor.h"
-#include "compat/da.h"
 #include "compat/h2opus.h"
-#include "compat/htool.h"
 #include "compat/plexexodusii.h"
 
 #endif/*PETSC4PY_COMPAT_H*/

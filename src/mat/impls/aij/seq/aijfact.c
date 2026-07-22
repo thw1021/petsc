@@ -177,16 +177,14 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B, Mat A, IS isrow, IS iscol, cons
   } else {
     B->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[n] != 0) {
     PetscReal af = B->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
     PetscCall(PetscInfo(A, "Run with -pc_factor_fill %g or use \n", (double)af));
     PetscCall(PetscInfo(A, "PCFactorSetFill(pc,%g);\n", (double)af));
     PetscCall(PetscInfo(A, "for best performance.\n"));
-  } else {
-    PetscCall(PetscInfo(A, "Empty matrix\n"));
-  }
+  } else PetscCall(PetscInfo(A, "Empty matrix\n"));
 #endif
   B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJ;
   if (a->inode.size_csr) B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJ_Inode;
@@ -995,7 +993,7 @@ static PetscErrorCode MatSolve_SeqAIJ_InplaceWithPerm(Mat A, Vec bb, Vec xx)
   IS                 iscol = a->col, isrow = a->row;
   const PetscInt    *r, *c, *rout, *cout, *adiag;
   PetscInt           i, n = A->rmap->n, *vi, *ai = a->i, *aj = a->j;
-  PetscInt           nz, row;
+  PetscInt           nz;
   PetscScalar       *x, *tmp, *tmps, sum;
   const PetscScalar *b;
   const MatScalar   *aa, *v;
@@ -1017,7 +1015,7 @@ static PetscErrorCode MatSolve_SeqAIJ_InplaceWithPerm(Mat A, Vec bb, Vec xx)
   /* forward solve the lower triangular */
   tmp[0] = b[*r++];
   tmps   = tmp;
-  for (row = 1; row < n; row++) {
+  for (PetscInt row = 1; row < n; row++) {
     i   = rout[row]; /* permuted row */
     v   = aa + ai[i];
     vi  = aj + ai[i];
@@ -1028,7 +1026,7 @@ static PetscErrorCode MatSolve_SeqAIJ_InplaceWithPerm(Mat A, Vec bb, Vec xx)
   }
 
   /* backward solve the upper triangular */
-  for (row = n - 1; row >= 0; row--) {
+  for (PetscInt row = n - 1; row >= 0; row--) {
     i   = rout[row]; /* permuted row */
     v   = aa + adiag[i] + 1;
     vi  = aj + adiag[i] + 1;
@@ -1055,7 +1053,7 @@ static PetscErrorCode MatSolve_SeqAIJ_NaturalOrdering_inplace(Mat A, Vec bb, Vec
   PetscScalar       *x;
   const PetscScalar *b;
   const MatScalar   *aa;
-#if !defined(PETSC_USE_FORTRAN_KERNEL_SOLVEAIJ)
+#if !PetscDefined(USE_FORTRAN_KERNEL_SOLVEAIJ)
   PetscInt         adiag_i, i, nz, ai_i;
   const PetscInt  *vi;
   const MatScalar *v;
@@ -1069,7 +1067,7 @@ static PetscErrorCode MatSolve_SeqAIJ_NaturalOrdering_inplace(Mat A, Vec bb, Vec
   PetscCall(VecGetArrayRead(bb, &b));
   PetscCall(VecGetArrayWrite(xx, &x));
 
-#if defined(PETSC_USE_FORTRAN_KERNEL_SOLVEAIJ)
+#if PetscDefined(USE_FORTRAN_KERNEL_SOLVEAIJ)
   fortransolveaij_(&n, x, ai, aj, adiag, aa, b);
 #else
   /* forward solve the lower triangular */
@@ -1659,7 +1657,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS isrow, IS iscol, 
   PetscCall(PetscFreeSpaceDestroy(free_space_lvl));
   PetscCall(PetscFree2(bj_ptr, bjlvl_ptr));
 
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   {
     PetscReal af = ((PetscReal)(bdiag[0] + 1)) / ((PetscReal)ai[n]);
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)f, (double)af));
@@ -2235,15 +2233,13 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const MatFa
   } else {
     fact->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[am] != 0) {
     PetscReal af = fact->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));
     PetscCall(PetscInfo(A, "Run with -pc_factor_fill %g or use \n", (double)af));
     PetscCall(PetscInfo(A, "PCFactorSetFill(pc,%g) for best performance.\n", (double)af));
-  } else {
-    PetscCall(PetscInfo(A, "Empty matrix\n"));
-  }
+  } else PetscCall(PetscInfo(A, "Empty matrix\n"));
 #endif
   fact->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_SeqAIJ;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2402,15 +2398,13 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const 
   } else {
     fact->info.fill_ratio_needed = 0.0;
   }
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   if (ai[am] != 0) {
     PetscReal af = fact->info.fill_ratio_needed;
     PetscCall(PetscInfo(A, "Reallocs %" PetscInt_FMT " Fill ratio:given %g needed %g\n", reallocs, (double)fill, (double)af));
     PetscCall(PetscInfo(A, "Run with -pc_factor_fill %g or use \n", (double)af));
     PetscCall(PetscInfo(A, "PCFactorSetFill(pc,%g) for best performance.\n", (double)af));
-  } else {
-    PetscCall(PetscInfo(A, "Empty matrix\n"));
-  }
+  } else PetscCall(PetscInfo(A, "Empty matrix\n"));
 #endif
   fact->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_SeqAIJ;
   PetscFunctionReturn(PETSC_SUCCESS);

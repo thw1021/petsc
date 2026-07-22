@@ -319,7 +319,7 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj, PetscFortranCallba
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_LOG)
+#if PetscDefined(USE_LOG)
 /*@C
   PetscObjectsDump - Prints all the currently existing objects.
 
@@ -425,14 +425,13 @@ PetscErrorCode PetscObjectsView(PetscViewer viewer)
 @*/
 PetscErrorCode PetscObjectsGetObject(const char name[], PetscObject *obj, const char *classname[])
 {
-  PetscInt    i;
   PetscObject h;
   PetscBool   flg;
 
   PetscFunctionBegin;
   PetscAssertPointer(name, 1);
   if (obj) *obj = NULL;
-  for (i = 0; i < PetscObjectsMaxCounts; i++) {
+  for (PetscInt i = 0; i < PetscObjectsMaxCounts; i++) {
     if ((h = PetscObjects[i])) {
       PetscCall(PetscObjectName(h));
       PetscCall(PetscStrcmp(h->name, name, &flg));

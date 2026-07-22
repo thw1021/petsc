@@ -3,8 +3,8 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '5.8.2'
-    self.minversion       = '5.2.1'
+    self.version          = '5.9.1'
+    self.minversion       = '5.3.1'
     self.versionname      = 'MUMPS_VERSION'
     self.requiresversion  = 1
     self.gitcommit        = 'v'+self.version
@@ -134,6 +134,8 @@ class Configure(config.package.Package):
       g.write('OPTF    = '+self.updatePackageFFlags(' '.join(self.removeOpenMPFlag(self.getCompilerFlags().split())))+'\n')
     if self.blasLapack.checkForRoutine('dgemmt'):
       g.write('OPTF   += -DGEMMT_AVAILABLE\n')
+    if 'BLASLAPACK_SNRM2_RETURNS_DOUBLE' in self.blasLapack.defines:
+      g.write('OPTF   += -Dnrm2_returns_double\n')
     g.write('OUTF = -o \n')
     self.popLanguage()
 

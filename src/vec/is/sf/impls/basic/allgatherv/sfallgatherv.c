@@ -33,7 +33,6 @@ PETSC_INTERN PetscErrorCode PetscSFSetUp_Allgatherv(PetscSF sf)
 {
   PetscSF_Allgatherv *dat = (PetscSF_Allgatherv *)sf->data;
   PetscMPIInt         size;
-  PetscInt            i;
   const PetscInt     *range;
   MPI_Comm            comm;
 
@@ -48,7 +47,7 @@ PETSC_INTERN PetscErrorCode PetscSFSetUp_Allgatherv(PetscSF sf)
     PetscCall(PetscMalloc1(size, &dat->displs));
     PetscCall(PetscLayoutGetRanges(sf->map, &range));
 
-    for (i = 0; i < size; i++) {
+    for (PetscInt i = 0; i < size; i++) {
       PetscCall(PetscMPIIntCast(range[i], &dat->displs[i]));
       PetscCall(PetscMPIIntCast(range[i + 1] - range[i], &dat->recvcounts[i]));
     }
@@ -171,8 +170,8 @@ static PetscErrorCode PetscSFReduceBegin_Allgatherv(PetscSF sf, MPI_Datatype uni
 #endif
       }
       PetscCall(PetscMPIIntCast(nleaves, &nleavesi));
-#if defined(PETSC_HAVE_OPENMPI) /* Workaround: cuda-aware Open MPI 4.1.3 does not support MPI_Ireduce() with device buffers */
-      *req = MPI_REQUEST_NULL;  /* Set NULL so that we can safely MPI_Wait(req) */
+#if PetscDefined(HAVE_OPENMPI) /* Workaround: cuda-aware Open MPI 4.1.3 does not support MPI_Ireduce() with device buffers */
+      *req = MPI_REQUEST_NULL; /* Set NULL so that we can safely MPI_Wait(req) */
       PetscCallMPI(MPIU_Reduce(leafbuf, rootbuf, nleavesi, baseunit, op, dat->bcast_root, comm));
 #else
       PetscCallMPI(MPIU_Ireduce(leafbuf, rootbuf, nleavesi, baseunit, op, dat->bcast_root, comm, req));

@@ -26,7 +26,7 @@ PetscErrorCode MatDisAssemble_MPISELL(Mat A)
   PetscCall(VecDestroy(&sell->lvec));
   PetscCall(VecScatterDestroy(&sell->Mvctx));
   if (sell->colmap) {
-#if defined(PETSC_USE_CTABLE)
+#if PetscDefined(USE_CTABLE)
     PetscCall(PetscHMapIDestroy(&sell->colmap));
 #else
     PetscCall(PetscFree(sell->colmap));
@@ -78,7 +78,7 @@ PetscErrorCode MatSetUpMultiply_MPISELL(Mat mat)
   IS           from, to;
   Vec          gvec;
   PetscBool    isnonzero;
-#if defined(PETSC_USE_CTABLE)
+#if PetscDefined(USE_CTABLE)
   PetscHMapI    gid1_lid1 = NULL;
   PetscHashIter tpos;
   PetscInt      gid, lid;
@@ -90,7 +90,7 @@ PetscErrorCode MatSetUpMultiply_MPISELL(Mat mat)
   totalslices = PetscCeilInt(sell->B->rmap->n, B->sliceheight);
 
   /* ec counts the number of columns that contain nonzeros */
-#if defined(PETSC_USE_CTABLE)
+#if PetscDefined(USE_CTABLE)
   /* use a table */
   PetscCall(PetscHMapICreateWithSize(sell->B->rmap->n, &gid1_lid1));
   for (i = 0; i < totalslices; i++) { /* loop over slices */
@@ -246,7 +246,7 @@ static PetscErrorCode MatMPISELLDiagonalScaleLocalSetUp(Mat inA, Vec scale)
 PetscErrorCode MatDiagonalScaleLocal_MPISELL(Mat A, Vec scale)
 {
   Mat_MPISELL       *a = (Mat_MPISELL *)A->data; /*access private part of matrix */
-  PetscInt           n, i;
+  PetscInt           n;
   PetscScalar       *d, *o;
   const PetscScalar *s;
 
@@ -255,13 +255,13 @@ PetscErrorCode MatDiagonalScaleLocal_MPISELL(Mat A, Vec scale)
   PetscCall(VecGetArrayRead(scale, &s));
   PetscCall(VecGetLocalSize(auglydd, &n));
   PetscCall(VecGetArray(auglydd, &d));
-  for (i = 0; i < n; i++) d[i] = s[auglyrmapd[i]]; /* copy "diagonal" (true local) portion of scale into dd vector */
+  for (PetscInt i = 0; i < n; i++) d[i] = s[auglyrmapd[i]]; /* copy "diagonal" (true local) portion of scale into dd vector */
   PetscCall(VecRestoreArray(auglydd, &d));
   /* column scale "diagonal" portion of local matrix */
   PetscCall(MatDiagonalScale(a->A, NULL, auglydd));
   PetscCall(VecGetLocalSize(auglyoo, &n));
   PetscCall(VecGetArray(auglyoo, &o));
-  for (i = 0; i < n; i++) o[i] = s[auglyrmapo[i]]; /* copy "off-diagonal" portion of scale into oo vector */
+  for (PetscInt i = 0; i < n; i++) o[i] = s[auglyrmapo[i]]; /* copy "off-diagonal" portion of scale into oo vector */
   PetscCall(VecRestoreArrayRead(scale, &s));
   PetscCall(VecRestoreArray(auglyoo, &o));
   /* column scale "off-diagonal" portion of local matrix */

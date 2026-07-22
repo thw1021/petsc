@@ -131,7 +131,7 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
   SNESLineSearch       linesearch;
   SNESConvergedReason  reason;
   PC                   pc;
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
   PetscReal gnorm;
 #endif
 
@@ -224,7 +224,7 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
 
     if (PetscLogPrintInfo) PetscCall(SNESNEWTONLSCheckResidual_Private(snes, snes->jacobian, F, Y));
 
-#if defined(PETSC_USE_INFO)
+#if PetscDefined(USE_INFO)
     gnorm = fnorm;
 #endif
     /* Compute a (scaled) negative update in the line search routine:
@@ -317,14 +317,14 @@ static PetscErrorCode SNESDestroy_NEWTONLS(SNES snes)
    SNESNEWTONLS - Newton based nonlinear solver that uses a line search
 
    Options Database Keys:
-+   -snes_linesearch_type (none|basic|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
-.   -snes_linesearch_order 3                                                - 2, 3. Selects the order of the line search for `bt`, see `SNESLineSearchSetOrder()`
-.   -snes_linesearch_norms true                                             - Turns on/off computation of the norms for basic linesearch (`SNESLineSearchSetComputeNorms()`)
-.   -snes_linesearch_alpha alpha                                            - Sets `alpha` used in determining if reduction in function norm is sufficient
-.   -snes_linesearch_maxstep maxstep                                        - Sets the maximum `stepsize` the line search will use (if the $ ||y|| > maxstep $ then scale `y` to be $y = y * maxstep/||y||.$
-.   -snes_linesearch_minlambda minlambda                                    - Sets the minimum `lambda` the line search will tolerate
-.   -snes_linesearch_monitor                                                - print information about the progress of line searches
--   -snes_linesearch_damping                                                - damping factor used for the basic line search
++   -snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - Line search type, see `SNESLineSearchType`
+.   -snes_linesearch_order 3                                          - 2, 3. Selects the order of the line search for `bt`, see `SNESLineSearchSetOrder()`
+.   -snes_linesearch_norms true                                       - Turns on/off computation of the norms for `none` linesearch (`SNESLineSearchSetComputeNorms()`)
+.   -snes_linesearch_alpha alpha                                      - Sets `alpha` used in determining if reduction in function norm is sufficient
+.   -snes_linesearch_maxstep maxstep                                  - Sets the maximum `stepsize` the line search will use (if the $ ||y|| > maxstep $ then scale `y` to be $y = y * maxstep/||y||.$
+.   -snes_linesearch_minlambda minlambda                              - Sets the minimum `lambda` the line search will tolerate
+.   -snes_linesearch_monitor                                          - Print information about the progress of line searches
+-   -snes_linesearch_damping                                          - Damping factor used for the `none` line search
 
    Level: beginner
 
@@ -352,8 +352,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONLS(SNES snes)
   if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBT));
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
-
-  PetscCall(SNESParametersInitialize(snes));
 
   PetscCall(PetscNew(&neP));
   snes->data = (void *)neP;

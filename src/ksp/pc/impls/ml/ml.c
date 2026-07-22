@@ -781,13 +781,11 @@ static PetscErrorCode PCSetUp_ML(PC pc)
 #endif
 
     if (!pc_ml->RepartitionType) {
-      PetscInt i;
-
       PetscCheck(pc_ml->dim, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "ML Zoltan repartitioning requires coordinates");
       PetscCallExternalVoid("ML_Repartition_Set_Partitioner", ML_Repartition_Set_Partitioner(ml_object, ML_USEZOLTAN));
       PetscCallExternalVoid("ML_Aggregate_Set_Dimensions", ML_Aggregate_Set_Dimensions(agg_object, pc_ml->dim));
 
-      for (i = 0; i < ml_object->ML_num_levels; i++) {
+      for (PetscInt i = 0; i < ml_object->ML_num_levels; i++) {
         ML_Aggregate_Viz_Stats *grid_info = (ML_Aggregate_Viz_Stats *)ml_object->Grid[i].Grid;
         grid_info->zoltan_type            = pc_ml->ZoltanScheme + 1; /* ml numbers options 1, 2, 3 */
         /* defaults from ml_agg_info.c */
@@ -1100,7 +1098,7 @@ static PetscErrorCode PCSetFromOptions_ML(PC pc, PetscOptionItems PetscOptionsOb
    operators are computed by ML, with the matrices converted to PETSc matrices in `MATAIJ` format
    and the restriction/interpolation operators wrapped as PETSc shell matrices.
 
-.seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCMGType`, `PCMG`, `PCHYPRE`, `PCGAMG`,
+.seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCMGType`, `PCMG`, `PCHYPRE`, `PCGAMG`, `PCAIR`,
           `PCMGSetLevels()`, `PCMGGetLevels()`, `PCMGSetType()`, `MPSetCycles()`, `PCMGSetDistinctSmoothUp()`,
           `PCMGGetCoarseSolve()`, `PCMGSetResidual()`, `PCMGSetInterpolation()`,
           `PCMGSetRestriction()`, `PCMGGetSmoother()`, `PCMGGetSmootherUp()`, `PCMGGetSmootherDown()`,

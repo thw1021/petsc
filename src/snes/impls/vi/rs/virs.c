@@ -127,7 +127,6 @@ static PetscErrorCode DMCoarsen_SNESVI(DM dm1, MPI_Comm comm, DM *dm2)
   */
   PetscCall(ISGetIndices(dmsnesvi1->inactive, &index));
   PetscCall(ISGetLocalSize(dmsnesvi1->inactive, &n));
-  PetscCall(VecSet(finemarked, 0.0));
   for (k = 0; k < n; k++) PetscCall(VecSetValue(finemarked, index[k], 1.0, INSERT_VALUES));
   PetscCall(VecAssemblyBegin(finemarked));
   PetscCall(VecAssemblyEnd(finemarked));
@@ -634,7 +633,7 @@ PetscErrorCode SNESVISetRedundancyCheck(SNES snes, PetscErrorCode (*func)(SNES s
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_MATLAB)
+#if PetscDefined(HAVE_MATLAB)
   #include <engine.h>
   #include <mex.h>
 typedef struct {
@@ -770,7 +769,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_VINEWTONRSLS(SNES snes)
   snes->ops->destroy        = SNESDestroy_VI;
   snes->ops->setfromoptions = SNESSetFromOptions_VI;
   snes->ops->view           = NULL;
-  snes->ops->converged      = SNESConvergedDefault_VI;
+  if (!snes->ops->converged || snes->ops->converged == SNESConvergedDefault) snes->ops->converged = SNESConvergedDefault_VI;
 
   snes->usesksp = PETSC_TRUE;
   snes->usesnpc = PETSC_FALSE;
@@ -781,11 +780,8 @@ PETSC_EXTERN PetscErrorCode SNESCreate_VINEWTONRSLS(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
-  PetscCall(SNESParametersInitialize(snes));
-
   PetscCall(PetscNew(&vi));
-  snes->data          = (void *)vi;
-  vi->checkredundancy = NULL;
+  snes->data = (void *)vi;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESVISetVariableBounds_C", SNESVISetVariableBounds_VI));
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESVISetComputeVariableBounds_C", SNESVISetComputeVariableBounds_VI));

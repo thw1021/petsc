@@ -177,7 +177,7 @@ PetscErrorCode PetscRandomSetFromOptions(PetscRandom rnd)
     PetscCall(PetscRandomSeed(rnd));
   }
   PetscCall(PetscOptionsBool("-random_no_imaginary_part", "The imaginary part of the random number will be zero", "PetscRandomSetInterval", noimaginary, &noimaginary, &set));
-#if defined(PETSC_HAVE_COMPLEX)
+#if PetscDefined(HAVE_COMPLEX)
   if (set) {
     if (noimaginary) {
       PetscScalar low, high;
@@ -209,7 +209,7 @@ PetscErrorCode PetscRandomSetFromOptions(PetscRandom rnd)
   A hyphen (-) must NOT be given at the beginning of the prefix name.
   The first character of all runtime options is AUTOMATICALLY the hyphen.
 
-.seealso: `PetscRandom`, `PetscRandomSetFromOptions()`
+.seealso: `PetscRandom`, `PetscRandomAppendOptionsPrefix()`, `PetscRandomSetFromOptions()`
 @*/
 PetscErrorCode PetscRandomSetOptionsPrefix(PetscRandom r, const char prefix[])
 {
@@ -219,7 +219,57 @@ PetscErrorCode PetscRandomSetOptionsPrefix(PetscRandom r, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_SAWS)
+/*@
+  PetscRandomAppendOptionsPrefix - Appends to the prefix used for searching for all
+  `PetscRandom` options in the database.
+
+  Logically Collective
+
+  Input Parameters:
++ r      - the random number generator context
+- prefix - the prefix string to prepend to all `PetscRandom` option requests
+
+  Level: advanced
+
+  Note:
+  A hyphen (-) must NOT be given at the beginning of the prefix name.
+  The first character of all runtime options is AUTOMATICALLY the hyphen.
+
+.seealso: `PetscRandom`, `PetscRandomSetOptionsPrefix()`, `PetscRandomSetFromOptions()`
+@*/
+PetscErrorCode PetscRandomAppendOptionsPrefix(PetscRandom r, const char prefix[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(r, PETSC_RANDOM_CLASSID, 1);
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)r, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscRandomGetOptionsPrefix - Gets the prefix used for searching for all
+  `PetscRandom` options in the database.
+
+  Not Collective
+
+  Input Parameter:
+. r - the random number generator context
+
+  Output Parameter:
+. prefix - pointer to the prefix string used
+
+  Level: advanced
+
+.seealso: `PetscRandom`, `PetscRandomSetOptionsPrefix()`, `PetscRandomAppendOptionsPrefix()`
+@*/
+PetscErrorCode PetscRandomGetOptionsPrefix(PetscRandom r, const char *prefix[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(r, PETSC_RANDOM_CLASSID, 1);
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)r, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if PetscDefined(HAVE_SAWS)
   #include <petscviewersaws.h>
 #endif
 
@@ -272,7 +322,7 @@ PetscErrorCode PetscRandomViewFromOptions(PetscRandom A, PetscObject obj, const 
 PetscErrorCode PetscRandomView(PetscRandom rnd, PetscViewer viewer)
 {
   PetscBool isascii;
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   PetscBool issaws;
 #endif
 
@@ -283,7 +333,7 @@ PetscErrorCode PetscRandomView(PetscRandom rnd, PetscViewer viewer)
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(rnd, 1, viewer, 2);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSAWS, &issaws));
 #endif
   if (isascii) {
@@ -294,7 +344,7 @@ PetscErrorCode PetscRandomView(PetscRandom rnd, PetscViewer viewer)
     PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Random type %s, seed %lu\n", rank, ((PetscObject)rnd)->type_name, rnd->seed));
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
   } else if (issaws) {
     PetscMPIInt rank;
     const char *name;

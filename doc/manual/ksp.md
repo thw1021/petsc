@@ -372,6 +372,9 @@ KSPSetUp_Richardson:No right preconditioning for KSPRICHARDSON
   * - Enhanced BiCGSTAB(L)
     - ``KSPBCGSL``
     - ``bcgsl``
+  * - IDR(s) :cite:`gijzen:2011`
+    - ``KSPIDR``
+    - ``idr``
   * - Minimal Residual Method :cite:`paige.saunders:solution`
     - ``KSPMINRES``
     - ``minres``
@@ -710,7 +713,7 @@ iterative linear solvers.
 PETSc provides several domain decomposition methods/preconditioners including
 `PCASM`, `PCGASM`, `PCBDDC`, and `PCHPDDM`. In addition PETSc provides
 multiple multigrid solvers/preconditioners including `PCMG`, `PCGAMG`, `PCHYPRE`,
-and `PCML`. See further discussion below.
+`PCML`, and `PCAIR`. See further discussion below.
 
 ```{eval-rst}
 .. list-table:: PETSc Preconditioners (partial list)
@@ -1073,8 +1076,8 @@ subdomains. The `runex62_2D_*` examples illustrate the use of
 ### Algebraic Multigrid (AMG) Preconditioners
 
 PETSc has a native algebraic multigrid preconditioner `PCGAMG` –
-*gamg* – and interfaces to three external AMG packages: *hypre*, *ML*
-and *AMGx* (CUDA platforms only) that can be downloaded in the
+*gamg* – and interfaces to four external AMG packages: *hypre*, *ML*,
+*AMGx* (CUDA platforms only) and *PFLARE* that can be downloaded in the
 configuration phase (e.g., `--download-hypre` ) and used by
 specifying that command line parameter (e.g., `-pc_type hypre`).
 *Hypre* is relatively monolithic in that a PETSc matrix is converted into a hypre
@@ -1082,7 +1085,9 @@ matrix, and then *hypre* is called to solve the entire problem. *ML* is more
 modular because PETSc only has *ML* generate the coarse grid spaces
 (columns of the prolongation operator), which is the core of an AMG method,
 and then constructs a `PCMG` with Galerkin coarse grid operator
-construction. `PCGAMG` is designed from the beginning to be modular, to
+construction. *PFLARE* provides `PCAIR`, a reduction-based AMG using approximate
+ideal restriction (AIR) aimed at nonsymmetric systems, as well as `PCPFLAREINV`,
+which builds approximate inverses using polynomial (GMRES/Neumann) or sparse methods. `PCGAMG` is designed from the beginning to be modular, to
 allow for new components to be added easily and also populates a
 multigrid preconditioner `PCMG` so generic multigrid parameters are
 used (see {any}`sec_mg`). PETSc provides a fully supported (smoothed) aggregation AMG, but supports the addition of new methods
@@ -1120,6 +1125,10 @@ constructor (or the `-mat_type` from the command line). For instance,
 
   > - `-pc_gamg_agg_nsmooths n` Number of smoothing steps to be used in constructing the prolongation. For symmetric problems,
   >   generally, one or more is best. For some strongly nonsymmetric problems, 0 may be best. See `PCGAMGSetNSmooths()`.
+  > - `-pc_gamg_prolongator_filter thr` Filter small entries from the smoothed prolongator while preserving the near-null space.
+  >   Entries with absolute value below `thr` are dropped, then each row is corrected to maintain the constraint $P B_c = B$.
+  >   A value of 0 disables filtering (default). Typical values are 0.001-0.0025. This can reduce operator complexity and
+  >   improve solve time with minimal impact on convergence. See `PCGAMGSetProlongatorFilter()`.
 
 - Control the amount of parallelism on the levels
 

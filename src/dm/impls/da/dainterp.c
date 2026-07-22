@@ -72,7 +72,7 @@ static PetscErrorCode DMCreateInterpolation_DA_1D_Q1(DM dac, DM daf, Mat *A)
 
   /* create interpolation matrix */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dac), &mat));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /*
      Temporary hack: Since the MAIJ matrix must be converted to AIJ before being used by the GPU
      we don't want the original unconverted matrix copied to the GPU
@@ -205,7 +205,7 @@ static PetscErrorCode DMCreateInterpolation_DA_1D_Q0(DM dac, DM daf, Mat *A)
 
   /* create interpolation matrix */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dac), &mat));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /*
      Temporary hack: Since the MAIJ matrix must be converted to AIJ before being used by the GPU
      we don't want the original unconverted matrix copied to the GPU
@@ -346,7 +346,7 @@ static PetscErrorCode DMCreateInterpolation_DA_2D_Q1(DM dac, DM daf, Mat *A)
     }
   }
   PetscCall(MatCreate(PetscObjectComm((PetscObject)daf), &mat));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /*
      Temporary hack: Since the MAIJ matrix must be converted to AIJ before being used by the GPU
      we don't want the original unconverted matrix copied to the GPU
@@ -558,7 +558,7 @@ static PetscErrorCode DMCreateInterpolation_DA_2D_Q0(DM dac, DM daf, Mat *A)
     }
   }
   PetscCall(MatCreate(PetscObjectComm((PetscObject)daf), &mat));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /*
      Temporary hack: Since the MAIJ matrix must be converted to AIJ before being used by the GPU
      we don't want the original unconverted matrix copied to the GPU
@@ -687,7 +687,7 @@ static PetscErrorCode DMCreateInterpolation_DA_3D_Q0(DM dac, DM daf, Mat *A)
     }
   }
   PetscCall(MatCreate(PetscObjectComm((PetscObject)daf), &mat));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /*
      Temporary hack: Since the MAIJ matrix must be converted to AIJ before being used by the GPU
      we don't want the original unconverted matrix copied to the GPU
@@ -828,7 +828,7 @@ static PetscErrorCode DMCreateInterpolation_DA_3D_Q1(DM dac, DM daf, Mat *A)
     }
   }
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dac), &mat));
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   /*
      Temporary hack: Since the MAIJ matrix must be converted to AIJ before being used by the GPU
      we don't want the original unconverted matrix copied to the GPU
@@ -1343,7 +1343,6 @@ PetscErrorCode DMDACreateAggregates(DM dac, DM daf, Mat *rest)
   PetscInt               i_start_c, j_start_c, l_start_c, m_c, n_c, p_c;
   PetscInt               i_start_ghost_c, j_start_ghost_c, l_start_ghost_c, m_ghost_c, n_ghost_c, p_ghost_c;
   const PetscInt        *idx_c;
-  PetscInt               d;
   PetscInt               a;
   PetscInt               max_agg_size;
   PetscInt              *fine_nodes;
@@ -1406,7 +1405,7 @@ PetscErrorCode DMDACreateAggregates(DM dac, DM daf, Mat *rest)
   for (l_c = l_start_c; l_c < l_start_c + p_c; l_c++) {
     for (j_c = j_start_c; j_c < j_start_c + n_c; j_c++) {
       for (i_c = i_start_c; i_c < i_start_c + m_c; i_c++) {
-        for (d = 0; d < dofc; d++) {
+        for (PetscInt d = 0; d < dofc; d++) {
           /* convert to local "natural" numbering and then to PETSc global numbering */
           a = idx_c[dofc * (m_ghost_c * n_ghost_c * (l_c - l_start_ghost_c) + m_ghost_c * (j_c - j_start_ghost_c) + (i_c - i_start_ghost_c))] + d;
 

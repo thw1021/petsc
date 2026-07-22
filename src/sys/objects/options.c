@@ -12,16 +12,16 @@
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
 #include <petscviewer.h>
 #include <ctype.h>
-#if defined(PETSC_HAVE_MALLOC_H)
+#if PetscDefined(HAVE_MALLOC_H)
   #include <malloc.h>
 #endif
-#if defined(PETSC_HAVE_STRINGS_H)
+#if PetscDefined(HAVE_STRINGS_H)
   #include <strings.h> /* strcasecmp */
 #endif
 
-#if defined(PETSC_HAVE_STRCASECMP)
+#if PetscDefined(HAVE_STRCASECMP)
   #define PetscOptNameCmp(a, b) strcasecmp(a, b)
-#elif defined(PETSC_HAVE_STRICMP)
+#elif PetscDefined(HAVE_STRICMP)
   #define PetscOptNameCmp(a, b) stricmp(a, b)
 #else
   #define PetscOptNameCmp(a, b) Error_strcasecmp_not_found
@@ -677,7 +677,6 @@ PetscErrorCode PetscOptionsInsertFile(MPI_Comm comm, PetscOptions options, const
 @*/
 PetscErrorCode PetscOptionsInsertArgs(PetscOptions options, int argc, const char *const args[])
 {
-  MPI_Comm           comm  = PETSC_COMM_WORLD;
   int                left  = PetscMax(argc, 0);
   const char *const *eargs = args;
 
@@ -695,12 +694,12 @@ PetscErrorCode PetscOptionsInsertArgs(PetscOptions options, int argc, const char
       left--;
     } else if (isfile) {
       PetscCheck(left > 1 && eargs[1][0] != '-', PETSC_COMM_SELF, PETSC_ERR_USER, "Missing filename for -options_file filename option");
-      PetscCall(PetscOptionsInsertFile(comm, options, eargs[1], PETSC_TRUE));
+      PetscCall(PetscOptionsInsertFile(PETSC_COMM_WORLD, options, eargs[1], PETSC_TRUE));
       eargs += 2;
       left -= 2;
     } else if (isfileyaml) {
       PetscCheck(left > 1 && eargs[1][0] != '-', PETSC_COMM_SELF, PETSC_ERR_USER, "Missing filename for -options_file_yaml filename option");
-      PetscCall(PetscOptionsInsertFileYAML(comm, options, eargs[1], PETSC_TRUE));
+      PetscCall(PetscOptionsInsertFileYAML(PETSC_COMM_WORLD, options, eargs[1], PETSC_TRUE));
       eargs += 2;
       left -= 2;
     } else if (isstringyaml) {
@@ -852,7 +851,6 @@ static inline PetscErrorCode PetscOptionsSkipPrecedent(PetscOptions options, con
 @*/
 PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args, const char file[]) PeNS
 {
-  MPI_Comm    comm = PETSC_COMM_WORLD;
   PetscMPIInt rank;
   PetscBool   hasArgs     = (argc && *argc) ? PETSC_TRUE : PETSC_FALSE;
   PetscBool   skipPetscrc = PETSC_FALSE, skipPetscrcSet = PETSC_FALSE;
@@ -860,8 +858,8 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
   size_t      len      = 0;
 
   PetscFunctionBegin;
-  PetscCheck(!hasArgs || (args && *args), comm, PETSC_ERR_ARG_NULL, "*argc > 1 but *args not given");
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCheck(!hasArgs || (args && *args), PETSC_COMM_WORLD, PETSC_ERR_ARG_NULL, "*argc > 1 but *args not given");
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
 
   if (!options) {
     PetscCall(PetscOptionsCreateDefault());
@@ -873,7 +871,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-petsc_ci", &PetscCIEnabled, NULL));
   }
   if (file && file[0]) {
-    PetscCall(PetscOptionsInsertFile(comm, options, file, PETSC_TRUE));
+    PetscCall(PetscOptionsInsertFile(PETSC_COMM_WORLD, options, file, PETSC_TRUE));
     /* if -skip_petscrc has not been set from command line, check whether it has been set in the file */
     if (!skipPetscrcSet) PetscCall(PetscOptionsGetBool(options, NULL, "-skip_petscrc", &skipPetscrc, NULL));
   }
@@ -881,11 +879,11 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
     char filename[PETSC_MAX_PATH_LEN];
 
     PetscCall(PetscGetHomeDirectory(filename, sizeof(filename)));
-    PetscCallMPI(MPI_Bcast(filename, (int)sizeof(filename), MPI_CHAR, 0, comm));
+    PetscCallMPI(MPI_Bcast(filename, (int)sizeof(filename), MPI_CHAR, 0, PETSC_COMM_WORLD));
     if (filename[0]) PetscCall(PetscStrlcat(filename, "/.petscrc", sizeof(filename)));
-    PetscCall(PetscOptionsInsertFile(comm, options, filename, PETSC_FALSE));
-    PetscCall(PetscOptionsInsertFile(comm, options, ".petscrc", PETSC_FALSE));
-    PetscCall(PetscOptionsInsertFile(comm, options, "petscrc", PETSC_FALSE));
+    PetscCall(PetscOptionsInsertFile(PETSC_COMM_WORLD, options, filename, PETSC_FALSE));
+    PetscCall(PetscOptionsInsertFile(PETSC_COMM_WORLD, options, ".petscrc", PETSC_FALSE));
+    PetscCall(PetscOptionsInsertFile(PETSC_COMM_WORLD, options, "petscrc", PETSC_FALSE));
   }
 
   /* insert environment options */
@@ -893,10 +891,10 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
     eoptions = getenv("PETSC_OPTIONS");
     PetscCall(PetscStrlen(eoptions, &len));
   }
-  PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, comm));
+  PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, PETSC_COMM_WORLD));
   if (len) {
     if (rank) PetscCall(PetscMalloc1(len + 1, &eoptions));
-    PetscCallMPI(MPI_Bcast(eoptions, (PetscMPIInt)len, MPI_CHAR, 0, comm));
+    PetscCallMPI(MPI_Bcast(eoptions, (PetscMPIInt)len, MPI_CHAR, 0, PETSC_COMM_WORLD));
     if (rank) eoptions[len] = 0;
     PetscCall(PetscOptionsInsertString_Private(options, eoptions, PETSC_OPT_ENVIRONMENT));
     if (rank) PetscCall(PetscFree(eoptions));
@@ -907,10 +905,10 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
     eoptions = getenv("PETSC_OPTIONS_YAML");
     PetscCall(PetscStrlen(eoptions, &len));
   }
-  PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, comm));
+  PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, PETSC_COMM_WORLD));
   if (len) {
     if (rank) PetscCall(PetscMalloc1(len + 1, &eoptions));
-    PetscCallMPI(MPI_Bcast(eoptions, (PetscMPIInt)len, MPI_CHAR, 0, comm));
+    PetscCallMPI(MPI_Bcast(eoptions, (PetscMPIInt)len, MPI_CHAR, 0, PETSC_COMM_WORLD));
     if (rank) eoptions[len] = 0;
     PetscCall(PetscOptionsInsertStringYAML_Private(options, eoptions, PETSC_OPT_ENVIRONMENT));
     if (rank) PetscCall(PetscFree(eoptions));
@@ -1952,13 +1950,12 @@ PetscErrorCode PetscOptionsAllUsed(PetscOptions options, PetscInt *N)
 @*/
 PetscErrorCode PetscOptionsLeft(PetscOptions options)
 {
-  PetscInt     i;
   PetscInt     cnt = 0;
   PetscOptions toptions;
 
   PetscFunctionBegin;
   toptions = options ? options : defaultoptions;
-  for (i = 0; i < toptions->N; i++) {
+  for (PetscInt i = 0; i < toptions->N; i++) {
     if (!toptions->used[i]) {
       if (PetscCIOption(toptions->names[i])) continue;
       if (toptions->values[i]) {
@@ -2004,7 +2001,7 @@ PetscErrorCode PetscOptionsLeft(PetscOptions options)
 @*/
 PetscErrorCode PetscOptionsLeftGet(PetscOptions options, PetscInt *N, char **names[], char **values[])
 {
-  PetscInt i, n;
+  PetscInt n;
 
   PetscFunctionBegin;
   if (N) PetscAssertPointer(N, 2);
@@ -2014,7 +2011,7 @@ PetscErrorCode PetscOptionsLeftGet(PetscOptions options, PetscInt *N, char **nam
 
   /* The number of unused PETSc options */
   n = 0;
-  for (i = 0; i < options->N; i++) {
+  for (PetscInt i = 0; i < options->N; i++) {
     if (PetscCIOption(options->names[i])) continue;
     if (!options->used[i]) n++;
   }
@@ -2024,7 +2021,7 @@ PetscErrorCode PetscOptionsLeftGet(PetscOptions options, PetscInt *N, char **nam
 
   n = 0;
   if (names || values) {
-    for (i = 0; i < options->N; i++) {
+    for (PetscInt i = 0; i < options->N; i++) {
       if (!options->used[i]) {
         if (PetscCIOption(options->names[i])) continue;
         if (names) (*names)[n] = options->names[i];
@@ -2104,13 +2101,12 @@ PetscErrorCode PetscOptionsMonitorDefault(const char name[], const char value[],
       PetscCall(PetscViewerASCIIPrintf(viewer, "Setting option: %s = %s (source: %s)\n", name, value, PetscOptionSources[source]));
     }
   } else {
-    MPI_Comm comm = PETSC_COMM_WORLD;
     if (!value) {
-      PetscCall(PetscPrintf(comm, "Removing option: %s\n", name));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Removing option: %s\n", name));
     } else if (!value[0]) {
-      PetscCall(PetscPrintf(comm, "Setting option: %s (no value) (source: %s)\n", name, PetscOptionSources[source]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Setting option: %s (no value) (source: %s)\n", name, PetscOptionSources[source]));
     } else {
-      PetscCall(PetscPrintf(comm, "Setting option: %s = %s (source: %s)\n", name, value, PetscOptionSources[source]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Setting option: %s = %s (source: %s)\n", name, value, PetscOptionSources[source]));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2290,10 +2286,10 @@ PetscErrorCode PetscOptionsStringToInt(const char name[], PetscInt *a)
     strtolval = strtol(name, &endptr, 10);
     PetscCheck((size_t)(endptr - name) == len, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Input string %s has no integer value (do not include . in it)", name);
 
-#if defined(PETSC_USE_64BIT_INDICES) && defined(PETSC_HAVE_ATOLL)
+#if PetscDefined(USE_64BIT_INDICES) && PetscDefined(HAVE_ATOLL)
     (void)strtolval;
     *a = atoll(name);
-#elif defined(PETSC_USE_64BIT_INDICES) && defined(PETSC_HAVE___INT64)
+#elif PetscDefined(USE_64BIT_INDICES) && PetscDefined(HAVE___INT64)
     (void)strtolval;
     *a = _atoi64(name);
 #else
@@ -2303,14 +2299,14 @@ PetscErrorCode PetscOptionsStringToInt(const char name[], PetscInt *a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_REAL___FLOAT128)
+#if PetscDefined(USE_REAL___FLOAT128)
   #include <quadmath.h>
 #endif
 
 static PetscErrorCode PetscStrtod(const char name[], PetscReal *a, char **endptr)
 {
   PetscFunctionBegin;
-#if defined(PETSC_USE_REAL___FLOAT128)
+#if PetscDefined(USE_REAL___FLOAT128)
   *a = strtoflt128(name, endptr);
 #else
   *a = (PetscReal)strtod(name, endptr);
@@ -2344,7 +2340,7 @@ static PetscErrorCode PetscStrtoz(const char name[], PetscScalar *a, char **endp
   *endptr      = ptr;
   *isImaginary = hasi;
   if (hasi) {
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Input string %s contains imaginary but complex not supported ", name);
 #else
     *a = PetscCMPLX(0., strtoval);
@@ -2446,7 +2442,7 @@ PetscErrorCode PetscOptionsStringToScalar(const char name[], PetscScalar *a)
   PetscCall(PetscStrlen(name, &len));
   PetscCheck(len, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "character string of length zero has no numerical value");
   PetscCall(PetscStrtoz(name, &val, &ptr, &imag1));
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   if ((size_t)(ptr - name) < len) {
     PetscBool   imag2;
     PetscScalar val2;
@@ -2612,11 +2608,10 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], cons
   size_t    alen, len = 0, tlen = 0;
   char     *svalue;
   PetscBool aset, flg = PETSC_FALSE;
-  PetscInt  i;
 
   PetscFunctionBegin;
   PetscAssertPointer(opt, 3);
-  for (i = 0; i < ntext; i++) {
+  for (PetscInt i = 0; i < ntext; i++) {
     PetscCall(PetscStrlen(list[i], &alen));
     if (alen > len) len = alen;
     tlen += len + 1;
@@ -2631,7 +2626,7 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], cons
 
       PetscCall(PetscMalloc1(tlen, &avail));
       avail[0] = '\0';
-      for (i = 0; i < ntext; i++) {
+      for (PetscInt i = 0; i < ntext; i++) {
         PetscCall(PetscStrlcat(avail, list[i], tlen));
         PetscCall(PetscStrlcat(avail, " ", tlen));
       }
@@ -2888,7 +2883,7 @@ PetscErrorCode PetscOptionsGetScalar(PetscOptions options, const char pre[], con
     if (!value) {
       if (set) *set = PETSC_FALSE;
     } else {
-#if !defined(PETSC_USE_COMPLEX)
+#if !PetscDefined(USE_COMPLEX)
       PetscCall(PetscOptionsStringToReal(value, dvalue));
 #else
       PetscCall(PetscOptionsStringToScalar(value, dvalue));
@@ -3375,44 +3370,6 @@ PetscErrorCode PetscOptionsGetStringArray(PetscOptions options, const char pre[]
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscOptionsDeprecated_Private - mark an option as deprecated, optionally replacing it with `newname`
-
-  Prints a deprecation warning, unless an option is supplied to suppress.
-
-  Logically Collective
-
-  Input Parameters:
-+ PetscOptionsObject - string to prepend to name or `NULL`
-. oldname            - the old, deprecated option
-. newname            - the new option, or `NULL` if option is purely removed
-. version            - a string describing the version of first deprecation, e.g. "3.9"
-- info               - additional information string, or `NULL`.
-
-  Options Database Key:
-. -options_suppress_deprecated_warnings - do not print deprecation warnings
-
-  Level: developer
-
-  Notes:
-  If `newname` is provided then the options database will automatically check the database for `oldname`.
-
-  The old call `PetscOptionsXXX`(`oldname`) should be removed from the source code when both (1) the call to `PetscOptionsDeprecated()` occurs before the
-  new call to `PetscOptionsXXX`(`newname`) and (2) the argument handling of the new call to `PetscOptionsXXX`(`newname`) is identical to the previous call.
-  See `PTScotch_PartGraph_Seq()` for an example of when (1) fails and `SNESTestJacobian()` where an example of (2) fails.
-
-  Must be called between `PetscOptionsBegin()` (or `PetscObjectOptionsBegin()`) and `PetscOptionsEnd()`.
-  Only the process of rank zero that owns the `PetscOptionsItems` are argument (managed by `PetscOptionsBegin()` or
-  `PetscObjectOptionsBegin()` prints the information
-  If newname is provided, the old option is replaced. Otherwise, it remains
-  in the options database.
-  If an option is not replaced, the info argument should be used to advise the user
-  on how to proceed.
-  There is a limit on the length of the warning printed, so very long strings
-  provided as info may be truncated.
-
-.seealso: `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsScalar()`, `PetscOptionsBool()`, `PetscOptionsString()`, `PetscOptionsSetValue()`
-@*/
 PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems PetscOptionsObject, const char oldname[], const char newname[], const char version[], const char info[])
 {
   PetscBool         found, quiet;

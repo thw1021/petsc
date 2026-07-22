@@ -5,20 +5,19 @@ static char help[] = "Exercises switching back and forth between different KSP a
 int main(int argc, char **args)
 {
   KSP ksp;
-#if defined(PETSC_HAVE_HPDDM)
+#if PetscDefined(HAVE_HPDDM)
   KSPHPDDMType type;
   PetscBool    flg;
 #endif
-  PetscInt    i;
   const char *common[] = {KSPGMRES, KSPCG, KSPPREONLY};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
-  for (i = 0; i < 3; i++) {
+  for (PetscInt i = 0; i < 3; i++) {
     PetscCall(KSPSetType(ksp, common[i]));
     PetscCall(KSPSetType(ksp, KSPHPDDM));
-#if defined(PETSC_HAVE_HPDDM)
+#if PetscDefined(HAVE_HPDDM)
     PetscCall(KSPHPDDMGetType(ksp, &type));
     PetscCall(PetscStrcmp(KSPHPDDMTypes[type], common[i], &flg));
     PetscCheck(flg, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "KSPType and KSPHPDDMType do not match: %s != %s", common[i], KSPHPDDMTypes[type]);

@@ -334,7 +334,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
   MatNullSpace   nullsp;
   PCFailedReason pcreason;
   PC             pc;
-  PetscBool      pcmpi;
+  PetscBool      pcmpi, Aopset, Bopset;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -353,13 +353,32 @@ PetscErrorCode KSPSetUp(KSP ksp)
   if (!((PetscObject)ksp)->type_name) PetscCall(KSPSetType(ksp, KSPGMRES));
   PetscCall(KSPSetUpNorms_Private(ksp, PETSC_TRUE, &ksp->normtype, &ksp->pc_side));
 
+  PetscCall(KSPGetOperatorsSet(ksp, &Aopset, &Bopset));
+  PetscCheck(Aopset == Bopset, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Operators set inconsistency: Amat %d, Pmat %d", (int)Aopset, (int)Bopset);
   if ((ksp->dmActive & KSP_DMACTIVE_OPERATOR) && !ksp->setupstage) {
     /* first time in so build matrix and vector data structures using DM */
     if (!ksp->vec_rhs) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_rhs));
     if (!ksp->vec_sol) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_sol));
-    PetscCall(DMCreateMatrix(ksp->dm, &A));
-    PetscCall(KSPSetOperators(ksp, A, A));
-    PetscCall(PetscObjectDereference((PetscObject)A));
+
+    if (!Aopset) {
+      DMKSP kdm;
+
+      PetscCall(DMGetDMKSP(ksp->dm, &kdm));
+      if (kdm->ops->createoperators) {
+        A = B = NULL;
+        PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
+        PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
+        if (!B) B = A;
+        if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
+        PetscCall(KSPSetOperators(ksp, A, B));
+        PetscCall(MatDestroy(&A));
+        PetscCall(MatDestroy(&B));
+      } else {
+        PetscCall(DMCreateMatrix(ksp->dm, &A));
+        PetscCall(KSPSetOperators(ksp, A, A));
+        PetscCall(MatDestroy(&A));
+      }
+    }
   }
 
   if (ksp->dmActive) {
@@ -401,7 +420,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
   /* scale the matrix if requested */
   if (ksp->dscale) {
     PetscScalar *xx;
-    PetscInt     i, n;
+    PetscInt     n;
     PetscBool    zeroflag = PETSC_FALSE;
 
     if (!ksp->diagonal) { /* allocate vector to hold diagonal */
@@ -410,7 +429,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
     PetscCall(MatGetDiagonal(pmat, ksp->diagonal));
     PetscCall(VecGetLocalSize(ksp->diagonal, &n));
     PetscCall(VecGetArray(ksp->diagonal, &xx));
-    for (i = 0; i < n; i++) {
+    for (PetscInt i = 0; i < n; i++) {
       if (xx[i] != 0.0) xx[i] = 1.0 / PetscSqrtReal(PetscAbsScalar(xx[i]));
       else {
         xx[i]    = 1.0;
@@ -831,8 +850,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   if (ksp->viewPre) PetscCall(ObjectView((PetscObject)ksp, ksp->viewerPre, ksp->formatPre));
 
-  if (ksp->presolve) PetscCall((*ksp->presolve)(ksp, ksp->vec_rhs, ksp->vec_sol, ksp->prectx));
-
   /* reset the residual history list if requested */
   if (ksp->res_hist_reset) ksp->res_hist_len = 0;
   if (ksp->err_hist_reset) ksp->err_hist_len = 0;
@@ -855,6 +872,8 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
       ksp->guess_zero = PETSC_TRUE;
     }
   }
+
+  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   PetscCall(VecSetErrorIfLocked(ksp->vec_sol, 3));
 
@@ -953,7 +972,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   }
   PetscCall(PetscLogEventEnd(!ksp->transpose_solve ? KSP_Solve : KSP_SolveTranspose, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
   if (ksp->guess) PetscCall(KSPGuessUpdate(ksp->guess, ksp->vec_rhs, ksp->vec_sol));
-  if (ksp->postsolve) PetscCall((*ksp->postsolve)(ksp, ksp->vec_rhs, ksp->vec_sol, ksp->postctx));
+  PetscCall(KSPPostSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   PetscCall(PCGetOperators(ksp->pc, &mat, &pmat));
   if (ksp->viewEV) PetscCall(KSPViewEigenvalues_Internal(ksp, PETSC_FALSE, ksp->viewerEV, ksp->formatEV));
@@ -1179,7 +1198,7 @@ static PetscErrorCode KSPViewFinalMatResidual_Internal(KSP ksp, Mat B, Mat X, Pe
 {
   Mat        A, R;
   PetscReal *norms;
-  PetscInt   i, N;
+  PetscInt   N;
   PetscBool  flg;
 
   PetscFunctionBegin;
@@ -1193,7 +1212,7 @@ static PetscErrorCode KSPViewFinalMatResidual_Internal(KSP ksp, Mat B, Mat X, Pe
     PetscCall(PetscMalloc1(N, &norms));
     PetscCall(MatGetColumnNorms(R, NORM_2, norms));
     PetscCall(MatDestroy(&R));
-    for (i = 0; i < N; ++i) PetscCall(PetscViewerASCIIPrintf(viewer, "%s #%" PetscInt_FMT " %g\n", i == 0 ? "KSP final norm of residual" : "                          ", shift + i, (double)norms[i]));
+    for (PetscInt i = 0; i < N; ++i) PetscCall(PetscViewerASCIIPrintf(viewer, "%s #%" PetscInt_FMT " %g\n", i == 0 ? "KSP final norm of residual" : "                          ", shift + i, (double)norms[i]));
     PetscCall(PetscFree(norms));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2386,11 +2405,9 @@ PetscErrorCode KSPMonitorSet(KSP ksp, KSPMonitorFn *monitor, PetscCtx ctx, Petsc
 @*/
 PetscErrorCode KSPMonitorCancel(KSP ksp)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  for (i = 0; i < ksp->numbermonitors; i++) {
+  for (PetscInt i = 0; i < ksp->numbermonitors; i++) {
     if (ksp->monitordestroy[i]) PetscCall((*ksp->monitordestroy[i])(&ksp->monitorcontext[i]));
   }
   ksp->numbermonitors = 0;
@@ -2617,7 +2634,7 @@ PetscErrorCode KSPComputeConvergenceRate(KSP ksp, PetscReal *cr, PetscReal *rRsq
 {
   PetscReal const *hist;
   PetscReal       *x, *y, slope, intercept, mean = 0.0, var = 0.0, res = 0.0;
-  PetscInt         n, k;
+  PetscInt         n;
 
   PetscFunctionBegin;
   if (cr || rRsq) {
@@ -2627,14 +2644,14 @@ PetscErrorCode KSPComputeConvergenceRate(KSP ksp, PetscReal *cr, PetscReal *rRsq
       if (rRsq) *rRsq = -1.0;
     } else {
       PetscCall(PetscMalloc2(n, &x, n, &y));
-      for (k = 0; k < n; ++k) {
+      for (PetscInt k = 0; k < n; ++k) {
         x[k] = k;
         y[k] = PetscLogReal(hist[k]);
         mean += y[k];
       }
       mean /= n;
       PetscCall(PetscLinearRegression(n, x, y, &slope, &intercept));
-      for (k = 0; k < n; ++k) {
+      for (PetscInt k = 0; k < n; ++k) {
         res += PetscSqr(y[k] - (slope * x[k] + intercept));
         var += PetscSqr(y[k] - mean);
       }
@@ -2650,14 +2667,14 @@ PetscErrorCode KSPComputeConvergenceRate(KSP ksp, PetscReal *cr, PetscReal *rRsq
       if (eRsq) *eRsq = -1.0;
     } else {
       PetscCall(PetscMalloc2(n, &x, n, &y));
-      for (k = 0; k < n; ++k) {
+      for (PetscInt k = 0; k < n; ++k) {
         x[k] = k;
         y[k] = PetscLogReal(hist[k]);
         mean += y[k];
       }
       mean /= n;
       PetscCall(PetscLinearRegression(n, x, y, &slope, &intercept));
-      for (k = 0; k < n; ++k) {
+      for (PetscInt k = 0; k < n; ++k) {
         res += PetscSqr(y[k] - (slope * x[k] + intercept));
         var += PetscSqr(y[k] - mean);
       }

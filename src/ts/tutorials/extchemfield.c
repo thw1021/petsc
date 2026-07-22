@@ -3,7 +3,7 @@ static const char help[] = "Integrate chemistry using TChem.\n";
 #include <petscts.h>
 #include <petscdmda.h>
 
-#if defined(PETSC_HAVE_TCHEM)
+#if PetscDefined(HAVE_TCHEM)
   #if defined(MAX)
     #undef MAX
   #endif
@@ -205,7 +205,6 @@ int main(int argc, char **argv)
   {
     Vec                max;
     const char *const *names;
-    PetscInt           i;
     const PetscReal   *bmax;
 
     PetscCall(TSMonitorEnvelopeGetBounds(ts, &max, NULL));
@@ -214,7 +213,7 @@ int main(int argc, char **argv)
       if (names) {
         PetscCall(VecGetArrayRead(max, &bmax));
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "Species - maximum mass fraction\n"));
-        for (i = 1; i < user.Nspec; i++) {
+        for (PetscInt i = 1; i < user.Nspec; i++) {
           if (bmax[i] > .01) PetscCall(PetscPrintf(PETSC_COMM_SELF, "%s %g\n", names[i], (double)bmax[i]));
         }
         PetscCall(VecRestoreArrayRead(max, &bmax));

@@ -126,7 +126,6 @@ int UpdateJSON(const char *const inputjsonfile, PetscReal *spmv_times, PetscReal
 PetscErrorCode TimedSpMV(Mat A, Vec b, PetscReal *time, const char *petscmatformat, PetscBool use_gpu, PetscInt repetitions)
 {
   Mat            A2 = NULL;
-  PetscInt       i;
   Vec            u;
   PetscLogDouble vstart = 0, vend = 0;
   PetscBool      isaijcusparse, isaijhipsparse, isaijkokkos, issellcuda, issellhip;
@@ -142,7 +141,7 @@ PetscErrorCode TimedSpMV(Mat A, Vec b, PetscReal *time, const char *petscmatform
   if (isaijhipsparse || issellhip) PetscCall(VecSetType(b, VECHIP));
   PetscCall(VecDuplicate(b, &u));
   if (time) *time = 0.0;
-  for (i = 0; i < repetitions; i++) {
+  for (PetscInt i = 0; i < repetitions; i++) {
     if (use_gpu) {
       PetscCall(MatDestroy(&A2));
       PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &A2));
@@ -213,7 +212,7 @@ PetscErrorCode PetscLogSpMVTime(PetscReal *gputime, PetscReal *cputime, PetscRea
   // gpuflopRate = eventInfo.GpuFlops/eventInfo.GpuTime;
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2f %.4e %.4e\n", gpuflopRate/1.e6, eventInfo.GpuTime, eventInfo.time));
   if (cputime) *cputime = eventInfo.time;
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
   if (gputime) *gputime = eventInfo.GpuTime;
   if (gpuflops) *gpuflops = eventInfo.GpuFlops / 1.e6;
 #endif
@@ -228,10 +227,10 @@ PetscErrorCode MapToPetscMatType(const char *matformat, PetscBool use_gpu, char 
   PetscCall(PetscStrcmp(matformat, "csr", &iscsr));
   if (iscsr) {
     if (use_gpu) {
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
       PetscCall(PetscStrallocpy(MATAIJCUSPARSE, petscmatformat));
 #endif
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
       PetscCall(PetscStrallocpy(MATAIJHIPSPARSE, petscmatformat));
 #endif
     } else PetscCall(PetscStrallocpy(MATAIJ, petscmatformat));
@@ -239,10 +238,10 @@ PetscErrorCode MapToPetscMatType(const char *matformat, PetscBool use_gpu, char 
     PetscCall(PetscStrcmp(matformat, "sell", &issell));
     if (issell) {
       if (use_gpu) {
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
         PetscCall(PetscStrallocpy(MATSELLCUDA, petscmatformat));
 #endif
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
         PetscCall(PetscStrallocpy(MATSELLHIP, petscmatformat));
 #endif
       } else PetscCall(PetscStrallocpy(MATSELL, petscmatformat));
@@ -289,7 +288,7 @@ int main(int argc, char **args)
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Extra options", "");
   PetscCall(PetscOptionsFList("-permute", "Permute matrix and vector to solving in new ordering", "", MatOrderingList, ordering, ordering, sizeof(ordering), &permute));
   PetscOptionsEnd();
-#if !defined(PETSC_HAVE_DEVICE)
+#if !PetscDefined(HAVE_DEVICE)
   PetscCheck(!use_gpu, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "To use the option -use_gpu 1, PETSc must be configured with GPU support");
 #endif
   PetscCheck(flg1 || flg2 || flg3, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "Must indicate an input file with the -ABIN or -AMTX or -AJSON depending on the file format");

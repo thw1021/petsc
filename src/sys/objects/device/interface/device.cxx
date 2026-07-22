@@ -15,7 +15,7 @@
 
 using namespace Petsc::device;
 
-#if defined(PETSC_HAVE_CUPM)
+#if PetscDefined(HAVE_CUPM)
 int PetscDeviceCUPMRuntimeArch = 0;
 #endif
 
@@ -34,7 +34,7 @@ cupm::Device<cupm::DeviceType::CUDA> CUDADevice{PetscDeviceContextCreate_CUDA};
 cupm::Device<cupm::DeviceType::HIP> HIPDevice{PetscDeviceContextCreate_HIP};
 #endif
 #if PetscDefined(HAVE_SYCL)
-sycl::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
+sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
 #endif
 
 } // namespace
