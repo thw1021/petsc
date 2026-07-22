@@ -8,10 +8,10 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_RCM(Mat, MatOrderingType, IS *, IS *)
 PETSC_INTERN PetscErrorCode MatGetOrdering_RowLength(Mat, MatOrderingType, IS *, IS *);
 PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat, MatOrderingType, IS *, IS *);
 PETSC_INTERN PetscErrorCode MatGetOrdering_Spectral(Mat, MatOrderingType, IS *, IS *);
-#if defined(PETSC_HAVE_SUITESPARSE)
+#if PetscDefined(HAVE_SUITESPARSE)
 PETSC_INTERN PetscErrorCode MatGetOrdering_AMD(Mat, MatOrderingType, IS *, IS *);
 #endif
-#if defined(PETSC_HAVE_METIS)
+#if PetscDefined(HAVE_METIS)
 PETSC_INTERN PetscErrorCode MatGetOrdering_METISND(Mat, MatOrderingType, IS *, IS *);
 #endif
 
@@ -47,14 +47,14 @@ PetscErrorCode MatOrderingRegisterAll(void)
   PetscCall(MatOrderingRegister(MATORDERINGRCM, MatGetOrdering_RCM));
   PetscCall(MatOrderingRegister(MATORDERINGQMD, MatGetOrdering_QMD));
   PetscCall(MatOrderingRegister(MATORDERINGROWLENGTH, MatGetOrdering_RowLength));
-#if defined(PETSC_HAVE_SUPERLU_DIST)
+#if PetscDefined(HAVE_SUPERLU_DIST)
   PetscCall(MatOrderingRegister(MATORDERINGWBM, MatGetOrdering_WBM));
 #endif
   PetscCall(MatOrderingRegister(MATORDERINGSPECTRAL, MatGetOrdering_Spectral));
-#if defined(PETSC_HAVE_SUITESPARSE)
+#if PetscDefined(HAVE_SUITESPARSE)
   PetscCall(MatOrderingRegister(MATORDERINGAMD, MatGetOrdering_AMD));
 #endif
-#if defined(PETSC_HAVE_METIS)
+#if PetscDefined(HAVE_METIS)
   PetscCall(MatOrderingRegister(MATORDERINGMETISND, MatGetOrdering_METISND));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
