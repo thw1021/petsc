@@ -30,7 +30,7 @@ Bug-fix updates, about every month, (e.g. 3.17.1) are tagged on `release` (e.g. 
 ### `main`
 
 The `main` branch contains everything in the release branch as well as new features that have passed all testing
-and will be in the next release (e.g. version 3.26). Users developing software based
+and will be in the next release (e.g. version 3.18). Users developing software based
 on recently-added features in PETSc should follow `main`.
 
 New features should start from `main`.
