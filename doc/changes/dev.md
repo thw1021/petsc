@@ -11,6 +11,8 @@
 ## General
 
 - Increase the minimum required CUDA Toolkit version to 11.4
+- Change the `make branch-review` rule to `[PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname] make branch-review`. Add support for gemini, codex, opencode, and other LLM CLIs.
+  Replace the use of `CLAUDE_OPTS` with `PETSC_LLM_CLI_OPTS` and `PETSC_LLM_MODEL`
 
 ## Configure/Build
 
