@@ -160,6 +160,10 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
 /* if someone is ready to rock with more than 128 GPUs on hand then we're in real trouble */
 #define PETSC_DEVICE_MAX_DEVICES 128
 
+#if PetscDefined(HAVE_HWLOC)
+  #define PETSC_DEVICE_TOPOLOGY_AWARE -2
+#endif
+
 /*
   the configure-time default device type, used as the initial the value of
   PETSC_DEVICE_DEFAULT() as well as what it is restored to during PetscFinalize()
