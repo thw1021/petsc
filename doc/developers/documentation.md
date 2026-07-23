@@ -24,7 +24,7 @@ We use a [Python 3 virtual environment](https://docs.python.org/3/tutorial/venv.
 ```console
 $ cd $PETSC_DIR
 $ make docs
-$ open $PETSC_ARCH-doc/_build/html/index.html  # in a browser
+$ open $PETSC_ARCH-doc/_build/html/index.html # in a browser
 ```
 
 (sec_local_docs_latex)=
@@ -40,7 +40,7 @@ if need be, to resolve LaTeX errors.
 ```console
 $ cd $PETSC_DIR
 $ make docspdf
-$ open $PETSC_ARCH-doc/_build/latex/manual.pdf # in PDF viewer
+$ open $PETSC_ARCH-doc/_build/latex/manual.pdf # in a PDF viewer
 ```
 
 (sphinx_guidelines)=
