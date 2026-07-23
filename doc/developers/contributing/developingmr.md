@@ -16,7 +16,7 @@ merge request.
 
 The `release` branch contains the latest PETSc release including bug-fixes.
 
-Bug-fixes should start from `release`.
+Crucial bug fixes should start from `release`, as well as changes intended to affect the website immediately, for example, news or meeting information.
 
 ```console
 $ git fetch
