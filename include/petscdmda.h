@@ -48,8 +48,6 @@ PETSC_EXTERN PetscErrorCode DMDAGetElementsCorners(DM, PetscInt *, PetscInt *, P
 PETSC_EXTERN PetscErrorCode DMDAGetSubdomainCornersIS(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMDARestoreSubdomainCornersIS(DM, IS *);
 
-#define MATSEQUSFFT "sequsfft"
-
 PETSC_EXTERN PetscErrorCode DMDACreate(MPI_Comm, DM *);
 PETSC_EXTERN PetscErrorCode DMDASetSizes(DM, PetscInt, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode DMDACreate1d(MPI_Comm, DMBoundaryType, PetscInt, PetscInt, PetscInt, const PetscInt[], DM *);
