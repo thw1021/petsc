@@ -10,4 +10,4 @@ Reviews the **remote MR state**, not local `HEAD`. Adhere to @CLAUDE.md.
 Follow @identify.md (Sections 1–3) to resolve `<MR_IID>`, fetch metadata, and check for local-vs-remote drift.
 
 ## Review
-Follow @review-procedure.md (Sections 4–6) to read the diff, classify findings, verify each one, and report.
+Follow @review-procedure.md (Sections 4–7) to read the diff, classify findings, verify each one, report, and write report document.
