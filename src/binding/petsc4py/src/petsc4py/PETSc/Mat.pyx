@@ -6466,6 +6466,74 @@ cdef class Mat(Object):
         CHKERR(PetscINCREF(submat.obj))
         return submat
 
+    def createMultiShift(
+        self,
+        Mat K,
+        sigma: Sequence[Scalar],
+        cmplx: Sequence[Bool] | None = None,
+        Mat M: Mat | None = None,
+        explicit: bool | None = None,
+        structure: Structure | None = None) -> Self:
+        r"""Create a `Type.NEST` matrix representing a family of shifted matrices.
+
+        Collective.
+
+        Parameters
+        ----------
+        K
+            The first `Mat` (stiffness) forming the shifted matrices.
+        sigma
+            List of shifts :math:`\sigma_i`.
+        cmplx
+            List of flags indicating occurrence of complex-conjugate
+            pairs in `sigma`.
+        M
+            The second `Mat` (mass) forming the shifted matrices (`None`
+            means identity).
+        explicit
+            Whether the shifted matrices should be built explicitly or not.
+        structure
+            `Structure` flag.
+
+        See Also
+        --------
+        createVecMultiShift, petsc.MatCreateMultiShift, petsc.MATNEST
+
+        """
+        cdef PetscMat newmat = NULL
+        cdef PetscMat Kmat = K.mat
+        cdef PetscInt ns = 0
+        cdef PetscScalar *s = NULL
+        sigma = iarray_s(sigma, &ns, &s)
+        cdef PetscBool *c = NULL
+        cmplx = iarray_b(cmplx, &ns, &c)
+        cdef PetscMat Mmat = M.mat if M is not None else <PetscMat>NULL
+        cdef PetscBool expl = asBool(explicit)
+        cdef PetscMatStructure flag = matstructure(structure)
+        CHKERR(MatCreateMultiShift(Kmat, ns, s, c, Mmat, expl, flag, &newmat))
+        CHKERR(PetscCLEAR(self.obj)); self.mat = newmat
+        return self
+
+    def createVecMultiShift(self, Vec v: Vec | None = None) -> Vec:
+        """Return a nested vector compatible with a `Mat` created with `createMultiShift`.
+
+        Collective.
+
+        Parameters
+        ----------
+        v
+            An optional vector that will be inserted in all subvectors of the result.
+
+        See Also
+        --------
+        createMultiShift
+
+        """
+        cdef Vec vout = Vec()
+        cdef PetscVec vvec = v.vec if v is not None else <PetscVec>NULL
+        CHKERR(MatMultiShiftCreateVec(self.mat, vvec, &vout.vec))
+        return vout
+
     # DM
 
     def getDM(self) -> DM:
