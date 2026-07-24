@@ -124,6 +124,10 @@
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
 - Fix `TSIRK` for solution vectors with block size greater than one, which previously failed with a stride-scatter error
+- Add `TSSetMassMatrix()`, `TSGetMassMatrix()`, `TSSetMassMatrixContextDestroy()`, `TSComputeMassMatrix()`, `TSHasMassMatrix()`,
+  `TSSetMassMatrixConstant()` and `TSGetMassMatrixConstant()`, together with `TSMassMatrixFn` and the `DMTS`-level
+  `DMTSSetMassMatrix()`, `DMTSGetMassMatrix()` and `DMTSSetMassMatrixContextDestroy()`, letting a user supply the (possibly
+  singular) mass matrix dF/dUdot of a DAE
 
 ## TAO
 
