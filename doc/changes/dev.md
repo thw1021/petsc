@@ -121,6 +121,7 @@
   `MatPartitioningParMETISSetRepartition()`, `MatPartitioningParMETISSetCoarseSequential()`, and `MatPartitioningParMETISGetEdgeCut()`
 - Deprecate `MatSolverFunction`, `MatHtoolKernel` and `MatH2OpusKernel` in favor of `MatSolverFn *`, `MatHtoolKernelFn *` and `MatH2OpusKernelFn *`
 - Change the application context argument of `MatCreateH2OpusFromKernel()` and of the `MatH2OpusKernelFn` callback from `void *` to `PetscCtx`; no user source changes are required
+- Add `MatCreateMultiShift()` to create a `MATNEST` that represents a family of shifted matrices, and `MatMultiShiftCreateVec()` to create a compatible `VECNEST` vector
 
 ## MatCoarsen
 
