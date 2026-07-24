@@ -121,6 +121,7 @@
   `TSSetMassMatrixConstant()` and `TSGetMassMatrixConstant()`, together with `TSMassMatrixFn` and the `DMTS`-level
   `DMTSSetMassMatrix()`, `DMTSGetMassMatrix()` and `DMTSSetMassMatrixContextDestroy()`, letting a user supply the (possibly
   singular) mass matrix dF/dUdot of a DAE
+- Add `TSIRK` support for DAEs with a mass matrix supplied through `TSSetMassMatrix()`
 
 ## TAO
 
