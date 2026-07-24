@@ -278,7 +278,7 @@ int main(int argc, char **argv)
   KSP               ksp;
   PC                pc;
   TestCtx           ctx;
-  PetscBool         distinct = PETSC_FALSE, shell = PETSC_FALSE, mffd = PETSC_FALSE, nonzero = PETSC_FALSE, test_reuse = PETSC_FALSE, test_errors = PETSC_FALSE, test_snes = PETSC_FALSE, test_deferred_operators = PETSC_FALSE;
+  PetscBool         distinct = PETSC_FALSE, shell = PETSC_FALSE, mffd = PETSC_FALSE, nonzero = PETSC_FALSE, test_reuse = PETSC_FALSE, test_errors = PETSC_FALSE, test_snes = PETSC_FALSE, test_deferred_operators = PETSC_FALSE, test_explicit_setup = PETSC_FALSE;
   PetscMPIInt       size;
   PetscErrorCode    ierr;
   PetscObjectState  state;
@@ -297,6 +297,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_errors", &test_errors, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_snes", &test_snes, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_deferred_operators", &test_deferred_operators, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_explicit_setup", &test_explicit_setup, NULL));
 
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 2, NULL, &assembled));
   PetscCall(MatSetValues(assembled, 2, rows, 2, rows, matrix, INSERT_VALUES));
@@ -363,6 +364,7 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectStateGet((PetscObject)P, &ctx.Pstate));
   PetscCall(KSPSetPreSolve(ksp, CheckPhysicalPreSolve, &ctx));
   PetscCall(KSPSetPostSolve(ksp, CheckPhysicalState, &ctx));
+  if (test_explicit_setup) PetscCall(KSPSetUp(ksp));
   PetscCall(KSPSolve(ksp, b, x));
   PetscCall(CheckSolution(x));
 
@@ -477,5 +479,10 @@ int main(int argc, char **argv)
     suffix: deferred_operators
     output_file: output/empty.out
     args: -test_deferred_operators -ksp_type preonly -pc_type lu
+
+  test:
+    suffix: explicit_setup
+    output_file: output/empty.out
+    args: -distinct_pmat -test_reuse -test_explicit_setup -ksp_type gmres -ksp_rtol 1e-12
 
 TEST*/

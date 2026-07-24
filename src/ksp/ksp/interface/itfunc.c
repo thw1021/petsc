@@ -311,8 +311,16 @@ PetscErrorCode KSPSetSkipPCSetFromOptions(KSP ksp, PetscBool flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+typedef struct {
+  Mat              mat, pmat;
+  PetscObjectState mat_state, pmat_state;
+  PetscBool        mat_scaled, pmat_scaled;
+} KSPRightDiagonalScaleContext;
+
 static PetscErrorCode KSPSetUpBeforePC_Private(KSP);
 static PetscErrorCode KSPSetUp_Private(KSP, PetscBool);
+static PetscErrorCode KSPRightDiagonalScaleBegin_Private(KSP, KSPRightDiagonalScaleContext *);
+static PetscErrorCode KSPRightDiagonalScaleEnd_Private(KSP, KSPRightDiagonalScaleContext *, PetscBool);
 
 /*@
   KSPSetUp - Sets up the internal data structures for the
@@ -332,9 +340,20 @@ static PetscErrorCode KSPSetUp_Private(KSP, PetscBool);
 @*/
 PetscErrorCode KSPSetUp(KSP ksp)
 {
+  PetscErrorCode               ierr, ierr1;
+  KSPRightDiagonalScaleContext scale_ctx;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(KSPSetUp_Private(ksp, PETSC_TRUE));
+  if (!ksp->right_diagonal_scale) PetscCall(KSPSetUp_Private(ksp, PETSC_TRUE));
+  else {
+    PetscCall(KSPSetUpBeforePC_Private(ksp));
+    PetscCall(KSPRightDiagonalScaleBegin_Private(ksp, &scale_ctx));
+    ierr  = KSPSetUp_Private(ksp, PETSC_FALSE);
+    ierr1 = KSPRightDiagonalScaleEnd_Private(ksp, &scale_ctx, PETSC_FALSE);
+    if (ierr1) PetscCall(ierr1);
+    PetscCall(ierr);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -838,12 +857,6 @@ static PetscErrorCode KSPMonitorPauseFinal_Internal(KSP ksp)
   PetscCall(PetscMonitorPauseFinal_Internal(ksp->numbermonitors, ksp->monitorcontext));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-typedef struct {
-  Mat              mat, pmat;
-  PetscObjectState mat_state, pmat_state;
-  PetscBool        mat_scaled, pmat_scaled;
-} KSPRightDiagonalScaleContext;
 
 static PetscErrorCode KSPRightDiagonalScaleGetInverse_Private(KSP ksp, Mat mat, Mat pmat, PetscObjectState *state)
 {
