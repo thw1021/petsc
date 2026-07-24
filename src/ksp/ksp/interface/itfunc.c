@@ -311,6 +311,9 @@ PetscErrorCode KSPSetSkipPCSetFromOptions(KSP ksp, PetscBool flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode KSPSetUpBeforePC_Private(KSP);
+static PetscErrorCode KSPSetUp_Private(KSP, PetscBool);
+
 /*@
   KSPSetUp - Sets up the internal data structures for the
   later use `KSPSolve()` the `KSP` linear iterative solver.
@@ -329,15 +332,19 @@ PetscErrorCode KSPSetSkipPCSetFromOptions(KSP ksp, PetscBool flag)
 @*/
 PetscErrorCode KSPSetUp(KSP ksp)
 {
-  Mat            A, B;
-  Mat            mat, pmat;
-  MatNullSpace   nullsp;
-  PCFailedReason pcreason;
-  PC             pc;
-  PetscBool      pcmpi, Aopset, Bopset;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscCall(KSPSetUp_Private(ksp, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPSetUpBeforePC_Private(KSP ksp)
+{
+  Mat       A, B;
+  PC        pc;
+  PetscBool pcmpi, Aopset, Bopset;
+
+  PetscFunctionBegin;
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCMPI, &pcmpi));
   if (pcmpi) {
@@ -345,7 +352,6 @@ PetscErrorCode KSPSetUp(KSP ksp)
     PetscCall(PetscObjectTypeCompare((PetscObject)ksp, KSPPREONLY, &ksppreonly));
     if (!ksppreonly) PetscCall(KSPSetType(ksp, KSPPREONLY));
   }
-  level++;
 
   /* reset the convergence flag from the previous solves */
   ksp->reason = KSP_CONVERGED_ITERATING;
@@ -397,6 +403,18 @@ PetscErrorCode KSPSetUp(KSP ksp)
       PetscCallBack("KSP callback operators", (*kdm->ops->computeoperators)(ksp, A, B, kdm->operatorsctx));
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPSetUp_Private(KSP ksp, PetscBool setup_before_pc)
+{
+  Mat            mat, pmat;
+  MatNullSpace   nullsp;
+  PCFailedReason pcreason;
+
+  PetscFunctionBegin;
+  level++;
+  if (setup_before_pc) PetscCall(KSPSetUpBeforePC_Private(ksp));
 
   if (ksp->setupstage == KSP_SETUP_NEWRHS) {
     level--;
@@ -984,7 +1002,7 @@ static PetscErrorCode KSPSolve_Private_Inner(KSP ksp, PetscBool setup, PetscBool
 
   PetscFunctionBegin;
   if (setup) {
-    PetscCall(KSPSetUp(ksp));
+    PetscCall(KSPSetUp_Private(ksp, PETSC_FALSE));
     PetscCall(KSPSetUpOnBlocks(ksp));
   }
 
@@ -1121,7 +1139,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   if (!ksp->right_diagonal_scale) {
     PetscCall(KSPSetUp(ksp));
     PetscCall(KSPSetUpOnBlocks(ksp));
-  }
+  } else PetscCall(KSPSetUpBeforePC_Private(ksp));
 
   if (ksp->guess) {
     PetscObjectState ostate, state;
