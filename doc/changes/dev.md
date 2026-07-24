@@ -129,6 +129,7 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
+- Fix `TSIRK` for solution vectors with block size greater than one, which previously failed with a stride-scatter error
 
 ## TAO
 
