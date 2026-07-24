@@ -324,6 +324,78 @@ PetscErrorCode MatKAIJSetAIJ(Mat A, Mat B)
 }
 
 /*@
+  MatKAIJSetB - Set the `MATAIJ` matrix `B` describing the second Kronecker term $B \otimes S$ of the `MATKAIJ` matrix
+
+  Logically Collective
+
+  Input Parameters:
++ A - the `MATKAIJ` matrix
+- B - the `MATAIJ` matrix, or `NULL` to make the second term $I_n \otimes S$ (the default `MATKAIJ` behavior)
+
+  Level: advanced
+
+  Notes:
+  This function increases the reference count on the `MATAIJ` matrix, so the user is free to destroy the matrix if it is not needed.
+
+  `B` must share the row and column layout of the `MATAIJ` matrix set with `MatKAIJSetAIJ()`.
+
+.seealso: [](ch_matrices), `Mat`, `MATKAIJ`, `MatCreateKAIJAB()`, `MatKAIJGetB()`, `MatKAIJSetAIJ()`, `MatKAIJSetS()`
+@*/
+PetscErrorCode MatKAIJSetB(Mat A, Mat B)
+{
+  Mat_SeqKAIJ *a = (Mat_SeqKAIJ *)A->data;
+  PetscMPIInt  size;
+  PetscBool    flg;
+
+  PetscFunctionBegin;
+  if (B) {
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
+    if (size == 1) {
+      PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQAIJ, &flg));
+      PetscCheck(flg, PetscObjectComm((PetscObject)B), PETSC_ERR_SUP, "MatKAIJSetB() with MATSEQKAIJ does not support %s as the B mat", ((PetscObject)B)->type_name);
+    } else {
+      PetscCall(PetscObjectTypeCompare((PetscObject)B, MATMPIAIJ, &flg));
+      PetscCheck(flg, PetscObjectComm((PetscObject)B), PETSC_ERR_SUP, "MatKAIJSetB() with MATMPIKAIJ does not support %s as the B mat", ((PetscObject)B)->type_name);
+    }
+    PetscCall(PetscObjectReference((PetscObject)B));
+  }
+  PetscCall(MatDestroy(&a->B));
+  a->B = B;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatKAIJGetB - Get the `MATAIJ` matrix `B` describing the second Kronecker term $B \otimes S$ of the `MATKAIJ` matrix
+
+  Not Collective, but if the `MATKAIJ` matrix is parallel, the `MATAIJ` matrix is also parallel
+
+  Input Parameter:
+. A - the `MATKAIJ` matrix
+
+  Output Parameter:
+. B - the `MATAIJ` matrix, or `NULL` if the second term is $I_n \otimes S$
+
+  Level: advanced
+
+  Note:
+  The reference count on the `MATAIJ` matrix is not increased so you should not destroy it.
+
+.seealso: [](ch_matrices), `Mat`, `MATKAIJ`, `MatCreateKAIJAB()`, `MatKAIJSetB()`, `MatKAIJGetAIJ()`
+@*/
+PetscErrorCode MatKAIJGetB(Mat A, Mat *B)
+{
+  Mat_SeqKAIJ *a = (Mat_SeqKAIJ *)A->data;
+  PetscBool    ismpikaij, isseqkaij;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIKAIJ, &ismpikaij));
+  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQKAIJ, &isseqkaij));
+  PetscCheck(ismpikaij || isseqkaij, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Matrix passed in is not of type KAIJ");
+  *B = a->B;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   MatKAIJSetS - Set the `S` matrix describing the shift action of the `MATKAIJ` matrix
 
   Logically Collective; the entire `S` is stored independently on all processes.
@@ -380,6 +452,10 @@ PetscErrorCode MatKAIJGetScaledIdentity(Mat A, PetscBool *identity)
   PetscInt     i, j;
 
   PetscFunctionBegin;
+  if (a->B) { /* a general second operand is not a scaled identity */
+    *identity = PETSC_FALSE;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   if (a->p != a->q) {
     *identity = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -461,6 +537,7 @@ static PetscErrorCode MatDestroy_SeqKAIJ(Mat A)
 
   PetscFunctionBegin;
   PetscCall(MatDestroy(&b->AIJ));
+  PetscCall(MatDestroy(&b->B));
   PetscCall(PetscFree(b->S));
   PetscCall(PetscFree(b->T));
   PetscCall(PetscFree(b->ibdiag));
@@ -473,22 +550,25 @@ static PetscErrorCode MatDestroy_SeqKAIJ(Mat A)
 static PetscErrorCode MatKAIJ_build_AIJ_OAIJ(Mat A)
 {
   Mat_MPIKAIJ     *a;
-  Mat_MPIAIJ      *mpiaij;
+  Mat_MPIAIJ      *mpiaij, *mpibij = NULL;
   PetscScalar     *T;
   PetscInt         i, j;
-  PetscObjectState state;
+  PetscObjectState state, bstate = 0;
 
   PetscFunctionBegin;
   a      = (Mat_MPIKAIJ *)A->data;
   mpiaij = (Mat_MPIAIJ *)a->A->data;
+  if (a->B) mpibij = (Mat_MPIAIJ *)a->B->data;
 
   PetscCall(PetscObjectStateGet((PetscObject)a->A, &state));
-  if (state == a->state) {
+  if (a->B) PetscCall(PetscObjectStateGet((PetscObject)a->B, &bstate));
+  if (state == a->state && (!a->B || bstate == a->bstate)) {
     /* The existing AIJ and KAIJ members are up-to-date, so simply exit. */
     PetscFunctionReturn(PETSC_SUCCESS);
   } else {
     PetscCall(MatDestroy(&a->AIJ));
     PetscCall(MatDestroy(&a->OAIJ));
+    PetscCall(MatDestroy(&a->OB));
     if (a->isTI) {
       /* If the transformation matrix associated with the parallel matrix A is the identity matrix, then a->T will be NULL.
        * In this case, if we pass a->T directly to the MatCreateKAIJ() calls to create the sequential submatrices, the routine will
@@ -502,10 +582,30 @@ static PetscErrorCode MatKAIJ_build_AIJ_OAIJ(Mat A)
         }
       }
     } else T = a->T;
-    PetscCall(MatCreateKAIJ(mpiaij->A, a->p, a->q, a->S, T, &a->AIJ));
-    PetscCall(MatCreateKAIJ(mpiaij->B, a->p, a->q, NULL, T, &a->OAIJ));
+    if (a->B) {
+      PetscInt an, bn, g;
+
+      /* The ghost vectors compared below only exist once each operand has been assembled */
+      PetscCheck(a->A->assembled && a->B->assembled, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "The AIJ and B matrices must be assembled before the KAIJ matrix is used");
+      /* B reuses A's ghost scatter, so re-verify the shared ghost columns: either operand may have been reassembled since the last build */
+      PetscCall(VecGetSize(mpiaij->lvec, &an));
+      PetscCall(VecGetSize(mpibij->lvec, &bn));
+      PetscCheck(an == bn, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "The B matrix must share the nonzero structure of the AIJ matrix (differing ghost column counts %" PetscInt_FMT " != %" PetscInt_FMT ")", bn, an);
+      for (g = 0; g < an; g++)
+        PetscCheck(mpiaij->garray[g] == mpibij->garray[g], PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "The B matrix must share the off-diagonal ghost columns of the AIJ matrix; assemble B with the same nonzero pattern (e.g. from the same DM)");
+      /* diagonal block action: (A_diag \otimes T) + (B_diag \otimes S) */
+      PetscCall(MatCreateKAIJAB(mpiaij->A, mpibij->A, a->p, a->q, a->S, T, &a->AIJ));
+      /* off-diagonal action of A: (A_offdiag \otimes T) */
+      PetscCall(MatCreateKAIJ(mpiaij->B, a->p, a->q, NULL, T, &a->OAIJ));
+      /* off-diagonal action of B: (B_offdiag \otimes S), expressed with S in the transformation slot */
+      PetscCall(MatCreateKAIJ(mpibij->B, a->p, a->q, NULL, a->S, &a->OB));
+    } else {
+      PetscCall(MatCreateKAIJ(mpiaij->A, a->p, a->q, a->S, T, &a->AIJ));
+      PetscCall(MatCreateKAIJ(mpiaij->B, a->p, a->q, NULL, T, &a->OAIJ));
+    }
     if (a->isTI) PetscCall(PetscFree(T));
-    a->state = state;
+    a->state  = state;
+    a->bstate = bstate;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -515,9 +615,14 @@ static PetscErrorCode MatSetUp_KAIJ(Mat A)
   PetscInt     n;
   PetscMPIInt  size;
   Mat_SeqKAIJ *seqkaij = (Mat_SeqKAIJ *)A->data;
+  Mat          aij;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
+  /* The (B \otimes S) term is applied over the layout of the AIJ operand, so B must share that layout in both the sequential and parallel cases */
+  aij = size == 1 ? seqkaij->AIJ : ((Mat_MPIKAIJ *)A->data)->A;
+  /* PETSC_COMM_SELF because the local sizes compared here may match on some ranks and differ on others */
+  PetscCheck(!seqkaij->B || (aij->rmap->N == seqkaij->B->rmap->N && aij->cmap->N == seqkaij->B->cmap->N && aij->rmap->n == seqkaij->B->rmap->n && aij->cmap->n == seqkaij->B->cmap->n), PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "The B matrix must share the row and column layout of the AIJ matrix");
   if (size == 1) {
     PetscCall(MatSetSizes(A, seqkaij->p * seqkaij->AIJ->rmap->n, seqkaij->q * seqkaij->AIJ->cmap->n, seqkaij->p * seqkaij->AIJ->rmap->N, seqkaij->q * seqkaij->AIJ->cmap->N));
     PetscCall(PetscLayoutSetBlockSize(A->rmap, seqkaij->p));
@@ -532,6 +637,7 @@ static PetscErrorCode MatSetUp_KAIJ(Mat A)
 
     a      = (Mat_MPIKAIJ *)A->data;
     mpiaij = (Mat_MPIAIJ *)a->A->data;
+    /* MatKAIJ_build_AIJ_OAIJ() below verifies that B shares the off-diagonal ghost columns of A, which the shared ghost scatter requires */
     PetscCall(MatSetSizes(A, a->p * a->A->rmap->n, a->q * a->A->cmap->n, a->p * a->A->rmap->N, a->q * a->A->cmap->N));
     PetscCall(PetscLayoutSetBlockSize(A->rmap, seqkaij->p));
     PetscCall(PetscLayoutSetBlockSize(A->cmap, seqkaij->q));
@@ -614,6 +720,13 @@ static PetscErrorCode MatView_KAIJ(Mat A, PetscViewer viewer)
       PetscCall(MatView(a->AIJ, viewer));
     }
 
+    /* Print appropriate details for the second operand B; the other viewer formats cannot display it at all. */
+    if (!a->B) PetscCall(PetscViewerASCIIPrintf(viewer, "B is the identity matrix\n"));
+    else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Now viewing the associated B matrix:\n"));
+      PetscCall(MatView(a->B, viewer));
+    }
+
   } else {
     /* For all other matrix viewer output formats, simply convert to an AIJ matrix and call MatView() on that. */
     PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &B));
@@ -630,7 +743,9 @@ static PetscErrorCode MatDestroy_MPIKAIJ(Mat A)
   PetscFunctionBegin;
   PetscCall(MatDestroy(&b->AIJ));
   PetscCall(MatDestroy(&b->OAIJ));
+  PetscCall(MatDestroy(&b->OB));
   PetscCall(MatDestroy(&b->A));
+  PetscCall(MatDestroy(&b->B));
   PetscCall(VecScatterDestroy(&b->ctx));
   PetscCall(VecDestroy(&b->w));
   PetscCall(PetscFree(b->S));
@@ -645,12 +760,13 @@ static PetscErrorCode MatDestroy_MPIKAIJ(Mat A)
 /* zz = yy + Axx */
 static PetscErrorCode MatMultAdd_SeqKAIJ(Mat A, Vec xx, Vec yy, Vec zz)
 {
-  Mat_SeqKAIJ       *b = (Mat_SeqKAIJ *)A->data;
-  Mat_SeqAIJ        *a = (Mat_SeqAIJ *)b->AIJ->data;
+  Mat_SeqKAIJ       *b  = (Mat_SeqKAIJ *)A->data;
+  Mat_SeqAIJ        *a  = (Mat_SeqAIJ *)b->AIJ->data;
+  Mat_SeqAIJ        *bb = b->B ? (Mat_SeqAIJ *)b->B->data : NULL;
   const PetscScalar *s = b->S, *t = b->T;
-  const PetscScalar *x, *v, *bx;
+  const PetscScalar *x, *v, *bx, *bv;
   PetscScalar       *y, *sums;
-  const PetscInt     m = b->AIJ->rmap->n, *idx, *ii;
+  const PetscInt     m = b->AIJ->rmap->n, *idx, *ii, *bidx, *bii;
   PetscInt           n, i, jrow, j, l, p = b->p, q = b->q, k;
 
   PetscFunctionBegin;
@@ -691,7 +807,7 @@ static PetscErrorCode MatMultAdd_SeqKAIJ(Mat A, Vec xx, Vec yy, Vec zz)
      * transformation is much less likely to be applied, but we nonetheless count the minimum flops required. */
     PetscCall(PetscLogFlops((2.0 * p * q - p) * m + 2.0 * p * a->nz));
   }
-  if (s) {
+  if (s && !bb) { /* (I \otimes S): S acts only on the diagonal block */
     for (i = 0; i < m; i++) {
       sums = y + p * i;
       bx   = x + q * i;
@@ -702,6 +818,21 @@ static PetscErrorCode MatMultAdd_SeqKAIJ(Mat A, Vec xx, Vec yy, Vec zz)
       }
     }
     PetscCall(PetscLogFlops(2.0 * m * p * q));
+  } else if (s) { /* (B \otimes S): sparse matvec over the rows of B */
+    bidx = bb->j;
+    bv   = bb->a;
+    bii  = bb->i;
+    for (i = 0; i < m; i++) {
+      jrow = bii[i];
+      n    = bii[i + 1] - jrow;
+      sums = y + p * i;
+      for (j = 0; j < n; j++) {
+        for (k = 0; k < p; k++) {
+          for (l = 0; l < q; l++) sums[k] += bv[jrow + j] * s[k + l * p] * x[q * bidx[jrow + j] + l];
+        }
+      }
+    }
+    PetscCall(PetscLogFlops((2.0 * p * q - p) * m + 2.0 * p * bb->nz));
   }
 
   PetscCall(VecRestoreArrayRead(xx, &x));
@@ -720,14 +851,16 @@ static PetscErrorCode MatMult_SeqKAIJ(Mat A, Vec xx, Vec yy)
 
 static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **values)
 {
-  Mat_SeqKAIJ       *b = (Mat_SeqKAIJ *)A->data;
-  Mat_SeqAIJ        *a = (Mat_SeqAIJ *)b->AIJ->data;
-  const PetscScalar *S = b->S;
-  const PetscScalar *T = b->T;
-  const PetscScalar *v = a->a;
+  Mat_SeqKAIJ       *b  = (Mat_SeqKAIJ *)A->data;
+  Mat_SeqAIJ        *a  = (Mat_SeqAIJ *)b->AIJ->data;
+  Mat_SeqAIJ        *bb = b->B ? (Mat_SeqAIJ *)b->B->data : NULL;
+  const PetscScalar *S  = b->S;
+  const PetscScalar *T  = b->T;
+  const PetscScalar *v = a->a, *bv = bb ? bb->a : NULL;
   const PetscInt     p = b->p, q = b->q, m = b->AIJ->rmap->n, *idx = a->j, *ii = a->i;
+  const PetscInt    *bidx = bb ? bb->j : NULL, *bii = bb ? bb->i : NULL;
   PetscInt           i, j, *v_pivots, dof, dof2;
-  PetscScalar       *diag, aval, *v_work;
+  PetscScalar       *diag, aval, bval, *v_work;
 
   PetscFunctionBegin;
   PetscCheck(p == q, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MATKAIJ: Block size must be square to calculate inverse.");
@@ -746,10 +879,16 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
 
   PetscCall(PetscMalloc2(dof, &v_work, dof, &v_pivots));
   for (i = 0; i < m; i++) {
+    /* block diagonal for dof i is A_ii * T + B_ii * S (with B_ii = 1 when B is the identity) */
+    PetscCall(PetscArrayzero(diag, dof2));
     if (S) {
-      PetscCall(PetscArraycpy(diag, S, dof2));
-    } else {
-      PetscCall(PetscArrayzero(diag, dof2));
+      if (bb) {
+        bval = 0;
+        for (j = bii[i]; j < bii[i + 1]; j++)
+          if (bidx[j] == i) bval = bv[j];
+        for (j = 0; j < dof2; j++) diag[j] += bval * S[j];
+      } else
+        for (j = 0; j < dof2; j++) diag[j] += S[j];
     }
     if (b->isTI) {
       aval = 0;
@@ -790,6 +929,7 @@ static PetscErrorCode MatConvert_KAIJ_AIJ(Mat A, MatType newtype, MatReuse reuse
   const PetscInt *aijdiag;
 
   PetscFunctionBegin;
+  PetscCheck(!a->B, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MATKAIJ: MatConvert() is not implemented for a KAIJ matrix with a general second operand B");
   if (reuse != MAT_REUSE_MATRIX) {
     PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIKAIJ, &ismpikaij));
     if (ismpikaij) {
@@ -854,6 +994,7 @@ static PetscErrorCode MatSOR_SeqKAIJ(Mat A, Vec bb, PetscReal omega, MatSORType 
   PetscInt           i, j, k, i2, bs, bs2, nz;
 
   PetscFunctionBegin;
+  PetscCheck(!kaij->B, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MATKAIJ: MatSOR() is not implemented for a KAIJ matrix with a general second operand B");
   its = its * lits;
   PetscCheck(!(flag & SOR_EISENSTAT), PETSC_COMM_SELF, PETSC_ERR_SUP, "No support yet for Eisenstat");
   PetscCheck(its > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive", its, lits);
@@ -1138,12 +1279,14 @@ static PetscErrorCode MatMultAdd_MPIKAIJ(Mat A, Vec xx, Vec yy, Vec zz)
   PetscFunctionBegin;
   if (!yy) PetscCall(VecSet(zz, 0.0));
   else PetscCall(VecCopy(yy, zz));
-  PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ and b->OAIJ are up to date. */
+  PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ, b->OAIJ and b->OB are up to date. */
   /* start the scatter */
   PetscCall(VecScatterBegin(b->ctx, xx, b->w, INSERT_VALUES, SCATTER_FORWARD));
   PetscUseTypeMethod(b->AIJ, multadd, xx, zz, zz);
   PetscCall(VecScatterEnd(b->ctx, xx, b->w, INSERT_VALUES, SCATTER_FORWARD));
   PetscUseTypeMethod(b->OAIJ, multadd, b->w, zz, zz);
+  /* B shares A's nonzero structure, so it reuses the same ghost values in b->w */
+  if (b->OB) PetscUseTypeMethod(b->OB, multadd, b->w, zz, zz);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1172,6 +1315,7 @@ static PetscErrorCode MatGetRow_SeqKAIJ(Mat A, PetscInt row, PetscInt *ncols, Pe
   PetscScalar *vaij, *v, *S = b->S, *T = b->T;
 
   PetscFunctionBegin;
+  PetscCheck(!b->B, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MATKAIJ: MatGetRow() is not implemented for a KAIJ matrix with a general second operand B");
   PetscCheck(!b->getrowactive, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Already active");
   b->getrowactive = PETSC_TRUE;
   PetscCheck(row >= 0 && row < A->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Row %" PetscInt_FMT " out of range", row);
@@ -1254,6 +1398,7 @@ static PetscErrorCode MatGetRow_MPIKAIJ(Mat A, PetscInt row, PetscInt *ncols, Pe
   PetscScalar   *v, *vals, *ovals, *S = b->S, *T = b->T;
 
   PetscFunctionBegin;
+  PetscCheck(!b->B, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MATKAIJ: MatGetRow() is not implemented for a KAIJ matrix with a general second operand B");
   PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ and b->OAIJ are up to date. */
   MatAIJ  = ((Mat_SeqKAIJ *)b->AIJ->data)->AIJ;
   MatOAIJ = ((Mat_SeqKAIJ *)b->OAIJ->data)->AIJ;
@@ -1402,14 +1547,67 @@ static PetscErrorCode MatCreateSubMatrix_KAIJ(Mat mat, IS isrow, IS iscol, MatRe
   rebuilding 'AIJ' and 'OAIJ' just before executing operations with the `MATMPIKAIJ` matrix. If new types of operations are added,
   routines implementing those must also ensure these are rebuilt when needed (by calling the internal MatKAIJ_build_AIJ_OAIJ() routine).
 
-.seealso: [](ch_matrices), `Mat`, `MatKAIJSetAIJ()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MatKAIJGetAIJ()`, `MatKAIJGetS()`, `MatKAIJGetT()`, `MATKAIJ`
+.seealso: [](ch_matrices), `Mat`, `MatCreateKAIJAB()`, `MatKAIJSetAIJ()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MatKAIJGetAIJ()`, `MatKAIJGetS()`, `MatKAIJGetT()`, `MATKAIJ`
 @*/
 PetscErrorCode MatCreateKAIJ(Mat A, PetscInt p, PetscInt q, const PetscScalar S[], const PetscScalar T[], Mat *kaij)
+{
+  PetscFunctionBegin;
+  PetscCall(MatCreateKAIJAB(A, NULL, p, q, S, T, kaij));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatCreateKAIJAB - Creates a matrix of type `MATKAIJ` with a general second Kronecker operand.
+
+  Collective
+
+  Input Parameters:
++ A - the `MATAIJ` matrix
+. B - the second `MATAIJ` matrix (can be `NULL`, in which case it is treated as the identity, and this is equivalent to `MatCreateKAIJ()`)
+. p - number of rows in `S` and `T`
+. q - number of columns in `S` and `T`
+. S - the `S` matrix (can be `NULL`), stored as a `PetscScalar` array (column-major)
+- T - the `T` matrix (can be `NULL`), stored as a `PetscScalar` array (column-major)
+
+  Output Parameter:
+. kaij - the new `MATKAIJ` matrix
+
+  Level: advanced
+
+  Notes:
+  The created matrix is of the following form\:
+.vb
+    [B \otimes S + A \otimes T]
+.ve
+  where
+.vb
+  S is a dense (p \times q) matrix
+  T is a dense (p \times q) matrix
+  A is a `MATAIJ`  (n \times n) matrix
+  B is a `MATAIJ`  (n \times n) matrix, or the identity if `NULL`
+.ve
+  The resulting matrix is (np \times nq)
+
+  `B` must share the parallel row and column layout of `A`, and in the `MATMPIKAIJ` case it must share the nonzero
+  structure of `A` (the same off-diagonal ghost columns), for example by assembling both from the same `DM`.
+
+  This function increases the reference count on both `MATAIJ` matrices, so the user is free to destroy them if they are not needed.
+
+  When `B` is not the identity, `MatMult()`, `MatMultAdd()`, and `MatInvertBlockDiagonal()` (hence `PCPBJACOBI`) are
+  supported; the remaining operations raise an error in that case. These are `MatSOR()`, `MatGetRow()`, `MatConvert()`,
+  and the operations built on `MatConvert()`\: `MatCreateSubMatrix()` and `MatView()` in any format other than
+  `PETSC_VIEWER_ASCII_INFO`, `PETSC_VIEWER_ASCII_INFO_DETAIL`, or `PETSC_VIEWER_ASCII_IMPL`. In particular
+  `-mat_view` and `-ksp_view_mat` will error on such a matrix.
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateKAIJ()`, `MatKAIJSetAIJ()`, `MatKAIJSetB()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MATKAIJ`
+@*/
+PetscErrorCode MatCreateKAIJAB(Mat A, Mat B, PetscInt p, PetscInt q, const PetscScalar S[], const PetscScalar T[], Mat *kaij)
 {
   PetscFunctionBegin;
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), kaij));
   PetscCall(MatSetType(*kaij, MATKAIJ));
   PetscCall(MatKAIJSetAIJ(*kaij, A));
+  PetscCall(MatKAIJSetB(*kaij, B));
   PetscCall(MatKAIJSetS(*kaij, p, q, S));
   PetscCall(MatKAIJSetT(*kaij, p, q, T));
   PetscCall(MatSetUp(*kaij));
@@ -1418,13 +1616,13 @@ PetscErrorCode MatCreateKAIJ(Mat A, PetscInt p, PetscInt q, const PetscScalar S[
 
 /*MC
   MATKAIJ - MATKAIJ = "kaij" - A matrix type to be used to evaluate matrices of form
-    [I \otimes S + A \otimes T],
+    [B \otimes S + A \otimes T],
   where
 .vb
     S is a dense (p \times q) matrix,
     T is a dense (p \times q) matrix,
     A is an AIJ  (n \times n) matrix,
-    and I is the identity matrix.
+    and B is an AIJ (n \times n) matrix, or the identity matrix.
 .ve
   The resulting matrix is (np \times nq).
 
@@ -1432,11 +1630,14 @@ PetscErrorCode MatCreateKAIJ(Mat A, PetscInt p, PetscInt q, const PetscScalar S[
 
   Level: advanced
 
-  Note:
+  Notes:
   A linear system with multiple right-hand sides, AX = B, can be expressed in the KAIJ-friendly form of (A \otimes I) x = b,
   where x and b are column vectors containing the row-major representations of X and B.
 
-.seealso: [](ch_matrices), `Mat`, `MatKAIJSetAIJ()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MatKAIJGetAIJ()`, `MatKAIJGetS()`, `MatKAIJGetT()`, `MatCreateKAIJ()`
+  `MatCreateKAIJ()` leaves the second operand as the identity, giving the common (I \otimes S + A \otimes T) form; a general
+  `B` is set with `MatCreateKAIJAB()` or `MatKAIJSetB()`, which supports fewer operations (see `MatCreateKAIJAB()`).
+
+.seealso: [](ch_matrices), `Mat`, `MatKAIJSetAIJ()`, `MatKAIJSetB()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MatKAIJGetAIJ()`, `MatKAIJGetB()`, `MatKAIJGetS()`, `MatKAIJGetT()`, `MatCreateKAIJ()`, `MatCreateKAIJAB()`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_KAIJ(Mat A)

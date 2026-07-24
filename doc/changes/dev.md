@@ -78,6 +78,8 @@
 - Change `MatGetValues()` to respect the row or column orientation set with `MatSetOption(mat, MAT_ROW_ORIENTED, ...)`. This will break current code that calls
   `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE)` and uses `MatGetValues()`
 - Add new `MatType` `MATSEQBAIJLIBXSMM` and `MATMPIBAIJLIBXSMM`
+- Add `MatCreateKAIJAB()`, `MatKAIJSetB()` and `MatKAIJGetB()` so a `MATKAIJ` matrix can represent (A x T) + (B x S) with a general second
+  operand `B` instead of the identity; `MatSOR()`, `MatGetRow()` and `MatConvert()` are not supported when `B` is not the identity
 
 ## MatCoarsen
 
