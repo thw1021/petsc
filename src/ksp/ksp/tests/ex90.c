@@ -6,7 +6,8 @@ static char help[] = "Tests KSP right diagonal scaling.\n\n";
 #include <math.h>
 
 typedef struct {
-  Mat              A, P;
+  Mat              A, P, Aphysical, Pphysical;
+  Vec              scale;
   PetscObjectState Astate, Pstate;
   PetscInt         setup_count;
   PetscBool        check_residual;
@@ -85,12 +86,31 @@ static PetscErrorCode PCApply_Identity(PC pc, Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckRightScaledMatrix(Mat scaled, Mat physical, Vec scale, const char *name)
+{
+  Mat       expected;
+  PetscReal norm;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatDuplicate(physical, MAT_COPY_VALUES, &expected));
+  PetscCall(MatDiagonalScale(expected, NULL, scale));
+  PetscCall(MatAXPY(expected, -1.0, scaled, SAME_NONZERO_PATTERN));
+  PetscCall(MatNorm(expected, NORM_FROBENIUS, &norm));
+  PetscCheck(norm < 100 * PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)scaled), PETSC_ERR_PLIB, "Right-scaled %s error norm %g is too large", name, (double)norm);
+  PetscCall(MatDestroy(&expected));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCSetUp_Count(PC pc)
 {
   TestCtx *ctx;
+  Mat      A, P;
 
   PetscFunctionBeginUser;
   PetscCall(PCShellGetContext(pc, &ctx));
+  PetscCall(PCGetOperators(pc, &A, &P));
+  PetscCall(CheckRightScaledMatrix(A, ctx->Aphysical, ctx->scale, "operator"));
+  PetscCall(CheckRightScaledMatrix(P, ctx->Pphysical, ctx->scale, "preconditioning matrix"));
   ++ctx->setup_count;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -322,7 +342,12 @@ int main(int argc, char **argv)
   PetscCall(KSPGetRightDiagonalScale(ksp, &got));
   PetscCheck(got == d, PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSPGetRightDiagonalScale() returned the wrong vector");
   PetscCall(KSPSetFromOptions(ksp));
+  ctx.Aphysical = NULL;
+  ctx.Pphysical = NULL;
+  ctx.scale     = d;
   if (test_reuse) {
+    PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &ctx.Aphysical));
+    PetscCall(MatDuplicate(P, MAT_COPY_VALUES, &ctx.Pphysical));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, PCSHELL));
     PetscCall(PCShellSetContext(pc, &ctx));
@@ -353,6 +378,7 @@ int main(int argc, char **argv)
     PetscCheck(ctx.setup_count == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Changed scaling did not rebuild the PC");
     PetscCall(CheckSolution(x));
     PetscCall(MatShift(P, 0.25));
+    PetscCall(MatShift(ctx.Pphysical, 0.25));
     PetscCall(PetscObjectStateGet((PetscObject)P, &ctx.Pstate));
     PetscCall(VecSet(x, 0.0));
     PetscCall(KSPSolve(ksp, b, x));
@@ -389,6 +415,8 @@ int main(int argc, char **argv)
   PetscCall(KSPGetRightDiagonalScale(ksp, &got));
   PetscCheck(!got, PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSP right diagonal scale was not cleared");
   PetscCall(KSPDestroy(&ksp));
+  PetscCall(MatDestroy(&ctx.Pphysical));
+  PetscCall(MatDestroy(&ctx.Aphysical));
   PetscCall(VecDestroy(&d));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&b));
