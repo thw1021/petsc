@@ -1,6 +1,7 @@
 static char help[] = "Tests KSP right diagonal scaling.\n\n";
 
 #include <petscsnes.h>
+#include <petscdmda.h>
 #include <petsc/private/petscimpl.h>
 #include <math.h>
 
@@ -125,6 +126,60 @@ static PetscErrorCode CheckSolution(Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode FormDeferredOperators(KSP ksp, Mat A, Mat P, void *ctx)
+{
+  const PetscInt    rows[]   = {0, 1};
+  const PetscScalar values[] = {4.0, 1.0, 2.0, 3.0};
+  PetscInt         *count    = (PetscInt *)ctx;
+
+  PetscFunctionBeginUser;
+  (void)ksp;
+  ++*count;
+  PetscCall(MatSetValues(P, 2, rows, 2, rows, values, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(P, MAT_FINAL_ASSEMBLY));
+  if (A != P) PetscCall(MatCopy(P, A, SAME_NONZERO_PATTERN));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestDeferredOperators(void)
+{
+  const PetscInt    rows[] = {0, 1};
+  const PetscScalar rhs[]  = {6.0, 8.0};
+  DM                dm;
+  KSP               ksp;
+  Vec               b, x, d;
+  PetscInt          operator_count = 0;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, 2, 1, 1, NULL, &dm));
+  PetscCall(DMSetUp(dm));
+  PetscCall(DMCreateGlobalVector(dm, &x));
+  PetscCall(VecDuplicate(x, &b));
+  PetscCall(VecDuplicate(x, &d));
+  PetscCall(VecSetValues(b, 2, rows, rhs, INSERT_VALUES));
+  PetscCall(VecAssemblyBegin(b));
+  PetscCall(VecAssemblyEnd(b));
+  PetscCall(VecSet(x, 0.0));
+  PetscCall(SetScale(d, 2.0, 0.5));
+
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetDM(ksp, dm));
+  PetscCall(KSPSetComputeOperators(ksp, FormDeferredOperators, &operator_count));
+  PetscCall(KSPSetRightDiagonalScale(ksp, d));
+  PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(KSPSolve(ksp, b, x));
+  PetscCheck(operator_count == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected one operator callback, got %" PetscInt_FMT, operator_count);
+  PetscCall(CheckSolution(x));
+
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(VecDestroy(&d));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
+  PetscCall(DMDestroy(&dm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode FormSNESFunction(SNES snes, Vec x, Vec f, void *ctx)
 {
   const PetscScalar *xa;
@@ -203,7 +258,7 @@ int main(int argc, char **argv)
   KSP               ksp;
   PC                pc;
   TestCtx           ctx;
-  PetscBool         distinct = PETSC_FALSE, shell = PETSC_FALSE, mffd = PETSC_FALSE, nonzero = PETSC_FALSE, test_reuse = PETSC_FALSE, test_errors = PETSC_FALSE, test_snes = PETSC_FALSE;
+  PetscBool         distinct = PETSC_FALSE, shell = PETSC_FALSE, mffd = PETSC_FALSE, nonzero = PETSC_FALSE, test_reuse = PETSC_FALSE, test_errors = PETSC_FALSE, test_snes = PETSC_FALSE, test_deferred_operators = PETSC_FALSE;
   PetscMPIInt       size;
   PetscErrorCode    ierr;
   PetscObjectState  state;
@@ -221,6 +276,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_reuse", &test_reuse, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_errors", &test_errors, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_snes", &test_snes, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_deferred_operators", &test_deferred_operators, NULL));
 
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 2, NULL, &assembled));
   PetscCall(MatSetValues(assembled, 2, rows, 2, rows, matrix, INSERT_VALUES));
@@ -342,6 +398,7 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&A));
   PetscCall(MatDestroy(&assembled));
   if (test_snes) PetscCall(TestSNESRightScale());
+  if (test_deferred_operators) PetscCall(TestDeferredOperators());
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -387,5 +444,10 @@ int main(int argc, char **argv)
     suffix: snes
     output_file: output/empty.out
     args: -test_snes -snes_linesearch_type bt -snes_ksp_ew -snes_rtol 1e-12
+
+  test:
+    suffix: deferred_operators
+    output_file: output/empty.out
+    args: -test_deferred_operators -ksp_type preonly -pc_type lu
 
 TEST*/
