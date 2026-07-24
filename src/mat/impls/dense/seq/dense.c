@@ -3951,6 +3951,38 @@ PetscErrorCode MatDenseRestoreSubMatrix(Mat A, Mat *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  MatDenseUpdateColumnLayout - Update the column layout of the dense matrix.
+
+  Collective
+
+  Input Parameters:
++ A - the `Mat` object
+- clayout - the `PetscLayout` object (cannot be `NULL`)
+
+  Level: advanced
+
+  Notes:
+  Because a dense matrix’s storage is independent of its column layout, this routine can update the layout without modifying the underlying storage.
+
+.seealso: [](ch_matrices), `Mat`, `MATDENSE`, `PetscLayout`
+@*/
+PetscErrorCode MatDenseUpdateColumnLayout(Mat A, PetscLayout clayout)
+{
+  PetscMPIInt flag;
+  MPI_Comm    lcomm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscCall(PetscLayoutGetComm(clayout, &lcomm));
+  PetscCallMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)A), lcomm, &flag));
+  PetscCheck(flag == MPI_CONGRUENT || flag == MPI_IDENT, PETSC_COMM_SELF, PETSC_ERR_ARG_NOTSAMECOMM, "Different communicators in the two objects: flag %d", flag);
+  PetscCheck(A->cmap->N == clayout->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat global dim %" PetscInt_FMT " does not match layout global dim %" PetscInt_FMT, A->cmap->N, clayout->N);
+  PetscUseMethod(A, "MatDenseUpdateColumnLayout_C", (Mat, PetscLayout), (A, clayout));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #include <petscblaslapack.h>
 #include <petsc/private/kernels/blockinvert.h>
 
