@@ -20,7 +20,10 @@ class Configure(config.package.GNUPackage):
     self.pthread = self.framework.require('config.packages.pthread',self)
     self.oce     = self.framework.require('config.packages.opencascade',self)
     self.deps    = [self.pthread]
-    self.odeps   = [self.oce]
+    if self.framework.argDB['egads-full']:
+      self.deps  = [self.oce]
+    else:
+      self.odeps   = [self.oce]
     return
 
   def setupHelp(self, help):
