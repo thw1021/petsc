@@ -12,7 +12,7 @@
 
 Severity weights for PETSc:
 - **CRITICAL / HIGH / MEDIUM** — correctness, performance, real bugs.
-- **Style** — important. PETSc convention violations (clang-format, naming, idioms, CLAUDE.md anti-patterns) are real review blockers. Treat at par with MEDIUM.
+- **Style** — important. PETSc convention violations (clang-format, naming, idioms, AGENTS.md anti-patterns) are real review blockers. Treat at par with MEDIUM.
 - **LOW** — count, do not list. End the report with `(N LOW findings suppressed; ask to show them.)` when `N > 0`. List individual LOW items only if asked.
 
 ### 5. Verify each finding before reporting
@@ -20,4 +20,4 @@ After generating the review, treat every finding at Style or above as tentative.
 
 ### 6. Report
 - Per finding: severity, file:line, description, suggested fix. Order CRITICAL → HIGH → MEDIUM → Style. If nothing at or above Style is found, say so explicitly.
-- If CI_PIPELINE_ID is in the environment: always write the report as a standalone HTML document (with a title) to ai-review.html — create the report document even when nothing is found. Add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID.
+- If CI_PIPELINE_ID is in the environment: always write the report as a standalone HTML document (with a title) to ai-review.html — create the report document even when nothing is found. Add a footnote with LLM CLI used (for example, Claude Code), the version, the model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID.
