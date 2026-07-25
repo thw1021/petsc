@@ -1,5 +1,5 @@
 ---
-name: petsc-codegraph
+name: codegraph
 description: >-
   Use CodeGraph to navigate PETSc and avoid duplicating existing functionality. Use whenever
   writing or reviewing PETSc C, C++, or Python, especially before adding or changing a public
