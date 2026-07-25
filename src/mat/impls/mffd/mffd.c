@@ -1047,9 +1047,9 @@ PetscErrorCode MatMFFDCheckPositivity(void *dummy, Vec U, Vec a, PetscScalar *h)
   }
   PetscCall(VecRestoreArray(U, &u_vec));
   PetscCall(VecRestoreArray(a, &a_vec));
-  PetscCallMPI(MPIU_Allreduce(&minval, &val, 1, MPIU_REAL, MPIU_MIN, comm));
-  if (val <= PetscAbsScalar(*h)) {
-    val = 0.99 * val;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &minval, 1, MPIU_REAL, MPIU_MIN, comm));
+  if (minval <= PetscAbsScalar(*h)) {
+    val = 0.99 * minval;
     PetscCall(PetscInfo(U, "Scaling back h from %g to %g\n", (double)PetscRealPart(*h), (double)val));
     if (PetscRealPart(*h) > 0.0) *h = val;
     else *h = -val;

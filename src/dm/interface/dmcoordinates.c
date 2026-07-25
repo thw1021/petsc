@@ -1031,21 +1031,23 @@ PetscErrorCode DMGetLocalBoundingBox(DM dm, PetscReal lmin[], PetscReal lmax[])
 PetscErrorCode DMGetBoundingBox(DM dm, PetscReal gmin[], PetscReal gmax[])
 {
   PetscReal        lmin[3], lmax[3];
+  PetscReal       *min = gmin ? gmin : lmin;
+  PetscReal       *max = gmax ? gmax : lmax;
   const PetscReal *L, *Lstart;
   PetscInt         cdim;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetCoordinateDim(dm, &cdim));
-  PetscCall(DMGetLocalBoundingBox(dm, lmin, lmax));
-  if (gmin) PetscCallMPI(MPIU_Allreduce(lmin, gmin, cdim, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)dm)));
-  if (gmax) PetscCallMPI(MPIU_Allreduce(lmax, gmax, cdim, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)dm)));
+  PetscCall(DMGetLocalBoundingBox(dm, min, max));
+  if (gmin) PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, min, cdim, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)dm)));
+  if (gmax) PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, max, cdim, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)dm)));
   PetscCall(DMGetPeriodicity(dm, NULL, &Lstart, &L));
   if (L) {
     for (PetscInt d = 0; d < cdim; ++d)
       if (L[d] > 0.0) {
-        gmin[d] = Lstart[d];
-        gmax[d] = Lstart[d] + L[d];
+        min[d] = Lstart[d];
+        max[d] = Lstart[d] + L[d];
       }
   }
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -2006,10 +2006,11 @@ static PetscErrorCode DMPlexCreateNodeNumbering(DM dm, PetscInt *num_local_nodes
     for (PetscInt n = 0; n < dof / ncomp; n++) nodes[offset / ncomp + n] = points[p - pStart] + n;
   }
   PetscCall(PetscFree(points));
-  *num_local_nodes = local_node;
-  *nStart          = owned_start;
-  *nEnd            = owned_start + owned_node;
-  PetscCallMPI(MPIU_Allreduce(&owned_node, num_global_nodes, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+  *num_local_nodes  = local_node;
+  *nStart           = owned_start;
+  *nEnd             = owned_start + owned_node;
+  *num_global_nodes = owned_node;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, num_global_nodes, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)dm)));
   *node_l2g = nodes;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

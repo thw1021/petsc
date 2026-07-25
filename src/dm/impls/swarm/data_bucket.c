@@ -361,9 +361,18 @@ PetscErrorCode DMSwarmDataBucketGetSizes(DMSwarmDataBucket db, PetscInt *L, Pets
 PetscErrorCode DMSwarmDataBucketGetGlobalSizes(MPI_Comm comm, DMSwarmDataBucket db, PetscInt *L, PetscInt *buffer, PetscInt *allocated)
 {
   PetscFunctionBegin;
-  if (L) PetscCallMPI(MPIU_Allreduce(&db->L, L, 1, MPIU_INT, MPI_SUM, comm));
-  if (buffer) PetscCallMPI(MPIU_Allreduce(&db->buffer, buffer, 1, MPIU_INT, MPI_SUM, comm));
-  if (allocated) PetscCallMPI(MPIU_Allreduce(&db->allocated, allocated, 1, MPIU_INT, MPI_SUM, comm));
+  if (L) {
+    *L = db->L;
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, L, 1, MPIU_INT, MPI_SUM, comm));
+  }
+  if (buffer) {
+    *buffer = db->buffer;
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, buffer, 1, MPIU_INT, MPI_SUM, comm));
+  }
+  if (allocated) {
+    *allocated = db->allocated;
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, allocated, 1, MPIU_INT, MPI_SUM, comm));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
