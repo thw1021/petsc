@@ -1698,14 +1698,84 @@ static PetscErrorCode MatAXPY_MPISBAIJ(Mat Y, PetscScalar a, Mat X, MatStructure
 
 static PetscErrorCode MatCreateSubMatrices_MPISBAIJ(Mat A, PetscInt n, const IS irow[], const IS icol[], MatReuse scall, Mat *B[])
 {
-  PetscInt  i;
-  PetscBool flg;
+  PetscBool action[2] = {PETSC_FALSE, PETSC_FALSE};
 
   PetscFunctionBegin;
-  PetscCall(MatCreateSubMatrices_MPIBAIJ(A, n, irow, icol, scall, B)); /* B[] are sbaij matrices */
-  for (i = 0; i < n; i++) {
-    PetscCall(ISEqual(irow[i], icol[i], &flg));
-    if (!flg) PetscCall(MatSeqSBAIJZeroOps_Private(*B[i]));
+  for (PetscInt i = 0; i < n; i++) {
+    if (!action[0] && irow[i] != icol[i]) {
+      PetscCall(ISEqual(irow[i], icol[i], action));
+      action[0] = (PetscBool)!action[0];
+    }
+    if (!action[1]) {
+      if (irow[i] != icol[i]) action[1] = PETSC_TRUE;
+      else {
+        PetscCall(ISSorted(irow[i], action + 1));
+        action[1] = (PetscBool)!action[1];
+      }
+    }
+  }
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, action, 2, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)A)));
+  if (action[0]) {
+    Mat Ageneral;
+
+    /* Different row and column sets need entries from both triangular parts of A */
+    PetscCall(MatConvert(A, MATMPIBAIJ, MAT_INITIAL_MATRIX, &Ageneral));
+    PetscCall(MatCreateSubMatrices_MPIBAIJ(Ageneral, n, irow, icol, scall, B));
+    PetscCall(MatDestroy(&Ageneral));
+  } else if (!action[1]) PetscCall(MatCreateSubMatrices_MPIBAIJ(A, n, irow, icol, scall, B)); /* B[] are MATSBAIJ matrices */
+  else {
+    Mat *Bsorted;
+    IS  *isrow_sorted, *iscol_sorted, *isrow_iperm, *iscol_iperm;
+    IS   perm;
+
+    PetscCall(PetscMalloc4(n, &isrow_sorted, n, &iscol_sorted, n, &isrow_iperm, n, &iscol_iperm));
+    for (PetscInt i = 0; i < n; i++) {
+      PetscCall(ISDuplicate(irow[i], isrow_sorted + i));
+      PetscCall(ISSort(isrow_sorted[i]));
+      PetscCall(ISSortPermutation(irow[i], PETSC_TRUE, &perm));
+      PetscCall(ISInvertPermutation(perm, PETSC_DECIDE, isrow_iperm + i));
+      PetscCall(ISDestroy(&perm));
+      if (irow[i] == icol[i]) {
+        iscol_sorted[i] = isrow_sorted[i];
+        PetscCall(PetscObjectReference((PetscObject)iscol_sorted[i]));
+        iscol_iperm[i] = isrow_iperm[i];
+        PetscCall(PetscObjectReference((PetscObject)iscol_iperm[i]));
+      } else {
+        iscol_sorted[i] = isrow_sorted[i];
+        PetscCall(PetscObjectReference((PetscObject)iscol_sorted[i]));
+        PetscCall(ISSortPermutation(icol[i], PETSC_TRUE, &perm));
+        PetscCall(ISInvertPermutation(perm, PETSC_DECIDE, iscol_iperm + i));
+        PetscCall(ISDestroy(&perm));
+      }
+    }
+    PetscCall(MatCreateSubMatrices_MPIBAIJ(A, n, isrow_sorted, iscol_sorted, MAT_INITIAL_MATRIX, &Bsorted)); /* Bsorted[] are MATSBAIJ matrices */
+    for (PetscInt i = 0; i < n; i++) {
+      Mat       Bpermuted;
+      PetscBool sameorder;
+
+      PetscCall(ISEqualUnsorted(isrow_iperm[i], iscol_iperm[i], &sameorder));
+      if (sameorder) PetscCall(MatPermute(Bsorted[i], isrow_iperm[i], iscol_iperm[i], &Bpermuted));
+      else {
+        Mat Bgeneral;
+
+        PetscCall(MatConvert(Bsorted[i], MATSEQBAIJ, MAT_INITIAL_MATRIX, &Bgeneral));
+        PetscCall(MatPermute(Bgeneral, isrow_iperm[i], iscol_iperm[i], &Bpermuted));
+        PetscCall(MatDestroy(&Bgeneral));
+      }
+      PetscCall(MatDestroy(Bsorted + i));
+      Bsorted[i] = Bpermuted;
+    }
+    if (scall == MAT_REUSE_MATRIX) {
+      for (PetscInt i = 0; i < n; i++) PetscCall(MatCopy(Bsorted[i], (*B)[i], DIFFERENT_NONZERO_PATTERN));
+      PetscCall(MatDestroySubMatrices(n, &Bsorted));
+    } else *B = Bsorted;
+    for (PetscInt i = 0; i < n; i++) {
+      PetscCall(ISDestroy(isrow_sorted + i));
+      PetscCall(ISDestroy(iscol_sorted + i));
+      PetscCall(ISDestroy(isrow_iperm + i));
+      PetscCall(ISDestroy(iscol_iperm + i));
+    }
+    PetscCall(PetscFree4(isrow_sorted, iscol_sorted, isrow_iperm, iscol_iperm));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1716,10 +1786,10 @@ static PetscErrorCode MatShift_MPISBAIJ(Mat Y, PetscScalar a)
   Mat_SeqSBAIJ *aij  = (Mat_SeqSBAIJ *)maij->A->data;
 
   PetscFunctionBegin;
-  if (!Y->preallocated) {
-    PetscCall(MatMPISBAIJSetPreallocation(Y, Y->rmap->bs, 1, NULL, 0, NULL));
-  } else if (!aij->nz) {
-    PetscInt nonew = aij->nonew;
+  if (!Y->preallocated) PetscCall(MatMPISBAIJSetPreallocation(Y, Y->rmap->bs, 1, NULL, 0, NULL));
+  else if (!aij->nz) {
+    const PetscInt nonew = aij->nonew;
+
     PetscCall(MatSeqSBAIJSetPreallocation(maij->A, Y->rmap->bs, 1, NULL));
     aij->nonew = nonew;
   }
