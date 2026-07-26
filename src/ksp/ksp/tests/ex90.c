@@ -14,6 +14,11 @@ typedef struct {
   PetscBool        check_residual, check_properties;
 } TestCtx;
 
+typedef struct {
+  PetscReal expected_rtol;
+  PetscInt  presolve_count, setup_count;
+} SNESCallbackCtx;
+
 static PetscErrorCode MatMult_Shell(Mat shell, Vec x, Vec y)
 {
   const PetscScalar *xa;
@@ -259,15 +264,42 @@ static PetscErrorCode FormSNESJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckSNESPreSolve(KSP ksp, Vec b, Vec x, void *vctx)
+{
+  SNESCallbackCtx *ctx = (SNESCallbackCtx *)vctx;
+  PetscReal        rtol;
+
+  PetscFunctionBeginUser;
+  (void)b;
+  (void)x;
+  PetscCall(KSPGetTolerances(ksp, &rtol, NULL, NULL, NULL));
+  if (!ctx->presolve_count) PetscCheck(PetscAbsReal(rtol - ctx->expected_rtol) <= PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback ran before Eisenstat-Walker updated KSP rtol: expected %g, got %g", (double)ctx->expected_rtol, (double)rtol);
+  ++ctx->presolve_count;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCSetUp_CheckSNESPreSolve(PC pc)
+{
+  SNESCallbackCtx *ctx;
+
+  PetscFunctionBeginUser;
+  PetscCall(PCShellGetContext(pc, &ctx));
+  PetscCheck(ctx->presolve_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PC setup ran before the user pre-solve callback");
+  ++ctx->setup_count;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TestSNESScale(void)
 {
-  SNES        snes;
-  KSP         ksp;
-  Mat         J;
-  Vec         x, f, left, right;
-  PetscInt    row = 0;
-  PetscScalar value;
-  PetscReal   error, rtol, atol, tolerance;
+  SNES            snes;
+  KSP             ksp;
+  PC              pc;
+  Mat             J;
+  Vec             x, f, left, right;
+  SNESCallbackCtx ctx = {.expected_rtol = 0.25, .presolve_count = 0, .setup_count = 0};
+  PetscInt        row = 0;
+  PetscScalar     value;
+  PetscReal       error, rtol, atol, tolerance;
 
   PetscFunctionBeginUser;
   PetscCall(VecCreateSeq(PETSC_COMM_WORLD, 1, &x));
@@ -279,6 +311,12 @@ static PetscErrorCode TestSNESScale(void)
   PetscCall(SNESSetFunction(snes, f, FormSNESFunction, NULL));
   PetscCall(SNESSetJacobian(snes, J, J, FormSNESJacobian, NULL));
   PetscCall(SNESGetKSP(snes, &ksp));
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCSHELL));
+  PetscCall(PCShellSetContext(pc, &ctx));
+  PetscCall(PCShellSetApply(pc, PCApply_Identity));
+  PetscCall(PCShellSetSetUp(pc, PCSetUp_CheckSNESPreSolve));
+  PetscCall(KSPSetPreSolve(ksp, CheckSNESPreSolve, &ctx));
   PetscCall(VecSet(left, 2.0));
   PetscCall(VecSet(right, 3.0));
   PetscCall(KSPSetLeftDiagonalScale(ksp, left));
@@ -288,6 +326,8 @@ static PetscErrorCode TestSNESScale(void)
   PetscCall(SNESSolve(snes, NULL, x));
   PetscCall(VecGetValues(x, 1, &row, &value));
   PetscCall(SNESGetTolerances(snes, &atol, &rtol, NULL, NULL, NULL));
+  PetscCheck(ctx.presolve_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback was not called");
+  PetscCheck(ctx.setup_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PC setup callback was not called");
   error     = PetscAbsScalar(value - (PetscScalar)2.0);
   tolerance = 100.0 * PetscMax(PETSC_MACHINE_EPSILON, PetscMax(atol, rtol));
   PetscCheck(error <= tolerance, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNES solution error %g exceeds tolerance %g", (double)error, (double)tolerance);
@@ -619,7 +659,7 @@ int main(int argc, char **argv)
   test:
     suffix: snes
     output_file: output/empty.out
-    args: -test_snes -snes_linesearch_type bt -snes_ksp_ew -snes_rtol 1e-12
+    args: -test_snes -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12
 
   test:
     suffix: deferred_operators

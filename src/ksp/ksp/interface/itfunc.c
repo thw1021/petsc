@@ -1275,6 +1275,8 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   PetscCheck(!ksp->diagonal_scale || !ksp->dscale, comm, PETSC_ERR_SUP, "Explicit KSP diagonal scaling cannot be combined with KSPSetDiagonalScale()");
 
+  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
+
   /* Without explicit scaling, preserve the usual setup-before-guess ordering. */
   if (!ksp->diagonal_scale) {
     PetscCall(KSPSetUp(ksp));
@@ -1295,8 +1297,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
       ksp->guess_zero = PETSC_TRUE;
     }
   }
-
-  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   if (ksp->diagonal_scale) {
     scale = ksp->diagonal_scale;
