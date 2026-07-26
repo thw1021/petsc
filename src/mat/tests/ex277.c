@@ -144,6 +144,16 @@ int main(int argc, char **argv)
   PetscCall(MatScale(B, -0.8));
   PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatScale(B)"));
 
+  /* Changing the dense blocks after setup must invalidate the cached submatrices too, since those hold copies of S
+     and T. The reference is rebuilt from scratch rather than updated in place, so that a missed invalidation on both
+     sides cannot cancel out. */
+  for (i = 0; i < p * q; i++) S[i] *= 1.7;
+  PetscCall(MatKAIJSetS(K2, p, q, S));
+  PetscCall(MatDestroy(&KBS));
+  if (bnull) PetscCall(MatCreateKAIJ(B, p, q, S, NULL, &KBS));
+  else PetscCall(MatCreateKAIJ(B, p, q, NULL, S, &KBS));
+  PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatKAIJSetS"));
+
   if (p == q) PetscCall(CheckInvertBlockDiagonal(A, p, q, S, T));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatCreateKAIJAB() MatMult matches (A x T) + (B x S)\n"));

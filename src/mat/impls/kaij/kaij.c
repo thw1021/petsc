@@ -285,6 +285,24 @@ PetscErrorCode MatKAIJRestoreTRead(Mat A, const PetscScalar *T[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  Drop everything the KAIJ matrix caches from its operands: the inverted block diagonal and, in the parallel case, the
+  sequential submatrices, which hold copies of S and T. MatKAIJRestoreS() and MatKAIJRestoreT() report the same kind of
+  change by increasing the state of the KAIJ matrix, so raising it here is all that MatKAIJ_build_AIJ_OAIJ() and
+  MatInvertBlockDiagonal_SeqKAIJ() need to notice. The block diagonal is freed rather than kept because p and q may
+  have changed, which changes the size of that buffer.
+*/
+static PetscErrorCode MatKAIJInvalidateCache_Private(Mat A)
+{
+  Mat_SeqKAIJ *a = (Mat_SeqKAIJ *)A->data;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFree(a->ibdiag));
+  a->ibdiagvalid = PETSC_FALSE;
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatKAIJSetAIJ - Set the `MATAIJ` matrix describing the blockwise action of the `MATKAIJ` matrix
 
@@ -361,6 +379,8 @@ PetscErrorCode MatKAIJSetB(Mat A, Mat B)
   }
   PetscCall(MatDestroy(&a->B));
   a->B = B;
+  /* The second operand changed, so the submatrices must be rebuilt even when neither operand has been reassembled */
+  PetscCall(MatKAIJInvalidateCache_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -428,6 +448,7 @@ PetscErrorCode MatKAIJSetS(Mat A, PetscInt p, PetscInt q, const PetscScalar S[])
 
   a->p = p;
   a->q = q;
+  PetscCall(MatKAIJInvalidateCache_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -528,6 +549,7 @@ PetscErrorCode MatKAIJSetT(Mat A, PetscInt p, PetscInt q, const PetscScalar T[])
 
   a->p = p;
   a->q = q;
+  PetscCall(MatKAIJInvalidateCache_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -553,16 +575,19 @@ static PetscErrorCode MatKAIJ_build_AIJ_OAIJ(Mat A)
   Mat_MPIAIJ      *mpiaij, *mpibij = NULL;
   PetscScalar     *T;
   PetscInt         i, j;
-  PetscObjectState state, bstate = 0;
+  PetscObjectState state, bstate = 0, kstate;
 
   PetscFunctionBegin;
   a      = (Mat_MPIKAIJ *)A->data;
   mpiaij = (Mat_MPIAIJ *)a->A->data;
   if (a->B) mpibij = (Mat_MPIAIJ *)a->B->data;
 
+  /* The submatrices hold copies of S and T, so they are also stale when those change; MatKAIJRestoreS() and
+     MatKAIJRestoreT() signal that by increasing the state of the KAIJ matrix itself. */
+  PetscCall(PetscObjectStateGet((PetscObject)A, &kstate));
   PetscCall(PetscObjectStateGet((PetscObject)a->A, &state));
   if (a->B) PetscCall(PetscObjectStateGet((PetscObject)a->B, &bstate));
-  if (state == a->state && (!a->B || bstate == a->bstate)) {
+  if (state == a->state && kstate == a->kstate && (!a->B || bstate == a->bstate)) {
     /* The existing AIJ and KAIJ members are up-to-date, so simply exit. */
     PetscFunctionReturn(PETSC_SUCCESS);
   } else {
@@ -606,6 +631,7 @@ static PetscErrorCode MatKAIJ_build_AIJ_OAIJ(Mat A)
     if (a->isTI) PetscCall(PetscFree(T));
     a->state  = state;
     a->bstate = bstate;
+    a->kstate = kstate;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -860,6 +886,7 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
   const PetscInt     p = b->p, q = b->q, m = b->AIJ->rmap->n, *idx = a->j, *ii = a->i;
   const PetscInt    *bidx = bb ? bb->j : NULL, *bii = bb ? bb->i : NULL;
   PetscInt           i, j, *v_pivots, dof, dof2;
+  PetscObjectState   astate, bstate = 0, kstate;
   PetscScalar       *diag, aval, bval, *v_work;
 
   PetscFunctionBegin;
@@ -868,6 +895,13 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
 
   dof  = p;
   dof2 = dof * dof;
+
+  /* Invalidate the cached block-diagonal if the entries of AIJ or B, or the dense blocks S or T, have changed.
+     Changes to S and T are signaled by the state of the KAIJ matrix, which MatKAIJRestoreS() and MatKAIJRestoreT() increase. */
+  PetscCall(PetscObjectStateGet((PetscObject)A, &kstate));
+  PetscCall(PetscObjectStateGet((PetscObject)b->AIJ, &astate));
+  if (b->B) PetscCall(PetscObjectStateGet((PetscObject)b->B, &bstate));
+  if (astate != b->ibdiagstate || bstate != b->ibdiagbstate || kstate != b->ibdiagkstate) b->ibdiagvalid = PETSC_FALSE;
 
   if (b->ibdiagvalid) {
     if (values) *values = b->ibdiag;
@@ -906,7 +940,10 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
   }
   PetscCall(PetscFree2(v_work, v_pivots));
 
-  b->ibdiagvalid = PETSC_TRUE;
+  b->ibdiagvalid  = PETSC_TRUE;
+  b->ibdiagstate  = astate;
+  b->ibdiagbstate = bstate;
+  b->ibdiagkstate = kstate;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1006,7 +1043,8 @@ static PetscErrorCode MatSOR_SeqKAIJ(Mat A, Vec bb, PetscReal omega, MatSORType 
 
   if (!m) PetscFunctionReturn(PETSC_SUCCESS);
 
-  if (!kaij->ibdiagvalid) PetscCall(MatInvertBlockDiagonal_SeqKAIJ(A, NULL));
+  /* Call unconditionally: the routine returns the cached block diagonal when it is still valid and recomputes it when the operands have changed */
+  PetscCall(MatInvertBlockDiagonal_SeqKAIJ(A, NULL));
   idiag = kaij->ibdiag;
   PetscCall(MatGetDiagonalMarkers_SeqAIJ(kaij->AIJ, &diag, NULL));
 
