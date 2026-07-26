@@ -87,6 +87,65 @@ cdef class DMPlex(DM):
         CHKERR(PetscCLEAR(self.obj)); self.dm = newdm
         return self
 
+    def createFromCellListParallel(self, dim: int, cells, coords, NVertices: int | None = None, interpolate: bool | None = True, comm: Comm | None = None) -> Self:
+        """Create a distributed `DMPlex` from a per-rank list of cells.
+
+        Collective.
+
+        Parameters
+        ----------
+        dim
+            The topological dimension of the mesh.
+        cells
+            This rank's cells: (numCells, numCorners) in global vertex numbering.
+        coords
+            This rank's owned vertices: (numVertices, spaceDim).
+        NVertices
+            Global number of vertices (defaults to ``PETSC_DECIDE``).
+        interpolate
+            Flag to interpolate the mesh (creates edges/faces) in parallel.
+        comm
+            MPI communicator, defaults to `Sys.getDefaultComm`.
+
+        See Also
+        --------
+        DM, DMPlex, DMPlex.createFromCellList,
+        petsc.DMPlexCreateFromCellListParallelPetsc
+
+        """
+        cdef MPI_Comm  ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+        cdef PetscBool interp = interpolate
+        cdef PetscDM   newdm = NULL
+        cdef PetscInt  cdim = asInt(dim)
+        cdef PetscInt  numCells = 0
+        cdef PetscInt  numCorners = 0
+        cdef PetscInt  *cellVertices = NULL
+        cdef PetscInt  numVertices = 0
+        cdef PetscInt  NVerts = PETSC_DECIDE
+        cdef PetscInt  spaceDim = 0
+        cdef PetscReal *vertexCoords = NULL
+        cdef int npy_flags = NPY_ARRAY_ALIGNED|NPY_ARRAY_NOTSWAPPED|NPY_ARRAY_CARRAY
+        if NVertices is not None: NVerts = asInt(NVertices)
+        cells  = PyArray_FROM_OTF(cells,  NPY_PETSC_INT,  npy_flags)
+        coords = PyArray_FROM_OTF(coords, NPY_PETSC_REAL, npy_flags)
+        if PyArray_NDIM(cells) != 2: raise ValueError(
+                ("cell indices must have two dimensions: "
+                 "cells.ndim=%d") % (PyArray_NDIM(cells)))
+        if PyArray_NDIM(coords) != 2: raise ValueError(
+                ("coords vertices must have two dimensions: "
+                 "coords.ndim=%d") % (PyArray_NDIM(coords)))
+        numCells     = <PetscInt> PyArray_DIM(cells, 0)
+        numCorners   = <PetscInt> PyArray_DIM(cells, 1)
+        numVertices  = <PetscInt> PyArray_DIM(coords, 0)
+        spaceDim     = <PetscInt> PyArray_DIM(coords, 1)
+        cellVertices = <PetscInt*> PyArray_DATA(cells)
+        vertexCoords = <PetscReal*> PyArray_DATA(coords)
+        CHKERR(DMPlexCreateFromCellListParallelPetsc(ccomm, cdim, numCells, numVertices,
+                                                     NVerts, numCorners, interp, cellVertices,
+                                                     spaceDim, vertexCoords, NULL, NULL, &newdm))
+        CHKERR(PetscCLEAR(self.obj)); self.dm = newdm
+        return self
+
     def createBoxMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0, 0, 0), upper: Sequence[float] | None = (1, 1, 1),
                       simplex: bool | None = True, periodic: Sequence | str | int | bool | None = False, interpolate: bool | None = True, localizationHeight: int | None = 0, sparseLocalize: bool | None = True, comm: Comm | None = None) -> Self:
         """Create a mesh on the tensor product of intervals.
