@@ -1,4 +1,4 @@
-static char help[] = "Tests KSP right diagonal scaling.\n\n";
+static char help[] = "Tests explicit KSP left and right diagonal scaling.\n\n";
 
 #include <petscsnes.h>
 #include <petscdmda.h>
@@ -7,10 +7,11 @@ static char help[] = "Tests KSP right diagonal scaling.\n\n";
 
 typedef struct {
   Mat              A, P, Aphysical, Pphysical;
-  Vec              scale;
-  PetscObjectState Astate, Pstate;
+  Vec              rhs;
+  Vec              left, right;
+  PetscObjectState Astate, Pstate, rhs_state;
   PetscInt         setup_count;
-  PetscBool        check_residual;
+  PetscBool        check_residual, check_properties;
 } TestCtx;
 
 static PetscErrorCode MatMult_Shell(Mat shell, Vec x, Vec y)
@@ -23,7 +24,7 @@ static PetscErrorCode MatMult_Shell(Mat shell, Vec x, Vec y)
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(VecGetArray(y, &ya));
   ya[0] = 4.0 * xa[0] + xa[1];
-  ya[1] = 2.0 * xa[0] + 3.0 * xa[1];
+  ya[1] = xa[0] + 3.0 * xa[1];
   PetscCall(VecRestoreArray(y, &ya));
   PetscCall(VecRestoreArrayRead(x, &xa));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -39,7 +40,7 @@ static PetscErrorCode FormFunction_Linear(void *ctx, Vec x, Vec f)
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(VecGetArray(f, &fa));
   fa[0] = 4.0 * xa[0] + xa[1];
-  fa[1] = 2.0 * xa[0] + 3.0 * xa[1];
+  fa[1] = xa[0] + 3.0 * xa[1];
   PetscCall(VecRestoreArray(f, &fa));
   PetscCall(VecRestoreArrayRead(x, &xa));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -50,8 +51,9 @@ static PetscErrorCode CheckPhysicalState(KSP ksp, Vec b, Vec x, void *vctx)
   TestCtx         *ctx = (TestCtx *)vctx;
   Mat              A, P;
   Vec              r;
-  PetscReal        norm;
+  PetscReal        norm, bnorm, rtol, atol, tolerance;
   PetscObjectState state;
+  PetscBool        set, flag;
 
   PetscFunctionBeginUser;
   PetscCall(KSPGetOperators(ksp, &A, &P));
@@ -60,13 +62,27 @@ static PetscErrorCode CheckPhysicalState(KSP ksp, Vec b, Vec x, void *vctx)
   PetscCheck(state == ctx->Astate, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Operator state changed from %" PetscInt64_FMT " to %" PetscInt64_FMT, (PetscInt64)ctx->Astate, (PetscInt64)state);
   PetscCall(PetscObjectStateGet((PetscObject)P, &state));
   PetscCheck(state == ctx->Pstate, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Preconditioning matrix state changed from %" PetscInt64_FMT " to %" PetscInt64_FMT, (PetscInt64)ctx->Pstate, (PetscInt64)state);
+  PetscCheck(b == ctx->rhs, PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSP callbacks did not observe the physical right-hand side");
+  PetscCall(PetscObjectStateGet((PetscObject)b, &state));
+  PetscCheck(state == ctx->rhs_state, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Right-hand side state changed from %" PetscInt64_FMT " to %" PetscInt64_FMT, (PetscInt64)ctx->rhs_state, (PetscInt64)state);
+  if (ctx->check_properties) {
+    PetscCall(MatIsSymmetricKnown(P, &set, &flag));
+    PetscCheck(set && flag, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Preconditioning matrix lost its symmetric property");
+    PetscCall(MatIsHermitianKnown(P, &set, &flag));
+    PetscCheck(set && flag, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Preconditioning matrix lost its Hermitian property");
+    PetscCall(MatIsSPDKnown(P, &set, &flag));
+    PetscCheck(set && flag, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Preconditioning matrix lost its SPD property");
+  }
   if (x && ctx->check_residual) {
     PetscCall(VecDuplicate(b, &r));
     PetscCall(MatMult(A, x, r));
     PetscCall(VecAXPY(r, -1.0, b));
     PetscCall(VecNorm(r, NORM_2, &norm));
-    PetscCheck(norm < 100 * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Physical residual norm %g is too large", (double)norm);
+    PetscCall(VecNorm(b, NORM_2, &bnorm));
+    PetscCall(KSPGetTolerances(ksp, &rtol, &atol, NULL, NULL));
+    tolerance = 10.0 * PetscMax(atol, PetscMax(rtol * bnorm, PETSC_MACHINE_EPSILON * bnorm));
     PetscCall(VecDestroy(&r));
+    PetscCheck(norm <= tolerance, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Physical residual norm %g exceeds tolerance %g", (double)norm, (double)tolerance);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -86,17 +102,17 @@ static PetscErrorCode PCApply_Identity(PC pc, Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckRightScaledMatrix(Mat scaled, Mat physical, Vec scale, const char *name)
+static PetscErrorCode CheckScaledMatrix(Mat scaled, Mat physical, Vec left, Vec right, const char *name)
 {
   Mat       expected;
   PetscReal norm;
 
   PetscFunctionBeginUser;
   PetscCall(MatDuplicate(physical, MAT_COPY_VALUES, &expected));
-  PetscCall(MatDiagonalScale(expected, NULL, scale));
+  PetscCall(MatDiagonalScale(expected, left, right));
   PetscCall(MatAXPY(expected, -1.0, scaled, SAME_NONZERO_PATTERN));
   PetscCall(MatNorm(expected, NORM_FROBENIUS, &norm));
-  PetscCheck(norm < 100 * PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)scaled), PETSC_ERR_PLIB, "Right-scaled %s error norm %g is too large", name, (double)norm);
+  PetscCheck(norm < 100 * PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)scaled), PETSC_ERR_PLIB, "Scaled %s error norm %g is too large", name, (double)norm);
   PetscCall(MatDestroy(&expected));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -109,8 +125,8 @@ static PetscErrorCode PCSetUp_Count(PC pc)
   PetscFunctionBeginUser;
   PetscCall(PCShellGetContext(pc, &ctx));
   PetscCall(PCGetOperators(pc, &A, &P));
-  PetscCall(CheckRightScaledMatrix(A, ctx->Aphysical, ctx->scale, "operator"));
-  PetscCall(CheckRightScaledMatrix(P, ctx->Pphysical, ctx->scale, "preconditioning matrix"));
+  PetscCall(CheckScaledMatrix(A, ctx->Aphysical, ctx->left, ctx->right, "operator"));
+  PetscCall(CheckScaledMatrix(P, ctx->Pphysical, ctx->left, ctx->right, "preconditioning matrix"));
   ++ctx->setup_count;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -127,29 +143,32 @@ static PetscErrorCode SetScale(Vec d, PetscScalar d0, PetscScalar d1)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckSolution(Vec x)
+static PetscErrorCode CheckSolution(KSP ksp, Vec x)
 {
   Vec               expected;
-  const PetscInt     rows[]   = {0, 1};
-  const PetscScalar  values[] = {1.0, 2.0};
-  PetscReal          norm;
+  const PetscInt    rows[]   = {0, 1};
+  const PetscScalar values[] = {1.0, 2.0};
+  PetscReal         norm, expected_norm, rtol, atol, tolerance;
 
   PetscFunctionBeginUser;
   PetscCall(VecDuplicate(x, &expected));
   PetscCall(VecSetValues(expected, 2, rows, values, INSERT_VALUES));
   PetscCall(VecAssemblyBegin(expected));
   PetscCall(VecAssemblyEnd(expected));
+  PetscCall(VecNorm(expected, NORM_2, &expected_norm));
   PetscCall(VecAXPY(expected, -1.0, x));
   PetscCall(VecNorm(expected, NORM_2, &norm));
-  PetscCheck(norm < 100 * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Solution error norm %g is too large", (double)norm);
+  PetscCall(KSPGetTolerances(ksp, &rtol, &atol, NULL, NULL));
+  tolerance = 10.0 * PetscMax(atol, PetscMax(rtol * expected_norm, PETSC_MACHINE_EPSILON * expected_norm));
   PetscCall(VecDestroy(&expected));
+  PetscCheck(norm <= tolerance, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Solution error norm %g exceeds tolerance %g", (double)norm, (double)tolerance);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode FormDeferredOperators(KSP ksp, Mat A, Mat P, void *ctx)
 {
   const PetscInt    rows[]   = {0, 1};
-  const PetscScalar values[] = {4.0, 1.0, 2.0, 3.0};
+  const PetscScalar values[] = {4.0, 1.0, 1.0, 3.0};
   PetscInt         *count    = (PetscInt *)ctx;
 
   PetscFunctionBeginUser;
@@ -165,10 +184,10 @@ static PetscErrorCode FormDeferredOperators(KSP ksp, Mat A, Mat P, void *ctx)
 static PetscErrorCode TestDeferredOperators(void)
 {
   const PetscInt    rows[] = {0, 1};
-  const PetscScalar rhs[]  = {6.0, 8.0};
+  const PetscScalar rhs[]  = {6.0, 7.0};
   DM                dm;
   KSP               ksp;
-  Vec               b, x, d;
+  Vec               b, x, left, right;
   PetscInt          operator_count = 0;
 
   PetscFunctionBeginUser;
@@ -176,24 +195,28 @@ static PetscErrorCode TestDeferredOperators(void)
   PetscCall(DMSetUp(dm));
   PetscCall(DMCreateGlobalVector(dm, &x));
   PetscCall(VecDuplicate(x, &b));
-  PetscCall(VecDuplicate(x, &d));
+  PetscCall(VecDuplicate(x, &left));
+  PetscCall(VecDuplicate(x, &right));
   PetscCall(VecSetValues(b, 2, rows, rhs, INSERT_VALUES));
   PetscCall(VecAssemblyBegin(b));
   PetscCall(VecAssemblyEnd(b));
   PetscCall(VecSet(x, 0.0));
-  PetscCall(SetScale(d, 2.0, 0.5));
+  PetscCall(SetScale(left, 0.25, 3.0));
+  PetscCall(SetScale(right, 2.0, 0.5));
 
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
   PetscCall(KSPSetDM(ksp, dm));
   PetscCall(KSPSetComputeOperators(ksp, FormDeferredOperators, &operator_count));
-  PetscCall(KSPSetRightDiagonalScale(ksp, d));
+  PetscCall(KSPSetLeftDiagonalScale(ksp, left));
+  PetscCall(KSPSetRightDiagonalScale(ksp, right));
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(KSPSolve(ksp, b, x));
   PetscCheck(operator_count == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected one operator callback, got %" PetscInt_FMT, operator_count);
-  PetscCall(CheckSolution(x));
+  PetscCall(CheckSolution(ksp, x));
 
   PetscCall(KSPDestroy(&ksp));
-  PetscCall(VecDestroy(&d));
+  PetscCall(VecDestroy(&right));
+  PetscCall(VecDestroy(&left));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&b));
   PetscCall(DMDestroy(&dm));
@@ -236,54 +259,108 @@ static PetscErrorCode FormSNESJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestSNESRightScale(void)
+static PetscErrorCode TestSNESScale(void)
 {
   SNES        snes;
   KSP         ksp;
   Mat         J;
-  Vec         x, f, d;
+  Vec         x, f, left, right;
   PetscInt    row = 0;
   PetscScalar value;
-  PetscReal   error;
+  PetscReal   error, rtol, atol, tolerance;
 
   PetscFunctionBeginUser;
   PetscCall(VecCreateSeq(PETSC_COMM_WORLD, 1, &x));
   PetscCall(VecDuplicate(x, &f));
-  PetscCall(VecDuplicate(x, &d));
+  PetscCall(VecDuplicate(x, &left));
+  PetscCall(VecDuplicate(x, &right));
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 1, 1, 1, NULL, &J));
   PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
   PetscCall(SNESSetFunction(snes, f, FormSNESFunction, NULL));
   PetscCall(SNESSetJacobian(snes, J, J, FormSNESJacobian, NULL));
   PetscCall(SNESGetKSP(snes, &ksp));
-  PetscCall(VecSet(d, 3.0));
-  PetscCall(KSPSetRightDiagonalScale(ksp, d));
+  PetscCall(VecSet(left, 2.0));
+  PetscCall(VecSet(right, 3.0));
+  PetscCall(KSPSetLeftDiagonalScale(ksp, left));
+  PetscCall(KSPSetRightDiagonalScale(ksp, right));
   PetscCall(VecSet(x, 3.0));
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(SNESSolve(snes, NULL, x));
   PetscCall(VecGetValues(x, 1, &row, &value));
-  error = PetscAbsScalar(value - 2.0);
-  PetscCheck(error < 1e-10, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNES solution error %g is too large", (double)error);
+  PetscCall(SNESGetTolerances(snes, &atol, &rtol, NULL, NULL, NULL));
+  error     = PetscAbsScalar(value - (PetscScalar)2.0);
+  tolerance = 100.0 * PetscMax(PETSC_MACHINE_EPSILON, PetscMax(atol, rtol));
+  PetscCheck(error <= tolerance, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNES solution error %g exceeds tolerance %g", (double)error, (double)tolerance);
   PetscCall(SNESDestroy(&snes));
   PetscCall(MatDestroy(&J));
-  PetscCall(VecDestroy(&d));
+  PetscCall(VecDestroy(&right));
+  PetscCall(VecDestroy(&left));
   PetscCall(VecDestroy(&f));
   PetscCall(VecDestroy(&x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestSBAIJError(PetscBool left)
+{
+  Mat               A, physical;
+  Vec               scale;
+  KSP               ksp;
+  PetscErrorCode    ierr;
+  PetscObjectState  state, restored_state;
+  PetscReal         norm;
+  PetscBool         set, flag;
+  const PetscInt    rows[]   = {0, 1};
+  const PetscScalar values[] = {4.0, 1.0, 1.0, 3.0};
+
+  PetscFunctionBeginUser;
+  PetscCall(MatCreateSeqSBAIJ(PETSC_COMM_WORLD, 1, 2, 2, 2, NULL, &A));
+  PetscCall(MatSetOption(A, MAT_IGNORE_LOWER_TRIANGULAR, PETSC_TRUE));
+  PetscCall(MatSetValues(A, 2, rows, 2, rows, values, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &physical));
+  PetscCall(MatCreateVecs(A, &scale, NULL));
+  PetscCall(SetScale(scale, 2.0, 0.5));
+  PetscCall(PetscObjectStateGet((PetscObject)A, &state));
+
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetOperators(ksp, A, A));
+  if (left) PetscCall(KSPSetLeftDiagonalScale(ksp, scale));
+  else PetscCall(KSPSetRightDiagonalScale(ksp, scale));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = KSPSetUp(ksp);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "%s scaling of MATSBAIJ returned error %d", left ? "Left" : "Right", (int)ierr);
+
+  PetscCall(PetscObjectStateGet((PetscObject)A, &restored_state));
+  PetscCheck(restored_state == state, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MATSBAIJ object state was not restored");
+  PetscCall(MatAXPY(physical, -1.0, A, SAME_NONZERO_PATTERN));
+  PetscCall(MatNorm(physical, NORM_FROBENIUS, &norm));
+  PetscCheck(norm < 100 * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MATSBAIJ restoration error norm %g is too large", (double)norm);
+  PetscCall(MatIsSymmetricKnown(A, &set, &flag));
+  PetscCheck(set && flag, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MATSBAIJ lost its symmetric property");
+
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(VecDestroy(&scale));
+  PetscCall(MatDestroy(&physical));
+  PetscCall(MatDestroy(&A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
-  Mat               assembled, A, P, B, X;
-  Vec               b, x, d, got, mffd_base = NULL, mffd_fbase = NULL;
-  KSP               ksp;
-  PC                pc;
-  TestCtx           ctx;
-  PetscBool         distinct = PETSC_FALSE, shell = PETSC_FALSE, mffd = PETSC_FALSE, nonzero = PETSC_FALSE, test_reuse = PETSC_FALSE, test_errors = PETSC_FALSE, test_snes = PETSC_FALSE, test_deferred_operators = PETSC_FALSE, test_explicit_setup = PETSC_FALSE;
+  Mat     assembled, A, P, B, X;
+  Vec     b, x, left, right, got, bad, error_scale, mffd_base = NULL, mffd_fbase = NULL;
+  KSP     ksp, legacy_ksp;
+  PC      pc;
+  TestCtx ctx;
+  PetscBool scale_left = PETSC_FALSE, scale_right = PETSC_TRUE, distinct = PETSC_FALSE, shell = PETSC_FALSE, mffd = PETSC_FALSE, nonzero = PETSC_FALSE, test_reuse = PETSC_FALSE, test_errors = PETSC_FALSE, test_snes = PETSC_FALSE, test_deferred_operators = PETSC_FALSE, test_explicit_setup = PETSC_FALSE;
   PetscMPIInt       size;
   PetscErrorCode    ierr;
   PetscObjectState  state;
-  const PetscInt    rows[] = {0, 1};
-  const PetscScalar matrix[] = {4.0, 1.0, 2.0, 3.0}, rhs[] = {6.0, 8.0};
+  PetscInt          expected_setup_count;
+  const PetscInt    rows[]   = {0, 1};
+  const PetscScalar matrix[] = {4.0, 1.0, 1.0, 3.0}, rhs[] = {6.0, 7.0};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -298,11 +375,17 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_snes", &test_snes, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_deferred_operators", &test_deferred_operators, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_explicit_setup", &test_explicit_setup, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-scale_left", &scale_left, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-scale_right", &scale_right, NULL));
+  PetscCheck(scale_left || scale_right, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Enable at least one explicit diagonal scale");
 
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 2, NULL, &assembled));
   PetscCall(MatSetValues(assembled, 2, rows, 2, rows, matrix, INSERT_VALUES));
   PetscCall(MatAssemblyBegin(assembled, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(assembled, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(assembled, MAT_SYMMETRIC, PETSC_TRUE));
+  PetscCall(MatSetOption(assembled, MAT_HERMITIAN, PETSC_TRUE));
+  PetscCall(MatSetOption(assembled, MAT_SPD, PETSC_TRUE));
   PetscCheck(!shell || !mffd, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Use only one matrix-free option");
   if (mffd) {
     PetscCall(MatCreateMFFD(PETSC_COMM_WORLD, 2, 2, 2, 2, &A));
@@ -331,21 +414,27 @@ int main(int argc, char **argv)
   PetscCall(VecSetValues(b, 2, rows, rhs, INSERT_VALUES));
   PetscCall(VecAssemblyBegin(b));
   PetscCall(VecAssemblyEnd(b));
-  PetscCall(VecDuplicate(x, &d));
-  PetscCall(SetScale(d, 2.0, 0.5));
+  PetscCall(VecDuplicate(x, &left));
+  PetscCall(VecDuplicate(x, &right));
+  PetscCall(SetScale(left, 0.25, 3.0));
+  PetscCall(SetScale(right, 2.0, 0.5));
   if (nonzero) PetscCall(VecSet(x, 0.25));
   else PetscCall(VecSet(x, 0.0));
 
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
   PetscCall(KSPSetOperators(ksp, A, P));
   PetscCall(KSPSetInitialGuessNonzero(ksp, nonzero));
-  PetscCall(KSPSetRightDiagonalScale(ksp, d));
+  if (scale_left) PetscCall(KSPSetLeftDiagonalScale(ksp, left));
+  if (scale_right) PetscCall(KSPSetRightDiagonalScale(ksp, right));
+  PetscCall(KSPGetLeftDiagonalScale(ksp, &got));
+  PetscCheck(got == (scale_left ? left : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSPGetLeftDiagonalScale() returned the wrong vector");
   PetscCall(KSPGetRightDiagonalScale(ksp, &got));
-  PetscCheck(got == d, PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSPGetRightDiagonalScale() returned the wrong vector");
+  PetscCheck(got == (scale_right ? right : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSPGetRightDiagonalScale() returned the wrong vector");
   PetscCall(KSPSetFromOptions(ksp));
   ctx.Aphysical = NULL;
   ctx.Pphysical = NULL;
-  ctx.scale     = d;
+  ctx.left      = scale_left ? left : NULL;
+  ctx.right     = scale_right ? right : NULL;
   if (test_reuse) {
     PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &ctx.Aphysical));
     PetscCall(MatDuplicate(P, MAT_COPY_VALUES, &ctx.Pphysical));
@@ -356,36 +445,52 @@ int main(int argc, char **argv)
     PetscCall(PCShellSetSetUp(pc, PCSetUp_Count));
   }
 
-  ctx.A = A;
-  ctx.P = P;
-  ctx.setup_count = 0;
-  ctx.check_residual = PETSC_TRUE;
+  ctx.A                = A;
+  ctx.P                = P;
+  ctx.rhs              = b;
+  ctx.setup_count      = 0;
+  ctx.check_residual   = PETSC_TRUE;
+  ctx.check_properties = PETSC_TRUE;
   PetscCall(PetscObjectStateGet((PetscObject)A, &ctx.Astate));
   PetscCall(PetscObjectStateGet((PetscObject)P, &ctx.Pstate));
+  PetscCall(PetscObjectStateGet((PetscObject)b, &ctx.rhs_state));
   PetscCall(KSPSetPreSolve(ksp, CheckPhysicalPreSolve, &ctx));
   PetscCall(KSPSetPostSolve(ksp, CheckPhysicalState, &ctx));
   if (test_explicit_setup) PetscCall(KSPSetUp(ksp));
   PetscCall(KSPSolve(ksp, b, x));
-  PetscCall(CheckSolution(x));
+  PetscCall(CheckSolution(ksp, x));
 
   if (test_reuse) {
+    expected_setup_count = 1;
     PetscCheck(ctx.setup_count == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected one PC setup, got %" PetscInt_FMT, ctx.setup_count);
     PetscCall(VecSet(x, 0.0));
     PetscCall(KSPSetInitialGuessNonzero(ksp, PETSC_FALSE));
     PetscCall(KSPSolve(ksp, b, x));
     PetscCheck(ctx.setup_count == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unchanged scaling rebuilt the PC");
-    PetscCall(SetScale(d, 0.5, 4.0));
-    PetscCall(VecSet(x, 0.0));
-    PetscCall(KSPSolve(ksp, b, x));
-    PetscCheck(ctx.setup_count == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Changed scaling did not rebuild the PC");
-    PetscCall(CheckSolution(x));
+    if (scale_right) {
+      PetscCall(SetScale(right, 0.5, 4.0));
+      PetscCall(VecSet(x, 0.0));
+      PetscCall(KSPSolve(ksp, b, x));
+      ++expected_setup_count;
+      PetscCheck(ctx.setup_count == expected_setup_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Changed right scaling did not rebuild the PC");
+      PetscCall(CheckSolution(ksp, x));
+    }
+    if (scale_left) {
+      PetscCall(SetScale(left, 4.0, 0.125));
+      PetscCall(VecSet(x, 0.0));
+      PetscCall(KSPSolve(ksp, b, x));
+      ++expected_setup_count;
+      PetscCheck(ctx.setup_count == expected_setup_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Changed left scaling did not rebuild the PC");
+      PetscCall(CheckSolution(ksp, x));
+    }
     PetscCall(MatShift(P, 0.25));
     PetscCall(MatShift(ctx.Pphysical, 0.25));
     PetscCall(PetscObjectStateGet((PetscObject)P, &ctx.Pstate));
     PetscCall(VecSet(x, 0.0));
     PetscCall(KSPSolve(ksp, b, x));
-    PetscCheck(ctx.setup_count == 3, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Changed matrix did not rebuild the PC");
-    PetscCall(CheckSolution(x));
+    ++expected_setup_count;
+    PetscCheck(ctx.setup_count == expected_setup_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Changed matrix did not rebuild the PC");
+    PetscCall(CheckSolution(ksp, x));
   }
 
   PetscCall(PetscObjectStateGet((PetscObject)A, &state));
@@ -394,32 +499,58 @@ int main(int argc, char **argv)
   PetscCheck(state == ctx.Pstate, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Physical preconditioning matrix state was not restored");
 
   if (test_errors) {
+    error_scale = scale_right ? right : left;
     PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
-    PetscCall(SetScale(d, 0.0, 1.0));
+    PetscCall(SetScale(error_scale, 0.0, 1.0));
     ierr = KSPSolve(ksp, b, x);
     PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Zero scale returned error %d", (int)ierr);
-    PetscCall(SetScale(d, (PetscScalar)NAN, 1.0));
+    PetscCall(SetScale(error_scale, (PetscScalar)NAN, 1.0));
     ierr = KSPSolve(ksp, b, x);
     PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nonfinite scale returned error %d", (int)ierr);
-    PetscCall(SetScale(d, 2.0, 0.5));
+    PetscCall(SetScale(error_scale, 2.0, 0.5));
+    PetscCall(VecCreateSeq(PETSC_COMM_WORLD, 1, &bad));
+    if (scale_right) PetscCall(KSPSetRightDiagonalScale(ksp, bad));
+    else PetscCall(KSPSetLeftDiagonalScale(ksp, bad));
+    ierr = KSPSolve(ksp, b, x);
+    PetscCheck(ierr == PETSC_ERR_ARG_SIZ, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Wrong-sized scale returned error %d", (int)ierr);
+    if (scale_right) PetscCall(KSPSetRightDiagonalScale(ksp, right));
+    else PetscCall(KSPSetLeftDiagonalScale(ksp, left));
+    PetscCall(VecDestroy(&bad));
+    ierr = KSPSetDiagonalScale(ksp, PETSC_TRUE);
+    PetscCheck(ierr == PETSC_ERR_SUP, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Combining explicit and legacy scaling returned error %d", (int)ierr);
+    PetscCall(KSPCreate(PETSC_COMM_WORLD, &legacy_ksp));
+    PetscCall(KSPSetDiagonalScale(legacy_ksp, PETSC_TRUE));
+    if (scale_right) ierr = KSPSetRightDiagonalScale(legacy_ksp, right);
+    else ierr = KSPSetLeftDiagonalScale(legacy_ksp, left);
+    PetscCheck(ierr == PETSC_ERR_SUP, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Setting explicit scaling after legacy scaling returned error %d", (int)ierr);
+    PetscCall(KSPDestroy(&legacy_ksp));
     ierr = KSPSolveTranspose(ksp, b, x);
     PetscCheck(ierr == PETSC_ERR_SUP, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Transpose solve returned error %d", (int)ierr);
     PetscCall(MatCreateSeqDense(PETSC_COMM_WORLD, 2, 1, NULL, &B));
     PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &X));
     ierr = KSPMatSolve(ksp, B, X);
     PetscCheck(ierr == PETSC_ERR_SUP, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Multiple-RHS solve returned error %d", (int)ierr);
+    ierr = KSPMatSolveTranspose(ksp, B, X);
+    PetscCheck(ierr == PETSC_ERR_SUP, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Transpose multiple-RHS solve returned error %d", (int)ierr);
     PetscCall(MatDestroy(&X));
     PetscCall(MatDestroy(&B));
     PetscCall(PetscPopErrorHandler());
+    PetscCall(CheckPhysicalState(ksp, b, NULL, &ctx));
+    PetscCall(TestSBAIJError(PETSC_FALSE));
+    PetscCall(TestSBAIJError(PETSC_TRUE));
   }
 
+  PetscCall(KSPSetLeftDiagonalScale(ksp, NULL));
   PetscCall(KSPSetRightDiagonalScale(ksp, NULL));
+  PetscCall(KSPGetLeftDiagonalScale(ksp, &got));
+  PetscCheck(!got, PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSP left diagonal scale was not cleared");
   PetscCall(KSPGetRightDiagonalScale(ksp, &got));
   PetscCheck(!got, PETSC_COMM_SELF, PETSC_ERR_PLIB, "KSP right diagonal scale was not cleared");
   PetscCall(KSPDestroy(&ksp));
   PetscCall(MatDestroy(&ctx.Pphysical));
   PetscCall(MatDestroy(&ctx.Aphysical));
-  PetscCall(VecDestroy(&d));
+  PetscCall(VecDestroy(&right));
+  PetscCall(VecDestroy(&left));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&b));
   PetscCall(VecDestroy(&mffd_fbase));
@@ -427,7 +558,7 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&P));
   PetscCall(MatDestroy(&A));
   PetscCall(MatDestroy(&assembled));
-  if (test_snes) PetscCall(TestSNESRightScale());
+  if (test_snes) PetscCall(TestSNESScale());
   if (test_deferred_operators) PetscCall(TestDeferredOperators());
   PetscCall(PetscFinalize());
   return 0;
@@ -439,6 +570,16 @@ int main(int argc, char **argv)
     suffix: direct_alias
     output_file: output/empty.out
     args: -ksp_type preonly -pc_type lu
+
+  test:
+    suffix: left
+    output_file: output/empty.out
+    args: -scale_left -scale_right false -ksp_type preonly -pc_type lu
+
+  test:
+    suffix: left_right
+    output_file: output/empty.out
+    args: -scale_left -distinct_pmat -nonzero_guess -ksp_type richardson -pc_type lu -ksp_max_it 1
 
   test:
     suffix: direct_distinct_nonzero
@@ -453,7 +594,7 @@ int main(int argc, char **argv)
   test:
     suffix: shell
     output_file: output/empty.out
-    args: -mat_shell -ksp_type gmres -pc_type jacobi -ksp_rtol 1e-12
+    args: -mat_shell -scale_left -ksp_type gmres -pc_type jacobi -ksp_rtol 1e-12
 
   test:
     suffix: mffd
@@ -463,12 +604,17 @@ int main(int argc, char **argv)
   test:
     suffix: reuse
     output_file: output/empty.out
-    args: -distinct_pmat -test_reuse -ksp_type gmres -ksp_rtol 1e-12
+    args: -scale_left -distinct_pmat -test_reuse -ksp_type gmres -ksp_rtol 1e-12
 
   test:
     suffix: errors
     output_file: output/empty.out
     args: -test_errors -ksp_type preonly -pc_type lu
+
+  test:
+    suffix: errors_left
+    output_file: output/empty.out
+    args: -scale_left -scale_right false -test_errors -ksp_type preonly -pc_type lu
 
   test:
     suffix: snes
@@ -483,6 +629,6 @@ int main(int argc, char **argv)
   test:
     suffix: explicit_setup
     output_file: output/empty.out
-    args: -distinct_pmat -test_reuse -test_explicit_setup -ksp_type gmres -ksp_rtol 1e-12
+    args: -scale_left -distinct_pmat -test_reuse -test_explicit_setup -ksp_type gmres -ksp_rtol 1e-12
 
 TEST*/
