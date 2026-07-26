@@ -3,13 +3,15 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 
 #define KAIJHEADER \
-  PetscInt     p, q; \
-  Mat          AIJ; \
-  Mat          B; /* second AIJ operand for the (B \otimes S) term; NULL means B is the identity */ \
-  PetscScalar *S; \
-  PetscScalar *T; \
-  PetscScalar *ibdiag; \
-  PetscBool    ibdiagvalid, getrowactive, isTI; \
+  PetscInt         p, q; \
+  Mat              AIJ; \
+  Mat              B; /* second AIJ operand for the (B \otimes S) term; NULL means B is the identity */ \
+  PetscScalar     *S; \
+  PetscScalar     *T; \
+  PetscScalar     *ibdiag; \
+  PetscObjectState ibdiagstate;  /* state of AIJ when ibdiag was last computed */ \
+  PetscObjectState ibdiagbstate; /* state of B when ibdiag was last computed */ \
+  PetscBool        ibdiagvalid, getrowactive, isTI; \
   struct { \
     PetscBool    setup; \
     PetscScalar *w, *work, *t, *arr, *y; \

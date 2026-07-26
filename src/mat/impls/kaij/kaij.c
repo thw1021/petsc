@@ -844,6 +844,7 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
   const PetscInt     p = b->p, q = b->q, m = b->AIJ->rmap->n, *idx = a->j, *ii = a->i;
   const PetscInt    *bidx = bb ? bb->j : NULL, *bii = bb ? bb->i : NULL;
   PetscInt           i, j, *v_pivots, dof, dof2;
+  PetscObjectState   astate, bstate = 0;
   PetscScalar       *diag, aval, bval, *v_work;
 
   PetscFunctionBegin;
@@ -852,6 +853,11 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
 
   dof  = p;
   dof2 = dof * dof;
+
+  /* Invalidate the cached block-diagonal if the entries of AIJ or B have changed */
+  PetscCall(PetscObjectStateGet((PetscObject)b->AIJ, &astate));
+  if (b->B) PetscCall(PetscObjectStateGet((PetscObject)b->B, &bstate));
+  if (astate != b->ibdiagstate || bstate != b->ibdiagbstate) b->ibdiagvalid = PETSC_FALSE;
 
   if (b->ibdiagvalid) {
     if (values) *values = b->ibdiag;
@@ -891,7 +897,9 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
   }
   PetscCall(PetscFree2(v_work, v_pivots));
 
-  b->ibdiagvalid = PETSC_TRUE;
+  b->ibdiagvalid  = PETSC_TRUE;
+  b->ibdiagstate  = astate;
+  b->ibdiagbstate = bstate;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
