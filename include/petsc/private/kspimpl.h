@@ -13,7 +13,8 @@ PETSC_EXTERN PetscErrorCode KSPMonitorRegisterAll(void);
 PETSC_EXTERN PetscErrorCode KSPGuessRegisterAll(void);
 PETSC_EXTERN PetscErrorCode KSPMatRegisterAll(void);
 
-typedef struct _KSPOps *KSPOps;
+typedef struct _KSPOps           *KSPOps;
+typedef struct _KSPDiagonalScale *KSPDiagonalScale;
 
 struct _KSPOps {
   PetscErrorCode (*buildsolution)(KSP, Vec, Vec *);      /* Returns a pointer to the solution, or
@@ -182,17 +183,8 @@ struct _p_KSP {
   Vec       diagonal;   /* 1/sqrt(diag of matrix) */
   Vec       truediagonal;
 
-  /* User-provided right scaling for solving A D y = b, x = D y */
-  Vec              right_diagonal_scale;
-  Vec              right_diagonal_scale_inv;
-  PetscObjectState right_diagonal_scale_inv_state;
-  PetscObjectState right_diagonal_scale_solve_state;
-  Mat              right_diagonal_scale_mat;
-  Mat              right_diagonal_scale_pmat;
-  PetscObjectState right_diagonal_scale_mat_state;
-  PetscObjectState right_diagonal_scale_pmat_state;
-  PetscObjectState right_diagonal_scale_mat_scaled_state;
-  PetscObjectState right_diagonal_scale_pmat_scaled_state;
+  /* Optional user-provided left and right diagonal scaling */
+  KSPDiagonalScale diagonal_scale;
 
   /* Allow declaring convergence when negative curvature is detected */
   PetscBool converged_neg_curve;
