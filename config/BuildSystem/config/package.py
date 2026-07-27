@@ -1236,6 +1236,11 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
       vl[-1] = re.compile(r'^[0-9]+').search(vl[-1]).group(0)
     return tuple(map(int,vl))
 
+  def padVersionTuples(self,v1,v2):
+    '''Pads the shorter of two version tuples with zeros so they compare by value instead of by length'''
+    ln = max(len(v1),len(v2))
+    return v1+(0,)*(ln-len(v1)), v2+(0,)*(ln-len(v2))
+
   def checkVersion(self):
     '''Uses self.version, self.minversion, self.maxversion, self.versionname, and self.versioninclude to determine if package has required version'''
     def dropPatch(str):
@@ -1363,16 +1368,20 @@ const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
           suggest += ' after running "rm -rf ' + self.getDir() +'"\n'
           suggest += 'DO NOT DO THIS if you rely on the exact version of the currently installed ' + self.name
     if self.minversion:
-      if self.versionToTuple(self.minversion) > self.version_tuple:
+      v1,v2 = self.padVersionTuples(self.versionToTuple(self.minversion),self.version_tuple)
+      if v1 > v2:
         raise RuntimeError(self.PACKAGE+' version is '+self.foundversion+', this version of PETSc needs at least '+self.minversion+suggest+'\n')
     elif self.version:
-      if self.versionToTuple(zeroPatch(self.version)) > self.version_tuple:
+      v1,v2 = self.padVersionTuples(self.versionToTuple(zeroPatch(self.version)),self.version_tuple)
+      if v1 > v2:
         self.logPrintWarning('Using version '+self.foundversion+' of package '+self.PACKAGE+', PETSc is tested with '+dropPatch(self.version)+suggest)
     if self.maxversion:
-      if self.versionToTuple(self.maxversion) < self.version_tuple:
+      v1,v2 = self.padVersionTuples(self.versionToTuple(self.maxversion),self.version_tuple)
+      if v1 < v2:
         raise RuntimeError(self.PACKAGE+' version is '+self.foundversion+', this version of PETSc needs at most '+self.maxversion+suggest+'\n')
     elif self.version:
-      if self.versionToTuple(infinitePatch(self.version)) < self.version_tuple:
+      v1,v2 = self.padVersionTuples(self.versionToTuple(infinitePatch(self.version)),self.version_tuple)
+      if v1 < v2:
         self.logPrintWarning('Using version '+self.foundversion+' of package '+self.PACKAGE+', PETSc is tested with '+dropPatch(self.version)+suggest)
     return
 
