@@ -221,19 +221,19 @@ checkbadManualPages:
 # For other LLM CLI not listed below provide PETSC_LLM_CLI_OPTS, for example PETSC_LLM_CLI_OPTS=--prompt
 PETSC_LLM_CLI ?= claude
 ifeq ($(PETSC_LLM_CLI),codex)
-    PETSC_LLM_CLI_OPTS ?= exec
+PETSC_LLM_CLI_OPTS ?= --dangerously-bypass-approvals-and-sandbox exec
 endif
 ifeq ($(PETSC_LLM_CLI),claude)
-    PETSC_LLM_CLI_OPTS ?= --dangerously-skip-permissions
+PETSC_LLM_CLI_OPTS ?= --dangerously-skip-permissions
 endif
 ifeq ($(PETSC_LLM_CLI),gemini)
-    PETSC_LLM_CLI_OPTS ?= --approval-mode yolo --prompt-interactive
+PETSC_LLM_CLI_OPTS ?= --approval-mode yolo --prompt-interactive
 endif
 ifeq ($(PETSC_LLM_CLI),opencode)
-    PETSC_LLM_CLI_OPTS ?= --prompt
+PETSC_LLM_CLI_OPTS ?= --auto --prompt
 endif
 ifdef PETSC_LLM_MODEL
-    PETSC_LLM_MODEL_OPTION := --model $(PETSC_LLM_MODEL)
+PETSC_LLM_MODEL_OPTION := --model $(PETSC_LLM_MODEL)
 endif
 
 .PHONY: branch-review
