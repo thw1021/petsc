@@ -5,6 +5,11 @@ import os
 import filecmp
 import numpy as np
 import importlib
+try:
+    from mpi4py import MPI as _MPI
+    _have_mpi4py = True
+except ImportError:
+    _have_mpi4py = False
 
 # --------------------------------------------------------------------
 
@@ -700,6 +705,104 @@ class TestPlexHDF5XDMFParmetisHeterogeneous(
 ):
     OUTFORMAT = 'hdf5_xdmf'
     PARTITIONERTYPE = 'parmetis'
+
+
+# --------------------------------------------------------------------
+
+# 3D mesh data reused from BaseTestPlex_3D: unit-cube split into 6 tets, 8 vertices
+_CELLS_3D = [
+    [0, 2, 3, 7],
+    [0, 2, 6, 7],
+    [0, 4, 6, 7],
+    [0, 1, 3, 7],
+    [0, 1, 5, 7],
+    [0, 4, 5, 7],
+]
+_COORDS_3D = [
+    [0.0, 0.0, 0.0],
+    [1.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [1.0, 1.0, 0.0],
+    [0.0, 0.0, 1.0],
+    [1.0, 0.0, 1.0],
+    [0.0, 1.0, 1.0],
+    [1.0, 1.0, 1.0],
+]
+
+
+class TestPlexCreateFromCellListParallel(unittest.TestCase):
+    """Corner-case tests for DMPlex.createFromCellListParallel.
+
+    The canonical "serial read -> parallel build" pattern: rank 0 holds all
+    cells and coords; every other rank passes empty (but correctly 2-D) arrays.
+    Tests cover explicit NVertices, the PETSC_DECIDE default, and the ndim
+    validation guard.
+    """
+
+    def _rank_inputs(self):
+        """Return (cells, coords) appropriate for this rank."""
+        rank = PETSc.COMM_WORLD.rank
+        if rank == 0:
+            cells = np.array(_CELLS_3D, dtype=PETSc.IntType)
+            coords = np.array(_COORDS_3D, dtype=PETSc.RealType)
+        else:
+            cells = np.empty((0, 4), dtype=PETSc.IntType)
+            coords = np.empty((0, 3), dtype=PETSc.RealType)
+        return cells, coords
+
+    def _global_cell_count(self, plex):
+        """Return global cell count via allreduce over getHeightStratum(0)."""
+        cStart, cEnd = plex.getHeightStratum(0)
+        local_count = cEnd - cStart
+        if _have_mpi4py:
+            mpicomm = PETSc.COMM_WORLD.tompi4py()
+            return mpicomm.allreduce(local_count, op=_MPI.SUM)
+        else:
+            # serial fall-back (only valid at n=1)
+            return local_count
+
+    # ------------------------------------------------------------------
+    # Corner case 1: all cells on rank 0, explicit NVertices=8
+    # ------------------------------------------------------------------
+    def testAllOnRank0WithExplicitNVertices(self):
+        """Rank 0 holds all cells; others pass empty arrays; NVertices=8."""
+        cells, coords = self._rank_inputs()
+        plex = PETSc.DMPlex().createFromCellListParallel(
+            3, cells, coords, NVertices=8
+        )
+        try:
+            self.assertEqual(plex.getDimension(), 3)
+            total = self._global_cell_count(plex)
+            self.assertEqual(total, 6)
+        finally:
+            plex.destroy()
+
+    # ------------------------------------------------------------------
+    # Corner case 2: same, but NVertices=None (exercises PETSC_DECIDE)
+    # ------------------------------------------------------------------
+    def testAllOnRank0WithPetscDecideNVertices(self):
+        """Rank 0 holds all cells; NVertices=None uses PETSC_DECIDE default."""
+        cells, coords = self._rank_inputs()
+        plex = PETSc.DMPlex().createFromCellListParallel(
+            3, cells, coords, NVertices=None
+        )
+        try:
+            self.assertEqual(plex.getDimension(), 3)
+            total = self._global_cell_count(plex)
+            self.assertEqual(total, 6)
+        finally:
+            plex.destroy()
+
+    # ------------------------------------------------------------------
+    # Corner case 3: 1-D cells array must raise ValueError before any
+    # collective call (mirrors the serial binding's ndim guard).
+    # ------------------------------------------------------------------
+    def testNdimValidationRaisesValueError(self):
+        """A 1-D cells array must raise ValueError on every rank."""
+        cells_1d = np.array([0, 2, 3, 7], dtype=PETSc.IntType)
+        coords = np.empty((0, 3), dtype=PETSc.RealType)
+        with self.assertRaises(ValueError):
+            PETSc.DMPlex().createFromCellListParallel(3, cells_1d, coords)
 
 
 # --------------------------------------------------------------------
