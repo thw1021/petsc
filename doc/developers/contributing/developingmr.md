@@ -148,11 +148,10 @@ $ git checkout -b yourname/fix-component-name origin/main
   the command-line request; for example, `PETSC_LLM_CLI_OPTS=--prompt`.
 
   When possible (this depends on the capabilities of the LLM CLI), `make branch-review` runs interactively and leaves the terminal in the LLM CLI when the review is complete.
-  This allows users to issue additional commands to
-  the LLM CLI, such as requesting that it fix certain issues it may have detected in the review.
+  This allows users to issue additional commands to the LLM CLI, such as requesting that it fix certain issues it may have detected in the review.
 
-  Multiple LLM CLIs, excluding Claude Code, look
-  for skills in the directory `.agents/skills`. Claude Code looks in `.claude/skills` hence the PETSc Git repository has a soft link from `.claude/skills` to `.agents/skills`.
+  LLM CLIs other than Claude Code look for skills in the directory `.agents/skills`.
+  Claude Code looks in `.claude/skills`, hence the PETSc Git repository has a soft link from `.claude/skills` to `.agents/skills`.
 
 (sec_clean_commit_history)=
 

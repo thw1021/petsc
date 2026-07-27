@@ -22,4 +22,4 @@ After generating the review, treat every finding at Style or above as tentative.
 - Per finding: severity, file:line, description, suggested fix. Order CRITICAL → HIGH → MEDIUM → Style. If nothing at or above Style is found, say so explicitly.
 
 ### 7. Write report
-- Always write the report (with a title) to ai-review.html! Add a footnote with LLM CLI used (for example, Claude Code), the version, the model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
+- Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
