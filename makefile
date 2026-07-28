@@ -272,6 +272,7 @@ cleantest:
 
 #********* gmake rules ***************************************************************************************************************************
 
+.PHONY: branch-review
 branch-review:
 	+${OMAKE} -f lib/petsc/conf/rules_gm.mk branch-review
 
