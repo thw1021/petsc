@@ -354,8 +354,8 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
     }
     initId->first = selected_device;
     if (max_count > 1) {
-      // Handle the case where multiple devices are reported at the same depth level. Find
-      // all devices at the highest depth value.
+      // Fallback method to handle the case where multiple devices are reported at the same depth level.
+      // Evenly distribute processes among closest devices sequentially.
       std::vector<PetscInt> devices_at_max_depth(max_count);
       PetscInt              ctr = 0;
       for (PetscInt idev = 0; idev < ndev; idev++) {
@@ -364,23 +364,26 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
           ctr++;
         }
       }
-      // Determine the cpuset of common ancestor of each device and the first CPU core
-      // of this thread's cpuset. Then enumerate the ancestor cpuset in topological
-      // order and determine how far through that cpuset the current core is bound.
-      // Use that to select a device id out of the devices at max_depth.
-      // Note that by the reasoning above, the common ancestor
-      // cpuset should be identical for each device, so this loop should always break
-      // in the first entry. If the loop does not break, initId->first has already been
-      // set to a sensible value.
-      for (PetscInt idev = 0; idev < max_count; idev++) {
-        hwloc_cpuset_t anc_cpuset = common_ancestors[devices_at_max_depth[idev]]->cpuset;
-        if (hwloc_bitmap_isincluded(first_cpu->cpuset, anc_cpuset)) {
-          PetscInt relative_device_idx = 0;
-          PetscCall(get_device_placement_in_cpuset_(max_count, anc_cpuset, first_cpu, topology, &relative_device_idx));
-          initId->first = devices_at_max_depth[relative_device_idx];
-          break;
+      // Construct a cpuset of all CPU cores that would identify the same devices at the
+      // that this process has identified as their closest devices. Select devices_at_max_depth[0]
+      // for this purpose as every other device has the same depth, therefore must have the same
+      // common ancestor
+      auto global_cpuset  = hwloc_topology_get_allowed_cpuset(topology);
+      auto sibling_cpuset = hwloc_bitmap_alloc();
+      if (!sibling_cpuset) PetscFunctionReturn(PETSC_ERR_LIB);
+      std::vector<PetscInt> device_depths(ndev);
+      // Repeat the common ancestor depth calculation for every CPU core detected in the current cgroup
+      for (auto this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(topology, global_cpuset, HWLOC_OBJ_PU, nullptr); this_cpu; this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(topology, global_cpuset, HWLOC_OBJ_PU, this_cpu)) {
+        for (PetscInt jdev = 0ul; jdev < ndev; jdev++) {
+          device_depths[jdev] = hwloc_get_common_ancestor_obj(topology, this_cpu, hwloc_get_non_io_ancestor_obj(topology, hwloc_devs[jdev]))->depth;
+        }
+        if (*std::max_element(device_depths.begin(), device_depths.end()) == device_depths[devices_at_max_depth[0]]) {
+          hwloc_bitmap_set(sibling_cpuset, this_cpu->logical_index);
         }
       }
+      PetscInt relative_device_idx = 0;
+      PetscCall(get_device_placement_in_cpuset_(max_count, sibling_cpuset, first_cpu, topology, &relative_device_idx));
+      initId->first = devices_at_max_depth[relative_device_idx];
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
