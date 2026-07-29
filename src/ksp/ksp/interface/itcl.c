@@ -403,40 +403,38 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(PetscOptionsBool("-ksp_initial_guess_nonzero", "Use the contents of the solution vector for initial guess", "KSPSetInitialNonzero", ksp->guess_zero ? PETSC_FALSE : PETSC_TRUE, &flag, &flg));
   if (flg) PetscCall(KSPSetInitialGuessNonzero(ksp, flag));
 
+  PetscCall(KSPGetReusePreconditioner(ksp, &reuse));
+  PetscCall(PetscOptionsBool("-ksp_reuse_preconditioner", "Use initial preconditioner and don't ever compute a new one", "KSPReusePreconditioner", reuse, &reuse, NULL));
+  PetscCall(KSPSetReusePreconditioner(ksp, reuse));
+  PetscCall(PetscOptionsBool("-ksp_error_if_not_converged", "Generate error if solver does not converge", "KSPSetErrorIfNotConverged", ksp->errorifnotconverged, &ksp->errorifnotconverged, &set));
+  if (set) PetscCall(KSPSetErrorIfNotConverged(ksp, ksp->errorifnotconverged));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view", &ksp->viewer, &ksp->format, &ksp->view));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_pre", &ksp->viewerPre, &ksp->formatPre, &ksp->viewPre));
+  PetscCall(PetscViewerDestroy(&ksp->convergedreasonviewer));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, ((PetscObject)ksp)->prefix, "-ksp_converged_reason", &ksp->convergedreasonviewer, &ksp->convergedreasonformat, NULL));
+  flg = PETSC_FALSE;
+  PetscCall(PetscOptionsBool("-ksp_converged_reason_view_cancel", "Cancel all the converged reason view functions set using KSPConvergedReasonViewSet", "KSPConvergedReasonViewCancel", PETSC_FALSE, &flg, &set));
+  if (set && flg) PetscCall(KSPConvergedReasonViewCancel(ksp));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat", &ksp->viewerMat, &ksp->formatMat, &ksp->viewMat));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_pmat", &ksp->viewerPMat, &ksp->formatPMat, &ksp->viewPMat));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_rhs", &ksp->viewerRhs, &ksp->formatRhs, &ksp->viewRhs));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_solution", &ksp->viewerSol, &ksp->formatSol, &ksp->viewSol));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat_explicit", &ksp->viewerMatExp, &ksp->formatMatExp, &ksp->viewMatExp));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_final_residual", &ksp->viewerFinalRes, &ksp->formatFinalRes, &ksp->viewFinalRes));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_preconditioned_operator_explicit", &ksp->viewerPOpExp, &ksp->formatPOpExp, &ksp->viewPOpExp));
+  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_diagonal_scale", &ksp->viewerDScale, &ksp->formatDScale, &ksp->viewDScale));
+  PetscCall(KSPGetDiagonalScale(ksp, &flag));
+  PetscCall(PetscOptionsBool("-ksp_diagonal_scale", "Diagonal scale matrix before building preconditioner", "KSPSetDiagonalScale", flag, &flag, &flg));
+  if (flg) PetscCall(KSPSetDiagonalScale(ksp, flag));
+  PetscCall(KSPGetDiagonalScaleFix(ksp, &flag));
+  PetscCall(PetscOptionsBool("-ksp_diagonal_scale_fix", "Fix diagonally scaled matrix after solve", "KSPSetDiagonalScaleFix", flag, &flag, &flg));
+  if (flg) PetscCall(KSPSetDiagonalScaleFix(ksp, flag));
+  nmax = ksp->nmax;
+  PetscCall(PetscOptionsDeprecated("-ksp_matsolve_block_size", "-ksp_matsolve_batch_size", "3.15", NULL));
+  PetscCall(PetscOptionsInt("-ksp_matsolve_batch_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBatchSize", nmax, &nmax, &flg));
+  if (flg) PetscCall(KSPSetMatSolveBatchSize(ksp, nmax));
   PetscCall(PetscObjectTypeCompare((PetscObject)ksp, KSPPREONLY, &flg));
-  if (flg) {
-    PetscCall(KSPGetReusePreconditioner(ksp, &reuse));
-    PetscCall(PetscOptionsBool("-ksp_reuse_preconditioner", "Use initial preconditioner and don't ever compute a new one", "KSPReusePreconditioner", reuse, &reuse, NULL));
-    PetscCall(KSPSetReusePreconditioner(ksp, reuse));
-    PetscCall(PetscOptionsBool("-ksp_error_if_not_converged", "Generate error if solver does not converge", "KSPSetErrorIfNotConverged", ksp->errorifnotconverged, &ksp->errorifnotconverged, &set));
-    if (set) PetscCall(KSPSetErrorIfNotConverged(ksp, ksp->errorifnotconverged));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view", &ksp->viewer, &ksp->format, &ksp->view));
-    PetscCall(PetscViewerDestroy(&ksp->convergedreasonviewer));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, ((PetscObject)ksp)->prefix, "-ksp_converged_reason", &ksp->convergedreasonviewer, &ksp->convergedreasonformat, NULL));
-    flg = PETSC_FALSE;
-    PetscCall(PetscOptionsBool("-ksp_converged_reason_view_cancel", "Cancel all the converged reason view functions set using KSPConvergedReasonViewSet", "KSPConvergedReasonViewCancel", PETSC_FALSE, &flg, &set));
-    if (set && flg) PetscCall(KSPConvergedReasonViewCancel(ksp));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat", &ksp->viewerMat, &ksp->formatMat, &ksp->viewMat));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_pmat", &ksp->viewerPMat, &ksp->formatPMat, &ksp->viewPMat));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_rhs", &ksp->viewerRhs, &ksp->formatRhs, &ksp->viewRhs));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_solution", &ksp->viewerSol, &ksp->formatSol, &ksp->viewSol));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat_explicit", &ksp->viewerMatExp, &ksp->formatMatExp, &ksp->viewMatExp));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_final_residual", &ksp->viewerFinalRes, &ksp->formatFinalRes, &ksp->viewFinalRes));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_preconditioned_operator_explicit", &ksp->viewerPOpExp, &ksp->formatPOpExp, &ksp->viewPOpExp));
-    PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_diagonal_scale", &ksp->viewerDScale, &ksp->formatDScale, &ksp->viewDScale));
-
-    PetscCall(KSPGetDiagonalScale(ksp, &flag));
-    PetscCall(PetscOptionsBool("-ksp_diagonal_scale", "Diagonal scale matrix before building preconditioner", "KSPSetDiagonalScale", flag, &flag, &flg));
-    if (flg) PetscCall(KSPSetDiagonalScale(ksp, flag));
-    PetscCall(KSPGetDiagonalScaleFix(ksp, &flag));
-    PetscCall(PetscOptionsBool("-ksp_diagonal_scale_fix", "Fix diagonally scaled matrix after solve", "KSPSetDiagonalScaleFix", flag, &flag, &flg));
-    if (flg) PetscCall(KSPSetDiagonalScaleFix(ksp, flag));
-    nmax = ksp->nmax;
-    PetscCall(PetscOptionsDeprecated("-ksp_matsolve_block_size", "-ksp_matsolve_batch_size", "3.15", NULL));
-    PetscCall(PetscOptionsInt("-ksp_matsolve_batch_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBatchSize", nmax, &nmax, &flg));
-    if (flg) PetscCall(KSPSetMatSolveBatchSize(ksp, nmax));
-    goto skipoptions;
-  }
+  if (flg) goto skipoptions;
 
   rtol   = ksp->rtol;
   abstol = ksp->abstol;
@@ -458,13 +456,8 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(KSPGetConvergedNegativeCurvature(ksp, &flag));
   PetscCall(PetscOptionsBool("-ksp_converged_neg_curve", "Declare convergence if negative curvature is detected", "KSPConvergedNegativeCurvature", flag, &flag, &set));
   if (set) PetscCall(KSPSetConvergedNegativeCurvature(ksp, flag));
-  PetscCall(KSPGetReusePreconditioner(ksp, &reuse));
-  PetscCall(PetscOptionsBool("-ksp_reuse_preconditioner", "Use initial preconditioner and don't ever compute a new one", "KSPReusePreconditioner", reuse, &reuse, NULL));
-  PetscCall(KSPSetReusePreconditioner(ksp, reuse));
 
   PetscCall(PetscOptionsBool("-ksp_knoll", "Use preconditioner applied to b for initial guess", "KSPSetInitialGuessKnoll", ksp->guess_knoll, &ksp->guess_knoll, NULL));
-  PetscCall(PetscOptionsBool("-ksp_error_if_not_converged", "Generate error if solver does not converge", "KSPSetErrorIfNotConverged", ksp->errorifnotconverged, &ksp->errorifnotconverged, &set));
-  if (set) PetscCall(KSPSetErrorIfNotConverged(ksp, ksp->errorifnotconverged));
   PetscCall(PetscOptionsFList("-ksp_guess_type", "Initial guess in Krylov method", NULL, KSPGuessList, NULL, guesstype, 256, &flg));
   if (flg) {
     PetscCall(KSPGetGuess(ksp, &ksp->guess));
@@ -504,13 +497,6 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
 
   PetscCall(PetscOptionsBool("-ksp_lag_norm", "Lag the calculation of the residual norm", "KSPSetLagNorm", ksp->lagnorm, &flag, &flg));
   if (flg) PetscCall(KSPSetLagNorm(ksp, flag));
-
-  PetscCall(KSPGetDiagonalScale(ksp, &flag));
-  PetscCall(PetscOptionsBool("-ksp_diagonal_scale", "Diagonal scale matrix before building preconditioner", "KSPSetDiagonalScale", flag, &flag, &flg));
-  if (flg) PetscCall(KSPSetDiagonalScale(ksp, flag));
-  PetscCall(KSPGetDiagonalScaleFix(ksp, &flag));
-  PetscCall(PetscOptionsBool("-ksp_diagonal_scale_fix", "Fix diagonally scaled matrix after solve", "KSPSetDiagonalScaleFix", flag, &flag, &flg));
-  if (flg) PetscCall(KSPSetDiagonalScaleFix(ksp, flag));
 
   PetscCall(PetscOptionsBool("-ksp_constant_null_space", "Add constant null space to Krylov solver matrix", "MatSetNullSpace", PETSC_FALSE, &flg, &set));
   if (set && flg) {
@@ -570,20 +556,8 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
     if (rtype == (PetscEnum)0 || rtype == (PetscEnum)1) PetscCall(KSPSetResidualHistory(ksp, NULL, PETSC_DETERMINE, PETSC_TRUE));
     if (rtype == (PetscEnum)0 || rtype == (PetscEnum)2) PetscCall(KSPSetErrorHistory(ksp, NULL, PETSC_DETERMINE, PETSC_TRUE));
   }
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view", &ksp->viewer, &ksp->format, &ksp->view));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_pre", &ksp->viewerPre, &ksp->formatPre, &ksp->viewPre));
 
-  PetscCall(PetscViewerDestroy(&ksp->convergedreasonviewer));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, ((PetscObject)ksp)->prefix, "-ksp_converged_reason", &ksp->convergedreasonviewer, &ksp->convergedreasonformat, NULL));
-  flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-ksp_converged_reason_view_cancel", "Cancel all the converged reason view functions set using KSPConvergedReasonViewSet", "KSPConvergedReasonViewCancel", PETSC_FALSE, &flg, &set));
-  if (set && flg) PetscCall(KSPConvergedReasonViewCancel(ksp));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_converged_rate", &ksp->viewerRate, &ksp->formatRate, &ksp->viewRate));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat", &ksp->viewerMat, &ksp->formatMat, &ksp->viewMat));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_pmat", &ksp->viewerPMat, &ksp->formatPMat, &ksp->viewPMat));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_rhs", &ksp->viewerRhs, &ksp->formatRhs, &ksp->viewRhs));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_solution", &ksp->viewerSol, &ksp->formatSol, &ksp->viewSol));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat_explicit", &ksp->viewerMatExp, &ksp->formatMatExp, &ksp->viewMatExp));
   PetscCall(PetscOptionsDeprecated("-ksp_compute_eigenvalues", "-ksp_view_eigenvalues", "3.9", NULL));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_eigenvalues", &ksp->viewerEV, &ksp->formatEV, &ksp->viewEV));
   PetscCall(PetscOptionsDeprecated("-ksp_compute_singularvalues", "-ksp_view_singularvalues", "3.9", NULL));
@@ -591,9 +565,6 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(PetscOptionsDeprecated("-ksp_compute_eigenvalues_explicitly", "-ksp_view_eigenvalues_explicit", "3.9", NULL));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_eigenvalues_explicit", &ksp->viewerEVExp, &ksp->formatEVExp, &ksp->viewEVExp));
   PetscCall(PetscOptionsDeprecated("-ksp_final_residual", "-ksp_view_final_residual", "3.9", NULL));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_final_residual", &ksp->viewerFinalRes, &ksp->formatFinalRes, &ksp->viewFinalRes));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_preconditioned_operator_explicit", &ksp->viewerPOpExp, &ksp->formatPOpExp, &ksp->viewPOpExp));
-  PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_diagonal_scale", &ksp->viewerDScale, &ksp->formatDScale, &ksp->viewDScale));
 
   /* Deprecated options */
   if (!ksp->viewEV) {
@@ -653,11 +624,6 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
     if (set) PetscCall(PetscObjectSAWsSetBlock((PetscObject)ksp, flg));
   }
 #endif
-
-  nmax = ksp->nmax;
-  PetscCall(PetscOptionsDeprecated("-ksp_matsolve_block_size", "-ksp_matsolve_batch_size", "3.15", NULL));
-  PetscCall(PetscOptionsInt("-ksp_matsolve_batch_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBatchSize", nmax, &nmax, &flg));
-  if (flg) PetscCall(KSPSetMatSolveBatchSize(ksp, nmax));
 
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-ksp_use_explicittranspose", "Explicitly transpose the system in KSPSolveTranspose", "KSPSetUseExplicitTranspose", ksp->transpose.use_explicittranspose, &flg, &set));
