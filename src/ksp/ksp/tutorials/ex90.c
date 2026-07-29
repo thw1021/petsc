@@ -248,12 +248,17 @@ int main(int argc, char **args)
 
    testset:
       nsize: 2
-      args: -ksp_atol 1e-10 -ksp_rtol 1e-20 -explicitmat {{0 1}}
+      args: -ksp_type {{gmres eksm}} -explicitmat {{0 1}}
       output_file: output/ex90_1.out
       test:
          suffix: 1
       test:
          suffix: 2
          args: -mass
+
+   test:
+      args: -ksp_type {{gmres eksm}} -explicitmat {{0 1}} -cmplx
+      suffix: 3
+      requires: !complex
 
 TEST*/
