@@ -736,7 +736,7 @@ class FunctionParameterList(ParameterList):
           '\n'.join((
             'If you are trying to document a function-pointer parameter, then you must name the function pointer arguments in source and introduce a new section \'Calling Sequence of `<name of function pointer arg>\'. For example:',
             '',
-            '/*@C',
+            '/*@',
             '  ...',
             '  Input Parameter:',
             '. func_ptr - A function pointer',
