@@ -2309,15 +2309,6 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       } else {
         if (PetscDefined(USE_DEBUG)) PetscCall(PCHPDDMCheckInclusion_Private(pc, data->is, loc, PETSC_TRUE));
         if (!ctx && overlap == -1) PetscCall(PetscObjectComposeFunction((PetscObject)pc->pmat, "PCHPDDMAlgebraicAuxiliaryMat_Private_C", PCHPDDMAlgebraicAuxiliaryMat_Private));
-        if (!PetscBool3ToBool(data->Neumann) && (!algebraic || overlap != -1)) {
-          PetscCall(PetscObjectTypeCompare((PetscObject)P, MATMPISBAIJ, &flg));
-          if (flg) {
-            /* maybe better to ISSort(is[0]), MatCreateSubMatrices(), and then MatPermute() */
-            /* but there is no MatPermute_SeqSBAIJ(), so as before, just use MATMPIBAIJ     */
-            PetscCall(MatConvert(P, MATMPIBAIJ, MAT_INITIAL_MATRIX, &uaux));
-            flg = PETSC_FALSE;
-          }
-        }
       }
       if (algebraic && overlap == -1) {
         PetscUseMethod(pc->pmat, "PCHPDDMAlgebraicAuxiliaryMat_Private_C", (Mat, IS *, Mat *[], PetscBool), (P, is, &sub, block));
