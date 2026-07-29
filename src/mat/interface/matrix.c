@@ -589,7 +589,7 @@ PetscErrorCode MatImaginaryPart(Mat mat)
   You can only have one call to `MatGetRow()` outstanding for a particular
   matrix at a time, per processor. `MatGetRow()` can only obtain rows
   associated with the given processor, it cannot get rows from the
-  other processors; for that we suggest using `MatCreateSubMatrices()`, then
+  other processes; for that we suggest using `MatCreateSubMatrices()`, then
   `MatGetRow()` on the submatrix. The row index passed to `MatGetRow()`
   is in the global number of rows.
 
@@ -3187,7 +3187,7 @@ PetscErrorCode MatSetFactorType(Mat mat, MatFactorType t)
 
   Input Parameters:
 + mat  - the matrix
-- flag - flag indicating the type of parameters to be returned (`MAT_LOCAL` - local matrix, `MAT_GLOBAL_MAX` - maximum over all processors, `MAT_GLOBAL_SUM` - sum over all processors)
+- flag - flag indicating the type of parameters to be returned (`MAT_LOCAL` - local matrix, `MAT_GLOBAL_MAX` - maximum over all processes, `MAT_GLOBAL_SUM` - sum over all processes)
 
   Output Parameter:
 . info - matrix information context
@@ -5778,12 +5778,13 @@ PetscErrorCode MatIsHermitianTranspose(Mat A, Mat B, PetscReal tol, PetscBool *f
   Level: advanced
 
   Note:
-  The index sets map from row/col of permuted matrix to row/col of original matrix.
+  The index sets map from `row`/`col` of permuted matrix to `row`/`col` of original matrix.
   The index sets should be on the same communicator as mat and have the same local sizes.
+  `MATSEQSBAIJ` inputs may produce a `MATSEQBAIJ` matrix when the permutation does not preserve symmetry.
 
   Developer Note:
   If you want to implement `MatPermute()` for a matrix type, and your approach doesn't
-  exploit the fact that row and col are permutations, consider implementing the
+  exploit the fact that `row` and `col` are permutations, consider implementing the
   more general `MatCreateSubMatrix()` instead.
 
 .seealso: [](ch_matrices), `Mat`, `MatGetOrdering()`, `ISAllGather()`, `MatCreateSubMatrix()`
@@ -5870,6 +5871,7 @@ PetscErrorCode MatEqual(Mat A, Mat B, PetscBool *flg)
   `MatDiagonalScale()` computes $A = LAR$, where
   L = a diagonal matrix (stored as a vector), R = a diagonal matrix (stored as a vector)
   The L scales the rows of the matrix, the R scales the columns of the matrix.
+  For `MATSEQSBAIJ`, if `l` and `r` are different `Vec` objects, `mat` changes to type `MATSEQBAIJ` because the result is not necessarily symmetric.
 
 .seealso: [](ch_matrices), `Mat`, `MatScale()`, `MatShift()`, `MatDiagonalSet()`
 @*/
@@ -6447,7 +6449,7 @@ PetscErrorCode MatAssemblyEnd(Mat mat, MatAssemblyType type)
   If this option is set, then the `MatAssemblyBegin()`/`MatAssemblyEnd()` processes has one less global reduction
 
   `MAT_IGNORE_OFF_PROC_ENTRIES` set to `PETSC_TRUE` indicates entries destined for
-  other processors should be dropped, rather than stashed.
+  other processes should be dropped, rather than stashed.
   This is useful if you know that the "owning" processor is also
   always generating the correct matrix entries, so that PETSc need
   not transfer duplicate entries generated on another processor.
@@ -7397,7 +7399,7 @@ PetscErrorCode MatGetOwnershipRange(Mat mat, PetscInt *m, PetscInt *n)
 . mat - the matrix
 
   Output Parameter:
-. ranges - start of each processors portion plus one more than the total length at the end, of length `size` + 1
+. ranges - start of each process's portion plus one more than the total length at the end, of length `size` + 1
            where `size` is the number of MPI processes used by `mat`
 
   Level: beginner
@@ -7439,7 +7441,7 @@ PetscErrorCode MatGetOwnershipRanges(Mat mat, const PetscInt *ranges[])
 . mat - the matrix
 
   Output Parameter:
-. ranges - start of each processors portion plus one more than the total length at the end
+. ranges - start of each processes portion plus one more than the total length at the end
 
   Level: beginner
 
@@ -7646,6 +7648,7 @@ PetscErrorCode MatICCFactorSymbolic(Mat fact, Mat mat, IS perm, const MatFactorI
 
   Some matrix types place restrictions on the row and column
   indices, such as that they be sorted or that they be equal to each other.
+  `MATSEQSBAIJ` inputs may produce `MATSEQBAIJ` submatrices when the row and column index sets do not preserve symmetry.
 
   The index sets may not have duplicate entries.
 
@@ -8857,7 +8860,7 @@ PetscErrorCode MatSetUnfactored(Mat mat)
 }
 
 /*@
-  MatCreateSubMatrix - Gets a single submatrix on the same number of processors
+  MatCreateSubMatrix - Gets a single submatrix on the same number of processes
   as the original matrix.
 
   Collective
@@ -8869,7 +8872,7 @@ PetscErrorCode MatSetUnfactored(Mat mat)
 - cll   - either `MAT_INITIAL_MATRIX` or `MAT_REUSE_MATRIX`
 
   Output Parameter:
-. newmat - the new submatrix, of the same type as the original matrix
+. newmat - the new submatrix, of the same type as the original matrix (except potentially for `MATSEQSBAIJ`)
 
   Level: advanced
 
@@ -8879,6 +8882,7 @@ PetscErrorCode MatSetUnfactored(Mat mat)
   Some matrix types place restrictions on the row and column indices, such
   as that they be sorted or that they be equal to each other. For `MATBAIJ` and `MATSBAIJ` matrices the indices must include all rows/columns of a block;
   for example, if the block size is 3 one cannot select the 0 and 2 rows without selecting the 1 row.
+  `MATSEQSBAIJ` inputs may produce a `MATSEQBAIJ` matrix when the row and column index sets do not preserve symmetry.
 
   The index sets may not have duplicate entries.
 
@@ -8898,7 +8902,7 @@ PetscErrorCode MatSetUnfactored(Mat mat)
 
   Example usage:
   Consider the following 8x8 matrix with 34 non-zero values, that is
-  assembled across 3 processors. Let's assume that proc0 owns 3 rows,
+  assembled across 3 processes. Let's assume that proc0 owns 3 rows,
   proc1 owns 3 rows, proc2 owns 2 rows. This division can be shown
   as follows
 .vb
@@ -9055,7 +9059,7 @@ PetscErrorCode MatPropagateSymmetryOptions(Mat A, Mat B)
 /*@
   MatStashSetInitialSize - sets the sizes of the matrix stash, that is
   used during the assembly process to store values that belong to
-  other processors.
+  other processes.
 
   Not Collective
 
@@ -9996,7 +10000,7 @@ PetscErrorCode MatIsStructurallySymmetricKnown(Mat A, PetscBool *set, PetscBool 
 
 /*@
   MatStashGetInfo - Gets how many values are currently in the matrix stash, i.e. need
-  to be communicated to other processors during the `MatAssemblyBegin()`/`MatAssemblyEnd()` process
+  to be communicated to other processes during the `MatAssemblyBegin()`/`MatAssemblyEnd()` process
 
   Not Collective
 
@@ -10840,7 +10844,7 @@ PetscErrorCode MatMatMatMult(Mat A, Mat B, Mat C, MatReuse scall, PetscReal fill
 }
 
 /*@
-  MatCreateRedundantMatrix - Create redundant matrices and put them into processors of subcommunicators.
+  MatCreateRedundantMatrix - Create redundant matrices and put them into processes of subcommunicators.
 
   Collective
 
@@ -10988,7 +10992,7 @@ PetscErrorCode MatCreateRedundantMatrix(Mat mat, PetscInt nsubcomm, MPI_Comm sub
   Level: advanced
 
   Notes:
-  The submatrix partition across processors is dictated by `subComm` a
+  The submatrix partition across processes is dictated by `subComm` a
   communicator obtained by `MPI_comm_split()` or via `PetscSubcommCreate()`. The `subComm`
   is not restricted to be grouped with consecutive original MPI processes.
 
