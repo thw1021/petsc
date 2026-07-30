@@ -566,37 +566,6 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_eigenvalues_explicit", &ksp->viewerEVExp, &ksp->formatEVExp, &ksp->viewEVExp));
   PetscCall(PetscOptionsDeprecated("-ksp_final_residual", "-ksp_view_final_residual", "3.9", NULL));
 
-  /* Deprecated options */
-  if (!ksp->viewEV) {
-    /* Cannot remove the what otherwise would be redundant call to PetscOptionsName("-ksp_plot_eigenvalues",...) below because the argument handling is different */
-    PetscCall(PetscOptionsDeprecated("-ksp_plot_eigenvalues", NULL, "3.9", "Use -ksp_view_eigenvalues draw"));
-    PetscCall(PetscOptionsName("-ksp_plot_eigenvalues", "[deprecated since PETSc 3.9; use -ksp_view_eigenvalues draw]", "KSPView", &ksp->viewEV));
-    if (ksp->viewEV) {
-      ksp->formatEV = PETSC_VIEWER_DEFAULT;
-      ksp->viewerEV = PETSC_VIEWER_DRAW_(comm);
-      PetscCall(PetscObjectReference((PetscObject)ksp->viewerEV));
-    }
-  }
-  if (!ksp->viewEV) {
-    PetscCall(PetscOptionsDeprecated("-ksp_plot_eigenvalues_explicitly", NULL, "3.9", "Use -ksp_view_eigenvalues_explicit draw"));
-    /* Cannot remove the what otherwise would be redundant call to PetscOptionsName("-ksp_plot_eigencontours",...) below because the argument handling is different */
-    PetscCall(PetscOptionsName("-ksp_plot_eigencontours", "[deprecated since PETSc 3.9; use -ksp_view_eigenvalues draw::draw_contour]", "KSPView", &ksp->viewEV));
-    if (ksp->viewEV) {
-      ksp->formatEV = PETSC_VIEWER_DRAW_CONTOUR;
-      ksp->viewerEV = PETSC_VIEWER_DRAW_(comm);
-      PetscCall(PetscObjectReference((PetscObject)ksp->viewerEV));
-    }
-  }
-  if (!ksp->viewEVExp) {
-    /* Cannot remove the what otherwise would be redundant call to PetscOptionsName("-ksp_plot_eigencontours_explicitly",...) below because the argument handling is different */
-    PetscCall(PetscOptionsName("-ksp_plot_eigenvalues_explicitly", "[deprecated since PETSc 3.9; use -ksp_view_eigenvalues_explicit draw]", "KSPView", &ksp->viewEVExp));
-    if (ksp->viewEVExp) {
-      ksp->formatEVExp = PETSC_VIEWER_DEFAULT;
-      ksp->viewerEVExp = PETSC_VIEWER_DRAW_(comm);
-      PetscCall(PetscObjectReference((PetscObject)ksp->viewerEVExp));
-    }
-  }
-
 #if PetscDefined(HAVE_SAWS)
   /*
     Publish convergence information using AMS
