@@ -205,7 +205,7 @@ PetscErrorCode PFApply(PF pf, PetscInt n, const PetscScalar *x, PetscScalar *y)
 
   Input Parameters:
 + A    - the `PF` context
-. obj  - Optional object that provides the prefix used to search the options database, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the prefix used to search the options database, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:

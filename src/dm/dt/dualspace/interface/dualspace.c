@@ -210,7 +210,7 @@ static PetscErrorCode PetscDualSpaceView_ASCII(PetscDualSpace sp, PetscViewer v)
 
   Input Parameters:
 + A    - the `PetscDualSpace` object
-. obj  - Optional object, provides the options prefix
+. obj  - optional object, provides the options prefix, pass `NULL` to use the options prefix of `A`
 - name - command line option name
 
   Options Database Key:
