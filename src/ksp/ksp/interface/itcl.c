@@ -322,7 +322,7 @@ PETSC_INTERN PetscErrorCode KSPCheckPCMPI(KSP);
 . -ksp_monitor_solution viewer_specification                      - monitor the solution
 . -ksp_monitor_singular_value viewer_specification                - monitor the extreme singular values
 . -ksp_monitor_range viewer_specification                         - monitor the range of values in the (preconditioned) residual
-. -ksp_monitor_max viewer_specification                           - monitor the maximum value in the (preconditioned) residual
+. -ksp_monitor_max viewer_specification                           - monitor the maximum value in the true residual
 . -ksp_monitor_error viewer_specification                         - monitor the error or its l2 norm, see `KSPMonitorError()`, `KSPMonitorErrorDraw()`, and `KSPMonitorErrorDrawLG()`
 . -ksp_monitor_pause_final (true|false)                           - pauses all draw monitors at the final iterate
 . -all_ksp_monitor viewer_specification                           - monitor the (preconditioned) residual norm for all `KSP` solves, regardless of their prefix. This is
@@ -336,25 +336,25 @@ PETSC_INTERN PetscErrorCode KSPCheckPCMPI(KSP);
 . -ksp_view_pmat viewer_specification                             - view the matrix from which the preconditioner is constructed
 . -ksp_view_rhs viewer_specification                              - view the right hand side of the linear system
 . -ksp_view_solution viewer_specification                         - view the computed solution
-. -ksp_view_mat_explicit viewer_specification                     - view the matrix computed explicitedly via `MatComputeOperator()`, useful when the operator is provided matrix-free
-. -ksp_view_eigenvalues viewer_specification                      - view the approximate eigenvalues of the preconditioner operator computed via `KSPComputeEigenvalues()`
-. -ksp_view_singularvalues viewer_specification                   - view the approximate singular values of the preconditioner operator computed via `KSPComputeSingularValues()`
-. -ksp_view_eigenvalues_explicit viewer_specification             - view the approximate eigenvalues of the preconditioner operator computed with LAPACK
-. -ksp_view_preconditioned_operator_explicit viewer_specification - view the preconditioner operator computed via `KSPComputeOperator()`
+. -ksp_view_mat_explicit viewer_specification                     - view the matrix computed explicitly via `MatComputeOperator()`, useful when the operator is provided matrix-free
+. -ksp_view_eigenvalues viewer_specification                      - view the approximate eigenvalues of the preconditioned operator computed via `KSPComputeEigenvalues()`
+. -ksp_view_singularvalues viewer_specification                   - view the approximate singular values of the preconditioned operator computed via `KSPComputeSingularValues()`
+. -ksp_view_eigenvalues_explicit viewer_specification             - view the approximate eigenvalues of the preconditioned operator computed with LAPACK
+. -ksp_view_preconditioned_operator_explicit viewer_specification - view the preconditioned operator computed via `KSPComputeOperator()`
 . -ksp_view_diagonal_scale viewer_specification                   - view the diagonal scaling applied via `-ksp_diagonal_scale`
-. -ksp_view_final_residual ascii[:filename[::filemode]]           - view the final true residual norm
+. -ksp_view_final_residual viewer_specification                   - view the final true residual norm
 - -ksp_view_final_residual_vec viewer_specification               - view the final true residual vector, must also use `-ksp_view_final_residual ascii:`
 
   Level: beginner
 
   Notes:
-  See `PetscOptionsCreateViewer()` for the values of `viewer_specification`
+  See `PetscOptionsCreateViewer()` for the values of `viewer_specification`.
 
-  The monitors are called at every iteration
+  The monitors are called at every iteration.
 
   Except for `-ksp_view_pre` all the `-ksp_view` viewers are called at the end of `KSPSolve()`.
 
-  To see all options, run your program with the `-help` option or consult [](ch_ksp)
+  To see all options, run your program with the `-help` option or consult [](ch_ksp).
 
 .seealso: [](ch_ksp), `KSP`, `KSPSetOptionsPrefix()`, `KSPResetFromOptions()`, `KSPSetUseFischerGuess()`
 @*/
@@ -420,6 +420,7 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_rhs", &ksp->viewerRhs, &ksp->formatRhs, &ksp->viewRhs));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_solution", &ksp->viewerSol, &ksp->formatSol, &ksp->viewSol));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_mat_explicit", &ksp->viewerMatExp, &ksp->formatMatExp, &ksp->viewMatExp));
+  PetscCall(PetscOptionsDeprecated("-ksp_final_residual", "-ksp_view_final_residual", "3.9", NULL));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_final_residual", &ksp->viewerFinalRes, &ksp->formatFinalRes, &ksp->viewFinalRes));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_preconditioned_operator_explicit", &ksp->viewerPOpExp, &ksp->formatPOpExp, &ksp->viewPOpExp));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_diagonal_scale", &ksp->viewerDScale, &ksp->formatDScale, &ksp->viewDScale));
@@ -564,7 +565,6 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_singularvalues", &ksp->viewerSV, &ksp->formatSV, &ksp->viewSV));
   PetscCall(PetscOptionsDeprecated("-ksp_compute_eigenvalues_explicitly", "-ksp_view_eigenvalues_explicit", "3.9", NULL));
   PetscCall(PetscOptionsCreateViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view_eigenvalues_explicit", &ksp->viewerEVExp, &ksp->formatEVExp, &ksp->viewEVExp));
-  PetscCall(PetscOptionsDeprecated("-ksp_final_residual", "-ksp_view_final_residual", "3.9", NULL));
 
 #if PetscDefined(HAVE_SAWS)
   /*

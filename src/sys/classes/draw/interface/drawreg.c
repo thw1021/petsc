@@ -87,7 +87,7 @@ PetscErrorCode PetscDrawView(PetscDraw indraw, PetscViewer viewer)
 
   Input Parameters:
 + A    - the `PetscDraw` context
-. obj  - Optional object
+. obj  - optional object that provides the prefix for the option names, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:
@@ -354,8 +354,7 @@ PetscErrorCode PetscDrawSetOptionsPrefix(PetscDraw draw, const char prefix[])
 }
 
 /*@
-  PetscDrawSetFromOptions - Sets the graphics type from the options database.
-  Defaults to a PETSc X Windows graphics.
+  PetscDrawSetFromOptions - Sets the graphics type from the options database as well as other draw options.
 
   Collective
 
@@ -363,23 +362,26 @@ PetscErrorCode PetscDrawSetOptionsPrefix(PetscDraw draw, const char prefix[])
 . draw - the graphics context
 
   Options Database Keys:
-+ -nox                              - do not use X graphics (ignore graphics calls, but run program correctly)
-. -nox_warning                      - when X Windows support is not installed this prevents the warning message from being printed
-. -draw_pause seconds               - -1 indicates wait for mouse input, -2 indicates pause when window is to be destroyed
-. -draw_marker_type (x|point)       - set the marker type
-. -draw_save [filename]             - (X Windows only) saves each image before it is cleared to a file
-. -draw_save_final_image [filename] - (X Windows only) saves the final image displayed in a window
-. -draw_save_movie                  - converts image files to a movie  at the end of the run. See `PetscDrawSetSave()`
-. -draw_save_single_file            - saves each new image in the same file, normally each new image is saved in a new file with 'filename/filename_%d.ext'
-. -draw_save_on_clear               - saves an image on each clear, mainly for debugging
-- -draw_save_on_flush               - saves an image on each flush, mainly for debugging
++ -nox                                        - do not use X graphics (ignore graphics calls, but run program correctly)
+. -nox_warning                                - when X Windows support is not installed this prevents the warning message from being printed
+. -draw_pause seconds                         - -1 indicates wait for mouse input, -2 indicates pause when window is to be destroyed
+. -draw_marker_type (cross|point|plus|circle) - set the marker type, see `PetscDrawMarkerType`
+. -draw_save [filename]                       - (X Windows only) saves each image before it is cleared to a file
+. -draw_save_final_image [filename]           - (X Windows only) saves the final image displayed in a window
+. -draw_save_movie [.ext]                     - converts image files to a movie  at the end of the run. See `PetscDrawSetSaveMovie()`
+. -draw_save_single_file (true|false)         - saves each new image in the same file, normally each new image is saved in a new file with 'filename/filename_%d.ext'
+. -draw_save_on_clear (true|false)            - saves an image on each clear, mainly for debugging
+- -draw_save_on_flush (true|false)            - saves an image on each flush, mainly for debugging
 
   Level: intermediate
 
   Note:
-  Must be called after `PetscDrawCreate()` before the `PetscDraw` is used.
+  Must be called after `PetscDrawCreate()` but before the `PetscDraw` is used.
 
-.seealso: `PetscDraw`, `PetscDrawCreate()`, `PetscDrawSetType()`, `PetscDrawSetSave()`, `PetscDrawSetSaveFinalImage()`, `PetscDrawPause()`, `PetscDrawSetPause()`
+  Defaults to a PETSc X Windows graphics.
+
+.seealso: `PetscDraw`, `PetscDrawCreate()`, `PetscDrawSetType()`, `PetscDrawSetSave()`, `PetscDrawSetSaveFinalImage()`, `PetscDrawPause()`, `PetscDrawSetPause()`,
+          `PetscDrawSetSaveMovie()`
 @*/
 PetscErrorCode PetscDrawSetFromOptions(PetscDraw draw)
 {

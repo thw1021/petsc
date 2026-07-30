@@ -1044,9 +1044,9 @@ PetscErrorCode PetscDeviceContextView(PetscDeviceContext dctx, PetscViewer viewe
   PetscDeviceContextViewFromOptions - View a `PetscDeviceContext` from options
 
   Input Parameters:
-+ dctx - The `PetscDeviceContext` to view
-. obj  - Optional `PetscObject` to provide the options prefix, pass `NULL` to use the options prefix of `dctx`
-- name - The command line option
++ dctx - the `PetscDeviceContext` to view
+. obj  - optional `PetscObject` to provide the options prefix, pass `NULL` to use the options prefix of `dctx`
+- name - the command line option
 
   Options Database Key:
 . -name viewer_specification - See `PetscOptionsCreateViewer()` for the values of `viewer_specification`

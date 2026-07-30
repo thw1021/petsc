@@ -259,7 +259,7 @@ PetscErrorCode TSTrajectoryGetVecs(TSTrajectory tj, TS ts, PetscInt stepnum, Pet
 
   Input Parameters:
 + A    - the `TSTrajectory` context
-. obj  - Optional object that provides prefix used for option name, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides prefix used for option name, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:
