@@ -1910,7 +1910,7 @@ PetscErrorCode TSViewFromOptions(TS ts, PetscObject obj, const char name[])
 }
 
 /*@
-  TSView - Prints the `TS` data structure.
+  TSView - Displays the `TS` data structure.
 
   Collective
 
@@ -1919,7 +1919,7 @@ PetscErrorCode TSViewFromOptions(TS ts, PetscObject obj, const char name[])
 - viewer - visualization context
 
   Options Database Key:
-. -ts_view - calls `TSView()` at end of `TSStep()`
+. -ts_view viewer_specification - calls `TSView()` at end of `TSStep()`. See `PetscOptionsCreateViewer()` for the format of `viewer_specification`
 
   Level: beginner
 
@@ -1938,7 +1938,7 @@ PetscErrorCode TSViewFromOptions(TS ts, PetscObject obj, const char name[])
 
   The "initial time step" displayed is the default time step from `TSCreate()` or that set with `TSSetTimeStep()` or `-ts_time_step`
 
-.seealso: [](ch_ts), `TS`, `PetscViewer`, `PetscViewerASCIIOpen()`
+.seealso: [](ch_ts), `TS`, `PetscViewer`, `PetscViewerASCIIOpen()`, `PetscOptionsCreateViewer()`, `TSViewFromOptions()`
 @*/
 PetscErrorCode TSView(TS ts, PetscViewer viewer)
 {
