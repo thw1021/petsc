@@ -425,42 +425,39 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
 . tao - the `Tao` solver context
 
   Options Database Keys:
-+ -tao_type type               - The algorithm that Tao uses (lmvm, nls, etc.). See `TAOType`
-. -tao_gatol gatol             - absolute error tolerance for ||gradient||
-. -tao_grtol grtol             - relative error tolerance for ||gradient||
-. -tao_gttol gttol             - reduction of ||gradient|| relative to initial gradient
-. -tao_max_it max              - sets maximum number of iterations
-. -tao_max_funcs max           - sets maximum number of function evaluations
-. -tao_fmin fmin               - stop if function value reaches fmin
-. -tao_steptol tol             - stop if trust region radius less than `tol`
-. -tao_trust0 radius           - initial trust region radius
-. -tao_view_solution           - view the solution at the end of the optimization process
-. -tao_monitor                 - prints function value and residual norm at each iteration
-. -tao_monitor_short           - same as `-tao_monitor`, but truncates very small values
-. -tao_monitor_constraint_norm - prints objective value, gradient, and constraint norm at each iteration
-. -tao_monitor_globalization   - prints information about the globalization at each iteration
-. -tao_monitor_solution        - prints solution vector at each iteration
-. -tao_monitor_ls_residual     - prints least-squares residual vector at each iteration
-. -tao_monitor_step            - prints step vector at each iteration
-. -tao_monitor_gradient        - prints gradient vector at each iteration
-. -tao_monitor_solution_draw   - graphically view solution vector at each iteration
-. -tao_monitor_step_draw       - graphically view step vector at each iteration
-. -tao_monitor_gradient_draw   - graphically view gradient at each iteration
-. -tao_monitor_cancel          - cancels all monitors (except those set with command line)
-. -tao_fd_gradient             - use gradient computed with finite differences
-. -tao_fd_hessian              - use hessian computed with finite differences
-. -tao_mf_hessian              - use matrix-free Hessian computed with finite differences. No `TaoTerm` support
-. -tao_view                    - prints information about the Tao after solving
-. -tao_converged_reason        - prints the reason Tao stopped iterating
-- -tao_add_terms               - takes a comma-separated list of up to 16 options prefixes, a `TaoTerm` will be created for each and added to the objective function
++ -tao_type type                                    - The algorithm that `tao` will use (lmvm, nls, etc.). See `TAOType`
+. -tao_gatol gatol                                  - absolute error tolerance for ||gradient||
+. -tao_grtol grtol                                  - relative error tolerance for ||gradient||
+. -tao_gttol gttol                                  - reduction of ||gradient|| relative to initial gradient
+. -tao_max_it max                                   - sets maximum number of iterations
+. -tao_max_funcs max                                - sets maximum number of function evaluations
+. -tao_fmin fmin                                    - stop if function value reaches `fmin`
+. -tao_steptol tol                                  - stop if the trust region radius becomes less than `tol`
+. -tao_trust0 radius                                - initial trust region radius
+. -tao_monitor viewer_specification                 - prints function value and residual norm at each iteration
+. -tao_monitor_short                                - same as `-tao_monitor`, but truncates very small values
+. -tao_monitor_constraint_norm viewer_specification - prints objective value, gradient, and constraint norm at each iteration
+. -tao_monitor_globalization viewer_specification   - prints information about the globalization at each iteration
+. -tao_monitor_solution viewer_specification        - prints solution vector at each iteration
+. -tao_monitor_ls_residual                          - prints least-squares residual vector at each iteration
+. -tao_monitor_step viewer_specification            - prints step vector at each iteration
+. -tao_monitor_gradient viewer_specification        - prints gradient vector at each iteration
+. -tao_monitor_cancel                               - cancels all monitors (except those set from the command line)
+. -tao_fd_gradient                                  - use gradient computed with finite differences
+. -tao_fd_hessian                                   - use Hessian computed with finite differences
+. -tao_mf_hessian                                   - use matrix-free Hessian computed with finite differences. No `TaoTerm` support
+. -tao_view viewer_specification                    - displays information about `tao` at the end of `TaoSolve()`
+. -tao_view_solution viewer_specification           - view the solution at the end of the optimization process
+. -tao_converged_reason (true|false)                - displays the reason `tao` stopped iterating
+- -tao_add_terms prefix1,prefix2,...                - takes a comma-separated list of up to 16 options prefixes, a `TaoTerm` will be created for each and added to the objective function
 
   Level: beginner
 
   Notes:
+  See `PetscOptionsCreateViewer()` for the format of `viewer_specification`
+
   To see all options, run your program with the `-help` option or consult the
   user's manual. Should be called after `TaoCreate()` but before `TaoSolve()`.
-
-  The `-tao_add_terms` option accepts at most 16 prefixes.
 
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
@@ -650,7 +647,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
   Input Parameters:
 + A    - the  `Tao` context
-. obj  - Optional object that provides the prefix for the options database, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the prefix for the options database, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:
@@ -673,7 +670,7 @@ PetscErrorCode TaoViewFromOptions(Tao A, PetscObject obj, const char name[])
 }
 
 /*@
-  TaoView - Prints information about the `Tao` object
+  TaoView - Displays information about the `Tao` object
 
   Collective
 
@@ -682,7 +679,7 @@ PetscErrorCode TaoViewFromOptions(Tao A, PetscObject obj, const char name[])
 - viewer - visualization context
 
   Options Database Key:
-. -tao_view - Calls `TaoView()` at the end of `TaoSolve()`
+. -tao_view viewer_specification - Calls `TaoView()` at the end of `TaoSolve()`. See `PetscOptionsCreateViewer()` for the format of `viewer_specification`.
 
   Level: beginner
 
@@ -697,7 +694,7 @@ PetscErrorCode TaoViewFromOptions(Tao A, PetscObject obj, const char name[])
   To view all the `TaoTerm` inside of `Tao`, use `PETSC_VIEWER_ASCII_INFO_DETAIL`,
   or pass `-tao_view ::ascii_info_detail` flag
 
-.seealso: [](ch_tao), `Tao`, `PetscViewerASCIIOpen()`
+.seealso: [](ch_tao), `Tao`, `PetscViewerASCIIOpen()`, `PetscOptionsCreateViewer()`
 @*/
 PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
 {

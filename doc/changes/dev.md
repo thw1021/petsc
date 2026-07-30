@@ -58,6 +58,7 @@
 
 - Add `VecSetStdBasis()` API to set a vector to the i-th standard basis vector
 - Change the behavior of `VecPointwiseDivide()` implementing w = x / y: if a particular `y[i]` is zero and `x[i]` is also zero, `w[i]` is set to one (before it was set to zero).
+- Deprecate `-vec_view_stash` with `-vec_stash_view`
 
 ## PetscSection
 
@@ -100,11 +101,11 @@
 - Change `SNESSetUp()` to not overwrite the NPC application context if one has previously been set on the NPC
 - Change `SNESComputeJacobian()` to call the user-provided Jacobian function when a left NPC is active and the solver is not `SNESASPIN`
 - Add support for nonlinear preconditioners with a `DM` different from the parent `SNES` `DM`. Calling `SNESSetNPC()` will no longer enforce default parameters on the `npc`.
-- Add `SNESLineSearchViewFromOptions()`
 
 ## SNESLineSearch
 
 - Deprecate `SNESLINESEARCHBASIC` in favor of `SNESLINESEARCHNONE`
+- Add `SNESLineSearchViewFromOptions()`
 
 ## TS
 

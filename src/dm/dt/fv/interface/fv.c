@@ -124,7 +124,7 @@ PetscErrorCode PetscLimiterGetType(PetscLimiter lim, PetscLimiterType *name)
 
   Input Parameters:
 + A    - the `PetscLimiter` object to view
-. obj  - Optional object that provides the options prefix to use, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options prefix to use, pass `NULL` to use the options prefix of `A`
 - name - command line option name
 
   Options Database Key:
@@ -1004,7 +1004,7 @@ PetscErrorCode PetscFVGetType(PetscFV fvm, PetscFVType *name)
 
   Input Parameters:
 + A    - the `PetscFV` object
-. obj  - Optional object that provides the options prefix, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options prefix, pass `NULL` to use the options prefix of `A`
 - name - command line option name
 
   Options Database Key:
