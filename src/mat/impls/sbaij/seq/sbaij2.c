@@ -261,7 +261,10 @@ PetscErrorCode MatCreateSubMatrix_SeqSBAIJ(Mat A, IS isrow, IS iscol, MatReuse s
     PetscCheck(scall != MAT_INPLACE_MATRIX, PETSC_COMM_SELF, PETSC_ERR_SUP, "MAT_INPLACE_MATRIX not supported");
     if (scall == MAT_REUSE_MATRIX) PetscCall(MatCopy(C[0], *B, SAME_NONZERO_PATTERN));
     else if (A->rmap->bs == 1) PetscCall(MatConvert(C[0], MATAIJ, MAT_INITIAL_MATRIX, B));
-    else PetscCall(MatCopy(C[0], *B, SAME_NONZERO_PATTERN));
+    else {
+      *B   = C[0];
+      C[0] = NULL;
+    }
     PetscCall(MatDestroy(C));
     PetscCall(MatDestroy(C + 1));
   }
