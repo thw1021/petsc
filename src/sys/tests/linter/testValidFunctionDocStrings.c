@@ -411,8 +411,8 @@ PetscErrorCode testPredeclarationCursorIgnored(int arg, int *another_arg)
   Level: developer
 
   Notes:
-  But bars arguments should correctly match! Additionally, this function requires a 'C'
-  interface marker!
+  But bars arguments should
+  correctly match!
 
 .seealso: `testPredeclarationCursorIgnored()`
 */
