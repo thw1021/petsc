@@ -860,7 +860,6 @@ class PetscDocString(DocBase):
     else:
       assert isinstance(begin_sowing, str), f'begin_sowing is not a string: {begin_sowing}'
       if begin_sowing[0] not in self.sowing_types:
-        diagnosed = False
         if line[line.find(begin_sowing) - 1].isspace():
           # There is a space between the "sowing char" and the character before
           # it. Therefore it is likely just regular text. Sometimes people make internal
@@ -873,8 +872,7 @@ class PetscDocString(DocBase):
           # we should ignore it, and stop processing this docstring altogether since it is
           # not an actual docstring.
           raise KnownUnhandleableCursorError
-        if not diagnosed:
-          raise RuntimeError(f'Unknown sowing char {begin_sowing[0]} not in sowing types {self.sowing_types} found in {line}')
+        raise RuntimeError(f'Unknown sowing char {begin_sowing[0]} not in sowing types {self.sowing_types} found in {line}')
       begin_sowing_range = self.make_source_range(begin_sowing, line, begin_sowing_range.start.line)
 
     self._attr['sowing_char_range'] = begin_sowing_range

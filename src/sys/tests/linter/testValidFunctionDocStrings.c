@@ -298,7 +298,7 @@ PetscErrorCode testBadDocString(PetscInt n)
   return 0;
 }
 
-/*@ testBadDocStringMissingChar - asdadsasd
+/*@ testBadDocStringOnTopLine - asdadsasd
 
   Input Parameter:
 . n - the n
@@ -307,13 +307,13 @@ PetscErrorCode testBadDocString(PetscInt n)
 
 .seealso: `testBadDocString()`
 */
-PetscErrorCode testBadDocStringMissingChar(PetscInt n)
+PetscErrorCode testBadDocStringOnTopLine(PetscInt n)
 {
   return 0;
 }
 
 /*@
-  testBadDocStringCharOutOfOrder - asdadsasd
+  testNothing - asdadsasd
 
   Input Parameter:
 . n - the n
@@ -322,7 +322,7 @@ PetscErrorCode testBadDocStringMissingChar(PetscInt n)
 
 .seealso: `testBadDocString()`
 */
-PetscErrorCode testBadDocStringCharOutOfOrder(PetscInt n)
+PetscErrorCode testNothing(PetscInt n)
 {
   return 0;
 }
