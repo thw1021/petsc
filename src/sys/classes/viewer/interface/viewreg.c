@@ -421,10 +421,15 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
 + ascii[:[filename][:[format][:filemode]]]  - `filename` defaults to `stdout`
 . binary[:[filename][:[format][:filemode]]] - defaults to the `filename` of `binaryoutput`
 . hdf5[:[filename][:[format][:filemode]]]   - HDF5 input and output, `PETSCVIEWERHDF5`
-. draw[:drawtype[:[filename][:filemode]]]   - for example, `draw:tikz`, `draw:tikz:figure.tex`,  or `draw:x`
+. draw[:drawtype[:[filename][:filemode]]]   - draw the object
 . socket[:port]                             - defaults to the standard socket output port of 5005, see `PetscViewerSocketOpen()`
 . saws[:communicatorname]                   - publishes object to the Scientific Application Webserver (SAWs)
 - vtk:filename.vts                          - VTK output, `PETSCVIEWERVTK`
+
+  Examples:
++ ascii:mesh.tex:ascii_latex - View a `DM` in LaTeX/TikZ
+. draw:tikz:figure.tex       - View an object in the file `figure.tex` using TikZ
+- draw:x                     - View an object with X Windows
 
   Notes:
   See `PetscViewerType` for a list of all available viewer types (the string before the first `:`).
