@@ -702,7 +702,7 @@ PetscErrorCode MatPartitioningCreate(MPI_Comm comm, MatPartitioning *newp)
 
   Input Parameters:
 + A    - the partitioning context
-. obj  - Optional object that provides the prefix used in the options database check, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the prefix used in the options database check, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:
