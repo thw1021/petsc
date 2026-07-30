@@ -93,7 +93,7 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 - viewer    - a `PetscViewer` context
 
   Options Database Key:
-. -regressor_view - Calls `PetscRegressorView()` at the end of `PetscRegressorFit()`
+. -regressor_view viewer_specification - Calls `PetscRegressorView()` at the end of `PetscRegressorFit()`, see `PetscOptionsCreateViewer()` for the format of `viewer_specification`
 
   Level: beginner
 
@@ -105,7 +105,7 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
   the file.  All other processors send their
   data to the first processor to print.
 
-.seealso: [](ch_regressor), `PetscRegressor`, `PetscViewerASCIIOpen()`
+.seealso: [](ch_regressor), `PetscRegressor`, `PetscViewerASCIIOpen()`, `PetscRegressorViewFromOptions()`, `PetscRegressorFit()`, `PetscOptionsCreateViewer()`
 @*/
 PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
 {
