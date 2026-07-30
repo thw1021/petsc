@@ -514,7 +514,7 @@ PetscErrorCode VecScatterCopy(VecScatter sf, VecScatter *newsf)
 
   Input Parameters:
 + sf   - the scatter context
-. obj  - Optional object that provides the prefix for the option names, pass `NULL` to use the options prefix of `sf`
+. obj  - optional object that provides the prefix for the option names, pass `NULL` to use the options prefix of `sf`
 - name - command line option
 
   Options Database Key:
@@ -638,10 +638,9 @@ PetscErrorCode VecScatterSetFromOptions(VecScatter sf)
 . newsf - location to store the new scatter context
 
   Options Database Keys:
-+ -vecscatter_view              - Prints detail of communications
-. -vecscatter_view ::ascii_info - Print less details about communication
-- -vecscatter_merge             - `VecScatterBegin()` handles all of the communication, `VecScatterEnd()` is a nop
-                                  eliminates the chance for overlap of computation and communication
++ -vecscatter_view viewer_specification - Prints detail of communications, see `PetscOptionsCreateViewer()` for the format of `viewer_specification`
+- -vecscatter_merge                     - `VecScatterBegin()` handles all of the communication, `VecScatterEnd()` is a nop
+                                          eliminates the chance for overlap of computation and communication
 
   Level: intermediate
 
