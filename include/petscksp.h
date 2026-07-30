@@ -1117,11 +1117,11 @@ S*/
 typedef struct _p_KSPGuess *KSPGuess;
 
 /*J
-   KSPGuessType - String with the name of a PETSc initial guess approach for Krylov methods.
+  KSPGuessType - String with the name of a PETSc initial guess approach for Krylov methods.
 
-   Values:
- + `KSPGUESSFISCHER` - methodology developed by Paul Fischer
- - `KSPGUESSPOD`     - methodology based on proper orthogonal decomposition (POD)
+  Values:
++ `KSPGUESSFISCHER` - methodology developed by Paul Fischer
+- `KSPGUESSPOD`     - methodology based on proper orthogonal decomposition (POD)
 
   Options Database Key:
 . -ksp_guess_type (fischer|pod) - set the type

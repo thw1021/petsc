@@ -78,7 +78,7 @@ PetscErrorCode PetscPartitionerGetType(PetscPartitioner part, PetscPartitionerTy
 
   Input Parameters:
 + A    - the `PetscPartitioner` object
-. obj  - Optional `PetscObject` that provides the options prefix, pass `NULL` to use the options prefix of `A`
+. obj  - optional `PetscObject` that provides the options prefix, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:
@@ -279,29 +279,32 @@ PetscErrorCode PetscPartitionerDestroy(PetscPartitioner *part)
 
   Input Parameters:
 + part          - The `PetscPartitioner`
-. nparts        - Number of partitions
+. nparts        - Number of partitions requested
 . numVertices   - Number of vertices in the local part of the graph
 . start         - row pointers for the local part of the graph (CSR style)
 . adjacency     - adjacency list (CSR style)
-. vertexSection - PetscSection describing the absolute weight of each local vertex (can be `NULL`)
-. edgeSection   - PetscSection describing the absolute weight of each local edge (can be `NULL`)
-- targetSection - PetscSection describing the absolute weight of each partition (can be `NULL`)
+. vertexSection - the absolute weight of each local vertex (can be `NULL`)
+. edgeSection   - the absolute weight of each local edge (can be `NULL`)
+- targetSection - the absolute weight of each partition (can be `NULL`)
 
   Output Parameters:
-+ partSection - The `PetscSection` giving the division of points by partition
++ partSection - The `PetscSection` giving the division of points by the partitioner
 - partition   - The list of points by partition
 
   Options Database Keys:
-+ -petscpartitioner_view       - View the partitioner information
-- -petscpartitioner_view_graph - View the graph we are partitioning
++ -petscpartitioner_view viewer_specification       - View the partitioner information. See `PetscOptionsCreateViewer()` for the format of `viewer_specification`
+- -petscpartitioner_view_graph viewer_specification - View the graph we are partitioning. See `PetscOptionsCreateViewer()` for the format of `viewer_specification`
 
   Level: developer
 
   Notes:
-  The chart of the vertexSection (if present) must contain [0,numVertices), with the number of dofs in the section specifying the absolute weight for each vertex.
-  The chart of the targetSection (if present) must contain [0,nparts), with the number of dofs in the section specifying the absolute weight for each partition. This information must be the same across processes, PETSc does not check it.
+  The chart of the `vertexSection` (if present) must contain [0,`numVertices`), with the number of dofs in the section specifying the absolute weight for each vertex.
 
-.seealso: `PetscPartitionerCreate()`, `PetscPartitionerSetType()`, `PetscSectionCreate()`, `PetscSectionSetChart()`, `PetscSectionSetDof()`
+  The chart of the `targetSection` (if present) must contain [0,`nparts`), with the number of dofs in the section specifying the absolute weight for each partition.
+  This information must be the same across processes, PETSc does not check it.
+
+.seealso: `PetscPartitionerCreate()`, `PetscPartitionerSetType()`, `PetscSectionCreate()`, `PetscSectionSetChart()`, `PetscSectionSetDof()`,
+          `PetscOptionsCreateViewer()`
 @*/
 PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertexSection, PetscSection edgeSection, PetscSection targetSection, PetscSection partSection, IS *partition)
 {

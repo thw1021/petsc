@@ -1525,7 +1525,7 @@ M*/
 
   Synopsis:
   #include <petscoptions.h>
-  PetscErrorCode PetscOptionsDeprecatedNoObject(const char oldname[], const char newname[], const char version[], const char info[])
+  PetscErrorCode PetscOptionsDeprecatedNoObject(const char prefix[], const char oldname[], const char newname[], const char version[], const char info[])
 
   Logically Collective
 
