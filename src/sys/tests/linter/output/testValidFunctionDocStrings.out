@@ -300,7 +300,7 @@
 > 123: /*@ [33m[1masdadsadasdas[0m
            [33m[1m^^^^^^^^^^^^^[0m
   124:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
-      ./src/sys/tests/linter/testValidFunctionDocStrings.c:127:10: error: Description 'a char pointer' must be aligned to 1 space from longest (valid) argument 'function_ptr' [-fdoc-param-list-alignment]:
+./src/sys/tests/linter/testValidFunctionDocStrings.c:127:10: error: Description 'a char pointer' must be aligned to 1 space from longest (valid) argument 'function_ptr' [-fdoc-param-list-alignment]:
   125: 
   125: 
   126:   Input Parameters:
@@ -629,6 +629,7 @@
 > 378: .seealso: testPredeclarationCursorIgnored()`, foo()`, `Bar, [33m[1mbaz()[0m
                                                                    [33m[1m^^^^^[0m
   379: */
+./src/sys/tests/linter/testValidFunctionDocStrings.c:419:1: error: Function 'testFunctionPointerArguments()' does not appear to be used anywhere outside of testValidFunctionDocStrings.c, and can be made static [-fstatic-function-candidate]:
   380: 
   417: .seealso: `testPredeclarationCursorIgnored()`
   418: */
@@ -1122,6 +1123,7 @@
   303:   Input Parameter:
   304: . n - the n
 
+./src/sys/tests/linter/testValidFunctionDocStrings.c:367:1: error: Invalid comment begin line, does not contain sowing identifier. Expected '/*@' for functions [-fdoc-sowing-chars]:
 ./src/sys/tests/linter/testValidFunctionDocStrings.c:302:1 Note: Expected 'testBadDocStringMissingChar - a very useful description'
   365: extern PetscErrorCode testPredeclarationCursorIgnored(int, int *);
   366: 
