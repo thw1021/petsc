@@ -605,9 +605,18 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Image(PetscDraw draw)
   Output Parameter:
 . draw - the drawing context.
 
+  Options Database Keys:
++ -draw_save [filename]               - `filename` could be `name.ext` or `.ext` (where `.ext` determines the type of graphics file to save, for example `.png`)
+. -draw_save_final_image [filename]   - saves the final image displayed in a window
+- -draw_save_single_file (true|false) - saves each new image in the same file, normally each new image is saved in a new file with filename/filename_%d.ext
+
   Level: beginner
 
-.seealso: `PetscDraw`, `PETSC_DRAW_IMAGE`, `PETSC_DRAW_X`, `PetscDrawSetSave()`, `PetscDrawSetFromOptions()`, `PetscDrawCreate()`, `PetscDrawDestroy()`
+  Notes:
+  Call `PetscDrawSetSave()` for how to indicate the format to use when saving the images to files.
+
+.seealso: `PetscDraw`, `PETSC_DRAW_IMAGE`, `PETSC_DRAW_X`, `PetscDrawSetSave()`, `PetscDrawSetFromOptions()`, `PetscDrawCreate()`, `PetscDrawDestroy()`,
+          `PetscDrawSave()`, `PetscDrawSetSaveMovie()`
 @*/
 PetscErrorCode PetscDrawOpenImage(MPI_Comm comm, const char filename[], int w, int h, PetscDraw *draw)
 {

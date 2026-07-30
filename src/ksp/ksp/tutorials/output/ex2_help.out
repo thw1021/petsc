@@ -250,7 +250,6 @@ Viewer (-ksp_view_eigenvalues_explicit) options:
   -ksp_view_eigenvalues_explicit socket[:port]: Pushes object to a Unix socket (PetscOptionsCreateViewer)
   -ksp_view_eigenvalues_explicit saws[:communicatorname]: Publishes object to SAWs (PetscOptionsCreateViewer)
   -ksp_pc_side: <now LEFT : formerly LEFT> KSP preconditioner side (choose one of) LEFT RIGHT SYMMETRIC (KSPSetPCSide)
-  -ksp_matsolve_batch_size: <now -1 : formerly -1>: Maximum number of columns treated simultaneously (KSPSetMatSolveBatchSize)
   -ksp_use_explicittranspose: <now FALSE : formerly FALSE> Explicitly transpose the system in KSPSolveTranspose (KSPSetUseExplicitTranspose)
   KSP GMRES Options
   -ksp_gmres_restart: <now 30 : formerly 30>: Number of Krylov search directions (KSPGMRESSetRestart)

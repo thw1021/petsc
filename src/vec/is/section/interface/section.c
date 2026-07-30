@@ -2485,7 +2485,7 @@ static PetscErrorCode PetscSectionView_ASCII(PetscSection s, PetscViewer viewer)
 
   Input Parameters:
 + A    - the `PetscSection` object to view
-. obj  - Optional object that provides the options prefix used for the options, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options prefix used for the options, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:

@@ -116,7 +116,7 @@ PetscErrorCode PetscSpaceGetType(PetscSpace sp, PetscSpaceType *name)
 
   Input Parameters:
 + A    - the `PetscSpace` object
-. obj  - Optional object that provides the options name prefix, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options name prefix, pass `NULL` to use the options prefix of `A`
 - name - command line option name
 
   Options Database Key:
