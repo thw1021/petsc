@@ -48,7 +48,6 @@ class DocStringTypeModifier(enum.Flag):
   NONE     = 0
   MACRO    = enum.auto()
   FLOATING = enum.auto()
-  C_FUNC   = enum.auto()
 
 @enum.unique
 class MatchReason(enum.IntEnum):

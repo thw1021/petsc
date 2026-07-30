@@ -613,7 +613,7 @@ which Sphinx later processes.
 
 - `/*@`
   a formatted comment of a function.
-
+  .
 - `/*E`
   a formatted comment of an enum.
   .
