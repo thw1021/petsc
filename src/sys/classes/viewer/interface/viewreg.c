@@ -417,27 +417,32 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
 
   Level: intermediate
 
-  Viewer specification:
-+ ascii[:[filename][:[format][:filemode]]]  - `filename` defaults to `stdout`
-. binary[:[filename][:[format][:filemode]]] - defaults to the `filename` of `binaryoutput`
-. hdf5[:[filename][:[format][:filemode]]]   - HDF5 input and output, `PETSCVIEWERHDF5`
-. draw[:drawtype[:[filename][:filemode]]]   - for example, `draw:tikz`, `draw:tikz:figure.tex`,  or `draw:x`
-. socket[:port]                             - defaults to the standard socket output port of 5005, see `PetscViewerSocketOpen()`
-. saws[:communicatorname]                   - publishes object to the Scientific Application Webserver (SAWs)
-- vtk:filename.vts                          - VTK output, `PETSCVIEWERVTK`
-
   Notes:
+  The Viewer specification has the following form
+.vb
+  ascii[:[filename][:[format][:filemode]]]   - `filename` defaults to `stdout`
+  binary[:[filename][:[format][:filemode]]]  - defaults to the `filename` of `binaryoutput`
+  hdf5[:[filename][:[format][:filemode]]]    - HDF5 input and output, `PETSCVIEWERHDF5`
+  pyvista[:[filename][:[format][:filemode]]] - display the object with PyVista, `PETSCVIEWERPYVISTA`
+  draw[:x]                                   - draw the object to X Windows
+  draw[:tikz[:filename]]                     - draw the object to a TikZ file
+  draw[:image[:dirname]]                     - draw the object to an image in memory that gets saved to files in a directory
+  socket[:port]                              - defaults to the standard socket output port of 5005, see `PetscViewerSocketOpen()`
+  saws[:communicatorname]                    - publishes object to the Scientific Application Webserver (SAWs)
+  vtk:filename.vts                           - VTK output, `PETSCVIEWERVTK`
+.ve
+
   See `PetscViewerType` for a list of all available viewer types (the string before the first `:`).
 
-  See `PetscViewerFormat` for the possible values of `format`
+  See `PetscViewerFormat` for the possible values of `format`.
 
-  See `PetscFileMode` for the possible values of `filemode`
+  See `PetscFileMode` for the possible values of `filemode`.
 
-  If no viewer type is indicated before the first `:`, then `ascii` is used
+  If no viewer type is indicated before the first `:`, then `ascii` is used.
 
-  Unless `filemode` is `append` or `append_update` any files are opened in write mode, overwriting any previous file
+  Unless `filemode` is `append` or `append_update`, files opened in write mode overwrite any previous file.
 
-  You can control whether calls to this function return early with a value of set of `PETSC_FALSE` using `PetscOptionsPushCreateViewerOff()`.
+  You can control whether calls to this function return immediately with a value of `set` of `PETSC_FALSE` using `PetscOptionsPushCreateViewerOff()`.
   This is useful if calling many small subsolves, in which case `XXXViewFromOptions()` calls can take an appreciable fraction of the runtime.
 
   This routine is thread-safe for accessing predefined `PetscViewer`s like `PETSC_VIEWER_STDOUT_SELF` but not for accessing
@@ -445,6 +450,12 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
 
   This routine is used by `KSPMonitorSetFromOptions()`, `SNESMonitorSetFromOptions()`, `TSMonitorSetFromOptions()`, `TaoMonitorSetFromOptions()`, and `DMMonitorSetFromOptions()`,
   as well as `PetscObjectViewFromOptions()` and all functions, such as `VecViewFromOptions()` that call it.
+
+  Example Usage:
+.vb
+  ascii:mesh.tex:ascii_latex - View a `DMPLEX` in LaTeX/TikZ
+  draw:tikz:figure.tex       - View an object in the file `figure.tex` using TikZ
+.ve
 
 .seealso: [](sec_viewers), `PetscViewerFormat`, `PetscViewerDestroy()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
@@ -491,7 +502,7 @@ PetscErrorCode PetscOptionsCreateViewer(MPI_Comm comm, PetscOptions options, con
 
   Level: intermediate
 
-  Note:
+  Notes:
   See `PetscOptionsCreateViewer()` for how the viewer specifications are interpreted.
 
   Use `PetscViewerDestroy()` on each viewer.

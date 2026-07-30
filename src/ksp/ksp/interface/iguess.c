@@ -67,7 +67,7 @@ PetscErrorCode KSPGuessRegisterAll(void)
 . guess - `KSPGuess` object
 
   Options Database Keys:
-+ -ksp_guess_type (fischer|pod)      - Turns on generation of initial guesses and sets the method; see `KSPGuessType`
++ -ksp_guess_type (fischer|pod)      - turns on generation of initial guesses and sets the method; see `KSPGuessType`
 . -ksp_guess_fischer_model a,b       - set details for the Fischer models
 . -ksp_guess_fischer_monitor         - monitor the Fischer models
 . -ksp_guess_fischer_tol tol         - set the tolerance for the Fischer models
