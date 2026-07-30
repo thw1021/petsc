@@ -96,13 +96,13 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
   This routine may initialize `PetscDevice`. If this is the case, it may cause some sort of
   device synchronization.
 
-  Available device selection strategies\:
+  Available device selection strategies:
 
   | Value | Behavior                                      |
   |-------|-----------------------------------------------|
   | -1    |  Round-robin allocation across available GPUs |
   | -2    |  Topology-aware allocation (requires hwloc)   |
-  | >0    |  Select a specific GPU device by index        |
+  | >=0   |  Select a specific GPU device by index        |
 
   When the "Topology-aware allocation" strategy is selected, PETSc uses `hwloc` to inspect
   the hardware layout of the current system and determine which GPU is closest to the CPU
@@ -161,7 +161,7 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
   is used to determine which device to select. For instance, a system with 2 GPUs at the same depth
   and 16 cores will assign device 0 to processes on cores 0-7 and device 1 to processes on cores 8-15.
 
-  Overview of topologically aware device selection method
+  Overview of topologically aware device selection method:
 
   - If there is a single GPU on the system, select it and return
   - Enumerate all devices on the system and map PCIe Bus ID to device ID
