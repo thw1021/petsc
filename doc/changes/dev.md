@@ -34,6 +34,8 @@
 
 ## Event Logging
 
+- Change `-log` and `-log_all` to only take optional filename arguments. They no longer take optional boolean argument
+
 
 ## PetscViewer
 
@@ -60,6 +62,7 @@
 - Add `VecCreateSeqWithArrayAndMemType()` and `VecCreateMPIWithArrayAndMemType()` to create array-style standard, CUDA, or HIP vectors from memory of a specified `PetscMemType`
 - Add `VecSetStdBasis()` API to set a vector to the i-th standard basis vector
 - Change the behavior of `VecPointwiseDivide()` implementing w = x / y: if a particular `y[i]` is zero and `x[i]` is also zero, `w[i]` is set to one (before it was set to zero).
+- Deprecate `-vec_view_stash` with `-vec_stash_view`
 
 ## PetscSection
 
@@ -106,11 +109,11 @@
 - Change `-snes_mf` to respect an explicitly set `PC` type instead of silently overriding it with `PCNONE`; an explicitly requested `PC` that requires an assembled matrix now errors
 - Deprecate `SNESMonitorDefaultShort()` and `-snes_monitor_short`
 - Add support for nonlinear preconditioners with a `DM` different from the parent `SNES` `DM`. Calling `SNESSetNPC()` will no longer enforce default parameters on the `npc`.
-- Add `SNESLineSearchViewFromOptions()`
 
 ## SNESLineSearch
 
 - Deprecate `SNESLINESEARCHBASIC` in favor of `SNESLINESEARCHNONE`
+- Add `SNESLineSearchViewFromOptions()`
 
 ## TS
 

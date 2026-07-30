@@ -1768,7 +1768,7 @@ PetscErrorCode PCLoad(PC newdm, PetscViewer viewer)
 
   Input Parameters:
 + A    - the `PC` context
-. obj  - Optional object that provides the options prefix, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options prefix, pass `NULL` to use the options prefix of `A`
 - name - command line option name
 
   Options Database Key:

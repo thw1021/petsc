@@ -1563,7 +1563,7 @@ PetscErrorCode ISRestoreNonlocalIS(IS is, IS *complement)
 
   Input Parameters:
 + A    - the index set
-. obj  - Optional object that provides the prefix for the options database, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the prefix for the options database, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:

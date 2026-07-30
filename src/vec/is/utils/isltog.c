@@ -328,7 +328,7 @@ PetscErrorCode ISLocalToGlobalMappingGetSize(ISLocalToGlobalMapping mapping, Pet
 
   Input Parameters:
 + A    - the local to global mapping object
-. obj  - Optional object that provides the options prefix used for the options database query, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options prefix used for the options database query, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:

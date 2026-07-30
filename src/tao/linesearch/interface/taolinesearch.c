@@ -18,7 +18,7 @@ const char *const *TaoLineSearchConvergedReasons = TaoLineSearchConvergedReasons
 
   Input Parameters:
 + A    - the `Tao` context
-. obj  - Optional object that provides the prefix for the option names, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the prefix for the option names, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:

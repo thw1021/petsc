@@ -95,7 +95,7 @@ PetscErrorCode PetscObjectView(PetscObject obj, PetscViewer viewer)
   Notes:
   This function is usually not called directly but is called by, for example, `MatViewFromOptions()`.
 
-  This creates the viewer on-the-fly, uses it and then destroys it. Hence it should not be called in heavily used routines,
+  This checks the options database, creates the viewer on-the-fly, uses it and then destroys it. Hence it should not be called in heavily used routines,
   rather `PetscOptionsCreateViewer()` should be used to construct the viewer once which can then be utilized in the heavily used routine.
 
 .seealso: `PetscObject`, `PetscObjectViewSynchronizedFromOptions()`, `PetscObjectView()`, `PetscOptionsCreateViewer()`
@@ -144,7 +144,7 @@ PetscErrorCode PetscObjectViewFromOptions(PetscObject obj, PetscObject bobj, con
   Notes:
   The objects will be viewed in sequence, following the MPI rank order.
 
-  Unlike with `PetscObjectViewFromOptions()` the prefix of `obj` is used to search the options database key
+  The prefix of `obj` is used to search the options database key
 
 .seealso: `PetscObject`, `PetscObjectViewFromOptions()`, `PetscObjectView()`, `PetscOptionsCreateViewer()`
 @*/

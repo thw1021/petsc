@@ -224,7 +224,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS ds, PetscViewer viewer)
 
   Input Parameters:
 + A    - the `PetscDS` object
-. obj  - Optional object that provides the options prefix used in the search of the options database, pass `NULL` to use the options prefix of `A`
+. obj  - optional object that provides the options prefix used in the search of the options database, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:
@@ -282,15 +282,15 @@ PetscErrorCode PetscDSView(PetscDS prob, PetscViewer v)
 . prob - the `PetscDS` object to set options for
 
   Options Database Keys:
-+ -petscds_type type            - Set the `PetscDS` type
-. -petscds_view                 - View the `PetscDS`
-. -petscds_jac_pre (true|false) - Turn formation of a separate Jacobian preconditioner on or off
-. -bc_NAME ids                  - comma separated list of label ids for the boundary condition NAME
-- -bc_NAME_comp comps           - comma separated list of field components to constrain for the boundary condition NAME
++ -petscds_type type                 - set the `PetscDS` type
+. -petscds_view viewer_specification - view the `PetscDS` at the end of this call, see `PetscOptionsCreateViewer()` for the format of `viewer_specification`
+. -petscds_jac_pre (true|false)      - turn formation of a separate Jacobian preconditioner on or off
+. -bc_NAME ids                       - comma separated list of label ids for the boundary condition NAME
+- -bc_NAME_comp comps                - comma separated list of field components to constrain for the boundary condition NAME
 
   Level: intermediate
 
-.seealso: `PetscDS`, `PetscDSView()`
+.seealso: `PetscDS`, `PetscDSView()`, `PetscOptionsCreateViewer()`
 @*/
 PetscErrorCode PetscDSSetFromOptions(PetscDS prob)
 {
