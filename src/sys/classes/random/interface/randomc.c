@@ -280,7 +280,7 @@ PetscErrorCode PetscRandomGetOptionsPrefix(PetscRandom r, const char *prefix[])
 
   Input Parameters:
 + A    - the random number generator context
-. obj  - Optional object
+. obj  - optional object that provides the prefix for the option names, pass `NULL` to use the options prefix of `A`
 - name - command line option
 
   Options Database Key:

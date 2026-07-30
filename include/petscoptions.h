@@ -1553,6 +1553,9 @@ M*/
 
   There is a limit on the length of the warning printed, so long strings provided as `info` may be truncated.
 
+  Developer Note:
+  This API does not handle prefixes for option keys and should be removed. It is only used in two places and should be avoided in the future.
+
 .seealso: `PetscOptionsDeprecated()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsScalar()`, `PetscOptionsBool()`, `PetscOptionsString()`, `PetscOptionsSetValue()`
 M*/
   #define PetscOptionsDeprecatedNoObject(oldname, newname, version, info)           PetscOptionsDeprecated_Private(NULL, oldname, newname, version, info)
