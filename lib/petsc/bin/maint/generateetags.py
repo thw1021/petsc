@@ -136,7 +136,7 @@ def processDir(flist, dirpath, dirnames, filenames):
       dirnames.remove(exname)
 
   # One-level unique dirs
-  for exname in ['.git','.hg','SCCS', 'output', 'BitKeeper', 'externalpackages', 'bilinear', 'ftn-auto','lib','systems']:
+  for exname in ['.claude', '.git', '.hg','SCCS', 'output', 'BitKeeper', 'externalpackages', 'bilinear', 'ftn-auto', 'lib', 'systems']:
     if exname in dirnames:
       dirnames.remove(exname)
   #  Multi-level unique dirs - specify from toplevel
@@ -180,7 +180,8 @@ def main(ctags):
     ctagfile = None
   flist = []
   if os.path.isdir('.git'):
-    output = check_output(r'git ls-files | grep -E -v \(^\(systems/\|share/petsc/datafiles/\)\|/output/\|\.\(png\|pdf\|ps\|ppt\|jpg\|md\)$\)', shell=True)
+    output = check_output(r'git ls-files -- :!systems :!.claude :!share/petsc/datafiles :!*/output/* :!*.png :!*.pdf :!*.ps :!*.ppt :!*.jpg', shell=True)
+
     flist = output.decode(sys.getfilesystemencoding()).splitlines()
   else:
     for dirpath, dirnames, filenames in os.walk(os.getcwd()):
