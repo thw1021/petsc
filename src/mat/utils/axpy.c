@@ -440,8 +440,11 @@ PetscErrorCode MatDiagonalSet(Mat Y, Vec D, InsertMode is)
 PetscErrorCode MatAYPX(Mat Y, PetscScalar a, Mat X, MatStructure str)
 {
   PetscFunctionBegin;
-  PetscCall(MatScale(Y, a));
-  PetscCall(MatAXPY(Y, 1.0, X, str));
+  if (Y == X) PetscCall(MatScale(Y, a + 1.0));
+  else {
+    PetscCall(MatScale(Y, a));
+    PetscCall(MatAXPY(Y, 1.0, X, str));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
