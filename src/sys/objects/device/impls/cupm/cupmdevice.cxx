@@ -293,7 +293,7 @@ PetscErrorCode Device<T>::select_device_petsc_decide_(MPI_Comm comm, PetscInt nd
 template <DeviceType T>
 PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hwloc_cpuset_t superset_cpuset, hwloc_obj_t process_cpu_obj, hwloc_topology_t topology, PetscInt *relative_device_index) noexcept
 {
-  // hwloc_bitmap_weight returns the number of non-zero entires in a cpuset.
+  // hwloc_bitmap_weight returns the number of non-zero entries in a cpuset.
   PetscInt cores_in_anc_obj = hwloc_bitmap_weight(superset_cpuset);
   PetscInt ctr              = 0;
 
@@ -326,7 +326,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
     std::vector<PetscInt>    device_depths(ndev);
     std::vector<std::string> device_addrs(ndev, std::string(32, 0));
 
-    // Ensure initId->first is set to a sensble fallback value if any hwloc
+    // Ensure initId->first is set to a sensible fallback value if any hwloc
     // calls fail.
     initId->first = PETSC_DECIDE;
 
@@ -391,10 +391,9 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
           ctr++;
         }
       }
-      // Construct a cpuset of all CPU cores that would identify the same devices at the
-      // that this process has identified as their closest devices. Select devices_at_max_depth[0]
-      // for this purpose as every other device has the same depth, therefore must have the same
-      // common ancestor
+      // Construct a cpuset of all CPU cores that would identify the same devices that this process
+      // has identified as their closest devices. Select devices_at_max_depth[0] for this purpose
+      // as every other device has the same depth, therefore must have the same common ancestor
       if (!hwloc_om.sibling_cpuset) PetscFunctionReturn(PETSC_ERR_LIB);
       // Repeat the common ancestor depth calculation for every CPU core detected in the current cgroup
       for (auto this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(hwloc_om.topology, global_cpuset, HWLOC_OBJ_PU, nullptr); this_cpu; this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(hwloc_om.topology, global_cpuset, HWLOC_OBJ_PU, this_cpu)) {

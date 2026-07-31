@@ -96,7 +96,7 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
   This routine may initialize `PetscDevice`. If this is the case, it may cause some sort of
   device synchronization.
 
-  Available device selection strategies:
+  Available device selection strategies\:
 
   | Value | Behavior                                      |
   |-------|-----------------------------------------------|
