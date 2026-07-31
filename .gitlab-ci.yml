@@ -303,6 +303,20 @@ pause-for-approval:
   stage: .pre
   tags:
     - feature:ai
+  variables:
+    # Export Claude Code token/cost metrics via OTLP directly to the Grafana Cloud
+    # OTLP gateway, for cross-run Grafana dashboards. The endpoint and auth header
+    # are masked GitLab CI/CD variables; GRAFANA_CLOUD_OTLP_AUTH holds the secret
+    # token (Authorization=Basic%20...) and must never be committed.
+    # OTEL_METRIC_EXPORT_INTERVAL is short because `claude -p` exits as soon as the
+    # review finishes; a slow interval would let the job die before metrics flush.
+    CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+    OTEL_METRICS_EXPORTER: otlp
+    OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+    OTEL_EXPORTER_OTLP_ENDPOINT: "$GRAFANA_CLOUD_OTLP_ENDPOINT"
+    OTEL_EXPORTER_OTLP_HEADERS: "$GRAFANA_CLOUD_OTLP_AUTH"
+    OTEL_METRIC_EXPORT_INTERVAL: "5000"
+    OTEL_RESOURCE_ATTRIBUTES: "ci.mr=$CI_MERGE_REQUEST_IID,ci.job=$CI_JOB_ID,ci.ref=$CI_COMMIT_REF_SLUG"
   before_script:
     - date
     - hostname
