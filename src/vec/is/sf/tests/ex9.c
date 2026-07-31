@@ -6,19 +6,20 @@ static char help[] = "This example shows 1) how to transfer vectors from a paren
 #include <petscvec.h>
 int main(int argc, char **argv)
 {
-  PetscMPIInt nproc, grank, mycolor;
-  PetscInt    i, n, N = 20, low, high;
-  MPI_Comm    subcomm;
-  Vec         x  = NULL; /* global vectors on PETSC_COMM_WORLD */
-  Vec         yg = NULL; /* global vectors on PETSC_COMM_WORLD */
-  VecScatter  vscat;
-  IS          ix, iy;
-  PetscBool   iscuda = PETSC_FALSE; /* Option to use VECCUDA vectors */
-  PetscBool   optionflag, compareflag;
-  char        vectypename[PETSC_MAX_PATH_LEN];
-  PetscBool   world2sub  = PETSC_FALSE; /* Copy a vector from WORLD to a subcomm? */
-  PetscBool   sub2sub    = PETSC_FALSE; /* Copy a vector from a subcomm to another subcomm? */
-  PetscBool   world2subs = PETSC_FALSE; /* Copy a vector from WORLD to multiple subcomms? */
+  PetscMPIInt  nproc, grank, mycolor;
+  PetscInt     i, n, N = 20, low, high;
+  MPI_Comm     subcomm;
+  Vec          x  = NULL; /* global vectors on PETSC_COMM_WORLD */
+  Vec          yg = NULL; /* global vectors on PETSC_COMM_WORLD */
+  VecScatter   vscat;
+  IS           ix, iy;
+  PetscMemType mtype  = PETSC_MEMTYPE_HOST;
+  PetscBool    iscuda = PETSC_FALSE; /* Option to use VECCUDA vectors */
+  PetscBool    optionflag, compareflag;
+  PetscBool    world2sub  = PETSC_FALSE; /* Copy a vector from WORLD to a subcomm? */
+  PetscBool    sub2sub    = PETSC_FALSE; /* Copy a vector from a subcomm to another subcomm? */
+  PetscBool    world2subs = PETSC_FALSE; /* Copy a vector from WORLD to multiple subcomms? */
+  char         vectypename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -35,6 +36,7 @@ int main(int argc, char **argv)
     PetscCall(PetscStrncmp(vectypename, "cuda", (size_t)4, &compareflag));
     if (compareflag) iscuda = PETSC_TRUE;
   }
+  if (iscuda) mtype = PETSC_MEMTYPE_CUDA;
 
   /* Split PETSC_COMM_WORLD into three subcomms. Each process can only see the subcomm it belongs to */
   mycolor = grank % 3;
@@ -72,23 +74,11 @@ int main(int argc, char **argv)
       PetscCall(VecSetUp(y));
       PetscCall(PetscObjectSetName((PetscObject)y, "y_subcomm_0")); /* Give a name to view y clearly */
       PetscCall(VecGetLocalSize(y, &n));
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCUDAGetArray(y, &yvalue));
-#endif
-      } else {
-        PetscCall(VecGetArray(y, &yvalue));
-      }
+      PetscCall(VecGetArrayAndMemType(y, &yvalue, &mtype));
       /* Create yg on PETSC_COMM_WORLD and alias yg with y. They share the memory pointed by yvalue.
         Note this is a collective call. All processes have to call it and supply consistent N.
       */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCreateMPICUDAWithArray(PETSC_COMM_WORLD, 1, n, N, yvalue, &yg));
-#endif
-      } else {
-        PetscCall(VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, N, yvalue, &yg));
-      }
+      PetscCall(VecCreateMPIWithArrayAndMemType(PETSC_COMM_WORLD, mtype, 1, n, N, yvalue, &yg));
 
       /* Create an identity map that makes yg[i] = x[i], i=0..N-1 */
       PetscCall(VecGetOwnershipRange(yg, &low, &high)); /* low, high are global indices */
@@ -101,15 +91,9 @@ int main(int argc, char **argv)
       PetscCall(VecScatterEnd(vscat, x, yg, INSERT_VALUES, SCATTER_FORWARD));
 
       /* Once yg got the data from x, we return yvalue to y so that we can use y in other operations.
-        VecGetArray must be paired with VecRestoreArray.
+        VecGetArrayAndMemType() must be paired with VecRestoreArrayAndMemType().
       */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCUDARestoreArray(y, &yvalue));
-#endif
-      } else {
-        PetscCall(VecRestoreArray(y, &yvalue));
-      }
+      PetscCall(VecRestoreArrayAndMemType(y, &yvalue));
 
       /* Libraries on subcomm0 can safely use y now, for example, view and scale it */
       PetscCall(VecView(y, PETSC_VIEWER_STDOUT_(subcomm)));
@@ -126,13 +110,7 @@ int main(int argc, char **argv)
       PetscCall(VecDestroy(&y));
     } else {
       /* Ranks outside of subcomm0 do not supply values to yg */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCreateMPICUDAWithArray(PETSC_COMM_WORLD, 1, 0 /*n*/, N, NULL, &yg));
-#endif
-      } else {
-        PetscCall(VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, 0 /*n*/, N, NULL, &yg));
-      }
+      PetscCall(VecCreateMPIWithArrayAndMemType(PETSC_COMM_WORLD, mtype, 1, 0 /*n*/, N, NULL, &yg));
 
       /* Ranks in subcomm0 already specified the full range of the identity map. The remaining
         ranks just need to create empty ISes to cheat VecScatterCreate.
@@ -204,24 +182,11 @@ int main(int argc, char **argv)
 
       /* Create a vector xg on parentcomm, which shares memory with x */
       PetscCall(VecGetLocalSize(x, &n));
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCUDAGetArrayRead(x, &xvalue));
-        PetscCall(VecCreateMPICUDAWithArray(parentcomm, 1, n, N, xvalue, &xg));
-#endif
-      } else {
-        PetscCall(VecGetArrayRead(x, &xvalue));
-        PetscCall(VecCreateMPIWithArray(parentcomm, 1, n, N, xvalue, &xg));
-      }
+      PetscCall(VecGetArrayReadAndMemType(x, &xvalue, &mtype));
+      PetscCall(VecCreateMPIWithArrayAndMemType(parentcomm, mtype, 1, n, N, xvalue, &xg));
 
       /* Ranks in subcomm 0 have nothing on yg, so they simply have n=0, array=NULL */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCreateMPICUDAWithArray(parentcomm, 1, 0 /*n*/, N, NULL /*array*/, &yg));
-#endif
-      } else {
-        PetscCall(VecCreateMPIWithArray(parentcomm, 1, 0 /*n*/, N, NULL /*array*/, &yg));
-      }
+      PetscCall(VecCreateMPIWithArrayAndMemType(parentcomm, mtype, 1, 0 /*n*/, N, NULL /*array*/, &yg));
 
       /* Create the vecscatter, which does identity map by setting yg[i] = xg[i], i=0..N-1. */
       PetscCall(VecGetOwnershipRange(xg, &low, &high)); /* low, high are global indices of xg */
@@ -234,13 +199,7 @@ int main(int argc, char **argv)
       PetscCall(VecScatterEnd(vscat, xg, yg, INSERT_VALUES, SCATTER_FORWARD));
 
       /* After the VecScatter is done, xg is idle so we can safely return xvalue to x */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCUDARestoreArrayRead(x, &xvalue));
-#endif
-      } else {
-        PetscCall(VecRestoreArrayRead(x, &xvalue));
-      }
+      PetscCall(VecRestoreArrayReadAndMemType(x, &xvalue));
       PetscCall(VecDestroy(&x));
       PetscCall(ISDestroy(&ix));
       PetscCall(ISDestroy(&iy));
@@ -270,13 +229,7 @@ int main(int argc, char **argv)
       PetscCallMPI(MPI_Intercomm_merge(intercomm, 1 /*high*/, &parentcomm));
 
       /* Ranks in subcomm1 have nothing on xg, so they simply have n=0, array=NULL.*/
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCreateMPICUDAWithArray(parentcomm, 1 /*bs*/, 0 /*n*/, N, NULL /*array*/, &xg));
-#endif
-      } else {
-        PetscCall(VecCreateMPIWithArray(parentcomm, 1 /*bs*/, 0 /*n*/, N, NULL /*array*/, &xg));
-      }
+      PetscCall(VecCreateMPIWithArrayAndMemType(parentcomm, mtype, 1 /*bs*/, 0 /*n*/, N, NULL /*array*/, &xg));
 
       PetscCall(VecCreate(subcomm, &y));
       PetscCall(VecSetSizes(y, PETSC_DECIDE, N));
@@ -286,24 +239,12 @@ int main(int argc, char **argv)
 
       PetscCall(PetscObjectSetName((PetscObject)y, "y_subcomm_1")); /* Give a name to view y clearly */
       PetscCall(VecGetLocalSize(y, &n));
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCUDAGetArray(y, &yvalue));
-#endif
-      } else {
-        PetscCall(VecGetArray(y, &yvalue));
-      }
+      PetscCall(VecGetArrayAndMemType(y, &yvalue, &mtype));
       /* Create a vector yg on parentcomm, which shares memory with y. xg and yg must be
         created in the same order in subcomm0/1. For example, we can not reverse the order of
         creating xg and yg in subcomm1.
       */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCreateMPICUDAWithArray(parentcomm, 1 /*bs*/, n, N, yvalue, &yg));
-#endif
-      } else {
-        PetscCall(VecCreateMPIWithArray(parentcomm, 1 /*bs*/, n, N, yvalue, &yg));
-      }
+      PetscCall(VecCreateMPIWithArrayAndMemType(parentcomm, mtype, 1 /*bs*/, n, N, yvalue, &yg));
 
       /* Ranks in subcomm0 already specified the full range of the identity map.
         ranks in subcomm1 just need to create empty ISes to cheat VecScatterCreate.
@@ -317,13 +258,7 @@ int main(int argc, char **argv)
       PetscCall(VecScatterEnd(vscat, xg, yg, INSERT_VALUES, SCATTER_FORWARD));
 
       /* After the VecScatter is done, values in yg are available. y is our interest, so we return yvalue to y */
-      if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-        PetscCall(VecCUDARestoreArray(y, &yvalue));
-#endif
-      } else {
-        PetscCall(VecRestoreArray(y, &yvalue));
-      }
+      PetscCall(VecRestoreArrayAndMemType(y, &yvalue));
 
       /* Libraries on subcomm1 can safely use y now, for example, view it */
       PetscCall(VecView(y, PETSC_VIEWER_STDOUT_(subcomm)));
@@ -376,15 +311,8 @@ int main(int argc, char **argv)
        necessarily consecutive in yg. That depends on how PETSC_COMM_WORLD is split. In our case, subcomm0 is made of rank
        0, 3, 6 etc from PETSC_COMM_WORLD. So subcomm0's pieces are interleaved with pieces from other subcomms in yg.
     */
-    if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-      PetscCall(VecCUDAGetArray(y, &yvalue));
-      PetscCall(VecCreateMPICUDAWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, yvalue, &yg));
-#endif
-    } else {
-      PetscCall(VecGetArray(y, &yvalue));
-      PetscCall(VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, yvalue, &yg));
-    }
+    PetscCall(VecGetArrayAndMemType(y, &yvalue, &mtype));
+    PetscCall(VecCreateMPIWithArrayAndMemType(PETSC_COMM_WORLD, mtype, 1, n, PETSC_DECIDE, yvalue, &yg));
     PetscCall(PetscObjectSetName((PetscObject)yg, "yg_on_subcomms")); /* Give a name to view yg clearly */
 
     /* The following two lines are key. From xstart, we know where to pull entries from x. Note that we get xstart from y,
@@ -404,13 +332,7 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&yg));
 
     /* Restory yvalue so that processes in subcomm can use y from now on. */
-    if (iscuda) {
-#if PetscDefined(HAVE_CUDA)
-      PetscCall(VecCUDARestoreArray(y, &yvalue));
-#endif
-    } else {
-      PetscCall(VecRestoreArray(y, &yvalue));
-    }
+    PetscCall(VecRestoreArrayAndMemType(y, &yvalue));
     PetscCall(VecScale(y, 3.0));
 
     PetscCall(ISDestroy(&ix)); /* One can also destroy ix, iy immediately after VecScatterCreate() */

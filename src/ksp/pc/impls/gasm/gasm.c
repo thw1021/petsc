@@ -318,6 +318,9 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
   DM             *subdomain_dm    = NULL;
   char          **subdomain_names = NULL;
   PetscInt       *numbering;
+  VecType         vtype;
+  PetscMemType    gxmemtype, gymemtype;
+  PetscBool       flg, iskokkos;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
@@ -427,7 +430,12 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
     PetscCall(VecCreateMPI(((PetscObject)pc)->comm, nTotalInnerIndices, PETSC_DETERMINE, &x));
     PetscCall(VecDuplicate(x, &y));
 
-    PetscCall(VecCreateMPI(PetscObjectComm((PetscObject)pc), on, PETSC_DECIDE, &osm->gx));
+    PetscCall(MatGetVecType(pc->pmat, &vtype));
+    PetscCall(PetscStrcmpAny(vtype, &flg, VECCUDA, VECSEQCUDA, VECMPICUDA, VECHIP, VECSEQHIP, VECMPIHIP, ""));
+    PetscCall(PetscStrcmpAny(vtype, &iskokkos, VECKOKKOS, VECSEQKOKKOS, VECMPIKOKKOS, ""));
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)pc), &osm->gx));
+    PetscCall(VecSetSizes(osm->gx, on, PETSC_DECIDE));
+    PetscCall(VecSetType(osm->gx, flg || iskokkos ? vtype : VECMPI));
     PetscCall(VecDuplicate(osm->gx, &osm->gy));
     PetscCall(VecGetOwnershipRange(osm->gx, &gostart, NULL));
     PetscCall(ISCreateStride(PetscObjectComm((PetscObject)pc), on, gostart, 1, &goid));
@@ -493,21 +501,31 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
     PetscCall(ISDestroy(&goid));
     PetscCall(PetscFree(numbering));
 
-    /* Create the subdomain work vectors. */
+    /* Create subdomain work vectors that alias the corresponding portions of the merged vectors. */
     PetscCall(PetscMalloc1(osm->n, &osm->x));
     PetscCall(PetscMalloc1(osm->n, &osm->y));
-    PetscCall(VecGetArray(osm->gx, &gxarray));
-    PetscCall(VecGetArray(osm->gy, &gyarray));
+    PetscCall(VecGetArrayAndMemType(osm->gx, &gxarray, &gxmemtype));
+    PetscCall(VecGetArrayAndMemType(osm->gy, &gyarray, &gymemtype));
+    PetscCheck(gxmemtype == gymemtype, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Merged vectors use different memory types: %s and %s", PetscMemTypeToString(gxmemtype), PetscMemTypeToString(gymemtype));
     for (i = 0, on = 0; i < osm->n; ++i, on += oni) {
       PetscInt oNi;
+
       PetscCall(ISGetLocalSize(osm->ois[i], &oni));
-      /* on a sub communicator */
       PetscCall(ISGetSize(osm->ois[i], &oNi));
-      PetscCall(VecCreateMPIWithArray(((PetscObject)osm->ois[i])->comm, 1, oni, oNi, gxarray + on, &osm->x[i]));
-      PetscCall(VecCreateMPIWithArray(((PetscObject)osm->ois[i])->comm, 1, oni, oNi, gyarray + on, &osm->y[i]));
+      if (iskokkos) {
+        PetscCheck(PetscDefined(HAVE_KOKKOS_KERNELS), PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Kokkos vector type requires Kokkos Kernels");
+#if PetscDefined(HAVE_KOKKOS_KERNELS)
+        PetscCall(VecCreateMPIKokkosWithArray(PetscObjectComm((PetscObject)osm->ois[i]), 1, oni, oNi, gxarray + on, &osm->x[i]));
+        PetscCall(VecCreateMPIKokkosWithArray(PetscObjectComm((PetscObject)osm->ois[i]), 1, oni, oNi, gyarray + on, &osm->y[i]));
+#endif
+      } else {
+        PetscCall(VecCreateMPIWithArrayAndMemType(PetscObjectComm((PetscObject)osm->ois[i]), gxmemtype, 1, oni, oNi, gxarray + on, &osm->x[i]));
+        PetscCall(VecCreateMPIWithArrayAndMemType(PetscObjectComm((PetscObject)osm->ois[i]), gymemtype, 1, oni, oNi, gyarray + on, &osm->y[i]));
+      }
     }
-    PetscCall(VecRestoreArray(osm->gx, &gxarray));
-    PetscCall(VecRestoreArray(osm->gy, &gyarray));
+    PetscCall(VecRestoreArrayAndMemType(osm->gx, &gxarray));
+    PetscCall(VecRestoreArrayAndMemType(osm->gy, &gyarray));
+
     /* Create the subdomain solvers */
     PetscCall(PetscMalloc1(osm->n, &osm->ksp));
     for (i = 0; i < osm->n; i++) {

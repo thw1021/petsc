@@ -3391,43 +3391,29 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqDense(MPI_Comm comm, Mat inma
 
 PetscErrorCode MatDenseCreateColumnVec_Private(Mat A, Vec *v)
 {
-  PetscBool   isstd, iskok, iscuda, iship;
+  PetscBool   flg, iskok;
   PetscMPIInt size;
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
-  /* we pass the data of A, to prevent allocating needless GPU memory the first time VecCUPMPlaceArray is called. */
-  const PetscScalar *a;
-#endif
 
   PetscFunctionBegin;
+  /* We pass the data of A to prevent allocating needless GPU memory the first time VecCUPMPlaceArray() is called. */
   *v = NULL;
-  PetscCall(PetscStrcmpAny(A->defaultvectype, &isstd, VECSTANDARD, VECSEQ, VECMPI, ""));
+  PetscCall(PetscStrcmpAny(A->defaultvectype, &flg, VECSTANDARD, VECSEQ, VECMPI, VECCUDA, VECSEQCUDA, VECMPICUDA, VECHIP, VECSEQHIP, VECMPIHIP, ""));
   PetscCall(PetscStrcmpAny(A->defaultvectype, &iskok, VECKOKKOS, VECSEQKOKKOS, VECMPIKOKKOS, ""));
-  PetscCall(PetscStrcmpAny(A->defaultvectype, &iscuda, VECCUDA, VECSEQCUDA, VECMPICUDA, ""));
-  PetscCall(PetscStrcmpAny(A->defaultvectype, &iship, VECHIP, VECSEQHIP, VECMPIHIP, ""));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
-  if (isstd) {
-    if (size > 1) PetscCall(VecCreateMPIWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, A->rmap->N, NULL, v));
-    else PetscCall(VecCreateSeqWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, v));
-  } else if (iskok) {
+  if (iskok) {
     PetscCheck(PetscDefined(HAVE_KOKKOS_KERNELS), PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Reconfigure using KOKKOS kernels support");
 #if PetscDefined(HAVE_KOKKOS_KERNELS)
     if (size > 1) PetscCall(VecCreateMPIKokkosWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, A->rmap->N, NULL, v));
     else PetscCall(VecCreateSeqKokkosWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, v));
 #endif
-  } else if (iscuda) {
-    PetscCheck(PetscDefined(HAVE_CUDA), PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Reconfigure using CUDA support");
-#if PetscDefined(HAVE_CUDA)
-    PetscCall(MatDenseCUDAGetArrayRead(A, &a));
-    if (size > 1) PetscCall(VecCreateMPICUDAWithArrays(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, A->rmap->N, NULL, a, v));
-    else PetscCall(VecCreateSeqCUDAWithArrays(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, a, v));
-#endif
-  } else if (iship) {
-    PetscCheck(PetscDefined(HAVE_HIP), PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Reconfigure using HIP support");
-#if PetscDefined(HAVE_HIP)
-    PetscCall(MatDenseHIPGetArrayRead(A, &a));
-    if (size > 1) PetscCall(VecCreateMPIHIPWithArrays(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, A->rmap->N, NULL, a, v));
-    else PetscCall(VecCreateSeqHIPWithArrays(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, a, v));
-#endif
+  } else if (flg) {
+    PetscMemType       mtype;
+    const PetscScalar *a;
+
+    PetscCall(MatDenseGetArrayReadAndMemType(A, &a, &mtype));
+    if (size > 1) PetscCall(VecCreateMPIWithArrayAndMemType(PetscObjectComm((PetscObject)A), mtype, A->rmap->bs, A->rmap->n, A->rmap->N, a, v));
+    else PetscCall(VecCreateSeqWithArrayAndMemType(PetscObjectComm((PetscObject)A), mtype, A->rmap->bs, A->rmap->n, a, v));
+    PetscCall(MatDenseRestoreArrayReadAndMemType(A, &a));
   }
   PetscCheck(*v, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Not coded for type %s", A->defaultvectype);
   PetscFunctionReturn(PETSC_SUCCESS);
