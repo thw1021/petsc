@@ -391,9 +391,26 @@ otlp-connectivity-test:
       echo
       case "$code" in
         200|400) echo "RESULT: EGRESS OK (reached gateway, auth accepted)";;
-        401|403) echo "RESULT: reached gateway but AUTH FAILED - check GRAFANA_CLOUD_OTLP_AUTH";;
+        401|403) echo "RESULT: reached gateway but AUTH FAILED - check GRAFANA_CLOUD_OTLP_AUTH"; exit 1;;
         000)     echo "RESULT: EGRESS BLOCKED - no route/DNS/timeout to Grafana Cloud"; exit 1;;
         *)       echo "RESULT: unexpected HTTP $code - inspect body above"; exit 1;;
+      esac
+      echo "== writing a real gauge datapoint for dashboard visualization =="
+      # Sends metric petsc_otlp_selftest=42 so a queryable series appears in Grafana.
+      # Query it in Explore as: petsc_otlp_selftest
+      ns=$(date +%s)000000000
+      payload="{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"petsc-otlp-selftest\"}},{\"key\":\"ci.job\",\"value\":{\"stringValue\":\"$CI_JOB_ID\"}}]},\"scopeMetrics\":[{\"metrics\":[{\"name\":\"petsc_otlp_selftest\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42,\"timeUnixNano\":\"$ns\"}]}}]}]}]}"
+      dcode=$(curl -sS -o /tmp/otlp2.out -w '%{http_code}' --max-time 20 \
+        -X POST "$OTEL_EXPORTER_OTLP_ENDPOINT/v1/metrics" \
+        -H "Content-Type: application/json" \
+        -H "$hdr" \
+        --data-binary "$payload" || echo 000)
+      echo "gauge write HTTP $dcode"
+      cat /tmp/otlp2.out 2>/dev/null || true
+      echo
+      case "$dcode" in
+        200) echo "RESULT: DATAPOINT SENT - query 'petsc_otlp_selftest' in Grafana Explore (last 15 min), expect value 42";;
+        *)   echo "RESULT: datapoint write returned HTTP $dcode - inspect body above"; exit 1;;
       esac
 
 #
