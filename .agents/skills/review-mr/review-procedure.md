@@ -1,5 +1,5 @@
 ### 4. Read and review the diff
-- Fetch with `glab api "projects/:id/merge_requests/<MR_IID>/changes" | jq '.changes |= map(select(.new_path | endswith(".out") | not))'` to drop `.out` files (test reference output, not code). Or read a local diff file and skip `.out` hunks.
+- Generate a local diff with 'git diff' and skip `.out` hunks.
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications

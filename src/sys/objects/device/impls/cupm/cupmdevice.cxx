@@ -22,23 +22,23 @@ class hwloc_object_manager {
 public:
   hwloc_object_manager();
   ~hwloc_object_manager();
-  hwloc_topology_t topology;
-  hwloc_cpuset_t   cpuset_mine;
-  hwloc_bitmap_t   sibling_cpuset;
+  hwloc_topology_t topology       = nullptr;
+  hwloc_cpuset_t   cpuset_mine    = nullptr;
+  hwloc_bitmap_t   sibling_cpuset = nullptr;
 };
 
 hwloc_object_manager::hwloc_object_manager()
 {
-  hwloc_topology_init(&topology);
+  if (hwloc_topology_init(&topology) == -1) topology = nullptr;
   cpuset_mine    = hwloc_bitmap_alloc();
   sibling_cpuset = hwloc_bitmap_alloc();
-};
+}
 hwloc_object_manager::~hwloc_object_manager()
 {
   hwloc_bitmap_free(sibling_cpuset);
   hwloc_bitmap_free(cpuset_mine);
-  hwloc_topology_destroy(topology);
-};
+  if (topology) hwloc_topology_destroy(topology);
+}
 #endif
 
 // internal "impls" class for CUPMDevice. Each instance represents a single cupm device
@@ -332,7 +332,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
 
     // Get PCI Bus addresses for each CUPM device
     for (PetscInt idev = 0; idev < ndev; idev++) {
-      PetscCallCUPM(cupmDeviceGetPCIBusId(device_addrs[idev].data(), 32, idev));
+      PetscCallCUPM(cupmDeviceGetPCIBusId(&device_addrs[idev][0], 32, idev));
     }
 
     if (!hwloc_om.topology) PetscFunctionReturn(PETSC_ERR_LIB);
@@ -398,7 +398,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
       if (!hwloc_om.sibling_cpuset) PetscFunctionReturn(PETSC_ERR_LIB);
       // Repeat the common ancestor depth calculation for every CPU core detected in the current cgroup
       for (auto this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(hwloc_om.topology, global_cpuset, HWLOC_OBJ_PU, nullptr); this_cpu; this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(hwloc_om.topology, global_cpuset, HWLOC_OBJ_PU, this_cpu)) {
-        for (PetscInt jdev = 0ul; jdev < ndev; jdev++) {
+        for (PetscInt jdev = 0; jdev < ndev; jdev++) {
           device_depths[jdev] = hwloc_get_common_ancestor_obj(hwloc_om.topology, this_cpu, hwloc_get_non_io_ancestor_obj(hwloc_om.topology, hwloc_devs[jdev]))->depth;
         }
         if (*std::max_element(device_depths.begin(), device_depths.end()) == device_depths[devices_at_max_depth[0]]) {

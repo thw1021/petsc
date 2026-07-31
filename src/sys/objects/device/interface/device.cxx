@@ -160,8 +160,7 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
   are found at the same depth, the logical ordering of the CPU cores under the device at that depth
   is used to determine which device to select. For instance, a system with 2 GPUs at the same depth
   and 16 cores will assign device 0 to processes on cores 0-7 and device 1 to processes on cores 8-15.
-
-  Overview of topologically aware device selection method:
+  A summary of the topologically aware device selection method is as follows.
 
   - If there is a single GPU on the system, select it and return
   - Enumerate all devices on the system and map PCIe Bus ID to device ID
