@@ -10,12 +10,16 @@ Cell 'mapped_separate_hpre': a mapped summand whose term builds different H and\
 Hpre matrices, summed with a MATSHELL Hessian and a separate assembled Hpre;\n\
 the assembled Hpre must be P^T Hpre_term P, not P^T H_term P.\n\
 Cell 'scaled_hessian_mult': a single term added to Tao with a non-unit top-level\n\
-scale must apply the same scale in TaoComputeHessianMult() as in TaoComputeHessian().\n\n";
+scale must apply the same scale in TaoComputeHessianMult() as in TaoComputeHessian().\n\
+Cell 'map_state': changing a TaoAddTerm() mapping matrix in place must invalidate\n\
+the TAOTERMSUM Hessian-mult cache at an otherwise unchanged evaluation point.\n\n";
 
 static PetscErrorCode FormObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormDiagHessian(TaoTerm, Vec, Vec, Mat, Mat);
+static PetscErrorCode FormDiagHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 static PetscErrorCode FormConstHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode TestScaledHessianMult(MPI_Comm, PetscInt);
+static PetscErrorCode TestMapState(MPI_Comm, PetscInt);
 
 /* TAOTERMSHELL with point-dependent Hessian H(x) = diag(x) (H == Hpre). */
 static PetscErrorCode CreateDiagonalHessianTerm(MPI_Comm comm, PetscInt n, TaoTerm *term_out)
@@ -30,6 +34,21 @@ static PetscErrorCode CreateDiagonalHessianTerm(MPI_Comm comm, PetscInt n, TaoTe
   PetscCall(TaoTermShellSetCreateHessianMatrices(term, TaoTermCreateHessianMatricesDefault));
   PetscCall(TaoTermSetCreateHessianMode(term, PETSC_TRUE, MATAIJ, NULL));
   PetscCall(TaoTermShellSetHessian(term, FormDiagHessian));
+  PetscCall(TaoTermSetUp(term));
+  *term_out = term;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateDiagonalHessianMultTerm(MPI_Comm comm, PetscInt n, TaoTerm *term_out)
+{
+  TaoTerm term;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermCreateShell(comm, NULL, NULL, &term));
+  PetscCall(TaoTermSetParametersMode(term, TAOTERM_PARAMETERS_NONE));
+  PetscCall(TaoTermSetSolutionSizes(term, PETSC_DECIDE, n, 1));
+  PetscCall(TaoTermShellSetObjectiveAndGradient(term, FormObjectiveAndGradient));
+  PetscCall(TaoTermShellSetHessianMult(term, FormDiagHessianMult));
   PetscCall(TaoTermSetUp(term));
   *term_out = term;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -264,14 +283,82 @@ static PetscErrorCode TestScaledHessianMult(MPI_Comm comm, PetscInt n)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestMapState(MPI_Comm comm, PetscInt n)
+{
+  TaoTerm      mapped_term, other_term;
+  Tao          tao;
+  Mat          map;
+  Vec          x, v, Hv, expected;
+  PetscScalar *a;
+  PetscReal    diff;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatCreateSeqAIJ(comm, n, n, 1, NULL, &map));
+  for (PetscInt i = 0; i < n; i++) PetscCall(MatSetValue(map, i, i, 1.0, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(map, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(map, MAT_FINAL_ASSEMBLY));
+
+  PetscCall(CreateDiagonalHessianMultTerm(comm, n, &mapped_term));
+  PetscCall(TaoTermCreate(comm, &other_term));
+  PetscCall(TaoTermSetType(other_term, TAOTERMHALFL2SQUARED));
+  PetscCall(TaoTermSetSolutionSizes(other_term, PETSC_DECIDE, n, 1));
+  PetscCall(TaoTermSetUp(other_term));
+
+  PetscCall(TaoCreate(comm, &tao));
+  PetscCall(TaoSetType(tao, TAONLS));
+  PetscCall(TaoAddTerm(tao, "mapped_", 1.0, mapped_term, NULL, map));
+  PetscCall(TaoAddTerm(tao, "other_", 1.0, other_term, NULL, NULL));
+  PetscCall(TaoTermCreateSolutionVec(mapped_term, &x));
+  PetscCall(VecDuplicate(x, &v));
+  PetscCall(VecDuplicate(x, &Hv));
+  PetscCall(VecDuplicate(x, &expected));
+  PetscCall(VecGetArrayWrite(x, &a));
+  for (PetscInt i = 0; i < n; i++) a[i] = (PetscScalar)(i + 1);
+  PetscCall(VecRestoreArrayWrite(x, &a));
+  PetscCall(VecSet(v, 1.0));
+  PetscCall(TaoSetSolution(tao, x));
+  PetscCall(TaoSetFromOptions(tao));
+  PetscCall(TaoSetUp(tao));
+
+  /* With map = I, the mapped diag(x) term contributes x and the half-L2 term contributes one. */
+  PetscCall(TaoComputeHessianMult(tao, x, v, Hv));
+  PetscCall(VecCopy(x, expected));
+  PetscCall(VecShift(expected, 1.0));
+  PetscCall(VecAXPY(expected, -1.0, Hv));
+  PetscCall(VecNorm(expected, NORM_2, &diff));
+  PetscCheck(diff <= 1.e-10, comm, PETSC_ERR_PLIB, "Initial mapped Hessian product is incorrect (||delta|| = %g)", (double)diff);
+
+  /* At the same x, map = 2 I changes the mapped contribution to 8 x. */
+  PetscCall(MatScale(map, 2.0));
+  PetscCall(TaoComputeHessianMult(tao, x, v, Hv));
+  PetscCall(VecCopy(x, expected));
+  PetscCall(VecScale(expected, 8.0));
+  PetscCall(VecShift(expected, 1.0));
+  PetscCall(VecAXPY(expected, -1.0, Hv));
+  PetscCall(VecNorm(expected, NORM_2, &diff));
+  PetscCheck(diff <= 1.e-10, comm, PETSC_ERR_PLIB, "Mapped Hessian product did not track the changed map state (||delta|| = %g)", (double)diff);
+  PetscCall(PetscPrintf(comm, "TAOTERMSUM Hessian-mult cache tracks mapping matrix state\n"));
+
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&v));
+  PetscCall(VecDestroy(&Hv));
+  PetscCall(VecDestroy(&expected));
+  PetscCall(MatDestroy(&map));
+  PetscCall(TaoDestroy(&tao));
+  PetscCall(TaoTermDestroy(&mapped_term));
+  PetscCall(TaoTermDestroy(&other_term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   MPI_Comm    comm;
   PetscMPIInt size;
-  PetscInt    n           = 4;
-  PetscBool   mask_all    = PETSC_FALSE;
-  PetscBool   test_mapped = PETSC_FALSE;
-  PetscBool   test_scaled = PETSC_FALSE;
+  PetscInt    n              = 4;
+  PetscBool   mask_all       = PETSC_FALSE;
+  PetscBool   test_mapped    = PETSC_FALSE;
+  PetscBool   test_scaled    = PETSC_FALSE;
+  PetscBool   test_map_state = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -282,8 +369,10 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-mask_all", &mask_all, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_mapped", &test_mapped, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_scaled", &test_scaled, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_map_state", &test_map_state, NULL));
 
-  if (test_scaled) PetscCall(TestScaledHessianMult(comm, n));
+  if (test_map_state) PetscCall(TestMapState(comm, n));
+  else if (test_scaled) PetscCall(TestScaledHessianMult(comm, n));
   else if (test_mapped) PetscCall(TestMappedSeparateHpre(comm));
   else PetscCall(TestMasked(comm, n, mask_all));
 
@@ -334,6 +423,13 @@ static PetscErrorCode FormDiagHessian(TaoTerm term, Vec x, Vec params, Mat H, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode FormDiagHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  PetscFunctionBeginUser;
+  PetscCall(VecPointwiseMult(Hv, x, v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* H = I and Hpre = 2 I: deliberately different so the consumer of the wrong
    matrix is detectable. */
 static PetscErrorCode FormConstHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
@@ -375,5 +471,9 @@ static PetscErrorCode FormConstHessian(TaoTerm term, Vec x, Vec params, Mat H, M
    test:
      suffix: scaled_hessian_mult
      args: -n 4 -test_scaled
+
+   test:
+     suffix: map_state
+     args: -n 4 -test_map_state -tao_term_hessian_mat_type shell
 
 TEST*/

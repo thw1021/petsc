@@ -9,8 +9,10 @@ typedef struct _n_TaoTerm_Sum TaoTerm_Sum;
 typedef struct _n_TaoTermSumHessCacheEntry {
   PetscObjectId    x_id;
   PetscObjectId    p_id;
+  PetscObjectId    map_id;
   PetscObjectState x_state;
   PetscObjectState p_state;
+  PetscObjectState map_state;
   PetscBool        hessian_valid; /* set when entry->hessian has been computed at the recorded key */
   PetscBool        Ax_valid;      /* set when entry->Ax has been computed at the recorded x */
   Mat              hessian;
@@ -68,8 +70,10 @@ static PetscErrorCode TaoTermSumHessCacheResetEntry(TaoTermSumHessCache *cache, 
   PetscCall(VecDestroy(&entry->Ax));
   entry->x_id          = 0;
   entry->p_id          = 0;
+  entry->map_id        = 0;
   entry->x_state       = 0;
   entry->p_state       = 0;
+  entry->map_state     = 0;
   entry->hessian_valid = PETSC_FALSE;
   entry->Ax_valid      = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -96,13 +100,15 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   Cache layout: one entry per summand, lazily sized to sum->n_terms.  If sum->n_terms changes
   the whole cache is dropped (size mismatch -> reset -> realloc).  Each entry owns one Mat and
   one Vec, both lazily allocated when first needed.  Two validity bits track whether the
-  matrix and vector are fresh for the recorded (x, params) key.  The vector key only depends
-  on x; we conservatively invalidate Ax whenever the joint key changes, which costs at most
-  one redundant MatMult per param change.
+  matrix and vector are fresh for the recorded (x, params, map) key.  Ax depends on x and the
+  map; we conservatively invalidate it on a parameter change as well, which costs at most one
+  redundant MatMult per parameter change.
 
-  Cache key: matching (x_id, x_state, p_id, p_state).  When params is NULL we treat
-  (p_id, p_state) as (0, 0) on both sides, which is consistent because PetscObjectId never
-  returns 0 for a real PetscObject.
+  Cache key: matching (x_id, x_state, p_id, p_state, map_id, map_state).  When params or the
+  map is NULL we treat its (id, state) as (0, 0) on both sides, which is consistent because
+  PetscObjectId never returns 0 for a real PetscObject.  Including the map ensures that an
+  in-place update between Hessian evaluations invalidates both cached Ax and any Hessian
+  evaluated at that mapped point, while an unchanged map remains cached across Krylov products.
 
   TODO: Perhaps add Hessian state to cache, if we want to allow users to play with
   Hessian outside of Tao-world.
@@ -117,16 +123,17 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   cache reuses that externally-provided matrix as its assembly target.  That aliasing is safe
   because the assembled-Hessian path the no-alias rule guards against is never invoked while the
   outer Hessian is matrix-free, which is the only context in which this Hessian-vector path runs.
-  Because the cache recomputes its matrix from summand->term's Hessian callback, the only
-  reconfiguration it must react to is replacing the subterm, handled by TaoTermSumSetTerm_Sum().
-  entry->Ax is allocated via MatCreateVecs() on summand->map the first time. */
+  Because the cache recomputes its matrix from summand->term's Hessian callback, replacing the
+  subterm is handled by TaoTermSumSetTerm_Sum(), while in-place changes to the mapping matrix
+  are detected by its object state in the cache key.  entry->Ax is allocated via MatCreateVecs()
+  on summand->map the first time. */
 static PetscErrorCode TaoTermSumHessCacheEntryPrepare(TaoTerm term, Vec x, Vec params, TaoTermSumHessCache *cache, PetscInt index, TaoTermMapping **summand_out, TaoTermSumHessCacheEntry **entry_out)
 {
   TaoTerm_Sum              *sum = (TaoTerm_Sum *)term->data;
   TaoTermMapping           *summand;
   TaoTermSumHessCacheEntry *entry;
-  PetscObjectId             x_id, p_id       = 0;
-  PetscObjectState          x_state, p_state = 0;
+  PetscObjectId             x_id, p_id = 0, map_id = 0;
+  PetscObjectState          x_state, p_state = 0, map_state = 0;
 
   PetscFunctionBegin;
   PetscCheck(index >= 0 && index < sum->n_terms, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", index, sum->n_terms);
@@ -143,11 +150,17 @@ static PetscErrorCode TaoTermSumHessCacheEntryPrepare(TaoTerm term, Vec x, Vec p
     PetscCall(PetscObjectGetId((PetscObject)params, &p_id));
     PetscCall(PetscObjectStateGet((PetscObject)params, &p_state));
   }
-  if (entry->x_id != x_id || entry->x_state != x_state || entry->p_id != p_id || entry->p_state != p_state) {
+  if (summand->map) {
+    PetscCall(PetscObjectGetId((PetscObject)summand->map, &map_id));
+    PetscCall(PetscObjectStateGet((PetscObject)summand->map, &map_state));
+  }
+  if (entry->x_id != x_id || entry->x_state != x_state || entry->p_id != p_id || entry->p_state != p_state || entry->map_id != map_id || entry->map_state != map_state) {
     entry->x_id          = x_id;
     entry->x_state       = x_state;
     entry->p_id          = p_id;
     entry->p_state       = p_state;
+    entry->map_id        = map_id;
+    entry->map_state     = map_state;
     entry->hessian_valid = PETSC_FALSE;
     entry->Ax_valid      = PETSC_FALSE;
   }
