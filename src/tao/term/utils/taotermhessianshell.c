@@ -9,8 +9,11 @@ static PetscErrorCode TaoTermHessianShellDestroy(PetscCtxRt ctx)
   PetscCall(VecDestroy(&hess->x));
   PetscCall(VecDestroy(&hess->params));
   PetscCall(VecDestroy(&hess->Ax));
+  if (hess->mt) {
+    PetscCall(TaoTermMappingReset(hess->mt));
+    PetscCall(PetscFree(hess->mt));
+  }
   PetscCall(TaoTermDestroy(&hess->term));
-  /* hess->mt is borrowed and not destroyed here */
   PetscCall(PetscFree(hess));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -44,6 +47,15 @@ PETSC_INTERN PetscErrorCode TaoTermHessianShellCheck(TaoTermHessianShell *hess, 
     if (!hess->params_state_change_warning && params_state != hess->params_state) {
       hess->params_state_change_warning = PETSC_TRUE;
       PetscCall(PetscInfo(hess->term, "parameter vector may have changed since TaoTermUpdateHessianShell() was called\n"));
+    }
+  }
+  if (hess->mt && hess->mt->map) {
+    PetscObjectState map_state;
+
+    PetscCall(PetscObjectStateGet((PetscObject)hess->mt->map, &map_state));
+    if (!hess->map_state_change_warning && map_state != hess->map_state) {
+      hess->map_state_change_warning = PETSC_TRUE;
+      PetscCall(PetscInfo(hess->term, "mapping matrix has changed since the Hessian shell was refreshed\n"));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -159,7 +171,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianShell(TaoTermMapping *mt,
   PetscCall(PetscNew(&hess));
   PetscCall(PetscObjectReference((PetscObject)mt->term));
   hess->term = mt->term;
-  hess->mt   = mt;
+  PetscCall(PetscNew(&hess->mt));
+  PetscCall(TaoTermMappingSetData(hess->mt, NULL, mt->scale, mt->term, mt->map));
+  hess->mt->mask = mt->mask;
   PetscCall(MatShellSetContext(*shell, hess));
   PetscCall(MatShellSetOperation(*shell, MATOP_MULT, (void (*)(void))MatMult_TaoTermHessianShell));
   PetscCall(MatSetOption(*shell, MAT_SYMMETRIC, PETSC_TRUE));
@@ -233,13 +247,23 @@ PetscErrorCode TaoTermUpdateHessianShell(TaoTerm term, Mat shell, Vec x, Vec par
 . params - the current parameter vector (or `NULL`)
 - M      - on entry, the candidate matrix to inspect; on exit, NULL when `*M` was a shell
 */
-static PetscErrorCode MaybeUpdateOneShell(TaoTerm term, Vec x, Vec params, Mat *M)
+static PetscErrorCode MaybeUpdateOneShell(TaoTerm term, TaoTermMapping *mt, Vec x, Vec params, Mat *M)
 {
-  PetscContainer marker = NULL;
+  PetscContainer       marker = NULL;
+  TaoTermHessianShell *hess;
 
   PetscFunctionBegin;
   if (*M) PetscCall(PetscObjectQuery((PetscObject)*M, "__TaoTermHessianShell", (PetscObject *)&marker));
   if (marker) {
+    PetscCall(MatShellGetContext(*M, &hess));
+    if (mt) {
+      PetscCheck(hess->mt, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "Hessian shell matrix does not come from a TaoTermMapping");
+      if (hess->mt->map != mt->map) PetscCall(VecDestroy(&hess->Ax));
+      PetscCall(TaoTermMappingSetData(hess->mt, NULL, mt->scale, mt->term, mt->map));
+      hess->mt->mask = mt->mask;
+      PetscCall(PetscObjectStateGet((PetscObject)hess->mt->map, &hess->map_state));
+      hess->map_state_change_warning = PETSC_FALSE;
+    }
     PetscCall(TaoTermUpdateHessianShell(term, *M, x, params));
     *M = NULL;
   }
@@ -275,8 +299,19 @@ PETSC_INTERN PetscErrorCode TaoTermPreprocessHessianShells(TaoTerm term, Vec x, 
   PetscBool Hpre_is_H = (*Hpre == *H) ? PETSC_TRUE : PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(MaybeUpdateOneShell(term, x, params, H));
+  PetscCall(MaybeUpdateOneShell(term, NULL, x, params, H));
   if (Hpre_is_H && !*H) *Hpre = NULL;
-  PetscCall(MaybeUpdateOneShell(term, x, params, Hpre));
+  PetscCall(MaybeUpdateOneShell(term, NULL, x, params, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermMappingPreprocessHessianShells(TaoTermMapping *mt, Vec x, Vec params, Mat *H, Mat *Hpre)
+{
+  PetscBool Hpre_is_H = (*Hpre == *H) ? PETSC_TRUE : PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(MaybeUpdateOneShell(mt->term, mt, x, params, H));
+  if (Hpre_is_H && !*H) *Hpre = NULL;
+  PetscCall(MaybeUpdateOneShell(mt->term, mt, x, params, Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

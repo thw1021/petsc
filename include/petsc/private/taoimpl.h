@@ -340,4 +340,5 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTe
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);
 
 PETSC_INTERN PetscErrorCode TaoTermPreprocessHessianShells(TaoTerm, Vec, Vec, Mat *, Mat *);
+PETSC_INTERN PetscErrorCode TaoTermMappingPreprocessHessianShells(TaoTermMapping *, Vec, Vec, Mat *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianShell(TaoTermMapping *, Mat *);

@@ -191,6 +191,18 @@ static PetscErrorCode TestMappedSeparateHpre(MPI_Comm comm)
   PetscCall(VecRestoreArrayRead(Hv, &da));
   PetscCheck(diff <= 1.e-10, comm, PETSC_ERR_PLIB, "MATSHELL Hessian of the mapped sum applied the wrong operator (max error %g)", (double)diff);
 
+  /* The returned shell is independently referenced and must not borrow the
+     mapping storage owned by the sum. */
+  PetscCall(MatDestroy(&P));
+  PetscCall(TaoTermDestroy(&sum));
+  PetscCall(TaoTermDestroy(&term));
+  PetscCall(MatMult(H, v, Hv));
+  PetscCall(VecGetArrayRead(Hv, &da));
+  diff = 0.0;
+  for (PetscInt i = 0; i < n; i++) diff = PetscMax(diff, PetscAbsReal(PetscRealPart(da[i]) - Hv_ex[i]));
+  PetscCall(VecRestoreArrayRead(Hv, &da));
+  PetscCheck(diff <= 1.e-10, comm, PETSC_ERR_PLIB, "Retained mapped Hessian shell borrowed destroyed TaoTermMapping storage (max error %g)", (double)diff);
+
   PetscCall(PetscPrintf(comm, "Mapped summand with MATSHELL Hessian and separate assembled Hpre is consistent\n"));
 
   PetscCall(VecDestroy(&x));
@@ -199,9 +211,6 @@ static PetscErrorCode TestMappedSeparateHpre(MPI_Comm comm)
   PetscCall(VecDestroy(&diag));
   PetscCall(MatDestroy(&H));
   PetscCall(MatDestroy(&Hpre));
-  PetscCall(MatDestroy(&P));
-  PetscCall(TaoTermDestroy(&sum));
-  PetscCall(TaoTermDestroy(&term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

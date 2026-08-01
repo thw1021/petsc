@@ -408,7 +408,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
   if (mt->map) {
     /* A matrix-free (shell) outer Hessian applies map^H (grad^2 f)(map x) map lazily in MatMult();
        refresh its cached (x, params) here and skip assembly, mirroring TaoTermComputeHessian(). */
-    PetscCall(TaoTermPreprocessHessianShells(mt->term, x, params, &H, &Hpre));
+    PetscCall(TaoTermMappingPreprocessHessianShells(mt, x, params, &H, &Hpre));
     if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (TaoTermHessianMasked(mt->mask)) {
