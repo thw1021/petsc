@@ -311,11 +311,18 @@ pause-for-approval:
     # OTEL_METRIC_EXPORT_INTERVAL is short because `claude -p` exits as soon as the
     # review finishes; a slow interval would let the job die before metrics flush.
     CLAUDE_CODE_ENABLE_TELEMETRY: "1"
-    OTEL_METRICS_EXPORTER: otlp
+    # TEMPORARY DIAGNOSTIC: "otlp,console" also prints metrics to the job log so
+    # we can tell whether Claude Code emits any metrics at all vs. a delivery
+    # problem. OTEL_LOG_LEVEL=debug surfaces exporter errors. Revert to plain
+    # "otlp" once telemetry delivery is confirmed working.
+    OTEL_METRICS_EXPORTER: otlp,console
+    OTEL_LOG_LEVEL: debug
     OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
     OTEL_EXPORTER_OTLP_ENDPOINT: "$GRAFANA_CLOUD_OTLP_ENDPOINT"
     OTEL_EXPORTER_OTLP_HEADERS: "$GRAFANA_CLOUD_OTLP_AUTH"
-    OTEL_METRIC_EXPORT_INTERVAL: "5000"
+    # 1000ms so a full metric export completes DURING the review rather than in
+    # the bounded flush window at `claude -p` exit (headless drops late metrics).
+    OTEL_METRIC_EXPORT_INTERVAL: "1000"
     OTEL_RESOURCE_ATTRIBUTES: "ci.mr=$CI_MERGE_REQUEST_IID,ci.job=$CI_JOB_ID,ci.ref=$CI_COMMIT_REF_SLUG"
     OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: cumulative
   before_script:
