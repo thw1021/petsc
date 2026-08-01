@@ -8,11 +8,14 @@ Cell 'all_masked': when every summand is Hessian-masked the sum's assembled\n\
 Hessian must be zeroed and the matrix-free product must return zero.\n\
 Cell 'mapped_separate_hpre': a mapped summand whose term builds different H and\n\
 Hpre matrices, summed with a MATSHELL Hessian and a separate assembled Hpre;\n\
-the assembled Hpre must be P^T Hpre_term P, not P^T H_term P.\n\n";
+the assembled Hpre must be P^T Hpre_term P, not P^T H_term P.\n\
+Cell 'scaled_hessian_mult': a single term added to Tao with a non-unit top-level\n\
+scale must apply the same scale in TaoComputeHessianMult() as in TaoComputeHessian().\n\n";
 
 static PetscErrorCode FormObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormDiagHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode FormConstHessian(TaoTerm, Vec, Vec, Mat, Mat);
+static PetscErrorCode TestScaledHessianMult(MPI_Comm, PetscInt);
 
 /* TAOTERMSHELL with point-dependent Hessian H(x) = diag(x) (H == Hpre). */
 static PetscErrorCode CreateDiagonalHessianTerm(MPI_Comm comm, PetscInt n, TaoTerm *term_out)
@@ -214,6 +217,53 @@ static PetscErrorCode TestMappedSeparateHpre(MPI_Comm comm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestScaledHessianMult(MPI_Comm comm, PetscInt n)
+{
+  const PetscReal scales[] = {2.0, -1.0};
+  TaoTerm         term;
+  Vec             x, v, Hv, Hv_assembled;
+  PetscReal       diff;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermCreate(comm, &term));
+  PetscCall(TaoTermSetType(term, TAOTERMHALFL2SQUARED));
+  PetscCall(TaoTermSetSolutionSizes(term, PETSC_DECIDE, n, 1));
+  PetscCall(TaoTermSetUp(term));
+  PetscCall(TaoTermCreateSolutionVec(term, &x));
+  PetscCall(VecDuplicate(x, &v));
+  PetscCall(VecDuplicate(x, &Hv));
+  PetscCall(VecDuplicate(x, &Hv_assembled));
+  PetscCall(VecSet(x, 1.0));
+  PetscCall(VecSet(v, 1.0));
+
+  for (PetscInt i = 0; i < PETSC_STATIC_ARRAY_LENGTH(scales); i++) {
+    Tao tao;
+    Mat H, Hpre;
+
+    PetscCall(TaoCreate(comm, &tao));
+    PetscCall(TaoSetType(tao, TAONLS));
+    PetscCall(TaoSetSolution(tao, x));
+    PetscCall(TaoAddTerm(tao, NULL, scales[i], term, NULL, NULL));
+    PetscCall(TaoSetUp(tao));
+    PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
+    PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+    PetscCall(MatMult(H, v, Hv_assembled));
+    PetscCall(TaoComputeHessianMult(tao, x, v, Hv));
+    PetscCall(VecAXPY(Hv_assembled, -1.0, Hv));
+    PetscCall(VecNorm(Hv_assembled, NORM_2, &diff));
+    PetscCheck(diff <= 1.e-10, comm, PETSC_ERR_PLIB, "Assembled and matrix-free Hessian products disagree for top-level scale %g (||delta|| = %g)", (double)scales[i], (double)diff);
+    PetscCall(TaoDestroy(&tao));
+  }
+  PetscCall(PetscPrintf(comm, "TaoComputeHessianMult() applies the top-level objective scale\n"));
+
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&v));
+  PetscCall(VecDestroy(&Hv));
+  PetscCall(VecDestroy(&Hv_assembled));
+  PetscCall(TaoTermDestroy(&term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   MPI_Comm    comm;
@@ -221,6 +271,7 @@ int main(int argc, char **argv)
   PetscInt    n           = 4;
   PetscBool   mask_all    = PETSC_FALSE;
   PetscBool   test_mapped = PETSC_FALSE;
+  PetscBool   test_scaled = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -230,8 +281,10 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-mask_all", &mask_all, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_mapped", &test_mapped, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_scaled", &test_scaled, NULL));
 
-  if (test_mapped) PetscCall(TestMappedSeparateHpre(comm));
+  if (test_scaled) PetscCall(TestScaledHessianMult(comm, n));
+  else if (test_mapped) PetscCall(TestMappedSeparateHpre(comm));
   else PetscCall(TestMasked(comm, n, mask_all));
 
   PetscCall(PetscFinalize());
@@ -318,5 +371,9 @@ static PetscErrorCode FormConstHessian(TaoTerm term, Vec x, Vec params, Mat H, M
    test:
      suffix: mapped_separate_hpre
      args: -test_mapped
+
+   test:
+     suffix: scaled_hessian_mult
+     args: -n 4 -test_scaled
 
 TEST*/

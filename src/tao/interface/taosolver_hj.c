@@ -400,7 +400,7 @@ PetscErrorCode TaoComputeHessianMult(Tao tao, Vec X, Vec V, Vec HV)
   PetscValidHeaderSpecific(HV, VEC_CLASSID, 4);
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCheck(!tao->objective_term.map, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TaoComputeHessianMult() does not support an objective term added with a mapping matrix");
-  PetscCall(TaoTermComputeHessianMult(tao->objective_term.term, X, tao->objective_parameters, V, HV));
+  PetscCall(TaoTermMappingComputeHessianMult(&tao->objective_term, X, tao->objective_parameters, NULL, V, INSERT_VALUES, HV));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
