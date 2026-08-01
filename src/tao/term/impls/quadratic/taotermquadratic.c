@@ -206,6 +206,7 @@ PetscErrorCode TaoTermQuadraticSetMat(TaoTerm term, Mat A)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermQuadraticSetMat() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscValidHeaderSpecific(A, MAT_CLASSID, 2);
   PetscCheckSameComm(term, 1, A, 2);
   PetscTryMethod(term, "TaoTermQuadraticSetMat_C", (TaoTerm, Mat), (term, A));

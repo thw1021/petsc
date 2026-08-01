@@ -676,6 +676,7 @@ PetscErrorCode TaoTermSumSetNumberTerms(TaoTerm term, PetscInt n_terms)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermSumSetNumberTerms() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscValidLogicalCollectiveInt(term, n_terms, 2);
   PetscTryMethod(term, "TaoTermSumSetNumberTerms_C", (TaoTerm, PetscInt), (term, n_terms));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -813,6 +814,7 @@ PetscErrorCode TaoTermSumSetTerm(TaoTerm sumterm, PetscInt index, const char pre
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sumterm, TAOTERM_CLASSID, 1);
+  PetscCheck(!sumterm->setup_called, PetscObjectComm((PetscObject)sumterm), PETSC_ERR_ARG_WRONGSTATE, "TaoTermSumSetTerm() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscValidLogicalCollectiveInt(sumterm, index, 2);
   if (prefix) PetscAssertPointer(prefix, 3);
   if (term) PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 5);
@@ -870,6 +872,7 @@ PetscErrorCode TaoTermSumSetTermHessianMatrices(TaoTerm term, PetscInt index, Ma
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermSumSetTermHessianMatrices() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscValidLogicalCollectiveInt(term, index, 2);
   if (unmapped_H) PetscValidHeaderSpecific(unmapped_H, MAT_CLASSID, 3);
   if (unmapped_Hpre) PetscValidHeaderSpecific(unmapped_Hpre, MAT_CLASSID, 4);
@@ -1045,6 +1048,7 @@ PetscErrorCode TaoTermSumSetTermMask(TaoTerm term, PetscInt index, TaoTermMask m
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermSumSetTermMask() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscValidLogicalCollectiveInt(term, index, 2);
   PetscTryMethod(term, "TaoTermSumSetTermMask_C", (TaoTerm, PetscInt, TaoTermMask), (term, index, mask));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1085,6 +1089,7 @@ PetscErrorCode TaoTermSumAddTerm(TaoTerm sumterm, const char prefix[], PetscReal
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sumterm, TAOTERM_CLASSID, 1);
+  PetscCheck(!sumterm->setup_called, PetscObjectComm((PetscObject)sumterm), PETSC_ERR_ARG_WRONGSTATE, "TaoTermSumAddTerm() must be called before TaoTermSetUp() or TaoSetUp()");
   if (prefix) PetscAssertPointer(prefix, 2);
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
   PetscValidLogicalCollectiveReal(sumterm, scale, 3);

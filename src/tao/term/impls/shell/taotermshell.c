@@ -209,6 +209,7 @@ PetscErrorCode TaoTermShellSetObjective(TaoTerm term, TaoTermObjectiveFn *object
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetObjective() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetObjective_C", (TaoTerm, TaoTermObjectiveFn *), (term, objective));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -242,6 +243,7 @@ PetscErrorCode TaoTermShellSetGradient(TaoTerm term, TaoTermGradientFn *gradient
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetGradient() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetGradient_C", (TaoTerm, TaoTermGradientFn *), (term, gradient));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -275,6 +277,7 @@ PetscErrorCode TaoTermShellSetObjectiveAndGradient(TaoTerm term, TaoTermObjectiv
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetObjectiveAndGradient() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetObjectiveAndGradient_C", (TaoTerm, TaoTermObjectiveAndGradientFn *), (term, objandgrad));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -308,6 +311,7 @@ PetscErrorCode TaoTermShellSetHessian(TaoTerm term, TaoTermHessianFn *hessian)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetHessian() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetHessian_C", (TaoTerm, TaoTermHessianFn *), (term, hessian));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -342,6 +346,7 @@ PetscErrorCode TaoTermShellSetHessianMult(TaoTerm term, TaoTermHessianMultFn *he
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetHessianMult() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetHessianMult_C", (TaoTerm, TaoTermHessianMultFn *), (term, hessianmult));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -384,6 +389,7 @@ PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible(TaoTerm term, PetscBool
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetIsComputeHessianFDPossible() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetIsComputeHessianFDPossible_C", (TaoTerm, PetscBool3), (term, ispossible));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -456,6 +462,7 @@ PetscErrorCode TaoTermShellSetCreateSolutionVec(TaoTerm term, PetscErrorCode (*c
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetCreateSolutionVec() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetCreateSolutionVec_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *)), (term, createsolutionvec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -482,6 +489,7 @@ PetscErrorCode TaoTermShellSetCreateParametersVec(TaoTerm term, PetscErrorCode (
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetCreateParametersVec() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetCreateParametersVec_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *)), (term, createparametersvec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -523,6 +531,7 @@ PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm term, PetscErrorCode
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetCreateHessianMatrices() must be called before TaoTermSetUp() or TaoSetUp()");
   PetscTryMethod(term, "TaoTermShellSetCreateHessianMatrices_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Mat *, Mat *)), (term, createmats));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
