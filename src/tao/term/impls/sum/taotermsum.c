@@ -1427,7 +1427,10 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
 
     /* A Hessian-masked summand contributes nothing: TaoTermMappingComputeHessian() and
        TaoTermMappingComputeHessianMult() both return before touching its matrices, so do
-       not require it to be able to create them (it may define no Hessian at all). */
+       not require it to be able to create them (it may define no Hessian at all).
+
+       TODO: If changing masks after setup becomes supported, unmasking a mapped summand
+       must create its mapped Hessian and MatProduct state before Hessian evaluation. */
     if (TaoTermHessianMasked(summand->mask)) continue;
     if (H_is_shell && (!Hpre || term->Hpre_is_H)) sub_Hpre_is_H = PETSC_TRUE;
     else {

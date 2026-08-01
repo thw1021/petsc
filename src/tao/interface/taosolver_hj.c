@@ -22,10 +22,17 @@
 
   Level: beginner
 
+  Note:
+  This routine must generally be called before `TaoAddTerm()`. Once `TaoAddTerm()` has replaced the callback objective,
+  Hessian routines and matrix creation must be configured on the individual `TaoTerm`s instead. The exception is
+  `TaoDefaultComputeHessian()`, which finite differences the gradient of the active objective and is used by `-tao_fd_hessian`.
+
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, `TaoGetHessian()`
 @*/
 PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec x, Mat H, Mat Hpre, PetscCtx ctx), PetscCtx ctx)
 {
+  PetscBool is_callbacks;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (H) {
@@ -36,6 +43,8 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
     PetscCheckSameComm(tao, 1, Hpre, 3);
   }
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callbacks));
+  PetscCheck(is_callbacks || func == TaoDefaultComputeHessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Cannot call TaoSetHessian() with this callback after TaoAddTerm() has replaced the callback objective; configure Hessian routines and matrix creation on the individual TaoTerms instead");
   PetscCall(TaoTermCallbacksSetHessian(tao->callbacks, func, ctx));
   if (H) {
     PetscCall(PetscObjectReference((PetscObject)H));
