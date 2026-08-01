@@ -104,6 +104,9 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   (p_id, p_state) as (0, 0) on both sides, which is consistent because PetscObjectId never
   returns 0 for a real PetscObject.
 
+  TODO: Perhaps add Hessian state to cache, if we want to allow users to play with
+  Hessian outside of Tao-world.
+
   Storage backing entry->hessian: normally a matrix the cache owns outright, allocated lazily via
   TaoTermCreateHessianMatrices() on summand->term.  It deliberately does NOT alias
   summand->_unmapped_H, which the assembled-Hessian path (TaoTermComputeHessian_Sum()) also
