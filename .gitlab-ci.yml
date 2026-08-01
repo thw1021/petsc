@@ -303,6 +303,28 @@ pause-for-approval:
   stage: .pre
   tags:
     - feature:ai
+  variables:
+    # Export Claude Code token/cost metrics via OTLP directly to the Grafana Cloud
+    # OTLP gateway, for cross-run Grafana dashboards. The endpoint and auth header
+    # are masked GitLab CI/CD variables; GRAFANA_CLOUD_OTLP_AUTH holds the secret
+    # token (Authorization=Basic%20...) and must never be committed.
+    # OTEL_METRIC_EXPORT_INTERVAL is short because `claude -p` exits as soon as the
+    # review finishes; a slow interval would let the job die before metrics flush.
+    CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+    # TEMPORARY DIAGNOSTIC: "otlp,console" also prints metrics to the job log so
+    # we can tell whether Claude Code emits any metrics at all vs. a delivery
+    # problem. OTEL_LOG_LEVEL=debug surfaces exporter errors. Revert to plain
+    # "otlp" once telemetry delivery is confirmed working.
+    OTEL_METRICS_EXPORTER: otlp,console
+    OTEL_LOG_LEVEL: debug
+    OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+    OTEL_EXPORTER_OTLP_ENDPOINT: "$GRAFANA_CLOUD_OTLP_ENDPOINT"
+    OTEL_EXPORTER_OTLP_HEADERS: "$GRAFANA_CLOUD_OTLP_AUTH"
+    # 1000ms so a full metric export completes DURING the review rather than in
+    # the bounded flush window at `claude -p` exit (headless drops late metrics).
+    OTEL_METRIC_EXPORT_INTERVAL: "1000"
+    OTEL_RESOURCE_ATTRIBUTES: "ci.mr=$CI_MERGE_REQUEST_IID,ci.job=$CI_JOB_ID,ci.ref=$CI_COMMIT_REF_SLUG"
+    OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: cumulative
   before_script:
     - date
     - hostname
@@ -338,6 +360,65 @@ ai-review:
   parallel:
     matrix:
       - ANTHROPIC_MODEL: [haiku, sonnet, opus]
+
+# TEMPORARY: diagnose whether the AI-review runner can reach the Grafana Cloud
+# OTLP gateway. Runs on the same runner as .ai-review. Delete once egress is
+# confirmed. Does not invoke claude, so it consumes no review tokens.
+otlp-connectivity-test:
+  stage: .pre
+  tags:
+    - feature:ai
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+  allow_failure: true
+  variables:
+    OTEL_EXPORTER_OTLP_ENDPOINT: "$GRAFANA_CLOUD_OTLP_ENDPOINT"
+    OTEL_EXPORTER_OTLP_HEADERS: "$GRAFANA_CLOUD_OTLP_AUTH"
+  script:
+    - date
+    - hostname
+    - test -n "$OTEL_EXPORTER_OTLP_ENDPOINT" || { echo "GRAFANA_CLOUD_OTLP_ENDPOINT not set"; exit 1; }
+    - test -n "$OTEL_EXPORTER_OTLP_HEADERS" || { echo "GRAFANA_CLOUD_OTLP_AUTH not set"; exit 1; }
+    - |
+      host=$(echo "$OTEL_EXPORTER_OTLP_ENDPOINT" | sed -E 's#^https?://([^/]+)/.*#\1#')
+      echo "== DNS resolution for $host =="
+      getent hosts "$host" || echo "DNS resolution FAILED"
+      echo "== authenticated OTLP probe =="
+      # OTEL header form "Authorization=Basic%20TOKEN" -> curl form "Authorization: Basic TOKEN"
+      hdr="${OTEL_EXPORTER_OTLP_HEADERS/=/: }"
+      hdr="${hdr//%20/ }"
+      code=$(curl -sS -o /tmp/otlp.out -w '%{http_code}' --max-time 20 \
+        -X POST "$OTEL_EXPORTER_OTLP_ENDPOINT/v1/metrics" \
+        -H "Content-Type: application/x-protobuf" \
+        -H "$hdr" \
+        --data-binary "" || echo 000)
+      echo "OTLP probe HTTP $code"
+      cat /tmp/otlp.out 2>/dev/null || true
+      echo
+      case "$code" in
+        200|400) echo "RESULT: EGRESS OK (reached gateway, auth accepted)";;
+        401|403) echo "RESULT: reached gateway but AUTH FAILED - check GRAFANA_CLOUD_OTLP_AUTH"; exit 1;;
+        000)     echo "RESULT: EGRESS BLOCKED - no route/DNS/timeout to Grafana Cloud"; exit 1;;
+        *)       echo "RESULT: unexpected HTTP $code - inspect body above"; exit 1;;
+      esac
+      echo "== writing a real gauge datapoint for dashboard visualization =="
+      # Sends metric petsc_otlp_selftest=42 so a queryable series appears in Grafana.
+      # Query it in Explore as: petsc_otlp_selftest
+      ns=$(date +%s)000000000
+      payload="{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"petsc-otlp-selftest\"}},{\"key\":\"ci.job\",\"value\":{\"stringValue\":\"$CI_JOB_ID\"}}]},\"scopeMetrics\":[{\"metrics\":[{\"name\":\"petsc_otlp_selftest\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42,\"timeUnixNano\":\"$ns\"}]}}]}]}]}"
+      dcode=$(curl -sS -o /tmp/otlp2.out -w '%{http_code}' --max-time 20 \
+        -X POST "$OTEL_EXPORTER_OTLP_ENDPOINT/v1/metrics" \
+        -H "Content-Type: application/json" \
+        -H "$hdr" \
+        --data-binary "$payload" || echo 000)
+      echo "gauge write HTTP $dcode"
+      cat /tmp/otlp2.out 2>/dev/null || true
+      echo
+      case "$dcode" in
+        200) echo "RESULT: DATAPOINT SENT - query 'petsc_otlp_selftest' in Grafana Explore (last 15 min), expect value 42";;
+        *)   echo "RESULT: datapoint write returned HTTP $dcode - inspect body above"; exit 1;;
+      esac
 
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
