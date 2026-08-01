@@ -5863,10 +5863,13 @@ PetscErrorCode DMPlexComputeResidualHybridByKey(DM dm, PetscFormKey key[], IS ce
       key[0].field = f;
       key[1].field = f;
       key[2].field = f;
+      if (ds->printIntegrate) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Integrating hybrid residual negative side for field %d\n", f));
       PetscCall(PetscFEIntegrateHybridResidual(ds, dsIn, key[0], 0, Ne, chunkGeomF, chunkGeomN, u, u_t, dsAux[0], a[0], t, elemVecNeg));
       PetscCall(PetscFEIntegrateHybridResidual(ds, dsIn, key[0], 0, Nr, remGeomF, remGeomN, &u[offset * totDimIn], PetscSafePointerPlusOffset(u_t, offset * totDimIn), dsAux[0], PetscSafePointerPlusOffset(a[0], offset * totDimAux[0]), t, &elemVecNeg[offset * totDim]));
+      if (ds->printIntegrate) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Integrating hybrid residual positive side for field %d\n", f));
       PetscCall(PetscFEIntegrateHybridResidual(ds, dsIn, key[1], 1, Ne, chunkGeomF, chunkGeomN, u, u_t, dsAux[1], a[1], t, elemVecPos));
       PetscCall(PetscFEIntegrateHybridResidual(ds, dsIn, key[1], 1, Nr, remGeomF, remGeomN, &u[offset * totDimIn], PetscSafePointerPlusOffset(u_t, offset * totDimIn), dsAux[1], PetscSafePointerPlusOffset(a[1], offset * totDimAux[1]), t, &elemVecPos[offset * totDim]));
+      if (ds->printIntegrate) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Integrating hybrid residual cohesive side for field %d\n", f));
       PetscCall(PetscFEIntegrateHybridResidual(ds, dsIn, key[2], 2, Ne, chunkGeomF, chunkGeomN, u, u_t, dsAux[2], a[2], t, elemVecCoh));
       PetscCall(PetscFEIntegrateHybridResidual(ds, dsIn, key[2], 2, Nr, remGeomF, remGeomN, &u[offset * totDimIn], PetscSafePointerPlusOffset(u_t, offset * totDimIn), dsAux[2], PetscSafePointerPlusOffset(a[2], offset * totDimAux[2]), t, &elemVecCoh[offset * totDim]));
       PetscCall(PetscFEGeomRestoreChunk(geomF, offset, numCells, &remGeomF));
@@ -6448,7 +6451,7 @@ end: {
 
   if (dmAux) PetscCall(DMDestroy(&plex));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gassOp, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)dm)));
-  if (hasJac && hasPrec) {
+  if (gassOp) {
     PetscCall(MatAssemblyBegin(Jac, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(Jac, MAT_FINAL_ASSEMBLY));
   }
@@ -6695,7 +6698,7 @@ end: {
 
   if (dmAux) PetscCall(DMDestroy(&plex));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gassOp, 1, MPI_C_BOOL, MPI_LOR, comm));
-  if (hasJac && hasPrec) {
+  if (gassOp) {
     PetscCall(MatAssemblyBegin(Jac, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(Jac, MAT_FINAL_ASSEMBLY));
   }

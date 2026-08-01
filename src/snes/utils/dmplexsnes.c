@@ -325,6 +325,61 @@ PetscErrorCode DMPlexSNESComputeObjectiveFEM(DM dm, Vec X, PetscReal *obj, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// keys must be an array of size 3
+static PetscErrorCode DMPlexGetHybridKeys(DM dm, PetscDS ds, PetscBool *hasHybrid, PetscFormKey keys[])
+{
+  PetscWeakForm wf;
+  PetscFormKey *bdf0keys, *bdf1keys;
+  PetscInt      bdf0Nk, bdf1Nk;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 2);
+  PetscAssertPointer(hasHybrid, 3);
+  PetscAssertPointer(keys, 4);
+  *hasHybrid = PETSC_FALSE;
+  PetscCall(PetscDSGetWeakForm(ds, &wf));
+  PetscCall(PetscWeakFormGetKeys(wf, PETSC_WF_BDF0, &bdf0Nk, &bdf0keys));
+  PetscCall(PetscWeakFormGetKeys(wf, PETSC_WF_BDF1, &bdf1Nk, &bdf1keys));
+  if (bdf0Nk + bdf1Nk > 1) {
+    DMLabel  label0 = NULL, label1 = NULL;
+    PetscInt value0A = 0, value0B = 0, value1 = 0;
+
+    // In the future, we need a way to construct the keys for both sides and the surface, and also the cellIS from the label
+    for (PetscInt i = 0; i < bdf0Nk; ++i) {
+      if (bdf0keys[i].field == 0) {
+        if (!label0) {
+          label0  = bdf0keys[i].label;
+          value0A = bdf0keys[i].value;
+          value0B = value0A;
+        } else if (bdf0keys[i].value != value0A) {
+          value0B = bdf0keys[i].value;
+        }
+      }
+      if (bdf0keys[i].field == 1) {
+        label1 = bdf0keys[i].label;
+        value1 = bdf0keys[i].value;
+      }
+    }
+    keys[0].label = label0;
+    keys[0].value = value0A;
+    keys[0].field = 0;
+    keys[0].part  = 0;
+    keys[1].label = label0;
+    keys[1].value = value0B;
+    keys[1].field = 0;
+    keys[1].part  = 1;
+    keys[2].label = label1;
+    keys[2].value = value1;
+    keys[2].field = 1;
+    keys[2].part  = 2;
+    *hasHybrid = PETSC_TRUE;
+  }
+  PetscCall(PetscFree(bdf0keys));
+  PetscCall(PetscFree(bdf1keys));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode CreateSurfaceCellIS_Private(DM dm, IS *cohesiveCells)
 {
   PetscInt    cMax, cEnd;
@@ -394,11 +449,8 @@ PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec locX, Vec locF, PetscCtx 
   for (s = 0; s < Nds; ++s) {
     PetscDS       ds;
     IS            cellIS;
-    PetscWeakForm wf;
-    PetscFormKey  key;
-    PetscFormKey  keys[3];
-    PetscFormKey *bdf0keys, *bdf1keys;
-    PetscInt      bdf0Nk, bdf1Nk;
+    PetscFormKey  key, keys[3];
+    PetscBool     hasHybrid;
 
     PetscCall(DMGetRegionNumDS(dm, s, &key.label, NULL, &ds, NULL));
     key.value = 0;
@@ -417,49 +469,15 @@ PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec locX, Vec locF, PetscCtx 
     }
     PetscCall(DMPlexComputeResidualByKey(plex, key, cellIS, PETSC_MIN_REAL, locX, NULL, 0.0, locF, ctx));
     PetscCall(ISDestroy(&cellIS));
-    // Hybrid evaluation
-    PetscCall(PetscDSGetWeakForm(ds, &wf));
-    PetscCall(PetscWeakFormGetKeys(wf, PETSC_WF_BDF0, &bdf0Nk, &bdf0keys));
-    PetscCall(PetscWeakFormGetKeys(wf, PETSC_WF_BDF1, &bdf1Nk, &bdf1keys));
-    if (bdf0Nk + bdf1Nk > 1) {
-      IS       cohesiveCells;
-      DMLabel  label0 = NULL, label1 = NULL;
-      PetscInt value0A = 0, value0B = 0, value1 = 0;
 
-      // In the future, we need a way to construct the keys for both sides and the surface, and also the cellIS from the label
-      for (PetscInt i = 0; i < bdf0Nk; ++i) {
-        if (bdf0keys[i].field == 0) {
-          if (!label0) {
-            label0  = bdf0keys[i].label;
-            value0A = bdf0keys[i].value;
-            value0B = value0A;
-          } else if (bdf0keys[i].value != value0A) {
-            value0B = bdf0keys[i].value;
-          }
-        }
-        if (bdf0keys[i].field == 1) {
-          label1 = bdf0keys[i].label;
-          value1 = bdf0keys[i].value;
-        }
-      }
-      keys[0].label = label0;
-      keys[0].value = value0A;
-      keys[0].field = 0;
-      keys[0].part  = 0;
-      keys[1].label = label0;
-      keys[1].value = value0B;
-      keys[1].field = 0;
-      keys[1].part  = 1;
-      keys[2].label = label1;
-      keys[2].value = value1;
-      keys[2].field = 1;
-      keys[2].part  = 2;
+    PetscCall(DMPlexGetHybridKeys(plex, ds, &hasHybrid, keys));
+    if (hasHybrid) {
+      IS cohesiveCells;
+
       PetscCall(CreateSurfaceCellIS_Private(plex, &cohesiveCells));
       PetscCall(DMPlexComputeResidualHybridByKey(plex, keys, cohesiveCells, PETSC_MIN_REAL, locX, NULL, 0.0, locF, ctx));
       PetscCall(ISDestroy(&cohesiveCells));
     }
-    PetscCall(PetscFree(bdf0keys));
-    PetscCall(PetscFree(bdf1keys));
   }
   PetscCall(ISDestroy(&allcellIS));
   PetscCall(DMDestroy(&plex));
@@ -669,9 +687,9 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, PetscCtx 
   DMPlexSNESComputeJacobianFEM - Form the local portion of the Jacobian matrix `Jac` at the local solution `X` using pointwise functions specified by the user.
 
   Input Parameters:
-+ dm  - The `DM`
-. X   - Local input vector
-- ctx - The application context
++ dm   - The `DM`
+. locX - Local input vector
+- ctx  - The application context
 
   Output Parameters:
 + Jac  - Jacobian matrix
@@ -685,7 +703,7 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, PetscCtx 
 
 .seealso: [](ch_snes), `DMPLEX`, `Mat`
 @*/
-PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, PetscCtx ctx)
+PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec locX, Mat Jac, Mat JacP, PetscCtx ctx)
 {
   DM        plex;
   IS        allcellIS;
@@ -699,7 +717,8 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, Pet
   for (PetscInt s = 0; s < Nds; ++s) {
     PetscDS      ds;
     IS           cellIS;
-    PetscFormKey key;
+    PetscFormKey key, keys[3];
+    PetscBool    hasHybrid;
 
     PetscCall(DMGetRegionNumDS(dm, s, &key.label, NULL, &ds, NULL));
     key.value = 0;
@@ -722,7 +741,17 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, Pet
       if (hasJac && hasPrec) PetscCall(MatZeroEntries(Jac));
       PetscCall(MatZeroEntries(JacP));
     }
-    PetscCall(DMPlexComputeJacobianByKey(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, ctx));
+    PetscCall(DMPlexGetHybridKeys(plex, ds, &hasHybrid, keys));
+    if (hasHybrid) {
+      IS cohesiveCells;
+
+      PetscCall(CreateSurfaceCellIS_Private(plex, &cohesiveCells));
+      PetscCall(DMPlexComputeJacobianHybridByKey(plex, keys, cohesiveCells, 0.0, 0.0, locX, NULL, Jac, JacP, ctx));
+      PetscCall(ISDestroy(&cohesiveCells));
+    }
+
+    // Compute normal cells second because this call assembles
+    PetscCall(DMPlexComputeJacobianByKey(plex, key, cellIS, 0.0, 0.0, locX, NULL, Jac, JacP, ctx));
     PetscCall(ISDestroy(&cellIS));
   }
   PetscCall(ISDestroy(&allcellIS));
