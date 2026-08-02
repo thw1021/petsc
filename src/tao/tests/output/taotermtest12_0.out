@@ -1,0 +1,3 @@
+TaoTerm masks and zero-scale contributions are correct
+TAOTERMSUM parameter modes and finite-difference gradients are correct
+Unmapped smooth-L1 and quadratic terms handle absent and present parameters correctly

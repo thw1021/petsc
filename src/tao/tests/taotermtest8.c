@@ -227,7 +227,7 @@ static PetscErrorCode TestOuterReconstruction(MPI_Comm comm, PetscLogEvent numer
   AppCtx ctx[2];
   Tao    tao;
   TaoTerm term[2];
-  Mat     H, Hpre, expected, map;
+  Mat     H, Hpre, expected, expected_pre, map;
   Vec     x;
   int     numeric[2], symbolic[2];
 
@@ -236,13 +236,13 @@ static PetscErrorCode TestOuterReconstruction(MPI_Comm comm, PetscLogEvent numer
   PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, 3, 3, 3, NULL, 3, NULL, &map));
   PetscCall(SetDiagonal(map, 1.0));
   for (PetscInt i = 0; i < 2; i++) {
-    ctx[i].Hpre_is_H = PETSC_TRUE;
+    ctx[i].Hpre_is_H = PETSC_FALSE;
     PetscCall(TaoTermCreateShell(comm, &ctx[i], NULL, &term[i]));
     PetscCall(TaoTermSetParametersMode(term[i], TAOTERM_PARAMETERS_NONE));
     PetscCall(TaoTermSetSolutionSizes(term[i], PETSC_DECIDE, 3, 1));
     PetscCall(TaoTermShellSetObjectiveAndGradient(term[i], FormObjectiveAndGradient));
     PetscCall(TaoTermShellSetCreateHessianMatrices(term[i], TaoTermCreateHessianMatricesDefault));
-    PetscCall(TaoTermSetCreateHessianMode(term[i], PETSC_TRUE, MATAIJ, NULL));
+    PetscCall(TaoTermSetCreateHessianMode(term[i], PETSC_FALSE, MATAIJ, MATAIJ));
     PetscCall(TaoTermShellSetHessian(term[i], FormHessian));
   }
   PetscCall(VecCreateMPI(comm, PETSC_DECIDE, 3, &x));
@@ -253,17 +253,27 @@ static PetscErrorCode TestOuterReconstruction(MPI_Comm comm, PetscLogEvent numer
   for (PetscInt i = 0; i < 2; i++) PetscCall(TaoAddTerm(tao, NULL, i + 1.0, term[i], NULL, map));
   PetscCall(TaoSetUp(tao));
   PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
+  PetscCheck(H != Hpre, comm, PETSC_ERR_PLIB, "Mapped sum lost its separate Hpre configuration");
+  PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
   PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+  PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
+  PetscCheck(numeric[1] - numeric[0] == 4 && symbolic[1] - symbolic[0] == 4, comm, PETSC_ERR_PLIB, "Two mapped summands with separate Hpre created %d numeric and %d symbolic PtAP products instead of four of each", numeric[1] - numeric[0], symbolic[1] - symbolic[0]);
+  PetscCall(CheckMappedMatrix(ctx[0].raw_H, map, 3.0, H));
+  PetscCall(CheckMappedMatrix(ctx[0].raw_Hpre, map, 3.0, Hpre));
   PetscCall(MatDuplicate(H, MAT_COPY_VALUES, &expected));
+  PetscCall(MatDuplicate(Hpre, MAT_COPY_VALUES, &expected_pre));
 
   PetscCall(MatShift(H, 7.0));
+  PetscCall(MatShift(Hpre, 11.0));
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
   PetscCall(TaoComputeHessian(tao, x, H, Hpre));
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
   PetscCheck(numeric[1] == numeric[0] && symbolic[1] == symbolic[0], comm, PETSC_ERR_PLIB, "Reconstructing a solver-modified outer Hessian recomputed unchanged mapped summand products");
   PetscCall(CheckMatricesEqual(expected, H, "Recomputing the Hessian did not remove a solver modification from the outer matrix"));
+  PetscCall(CheckMatricesEqual(expected_pre, Hpre, "Recomputing the Hessian did not remove a solver modification from the outer preconditioner"));
 
   PetscCall(MatDestroy(&expected));
+  PetscCall(MatDestroy(&expected_pre));
   PetscCall(TaoDestroy(&tao));
   for (PetscInt i = 0; i < 2; i++) PetscCall(TaoTermDestroy(&term[i]));
   PetscCall(VecDestroy(&x));
