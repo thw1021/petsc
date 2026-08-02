@@ -652,7 +652,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     }
   }
 
-  if (tao->objective_term.term != tao->callbacks) PetscCall(TaoTermSetFromOptions(tao->objective_term.term));
+  if (tao->objective_term.term != tao->callbacks && !tao->objective_term.term->setup_called) PetscCall(TaoTermSetFromOptions(tao->objective_term.term));
 
   PetscTryTypeMethod(tao, setfromoptions, PetscOptionsObject);
 
@@ -3049,6 +3049,8 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 
   Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`)
 
+  All terms must be added before `TaoSetUp()` or `TaoSolve()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`
 @*/
 PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
@@ -3059,6 +3061,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscCheck(!tao->setupcalled, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoAddTerm() must be called before TaoSetUp() or TaoSolve()");
   if (prefix) PetscAssertPointer(prefix, 2);
   PetscValidLogicalCollectiveReal(tao, scale, 3);
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
