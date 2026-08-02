@@ -1481,7 +1481,7 @@ M*/
 M*/
   #define PetscOptionsEnumArray(opt, text, man, list, value, n, set)                PetscOptionsEnumArray_Private(PetscOptionsObject, opt, text, man, list, value, n, set)
 
-  /*MC
+/*MC
   PetscOptionsDeprecated - mark an option as deprecated, optionally replacing it with `newname`.
   By default this will trigger a deprecation warning at runtime if `oldname` is in the options database.
 
@@ -1517,9 +1517,9 @@ M*/
 
 .seealso: `PetscOptionsDeprecatedNoObject()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsScalar()`, `PetscOptionsBool()`, `PetscOptionsString()`, `PetscOptionsSetValue()`
 M*/
-  #define PetscOptionsDeprecated(oldname, newname, version, info)                   PetscOptionsDeprecated_Private(PetscOptionsObject, oldname, newname, version, info)
+  #define PetscOptionsDeprecated(oldname, newname, version, info)                   PetscOptionsDeprecated_Private(PetscOptionsObject, NULL, oldname, newname, version, info)
 
-  /*MC
+/*MC
   PetscOptionsDeprecatedNoObject - mark an option as deprecated in the global `PetscOptionsObject`, optionally replacing it with `newname`.
   By default this will trigger a deprecation warning at runtime if `oldname` is in the options database.
 
@@ -1530,7 +1530,8 @@ M*/
   Logically Collective
 
   Input Parameters:
-+ oldname - the old, deprecated option
++ prefix  - prefix for the option, generally obtained with `((PetscObject)obj)->prefix`
+. oldname - the old, deprecated option
 . newname - the new option, or `NULL` if the option is removed and not simply renamed
 . version - a string describing the version of first deprecation, e.g. `"3.9"`
 - info    - additional information string, or `NULL`. Must be provided if `newname` is `NULL`
@@ -1555,7 +1556,7 @@ M*/
 
 .seealso: `PetscOptionsDeprecated()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsScalar()`, `PetscOptionsBool()`, `PetscOptionsString()`, `PetscOptionsSetValue()`
 M*/
-  #define PetscOptionsDeprecatedNoObject(oldname, newname, version, info)           PetscOptionsDeprecated_Private(NULL, oldname, newname, version, info)
+  #define PetscOptionsDeprecatedNoObject(prefix, oldname, newname, version, info)   PetscOptionsDeprecated_Private(NULL, prefix, oldname, newname, version, info)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 PETSC_EXTERN PetscErrorCode PetscOptionsEnum_Private(PetscOptionItems, const char[], const char[], const char[], const char *const *, PetscEnum, PetscEnum *, PetscBool *);
@@ -1578,7 +1579,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsIntArray_Private(PetscOptionItems, const
 PETSC_EXTERN PetscErrorCode PetscOptionsStringArray_Private(PetscOptionItems, const char[], const char[], const char[], char *[], PetscInt *, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscOptionsBoolArray_Private(PetscOptionItems, const char[], const char[], const char[], PetscBool[], PetscInt *, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscOptionsEnumArray_Private(PetscOptionItems, const char[], const char[], const char[], const char *const *, PetscEnum[], PetscInt *, PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems, const char[], const char[], const char[], const char[]);
+PETSC_EXTERN PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems, const char[], const char[], const char[], const char[], const char[]);
 
 PETSC_EXTERN PetscErrorCode PetscObjectAddOptionsHandler(PetscObject, PetscErrorCode (*)(PetscObject, PetscOptionItems, void *), PetscErrorCode (*)(PetscObject, void *), void *);
 PETSC_EXTERN PetscErrorCode PetscObjectProcessOptionsHandlers(PetscObject, PetscOptionItems);
