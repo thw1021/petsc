@@ -40,16 +40,16 @@ struct _TaoOps {
 typedef struct _n_TaoTermMapping TaoTermMapping;
 
 typedef struct {
-  PetscObjectId    raw_id;
-  PetscObjectId    map_id;
-  PetscObjectId    mapped_id;
-  PetscObjectState raw_state;
-  PetscObjectState map_state;
-  PetscObjectState mapped_state;
-  PetscObjectState raw_nonzero_state;
-  PetscObjectState map_nonzero_state;
-  PetscObjectState mapped_nonzero_state;
-  PetscBool        valid;
+  PetscObjectId    id;
+  PetscObjectState state;
+  PetscObjectState nonzero_state;
+} TaoTermMatSnapshot;
+
+typedef struct {
+  TaoTermMatSnapshot raw;
+  TaoTermMatSnapshot map;
+  TaoTermMatSnapshot mapped;
+  PetscBool          valid;
 } TaoTermMappedHessianState;
 
 /*S

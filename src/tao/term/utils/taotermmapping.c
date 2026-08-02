@@ -1,41 +1,52 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/matimpl.h>
 
+static PetscErrorCode TaoTermMatSnapshotGet(Mat mat, TaoTermMatSnapshot *snapshot)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetId((PetscObject)mat, &snapshot->id));
+  PetscCall(MatGetState(mat, &snapshot->state));
+  PetscCall(MatGetNonzeroState(mat, &snapshot->nonzero_state));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermMappedHessianStateGet(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *state)
 {
   PetscFunctionBegin;
-  PetscCall(PetscObjectGetId((PetscObject)raw, &state->raw_id));
-  PetscCall(PetscObjectGetId((PetscObject)map, &state->map_id));
-  PetscCall(PetscObjectGetId((PetscObject)mapped, &state->mapped_id));
-  PetscCall(MatGetState(raw, &state->raw_state));
-  PetscCall(MatGetState(map, &state->map_state));
-  PetscCall(MatGetState(mapped, &state->mapped_state));
-  PetscCall(MatGetNonzeroState(raw, &state->raw_nonzero_state));
-  PetscCall(MatGetNonzeroState(map, &state->map_nonzero_state));
-  PetscCall(MatGetNonzeroState(mapped, &state->mapped_nonzero_state));
+  PetscCall(TaoTermMatSnapshotGet(raw, &state->raw));
+  PetscCall(TaoTermMatSnapshotGet(map, &state->map));
+  PetscCall(TaoTermMatSnapshotGet(mapped, &state->mapped));
   state->valid = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *cached, PetscBool *updated)
+static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *cached, PetscBool *refreshed)
 {
   TaoTermMappedHessianState current;
-  Mat                       fresh = NULL;
-  PetscBool                 same_objects, same_structure;
+  Mat                       fresh             = NULL;
+  PetscBool                 structure_changed = PETSC_FALSE, values_changed = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(TaoTermMappedHessianStateGet(raw, map, mapped, &current));
-  same_objects   = (PetscBool)(cached->valid && cached->raw_id == current.raw_id && cached->map_id == current.map_id && cached->mapped_id == current.mapped_id);
-  same_structure = (PetscBool)(same_objects && cached->raw_nonzero_state == current.raw_nonzero_state && cached->map_nonzero_state == current.map_nonzero_state && cached->mapped_nonzero_state == current.mapped_nonzero_state);
-  *updated       = PETSC_FALSE;
-  if (!same_structure) {
-    PetscCall(MatPtAP(raw, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &fresh));
-    PetscCall(MatHeaderReplace(mapped, &fresh));
-    *updated = PETSC_TRUE;
-  } else if (cached->raw_state != current.raw_state || cached->map_state != current.map_state || cached->mapped_state != current.mapped_state) {
-    PetscCall(MatPtAP(raw, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped));
-    *updated = PETSC_TRUE;
+  if (!cached->valid) structure_changed = PETSC_TRUE;
+  else {
+    if (cached->raw.id != current.raw.id || cached->raw.nonzero_state != current.raw.nonzero_state) structure_changed = PETSC_TRUE;
+    if (cached->map.id != current.map.id || cached->map.nonzero_state != current.map.nonzero_state) structure_changed = PETSC_TRUE;
+    if (cached->mapped.id != current.mapped.id || cached->mapped.nonzero_state != current.mapped.nonzero_state) structure_changed = PETSC_TRUE;
+    if (cached->raw.state != current.raw.state || cached->map.state != current.map.state || cached->mapped.state != current.mapped.state) values_changed = PETSC_TRUE;
   }
+  *refreshed = PETSC_FALSE;
+  if (structure_changed) {
+    PetscCall(MatPtAP(raw, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &fresh));
+    /* `mapped` may already be referenced by Tao or KSP. Preserve its identity while replacing
+       the obsolete product implementation and symbolic data with those from `fresh`. */
+    PetscCall(MatHeaderReplace(mapped, &fresh));
+    *refreshed = PETSC_TRUE;
+  } else if (values_changed) {
+    PetscCall(MatPtAP(raw, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped));
+    *refreshed = PETSC_TRUE;
+  }
+  /* The caller records the final cache state after any term scaling has modified `mapped`. */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -407,12 +418,12 @@ static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode m
 */
 static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode mode, Mat H, Mat Hpre, Mat mapped_H, Mat mapped_Hpre, Mat unmapped_H, Mat unmapped_Hpre)
 {
-  PetscBool H_updated = PETSC_FALSE, Hpre_updated = PETSC_FALSE;
+  PetscBool H_refreshed = PETSC_FALSE, Hpre_refreshed = PETSC_FALSE;
 
   PetscFunctionBegin;
   if (mt->map) {
-    if (mapped_H) PetscCall(TaoTermMappingUpdateMappedHessian(unmapped_H, mt->map, mapped_H, &mt->mapped_H_state, &H_updated));
-    if (mapped_Hpre && mapped_Hpre != mapped_H) PetscCall(TaoTermMappingUpdateMappedHessian(unmapped_Hpre, mt->map, mapped_Hpre, &mt->mapped_Hpre_state, &Hpre_updated));
+    if (mapped_H) PetscCall(TaoTermMappingUpdateMappedHessian(unmapped_H, mt->map, mapped_H, &mt->mapped_H_state, &H_refreshed));
+    if (mapped_Hpre && mapped_Hpre != mapped_H) PetscCall(TaoTermMappingUpdateMappedHessian(unmapped_Hpre, mt->map, mapped_Hpre, &mt->mapped_Hpre_state, &Hpre_refreshed));
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -421,8 +432,8 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
     if (H && (mapped_H != H)) PetscCall(MatCopy(mapped_H, H, DIFFERENT_NONZERO_PATTERN));
     if (Hpre && (H != Hpre) && (mapped_Hpre != Hpre)) PetscCall(MatCopy(mapped_Hpre, Hpre, DIFFERENT_NONZERO_PATTERN));
     if (mt->scale != 1.0) {
-      if (H && (!mt->map || mapped_H != H || H_updated)) PetscCall(MatScale(H, mt->scale));
-      if (Hpre && Hpre != H && (!mt->map || mapped_Hpre != Hpre || Hpre_updated)) PetscCall(MatScale(Hpre, mt->scale));
+      if (H && (!mt->map || mapped_H != H || H_refreshed)) PetscCall(MatScale(H, mt->scale));
+      if (Hpre && Hpre != H && (!mt->map || mapped_Hpre != Hpre || Hpre_refreshed)) PetscCall(MatScale(Hpre, mt->scale));
     }
   }
   if (mt->map) {
