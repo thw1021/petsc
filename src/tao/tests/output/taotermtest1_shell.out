@@ -1,0 +1,10 @@
+        Hessian MatType (tao_term_hessian_mat_type): shell
+                Hessian MatType (tao_term_hessian_mat_type): seqaij
+                Hessian MatType (tao_term_hessian_mat_type): diagonal
+                total number of HessianMult evaluations=27
+                Hessian MatType (tao_term_hessian_mat_type): diagonal
+                total number of HessianMult evaluations=27
+                rows=1, cols=2
+        total number of HessianMult evaluations=27
+      rows=2, cols=2
+  Solution converged:    ||g(X)|| <= gatol

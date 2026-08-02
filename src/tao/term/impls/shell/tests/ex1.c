@@ -96,13 +96,6 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
     PetscCall(TaoTermShellSetCreateParametersVec(term, TaoTermCreateParametersVec_Test));
   }
 
-  PetscCall(TaoTermSetUp(term));
-
-  PetscCall(TaoTermGetSolutionSizes(term, NULL, &test_m, NULL));
-  PetscCall(TaoTermGetParametersSizes(term, NULL, &test_n, NULL));
-  PetscCheck(test_m == m, comm, PETSC_ERR_PLIB, "Inconsistent solution size");
-  PetscCheck(test_n == n, comm, PETSC_ERR_PLIB, "Inconsistent parameters size");
-
   if (separate) {
     PetscCall(TaoTermShellSetObjective(term, TaoTermComputeObjective_Test));
     PetscCall(TaoTermShellSetGradient(term, TaoTermComputeGradient_Test));
@@ -110,6 +103,13 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
     PetscCall(TaoTermShellSetObjectiveAndGradient(term, TaoTermComputeObjectiveAndGradient_Test));
     PetscCall(TaoTermShellSetView(term, TaoTermView_Test));
   }
+
+  PetscCall(TaoTermSetUp(term));
+
+  PetscCall(TaoTermGetSolutionSizes(term, NULL, &test_m, NULL));
+  PetscCall(TaoTermGetParametersSizes(term, NULL, &test_n, NULL));
+  PetscCheck(test_m == m, comm, PETSC_ERR_PLIB, "Inconsistent solution size");
+  PetscCheck(test_n == n, comm, PETSC_ERR_PLIB, "Inconsistent parameters size");
 
   PetscCall(TaoTermView(term, PETSC_VIEWER_STDOUT_(comm)));
 

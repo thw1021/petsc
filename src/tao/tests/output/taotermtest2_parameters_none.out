@@ -1,0 +1,10 @@
+        parameter vector space: (none)
+        Hessian MatType (tao_term_hessian_mat_type): aij
+                parameter vector space: (none)
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=10, cols=10
+                parameter vector space: (none)
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=12, cols=10
+  Solution converged:    ||g(X)|| <= gatol
+Least-squares TaoTerm operator check passed

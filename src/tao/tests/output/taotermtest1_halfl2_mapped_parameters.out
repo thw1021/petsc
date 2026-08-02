@@ -1,0 +1,7 @@
+        parameter vector space: (optional) K = 1 [VecType nest (tao_term_parameters_vec_type)]
+                parameter vector space: (none)
+                parameter vector space: (optional) K = 1 [VecType standard (tao_term_parameters_vec_type)]
+                rows=1, cols=2
+            rows=2, cols=2
+      rows=2, cols=2
+  Solution converged:    ||g(X)|| <= gatol

@@ -1,0 +1,23 @@
+        Hessian MatType (tao_term_hessian_mat_type): aij
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=8, cols=8
+                Hessian MatType (tao_term_hessian_mat_type): diagonal
+            rows=8, cols=8
+      rows=8, cols=8
+  Solution converged:    ||g(X)|| <= gatol
+Initial least-squares solution check passed
+        Hessian MatType (tao_term_hessian_mat_type): aij
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=8, cols=8
+                Hessian MatType (tao_term_hessian_mat_type): diagonal
+            rows=8, cols=8
+      rows=8, cols=8
+  Solution converged:    ||g(X)|| <= gatol
+Updated least-squares solution check passed
+        Hessian MatType (tao_term_hessian_mat_type): aij
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=8, cols=8
+                Hessian MatType (tao_term_hessian_mat_type): diagonal
+            rows=8, cols=8
+      rows=8, cols=8
+  Solution converged:    ||g(X)|| <= gatol

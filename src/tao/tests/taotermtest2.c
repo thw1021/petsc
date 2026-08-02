@@ -1,255 +1,139 @@
 #include <petsctao.h>
 
-static char help[] = "Using TaoTermShell with mapping matrices that are not diagonal.\n";
+static char help[] = "Solve one or two linear least-squares data terms through TaoAddTerm().\n";
 
 typedef struct {
-  Vec pdiff_work; /* Work vector for x - params */
-} HalfL2Ctx;
+  PetscBool separate_callbacks;
+  PetscBool provide_hessian_mult;
+  PetscBool split_hpre;
+} TermCtx;
 
-typedef struct {
-  Mat A;    /* Mapping matrix A */
-  Vec p;    /* Target vector p */
-  Vec Ax;   /* Work vector for A*x */
-  Vec Ax_p; /* Work vector for A*x - p */
-} CallbackCtx;
-
-static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
+static PetscErrorCode FormObjective(TaoTerm, Vec, Vec, PetscReal *);
+static PetscErrorCode FormGradient(TaoTerm, Vec, Vec, Vec);
+static PetscErrorCode FormObjectiveGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
-static PetscErrorCode CtxDestroy(PetscCtxRt ctx);
-
-/* Callback functions for traditional TAO interface */
-static PetscErrorCode FormObjectiveGradient_Callback(Tao, Vec, PetscReal *, Vec, void *);
-static PetscErrorCode FormHessian_Callback(Tao, Vec, Mat, Mat, void *);
+static PetscErrorCode FormHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
+static PetscErrorCode CreateMap(MPI_Comm, PetscInt, PetscInt, PetscReal, Mat *);
+static PetscErrorCode CreateDataTerm(MPI_Comm, const char[], PetscInt, TermCtx *, TaoTerm *);
+static PetscErrorCode AddExpectedAction(Mat, PetscReal, Vec, Vec, Vec);
+static PetscErrorCode CheckOperator(Tao, Vec, Mat *, PetscReal *, PetscInt, PetscInt, PetscReal, PetscBool);
 
 int main(int argc, char **argv)
 {
-  TaoTerm      objective;
-  Tao          tao, tao2;
-  PetscMPIInt  size;
-  HalfL2Ctx   *ctx;
-  MPI_Comm     comm;
-  PetscInt     n = 10, m = 10;
-  Mat          A;
-  Vec          target;
-  CallbackCtx *cb_ctx;
-  Vec          x_term, x_callback, x2, diff;
-  Mat          H2;
-  PetscReal    norm_diff, diag_val = 1.1;
-  PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense, fd_notpossible;
-  const char  *mtype         = MATAIJ;
-  char         typeName[256] = "";
+  const PetscInt n = 10;
+  Tao            tao;
+  TaoTerm        terms[2]   = {NULL, NULL};
+  TermCtx        ctx        = {PETSC_FALSE, PETSC_TRUE, PETSC_FALSE};
+  Mat            maps[2]    = {NULL, NULL};
+  Vec            targets[2] = {NULL, NULL}, x;
+  PetscReal      scales[2]  = {1.0, 0.25};
+  PetscInt       nterms = 1, m = 10;
+  PetscBool      second_term = PETSC_FALSE, no_map = PETSC_FALSE, check_hessian_mult = PETSC_FALSE;
+  PetscBool      parameters_none = PETSC_FALSE, parameters_required = PETSC_FALSE, use_fd = PETSC_FALSE;
+  PetscBool      none_with_parameters = PETSC_FALSE, required_without_parameters = PETSC_FALSE;
+  PetscBool      check_first_hessian_only = PETSC_FALSE;
+  MPI_Comm       comm;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
-
-  fd_notpossible = PETSC_FALSE;
-
-  PetscOptionsBegin(comm, "", help, "none");
-  PetscCall(PetscOptionsBool("-fd_notpossible", "Set TaoTermShell ComputeHessianFDPossible as false", "", fd_notpossible, &fd_notpossible, NULL));
-  PetscCall(PetscOptionsInt("-n", "Problem size", "", n, &n, NULL));
-  PetscCall(PetscOptionsInt("-m", "Mapping matrix row size", "", m, &m, NULL));
-  PetscCall(PetscOptionsReal("-diag_val", "Value of constant diagonal matrix", NULL, diag_val, &diag_val, NULL));
-  PetscCall(PetscOptionsFList("-mapping_mtype", "Mapping matrix type", "", MatList, mtype, typeName, 256, &opt));
+  PetscOptionsBegin(comm, "", help, "Tao");
+  PetscCall(PetscOptionsBool("-second_term", "Add a second least-squares data term", NULL, second_term, &second_term, NULL));
+  PetscCall(PetscOptionsBool("-no_map", "Add terms directly in the Tao solution space", NULL, no_map, &no_map, NULL));
+  PetscCall(PetscOptionsBool("-separate_callbacks", "Register separate objective and gradient callbacks", NULL, ctx.separate_callbacks, &ctx.separate_callbacks, NULL));
+  PetscCall(PetscOptionsBool("-provide_hessian_mult", "Register the direct Hessian-vector callback", NULL, ctx.provide_hessian_mult, &ctx.provide_hessian_mult, NULL));
+  PetscCall(PetscOptionsBool("-split_hpre", "Use a distinct raw preconditioning matrix equal to two times the Hessian", NULL, ctx.split_hpre, &ctx.split_hpre, NULL));
+  PetscCall(PetscOptionsBool("-check_hessian_mult", "Compare TaoComputeHessianMult() with the exact least-squares action", NULL, check_hessian_mult, &check_hessian_mult, NULL));
+  PetscCall(PetscOptionsBool("-parameters_none", "Configure every term with parameter mode NONE", NULL, parameters_none, &parameters_none, NULL));
+  PetscCall(PetscOptionsBool("-parameters_required", "Configure every term with parameter mode REQUIRED", NULL, parameters_required, &parameters_required, NULL));
+  PetscCall(PetscOptionsBool("-none_with_parameters", "Deliberately supply parameters to terms configured with parameter mode NONE", NULL, none_with_parameters, &none_with_parameters, NULL));
+  PetscCall(PetscOptionsBool("-required_without_parameters", "Deliberately omit parameters from terms configured with parameter mode REQUIRED", NULL, required_without_parameters, &required_without_parameters, NULL));
+  PetscCall(PetscOptionsBool("-check_first_hessian_only", "Expect only the first data term to contribute to the Hessian", NULL, check_first_hessian_only, &check_first_hessian_only, NULL));
+  PetscCall(PetscOptionsInt("-m", "Number of observations in the first data set", NULL, m, &m, NULL));
   PetscOptionsEnd();
+  PetscCheck(!parameters_none || !parameters_required, comm, PETSC_ERR_USER_INPUT, "Select at most one explicit parameter mode");
+  nterms = second_term ? 2 : 1;
 
-  PetscCall(PetscNew(&ctx));
-
-  /* Initialize typeName to default if option was not set */
-  if (!opt) PetscCall(PetscStrcpy(typeName, mtype));
-
-  PetscCall(PetscStrcmp(typeName, MATDIAGONAL, &is_diag));
-  PetscCall(PetscStrcmp(typeName, MATCONSTANTDIAGONAL, &is_cdiag));
-  PetscCall(PetscStrcmp(typeName, MATAIJ, &is_aij));
-  PetscCall(PetscStrcmp(typeName, MATDENSE, &is_dense));
-  /* Create mapping matrix A: m x n (maps from solution space to term space) */
-  if (is_diag) {
-    /* Create a diagonal matrix */
-    Vec      diag_vec;
-    PetscInt diag_size;
-
-    PetscCheck(m == n, comm, PETSC_ERR_ARG_INCOMP, "For diagonal matrix, m and n must be equal (got m=%" PetscInt_FMT ", n=%" PetscInt_FMT ")", m, n);
-    diag_size = m;
-    PetscCall(VecCreate(comm, &diag_vec));
-    PetscCall(VecSetSizes(diag_vec, PETSC_DECIDE, diag_size));
-    PetscCall(VecSetFromOptions(diag_vec));
-    PetscCall(VecSetRandom(diag_vec, NULL));
-    PetscCall(MatCreateDiagonal(diag_vec, &A));
-    PetscCall(VecDestroy(&diag_vec));
-  } else if (is_cdiag) {
-    /* Create a constant diagonal matrix */
-    PetscCheck(m == n, comm, PETSC_ERR_ARG_INCOMP, "For constant diagonal matrix, m and n must be equal (got m=%" PetscInt_FMT ", n=%" PetscInt_FMT ")", m, n);
-    PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val, &A));
-  } else if (is_dense) {
-    /* Create a dense matrix */
-    PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
-    PetscCall(MatSetFromOptions(A));
-    PetscCall(MatSetRandom(A, NULL));
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-  } else {
-    /* Create an AIJ matrix (default) */
-    PetscCall(MatCreateSeqAIJ(comm, m, n, PETSC_DEFAULT, NULL, &A));
-    PetscCall(MatSetFromOptions(A));
-    PetscCall(MatSetRandom(A, NULL));
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-  }
-
-  /* Create shell term that computes f(x) = 0.5 ||x||_2^2 */
-  PetscCall(TaoTermCreateShell(comm, ctx, CtxDestroy, &objective));
-
-  /* Set solution and parameter sizes to match the mapped space (m) */
-  PetscCall(TaoTermSetSolutionSizes(objective, PETSC_DECIDE, m, 1));
-  PetscCall(TaoTermSetParametersSizes(objective, PETSC_DECIDE, m, 1));
-
-  PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
-  PetscCall(TaoTermShellSetCreateHessianMatrices(objective, TaoTermCreateHessianMatricesDefault));
-  PetscCall(TaoTermSetCreateHessianMode(objective, PETSC_TRUE /* H == Hpre */, MATAIJ, NULL));
-  PetscCall(TaoTermShellSetHessian(objective, FormHessian));
-  PetscCall(TaoTermSetFromOptions(objective));
-  if (fd_notpossible) PetscCall(TaoTermShellSetIsComputeHessianFDPossible(objective, PETSC_BOOL3_FALSE));
-
-  PetscCall(TaoTermSetUp(objective));
-
-  /* Create target vector for least squares problem (parameters) */
-  PetscCall(TaoTermCreateParametersVec(objective, &target));
-  PetscCall(VecSetRandom(target, NULL));
-
+  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, n, &x));
+  PetscCall(VecSet(x, 0.0));
   PetscCall(TaoCreate(comm, &tao));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao, "shell_"));
-  PetscCall(TaoSetType(tao, TAOLMVM));
+  PetscCall(TaoSetType(tao, TAONLS));
+  PetscCall(TaoSetSolution(tao, x));
 
-  /* Add term with mapping matrix A: f(Ax; p) = 0.5 ||Ax - p||_2^2 */
-  PetscCall(TaoAddTerm(tao, NULL, 1.0, objective, target, A));
+  for (PetscInt i = 0; i < nterms; i++) {
+    const PetscInt mi = no_map ? n : (i ? n + 2 : m);
+    char           prefix[16];
+
+    PetscCall(PetscStrncpy(prefix, i ? "extra_" : "data_", sizeof(prefix)));
+    if (!no_map) PetscCall(CreateMap(comm, mi, n, i ? 0.75 : 1.0, &maps[i]));
+    PetscCall(CreateDataTerm(comm, prefix, mi, &ctx, &terms[i]));
+    if (parameters_none || none_with_parameters) PetscCall(TaoTermSetParametersMode(terms[i], TAOTERM_PARAMETERS_NONE));
+    else if (parameters_required || required_without_parameters) PetscCall(TaoTermSetParametersMode(terms[i], TAOTERM_PARAMETERS_REQUIRED));
+    if (!parameters_none && !required_without_parameters) {
+      PetscCall(VecCreateMPI(comm, PETSC_DECIDE, mi, &targets[i]));
+      PetscCall(VecSet(targets[i], 1.0 + i));
+    }
+    PetscCall(TaoAddTerm(tao, prefix, scales[i], terms[i], targets[i], maps[i]));
+  }
 
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
+  PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
+  PetscCall(CheckOperator(tao, x, maps, scales, nterms, check_first_hessian_only ? 1 : nterms, ctx.split_hpre && !use_fd ? 2.0 : 1.0, check_hessian_mult));
+  PetscCall(PetscPrintf(comm, "Least-squares TaoTerm operator check passed\n"));
 
-  /* Allocate callback context */
-  PetscCall(PetscNew(&cb_ctx));
-  cb_ctx->A = A;
-  cb_ctx->p = target;
-
-  /* Create work vectors */
-  PetscCall(MatCreateVecs(A, NULL, &cb_ctx->Ax));
-  PetscCall(VecDuplicate(target, &cb_ctx->Ax_p));
-
-  PetscCall(MatCreateVecs(A, &x2, NULL));
-
-  /* Create Hessian matrix A^T * A */
-  if (is_diag) {
-    Vec A_diag, H2_diag;
-
-    PetscCall(MatCreateVecs(A, &A_diag, NULL));
-    PetscCall(MatGetDiagonal(A, A_diag));
-    PetscCall(VecDuplicate(A_diag, &H2_diag));
-    PetscCall(VecPointwiseMult(H2_diag, A_diag, A_diag));
-    PetscCall(MatCreateDiagonal(H2_diag, &H2));
-    PetscCall(VecDestroy(&A_diag));
-    PetscCall(VecDestroy(&H2_diag));
-  } else if (is_cdiag) {
-    PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val * diag_val, &H2));
-  } else {
-    Mat       Htest, Hpretest;
-    PetscBool is_h_dense;
-
-    PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H2));
-    PetscCall(MatAssemblyBegin(H2, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(H2, MAT_FINAL_ASSEMBLY));
-
-    PetscCall(TaoGetHessianMatrices(tao, &Htest, &Hpretest));
-    PetscCall(PetscObjectBaseTypeCompare((PetscObject)Htest, MATSEQDENSE, &is_h_dense));
-    if (is_h_dense) PetscCall(MatConvert(H2, MATDENSE, MAT_INPLACE_MATRIX, &H2));
+  for (PetscInt i = 0; i < nterms; i++) {
+    PetscCall(TaoTermDestroy(&terms[i]));
+    PetscCall(VecDestroy(&targets[i]));
+    PetscCall(MatDestroy(&maps[i]));
   }
-  /* Create second TAO solver */
-  PetscCall(TaoCreate(comm, &tao2));
-  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao2, "regular_"));
-  PetscCall(TaoSetType(tao2, TAOLMVM));
-  PetscCall(TaoSetSolution(tao2, x2));
-  PetscCall(TaoSetObjectiveAndGradient(tao2, NULL, FormObjectiveGradient_Callback, cb_ctx));
-  PetscCall(TaoSetHessian(tao2, H2, H2, FormHessian_Callback, cb_ctx));
-  PetscCall(TaoSetFromOptions(tao2));
-  PetscCall(TaoSolve(tao2));
-
-  /* Compare solutions */
-  PetscCall(TaoGetSolution(tao, &x_term));
-  PetscCall(TaoGetSolution(tao2, &x_callback));
-  PetscCall(VecDuplicate(x_term, &diff));
-  PetscCall(VecCopy(x_term, diff));
-  PetscCall(VecAXPY(diff, -1.0, x_callback));
-  PetscCall(VecNorm(diff, NORM_2, &norm_diff));
-  if (norm_diff <= 1.e-12) PetscCall(PetscPrintf(comm, "Relative difference < 1e-12\n"));
-  else PetscCall(PetscPrintf(comm, "Relative difference > 1e-12: %6.10e\n", (double)norm_diff));
-  PetscCall(VecDestroy(&x2));
-  PetscCall(VecDestroy(&diff));
-  PetscCall(VecDestroy(&cb_ctx->Ax));
-  PetscCall(VecDestroy(&cb_ctx->Ax_p));
-  PetscCall(PetscFree(cb_ctx));
-  PetscCall(VecDestroy(&target));
-  PetscCall(MatDestroy(&A));
-  PetscCall(MatDestroy(&H2));
-  PetscCall(TaoDestroy(&tao2));
   PetscCall(TaoDestroy(&tao));
-  PetscCall(TaoTermDestroy(&objective));
+  PetscCall(VecDestroy(&x));
   PetscCall(PetscFinalize());
   return 0;
 }
 
-/*
-  FormFunctionGradient - Evaluates the function, f(X), and gradient, G(X).
-
-  Input Parameters:
-+ term      - the `TaoTerm` for the objective function
-. x         - input vector
-- params    - optional vector of parameters
-
-  Output Parameters:
-+ f - function value
-- G - vector containing the newly evaluated gradient
-
-  Note:
-  Computes f = 0.5 * ||x - params||_2^2 and g = x - params, matching TAOTERMHALFL2SQUARED.
-*/
-static PetscErrorCode FormFunctionGradient(TaoTerm term, Vec x, Vec params, PetscReal *f, Vec G)
+static PetscErrorCode FormObjective(TaoTerm term, Vec x, Vec params, PetscReal *f)
 {
-  HalfL2Ctx  *ctx;
-  PetscScalar v;
+  Vec         work;
+  PetscScalar dot;
 
   PetscFunctionBeginUser;
-  PetscCall(TaoTermShellGetContext(term, &ctx));
-  if (params) {
-    PetscCall(VecWAXPY(G, -1.0, params, x));
-    PetscCall(VecDot(G, G, &v));
-  } else {
-    PetscCall(VecCopy(x, G));
-    PetscCall(VecDot(G, G, &v));
-  }
-  *f = 0.5 * PetscRealPart(v);
+  PetscCall(VecDuplicate(x, &work));
+  if (params) PetscCall(VecWAXPY(work, -1.0, params, x));
+  else PetscCall(VecCopy(x, work));
+  PetscCall(VecDot(work, work, &dot));
+  *f = 0.5 * PetscRealPart(dot);
+  PetscCall(VecDestroy(&work));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  FormHessian - Evaluates Hessian matrix.
-
-  Input Parameters:
-+ term      - the `TaoTerm` for the objective function
-. x         - input vector
-. params    - optional vector of parameters
-- Hpre      - optional matrix for building the preconditioner
-
-  Output Parameters:
-+ H    - Hessian matrix
-- Hpre - matrix for building the preconditioning
-
-  Note:
-  Computes H = I (identity matrix), matching TAOTERMHALFL2SQUARED.
-*/
-static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+static PetscErrorCode FormGradient(TaoTerm term, Vec x, Vec params, Vec g)
 {
   PetscFunctionBeginUser;
+  if (params) PetscCall(VecWAXPY(g, -1.0, params, x));
+  else PetscCall(VecCopy(x, g));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode FormObjectiveGradient(TaoTerm term, Vec x, Vec params, PetscReal *f, Vec g)
+{
+  PetscScalar dot;
+
+  PetscFunctionBeginUser;
+  PetscCall(FormGradient(term, x, params, g));
+  PetscCall(VecDot(g, g, &dot));
+  *f = 0.5 * PetscRealPart(dot);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+{
+  TermCtx *ctx;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermShellGetContext(term, &ctx));
   if (H) {
     PetscCall(MatZeroEntries(H));
     PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
@@ -260,190 +144,203 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hp
     PetscCall(MatZeroEntries(Hpre));
     PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatShift(Hpre, 1.0));
+    PetscCall(MatShift(Hpre, ctx->split_hpre ? 2.0 : 1.0));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CtxDestroy(PetscCtxRt ctx_ptr)
+static PetscErrorCode FormHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
 {
-  HalfL2Ctx *ctx = *(HalfL2Ctx **)ctx_ptr;
+  PetscFunctionBeginUser;
+  PetscCall(VecCopy(v, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateMap(MPI_Comm comm, PetscInt m, PetscInt n, PetscReal shift, Mat *A)
+{
+  PetscInt rstart, rend;
 
   PetscFunctionBeginUser;
-  if (ctx) {
-    PetscCall(VecDestroy(&ctx->pdiff_work));
-    PetscCall(PetscFree(ctx));
-    *(void **)ctx_ptr = NULL;
+  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, 2, NULL, 2, NULL, A));
+  PetscCall(MatGetOwnershipRange(*A, &rstart, &rend));
+  for (PetscInt i = rstart; i < rend; i++) {
+    const PetscInt j = i % n;
+
+    PetscCall(MatSetValue(*A, i, j, shift + 0.05 * (i + 1), INSERT_VALUES));
+    if (n > 1) PetscCall(MatSetValue(*A, i, (j + 1) % n, 0.1, INSERT_VALUES));
   }
+  PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*A, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  FormObjectiveGradient_Callback - Evaluates the objective and gradient for traditional TAO callback interface.
-
-  Input Parameters:
-+ tao  - the Tao solver context
-. x    - input vector (size n)
-- ctx  - application context containing A and p
-
-  Output Parameters:
-+ f - function value: 0.5 * ||Ax - p||_2^2
-- g - gradient vector: A^T (Ax - p)
-
-  Note:
-  Computes f = 0.5 * ||Ax - p||_2^2 and g = A^T (Ax - p)
-*/
-static PetscErrorCode FormObjectiveGradient_Callback(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx)
-{
-  CallbackCtx *cb_ctx = (CallbackCtx *)ctx;
-  PetscScalar  v;
-
-  PetscFunctionBeginUser;
-  /* Compute Ax */
-  PetscCall(MatMult(cb_ctx->A, x, cb_ctx->Ax));
-  /* Compute Ax - p */
-  PetscCall(VecCopy(cb_ctx->Ax, cb_ctx->Ax_p));
-  PetscCall(VecAXPY(cb_ctx->Ax_p, -1.0, cb_ctx->p));
-  /* Compute objective: 0.5 * ||Ax - p||_2^2 */
-  PetscCall(VecDot(cb_ctx->Ax_p, cb_ctx->Ax_p, &v));
-  *f = 0.5 * PetscRealPart(v);
-  /* Compute gradient: A^T (Ax - p) */
-  PetscCall(MatMultTranspose(cb_ctx->A, cb_ctx->Ax_p, g));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  FormHessian_Callback - Evaluates the Hessian matrix for traditional TAO callback interface.
-
-  Input Parameters:
-+ tao  - the Tao solver context
-. x    - input vector
-. H    - Hessian matrix (should be pre-allocated as A^T * A)
-. Hpre - preconditioner matrix
-- ctx  - application context containing A and p
-
-  Output Parameters:
-+ H    - Hessian matrix (A^T * A)
-- Hpre - Preconditioning matrix
-
-  Note:
-  The Hessian for 0.5 * ||Ax - p||_2^2 is constant: H = A^T * A
-*/
-static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
+static PetscErrorCode CreateDataTerm(MPI_Comm comm, const char prefix[], PetscInt m, TermCtx *ctx, TaoTerm *term)
 {
   PetscFunctionBeginUser;
-  /* Hessian is constant: A^T * A, which should already be set in H */
-  if (Hpre && Hpre != H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
+  PetscCall(TaoTermCreateShell(comm, ctx, NULL, term));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, prefix));
+  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, m, 1));
+  PetscCall(TaoTermSetParametersSizes(*term, PETSC_DECIDE, m, 1));
+  if (ctx->separate_callbacks) {
+    PetscCall(TaoTermShellSetObjective(*term, FormObjective));
+    PetscCall(TaoTermShellSetGradient(*term, FormGradient));
+  } else PetscCall(TaoTermShellSetObjectiveAndGradient(*term, FormObjectiveGradient));
+  PetscCall(TaoTermShellSetCreateHessianMatrices(*term, TaoTermCreateHessianMatricesDefault));
+  PetscCall(TaoTermSetCreateHessianMode(*term, ctx->split_hpre ? PETSC_FALSE : PETSC_TRUE, MATAIJ, ctx->split_hpre ? MATAIJ : NULL));
+  PetscCall(TaoTermShellSetHessian(*term, FormHessian));
+  if (ctx->provide_hessian_mult) PetscCall(TaoTermShellSetHessianMult(*term, FormHessianMult));
+  PetscCall(TaoTermSetFromOptions(*term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Note: For dense variations, relative error may be greater than 1.e-12, *
- * but that is okay, as it is a result of KSP, and PC using AIJ matrices  *
- * instead of dense.                                                      */
+static PetscErrorCode AddExpectedAction(Mat A, PetscReal scale, Vec v, Vec expected, Vec work)
+{
+  PetscFunctionBeginUser;
+  if (A) {
+    Vec Av;
+
+    PetscCall(MatCreateVecs(A, NULL, &Av));
+    PetscCall(MatMult(A, v, Av));
+    PetscCall(MatMultTranspose(A, Av, work));
+    PetscCall(VecDestroy(&Av));
+  } else PetscCall(VecCopy(v, work));
+  PetscCall(VecAXPY(expected, scale, work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales[], PetscInt nterms, PetscInt hessian_terms, PetscReal hpre_factor, PetscBool check_hessian_mult)
+{
+  Mat       H, Hpre;
+  Vec       v, actual, expected, work;
+  PetscReal error, tolerance = 2.e-5;
+
+  PetscFunctionBeginUser;
+  PetscCheck(hessian_terms >= 1 && hessian_terms <= nterms, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_OUTOFRANGE, "Expected Hessian term count must be in [1, %" PetscInt_FMT "]", nterms);
+  PetscCall(VecDuplicate(x, &v));
+  PetscCall(VecDuplicate(x, &actual));
+  PetscCall(VecDuplicate(x, &expected));
+  PetscCall(VecDuplicate(x, &work));
+  PetscCall(VecSet(v, 1.0));
+  PetscCall(VecZeroEntries(expected));
+  for (PetscInt i = 0; i < hessian_terms; i++) PetscCall(AddExpectedAction(maps[i], scales[i], v, expected, work));
+
+  PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
+  PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+  PetscCall(MatMult(H, v, actual));
+  PetscCall(VecAXPY(actual, -1.0, expected));
+  PetscCall(VecNorm(actual, NORM_2, &error));
+  PetscCheck(error <= tolerance, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Tao Hessian action differs from the exact least-squares action by %g", (double)error);
+
+  if (Hpre != H) {
+    PetscCall(MatMult(Hpre, v, actual));
+    PetscCall(VecAXPY(actual, -hpre_factor, expected));
+    PetscCall(VecNorm(actual, NORM_2, &error));
+    PetscCheck(error <= tolerance, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Tao preconditioning action differs from its exact mapped action by %g", (double)error);
+  }
+  if (check_hessian_mult) {
+    PetscCall(TaoComputeHessianMult(tao, x, v, actual));
+    PetscCall(VecAXPY(actual, -1.0, expected));
+    PetscCall(VecNorm(actual, NORM_2, &error));
+    PetscCheck(error <= tolerance, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "TaoComputeHessianMult() differs from the exact sum action by %g", (double)error);
+  }
+  PetscCall(VecDestroy(&v));
+  PetscCall(VecDestroy(&actual));
+  PetscCall(VecDestroy(&expected));
+  PetscCall(VecDestroy(&work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*TEST
 
-   build:
-     requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
+  build:
+    requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
-   test:
-     suffix: diag_diag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type diagonal -mapping_mtype diagonal
+  testset:
+    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|parameter vector space|Mask \(|rows=.*cols=|Solution converged|operator check passed" | grep -v "MatType.*undefined"
 
-   test:
-     suffix: diag_cdiag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type diagonal -mapping_mtype constantdiagonal
+    test:
+      suffix: assembled
+      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: diag_dense
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type diagonal -mapping_mtype dense
+    test:
+      suffix: rectangular_map
+      args: -m 15 -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: diag_dense_nsq
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type diagonal -mapping_mtype dense -m 15
+    test:
+      suffix: separate_callbacks
+      args: -separate_callbacks -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      filter: grep -E "methods have been set|Hessian (preconditioning )?MatType|parameter vector space|rows=.*cols=|Solution converged|operator check passed" | grep -v "MatType.*undefined"
 
-   test:
-     suffix: diag_aij
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type diagonal -mapping_mtype aij
+    test:
+      suffix: mapped_separate_hpre
+      args: -split_hpre -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: cdiag_diag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype diagonal
+    test:
+      suffix: mapped_fd
+      args: -data_tao_term_hessian_use_fd -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: cdiag_cdiag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype constantdiagonal
+    test:
+      suffix: mapped_fd_separate_hpre
+      args: -split_hpre -data_tao_term_hessian_use_fd -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: cdiag_dense
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype dense
+    test:
+      suffix: two_mapped_assembled
+      args: -second_term -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: cdiag_dense_nsq
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype dense -m 15
+    test:
+      suffix: fallback_unmapped
+      args: -second_term -no_map -provide_hessian_mult false -shell_tao_type nls
+      args: -shell_tao_term_hessian_mat_type shell -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: cdiag_aij
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype aij
+    test:
+      suffix: fallback_mapped
+      args: -second_term -provide_hessian_mult false -shell_tao_type nls
+      args: -shell_tao_term_hessian_mat_type shell -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: dense_diag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type dense -mapping_mtype diagonal
+    test:
+      suffix: fallback_separate_hpre
+      args: -second_term -no_map -provide_hessian_mult false -split_hpre -shell_tao_type nls
+      args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
+      args: -shell_tao_term_hessian_pre_mat_type aij -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: dense_cdiag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type dense -mapping_mtype constantdiagonal
+    test:
+      suffix: fallback_mapped_separate_hpre
+      args: -second_term -provide_hessian_mult false -split_hpre -shell_tao_type nls
+      args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
+      args: -shell_tao_term_hessian_pre_mat_type aij -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: dense_dense
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type dense -mapping_mtype dense -fd_notpossible {{0 1}}
+    test:
+      suffix: sum_hessian_mult
+      args: -second_term -check_hessian_mult -shell_tao_type nls
+      args: -shell_tao_term_hessian_mat_type shell -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: dense_dense_nsq
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type dense -mapping_mtype dense -m 15
+    test:
+      suffix: parameters_none
+      args: -second_term -parameters_none -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: dense_aij
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type dense -mapping_mtype aij
+    test:
+      suffix: parameters_required
+      args: -second_term -parameters_required -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: aij_diag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type aij -mapping_mtype diagonal
+    test:
+      suffix: hessian_only_model
+      args: -second_term -shell_tao_term_sum_extra_mask objective,gradient
+      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: aij_cdiag
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type aij -mapping_mtype constantdiagonal
+    test:
+      suffix: shell_masked_hessian
+      args: -second_term -provide_hessian_mult false -check_first_hessian_only
+      args: -shell_tao_term_sum_extra_mask hessian -shell_tao_term_hessian_mat_type shell
+      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
-   test:
-     suffix: aij_dense
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type aij -mapping_mtype dense
+  test:
+    suffix: none_with_parameters
+    args: -none_with_parameters -shell_tao_type nls -petsc_ci_portable_error_output -error_output_stdout
+    filter: grep -E "Parameters passed to a TaoTerm with TAOTERM_PARAMETERS_NONE"
 
-   test:
-     suffix: aij_dense_nsq
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type aij -mapping_mtype dense -m 15
-
-   test:
-     suffix: aij_aij
-     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type aij -mapping_mtype aij
+  test:
+    suffix: required_without_parameters
+    args: -required_without_parameters -shell_tao_type nls -petsc_ci_portable_error_output -error_output_stdout
+    filter: grep -E "Parameters required but not provided for a TaoTerm with TAOTERM_PARAMETERS_REQUIRED"
 
 TEST*/
