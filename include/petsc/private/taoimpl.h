@@ -39,6 +39,19 @@ struct _TaoOps {
 
 typedef struct _n_TaoTermMapping TaoTermMapping;
 
+typedef struct {
+  PetscObjectId    raw_id;
+  PetscObjectId    map_id;
+  PetscObjectId    mapped_id;
+  PetscObjectState raw_state;
+  PetscObjectState map_state;
+  PetscObjectState mapped_state;
+  PetscObjectState raw_nonzero_state;
+  PetscObjectState map_nonzero_state;
+  PetscObjectState mapped_nonzero_state;
+  PetscBool        valid;
+} TaoTermMappedHessianState;
+
 /*S
    TaoTermMapping - Object held by either `Tao` or `TaoTerm` with `TAOTERMSUM` type
    that contain necessary information regarding mapping matrix
@@ -61,18 +74,20 @@ typedef struct _n_TaoTermMapping TaoTermMapping;
 .seealso: [](ch_tao), `Tao`, `TaoAddTerm()`, `TAOTERMSUM`,
 S*/
 struct _n_TaoTermMapping {
-  char       *prefix;
-  TaoTerm     term;
-  PetscReal   scale;
-  Mat         map;
-  Vec         _map_output;
-  Vec         _unmapped_vec_work;
-  Vec         _mapped_vec_work;
-  Mat         _unmapped_H;
-  Mat         _unmapped_Hpre;
-  Mat         _mapped_H;
-  Mat         _mapped_Hpre;
-  TaoTermMask mask;
+  char                     *prefix;
+  TaoTerm                   term;
+  PetscReal                 scale;
+  Mat                       map;
+  Vec                       _map_output;
+  Vec                       _unmapped_vec_work;
+  Vec                       _mapped_vec_work;
+  Mat                       _unmapped_H;
+  Mat                       _unmapped_Hpre;
+  Mat                       _mapped_H;
+  Mat                       _mapped_Hpre;
+  TaoTermMappedHessianState mapped_H_state;
+  TaoTermMappedHessianState mapped_Hpre_state;
+  TaoTermMask               mask;
 };
 
 #define TaoTermObjectiveMasked(a) ((a) & TAOTERM_MASK_OBJECTIVE)

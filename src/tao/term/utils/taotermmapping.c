@@ -1,6 +1,44 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/matimpl.h>
 
+static PetscErrorCode TaoTermMappedHessianStateGet(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *state)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetId((PetscObject)raw, &state->raw_id));
+  PetscCall(PetscObjectGetId((PetscObject)map, &state->map_id));
+  PetscCall(PetscObjectGetId((PetscObject)mapped, &state->mapped_id));
+  PetscCall(MatGetState(raw, &state->raw_state));
+  PetscCall(MatGetState(map, &state->map_state));
+  PetscCall(MatGetState(mapped, &state->mapped_state));
+  PetscCall(MatGetNonzeroState(raw, &state->raw_nonzero_state));
+  PetscCall(MatGetNonzeroState(map, &state->map_nonzero_state));
+  PetscCall(MatGetNonzeroState(mapped, &state->mapped_nonzero_state));
+  state->valid = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *cached, PetscBool *updated)
+{
+  TaoTermMappedHessianState current;
+  Mat                       fresh = NULL;
+  PetscBool                 same_objects, same_structure;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermMappedHessianStateGet(raw, map, mapped, &current));
+  same_objects   = (PetscBool)(cached->valid && cached->raw_id == current.raw_id && cached->map_id == current.map_id && cached->mapped_id == current.mapped_id);
+  same_structure = (PetscBool)(same_objects && cached->raw_nonzero_state == current.raw_nonzero_state && cached->map_nonzero_state == current.map_nonzero_state && cached->mapped_nonzero_state == current.mapped_nonzero_state);
+  *updated       = PETSC_FALSE;
+  if (!same_structure) {
+    PetscCall(MatPtAP(raw, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &fresh));
+    PetscCall(MatHeaderReplace(mapped, &fresh));
+    *updated = PETSC_TRUE;
+  } else if (cached->raw_state != current.raw_state || cached->map_state != current.map_state || cached->mapped_state != current.mapped_state) {
+    PetscCall(MatPtAP(raw, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped));
+    *updated = PETSC_TRUE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char *prefix, PetscReal scale, TaoTerm term, Mat map)
 {
   PetscBool same_name;
@@ -17,6 +55,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char
     PetscCall(MatDestroy(&mt->_unmapped_Hpre));
     PetscCall(MatDestroy(&mt->_mapped_H));
     PetscCall(MatDestroy(&mt->_mapped_Hpre));
+  }
+  if (term != mt->term || map != mt->map) {
+    mt->mapped_H_state.valid    = PETSC_FALSE;
+    mt->mapped_Hpre_state.valid = PETSC_FALSE;
   }
   PetscCall(PetscObjectReference((PetscObject)term));
   PetscCall(TaoTermDestroy(&mt->term));
@@ -38,7 +80,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
   PetscCall(MatDestroy(&mt->_unmapped_Hpre));
   PetscCall(MatDestroy(&mt->_mapped_H));
   PetscCall(MatDestroy(&mt->_mapped_Hpre));
-  mt->mask = TAOTERM_MASK_NONE;
+  mt->mapped_H_state.valid    = PETSC_FALSE;
+  mt->mapped_Hpre_state.valid = PETSC_FALSE;
+  mt->mask                    = TAOTERM_MASK_NONE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -363,10 +407,12 @@ static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode m
 */
 static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode mode, Mat H, Mat Hpre, Mat mapped_H, Mat mapped_Hpre, Mat unmapped_H, Mat unmapped_Hpre)
 {
+  PetscBool H_updated = PETSC_FALSE, Hpre_updated = PETSC_FALSE;
+
   PetscFunctionBegin;
   if (mt->map) {
-    if (mapped_H) PetscCall(MatPtAP(unmapped_H, mt->map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
-    if (mapped_Hpre && (mapped_Hpre != mapped_H)) PetscCall(MatPtAP(unmapped_Hpre, mt->map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_Hpre));
+    if (mapped_H) PetscCall(TaoTermMappingUpdateMappedHessian(unmapped_H, mt->map, mapped_H, &mt->mapped_H_state, &H_updated));
+    if (mapped_Hpre && mapped_Hpre != mapped_H) PetscCall(TaoTermMappingUpdateMappedHessian(unmapped_Hpre, mt->map, mapped_Hpre, &mt->mapped_Hpre_state, &Hpre_updated));
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -375,9 +421,13 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
     if (H && (mapped_H != H)) PetscCall(MatCopy(mapped_H, H, DIFFERENT_NONZERO_PATTERN));
     if (Hpre && (H != Hpre) && (mapped_Hpre != Hpre)) PetscCall(MatCopy(mapped_Hpre, Hpre, DIFFERENT_NONZERO_PATTERN));
     if (mt->scale != 1.0) {
-      if (H) PetscCall(MatScale(H, mt->scale));
-      if (Hpre && Hpre != H) PetscCall(MatScale(Hpre, mt->scale));
+      if (H && (!mt->map || mapped_H != H || H_updated)) PetscCall(MatScale(H, mt->scale));
+      if (Hpre && Hpre != H && (!mt->map || mapped_Hpre != Hpre || Hpre_updated)) PetscCall(MatScale(Hpre, mt->scale));
     }
+  }
+  if (mt->map) {
+    if (mapped_H) PetscCall(TaoTermMappedHessianStateGet(unmapped_H, mt->map, mapped_H, &mt->mapped_H_state));
+    if (mapped_Hpre && mapped_Hpre != mapped_H) PetscCall(TaoTermMappedHessianStateGet(unmapped_Hpre, mt->map, mapped_Hpre, &mt->mapped_Hpre_state));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -569,7 +619,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
     PetscCall(MatShift(mt->_unmapped_H, 1.));
     // Create PtAP only if mt->_mapped_H is empty
     // TODO ?? do we still need this? (MatZeroEntries() on the fresh product, removed with the old diagonal workaround)
-    if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(MatPtAP(mt->_unmapped_H, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mt->_mapped_H));
+    if (mt->_unmapped_H && !mt->_mapped_H) {
+      PetscCall(MatPtAP(mt->_unmapped_H, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mt->_mapped_H));
+      PetscCall(TaoTermMappedHessianStateGet(mt->_unmapped_H, mt->map, mt->_mapped_H, &mt->mapped_H_state));
+    }
     if (H) {
       if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
       *H = mt->_mapped_H;
@@ -587,7 +640,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
       PetscCall(MatAssemblyBegin(mt->_unmapped_Hpre, MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(mt->_unmapped_Hpre, MAT_FINAL_ASSEMBLY));
       PetscCall(MatShift(mt->_unmapped_Hpre, 1.));
-      if (!mt->_mapped_Hpre) PetscCall(MatPtAP(mt->_unmapped_Hpre, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mt->_mapped_Hpre));
+      if (!mt->_mapped_Hpre) {
+        PetscCall(MatPtAP(mt->_unmapped_Hpre, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mt->_mapped_Hpre));
+        PetscCall(TaoTermMappedHessianStateGet(mt->_unmapped_Hpre, mt->map, mt->_mapped_Hpre, &mt->mapped_Hpre_state));
+      }
       if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
       *Hpre = mt->_mapped_Hpre;
     }

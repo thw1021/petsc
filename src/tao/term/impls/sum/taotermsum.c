@@ -920,7 +920,9 @@ static PetscErrorCode TaoTermSumSetTermHessianMatrices_Sum(TaoTerm term, PetscIn
 
   PetscCall(PetscObjectReference((PetscObject)mapped_Hpre));
   PetscCall(MatDestroy(&summand->_mapped_Hpre));
-  summand->_mapped_Hpre = mapped_Hpre;
+  summand->_mapped_Hpre            = mapped_Hpre;
+  summand->mapped_H_state.valid    = PETSC_FALSE;
+  summand->mapped_Hpre_state.valid = PETSC_FALSE;
   /* The Hessian-vector cache may alias the summand's Hessian matrix (see
      TaoTermSumHessCacheGetHessian()); drop the stale entry now that it has been replaced. */
   PetscCall(TaoTermSumHessCacheResetEntry(&sum->hessian_cache, index));
