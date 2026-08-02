@@ -10,6 +10,40 @@ typedef struct {
   PetscBool Hpre_is_H;
 } AppCtx;
 
+enum {
+  UPDATE_NONE,
+  UPDATE_H_VALUES,
+  UPDATE_H_STRUCTURE,
+  UPDATE_HPRE_VALUES,
+  UPDATE_HPRE_STRUCTURE
+};
+
+static PetscErrorCode SetDiagonal(Mat A, PetscReal scale)
+{
+  PetscInt rstart, rend;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
+  for (PetscInt i = rstart; i < rend; i++) PetscCall(MatSetValue(A, i, i, scale * (i + 1.0), INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SetSymmetricOffDiagonal(Mat A, PetscScalar value)
+{
+  PetscInt rstart, rend;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+  PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
+  if (rstart <= 0 && 0 < rend) PetscCall(MatSetValue(A, 0, 1, value, INSERT_VALUES));
+  if (rstart <= 1 && 1 < rend) PetscCall(MatSetValue(A, 1, 0, value, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode FormObjectiveAndGradient(TaoTerm term, Vec x, Vec params, PetscReal *f, Vec g)
 {
   PetscFunctionBeginUser;
@@ -27,27 +61,20 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hp
   ctx->raw_H    = H;
   ctx->raw_Hpre = Hpre;
   if (!ctx->initialized) {
-    for (PetscInt i = 0; i < 3; i++) PetscCall(MatSetValue(H, i, i, i + 1.0, INSERT_VALUES));
-    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-    if (Hpre != H) {
-      for (PetscInt i = 0; i < 3; i++) PetscCall(MatSetValue(Hpre, i, i, 2.0 * (i + 1.0), INSERT_VALUES));
-      PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
-    }
+    PetscCall(SetDiagonal(H, 1.0));
+    if (Hpre != H) PetscCall(SetDiagonal(Hpre, 2.0));
     ctx->initialized = PETSC_TRUE;
-  } else if (ctx->update == 1) {
+  } else if (ctx->update == UPDATE_H_VALUES) {
     PetscCall(MatSetValue(H, 0, 0, 4.0, INSERT_VALUES));
     PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  } else if (ctx->update == 2) {
-    PetscCall(MatSetOption(H, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
-    PetscCall(MatSetValue(H, 0, 1, 0.5, INSERT_VALUES));
-    PetscCall(MatSetValue(H, 1, 0, 0.5, INSERT_VALUES));
-    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  }
-  ctx->update = 0;
+  } else if (ctx->update == UPDATE_H_STRUCTURE) PetscCall(SetSymmetricOffDiagonal(H, 0.5));
+  else if (ctx->update == UPDATE_HPRE_VALUES) {
+    PetscCall(MatSetValue(Hpre, 0, 0, 8.0, INSERT_VALUES));
+    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
+  } else if (ctx->update == UPDATE_HPRE_STRUCTURE) PetscCall(SetSymmetricOffDiagonal(Hpre, 0.75));
+  ctx->update = UPDATE_NONE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -78,6 +105,20 @@ static PetscErrorCode CheckMappedMatrix(Mat raw, Mat map, PetscReal scale, Mat a
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckMatricesEqual(Mat expected, Mat actual, const char description[])
+{
+  Mat       difference;
+  PetscReal norm;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatDuplicate(expected, MAT_COPY_VALUES, &difference));
+  PetscCall(MatAXPY(difference, -1.0, actual, DIFFERENT_NONZERO_PATTERN));
+  PetscCall(MatNorm(difference, NORM_FROBENIUS, &norm));
+  PetscCheck(norm <= 1.e-10, PetscObjectComm((PetscObject)actual), PETSC_ERR_PLIB, "%s (norm of error %g)", description, (double)norm);
+  PetscCall(MatDestroy(&difference));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TestMappedCache(MPI_Comm comm, PetscBool Hpre_is_H, PetscLogEvent numeric_event, PetscLogEvent symbolic_event)
 {
   const PetscReal scale = 2.0;
@@ -89,10 +130,8 @@ static PetscErrorCode TestMappedCache(MPI_Comm comm, PetscBool Hpre_is_H, PetscL
   int            numeric[2], symbolic[2];
 
   PetscFunctionBeginUser;
-  PetscCall(MatCreateSeqAIJ(comm, 3, 3, 3, NULL, &map));
-  for (PetscInt i = 0; i < 3; i++) PetscCall(MatSetValue(map, i, i, 1.0, INSERT_VALUES));
-  PetscCall(MatAssemblyBegin(map, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(map, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, 3, 3, 3, NULL, 3, NULL, &map));
+  PetscCall(SetDiagonal(map, 1.0));
 
   PetscCall(TaoTermCreateShell(comm, &ctx, NULL, &term));
   PetscCall(TaoTermSetParametersMode(term, TAOTERM_PARAMETERS_NONE));
@@ -102,7 +141,7 @@ static PetscErrorCode TestMappedCache(MPI_Comm comm, PetscBool Hpre_is_H, PetscL
   PetscCall(TaoTermSetCreateHessianMode(term, Hpre_is_H, MATAIJ, Hpre_is_H ? NULL : MATAIJ));
   PetscCall(TaoTermShellSetHessian(term, FormHessian));
 
-  PetscCall(VecCreateSeq(comm, 3, &x));
+  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, 3, &x));
   PetscCall(VecSet(x, 1.0));
   PetscCall(TaoCreate(comm, &tao));
   PetscCall(TaoSetType(tao, TAONLS));
@@ -128,7 +167,7 @@ static PetscErrorCode TestMappedCache(MPI_Comm comm, PetscBool Hpre_is_H, PetscL
   PetscCheck(numeric[1] == numeric[0] && symbolic[1] == symbolic[0], comm, PETSC_ERR_PLIB, "Unchanged raw Hessian and map did not reuse the cached mapped product");
   PetscCall(CheckMappedMatrix(ctx.raw_H, map, scale, H));
 
-  ctx.update = 1;
+  ctx.update = UPDATE_H_VALUES;
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
   PetscCall(TaoComputeHessian(tao, x, H, Hpre));
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
@@ -143,17 +182,32 @@ static PetscErrorCode TestMappedCache(MPI_Comm comm, PetscBool Hpre_is_H, PetscL
   PetscCall(CheckMappedMatrix(ctx.raw_H, map, scale, H));
   if (!Hpre_is_H) PetscCall(CheckMappedMatrix(ctx.raw_Hpre, map, scale, Hpre));
 
-  ctx.update = 2;
+  if (!Hpre_is_H) {
+    ctx.update = UPDATE_HPRE_VALUES;
+    PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
+    PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+    PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
+    PetscCheck(numeric[1] - numeric[0] == 1 && symbolic[1] == symbolic[0], comm, PETSC_ERR_PLIB, "A raw-Hpre value change did not update only the Hpre numeric PtAP");
+    PetscCall(CheckMappedMatrix(ctx.raw_H, map, scale, H));
+    PetscCall(CheckMappedMatrix(ctx.raw_Hpre, map, scale, Hpre));
+
+    ctx.update = UPDATE_HPRE_STRUCTURE;
+    PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
+    PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+    PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
+    PetscCheck(symbolic[1] - symbolic[0] == 1, comm, PETSC_ERR_PLIB, "A raw-Hpre sparsity change did not rebuild only the Hpre symbolic PtAP");
+    PetscCall(CheckMappedMatrix(ctx.raw_H, map, scale, H));
+    PetscCall(CheckMappedMatrix(ctx.raw_Hpre, map, scale, Hpre));
+  }
+
+  ctx.update = UPDATE_H_STRUCTURE;
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
   PetscCall(TaoComputeHessian(tao, x, H, Hpre));
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
   PetscCheck(symbolic[1] - symbolic[0] == 1, comm, PETSC_ERR_PLIB, "A raw-H sparsity change did not rebuild exactly one PtAP symbolic structure");
   PetscCall(CheckMappedMatrix(ctx.raw_H, map, scale, H));
 
-  PetscCall(MatSetOption(map, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
-  PetscCall(MatSetValue(map, 0, 1, 0.25, INSERT_VALUES));
-  PetscCall(MatAssemblyBegin(map, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(map, MAT_FINAL_ASSEMBLY));
+  PetscCall(SetSymmetricOffDiagonal(map, 0.25));
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
   PetscCall(TaoComputeHessian(tao, x, H, Hpre));
   PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
@@ -163,6 +217,55 @@ static PetscErrorCode TestMappedCache(MPI_Comm comm, PetscBool Hpre_is_H, PetscL
 
   PetscCall(TaoDestroy(&tao));
   PetscCall(TaoTermDestroy(&term));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&map));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestOuterReconstruction(MPI_Comm comm, PetscLogEvent numeric_event, PetscLogEvent symbolic_event)
+{
+  AppCtx ctx[2];
+  Tao    tao;
+  TaoTerm term[2];
+  Mat     H, Hpre, expected, map;
+  Vec     x;
+  int     numeric[2], symbolic[2];
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscMemzero(ctx, sizeof(ctx)));
+  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, 3, 3, 3, NULL, 3, NULL, &map));
+  PetscCall(SetDiagonal(map, 1.0));
+  for (PetscInt i = 0; i < 2; i++) {
+    ctx[i].Hpre_is_H = PETSC_TRUE;
+    PetscCall(TaoTermCreateShell(comm, &ctx[i], NULL, &term[i]));
+    PetscCall(TaoTermSetParametersMode(term[i], TAOTERM_PARAMETERS_NONE));
+    PetscCall(TaoTermSetSolutionSizes(term[i], PETSC_DECIDE, 3, 1));
+    PetscCall(TaoTermShellSetObjectiveAndGradient(term[i], FormObjectiveAndGradient));
+    PetscCall(TaoTermShellSetCreateHessianMatrices(term[i], TaoTermCreateHessianMatricesDefault));
+    PetscCall(TaoTermSetCreateHessianMode(term[i], PETSC_TRUE, MATAIJ, NULL));
+    PetscCall(TaoTermShellSetHessian(term[i], FormHessian));
+  }
+  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, 3, &x));
+  PetscCall(VecSet(x, 1.0));
+  PetscCall(TaoCreate(comm, &tao));
+  PetscCall(TaoSetType(tao, TAONLS));
+  PetscCall(TaoSetSolution(tao, x));
+  for (PetscInt i = 0; i < 2; i++) PetscCall(TaoAddTerm(tao, NULL, i + 1.0, term[i], NULL, map));
+  PetscCall(TaoSetUp(tao));
+  PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
+  PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+  PetscCall(MatDuplicate(H, MAT_COPY_VALUES, &expected));
+
+  PetscCall(MatShift(H, 7.0));
+  PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[0], &symbolic[0]));
+  PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+  PetscCall(GetPtAPCounts(numeric_event, symbolic_event, &numeric[1], &symbolic[1]));
+  PetscCheck(numeric[1] == numeric[0] && symbolic[1] == symbolic[0], comm, PETSC_ERR_PLIB, "Reconstructing a solver-modified outer Hessian recomputed unchanged mapped summand products");
+  PetscCall(CheckMatricesEqual(expected, H, "Recomputing the Hessian did not remove a solver modification from the outer matrix"));
+
+  PetscCall(MatDestroy(&expected));
+  PetscCall(TaoDestroy(&tao));
+  for (PetscInt i = 0; i < 2; i++) PetscCall(TaoTermDestroy(&term[i]));
   PetscCall(VecDestroy(&x));
   PetscCall(MatDestroy(&map));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -183,6 +286,7 @@ int main(int argc, char **argv)
   PetscCheck(numeric_event >= 0 && symbolic_event >= 0, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "PtAP logging events are not registered");
   PetscCall(TestMappedCache(PETSC_COMM_WORLD, PETSC_TRUE, numeric_event, symbolic_event));
   PetscCall(TestMappedCache(PETSC_COMM_WORLD, PETSC_FALSE, numeric_event, symbolic_event));
+  PetscCall(TestOuterReconstruction(PETSC_COMM_WORLD, numeric_event, symbolic_event));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Mapped Hessian cache skips unchanged products and distinguishes numeric from symbolic updates\n"));
   PetscCall(PetscFinalize());
   return 0;
@@ -190,8 +294,16 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    suffix: 0
+  testset:
+    output_file: output/taotermtest8_0.out
     requires: !complex defined(PETSC_USE_LOG)
+
+    test:
+      suffix: 0
+      nsize: 1
+
+    test:
+      suffix: mpi
+      nsize: 2
 
 TEST*/

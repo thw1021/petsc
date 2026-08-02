@@ -9,6 +9,19 @@ static PetscErrorCode Objective(TaoTerm term, Vec x, Vec params, PetscReal *f)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode Hessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+{
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode HessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  PetscFunctionBeginUser;
+  PetscCall(VecCopy(v, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode CheckWrongState(MPI_Comm comm, PetscErrorCode ierr, const char function[])
 {
   PetscFunctionBeginUser;
@@ -33,6 +46,10 @@ static PetscErrorCode TestTermGuards(MPI_Comm comm)
   ierr = TaoTermSetCreateHessianMode(term, PETSC_TRUE, MATAIJ, NULL);
   PetscCall(PetscPopErrorHandler());
   PetscCall(CheckWrongState(comm, ierr, "TaoTermSetCreateHessianMode"));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = TaoTermSetParametersMode(term, TAOTERM_PARAMETERS_OPTIONAL);
+  PetscCall(PetscPopErrorHandler());
+  PetscCall(CheckWrongState(comm, ierr, "TaoTermSetParametersMode"));
   PetscCall(TaoTermSetFDDelta(term, 1e-5));
 
   PetscCall(TaoTermCreateL1(comm, PETSC_DECIDE, 3, 0.0, &shell));
@@ -49,6 +66,14 @@ static PetscErrorCode TestTermGuards(MPI_Comm comm)
   ierr = TaoTermShellSetObjective(shell, Objective);
   PetscCall(PetscPopErrorHandler());
   PetscCall(CheckWrongState(comm, ierr, "TaoTermShellSetObjective"));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = TaoTermShellSetHessian(shell, Hessian);
+  PetscCall(PetscPopErrorHandler());
+  PetscCall(CheckWrongState(comm, ierr, "TaoTermShellSetHessian"));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = TaoTermShellSetHessianMult(shell, HessianMult);
+  PetscCall(PetscPopErrorHandler());
+  PetscCall(CheckWrongState(comm, ierr, "TaoTermShellSetHessianMult"));
 
   PetscCall(TaoTermCreate(comm, &sum));
   PetscCall(TaoTermSetType(sum, TAOTERMSUM));
@@ -71,6 +96,11 @@ static PetscErrorCode TestTermGuards(MPI_Comm comm)
 
   PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, 3, 3, 1, NULL, 0, NULL, &A));
   PetscCall(MatSetUp(A));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = TaoTermSumSetTermHessianMatrices(sum, 0, A, A, NULL, NULL);
+  PetscCall(PetscPopErrorHandler());
+  PetscCall(CheckWrongState(comm, ierr, "TaoTermSumSetTermHessianMatrices"));
+
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatShift(A, 1.0));
