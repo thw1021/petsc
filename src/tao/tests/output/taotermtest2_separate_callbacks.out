@@ -1,0 +1,8 @@
+        parameter vector space: (optional) K = 10 [VecType standard (tao_term_parameters_vec_type)]
+        default Hessian MatType (tao_term_hessian_mat_type): aij
+        The following methods have been set: objective, gradient, hessian, hessianmult,
+        rows=10, cols=10
+            rows=10, cols=10
+      rows=10, cols=10
+  Solution converged:    ||g(X)|| <= gatol
+Least-squares TaoTerm operator check passed

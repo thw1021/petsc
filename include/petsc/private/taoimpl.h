@@ -46,7 +46,7 @@ typedef struct {
 } TaoTermMatSnapshot;
 
 typedef struct {
-  TaoTermMatSnapshot raw;
+  TaoTermMatSnapshot unmapped;
   TaoTermMatSnapshot map;
   TaoTermMatSnapshot mapped;
   PetscBool          valid;
@@ -265,6 +265,7 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
 }
 
 PETSC_INTERN PetscErrorCode TaoTestGradient_Internal(Tao, Vec, Vec, PetscViewer, PetscViewer);
+PETSC_INTERN PetscErrorCode TaoSetHessianStorage_Internal(Tao, Mat, Mat);
 
 typedef struct _TaoTermOps *TaoTermOps;
 
@@ -343,6 +344,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjective(TaoTermMapping *, Vec
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeGradient(TaoTermMapping *, Vec, Vec, InsertMode, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMapping *, Vec, Vec, InsertMode, PetscReal *, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *, Vec, Vec, InsertMode, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoTermMappingApplyHessian(TaoTermMapping *, InsertMode, Mat, Mat, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoTermMappingGetUnmappedHessians(TaoTermMapping *, Mat *, Mat *);
+PETSC_INTERN PetscErrorCode TaoTermMatSnapshotGet(Mat, TaoTermMatSnapshot *);
+PETSC_INTERN PetscErrorCode TaoTermMatSnapshotMatches(Mat, const TaoTermMatSnapshot *, PetscBool *);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *, Vec, Vec, Mat, Vec, InsertMode, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingSetUp(TaoTermMapping *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateSolutionVec(TaoTermMapping *, Vec *);
