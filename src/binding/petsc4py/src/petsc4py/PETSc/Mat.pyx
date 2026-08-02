@@ -4693,7 +4693,7 @@ cdef class Mat(Object):
 
         See Also
         --------
-        petsc.MatADot
+        aNorm, petsc.MatADot
 
         """
         cdef PetscScalar result = 0
@@ -4701,6 +4701,35 @@ cdef class Mat(Object):
         cdef PetscVec yvec = y.vec
         CHKERR(MatADot(self.mat, xvec, yvec, &result))
         return toScalar(result)
+
+    def aNorm(self, Vec x) -> float:
+        """Compute the matrix norm (x^H A x)^1/2.
+
+        Collective.
+
+        Parameters
+        ----------
+        x
+            The vector to compute the norm of.
+
+        Returns
+        -------
+        result : float
+            The norm.
+
+        Notes
+        -----
+        A needs to be Hermitian positive definite.
+
+        See Also
+        --------
+        aDot, petsc.MatANorm
+
+        """
+        cdef PetscReal result = 0
+        cdef PetscVec xvec = x.vec
+        CHKERR(MatANorm(self.mat, xvec, &result))
+        return toReal(result)
 
     def ptap(
         self,
