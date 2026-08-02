@@ -348,6 +348,7 @@ cdef extern from * nogil:
     PetscErrorCode MatMatMult(PetscMat, PetscMat, PetscMatReuse, PetscReal, PetscMat*)
     PetscErrorCode MatMatTransposeMult(PetscMat, PetscMat, PetscMatReuse, PetscReal, PetscMat*)
     PetscErrorCode MatTransposeMatMult(PetscMat, PetscMat, PetscMatReuse, PetscReal, PetscMat*)
+    PetscErrorCode MatADot(PetscMat, PetscVec, PetscVec, PetscScalar*)
 
     PetscErrorCode MatPtAP(PetscMat, PetscMat, PetscMatReuse, PetscReal, PetscMat*)
     PetscErrorCode MatRARt(PetscMat, PetscMat, PetscMatReuse, PetscReal, PetscMat*)
