@@ -653,7 +653,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     }
   }
 
-  if (tao->objective_term.term != tao->callbacks) PetscCall(TaoTermSetFromOptions(tao->objective_term.term));
+  if (tao->objective_term.term != tao->callbacks && !tao->objective_term.term->setup_called) PetscCall(TaoTermSetFromOptions(tao->objective_term.term));
 
   PetscTryTypeMethod(tao, setfromoptions, PetscOptionsObject);
 

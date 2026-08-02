@@ -1138,7 +1138,7 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems P
       PetscCall(PetscObjectSetOptionsPrefix((PetscObject)subterm, prefix));
       PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)subterm, subprefix));
     } else PetscCall(PetscObjectReference((PetscObject)subterm));
-    PetscCall(TaoTermSetFromOptions(subterm));
+    if (!subterm->setup_called) PetscCall(TaoTermSetFromOptions(subterm));
 
     PetscCall(PetscSNPrintf(arg, 256, "-tao_term_sum_%sscale", subprefix));
     PetscCall(PetscOptionsReal(arg, "The scale of the term in the TaoTermSum", "TaoTermSumSetTerm", scale, &scale, NULL));
