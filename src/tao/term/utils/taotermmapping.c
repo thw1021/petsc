@@ -20,6 +20,24 @@ static PetscErrorCode TaoTermMappedHessianStateGet(Mat raw, Mat map, Mat mapped,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermMappingCreateMappedHessianPlaceholder(TaoTermMapping *mt, Mat *mapped)
+{
+  PetscLayout layout;
+  VecType     vec_type;
+
+  PetscFunctionBegin;
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)mt->map), mapped));
+  PetscCall(MatGetLayouts(mt->map, NULL, &layout));
+  PetscCall(MatSetLayouts(*mapped, layout, layout));
+  PetscCall(MatGetVecType(mt->map, &vec_type));
+  PetscCall(MatSetType(*mapped, MATAIJ));
+  PetscCall(MatSetVecType(*mapped, vec_type));
+  PetscCall(MatSetUp(*mapped));
+  PetscCall(MatAssemblyBegin(*mapped, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*mapped, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *cached, PetscBool *refreshed)
 {
   TaoTermMappedHessianState current;
@@ -38,8 +56,8 @@ static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat raw, Mat map, Mat ma
   *refreshed = PETSC_FALSE;
   if (structure_changed) {
     PetscCall(MatPtAP(raw, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &fresh));
-    /* `mapped` may already be referenced by Tao or KSP. Preserve its identity while replacing
-       the obsolete product implementation and symbolic data with those from `fresh`. */
+    /* `mapped` may already be referenced by Tao or KSP. Preserve the outer object they hold while
+       replacing its obsolete product implementation and symbolic data with those from `fresh`. */
     PetscCall(MatHeaderReplace(mapped, &fresh));
     *refreshed = PETSC_TRUE;
   } else if (values_changed) {
@@ -310,8 +328,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
   (with `TaoTermCreateHessianMatrices()` when the `TaoTerm` defines it).
 
   For `INSERT_VALUES` the `mapped_H == H`, unless a cached `mt->_mapped_H` (and `mt->_mapped_Hpre`)
-  from `TaoTermMappingCreateHessianMatrices()` exists. That cached matrix carries the `MatProduct`
-  symbolic state required by the `MAT_REUSE_MATRIX` and `PtAP` path, so it is used as the target.
+  from `TaoTermMappingCreateHessianMatrices()` exists. The first genuine Hessian evaluation
+  replaces this placeholder's implementation with the initial `MatPtAP()` result while preserving
+  the outer object held by Tao and KSP; subsequent evaluations may reuse that product's symbolic state.
 
   For `ADD_VALUES` the mapped matrices are always separate internal matrices.
 
@@ -325,10 +344,8 @@ static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode m
   *mapped_H    = H;
   *mapped_Hpre = Hpre;
   /* When `mode == INSERT_VALUES`, and the per-summand cached _mapped_H exists, use it as the
-     PtAP target.  The cached matrix carries the MatProduct symbolic state set up at
-     TaoTermMappingCreateHessianMatrices() time, so the MAT_REUSE_MATRIX MatPtAP() in
-     TaoTermMappingSetHessians() will succeed. The outer H, was allocated by the caller
-     without going through MatPtAP() and has no cached product. */
+     PtAP target. The first evaluation replaces its placeholder implementation with the initial
+     product, after which it carries the symbolic state needed for MAT_REUSE_MATRIX. */
   if (mode == INSERT_VALUES) {
     if (H && mt->_mapped_H) *mapped_H = mt->_mapped_H;
     if (Hpre && mt->_mapped_Hpre) *mapped_Hpre = mt->_mapped_Hpre;
@@ -624,16 +641,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
     }
     // create _unmapped only if they are empty
     PetscCall(TaoTermCreateHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
-    // Hack: prime the nonzero pattern of a fresh _unmapped_H (assemble, then shift the diagonal) so the symbolic PtAP below sees valid entries. TODO: replace with a symbolic-only product setup
-    PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatShift(mt->_unmapped_H, 1.));
-    // Create PtAP only if mt->_mapped_H is empty
-    // TODO ?? do we still need this? (MatZeroEntries() on the fresh product, removed with the old diagonal workaround)
-    if (mt->_unmapped_H && !mt->_mapped_H) {
-      PetscCall(MatPtAP(mt->_unmapped_H, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mt->_mapped_H));
-      PetscCall(TaoTermMappedHessianStateGet(mt->_unmapped_H, mt->map, mt->_mapped_H, &mt->mapped_H_state));
-    }
+    /* Tao and KSP need stable outer matrix objects during setup, before a genuine raw Hessian
+       exists. Create empty placeholders with the mapped layout; the first Hessian evaluation
+       computes the initial PtAP and replaces each placeholder's implementation in place. */
+    if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(TaoTermMappingCreateMappedHessianPlaceholder(mt, &mt->_mapped_H));
     if (H) {
       if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
       *H = mt->_mapped_H;
@@ -647,14 +658,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
       if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
       *Hpre = mt->_mapped_Hpre;
     } else {
-      // Prime the separate preconditioner's nonzero pattern before PtAP (same hack as _unmapped_H above)
-      PetscCall(MatAssemblyBegin(mt->_unmapped_Hpre, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(mt->_unmapped_Hpre, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatShift(mt->_unmapped_Hpre, 1.));
-      if (!mt->_mapped_Hpre) {
-        PetscCall(MatPtAP(mt->_unmapped_Hpre, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mt->_mapped_Hpre));
-        PetscCall(TaoTermMappedHessianStateGet(mt->_unmapped_Hpre, mt->map, mt->_mapped_Hpre, &mt->mapped_Hpre_state));
-      }
+      if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreateMappedHessianPlaceholder(mt, &mt->_mapped_Hpre));
       if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
       *Hpre = mt->_mapped_Hpre;
     }
