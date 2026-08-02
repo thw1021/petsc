@@ -119,7 +119,7 @@ PetscErrorCode VecAssemblyBegin(Vec vec)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
   PetscValidType(vec, 1);
-  PetscCall(PetscOptionsDeprecatedNoObject("-vec_view_stash", "-vec_stash_view", "3.26", NULL));
+  PetscCall(PetscOptionsDeprecatedNoObject(((PetscObject)vec)->prefix, "-vec_view_stash", "-vec_stash_view", "3.26", NULL));
   PetscCall(VecStashViewFromOptions(vec, NULL, "-vec_stash_view"));
   PetscCall(PetscLogEventBegin(VEC_AssemblyBegin, vec, 0, 0, 0));
   PetscTryTypeMethod(vec, assemblybegin);
