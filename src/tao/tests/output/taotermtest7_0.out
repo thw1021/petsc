@@ -1,2 +1,3 @@
 TaoTerm structural mutations rejected after setup; numerical updates accepted
 TaoAddTerm rejected after Tao setup
+TaoTerm parameter-presence contracts are enforced

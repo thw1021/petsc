@@ -150,12 +150,48 @@ static PetscErrorCode TestTaoAddTermGuard(MPI_Comm comm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestParameterContracts(MPI_Comm comm)
+{
+  PetscErrorCode ierr;
+  TaoTerm        none, required;
+  Vec            x, p;
+  PetscReal      f;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, 3, &none));
+  PetscCall(TaoTermSetParametersMode(none, TAOTERM_PARAMETERS_NONE));
+  PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, 3, &required));
+  PetscCall(TaoTermSetParametersMode(required, TAOTERM_PARAMETERS_REQUIRED));
+  PetscCall(TaoTermSetParametersSizes(required, PETSC_DECIDE, 3, 1));
+  PetscCall(TaoTermSetUp(none));
+  PetscCall(TaoTermSetUp(required));
+  PetscCall(TaoTermCreateSolutionVec(none, &x));
+  PetscCall(VecDuplicate(x, &p));
+  PetscCall(VecSet(x, 1.0));
+  PetscCall(VecSet(p, 0.0));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = TaoTermComputeObjective(none, x, p, &f);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_WRONG, comm, PETSC_ERR_PLIB, "TAOTERM_PARAMETERS_NONE accepted parameters");
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = TaoTermComputeObjective(required, x, NULL, &f);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_WRONG, comm, PETSC_ERR_PLIB, "TAOTERM_PARAMETERS_REQUIRED accepted missing parameters");
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&p));
+  PetscCall(TaoTermDestroy(&none));
+  PetscCall(TaoTermDestroy(&required));
+  PetscCall(PetscPrintf(comm, "TaoTerm parameter-presence contracts are enforced\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(TestTermGuards(PETSC_COMM_WORLD));
   PetscCall(TestTaoAddTermGuard(PETSC_COMM_WORLD));
+  PetscCall(TestParameterContracts(PETSC_COMM_WORLD));
   PetscCall(PetscFinalize());
   return 0;
 }
