@@ -1,0 +1,12 @@
+        parameter vector space: (required) K = 22 [VecType nest (tao_term_parameters_vec_type)]
+        Hessian MatType (tao_term_hessian_mat_type): aij
+                parameter vector space: (required) K = 10 [VecType standard (tao_term_parameters_vec_type)]
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=10, cols=10
+                parameter vector space: (required) K = 12 [VecType standard (tao_term_parameters_vec_type)]
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                rows=12, cols=10
+            rows=10, cols=10
+      rows=10, cols=10
+  Solution converged:    ||g(X)|| <= gatol
+Least-squares TaoTerm operator check passed

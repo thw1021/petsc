@@ -472,7 +472,16 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
   To see all options, run your program with the `-help` option or consult the
   user's manual. Should be called after `TaoCreate()` but before `TaoSolve()`.
 
+  This function may be called again between solves to update solver options.
+  Options that configure the objective's `TaoTerm` structure are processed
+  only before the objective is first set up.
+
   The `-tao_add_terms` option accepts at most 16 prefixes.
+
+  Currently, when `-tao_fd_hessian` is used with a `TAOTERMSUM`, no summand may mask its gradient or Hessian because
+  the Hessian is computed by differentiating the complete sum gradient.
+
+  `TAOTERMSUM` does not support `-tao_mf_hessian`.
 
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
@@ -480,13 +489,21 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 {
   TaoType   default_type = TAOLMVM;
   char      type[256];
-  PetscBool flg, found;
+  PetscBool flg, found, objective_setup;
   MPI_Comm  comm;
   PetscReal catol, crtol, gatol, grtol, gttol;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  /*
+    TaoSetFromOptions() may be called between solves. Process solver controls on every call,
+    but process options that configure the objective or its TaoTerms only before objective
+    setup because setup-dependent mappings, Hessians, and matrix-product state are not rebuilt
+    here. Capture this state before processing -tao_type, since TaoSetType() may reset Tao
+    setup without resetting the already set-up objective.
+  */
+  objective_setup = tao->objective_term.term->setup_called;
 
   if (((PetscObject)tao)->type_name) default_type = ((PetscObject)tao)->type_name;
 
@@ -588,39 +605,6 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(TaoMonitorSet(tao, TaoMonitorGradientDraw, drawctx, (PetscCtxDestroyFn *)TaoMonitorDrawCtxDestroy));
   }
 
-  flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
-  if (flg) PetscCall(TaoTermComputeGradientSetUseFD(tao->objective_term.term, PETSC_TRUE));
-  flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences", "TaoDefaultComputeHessian", flg, &flg, NULL));
-  if (flg) {
-    Mat H;
-
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
-    PetscCall(MatSetType(H, MATAIJ));
-    PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
-    PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
-    PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessian, NULL));
-    PetscCall(TaoTermComputeHessianSetUseFD(tao->objective_term.term, PETSC_TRUE));
-    PetscCall(MatDestroy(&H));
-  }
-  flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_mf_hessian", "compute matrix-free Hessian using finite differences", "TaoDefaultComputeHessianMFFD", flg, &flg, NULL));
-  if (flg) {
-    PetscBool is_callback;
-    Mat       H;
-
-    // Check that tao has only one TaoTerm with type TAOTERMCALLBACK
-    PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
-    if (is_callback) {
-      // Create Hessian via TaoTermCreateHessianMFFD
-      PetscCall(TaoTermCreateHessianMFFD(tao->objective_term.term, &H));
-      PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessianMFFD, NULL));
-      PetscCall(MatDestroy(&H));
-    } else {
-      PetscCall(PetscInfo(tao, "-tao_mf_hessian only works when Tao has a single TAOTERMCALLBACK term. Ignoring.\n"));
-    }
-  }
   PetscCall(PetscOptionsBool("-tao_recycle_history", "enable recycling/re-using information from the previous TaoSolve() call for some algorithms", "TaoSetRecycleHistory", flg, &flg, &found));
   if (found) PetscCall(TaoSetRecycleHistory(tao, flg));
   PetscCall(PetscOptionsEnum("-tao_subset_type", "subset type", "", TaoSubsetTypes, (PetscEnum)tao->subset_type, (PetscEnum *)&tao->subset_type, NULL));
@@ -630,29 +614,65 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(TaoKSPSetUseEW(tao, tao->ksp_ewconv));
   }
 
-  PetscCall(TaoTermSetFromOptions(tao->callbacks));
+  if (!objective_setup) {
+    PetscBool use_fd_gradient = PETSC_FALSE, use_fd_hessian = PETSC_FALSE, use_mf_hessian = PETSC_FALSE;
 
-  {
-    char    *term_prefixes[16];
-    PetscInt n_terms = PETSC_STATIC_ARRAY_LENGTH(term_prefixes);
+    PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", use_fd_gradient, &use_fd_gradient, NULL));
+    PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences", "TaoDefaultComputeHessian", use_fd_hessian, &use_fd_hessian, NULL));
+    PetscCall(PetscOptionsBool("-tao_mf_hessian", "compute matrix-free Hessian using finite differences", "TaoDefaultComputeHessianMFFD", use_mf_hessian, &use_mf_hessian, NULL));
+    PetscCall(TaoTermSetFromOptions(tao->callbacks));
 
-    PetscCall(PetscOptionsStringArray("-tao_add_terms", "a list of prefixes for terms to add to the Tao objective function", "TaoAddTerm", term_prefixes, &n_terms, NULL));
-    for (PetscInt i = 0; i < n_terms; i++) {
-      TaoTerm     term;
-      const char *prefix;
+    {
+      char    *term_prefixes[16];
+      PetscInt n_terms = PETSC_STATIC_ARRAY_LENGTH(term_prefixes);
 
-      PetscCall(TaoTermDuplicate(tao->objective_term.term, TAOTERM_DUPLICATE_SIZEONLY, &term));
-      PetscCall(TaoGetOptionsPrefix(tao, &prefix));
-      PetscCall(PetscObjectSetOptionsPrefix((PetscObject)term, prefix));
-      PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)term, term_prefixes[i]));
-      PetscCall(TaoTermSetFromOptions(term));
-      PetscCall(TaoAddTerm(tao, term_prefixes[i], 1.0, term, NULL, NULL));
-      PetscCall(TaoTermDestroy(&term));
-      PetscCall(PetscFree(term_prefixes[i]));
+      PetscCall(PetscOptionsStringArray("-tao_add_terms", "a list of prefixes for terms to add to the Tao objective function", "TaoAddTerm", term_prefixes, &n_terms, NULL));
+      for (PetscInt i = 0; i < n_terms; i++) {
+        TaoTerm     term;
+        const char *prefix;
+
+        PetscCall(TaoTermDuplicate(tao->objective_term.term, TAOTERM_DUPLICATE_SIZEONLY, &term));
+        PetscCall(TaoGetOptionsPrefix(tao, &prefix));
+        PetscCall(PetscObjectSetOptionsPrefix((PetscObject)term, prefix));
+        PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)term, term_prefixes[i]));
+        PetscCall(TaoTermSetFromOptions(term));
+        PetscCall(TaoAddTerm(tao, term_prefixes[i], 1.0, term, NULL, NULL));
+        PetscCall(TaoTermDestroy(&term));
+        PetscCall(PetscFree(term_prefixes[i]));
+      }
+    }
+
+    if (tao->objective_term.term != tao->callbacks) PetscCall(TaoTermSetFromOptions(tao->objective_term.term));
+    if (use_fd_gradient) PetscCall(TaoTermComputeGradientSetUseFD(tao->objective_term.term, PETSC_TRUE));
+    if (use_fd_hessian) {
+      Mat H;
+
+      PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
+      PetscCall(MatSetType(H, MATAIJ));
+      PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
+      PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+      PetscCall(TaoSetHessianStorage_Internal(tao, H, H));
+      PetscCall(TaoTermComputeHessianSetUseFD(tao->objective_term.term, PETSC_TRUE));
+      PetscCall(MatDestroy(&H));
+    }
+    if (use_mf_hessian) {
+      PetscBool is_callback, is_sum;
+      Mat       H;
+
+      // Check that tao has only one TaoTerm with type TAOTERMCALLBACK
+      PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
+      PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+      PetscCheck(!is_sum, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOTERMSUM does not support matrix-free finite-difference Hessians");
+      if (is_callback) {
+        // Create Hessian via TaoTermCreateHessianMFFD
+        PetscCall(TaoTermCreateHessianMFFD(tao->objective_term.term, &H));
+        PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessianMFFD, NULL));
+        PetscCall(MatDestroy(&H));
+      } else {
+        PetscCall(PetscInfo(tao, "-tao_mf_hessian only works when Tao has a single TAOTERMCALLBACK term. Ignoring.\n"));
+      }
     }
   }
-
-  if (tao->objective_term.term != tao->callbacks && !tao->objective_term.term->setup_called) PetscCall(TaoTermSetFromOptions(tao->objective_term.term));
 
   PetscTryTypeMethod(tao, setfromoptions, PetscOptionsObject);
 
