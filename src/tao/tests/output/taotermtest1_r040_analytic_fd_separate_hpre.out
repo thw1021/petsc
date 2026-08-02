@@ -1,0 +1,4 @@
+Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
+Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): seqaij
+Using finite differences for Hessian computation
+Reference callback comparison passed

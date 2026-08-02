@@ -1,0 +1,10 @@
+        Hessian MatType (tao_term_hessian_mat_type): shell
+        Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
+                Hessian MatType (tao_term_hessian_mat_type): seqaij
+                default Hessian MatType (tao_term_hessian_mat_type): aij
+                total number of HessianMult evaluations=6
+        total number of HessianMult evaluations=6
+            rows=10, cols=10
+      rows=10, cols=10
+      rows=10, cols=10
+  Solution converged:    ||g(X)|| <= gatol

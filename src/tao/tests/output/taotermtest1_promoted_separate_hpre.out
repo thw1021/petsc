@@ -1,0 +1,9 @@
+        Hessian MatType (tao_term_hessian_mat_type): aij
+        Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
+                Hessian MatType (tao_term_hessian_mat_type): seqaij
+                Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): seqaij
+                Hessian MatType (tao_term_hessian_mat_type): diagonal
+            rows=10, cols=10
+      rows=10, cols=10
+      rows=10, cols=10
+  Solution converged:    ||g(X)|| <= gatol
