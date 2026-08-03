@@ -1279,7 +1279,7 @@ static PetscErrorCode PCApply_FieldSplit_Schur(PC pc, Vec x, Vec y)
           PetscCall(MatGetSize(jac->B, &M, NULL));
           PetscCall(MatGetLocalSize(jac->B, &m, NULL));
           PetscCall(MatDenseGetArrayAndMemType(AinvB, &array, &mtype));
-          PetscCall(VecCreateMPIWithArrayAndMemType(PetscObjectComm((PetscObject)jac->schur), !PetscDefined(HAVE_CUDA) && !PetscDefined(HAVE_HIP) ? PETSC_MEMTYPE_HOST : mtype, 1, m, M, array + m * P, &c));
+          PetscCall(VecCreateMPIWithArrayAndMemType(PetscObjectComm((PetscObject)jac->schur), mtype, 1, m, M, array + m * P, &c));
           PetscCall(MatDenseRestoreArrayAndMemType(AinvB, &array));
           PetscCall(VecCopy(ilinkA->x, c));
           PetscCall(MatSchurComplementComputeExplicitOperator(jac->schur, &jac->schur_user));

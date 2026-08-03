@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     /* Transfer x to a vector y only defined on subcomm0 and vice versa */
     if (mycolor == 0) { /* subcomm0 contains ranks 0, 3, 6, ... in PETSC_COMM_WORLD */
       Vec          y;
-      PetscScalar *yvalue;
+      PetscScalar *yvalue = NULL;
       PetscCall(VecCreate(subcomm, &y));
       PetscCall(VecSetSizes(y, PETSC_DECIDE, N));
       if (iscuda) PetscCall(VecSetType(y, VECCUDA));
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
       Vec                x, xg, yg;
       IS                 ix, iy;
       VecScatter         vscat;
-      const PetscScalar *xvalue;
+      const PetscScalar *xvalue = NULL;
       MPI_Comm           intercomm, parentcomm;
       PetscMPIInt        lrank;
 
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
       Vec          y, xg, yg;
       IS           ix, iy;
       VecScatter   vscat;
-      PetscScalar *yvalue;
+      PetscScalar *yvalue = NULL;
       MPI_Comm     intercomm, parentcomm;
       PetscMPIInt  lrank;
 
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
   if (world2subs) {
     Vec          y;
     PetscInt     n, N = 15, xstart, ystart, low, high;
-    PetscScalar *yvalue;
+    PetscScalar *yvalue = NULL;
 
     /* Initialize x to [0, 1, 2, 3, ..., N-1] */
     PetscCall(VecCreate(PETSC_COMM_WORLD, &x));
@@ -366,9 +366,7 @@ int main(int argc, char **argv)
 #if PetscDefined(HAVE_CUDA)
       PetscCall(VecCUDARestoreArray(y, &yvalue));
 #endif
-    } else {
-      PetscCall(VecRestoreArray(y, &yvalue));
-    }
+    } else PetscCall(VecRestoreArray(y, &yvalue));
     PetscCall(VecScale(y, 3.0));
 
     PetscCall(ISDestroy(&ix)); /* One can also destroy ix, iy immediately after VecScatterCreate() */
