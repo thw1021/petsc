@@ -65,41 +65,49 @@ int main(int argc, char **argv)
 
     test:
       suffix: cpu
+      diff_args: -j
       args: -use_case {{0 1 2 3}}
 
     test:
       requires: kokkos_kernels
       suffix: kokkos
+      diff_args: -j
       args: -vec_type kokkos -use_case {{0 1}}
 
     test:
       requires: kokkos_kernels
       suffix: kokkos_usecase2
+      diff_args: -j
       args: -vec_type kokkos -use_case 2 -mat_vec_type kokkos
 
     test:
       requires: kokkos_kernels
       suffix: kokkos_aij
+      diff_args: -j
       args: -vec_type kokkos -use_case 3 -mat_type aijkokkos
 
     test:
       requires: cuda
       suffix: cuda
+      diff_args: -j
       args: -vec_type cuda -use_case {{0 1}}
 
     test:
       requires: cuda
       suffix: cuda_aij
+      diff_args: -j
       args: -vec_type cuda -use_case 3 -mat_type aijcusparse
 
     test:
       requires: hip
       suffix: hip
+      diff_args: -j
       args: -vec_type hip -use_case {{0 1}}
 
     test:
       requires: hip
       suffix: hip_aij
+      diff_args: -j
       args: -vec_type hip -use_case 3 -mat_type aijhipsparse
 
 TEST*/
