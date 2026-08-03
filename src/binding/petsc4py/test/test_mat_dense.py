@@ -397,6 +397,49 @@ class TestMatMPIDense_B_G89_B5(TestMatMPIDense_B_G89):
     BSIZE = 5
 
 
+# -- Mat functionality --
+class MatADot(unittest.TestCase):
+    def setUp(self):
+        self.A = PETSc.Mat().createDense(
+            (2, 2), comm=PETSc.COMM_SELF, array=[1, 0, 0, 2]
+        )
+        self.x, self.y = self.A.createVecs()
+
+        if np.iscomplexobj(PETSc.ScalarType()):
+            xval = [1 + 1j, 2 - 1j]
+            yval = [3 - 1j, 4 - 2j]
+        else:
+            xval = [1, 2]
+            yval = [3, 4]
+
+        self.x.getArray()[:] = np.array(xval, dtype=PETSc.ScalarType)
+        self.y.getArray()[:] = np.array(yval, dtype=PETSc.ScalarType)
+
+    def tearDown(self):
+        self.A.destroy()
+        self.A = None
+        self.x.destroy()
+        self.x = None
+        self.y.destroy()
+        self.y = None
+        PETSc.garbage_cleanup()
+
+    def testADot(self):
+        norm = self.A.aDot(self.x, self.y)
+        expected = self.x.getArray().T @ np.diag([1, 2]) @ self.y.getArray()
+        self.assertAlmostEqual(norm, expected)
+
+    def testANorm_x(self):
+        xnorm = self.A.aNorm(self.x)
+        expected = np.sqrt(self.x.getArray().T @ np.diag([1, 2]) @ self.x.getArray())
+        self.assertAlmostEqual(xnorm, expected)
+
+    def testANorm_y(self):
+        ynorm = self.A.aNorm(self.y)
+        expected = np.sqrt(self.y.getArray().T @ np.diag([1, 2]) @ self.y.getArray())
+        self.assertAlmostEqual(ynorm, expected)
+
+
 # -----
 
 if __name__ == '__main__':
