@@ -134,6 +134,35 @@ class BaseTestMatAnyDense:
         underlyingA = AT.getTransposeMat()
         self.assertTrue(underlyingA.equal(A))
 
+    def testADot(self):
+        self._preallocate()
+        self._set_values()
+        self.A.assemble()
+        x, y = self.A.createVecs()
+        x.setRandom()
+        y.setRandom()
+        adot = self.A.aDot(x, y)
+        expected = (self.A @ x).dot(y)
+        self.assertAlmostEqual(adot, expected)
+        x.destroy()
+        y.destroy()
+
+    def testANorm(self):
+        self._preallocate()
+        self._set_values()
+        self.A.assemble()
+        M, N = self.A.getSize()
+        # only for square matrices, hermitian test not avail for mpidense
+        if M != N or self.A.getType() == "mpidense" or not self.A.isHermitian(1e-8):
+            return
+        self.A.setOption(PETSc.Mat.Option.HERMITIAN, True)
+        x, _= self.A.createVecs()
+        x.setRandom()
+        norm = self.A.aNorm(x)
+        expected = np.sqrt((self.A @ x).dot(x))
+        self.assertAlmostEqual(norm, expected)
+        x.destroy()
+
     def _preallocate(self):
         self.A.setPreallocationDense(None)
 
@@ -395,7 +424,6 @@ class TestMatMPIDense_B_G77_B5(TestMatMPIDense_B_G77):
 
 class TestMatMPIDense_B_G89_B5(TestMatMPIDense_B_G89):
     BSIZE = 5
-
 
 # -----
 
