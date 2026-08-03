@@ -314,7 +314,8 @@ template <DeviceType T>
 PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair<PetscInt, PetscBool> *initId) noexcept
 {
   PetscFunctionBegin;
-  if (ndev == 1) initId->first = 0;
+  if (ndev == 0) initId->first = PETSC_DECIDE;
+  else if (ndev == 1) initId->first = 0;
   else {
     PetscInt selected_device = -1;
     PetscInt max_depth       = -1;
