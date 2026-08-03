@@ -4586,6 +4586,59 @@ cdef class Mat(Object):
         CHKERR(MatTransposeMatMult(self.mat, mat.mat, reuse, rval, &result.mat))
         return result
 
+    def aDot(self, Vec x, Vec y) -> Scalar:
+        """Computes the inner product with respect to a matrix y^H A x.
+
+        Collective.
+
+        Parameters
+        ----------
+        x
+            First vector.
+        y
+            Second vector.
+
+        Returns
+        -------
+        result : PetscScalar
+            The inner product.
+
+        See Also
+        --------
+        aNorm, petsc.MatADot
+
+        """
+        cdef PetscScalar result = 0
+        cdef PetscVec xvec = x.vec
+        cdef PetscVec yvec = y.vec
+        CHKERR(MatADot(self.mat, xvec, yvec, &result))
+        return result
+
+    def aNorm(self, Vec x) -> float:
+        """Computes the matrix norm (x^H A x)^1/2.
+
+        Collective.
+
+        Parameters
+        ----------
+        x
+            The vector to compute the norm of.
+
+        Returns
+        -------
+        result : PetscReal
+            The norm.
+
+        See Also
+        --------
+        aDot, petsc.MatANorm
+
+        """
+        cdef PetscReal result = 0
+        cdef PetscVec xvec = x.vec
+        CHKERR(MatANorm(self.mat, xvec, &result))
+        return result
+
     def ptap(
         self,
         Mat P,
