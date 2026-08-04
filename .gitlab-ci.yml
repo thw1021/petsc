@@ -308,6 +308,7 @@ pause-for-approval:
     # OTLP gateway, for cross-run Grafana dashboards. The endpoint and auth header
     # are masked GitLab CI/CD variables; GRAFANA_CLOUD_OTLP_AUTH holds the secret
     # token (Authorization=Basic%20...) and must never be committed.
+    # The string %20 might not work when used as gitlab CI variables. 
     # OTEL_METRIC_EXPORT_INTERVAL is short because `claude -p` exits as soon as the
     # review finishes; a slow interval would let the job die before metrics flush.
     CLAUDE_CODE_ENABLE_TELEMETRY: "1"
