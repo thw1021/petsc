@@ -181,6 +181,7 @@
 - Add `DM_COORD_MAP_ROTATE`
 - Add `DM_SHAPE_DIIID`
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
+- Add `DM_COORD_MAP_MUPARSER` and `-dm_coord_map_func`
 
 ## FE/FV
 
