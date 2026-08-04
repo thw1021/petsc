@@ -465,13 +465,12 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
           c1 = 2.0 * c1;
           PetscCall(VecNorm(YCtmp, NORM_2, &c2)); /* this could be improved */
           c2      = PetscSqr(c2) - PetscSqr(delta);
-          tau_pos = (c1 + PetscSqrtReal(PetscSqr(c1) - 4. * c0 * c2)) / (2. * c0); /* quadratic formula */
-          tau_neg = (c1 - PetscSqrtReal(PetscSqr(c1) - 4. * c0 * c2)) / (2. * c0);
+          tau_pos = (-c1 + PetscSqrtReal(PetscSqr(c1) - 4. * c0 * c2)) / (2. * c0); /* quadratic formula */
+          tau_neg = (-c1 - PetscSqrtReal(PetscSqr(c1) - 4. * c0 * c2)) / (2. * c0);
           tau     = PetscMax(tau_pos, tau_neg); /* can tau_neg > tau_pos? I don't think so, but just in case. */
           PetscCall(PetscInfo(snes, "DL evaluated. tau: %8.4e, ynnorm: %8.4e, ycnorm: %8.4e\n", (double)tau, (double)ynnorm, (double)ycnorm));
-          PetscCall(VecWAXPY(W, tau, YNtmp, YCtmp));
-          PetscCall(VecAXPY(W, -tau, YCtmp));
-          PetscCall(VecCopy(W, Y)); /* this could be improved */
+          PetscCall(VecWAXPY(W, tau, YNtmp, YCtmp)); /* W = Y_C + tau*(Y_N - Y_C) */
+          PetscCall(VecCopy(W, Y));                  /* this could be improved */
         }
       } else {
         /* if Cauchy is disabled, only use Newton direction */
