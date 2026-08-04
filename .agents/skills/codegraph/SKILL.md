@@ -6,8 +6,8 @@ description: >-
   API, package utility, object operation, implementation, backend, registration, or composed
   method; when finding callers and the blast radius of a change; or when comparing sibling
   implementations. Target PETSc's own index explicitly so queries use the intended graph.
-  CodeGraph is optional: if the index is absent or runtime dispatch is unresolved, fall back to
-  rg and direct reads without blocking.
+  CodeGraph is optional: if the index is absent or runtime dispatch is unresolved, continue with
+  normal repository inspection without blocking.
 ---
 
 # CodeGraph for PETSc
@@ -18,15 +18,16 @@ returns relevant source, relationships, callers, and blast-radius information in
 
 ## Select the PETSc index
 
-Always target the PETSc repository root:
+Use whichever CodeGraph interface is available, and always target the PETSc repository root:
 
-- Pass the PETSc root as `projectPath` to `codegraph_explore`.
-- For the CLI, change to the PETSc root before running `codegraph explore "..."`.
-- Confirm `<petsc-root>/.codegraph/` exists, or run `codegraph status` from the PETSc root.
+- With the `codegraph_explore` tool, pass the PETSc root as `projectPath`.
+- With shell access, pass the PETSc root explicitly using `codegraph status <petsc-root>` and
+  `codegraph explore --path <petsc-root> "..."`.
+- Confirm `<petsc-root>/.codegraph/` exists before querying it.
 
 Do not silently use an enclosing repository's index. If the PETSc index is absent, skip CodeGraph,
-use `rg` and direct reads for the same questions, and mention that the user can run `codegraph
-init` from the PETSc root. Indexing is the user's decision; do not initialize it automatically.
+continue with normal repository inspection, and mention that the user can run `codegraph init`
+from the PETSc root. Indexing is the user's decision; do not initialize it automatically.
 
 ## Search before implementing
 
@@ -64,7 +65,7 @@ For `PetscUseTypeMethod()` and `PetscTryTypeMethod()`:
    corresponding `struct _*Ops` field order.
 5. Continue through subtype, backend, and options-driven setup that may override the base
    operation table.
-6. Use `rg` for the unresolved assignment or table step when CodeGraph stops at the function
+6. Independently resolve the assignment or table step when CodeGraph stops at the function
    pointer.
 
 For `PetscUseMethod()` and `PetscTryMethod()`:
@@ -94,10 +95,10 @@ Use these checks to scope the requested change, not to expand it into unrelated 
 
 ## Practical rules
 
-- Treat source returned by `codegraph_explore` as already read; do not repeat the lookup with
-  `rg` or another read.
-- Use `rg` only for details CodeGraph did not cover, especially macro expansion, function-pointer
-  assignment, generated files, preprocessor variants, and text-only configuration.
+- Treat source returned by `codegraph_explore` as already read; do not fetch the same source again.
+- Use other repository-inspection capabilities only for details CodeGraph did not cover,
+  especially macro expansion, function-pointer assignment, generated files, preprocessor
+  variants, and text-only configuration.
 - Keep queries specific. Combine interface, operation, type, constructor, and implementation names
   when tracing dispatch.
 - If CodeGraph reports pending re-indexing for an edited file, read that file directly until the
