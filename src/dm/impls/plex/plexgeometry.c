@@ -2,8 +2,9 @@
 #include <petsc/private/petscfeimpl.h> /*I      "petscfe.h"       I*/
 #include <petscblaslapack.h>
 #include <petsctime.h>
+#include <petsc/private/petscsysmuparserimpl.h>
 
-const char *const DMPlexCoordMaps[] = {"none", "rotate", "shear", "flare", "annulus", "shell", "sinusoid", "torus", "unknown", "DMPlexCoordMap", "DM_COORD_MAP_", NULL};
+const char *const DMPlexCoordMaps[] = {"none", "rotate", "shear", "flare", "annulus", "shell", "sinusoid", "torus", "muparser", "unknown", "DMPlexCoordMap", "DM_COORD_MAP_", NULL};
 
 /*@
   DMPlexFindVertices - Try to find DAG points based on their coordinates.
@@ -4179,6 +4180,23 @@ void coordMap_torus(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
   xp[2] = x[0];
 }
 
+static PetscMuParserCoordFunc muX[3];
+
+void coordMap_muparser(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar xp[])
+{
+  const PetscInt cdim = uOff[1] - uOff[0];
+
+  for (PetscInt e = 0; e < cdim; ++e) {
+#if PetscDefined(HAVE_MUPARSER)
+    if (!muX[e]) continue;
+    for (PetscInt d = 0; d < cdim; ++d) muX[e]->x[d] = x[d];
+    xp[e] = mupEval(muX[e]->parser);
+#else
+    xp[e] = x[e];
+#endif
+  }
+}
+
 /*@
   DMPlexRemapGeometry - This function maps the original `DM` coordinates to new coordinates.
 
@@ -4215,6 +4233,7 @@ void coordMap_torus(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
 @*/
 PetscErrorCode DMPlexRemapGeometry(DM dm, PetscReal time, void (*func)(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]))
 {
+  DM_Plex     *mesh;
   DM           cdm;
   PetscDS      cds;
   DMField      cf;
@@ -4223,12 +4242,20 @@ PetscErrorCode DMPlexRemapGeometry(DM dm, PetscReal time, void (*func)(PetscInt 
   Vec          lCoords, tmpCoords;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMPLEX);
+  mesh = (DM_Plex *)dm->data;
   if (!func) PetscCall(DMPlexGetCoordinateMap(dm, &func));
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetCoordinatesLocal(dm, &lCoords));
   PetscCall(DMGetDS(cdm, &cds));
   PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
   PetscCall(PetscObjectGetClassId(obj, &id));
+  // Have to make muParser functions accessible to the point function
+  if (mesh->muCoordFunc[0]) {
+    muX[0] = mesh->muCoordFunc[0];
+    muX[1] = mesh->muCoordFunc[1];
+    muX[2] = mesh->muCoordFunc[2];
+  }
   if (id != PETSCFE_CLASSID) {
     PetscSection       cSection;
     const PetscScalar *constants;
@@ -4261,6 +4288,12 @@ PetscErrorCode DMPlexRemapGeometry(DM dm, PetscReal time, void (*func)(PetscInt 
     cdm->coordinates[0].field = NULL;
     PetscCall(DMRestoreLocalVector(cdm, &tmpCoords));
     PetscCall(DMSetCoordinatesLocal(dm, lCoords));
+  }
+  // Have to make muParser functions accessible to the point function
+  if (mesh->muCoordFunc[0]) {
+    muX[0] = NULL;
+    muX[1] = NULL;
+    muX[2] = NULL;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

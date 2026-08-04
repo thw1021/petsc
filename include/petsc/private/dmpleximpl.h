@@ -5,6 +5,7 @@
 #include <petscdmplextransform.h>
 #include <petscbt.h>
 #include <petscsf.h>
+#include <petscsysmuparser.h>
 #include <petsc/private/dmimpl.h>
 
 #if PetscDefined(HAVE_EXODUSII)
@@ -249,6 +250,9 @@ typedef struct {
   // Transforms
   PetscBool       saveTransform; // Flag to save transform, if this mesh was produced by a transform
   DMPlexTransform transform;     // Transform producing this mesh (note that this will hold on to the original mesh too)
+
+  // MuParser coordinate functions
+  PetscMuParserCoordFunc muCoordFunc[3]; // Coordinate functions defined by text parsed by muParser
 
   /* Debugging */
   PetscBool printSetValues;
@@ -860,6 +864,7 @@ PETSC_INTERN void coordMap_annulus(PetscInt, PetscInt, PetscInt, const PetscInt[
 PETSC_INTERN void coordMap_shell(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_sinusoid(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_torus(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+PETSC_INTERN void coordMap_muparser(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 
 PETSC_INTERN PetscErrorCode DMSnapToGeomModel_EGADS(DM, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
 

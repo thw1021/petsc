@@ -3012,6 +3012,9 @@ PetscErrorCode DMDestroy_Plex(DM dm)
   PetscCall(PetscFree(mesh->metricCtx));
   if (mesh->nonempty_comm != MPI_COMM_NULL && mesh->nonempty_comm != MPI_COMM_SELF) PetscCallMPI(MPI_Comm_free(&mesh->nonempty_comm));
   PetscCall(DMPlexTransformDestroy(&mesh->transform));
+  PetscCall(PetscMuParserCoordFuncDestroy(&mesh->muCoordFunc[0]));
+  PetscCall(PetscMuParserCoordFuncDestroy(&mesh->muCoordFunc[1]));
+  PetscCall(PetscMuParserCoordFuncDestroy(&mesh->muCoordFunc[2]));
   /* This was originally freed in DMDestroy(), but that prevents reference counting of backend objects */
   PetscCall(PetscFree(mesh));
   PetscFunctionReturn(PETSC_SUCCESS);
