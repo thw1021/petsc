@@ -30,6 +30,7 @@
 - Add support for running PETSc applications as MCP servers that can be accessed by LLMs
 - Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
 - Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
+- Add `PetscMuParserCoordFuncCreate()` and `PetscMuParserCoordFuncDestroy()` and `PetscMuParserCoordFunc`
 
 ## Event Logging
 
@@ -169,6 +170,7 @@
 - Add `DM_COORD_MAP_ROTATE`
 - Add `DM_SHAPE_DIIID`
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
+- Add `DM_COORD_MAP_MUPARSER` and `-dm_coord_map_func`
 
 ## FE/FV
 

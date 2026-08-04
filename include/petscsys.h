@@ -3160,3 +3160,6 @@ M*/
   { \
     return &mkl_serv_intel_cpu_true; \
   }
+
+PETSC_EXTERN PetscErrorCode PetscMuParserCoordFuncCreate(const char[], PetscMuParserCoordFunc *);
+PETSC_EXTERN PetscErrorCode PetscMuParserCoordFuncDestroy(PetscMuParserCoordFunc *);
