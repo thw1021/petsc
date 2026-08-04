@@ -52,7 +52,8 @@ PETSC_EXTERN const char *const DMPlexShapes[];
 . `DM_COORD_MAP_ANNULUS`  - The map from a rectangle to an annulus
 . `DM_COORD_MAP_SHELL`    - The map from a rectangular solid to an spherical shell
 . `DM_COORD_MAP_SINUSOID` - The map from a flat rectangle to a sinusoidal surface
-- `DM_COORD_MAP_TORUS`    - The map from a periodic cylinder to a torus
+. `DM_COORD_MAP_TORUS`    - The map from a periodic cylinder to a torus
+- `DM_COORD_MAP_MUPARSER` - The map is defined by a string accepted by muParser
 
   Level: beginner
 
@@ -67,6 +68,7 @@ typedef enum {
   DM_COORD_MAP_SHELL,
   DM_COORD_MAP_SINUSOID,
   DM_COORD_MAP_TORUS,
+  DM_COORD_MAP_MUPARSER,
   DM_COORD_MAP_UNKNOWN
 } DMPlexCoordMap;
 PETSC_EXTERN const char *const DMPlexCoordMaps[];
