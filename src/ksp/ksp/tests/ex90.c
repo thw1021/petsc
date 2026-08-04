@@ -7,14 +7,12 @@ typedef struct {
   PetscInt  presolve_count, setup_count;
 } CallbackCtx;
 
-static PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, void *ctx)
+static PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
 {
   const PetscScalar *xa;
   PetscScalar       *fa;
 
   PetscFunctionBeginUser;
-  (void)snes;
-  (void)ctx;
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(VecGetArray(f, &fa));
   fa[0] = xa[0] * xa[0] - 4.0;
@@ -23,13 +21,11 @@ static PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx)
+static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, PetscCtx ctx)
 {
   const PetscScalar *xa;
 
   PetscFunctionBeginUser;
-  (void)snes;
-  (void)ctx;
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(MatSetValue(P, 0, 0, 2.0 * xa[0], INSERT_VALUES));
   PetscCall(VecRestoreArrayRead(x, &xa));
@@ -46,19 +42,16 @@ static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx)
 static PetscErrorCode PCApply_Identity(PC pc, Vec x, Vec y)
 {
   PetscFunctionBeginUser;
-  (void)pc;
   PetscCall(VecCopy(x, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckPreSolve(KSP ksp, Vec b, Vec x, void *vctx)
+static PetscErrorCode CheckPreSolve(KSP ksp, Vec b, Vec x, PetscCtx vctx)
 {
   CallbackCtx *ctx = (CallbackCtx *)vctx;
   PetscReal    rtol;
 
   PetscFunctionBeginUser;
-  (void)b;
-  (void)x;
   PetscCall(KSPGetTolerances(ksp, &rtol, NULL, NULL, NULL));
   if (!ctx->presolve_count)
     PetscCheck(PetscAbsReal(rtol - ctx->expected_rtol) <= PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback ran before Eisenstat-Walker updated KSP rtol: expected %g, got %g", (double)ctx->expected_rtol, (double)rtol);
