@@ -328,9 +328,10 @@ PetscErrorCode DMPlexInterpolateInPlace_Internal(DM dm)
 @*/
 PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool localized, PetscBool project)
 {
-  PetscFE  fe = NULL;
-  DM       cdm;
-  PetscInt dim, cdim, dE, qorder, height;
+  PetscFE      fe = NULL;
+  DM           cdm;
+  PetscSection cs;
+  PetscInt     dim, cdim, Nc, dE, qorder, height;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
@@ -343,9 +344,10 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool loc
   PetscCall(PetscOptionsBoundedInt("-dm_plex_coordinate_dim", "Set the coordinate dimension", "DMPlexCreateCoordinateSpace", cdim, &cdim, NULL, dim));
   PetscOptionsEnd();
   PetscCall(DMPlexGetVTKCellHeight(dm, &height));
-  if (cdim > dim) {
-    DM           cdm;
-    PetscSection cs, csNew;
+  PetscCall(DMGetLocalSection(cdm, &cs));
+  PetscCall(PetscSectionGetFieldComponents(cs, 0, &Nc));
+  if (cdim > Nc) {
+    PetscSection csNew;
     Vec          coordinates, coordinatesNew;
     VecType      vectype;
     IS           idx;
@@ -355,15 +357,12 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool loc
     // Recreate coordinate section
     {
       const char *fieldName = NULL, *compName = NULL;
-      PetscInt    Nc, pStart, pEnd;
+      PetscInt    pStart, pEnd;
 
-      PetscCall(DMGetCoordinateDM(dm, &cdm));
-      PetscCall(DMGetLocalSection(cdm, &cs));
       PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)cs), &csNew));
       PetscCall(PetscSectionSetNumFields(csNew, 1));
       PetscCall(PetscSectionGetFieldName(cs, 0, &fieldName));
       PetscCall(PetscSectionSetFieldName(csNew, 0, fieldName));
-      PetscCall(PetscSectionGetFieldComponents(cs, 0, &Nc));
       PetscCall(PetscSectionSetFieldComponents(csNew, 0, cdim));
       for (PetscInt c = 0; c < Nc; ++c) {
         PetscCall(PetscSectionGetComponentName(cs, 0, c, &compName));
@@ -390,7 +389,7 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool loc
     // Inject coordinates into higher dimension
     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
     PetscCall(VecGetBlockSize(coordinates, &bs));
-    PetscCheck(bs == dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension");
+    PetscCheck(bs == dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension, bs %" PetscInt_FMT " != %" PetscInt_FMT " dim", bs, dim);
     PetscCall(VecCreate(PetscObjectComm((PetscObject)coordinates), &coordinatesNew));
     PetscCall(VecGetType(coordinates, &vectype));
     PetscCall(VecSetType(coordinatesNew, vectype));
@@ -398,6 +397,7 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool loc
     PetscCheck(!(n % bs), PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension");
     n /= bs;
     PetscCall(VecSetSizes(coordinatesNew, n * cdim, PETSC_DETERMINE));
+    PetscCall(VecSetBlockSize(coordinatesNew, cdim));
     PetscCall(VecSetUp(coordinatesNew));
     PetscCall(PetscMalloc1(n * bs, &indices));
     for (PetscInt i = 0; i < n; ++i)
@@ -5662,14 +5662,23 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
     DMPlexCoordMap map     = DM_COORD_MAP_NONE;
     PetscPointFn  *mapFunc = NULL;
     PetscScalar    params[16];
-    PetscInt       Np = PETSC_STATIC_ARRAY_LENGTH(params), cdim;
+    PetscInt       Np = PETSC_STATIC_ARRAY_LENGTH(params), cdim, Nfunc = 3;
+    char          *func[3];
     MPI_Comm       comm;
 
     PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
     PetscCall(DMGetCoordinateDim(dm, &cdim));
     PetscCall(PetscOptionsScalarArray("-dm_coord_map_params", "Parameters for the coordinate remapping", "", params, &Np, &flg));
     if (!flg) Np = 0;
-    // TODO Allow user to pass a map function by name
+    PetscCall(PetscOptionsStringArray("-dm_coord_map_func", "muParser coordinate function", "", func, &Nfunc, &flg));
+    if (flg) {
+      PetscCheck(Nfunc == cdim, comm, PETSC_ERR_ARG_WRONG, "Number of coordinate functions %" PetscInt_FMT " != %" PetscInt_FMT " coordinate dimension", Nfunc, cdim);
+      PetscCheck(cdim <= 3, comm, PETSC_ERR_SUP, "muParser functions not supported for coordinate dimension %" PetscInt_FMT " > 3", cdim);
+      for (PetscInt d = 0; d < cdim; ++d) {
+        PetscCall(PetscMuParserCoordFuncCreate(func[d], &((DM_Plex *)dm->data)->muCoordFunc[d]));
+        PetscCall(PetscFree(func[d]));
+      }
+    }
     PetscCall(PetscOptionsEnum("-dm_coord_map", "Coordinate mapping for built-in mesh", "", DMPlexCoordMaps, (PetscEnum)map, (PetscEnum *)&map, &flg));
     if (flg) {
       switch (map) {
@@ -5739,6 +5748,14 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
           params[0] = 2.;
         }
         PetscCheck(Np == 1, comm, PETSC_ERR_ARG_WRONG, "The toroidal coordinate map must have 1 parameter, not %" PetscInt_FMT, Np);
+        break;
+      case DM_COORD_MAP_MUPARSER:
+#if PetscDefined(HAVE_MUPARSER)
+        mapFunc = coordMap_muparser;
+        for (PetscInt d = 0; d < cdim; ++d) PetscCheck(((DM_Plex *)dm->data)->muCoordFunc[d], comm, PETSC_ERR_ARG_WRONG, "Missing muParser function for coordinate dimension %" PetscInt_FMT ". Use -dm_coord_map_func to provide a function", d);
+#else
+        SETERRQ(comm, PETSC_ERR_SUP, "muParser not installed. Reconfigure with --download-muparser");
+#endif
         break;
       default:
         mapFunc = coordMap_identity;
