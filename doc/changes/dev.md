@@ -235,6 +235,7 @@
 - Add `DMPlexSetClosurePermutationLexicographic()`
 - Add `DMPlexDrawCell()`
 - Add `DMPlexLabelCompleteStar()`
+- Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Add `DMPlexCopyFlags()`
