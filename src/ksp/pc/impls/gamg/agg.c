@@ -242,14 +242,15 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
   Level: intermediate
 
   Notes:
-  Each fine node corresponds to a block of rows (one per degree of freedom of the node) and each coarse node to a block of columns (one per near-null space vector), so the
+  Each fine node corresponds to a block of rows (one per degree of freedom of the node, as given by the block size of the operator) and each coarse node to a block of columns (one per near-null space vector), so the
   filtering drops small dense sub-blocks of the prolongator, not individual entries. The threshold is relative to the largest block Frobenius norm in the same fine-node
   block row so the decision is invariant to the differing scales of the near-null space modes. On coarser levels the threshold is scaled by `PCGAMGSetProlongatorFilterScale()`.
   Dropping whole blocks (rather than individual entries) keeps complete coarse-node blocks in every surviving fine row, so the near-null space correction below remains full rank.
 
   After filtering, each row of the prolongator is corrected so that the filtered prolongator still reproduces the near-null space exactly, that is, P applied to the coarse
   representation of the near-null space equals the fine near-null space. With a single near-null space vector each row is simply rescaled; with several, a small symmetric
-  positive-definite system of that size is solved for each row and a low-rank correction is added to the surviving entries of the row.
+  positive-definite system (of size the number of near-null space vectors) is solved for each row and the resulting correction, a combination of the coarse near-null space
+  vectors, is added to the surviving entries of the row. Rows with fewer surviving entries than near-null space vectors are left uncorrected.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`, `PCGAMGSetLowMemoryFilter()`
 @*/
@@ -294,7 +295,7 @@ PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
 
   Input Parameters:
 + pc    - the preconditioner context
-- scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l
+- scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
 
   Options Database Key:
 . -pc_gamg_prolongator_filter_scale scale - per-level scaling of the prolongator filter threshold (1.0=default)
@@ -324,7 +325,7 @@ PetscErrorCode PCGAMGSetProlongatorFilterScale(PC pc, PetscReal scale)
 . pc - the preconditioner context
 
   Output Parameter:
-. scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l
+. scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
 
   Level: intermediate
 
@@ -1762,7 +1763,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     PetscCall(VecDestroy(&scale_vec));
   } else {
     /*
-      Vector case (nSAvec > 1): per-row least-squares correction.
+      Vector case (nSAvec > 1): per-row minimum-norm correction (Gram-matrix solve).
       Scatter Bc_data to include ghost column values using Prol's Mvctx,
       then build a hash map from global ghost column index to local ghost index
       so that `MatGetRow()` global column indices can be mapped to the ghosted array.
@@ -2152,7 +2153,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
 
   Options Database Keys:
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation
-. -pc_gamg_prolongator_filter thr                     - relative threshold for block filtering of the prolongator, preserving the near-null space (0=disabled, 0.1=typical)
+. -pc_gamg_prolongator_filter thr                     - relative threshold for block filtering of the prolongator, preserving the near-null space (0=disabled, 0.01-0.1=typical)
 . -pc_gamg_prolongator_filter_scale scale             - per-level scaling of the prolongator filter threshold (1.0=default)
 . -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2 or square graph) levels from finest.
 . -pc_gamg_aggressive_square_graph (true|false)       - use square graph ($A^T A$), alternative is MIS-k (k=2), for aggressive coarsening
