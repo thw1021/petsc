@@ -237,7 +237,7 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
         largest such block norm in that fine node's block row (0 disables filtering)
 
   Options Database Key:
-. -pc_gamg_prolongator_filter thr - relative threshold for block filtering of the prolongator (0=disabled, 0.01-0.1=typical)
+. -pc_gamg_prolongator_filter thr - relative threshold for block filtering of the prolongator (0=disabled, 0.01-0.03=typical)
 
   Level: intermediate
 
@@ -2153,7 +2153,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
 
   Options Database Keys:
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation
-. -pc_gamg_prolongator_filter thr                     - relative threshold for block filtering of the prolongator, preserving the near-null space (0=disabled, 0.01-0.1=typical)
+. -pc_gamg_prolongator_filter thr                     - relative threshold for block filtering of the prolongator, preserving the near-null space (0=disabled, 0.01-0.03=typical)
 . -pc_gamg_prolongator_filter_scale scale             - per-level scaling of the prolongator filter threshold (1.0=default)
 . -pc_gamg_aggressive_coarsening n                    - number of aggressive coarsening (MIS-2 or square graph) levels from finest.
 . -pc_gamg_aggressive_square_graph (true|false)       - use square graph ($A^T A$), alternative is MIS-k (k=2), for aggressive coarsening
