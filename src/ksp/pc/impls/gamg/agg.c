@@ -233,7 +233,8 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 
   Input Parameters:
 + pc  - the preconditioner context
-- thr - relative threshold in (0,1); a coarse-node coupling block is dropped when its norm is below `thr` times the largest block norm in that fine-node row (0 disables filtering)
+- thr - relative threshold in [0,1); the block of prolongator entries coupling a fine node to a coarse node is dropped when its Frobenius norm is below `thr` times the
+        largest such block norm in that fine node's block row (0 disables filtering)
 
   Options Database Key:
 . -pc_gamg_prolongator_filter thr - relative threshold for block filtering of the prolongator (0=disabled, 0.01-0.1=typical)
@@ -241,7 +242,9 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
   Level: intermediate
 
   Note:
-  The threshold is relative (per fine-node row) so it is invariant to the differing scales of the near-null space modes. On coarser levels it is scaled by `PCGAMGSetProlongatorFilterScale()`.
+  Each fine node corresponds to a block of rows (one per degree of freedom of the node) and each coarse node to a block of columns (one per near-null space vector), so the
+  filtering drops small dense sub-blocks of the prolongator, not individual entries. The threshold is relative to the largest block Frobenius norm in the same fine-node
+  block row so the decision is invariant to the differing scales of the near-null space modes. On coarser levels the threshold is scaled by `PCGAMGSetProlongatorFilterScale()`.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`, `PCGAMGSetLowMemoryFilter()`
 @*/
@@ -255,7 +258,7 @@ PetscErrorCode PCGAMGSetProlongatorFilter(PC pc, PetscReal thr)
 }
 
 /*@
-  PCGAMGGetProlongatorFilter - Get threshold for filtering small entries from the prolongator
+  PCGAMGGetProlongatorFilter - Get the relative threshold for block filtering of the prolongator
 
   Not Collective
 
@@ -263,7 +266,8 @@ PetscErrorCode PCGAMGSetProlongatorFilter(PC pc, PetscReal thr)
 . pc - the preconditioner context
 
   Output Parameter:
-. thr - relative block-filtering threshold; a coarse-node coupling block is dropped when its norm is below `thr` times the largest block norm in that fine-node row (0 disables filtering)
+. thr - relative block-filtering threshold; the block of prolongator entries coupling a fine node to a coarse node is dropped when its Frobenius norm is below `thr` times
+        the largest such block norm in that fine node's block row (0 disables filtering, see `PCGAMGSetProlongatorFilter()`)
 
   Level: intermediate
 
@@ -467,7 +471,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   PetscCall(PetscOptionsBool("-pc_gamg_graph_symmetrize", "Symmetrize graph for coarsening", "PCGAMGSetGraphSymmetrize", pc_gamg_agg->graph_symmetrize, &pc_gamg_agg->graph_symmetrize, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Threshold for filtering small entries from prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", thr, &thr, &flg));
+  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Relative Frobenius-norm threshold for block filtering of the prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", thr, &thr, &flg));
   if (flg) PetscCall(PCGAMGSetProlongatorFilter(pc, thr));
   PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter_scale", "Per-level scaling of the prolongator filter threshold", "PCGAMGSetProlongatorFilterScale", scale, &scale, &flg));
   if (flg) PetscCall(PCGAMGSetProlongatorFilterScale(pc, scale));
