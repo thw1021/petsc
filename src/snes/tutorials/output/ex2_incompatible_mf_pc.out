@@ -1,1 +1,1 @@
-[0]PETSC ERROR: Cannot use explicitly set PC type lu with -snes_mf because no assembled preconditioning matrix is available. Use -snes_mf_operator to retain the user-provided preconditioning matrix, or use -pc_type none
+[0]PETSC ERROR: Could not locate a solver type for factorization type LU and matrix type mffd.

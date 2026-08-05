@@ -641,26 +641,7 @@ static PetscErrorCode SNESSetUpMatrixFree_Private(SNES snes, PetscBool hasOperat
      provided preconditioner Jacobian with the default matrix-free version. */
     if (snes->npcside == PC_LEFT && snes->npc) {
       if (!snes->jacobian) PetscCall(SNESSetJacobian(snes, J, NULL, NULL, NULL));
-    } else {
-      KSP       ksp;
-      PC        pc;
-      PetscBool compatible, is_none, pc_type_set;
-
-      PetscCall(SNESSetJacobian(snes, J, J, MatMFFDComputeJacobian, NULL));
-      /* Force no preconditioner */
-      PetscCall(SNESGetKSP(snes, &ksp));
-      PetscCall(KSPGetPC(ksp, &pc));
-      PetscCall(PetscObjectTypeCompareAny((PetscObject)pc, &compatible, PCSHELL, PCH2OPUS, ""));
-      if (!compatible) {
-        PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCNONE, &is_none));
-        if (!is_none) {
-          PetscCall(PetscOptionsHasName(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, "-pc_type", &pc_type_set));
-          PetscCheck(!pc_type_set, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Cannot use explicitly set PC type %s with -snes_mf because no assembled preconditioning matrix is available. Use -snes_mf_operator to retain the user-provided preconditioning matrix, or use -pc_type none", ((PetscObject)pc)->type_name);
-        }
-        PetscCall(PetscInfo(snes, "Setting default matrix-free preconditioner routines\nThat is no preconditioner is being used\n"));
-        PetscCall(PCSetType(pc, PCNONE));
-      }
-    }
+    } else PetscCall(SNESSetJacobian(snes, J, J, MatMFFDComputeJacobian, NULL));
   }
   PetscCall(MatDestroy(&J));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1190,8 +1171,14 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   }
 
   if (snes->usesksp) {
+    PC     pc;
+    PCType pctype;
+
     if (!snes->ksp) PetscCall(SNESGetKSP(snes, &snes->ksp));
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
+    PetscCall(KSPGetPC(snes->ksp, &pc));
+    PetscCall(PCGetType(pc, &pctype));
+    if (snes->mf && !snes->mf_operator && !pctype) PetscCall(PCSetType(pc, PCNONE));
     PetscCall(KSPSetFromOptions(snes->ksp));
   }
 

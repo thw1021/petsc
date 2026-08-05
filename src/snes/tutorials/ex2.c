@@ -31,12 +31,15 @@ typedef struct {
 
 int main(int argc, char **argv)
 {
-  SNES        snes;       /* SNES context */
+  SNES        snes; /* SNES context */
+  KSP         ksp;
+  PC          pc;
   Vec         x, r, F, U; /* vectors */
   Mat         J;          /* Jacobian matrix */
   MonitorCtx  monP;       /* monitoring context */
   PetscInt    its, n = 5, i, maxit, maxf;
   PetscMPIInt size;
+  PetscBool   test_set_pc_type_lu = PETSC_FALSE;
   PetscScalar h, xp, v, none = -1.0;
   PetscReal   abstol, rtol, stol, norm;
 
@@ -113,6 +116,12 @@ int main(int argc, char **argv)
      Set SNES/KSP/KSP/PC runtime options, e.g.,
          -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
   */
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_set_pc_type_lu", &test_set_pc_type_lu, NULL));
+  if (test_set_pc_type_lu) {
+    PetscCall(SNESGetKSP(snes, &ksp));
+    PetscCall(KSPGetPC(ksp, &pc));
+    PetscCall(PCSetType(pc, PCLU));
+  }
   PetscCall(SNESSetFromOptions(snes));
 
   /*
@@ -379,9 +388,26 @@ PetscErrorCode Monitor(SNES snes, PetscInt its, PetscReal fnorm, PetscCtx ctx)
       requires: !single
 
    test:
+      suffix: mf_default_pc
+      args: -nox -snes_mf -snes_max_it 0 -snes_view
+      filter: grep -A 1 "^  PC Object"
+
+   test:
+      suffix: mf_pcksp
+      args: -nox -snes_mf -pc_type ksp -snes_max_it 0 -snes_view
+      filter: grep -A 1 "^  PC Object"
+
+   test:
       suffix: incompatible_mf_pc
       args: -snes_mf -pc_type lu -petsc_ci_portable_error_output -error_output_stdout
-      filter: grep "Cannot use explicitly set PC type"
+      filter: grep "factorization type LU and matrix type mffd"
+      requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
+
+   test:
+      suffix: incompatible_mf_pc_api
+      args: -snes_mf -test_set_pc_type_lu -petsc_ci_portable_error_output -error_output_stdout
+      filter: grep "factorization type LU and matrix type mffd"
+      output_file: output/ex2_incompatible_mf_pc.out
       requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
 
 TEST*/
