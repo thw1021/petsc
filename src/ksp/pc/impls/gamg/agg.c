@@ -1589,6 +1589,7 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
   PetscReal   *cn_n2;
   PetscReal    thr2 = thr * thr;
   PetscScalar *zeros;
+  PetscBool    no_off_proc;
   MatInfo      info;
 
   PetscFunctionBegin;
@@ -1672,9 +1673,13 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
     }
   }
 
+  /* all insertions are in local rows; skip the off-process assembly communication */
+  PetscCall(MatGetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, &no_off_proc));
+  PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   for (PetscInt i = 0; i < ndrows; i++) PetscCall(MatSetValues(Prol, 1, &drow[i], dcnt[i], &zcols[doff[i]], zeros, INSERT_VALUES));
   PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(Prol, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, no_off_proc));
 
   PetscCall(PetscFree2(cn_gid, cn_n2));
   PetscCall(PetscFree(zeros));
@@ -1739,11 +1744,13 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     /*
       Scalar case: use `MatMult()` + element-wise scaling + `MatDiagonalScale()`.
       scale_i = B_i / (P_filtered * Bc)_i, then P_new = diag(scale) * P_filtered.
-      Guard against zero denominators (empty rows after filter).
+      Guard against denominators that are zero (empty rows after filter) or tiny
+      relative to B_i, which would blow up the row scale; such rows are left
+      unscaled (near-null space constraint not enforced for them).
       No ghost column access needed.
     */
     Vec                d_vec, scale_vec;
-    PetscInt           n_local;
+    PetscInt           n_local, n_unscaled = 0;
     PetscScalar       *s_arr;
     const PetscScalar *b_arr, *d_arr;
 
@@ -1754,7 +1761,14 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     PetscCall(VecGetArrayRead(B_vecs[0], &b_arr));
     PetscCall(VecGetArrayRead(d_vec, &d_arr));
     PetscCall(VecGetArray(scale_vec, &s_arr));
-    for (PetscInt i = 0; i < n_local; i++) s_arr[i] = (PetscAbsScalar(d_arr[i]) > 0.0) ? b_arr[i] / d_arr[i] : 1.0;
+    for (PetscInt i = 0; i < n_local; i++) {
+      if (PetscAbsScalar(d_arr[i]) > PETSC_SMALL * PetscAbsScalar(b_arr[i])) s_arr[i] = b_arr[i] / d_arr[i];
+      else {
+        s_arr[i] = 1.0;
+        n_unscaled++;
+      }
+    }
+    if (n_unscaled > 0) PetscCall(PetscInfo(pc, "PCGAMGKernelPreservingFilter_AGG: %" PetscInt_FMT " rows left unscaled (zero or near-zero denominator)\n", n_unscaled));
     PetscCall(VecRestoreArray(scale_vec, &s_arr));
     PetscCall(VecRestoreArrayRead(d_vec, &d_arr));
     PetscCall(VecRestoreArrayRead(B_vecs[0], &b_arr));
@@ -1782,7 +1796,10 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
       Vec          tmp_vec;
       PetscScalar *data_arr;
       PetscInt     nnodes;
+      PetscBool    isaij;
 
+      PetscCall(PetscObjectBaseTypeCompare((PetscObject)Prol, MATMPIAIJ, &isaij));
+      PetscCheck(isaij, PetscObjectComm((PetscObject)Prol), PETSC_ERR_SUP, "Prolongator filter requires an MPIAIJ-based prolongator, not %s", ((PetscObject)Prol)->type_name);
       PetscCall(VecGetLocalSize(mpimat->lvec, &num_ghosts));
       nnodes       = nloc + num_ghosts;
       ghost_stride = nnodes;
@@ -1946,7 +1963,8 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
           /* solve (D G D) y = D rhs, then x = D y */
           for (PetscInt k = 0; k < nSAvec; k++) x[k] = dscale[k] * rhs[k];
           PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&N_b, &NRHS, G, &LDA, ipiv, x, &LDB, &info));
-          if (info != 0) {
+          PetscCheck(info >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "LAPACKgesv: %" PetscBLASInt_FMT "-th argument had an illegal value", -info);
+          if (info > 0) {
             /* G is singular despite ncols >= nSAvec (Bc columns linearly dependent);
                keep filtered values as-is (near-null space constraint not enforced for this row) */
             n_singular++;
