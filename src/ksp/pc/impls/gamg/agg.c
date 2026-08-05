@@ -241,10 +241,15 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
 
   Level: intermediate
 
-  Note:
+  Notes:
   Each fine node corresponds to a block of rows (one per degree of freedom of the node) and each coarse node to a block of columns (one per near-null space vector), so the
   filtering drops small dense sub-blocks of the prolongator, not individual entries. The threshold is relative to the largest block Frobenius norm in the same fine-node
   block row so the decision is invariant to the differing scales of the near-null space modes. On coarser levels the threshold is scaled by `PCGAMGSetProlongatorFilterScale()`.
+  Dropping whole blocks (rather than individual entries) keeps complete coarse-node blocks in every surviving fine row, so the near-null space correction below remains full rank.
+
+  After filtering, each row of the prolongator is corrected so that the filtered prolongator still reproduces the near-null space exactly, that is, P applied to the coarse
+  representation of the near-null space equals the fine near-null space. With a single near-null space vector each row is simply rescaled; with several, a small symmetric
+  positive-definite system of that size is solved for each row and a low-rank correction is added to the surviving entries of the row.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`, `PCGAMGSetLowMemoryFilter()`
 @*/
@@ -1575,29 +1580,7 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   PCGAMGKernelPreservingFilter_AGG - filter the prolongator while preserving the near-null space constraint P*B_c = B
-
-   Applies `MatFilter()` to drop small entries, then corrects each row so that
-   P_filtered * B_c = B (the fine near-null space) is restored.
-
-   For nSAvec == 1: rescale each row by B[i] / (P_filtered[i,:] * B_c[J_i]).
-   For nSAvec > 1:  solve a small nSAvec x nSAvec SPD system per row and add
-                    a rank-nSAvec correction to the row entries.
-*/
-/*
-   PCGAMGProlongatorBlockFilter_AGG - drop whole (row_bs x col_bs) node-coupling
-   blocks of the prolongator whose Frobenius norm is below `thr` times the largest
-   block norm in the same fine node-block row.
-
-   Filtering whole blocks (rather than individual scalar entries, as `MatFilter()`
-   does) preserves the coarse-node column-block structure: every surviving fine row
-   keeps complete coarse-node blocks, so the per-row near-null correction in
-   PCGAMGKernelPreservingFilter_AGG() stays full rank. The relative (per-row-block)
-   threshold makes the decision invariant to the differing scales of the near-null
-   modes (e.g. translations vs rotations in elasticity), which a single scalar
-   threshold cannot handle.
-*/
+// Drop small node-coupling blocks of the prolongator; see the PCGAMGSetProlongatorFilter() manual page
 static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt col_bs, PetscReal thr)
 {
   PetscInt     rbs, cbs, rStart, rEnd, nfn, local_nnz, ndrows = 0, zoff = 0;
@@ -1702,6 +1685,7 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Restore the near-null space constraint P*B_c = B after filtering; see the PCGAMGSetProlongatorFilter() manual page
 static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscReal threshold)
 {
   PC_MG           *mg      = (PC_MG *)pc->data;
