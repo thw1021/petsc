@@ -303,9 +303,9 @@ PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
   Level: intermediate
 
   Note:
-  A scale below 1 filters less aggressively on coarser levels, where the prolongator is denser. Values above 1 are not allowed:
-  they would let the effective threshold reach 1, at which the filter drops even the strongest block of every fine node and
-  zeroes the prolongator.
+  A scale below 1 filters less aggressively on coarser levels, where the prolongator is denser. Values above 1 are not allowed since
+  they would let the effective threshold reach 1, at which the filter drops even the strongest block of every fine node and zeroes
+  the prolongator.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGGetProlongatorFilterScale()`
 @*/
