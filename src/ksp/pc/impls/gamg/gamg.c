@@ -1583,7 +1583,7 @@ static PetscErrorCode PCGAMGSetRankReductionFactors_GAMG(PC pc, PetscInt v[], Pe
 
   Input Parameters:
 + pc - the preconditioner context
-- v  - the threshold value reduction, usually < 1.0
+- v  - the threshold value reduction, in [0,1]
 
   Options Database Key:
 . -pc_gamg_threshold_scale v - set the relative threshold reduction on each level
@@ -1592,7 +1592,8 @@ static PetscErrorCode PCGAMGSetRankReductionFactors_GAMG(PC pc, PetscInt v[], Pe
 
   Note:
   The initial threshold (for an arbitrary number of levels starting from the finest) can be set with `PCGAMGSetThreshold()`.
-  This scaling is used for each subsequent coarsening, but must be called before `PCGAMGSetThreshold()`.
+  This scaling is used for each subsequent coarsening, but must be called before `PCGAMGSetThreshold()`. Values above 1, which
+  would make coarser levels filter more aggressively than the finest, are not allowed.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetThreshold()`
 @*/
@@ -1600,6 +1601,7 @@ PetscErrorCode PCGAMGSetThresholdScale(PC pc, PetscReal v)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(pc, v, 2);
   PetscTryMethod(pc, "PCGAMGSetThresholdScale_C", (PC, PetscReal), (pc, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1610,6 +1612,7 @@ static PetscErrorCode PCGAMGSetThresholdScale_GAMG(PC pc, PetscReal v)
   PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
+  PetscCheck(v >= 0.0 && v <= 1.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Threshold scale %g must be in [0,1]", (double)v);
   pc_gamg->threshold_scale = v;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1829,7 +1832,12 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   PetscCall(PetscOptionsInt("-pc_gamg_process_eq_limit", "Limit (goal) on number of equations per process on coarse grids", "PCGAMGSetProcEqLim", pc_gamg->min_eq_proc, &pc_gamg->min_eq_proc, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_coarse_eq_limit", "Limit on number of equations for the coarse grid", "PCGAMGSetCoarseEqLim", pc_gamg->coarse_eq_limit, &pc_gamg->coarse_eq_limit, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_asm_hem_aggs", "Number of HEM matching passed in aggregates for ASM smoother", "PCGAMGASMSetHEM", pc_gamg->asm_hem_aggs, &pc_gamg->asm_hem_aggs, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", pc_gamg->threshold_scale, &pc_gamg->threshold_scale, NULL));
+  {
+    PetscReal tscale = pc_gamg->threshold_scale;
+
+    PetscCall(PetscOptionsReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", tscale, &tscale, &flag));
+    if (flag) PetscCall(PCGAMGSetThresholdScale(pc, tscale)); /* through the setter so the range is checked */
+  }
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscOptionsRealArray("-pc_gamg_threshold", "Relative threshold to use for dropping edges in aggregation graph", "PCGAMGSetThreshold", pc_gamg->threshold, &n, &flag));
   if (!flag || n < PETSC_MG_MAXLEVELS) {
