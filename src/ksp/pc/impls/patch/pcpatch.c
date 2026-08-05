@@ -589,6 +589,134 @@ PetscErrorCode PCPatchGetCellNumbering(PC pc, PetscSection *cellNumbering)
 }
 
 /*@
+  PCPatchSetConstructLabel - Restrict the mesh points that a `PCPATCH` preconditioner builds patches around
+
+  Logically Collective
+
+  Input Parameters:
++ pc    - the `PCPATCH` preconditioner
+. label - the `DMLabel` marking the points, or `NULL` to build a patch around every point of the stratum
+- value - the stratum value of `label` marking the points
+
+  Level: advanced
+
+  Notes:
+  Without this, a patch is built around every point of the stratum selected by `-pc_patch_construct_dim` or
+  `-pc_patch_construct_codim`. The points marked by `label` are intersected with that stratum, so a label spanning
+  several strata may be passed unchanged and the usual options still choose which entities are used as seeds.
+
+  This is what a solver on an adaptively refined level wants, where only the entities near the refinement should get a
+  patch. Mark the cells that were genuinely refined, call `DMPlexLabelComplete()` on the label to add their closure,
+  which is exactly the set of entities whose star contains one of those cells, and pass the result here. The
+  restriction composes with `-pc_patch_use_coloring`, which then colors only the selected points.
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetConstructLabel()`, `PCPatchSetPatchLabel()`, `DMPlexLabelComplete()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchSetConstructLabel(PC pc, DMLabel label, PetscInt value)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (label != NULL) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  PetscCall(PetscObjectReference((PetscObject)label));
+  PetscCall(DMLabelDestroy(&patch->constructLabel));
+  patch->constructLabel = label;
+  patch->constructValue = value;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCPatchGetConstructLabel - Return the `DMLabel` restricting the points a `PCPATCH` preconditioner builds patches around
+
+  Not Collective
+
+  Input Parameter:
+. pc - the `PCPATCH` preconditioner
+
+  Output Parameters:
++ label - the `DMLabel` marking the points, or `NULL` if the whole stratum is used
+- value - the stratum value of `label` marking the points
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchSetConstructLabel()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchGetConstructLabel(PC pc, DMLabel *label, PetscInt *value)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (label != NULL) *label = patch->constructLabel;
+  if (value != NULL) *value = patch->constructValue;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCPatchSetPatchLabel - Set the patches of a `PCPATCH` preconditioner directly, as the strata of a `DMLabel`
+
+  Logically Collective
+
+  Input Parameters:
++ pc    - the `PCPATCH` preconditioner
+- label - a `DMLabel` with one stratum per patch, each marking the mesh points that patch solves for, or `NULL` to
+          construct the patches instead
+
+  Level: advanced
+
+  Notes:
+  This bypasses patch construction, but the `PC`'s `DM` must still convert to `DMPLEX`, since each patch is completed
+  from the mesh topology. Patches are numbered by the position of their value in `DMLabelGetValueIS()`, and the order
+  of the points within a stratum is preserved, since it sets the order of the patch local degrees of freedom.
+
+  The points of a stratum are those the patch solves for. Everything reachable from them is added as the patch's
+  artificial boundary, exactly as for a constructed patch. `PCPATCH` solves the patches of one stratum simultaneously,
+  so their stars must be disjoint for the patch operator to be block diagonal; that is what a coloring of the points
+  guarantees, and it is the caller's responsibility here.
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetPatchLabel()`, `PCPatchSetConstructLabel()`, `DMPlexCreateColoringLabel()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchSetPatchLabel(PC pc, DMLabel label)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (label != NULL) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  PetscCall(PetscObjectReference((PetscObject)label));
+  PetscCall(DMLabelDestroy(&patch->userPatchLabel));
+  patch->userPatchLabel = label;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCPatchGetPatchLabel - Return the `DMLabel` whose strata are the patches of a `PCPATCH` preconditioner
+
+  Not Collective
+
+  Input Parameter:
+. pc - the `PCPATCH` preconditioner
+
+  Output Parameter:
+. label - the `DMLabel` set with `PCPatchSetPatchLabel()`, or `NULL` if the patches are constructed
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchSetPatchLabel()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchGetPatchLabel(PC pc, DMLabel *label)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(label, 2);
+  *label = patch->userPatchLabel;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PCPatchSetConstructType - Set the way patches are constructed for a `PCPATCH` preconditioner
 
   Logically Collective
@@ -1274,11 +1402,86 @@ static PetscErrorCode PCPatchComputeSetDifference_Private(PetscHSetI A, PetscHSe
   . pointCounts - Section with counts of cells around each vertex
   - point       - IS of the cell point indices of cells in each patch
  */
+/*
+  Returns the points that patch v solves for, or NULL when the patch is empty. The order of the points is preserved
+  from the patch label, since it sets the order of the patch local degrees of freedom. The caller destroys the IS.
+*/
+static PetscErrorCode PCPatchGetPatchPointIS_Private(PC pc, PetscInt v, IS *pointIS)
+{
+  PC_PATCH       *patch = (PC_PATCH *)pc->data;
+  const PetscInt *values;
+
+  PetscFunctionBegin;
+  PetscCall(ISGetIndices(patch->patchValues, &values));
+  PetscCall(DMLabelGetStratumIS(patch->patchLabel, values[v], pointIS));
+  PetscCall(ISRestoreIndices(patch->patchValues, &values));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Builds a patch label with one stratum per color of the points the patches are built around, each holding the union of
+  the stars of the owned points of that color.
+
+  Points of one color are pairwise non-adjacent, so their stars share no cell and the operator of the resulting patch
+  is block diagonal with one block per star, which is what makes solving a whole color at once equivalent to solving
+  its patches separately. That holds only for the finite-element adjacency, where two points are adjacent exactly when
+  they share a cell, so we impose it for the coloring rather than letting the setting on the DM decide it.
+*/
+static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt colorDepth, DMLabel ghost, PetscInt nleaves, const PetscInt leaves[], DMLabel *patchLabel)
+{
+  PC_PATCH  *patch = (PC_PATCH *)pc->data;
+  ISColoring coloring;
+  IS        *iscolors;
+  PetscBool  useCone, useClosure;
+  PetscInt   ncolors;
+
+  PetscFunctionBegin;
+  PetscCall(DMGetBasicAdjacency(dm, &useCone, &useClosure));
+  PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
+  PetscCall(DMPlexCreateColoringLabel(dm, colorDepth, 1, patch->constructLabel, patch->constructValue, &coloring));
+  PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
+  PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
+  PetscCall(DMLabelCreate(PETSC_COMM_SELF, "PCPatch color star", patchLabel));
+  for (PetscInt c = 0; c < ncolors; ++c) {
+    IS              ownedIS;
+    const PetscInt *colorPoints;
+    PetscInt       *ownedPoints;
+    PetscInt        numColorPoints, numOwnedPoints = 0;
+
+    /* We only build patches around points that this process owns */
+    PetscCall(ISGetLocalSize(iscolors[c], &numColorPoints));
+    PetscCall(ISGetIndices(iscolors[c], &colorPoints));
+    PetscCall(PetscMalloc1(numColorPoints, &ownedPoints));
+    for (PetscInt p = 0; p < numColorPoints; ++p) {
+      PetscInt  loc = -1;
+      PetscBool flg;
+
+      if (ghost != NULL) PetscCall(DMLabelHasPoint(ghost, colorPoints[p], &flg));
+      else {
+        PetscCall(PetscFindInt(colorPoints[p], nleaves, leaves, &loc));
+        flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
+      }
+      if (flg == PETSC_FALSE) ownedPoints[numOwnedPoints++] = colorPoints[p];
+    }
+    PetscCall(ISRestoreIndices(iscolors[c], &colorPoints));
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numOwnedPoints, ownedPoints, PETSC_OWN_POINTER, &ownedIS));
+    /* Every color gets a stratum, even an empty one, so that patch c is color c */
+    PetscCall(DMLabelSetStratumIS(*patchLabel, c, ownedIS));
+    PetscCall(ISDestroy(&ownedIS));
+  }
+  PetscCall(ISColoringRestoreIS(coloring, PETSC_USE_POINTER, &iscolors));
+  PetscCall(ISColoringDestroy(&coloring));
+  /* A process builds patches only around the points it owns, and the same color on another process is a different
+     patch, so complete each process's patches by themselves */
+  PetscCall(DMPlexLabelCompleteStar_Internal(dm, *patchLabel, PETSC_FALSE));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, ncolors, 0, 1, &patch->patchValues));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCPatchCreateCellPatches(PC pc)
 {
-  PC_PATCH       *patch       = (PC_PATCH *)pc->data;
-  DMLabel         ghost       = NULL;
-  DMLabel        *colorLabels = NULL;
+  PC_PATCH       *patch = (PC_PATCH *)pc->data;
+  DMLabel         ghost = NULL;
   DM              dm, plex;
   PetscHSetI      ht = NULL, cht = NULL;
   PetscSection    cellCounts, pointCounts, intFacetCounts, extFacetCounts;
@@ -1302,6 +1505,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
 
   PetscCheck(patch->use_coloring == PETSC_FALSE || (patch->user_patches == PETSC_FALSE && patch->ctype == PC_PATCH_STAR), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Coloring is only supported with star patch construction");
+  PetscCheck(patch->userPatchLabel == NULL || patch->user_patches == PETSC_FALSE, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "A patch label cannot be combined with user or Python patch construction, since both define the patches");
+  PetscCheck(patch->constructLabel == NULL || (patch->user_patches == PETSC_FALSE && patch->ctype != PC_PATCH_PARDECOMP), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "A construct label cannot be combined with user, Python, or pardecomp patch construction, which do not build patches around mesh points");
   if (patch->user_patches) {
     PetscCall(patch->userpatchconstructionop(pc, &patch->npatch, &patch->userIS, &patch->iterationSet, patch->userpatchconstructctx));
     vStart = 0;
@@ -1339,51 +1544,21 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     nleaves = PetscMax(nleaves, 0);
   }
 
-  if (patch->use_coloring == PETSC_TRUE) {
-    ISColoring coloring;
-    IS        *iscolors;
-    PetscInt   ncolors;
-
-    PetscCall(DMPlexCreateColoring(dm, colorDepth, 1, &coloring));
-    PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
-    PetscCall(PetscCalloc1(ncolors, &colorLabels));
-    for (PetscInt c = 0; c < ncolors; ++c) {
-      IS              ownedIS;
-      const PetscInt *colorPoints;
-      PetscInt       *ownedPoints;
-      PetscInt        numColorPoints, numOwnedPoints = 0;
-
-      PetscCall(DMLabelCreate(PETSC_COMM_SELF, "PCPatch color star", &colorLabels[c]));
-      PetscCall(ISGetLocalSize(iscolors[c], &numColorPoints));
-      PetscCall(ISGetIndices(iscolors[c], &colorPoints));
-      PetscCall(PetscMalloc1(numColorPoints, &ownedPoints));
-      for (PetscInt p = 0; p < numColorPoints; ++p) {
-        PetscInt  loc = -1;
-        PetscBool flg;
-
-        if (ghost != NULL) PetscCall(DMLabelHasPoint(ghost, colorPoints[p], &flg));
-        else {
-          PetscCall(PetscFindInt(colorPoints[p], nleaves, leaves, &loc));
-          flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
-        }
-        if (flg == PETSC_FALSE) ownedPoints[numOwnedPoints++] = colorPoints[p];
-      }
-      PetscCall(ISRestoreIndices(iscolors[c], &colorPoints));
-      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numOwnedPoints, ownedPoints, PETSC_OWN_POINTER, &ownedIS));
-      PetscCall(DMLabelSetStratumIS(colorLabels[c], 1, ownedIS));
-      PetscCall(ISDestroy(&ownedIS));
-      /* A process builds patches only around the points it owns, and the same color on another process is a
-         different patch, so complete each process's patches by themselves */
-      PetscCall(DMPlexLabelCompleteStar_Internal(dm, colorLabels[c], PETSC_FALSE));
-    }
-    PetscCall(ISColoringRestoreIS(coloring, PETSC_USE_POINTER, &iscolors));
-    PetscCall(ISColoringDestroy(&coloring));
-    vStart        = 0;
-    vEnd          = ncolors;
-    patch->npatch = ncolors;
+  if (patch->userPatchLabel != NULL) {
+    /* The user handed us the patches directly, one stratum per patch */
+    PetscCall(PetscObjectReference((PetscObject)patch->userPatchLabel));
+    patch->patchLabel = patch->userPatchLabel;
+    PetscCall(DMLabelGetValueIS(patch->patchLabel, &patch->patchValues));
+  } else if (patch->use_coloring == PETSC_TRUE) {
+    PetscCall(PCPatchCreateColorLabel_Private(pc, dm, colorDepth, ghost, nleaves, leaves, &patch->patchLabel));
+  }
+  if (patch->patchLabel != NULL) {
+    PetscCall(ISGetLocalSize(patch->patchValues, &patch->npatch));
+    vStart = 0;
+    vEnd   = patch->npatch;
   }
 
-  if (patch->use_coloring == PETSC_TRUE) {
+  if (patch->patchLabel != NULL) {
     PetscInt  numOwnedPoints;
     PetscInt *ownedPointsArray = NULL;
 
@@ -1391,10 +1566,13 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscCall(PetscObjectSetName((PetscObject)patch->ownedPointCounts, "Patch Owned Point Layout"));
     PetscCall(PetscSectionSetChart(patch->ownedPointCounts, vStart, vEnd));
     for (v = vStart; v < vEnd; ++v) {
-      PetscInt numLabelPoints;
+      IS       pointIS        = NULL;
+      PetscInt numLabelPoints = 0;
 
-      PetscCall(DMLabelGetStratumSize(colorLabels[v], 1, &numLabelPoints));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
+      if (pointIS != NULL) PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
       PetscCall(PetscSectionSetDof(patch->ownedPointCounts, v, numLabelPoints));
+      PetscCall(ISDestroy(&pointIS));
     }
     PetscCall(PetscSectionSetUp(patch->ownedPointCounts));
     PetscCall(PetscSectionGetStorageSize(patch->ownedPointCounts, &numOwnedPoints));
@@ -1404,7 +1582,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       const PetscInt *labelPoints    = NULL;
       PetscInt        numLabelPoints = 0, off;
 
-      PetscCall(DMLabelGetStratumIS(colorLabels[v], 1, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
       if (pointIS == NULL) continue;
       PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
       PetscCall(ISGetIndices(pointIS, &labelPoints));
@@ -1439,12 +1617,12 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscInt  chtSize = 0, loc = -1;
     PetscBool flg;
 
-    if (patch->use_coloring == PETSC_TRUE) {
+    if (patch->patchLabel != NULL) {
       IS              pointIS        = NULL;
       const PetscInt *labelPoints    = NULL;
       PetscInt        numLabelPoints = 0;
 
-      PetscCall(DMLabelGetStratumIS(colorLabels[v], 1, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
       if (pointIS != NULL) {
         PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
         PetscCall(ISGetIndices(pointIS, &labelPoints));
@@ -1463,6 +1641,13 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         }
         /* Not an owned entity, do not make a cell patch. */
         if (flg == PETSC_TRUE) continue;
+        /* Not a selected entity, do not make a cell patch. The patch is left empty, and the loops below skip it. */
+        if (patch->constructLabel != NULL) {
+          PetscBool selected;
+
+          PetscCall(DMLabelStratumHasPoint(patch->constructLabel, patch->constructValue, v, &selected));
+          if (selected == PETSC_FALSE) continue;
+        }
       }
       PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
       PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
@@ -1542,12 +1727,12 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscCall(PetscSectionGetDof(extFacetCounts, v, &efdof));
     PetscCall(PetscSectionGetOffset(extFacetCounts, v, &efoff));
     if (dof <= 0) continue;
-    if (patch->use_coloring == PETSC_TRUE) {
+    if (patch->patchLabel != NULL) {
       IS              pointIS        = NULL;
       const PetscInt *labelPoints    = NULL;
       PetscInt        numLabelPoints = 0;
 
-      PetscCall(DMLabelGetStratumIS(colorLabels[v], 1, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
       if (pointIS != NULL) {
         PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
         PetscCall(ISGetIndices(pointIS, &labelPoints));
@@ -1633,7 +1818,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         }
         if (found0 && found1) break;
       }
-      PetscCheck(found0 == PETSC_TRUE && found1 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not manage to find local point numbers for facet support");
+      PetscCheck(found0 == PETSC_TRUE && found1 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not find local point numbers for facet support");
     }
     for (efn = 0; efn < efdof; efn++) {
       PetscInt  cell0  = extFacetsToPatchCell[efoff + efn];
@@ -1645,12 +1830,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
           break;
         }
       }
-      PetscCheck(found0 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not manage to find local point number for exterior facet support");
+      PetscCheck(found0 == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Did not find local point number for exterior facet support");
     }
-  }
-  if (colorLabels != NULL) {
-    for (PetscInt c = 0; c < patch->npatch; ++c) PetscCall(DMLabelDestroy(&colorLabels[c]));
-    PetscCall(PetscFree(colorLabels));
   }
   PetscCall(PetscHSetIDestroy(&ht));
   PetscCall(PetscHSetIDestroy(&cht));
@@ -1807,7 +1988,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
   PetscCall(ISGetIndices(cells, &cellsArray));
   PetscCall(ISGetIndices(points, &pointsArray));
-  if (patch->use_coloring == PETSC_TRUE) PetscCall(ISGetIndices(ownedPoints, &ownedPointsArray));
+  if (patch->patchLabel != NULL) PetscCall(ISGetIndices(ownedPoints, &ownedPointsArray));
   PetscCall(PetscHMapICreate(&ht));
   PetscCall(PetscHMapICreate(&htWithArtificial));
   PetscCall(PetscHMapICreate(&htWithAll));
@@ -1827,7 +2008,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     /* Calculate the global numbers of the artificial BC dofs here first */
     PetscCall(PetscHSetIClear(ownedpts));
     PetscCall(PetscHSetIClear(seenpts));
-    if (patch->use_coloring == PETSC_TRUE) {
+    if (patch->patchLabel != NULL) {
       PetscInt pdof, poff;
 
       PetscCall(PetscSectionGetDof(ownedPointCounts, v, &pdof));
@@ -1840,7 +2021,8 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
       PetscCall(patch->patchconstructop((void *)patch, dm, v, ownedpts));
       PetscCall(PCPatchCompleteCellPatch(pc, ownedpts, seenpts));
     }
-    PetscCall(PCPatchGetPointDofs(pc, ownedpts, owneddofs, v, patch->use_coloring == PETSC_TRUE ? NULL : &patch->subspaces_to_exclude));
+    /* The Vanka exclusion rule is indexed by the mesh point a patch is built around, which a patch label does not give us */
+    PetscCall(PCPatchGetPointDofs(pc, ownedpts, owneddofs, v, patch->patchLabel != NULL ? NULL : &patch->subspaces_to_exclude));
     PetscCall(PCPatchGetPointDofs(pc, seenpts, seendofs, v, NULL));
     PetscCall(PCPatchComputeSetDifference_Private(owneddofs, seendofs, artificialbcs));
     if (patch->viewPatches) {
@@ -2163,7 +2345,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   PetscCall(PetscHMapIDestroy(&htWithAll));
   PetscCall(ISRestoreIndices(cells, &cellsArray));
   PetscCall(ISRestoreIndices(points, &pointsArray));
-  if (patch->use_coloring == PETSC_TRUE) PetscCall(ISRestoreIndices(ownedPoints, &ownedPointsArray));
+  if (patch->patchLabel != NULL) PetscCall(ISRestoreIndices(ownedPoints, &ownedPointsArray));
   PetscCall(PetscFree(dofsArray));
   if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) PetscCall(PetscFree(dofsArrayWithArtificial));
   if (isNonlinear) PetscCall(PetscFree(dofsArrayWithAll));
@@ -3510,6 +3692,8 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(PetscSectionDestroy(&patch->cellCounts));
   PetscCall(PetscSectionDestroy(&patch->pointCounts));
   PetscCall(PetscSectionDestroy(&patch->ownedPointCounts));
+  PetscCall(DMLabelDestroy(&patch->patchLabel));
+  PetscCall(ISDestroy(&patch->patchValues));
   PetscCall(PetscSectionDestroy(&patch->cellNumbering));
   PetscCall(PetscSectionDestroy(&patch->gtolCounts));
   PetscCall(ISDestroy(&patch->gtol));
@@ -3618,6 +3802,8 @@ static PetscErrorCode PCDestroy_PATCH(PC pc)
 
   PetscFunctionBegin;
   PetscCall(PCReset_PATCH(pc));
+  PetscCall(DMLabelDestroy(&patch->userPatchLabel));
+  PetscCall(DMLabelDestroy(&patch->constructLabel));
   PetscCall((*patch->destroysolver)(pc));
   PetscCall(PetscFree(pc->data));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3663,7 +3849,7 @@ static PetscErrorCode PCSetFromOptions_PATCH(PC pc, PetscOptionItems PetscOption
   PetscCall(PetscOptionsEnum(option, "How should the patches be constructed?", "PCPatchSetConstructType", PCPatchConstructTypes, (PetscEnum)patchConstructionType, (PetscEnum *)&patchConstructionType, &flg));
   if (flg) PetscCall(PCPatchSetConstructType(pc, patchConstructionType, NULL, NULL));
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_use_coloring", patch->classname));
-  PetscCall(PetscOptionsBool(option, "Group star patches using a DMPlex coloring?", "PCPATCH", patch->use_coloring, &patch->use_coloring, &flg));
+  PetscCall(PetscOptionsBool(option, "Group star patches by a coloring of the points they are built around?", "PCPATCH", patch->use_coloring, &patch->use_coloring, &flg));
 
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_vanka_dim", patch->classname));
   PetscCall(PetscOptionsInt(option, "Topological dimension of entities for Vanka to ignore", "PCPATCH", patch->vankadim, &patch->vankadim, &flg));
@@ -3767,7 +3953,8 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Precomputing element tensors (each cell assembled only once)\n"));
   if (!patch->save_operators) PetscCall(PetscViewerASCIIPrintf(viewer, "Not saving patch operators (rebuilt every PCApply)\n"));
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Saving patch operators (rebuilt every PCSetUp)\n"));
-  if (patch->patchconstructop == PCPatchConstruct_Star) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: star%s\n", patch->use_coloring == PETSC_TRUE ? " with coloring" : ""));
+  if (patch->userPatchLabel != NULL) PetscCall(PetscViewerASCIIPrintf(viewer, "Patches given by the strata of a label\n"));
+  else if (patch->patchconstructop == PCPatchConstruct_Star) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: star%s\n", patch->use_coloring == PETSC_TRUE ? " with coloring" : ""));
   else if (patch->patchconstructop == PCPatchConstruct_Vanka) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: Vanka\n"));
   else if (patch->patchconstructop == PCPatchConstruct_User) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: user-specified\n"));
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: unknown\n"));
@@ -3808,7 +3995,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
 . -pc_patch_points_view  - Views the process local mesh point numbers for each patch
 . -pc_patch_g2l_view     - Views the map between global dofs and patch local dofs for each patch
 . -pc_patch_patches_view - Views the global dofs associated with each patch and its boundary
-. -pc_patch_use_coloring - Groups star patches by `DMPlexCreateColoring()` colors
+. -pc_patch_use_coloring - Groups star patches by a coloring of the points they are built around, so that each solve handles a whole color at once
 - -pc_patch_sub_mat_view - Views the matrix associated with each patch
 
    Level: intermediate
@@ -3849,6 +4036,11 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->iterationSet             = NULL;
   patch->user_patches             = PETSC_FALSE;
   patch->use_coloring             = PETSC_FALSE;
+  patch->constructLabel           = NULL;
+  patch->constructValue           = 1;
+  patch->userPatchLabel           = NULL;
+  patch->patchLabel               = NULL;
+  patch->patchValues              = NULL;
   PetscCall(PetscStrallocpy(MATDENSE, (char **)&patch->sub_mat_type));
   patch->viewPatches                       = PETSC_FALSE;
   patch->viewCells                         = PETSC_FALSE;
