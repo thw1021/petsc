@@ -1128,7 +1128,7 @@ constructor (or the `-mat_type` from the command line). For instance,
   > - `-pc_gamg_prolongator_filter thr` Filter small entries from the (optionally smoothed) prolongator while preserving the
   >   near-null space. The entries coupling a fine node to a coarse node form a small dense block; a block is dropped when its
   >   Frobenius norm is below `thr` times the largest such block norm in that fine node's rows, then each row is corrected to
-  >   maintain the constraint $P B_c = B$. A value of 0 disables filtering (default). Typical values are 0.01-0.1. This can
+  >   maintain the constraint $P B_c = B$. A value of 0 disables filtering (default). Typical values are 0.01-0.03. This can
   >   reduce operator complexity and improve solve time with minimal impact on convergence. See `PCGAMGSetProlongatorFilter()`.
   > - `-pc_gamg_prolongator_filter_scale scale` Scale the prolongator filter threshold by `scale` on each successive coarser
   >   level; the threshold on level $l$ is `thr` times `scale` to the power $l$, with $l=0$ the finest level. A value below 1
