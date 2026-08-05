@@ -641,21 +641,7 @@ static PetscErrorCode SNESSetUpMatrixFree_Private(SNES snes, PetscBool hasOperat
      provided preconditioner Jacobian with the default matrix-free version. */
     if (snes->npcside == PC_LEFT && snes->npc) {
       if (!snes->jacobian) PetscCall(SNESSetJacobian(snes, J, NULL, NULL, NULL));
-    } else {
-      KSP       ksp;
-      PC        pc;
-      PetscBool match;
-
-      PetscCall(SNESSetJacobian(snes, J, J, MatMFFDComputeJacobian, NULL));
-      /* Force no preconditioner */
-      PetscCall(SNESGetKSP(snes, &ksp));
-      PetscCall(KSPGetPC(ksp, &pc));
-      PetscCall(PetscObjectTypeCompareAny((PetscObject)pc, &match, PCSHELL, PCH2OPUS, ""));
-      if (!match) {
-        PetscCall(PetscInfo(snes, "Setting default matrix-free preconditioner routines\nThat is no preconditioner is being used\n"));
-        PetscCall(PCSetType(pc, PCNONE));
-      }
-    }
+    } else PetscCall(SNESSetJacobian(snes, J, J, MatMFFDComputeJacobian, NULL));
   }
   PetscCall(MatDestroy(&J));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1185,8 +1171,23 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   }
 
   if (snes->usesksp) {
+    PC     pc;
+    PCType pctype;
+
     if (!snes->ksp) PetscCall(SNESGetKSP(snes, &snes->ksp));
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
+    PetscCall(KSPGetPC(snes->ksp, &pc));
+    PetscCall(PCGetType(pc, &pctype));
+    /* If the first two conditions in the following conditional are true, we know a matrix-free Mat
+       will be used eventually with the PC, but we cannot provide the matrix-free Mat to the PC here
+       since we do not have enough information to construct it here (it is constructed after the
+       start of SNESSetUp()). If we do not set the PCNONE here, then the PCSetFromOptions() called
+       from KSPSetFromOptions() below will use PCGetDefaultType_Private() to set a PCType
+       appropriate for the current pc->pmat that will likely not work for the matrix-free Mat, thus
+       producing a later confusing error message. A significant refactoring of how SNES handles
+       matrix-free Mat would be needed to eliminate the next line of code. Note that if the PC type
+       has already been set (third condition), we do not override it */
+    if (snes->mf && !snes->mf_operator && !pctype) PetscCall(PCSetType(pc, PCNONE));
     PetscCall(KSPSetFromOptions(snes->ksp));
   }
 
