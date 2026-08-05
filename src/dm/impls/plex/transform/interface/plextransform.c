@@ -1,6 +1,7 @@
 #include <petsc/private/dmplextransformimpl.h> /*I "petscdmplextransform.h" I*/
 
 #include <petsc/private/petscfeimpl.h> /* For PetscFEInterpolate_Static() */
+#include <petsc/private/hashmapi.h>
 
 PetscClassId DMPLEXTRANSFORM_CLASSID;
 
@@ -1265,6 +1266,59 @@ PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform tr, PetscInt pNew, 
   if (ctNew) *ctNew = ctN;
   if (p) *p = pO;
   if (r) *r = rO;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexTransformCreateSplitCellLabel - Mark the cells of a transformed mesh whose source cell was genuinely split
+
+  Not Collective
+
+  Input Parameters:
++ tr - The `DMPlexTransform` that produced `dm`
+- dm - The transformed `DM`
+
+  Output Parameter:
+. label - A `DMLabel` marking with 1 the cells of `dm` whose source cell produced more than one cell
+
+  Level: advanced
+
+  Notes:
+  For `DMPLEXREFINESBR`, this returns both marked and unmarked cells that were split to restore conformity.
+
+  The transform is available only if saved with `DMPlexSetSaveTransform()`. Use `DMPlexGetTransform()` to get it.
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexTransform`, `DMPlexTransformGetSourcePoint()`, `DMPlexTransformGetActive()`, `DMPlexGetTransform()`, `DMPlexLabelComplete()`
+@*/
+PetscErrorCode DMPlexTransformCreateSplitCellLabel(DMPlexTransform tr, DM dm, DMLabel *label)
+{
+  PetscHMapI children;
+  PetscInt   cStart, cEnd;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscAssertPointer(label, 3);
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  /* Count the cells each source point produced, rather than asking the transform how it refines a cell type, so that
+     this does not have to know how any particular transform reports its refinement types */
+  PetscCall(PetscHMapICreate(&children));
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscInt p, n = 0;
+
+    PetscCall(DMPlexTransformGetSourcePoint(tr, c, NULL, NULL, &p, NULL));
+    PetscCall(PetscHMapIGetWithDefault(children, p, 0, &n));
+    PetscCall(PetscHMapISet(children, p, n + 1));
+  }
+  PetscCall(DMLabelCreate(PETSC_COMM_SELF, "split cells", label));
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscInt p, n = 0;
+
+    PetscCall(DMPlexTransformGetSourcePoint(tr, c, NULL, NULL, &p, NULL));
+    PetscCall(PetscHMapIGetWithDefault(children, p, 0, &n));
+    if (n > 1) PetscCall(DMLabelSetValue(*label, c, 1));
+  }
+  PetscCall(PetscHMapIDestroy(&children));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
