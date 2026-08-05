@@ -82,6 +82,7 @@
 
 ## Mat
 
+- Fix an invalid free in `MatColoringDestroy()` for weights supplied with `MatColoringSetWeights()`
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
 - Add `MATPRODUCT_AB` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL` with any matrix type
 - Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
@@ -221,6 +222,8 @@
 - Add `DMPlexSetClosurePermutationLexicographic()`
 - Add `DMPlexDrawCell()`
 - Add `DMPlexLabelCompleteStar()`
+- Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum, and add `-dm_plex_coloring_ordering_type` to reorder the points before coloring them
+- Change `DMPlexCreateColoring()` to weight the points lexically rather than randomly, which uses the optimal four colors for the vertices of a structured quadrilateral grid instead of seven
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Add `DMPlexCopyFlags()`

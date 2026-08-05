@@ -11682,16 +11682,59 @@ static inline PetscInt DMPlex_GlobalID(PetscInt point)
 }
 
 /*
-   Computes the graph laplacian L at the given depth.
-      L = D - A, with D = degree matrix and A = adjacency matrix
+  Number selected points in [pStart, pEnd) with consecutive global indices. Owned points are
+  numbered in increasing point order; ghost points carry their owner's index. Unselected points
+  get PETSC_INT_MIN.
 */
-static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
+static PetscErrorCode DMPlexCreateSubsetNumbering_Private(DM dm, PetscInt pStart, PetscInt pEnd, DMLabel label, PetscInt value, PetscInt *numOwned, PetscInt *numbering[], IS *points)
+{
+  PetscSection section, globalSection;
+  PetscInt    *nums, *pts;
+  PetscInt     n = 0;
+
+  PetscFunctionBegin;
+  PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &section));
+  PetscCall(PetscSectionSetChart(section, pStart, pEnd));
+  for (PetscInt p = pStart; p < pEnd; ++p) {
+    PetscInt val = value;
+
+    if (label) PetscCall(DMLabelGetValue(label, p, &val));
+    if (val == value) PetscCall(PetscSectionSetDof(section, p, 1));
+  }
+  PetscCall(PetscSectionSetUp(section));
+  PetscCall(PetscSectionCreateGlobalSection(section, dm->sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &globalSection));
+  PetscCall(PetscMalloc1(pEnd - pStart, &nums));
+  PetscCall(PetscMalloc1(pEnd - pStart, &pts));
+  for (PetscInt p = pStart; p < pEnd; ++p) {
+    PetscInt dof;
+
+    PetscCall(PetscSectionGetDof(section, p, &dof));
+    if (!dof) {
+      nums[p - pStart] = PETSC_INT_MIN;
+      continue;
+    }
+    PetscCall(PetscSectionGetOffset(globalSection, p, &nums[p - pStart]));
+    if (nums[p - pStart] >= 0) pts[n++] = p;
+  }
+  PetscCall(PetscSectionDestroy(&section));
+  PetscCall(PetscSectionDestroy(&globalSection));
+  if (numOwned) *numOwned = n;
+  if (points) PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n, pts, PETSC_COPY_VALUES, points));
+  PetscCall(PetscFree(pts));
+  if (numbering) *numbering = nums;
+  else PetscCall(PetscFree(nums));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Build the graph Laplacian L = D - A for points at depth, restricted by label. */
+static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, DMLabel label, PetscInt value, Mat *oL, IS *oPoints)
 {
   Mat             L, preall;
   Vec             x, y;
-  IS              pointNumbering;
-  const PetscInt *pointNum;
-  PetscInt       *i, *j, numVertices, numEdges, shift, maxnnzrow, dim, *numDof, numFields;
+  IS              points;
+  const PetscInt *pts;
+  PetscInt       *numbering   = NULL, *i, *j, *numDof;
+  PetscInt        numVertices = 0, numEdges = 0, shift, maxnnzrow, dim, numFields, iptr = 0;
   PetscInt        pStart, pEnd;
   PetscScalar    *vals;
   PetscSection    s;
@@ -11699,52 +11742,36 @@ static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, 
   PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
   {
-    /* XXX this generalizes DMPlexCreatePartitionerGraph to any height and adjacency */
     PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
-    PetscCall(DMPlexCreatePointNumbering(dm, &pointNumbering));
-    PetscCall(ISGetIndices(pointNumbering, &pointNum));
-    shift = pStart < pEnd ? DMPlex_GlobalID(pointNum[pStart]) : PETSC_INT_MAX;
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &shift, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)dm)));
-    /* Determine sizes */
-    numVertices = 0;
-    for (PetscInt p = pStart; p < pEnd; p++) {
-      /* Skip non-owned cells in parallel */
-      if (pointNum[p] < 0) continue;
-      numVertices++;
-    }
-    numEdges = 0;
-    for (PetscInt p = pStart; p < pEnd; p++) {
+    PetscCall(DMPlexCreateSubsetNumbering_Private(dm, pStart, pEnd, label, value, &numVertices, &numbering, &points));
+    PetscCall(ISGetIndices(points, &pts));
+    /* Keep edges only when both endpoints are selected. */
+    for (PetscInt v = 0; v < numVertices; v++) {
       PetscInt  nadj = PETSC_DETERMINE;
       PetscInt *adj  = NULL;
-      /* Skip non-owned cells in parallel */
-      if (pointNum[p] < 0) continue;
-      PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
+
+      PetscCall(DMPlexGetAdjacency(dm, pts[v], &nadj, &adj));
       for (PetscInt a = 0; a < nadj; a++)
-        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd) numEdges++;
+        if (adj[a] != pts[v] && pStart <= adj[a] && adj[a] < pEnd && numbering[adj[a] - pStart] != PETSC_INT_MIN) numEdges++;
       PetscCall(PetscFree(adj));
     }
-    /* Determine adjacency */
     PetscCall(PetscMalloc1(numVertices + 1, &i));
     PetscCall(PetscMalloc1(numEdges, &j));
-    PetscInt iptr = 0;
-    i[0]          = iptr;
-    for (PetscInt p = pStart; p < pEnd; p++) {
+    i[0] = iptr;
+    for (PetscInt v = 0; v < numVertices; v++) {
       PetscInt  nadj = PETSC_DETERMINE;
       PetscInt *adj  = NULL;
-      /* Skip non-owned cells in parallel */
-      if (pointNum[p] < 0) continue;
-      PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
+
+      PetscCall(DMPlexGetAdjacency(dm, pts[v], &nadj, &adj));
       for (PetscInt a = 0; a < nadj; a++)
-        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd) j[iptr++] = DMPlex_GlobalID(pointNum[adj[a]]) - shift;
+        if (adj[a] != pts[v] && pStart <= adj[a] && adj[a] < pEnd && numbering[adj[a] - pStart] != PETSC_INT_MIN) j[iptr++] = DMPlex_GlobalID(numbering[adj[a] - pStart]);
       PetscCall(PetscFree(adj));
-      i[p - pStart + 1] = iptr;
-      /* Sort adjacencies (not strictly necessary) */
-      PetscCall(PetscSortInt(iptr - i[p - pStart], &j[i[p - pStart]]));
+      i[v + 1] = iptr;
+      PetscCall(PetscSortInt(iptr - i[v], &j[i[v]]));
     }
-    PetscCall(ISRestoreIndices(pointNumbering, &pointNum));
-    PetscCall(ISDestroy(&pointNumbering));
+    PetscCall(ISRestoreIndices(points, &pts));
+    PetscCall(PetscFree(numbering));
   }
-  /* First create a matrix object */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &L));
   PetscCall(MatSetSizes(L, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(MatSetOptionsPrefix(L, "dm_plex_laplacian_"));
@@ -11761,19 +11788,15 @@ static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, 
     PetscInt  row    = shift + k;
     PetscInt *col    = j + i[k];
     maxnnzrow        = PetscMax(maxnnzrow, nnzrow);
-    /* Add adjacency connection */
     PetscCall(MatSetValues(preall, 1, &row, nnzrow, col, NULL, INSERT_VALUES));
-    /* The graph CSR does not represent self-to-self connections, we need them
-       for the graph laplacian */
+    /* Add diagonal entries for the graph Laplacian. */
     PetscCall(MatSetValues(preall, 1, &row, 1, &row, NULL, INSERT_VALUES));
   }
   PetscCall(MatAssemblyBegin(preall, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(preall, MAT_FINAL_ASSEMBLY));
-  /* Preallocate the graph laplacian matrix */
   PetscCall(MatPreallocatorPreallocate(preall, PETSC_TRUE, L));
   PetscCall(MatDestroy(&preall));
-  /* Set values. We first set all values to -1.0 to obtain -A,
-     and then use matrix API to modify for our needs and add the diagonal D matrix */
+  /* Set -A; the diagonal is set from the row sums below. */
   PetscCall(PetscMalloc1(maxnnzrow, &vals));
   for (PetscInt k = 0; k < maxnnzrow; k++) vals[k] = -1.0;
   for (PetscInt k = 0; k < numVertices; k++) {
@@ -11784,7 +11807,7 @@ static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, 
   }
   PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
-  /* Add D. Here we use the fact that D = rowsum(A) */
+  /* D is the row sum of A. */
   PetscCall(MatCreateVecs(L, &x, &y));
   PetscCall(VecSet(x, -1.0));
   PetscCall(MatMult(L, x, y));
@@ -11793,33 +11816,144 @@ static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, 
   PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
-  /* Clean up */
   PetscCall(PetscFree(vals));
   PetscCall(PetscFree(i));
   PetscCall(PetscFree(j));
-  /* Allow command line view via -laplacian_view */
   PetscCall(MatViewFromOptions(L, NULL, "-view"));
-  /*
-    For visualization purposes, we attach a DM to the matrix.
-    Cloning makes a shallow (pointer) copy of the mesh topology and geometry,
-    and allows us to consider different discretization spaces.
-    In this case, we specify a one-field discretization with a PetscSection object.
-  */
-  PetscCall(DMClone(dm, &dm));
-  numFields = 1;
-  PetscCall(DMSetNumFields(dm, numFields));
-  PetscCall(PetscCalloc1(dim + 1, &numDof));
-  numDof[depth] = 1;
-  PetscCall(DMPlexCreateSection(dm, NULL, &numFields, numDof, 0, NULL, NULL, NULL, NULL, &s));
-  PetscCall(DMSetLocalSection(dm, s));
-  PetscCall(PetscSectionDestroy(&s));
-  PetscCall(PetscFree(numDof));
-  /* Attach the DM to the matrix */
-  PetscCall(MatSetDM(L, dm));
-  /* the matrix holds a reference to the DM, we can decrease reference counting */
-  PetscCall(DMDestroy(&dm));
-  /* Return matrix to caller */
+  /* The matrix layout matches the DM only for the full stratum. */
+  if (!label) {
+    PetscCall(DMClone(dm, &dm));
+    numFields = 1;
+    PetscCall(DMSetNumFields(dm, numFields));
+    PetscCall(PetscCalloc1(dim + 1, &numDof));
+    numDof[depth] = 1;
+    PetscCall(DMPlexCreateSection(dm, NULL, &numFields, numDof, 0, NULL, NULL, NULL, NULL, &s));
+    PetscCall(DMSetLocalSection(dm, s));
+    PetscCall(PetscSectionDestroy(&s));
+    PetscCall(PetscFree(numDof));
+    PetscCall(MatSetDM(L, dm));
+    PetscCall(DMDestroy(&dm));
+  }
   *oL = L;
+  if (oPoints) *oPoints = points;
+  else PetscCall(ISDestroy(&points));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexCreateColoringLabel - Gets coloring of the connectivity graph of the `DMPlex` points at a given depth that are marked by a `DMLabel`.
+
+  Collective
+
+  Input Parameters:
++ dm       - the `DMPlex` object
+. depth    - the dimension of the entities in the connectivity graph.
+. distance - the distance of the coloring (either 1 or 2).
+. label    - the `DMLabel` selecting the points to color, or `NULL` to color the whole stratum
+- value    - the stratum value of `label` selecting the points, ignored when `label` is `NULL`
+
+  Output Parameter:
+. coloring - the coloring, in `DMPlex` point numbers
+
+  Options Database Keys:
++ -dm_plex_coloring_ordering_type name       - order the points with `MatGetOrdering()` before coloring them
+. -dm_plex_coloring_mat_coloring_type name   - the `MatColoringType` used to color the connectivity graph
+- -dm_plex_coloring_mat_coloring_weight_type (RANDOM|LEXICAL|LF|SL) - the vertex weighting, which sets the order in which points are colored
+
+  Level: developer
+
+  Notes:
+  The graph is the subgraph induced by the selected points: two selected points are connected exactly when they are
+  adjacent in the mesh. Restricting the graph this way, rather than coloring the whole stratum and discarding the
+  unselected points afterwards, both costs work proportional to the selected set and uses fewer colors, since points
+  whose neighbors are all unselected become isolated and can share a color.
+
+  The adjacency is the one configured on `dm` by `DMSetBasicAdjacency()`. For grouping vertex-star patches, that must
+  be the finite-element adjacency (`useCone` `PETSC_FALSE`, `useClosure` `PETSC_TRUE`), for which two vertices are
+  adjacent exactly when they share a cell; points of one color then have pairwise disjoint stars.
+
+  `MATCOLORINGGREEDY` colors the points in order of decreasing weight, so the ordering determines the number of
+  colors. This routine defaults to `MAT_COLORING_WEIGHT_LEXICAL`, which sweeps in the point numbering and yields the
+  optimal four colors on a structured grid, where the `MatColoring` default of random weights uses seven. Use
+  `-dm_plex_coloring_ordering_type` to sweep in a different order when the point numbering has no locality. A
+  bandwidth-reducing ordering is not what serves a coloring: `MATORDERINGRCM` is a wavefront, and sweeping a
+  structured grid diagonally costs it six colors rather than four. `MatGetOrdering()` reaches the graph through
+  `MatGetRowIJ()`, which is not supported for parallel matrices, so requesting an ordering on more than one process
+  raises an error.
+
+.seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`, `DMPlexCreateColoring()`, `DMSetBasicAdjacency()`, `MatGetOrdering()`
+@*/
+PetscErrorCode DMPlexCreateColoringLabel(DM dm, PetscInt depth, PetscInt distance, DMLabel label, PetscInt value, ISColoring *coloring)
+{
+  Mat             L        = NULL;
+  MatColoring     mc       = NULL;
+  IS             *iscolors = NULL;
+  IS              points;
+  const PetscInt *pts;
+  PetscInt       *idx;
+  PetscInt        rowStart = 0, numVertices = 0, ncolors = 0;
+  char            ordering[PETSC_MAX_PATH_LEN];
+  PetscBool       flg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 4);
+  PetscAssertPointer(coloring, 6);
+  PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, label, value, &L, &points));
+  PetscCall(MatGetOwnershipRange(L, &rowStart, NULL));
+  PetscCall(ISGetLocalSize(points, &numVertices));
+  PetscCall(MatColoringCreate(L, &mc));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)mc, "dm_plex_coloring_"));
+  PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));
+  PetscCall(MatColoringSetDistance(mc, distance));
+  PetscCall(MatColoringSetWeightType(mc, MAT_COLORING_WEIGHT_LEXICAL));
+  PetscCall(MatColoringSetFromOptions(mc));
+  PetscObjectOptionsBegin((PetscObject)mc);
+  PetscCall(PetscOptionsFList("-ordering_type", "Reorder the points with MatGetOrdering() before coloring them", "MatGetOrdering", MatOrderingList, NULL, ordering, sizeof(ordering), &flg));
+  PetscOptionsEnd();
+  if (flg) {
+    IS              rperm, cperm;
+    const PetscInt *perm;
+    PetscReal      *wts;
+    PetscInt        n;
+    PetscMPIInt     size;
+
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size));
+    PetscCheck(size == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Reordering the points before coloring them is not supported in parallel, because MatGetOrdering() reaches the graph through MatGetRowIJ()");
+    PetscCall(MatGetOrdering(L, ordering, &rperm, &cperm));
+    PetscCall(ISGetLocalSize(rperm, &n));
+    PetscCheck(n == numVertices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Ordering %s returned %" PetscInt_FMT " indices, but the graph has %" PetscInt_FMT " local points", ordering, n, numVertices);
+    PetscCall(ISGetIndices(rperm, &perm));
+    PetscCall(PetscMalloc1(n, &wts));
+    /* Greedy coloring visits points in decreasing weight order. */
+    for (PetscInt k = 0; k < n; k++) wts[perm[k]] = (PetscReal)(n - k);
+    PetscCall(ISRestoreIndices(rperm, &perm));
+    PetscCall(MatColoringSetWeights(mc, wts, NULL));
+    PetscCall(PetscFree(wts));
+    PetscCall(ISDestroy(&rperm));
+    PetscCall(ISDestroy(&cperm));
+  }
+  PetscCall(MatColoringApply(mc, coloring));
+  PetscCall(MatColoringDestroy(&mc));
+  PetscCall(MatDestroy(&L));
+  /* Convert graph-row indices back to DMPlex point numbers. */
+  PetscCall(ISGetIndices(points, &pts));
+  PetscCall(PetscMalloc1(numVertices, &idx));
+  PetscCall(ISColoringGetIS(*coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
+  for (PetscInt c = 0; c < ncolors; c++) {
+    const PetscInt *rows;
+    PetscInt        n;
+
+    PetscCall(ISGetLocalSize(iscolors[c], &n));
+    PetscCall(ISGetIndices(iscolors[c], &rows));
+    for (PetscInt k = 0; k < n; k++) idx[k] = pts[rows[k] - rowStart];
+    PetscCall(ISRestoreIndices(iscolors[c], &rows));
+    PetscCall(ISGeneralSetIndices(iscolors[c], n, idx, PETSC_COPY_VALUES));
+  }
+  PetscCall(ISColoringRestoreIS(*coloring, PETSC_USE_POINTER, &iscolors));
+  PetscCall(PetscFree(idx));
+  PetscCall(ISRestoreIndices(points, &pts));
+  PetscCall(ISDestroy(&points));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11850,36 +11984,14 @@ static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, 
   A coloring of the vertices (`depth=0`) with `distance=1` can be use can be used to group non-overlapping vertex-star patches into multi-patch subdomains.
   Similarly, a vertex coloring with `distance=2` can be used to group non-overlapping Vanka patches into multi-patch subdomains.
 
-.seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
+  This colors the whole stratum. Use `DMPlexCreateColoringLabel()` to color a subset of it, and see that routine for
+  the options controlling the ordering and hence the number of colors.
+
+.seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`, `DMPlexCreateColoringLabel()`
 @*/
 PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, ISColoring *coloring)
 {
-  Mat         L        = NULL;
-  MatColoring mc       = NULL;
-  IS         *iscolors = NULL;
-  PetscInt    pStart = 0, offset = 0, ncolors = 0;
-
   PetscFunctionBegin;
-  /* Create a graph Laplacian */
-  PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
-  /* Compute offset */
-  PetscCall(MatGetOwnershipRange(L, &offset, NULL));
-  PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, NULL));
-  offset = pStart - offset;
-  /* Obtain ISColoring via MatColoring */
-  PetscCall(MatColoringCreate(L, &mc));
-  PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));
-  PetscCall(MatColoringSetDistance(mc, distance));
-  PetscCall(MatColoringSetFromOptions(mc));
-  PetscCall(MatColoringApply(mc, coloring));
-  PetscCall(MatColoringDestroy(&mc));
-  /* Destroy the graph Laplacian */
-  PetscCall(MatDestroy(&L));
-  /* Shift ISColoring to align with the DMPlex numbering */
-  PetscCall(ISColoringGetIS(*coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
-  for (PetscInt c = 0; c < ncolors; c++) {
-    PetscCall(ISShift(iscolors[c], offset, iscolors[c]));
-  }
-  PetscCall(ISColoringRestoreIS(*coloring, PETSC_USE_POINTER, &iscolors));
+  PetscCall(DMPlexCreateColoringLabel(dm, depth, distance, NULL, 0, coloring));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
