@@ -17,20 +17,25 @@ typedef struct {
   PetscErrorCode (*userpatchconstructionop)(PC, PetscInt *, IS **, IS *, PetscCtx ctx);
   void        *userpatchconstructctx;
   IS          *userIS;
-  PetscInt     npatch;       /* Number of patches */
-  PetscBool    user_patches; /* Flag for user construction of patches */
-  PetscInt     dim, codim;   /* Dimension or codimension of mesh points to loop over; only one of them can be set */
-  PetscSection cellCounts;   /* Maps patch -> # cells in patch */
-  IS           cells;        /* [patch][cell in patch]: Cell number */
+  PetscInt     npatch;         /* Number of patches */
+  PetscBool    user_patches;   /* Flag for user construction of patches */
+  DMLabel      userPatchLabel; /* User-supplied patches, one stratum per patch, retained across PCReset() */
+  DMLabel      patchLabel;     /* Points solved for by each patch, one stratum per patch */
+  IS           patchValues;    /* Stratum values of patchLabel, indexed by patch number */
+  PetscInt     dim, codim;     /* Dimension or codimension of mesh points to loop over; only one of them can be set */
+  PetscSection cellCounts;     /* Maps patch -> # cells in patch */
+  IS           cells;          /* [patch][cell in patch]: Cell number */
   IS           extFacets;
   IS           intFacets;
   IS           intFacetsToPatchCell; /* Support of interior facet in local patch point numbering: AKA which two cells touch the facet (in patch local numbering of cells) */
   IS           extFacetsToPatchCell; /* Support of exterior facet in local patch point numbering: the one cell that touches the facet (in patch local numbering of cells) */
   PetscSection intFacetCounts;
   PetscSection extFacetCounts;
-  PetscSection cellNumbering; /* Plex: NULL Firedrake: Numbering of cells in DM */
-  PetscSection pointCounts;   /* Maps patch -> # points with dofs in patch */
-  IS           points;        /* [patch][point in patch]: Point number */
+  PetscSection cellNumbering;    /* Plex: NULL Firedrake: Numbering of cells in DM */
+  PetscSection pointCounts;      /* Maps patch -> # points with dofs in patch */
+  IS           points;           /* [patch][point in patch]: Point number */
+  PetscSection ownedPointCounts; /* Maps patch -> # points solved for by the patch, before completion */
+  IS           ownedPoints;      /* [patch][owned point in patch]: Point number */
   /* Dof layout */
   PetscBool     combined;        /* Use a combined space with all fields */
   PetscInt      nsubspaces;      /* Number of fields */
