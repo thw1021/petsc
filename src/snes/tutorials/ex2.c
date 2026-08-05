@@ -378,4 +378,10 @@ PetscErrorCode Monitor(SNES snes, PetscInt its, PetscReal fnorm, PetscCtx ctx)
       args: -nox -snes_type {{newtonls newtontr ncg ngmres qn anderson nrichardson ms ksponly ksptransposeonly vinewtonrsls vinewtonssls fas ms}} -snes_max_it 1
       requires: !single
 
+   test:
+      suffix: incompatible_mf_pc
+      args: -snes_mf -pc_type lu -petsc_ci_portable_error_output -error_output_stdout
+      filter: grep "Cannot use explicitly set PC type"
+      requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
+
 TEST*/

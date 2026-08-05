@@ -644,14 +644,19 @@ static PetscErrorCode SNESSetUpMatrixFree_Private(SNES snes, PetscBool hasOperat
     } else {
       KSP       ksp;
       PC        pc;
-      PetscBool match;
+      PetscBool compatible, is_none, pc_type_set;
 
       PetscCall(SNESSetJacobian(snes, J, J, MatMFFDComputeJacobian, NULL));
       /* Force no preconditioner */
       PetscCall(SNESGetKSP(snes, &ksp));
       PetscCall(KSPGetPC(ksp, &pc));
-      PetscCall(PetscObjectTypeCompareAny((PetscObject)pc, &match, PCSHELL, PCH2OPUS, ""));
-      if (!match) {
+      PetscCall(PetscObjectTypeCompareAny((PetscObject)pc, &compatible, PCSHELL, PCH2OPUS, ""));
+      if (!compatible) {
+        PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCNONE, &is_none));
+        if (!is_none) {
+          PetscCall(PetscOptionsHasName(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, "-pc_type", &pc_type_set));
+          PetscCheck(!pc_type_set, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Cannot use explicitly set PC type %s with -snes_mf because no assembled preconditioning matrix is available. Use -snes_mf_operator to retain the user-provided preconditioning matrix, or use -pc_type none", ((PetscObject)pc)->type_name);
+        }
         PetscCall(PetscInfo(snes, "Setting default matrix-free preconditioner routines\nThat is no preconditioner is being used\n"));
         PetscCall(PCSetType(pc, PCNONE));
       }
