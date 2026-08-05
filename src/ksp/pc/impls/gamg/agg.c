@@ -303,7 +303,9 @@ PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
   Level: intermediate
 
   Note:
-  A scale below 1 filters less aggressively on coarser levels, where the prolongator is denser.
+  A scale below 1 filters less aggressively on coarser levels, where the prolongator is denser. Values above 1 are not allowed:
+  they would let the effective threshold reach 1, at which the filter drops even the strongest block of every fine node and
+  zeroes the prolongator.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGGetProlongatorFilterScale()`
 @*/
@@ -325,7 +327,7 @@ PetscErrorCode PCGAMGSetProlongatorFilterScale(PC pc, PetscReal scale)
 . pc - the preconditioner context
 
   Output Parameter:
-. scale - per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
+. scale - per-level multiplier in [0,1]; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
 
   Level: intermediate
 
@@ -433,7 +435,9 @@ static PetscErrorCode PCGAMGSetProlongatorFilterScale_AGG(PC pc, PetscReal scale
   PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
-  PetscCheck(scale >= 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Filter scale %g must be non-negative", (double)scale);
+  /* scale <= 1 keeps the effective per-level threshold thr*scale^level below the 1.0 at which the
+     filter would drop even the strongest block of every fine node, zeroing the prolongator */
+  PetscCheck(scale >= 0.0 && scale <= 1.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Prolongator filter scale %g must be in [0,1]", (double)scale);
   pc_gamg->prolongator_filter_scale = scale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1595,9 +1599,9 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
   PetscFunctionBegin;
   PetscCall(MatGetBlockSizes(Prol, &rbs, &cbs));
   /* Prol is built internally with MatSetBlockSizes(..., col_bs); a mismatch here means smoothing corrupted the block structure */
-  PetscCheck(cbs == col_bs, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Prolongator column block size %" PetscInt_FMT " != nSAvec %" PetscInt_FMT " (block structure lost during smoothing; should be unreachable with a user-facing config)", cbs, col_bs);
+  PetscCheck(cbs == col_bs, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Prolongator column block size %" PetscInt_FMT " != nSAvec %" PetscInt_FMT " (block structure lost during smoothing; should be unreachable with a user-facing config)", cbs, col_bs);
   PetscCall(MatGetOwnershipRange(Prol, &rStart, &rEnd));
-  PetscCheck((rEnd - rStart) % rbs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Local rows %" PetscInt_FMT " not divisible by row block size %" PetscInt_FMT, rEnd - rStart, rbs);
+  PetscCheck((rEnd - rStart) % rbs == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Local rows %" PetscInt_FMT " not divisible by row block size %" PetscInt_FMT, rEnd - rStart, rbs);
   nfn = (rEnd - rStart) / rbs;
 
   /* The local nonzero count bounds every scratch array: distinct coarse nodes per
@@ -2054,6 +2058,7 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
   Vec          bb, xx;
   PC           epc;
   PetscReal    alpha, emax, emin;
+  PetscReal    pfilter = pc_gamg->prolongator_filter * PetscPowRealInt(pc_gamg->prolongator_filter_scale, pc_gamg->current_level);
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)Amat, &comm));
@@ -2153,9 +2158,12 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
     }
     PetscCall(VecDestroy(&diag));
   }
-  if (pc_gamg->prolongator_filter > 0.0) {
-    PetscReal pfilter = pc_gamg->prolongator_filter * PetscPowRealInt(pc_gamg->prolongator_filter_scale, pc_gamg->current_level);
-
+  /* A per-level threshold of 0 (from prolongator_filter_scale == 0 on the coarser levels) drops
+     nothing, so skip the whole filter rather than pay for its passes and per-row solves. The
+     setters keep prolongator_filter < 1 and its scale <= 1, so the effective threshold cannot
+     reach the 1.0 at which every block, including the strongest of each fine node, is dropped. */
+  PetscCheck(pfilter < 1.0, comm, PETSC_ERR_ARG_OUTOFRANGE, "Effective prolongator filter threshold %g on level %" PetscInt_FMT " must be less than 1", (double)pfilter, pc_gamg->current_level);
+  if (pfilter > 0.0) {
     PetscCall(PetscInfo(pc, "%s: level %" PetscInt_FMT " prolongator filter threshold %g (base %g, scale %g^%" PetscInt_FMT ")\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)pfilter, (double)pc_gamg->prolongator_filter,
                         (double)pc_gamg->prolongator_filter_scale, pc_gamg->current_level));
     PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pfilter));

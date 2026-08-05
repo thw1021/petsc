@@ -217,6 +217,9 @@ int main(int argc, char **args)
    build:
       requires: !complex
 
+   # The skip is not about the prolongator filter: with the ILP64 OpenBLAS of arch-ci-linux-ILP64,
+   # LAPACKstev fails (INFO > 0) in the CG Lanczos eigenvalue estimate that GAMG uses to smooth the
+   # prolongator, aborting the run before the solve. Remove once that estimate is made robust.
    test:
       nsize: 4
       requires: !defined(PETSC_HAVE_64BIT_BLAS_INDICES)
