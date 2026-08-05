@@ -617,7 +617,7 @@ PetscErrorCode KSPGetOperatorsSet(KSP ksp, PetscBool *mat, PetscBool *pmat)
 }
 
 /*@
-  KSPSetPreSolve - Sets a function that is called at the beginning of each `KSPSolve()`. Used in conjunction with `KSPSetPostSolve()`.
+  KSPSetPreSolve - Sets a function that is called before solver and preconditioner setup at the beginning of each `KSPSolve()`. Used in conjunction with `KSPSetPostSolve()`.
 
   Logically Collective
 
@@ -629,7 +629,8 @@ PetscErrorCode KSPGetOperatorsSet(KSP ksp, PetscBool *mat, PetscBool *pmat)
   Level: developer
 
   Notes:
-  The function provided here `presolve` is used to modify the right hand side, and possibly the matrix, of the linear system to be solved.
+  The function provided here `presolve` runs before `KSPSetUp()` and `KSPSetUpOnBlocks()`. It may modify the operators and right-hand side
+  of the linear system to be solved.
   The function provided with `KSPSetPostSolve()` then modifies the resulting solution of that linear system to obtain the correct solution
   to the initial linear system.
 
