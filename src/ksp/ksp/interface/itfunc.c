@@ -854,7 +854,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   if (ksp->res_hist_reset) ksp->res_hist_len = 0;
   if (ksp->err_hist_reset) ksp->err_hist_len = 0;
 
-  PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
+  if (ksp->presolve_ew || ksp->presolve) PetscCall(KSPPreSolve(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   /* KSPSetUp() scales the matrix if needed */
   PetscCall(KSPSetUp(ksp));
