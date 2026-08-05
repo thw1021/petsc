@@ -1,13 +1,12 @@
 static char help[] = "Tests KSP pre-solve callback ordering with SNES Eisenstat-Walker.\n\n";
 
 #include <petscsnes.h>
-
 typedef struct {
   PetscReal expected_rtol;
   PetscInt  presolve_count, setup_count;
 } CallbackCtx;
 
-static PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
+static PetscErrorCode FormFunction(PETSC_UNUSED SNES snes, Vec x, Vec f, PETSC_UNUSED PetscCtx ctx)
 {
   const PetscScalar *xa;
   PetscScalar       *fa;
@@ -21,7 +20,7 @@ static PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, PetscCtx ctx)
+static PetscErrorCode FormJacobian(PETSC_UNUSED SNES snes, Vec x, Mat J, Mat P, PETSC_UNUSED PetscCtx ctx)
 {
   const PetscScalar *xa;
 
@@ -39,14 +38,14 @@ static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, PetscCtx ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCApply_Identity(PC pc, Vec x, Vec y)
+static PetscErrorCode PCApply_Identity(PETSC_UNUSED PC pc, Vec x, Vec y)
 {
   PetscFunctionBeginUser;
   PetscCall(VecCopy(x, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckPreSolve(KSP ksp, Vec b, Vec x, PetscCtx vctx)
+static PetscErrorCode CheckPreSolve(KSP ksp, PETSC_UNUSED Vec b, PETSC_UNUSED Vec x, PetscCtx vctx)
 {
   CallbackCtx *ctx = (CallbackCtx *)vctx;
   PetscReal    rtol;
