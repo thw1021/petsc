@@ -305,8 +305,8 @@ PetscErrorCode DMPlexLabelComplete(DM dm, DMLabel label)
 
 static PetscErrorCode DMPlexLabelAppendPoint_Private(PetscHSetI seen, PetscInt point, PetscInt *numPoints, PetscInt *maxPoints, PetscInt **points)
 {
-  PetscInt  *newPoints = NULL;
-  PetscBool  has;
+  PetscInt *newPoints = NULL;
+  PetscBool has;
 
   PetscFunctionBegin;
   PetscCall(PetscHSetIHas(seen, point, &has));
@@ -327,7 +327,7 @@ static PetscErrorCode DMPlexLabelAppendPoint_Private(PetscHSetI seen, PetscInt p
 
 static PetscErrorCode DMPlexLabelSetStratumOrdered_Private(DMLabel label, PetscInt value, PetscBool append, PetscInt numPoints, const PetscInt points[])
 {
-  IS              oldIS = NULL, newIS;
+  IS              oldIS     = NULL, newIS;
   PetscHSetI      seen      = NULL;
   const PetscInt *oldPoints = NULL;
   PetscInt       *newPoints = NULL;
