@@ -237,6 +237,7 @@
 - Add `DMPlexLabelCompleteStar()`
 - Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum
 - Add `-dm_plex_coloring_ordering_type` to order the points with `MatGetOrdering()` before coloring them
+- Add `-dm_plex_coloring_local` to color the points each process owns by themselves, without communicating
 - Change `DMPlexCreateColoring()` to weight the points lexically rather than randomly, which uses the optimal four colors for the vertices of a structured quadrilateral grid instead of seven
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
