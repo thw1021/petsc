@@ -84,7 +84,9 @@
 
 ## PC
 
-- Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering small entries from the prolongator in `PCGAMG`
+- Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering the prolongator in `PCGAMG`; the threshold is relative and applies to whole fine-node/coarse-node coupling blocks, so a value that was tuned as an absolute per-entry drop tolerance, such as `-pc_gamg_prolongator_filter 1e-3`, now means something different, and values of 1 or more are no longer allowed
+- Add `PCGAMGSetProlongatorFilterScale()` and `PCGAMGGetProlongatorFilterScale()` to set/get the per-level scaling of the prolongator filter threshold in `PCGAMG`
+- `PCGAMGSetThresholdScale()` now requires its argument to be in [0,1]
 - Add `PCAIR` and `PCPFLAREINV` manual pages, generated from the PFLARE sources when the documentation is built
 - Add `PCParametersInitialize`
 - Fix `PCMG` to honor `PCSetUseAmat(pc, PETSC_FALSE)` at all levels
