@@ -1437,7 +1437,7 @@ static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt col
   ISColoring coloring;
   IS        *iscolors;
   PetscBool  useCone, useClosure;
-  PetscInt   ncolors;
+  PetscInt   ncolors, npatch;
 
   PetscFunctionBegin;
   PetscCall(DMGetBasicAdjacency(dm, &useCone, &useClosure));
@@ -1445,16 +1445,21 @@ static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt col
   PetscCall(DMPlexCreateColoringLabel(dm, colorDepth, 1, patch->constructLabel, patch->constructValue, &coloring));
   PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
   PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
+  /* With -dm_plex_coloring_local each process colors its own points, so it gets its own number of colors. Take the
+     largest, so that every process has a patch for every color and patch c is color c on all of them. */
+  PetscCallMPI(MPIU_Allreduce(&ncolors, &npatch, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
   PetscCall(DMLabelCreate(PETSC_COMM_SELF, "PCPatch color star", patchLabel));
-  for (PetscInt c = 0; c < ncolors; ++c) {
+  for (PetscInt c = 0; c < npatch; ++c) {
     IS              ownedIS;
     const PetscInt *colorPoints;
     PetscInt       *ownedPoints;
-    PetscInt        numColorPoints, numOwnedPoints = 0;
+    PetscInt        numColorPoints = 0, numOwnedPoints = 0;
 
     /* We only build patches around points that this process owns */
-    PetscCall(ISGetLocalSize(iscolors[c], &numColorPoints));
-    PetscCall(ISGetIndices(iscolors[c], &colorPoints));
+    if (c < ncolors) {
+      PetscCall(ISGetLocalSize(iscolors[c], &numColorPoints));
+      PetscCall(ISGetIndices(iscolors[c], &colorPoints));
+    }
     PetscCall(PetscMalloc1(numColorPoints, &ownedPoints));
     for (PetscInt p = 0; p < numColorPoints; ++p) {
       PetscInt  loc = -1;
@@ -1467,9 +1472,9 @@ static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt col
       }
       if (flg == PETSC_FALSE) ownedPoints[numOwnedPoints++] = colorPoints[p];
     }
-    PetscCall(ISRestoreIndices(iscolors[c], &colorPoints));
+    if (c < ncolors) PetscCall(ISRestoreIndices(iscolors[c], &colorPoints));
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numOwnedPoints, ownedPoints, PETSC_OWN_POINTER, &ownedIS));
-    /* Every color gets a stratum, even an empty one, so that patch c is color c */
+    /* Every process creates a stratum for every color, even an empty one, so that patch c is color c everywhere */
     PetscCall(DMLabelSetStratumIS(*patchLabel, c, ownedIS));
     PetscCall(ISDestroy(&ownedIS));
   }
@@ -1478,7 +1483,7 @@ static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt col
   /* A process builds patches only around the points it owns, and the same color on another process is a different
      patch, so complete each process's patches by themselves */
   PetscCall(DMPlexLabelCompleteStar_Internal(dm, *patchLabel, PETSC_FALSE));
-  PetscCall(ISCreateStride(PETSC_COMM_SELF, ncolors, 0, 1, &patch->patchValues));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, npatch, 0, 1, &patch->patchValues));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4024,7 +4029,13 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
 
    Level: intermediate
 
-.seealso: [](ch_ksp), `PCType`, `PCCreate()`, `PCSetType()`, `PCASM`, `PCJACOBI`, `PCPBJACOBI`, `PCVPBJACOBI`, `SNESPATCH`
+   Note:
+   A process only builds patches around the points it owns, so the coloring behind `-pc_patch_use_coloring` need only
+   separate each process's own points. Adding `-dm_plex_coloring_local` colors them without communicating, and usually
+   with fewer colors, which leaves fewer and larger patch solves.
+
+.seealso: [](ch_ksp), `PCType`, `PCCreate()`, `PCSetType()`, `PCASM`, `PCJACOBI`, `PCPBJACOBI`, `PCVPBJACOBI`, `SNESPATCH`,
+          `DMPlexCreateColoringLabel()`
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
 {
