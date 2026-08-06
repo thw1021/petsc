@@ -104,8 +104,6 @@ class TestASMPCWorld(unittest.TestCase):
 
     def tearDown(self):
         self.pc.destroy()
-        self.pc = None
-        PETSc.garbage_cleanup()
 
     def testLocalSubdomains(self):
         # The index sets are in the global numbering of the vector, so give
