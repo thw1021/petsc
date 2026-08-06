@@ -955,7 +955,7 @@ cdef class PC(Object):
             if they have not been created or set yet.
         is_local : list[IS]
             The index sets that define the local part of the subdomains for
-            this process, empty if they have not been created yet.
+            this process, empty if they have not been created or set yet.
 
         Notes
         -----
