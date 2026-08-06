@@ -68,8 +68,11 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         self.assertEqual(len(got_local), 0)
         for got, idx in zip(got_sub, indices):
             self.assertTrue((got.getIndices() == idx).all())
-        for is in is_sub:
-            is.destroy()
+
+        for iset in got_sub:
+            iset.destroy()
+        for iset in is_sub:
+            iset.destroy()
 
     def testLocalSubdomainsWithLocalPart(self):
         pc = self.pc
@@ -89,10 +92,10 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         for got, idx in zip(got_local, local_indices):
             self.assertTrue((got.getIndices() == idx).all())
 
-        got_sub = None
-        got_local = None
-        is_sub = None
-        is_local = None
+        for iset in got_sub + got_local:
+            iset.destroy()
+        for iset in is_sub + is_local:
+            iset.destroy()
 
 
 class TestASMPCWorld(unittest.TestCase):
@@ -119,9 +122,9 @@ class TestASMPCWorld(unittest.TestCase):
         self.assertTrue((got_sub[0].getIndices() == indices).all())
         self.assertEqual(len(got_local), 0)
 
-        got_sub = None
-        got_local = None
-        is_sub = None
+        for iset in got_sub:
+            iset.destroy()
+        is_sub.destroy()
 
     def testLocalSubdomainsUnset(self):
         # Nothing has been set and the preconditioner has not been set up, so
