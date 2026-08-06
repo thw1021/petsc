@@ -940,6 +940,40 @@ cdef class PC(Object):
         CHKERR(PetscFree(isets))
         CHKERR(PetscFree(isets_local))
 
+    def getASMLocalSubdomains(self) -> tuple[list[IS], list[IS]]:
+        """Return the local subdomains.
+
+        Not collective.
+
+        Returns
+        -------
+        is_sub : list[IS]
+            The index sets that define the subdomains for this process.
+        is_local : list[IS]
+            The index sets that define the local part of the subdomains for
+            this process, empty if they have not been set.
+
+        Notes
+        -----
+        The `IS` numbering is in the parallel, global numbering of the vector.
+
+        See Also
+        --------
+        setASMLocalSubdomains, petsc.PCASMGetLocalSubdomains
+
+        """
+        cdef PetscInt n = 0
+        cdef PetscIS *isets = NULL
+        cdef PetscIS *isets_local = NULL
+        CHKERR(PCASMGetLocalSubdomains(self.pc, &n, &isets, &isets_local))
+        cdef list is_sub = []
+        cdef list is_local = []
+        if isets != NULL:
+            is_sub = [ref_IS(isets[i]) for i from 0 <= i < n]
+        if isets_local != NULL:
+            is_local = [ref_IS(isets_local[i]) for i from 0 <= i < n]
+        return (is_sub, is_local)
+
     def setASMTotalSubdomains(
         self,
         nsd: int,
