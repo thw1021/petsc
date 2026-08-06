@@ -1,14 +1,20 @@
-static char help[] = "Compares PCPATCH star patches with color-star patches.\n\n";
+static char help[] = "Compares PCPATCH star and Vanka patches with the colored, labeled and restricted patches that must reproduce them.\n\n";
 
 #include <petscksp.h>
 #include <petscdmplex.h>
 
 typedef struct {
+  DM          cellDM; /* Carries the section of the cellwise subspace, NULL unless mixed */
   PetscInt    cells[2];
-  PetscInt    nodesPerCell;
+  PetscInt    nodesPerCell; /* Nodes of a cell in the vertex subspace */
+  PetscInt    dofsPerCell;  /* Nodes of a cell over all the subspaces */
+  PetscInt    numCells;
+  PetscInt    numVertexDofs;
   PetscInt    numDofs;
   PetscInt   *cellNodeMap;
-  PetscScalar elemMat[16];
+  PetscInt   *cellDofMap;
+  PetscScalar elemMat[25];
+  PetscBool   mixed;
   PetscBool   unevenColors;
 } AppCtx;
 
@@ -20,10 +26,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   PetscFunctionBeginUser;
   user->cells[0]     = 4;
   user->cells[1]     = 4;
+  user->cellDM       = NULL;
   user->cellNodeMap  = NULL;
+  user->cellDofMap   = NULL;
+  user->mixed        = PETSC_FALSE;
   user->unevenColors = PETSC_FALSE;
   PetscOptionsBegin(comm, NULL, "PCPATCH color-star test options", "PC");
   PetscCall(PetscOptionsIntArray("-cells", "Number of mesh cells in each direction", "ex13.c", user->cells, &n, &flg));
+  PetscCall(PetscOptionsBool("-mixed", "Add a cellwise subspace, which a Vanka patch may take at its base entity alone", "ex13.c", user->mixed, &user->mixed, NULL));
   PetscCall(PetscOptionsBool("-check_uneven_colors", "Check that the processes color their own vertices with different numbers of colors", "ex13.c", user->unevenColors, &user->unevenColors, NULL));
   PetscOptionsEnd();
   PetscCheck(flg == PETSC_FALSE || n == 2, comm, PETSC_ERR_ARG_SIZ, "Expected two entries for -cells");
@@ -62,7 +72,7 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   for (PetscInt v = vStart; v < vEnd; ++v) PetscCall(PetscSectionSetDof(section, v, 1));
   PetscCall(PetscSectionSetUp(section));
   PetscCall(DMSetLocalSection(dm, section));
-  PetscCall(PetscSectionGetStorageSize(section, &user->numDofs));
+  PetscCall(PetscSectionGetStorageSize(section, &user->numVertexDofs));
 
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCheck(cStart < cEnd, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh has no cells");
@@ -98,40 +108,66 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
     PetscCall(DMPlexRestoreTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure));
     PetscCheck(n == user->nodesPerCell, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cell has %" PetscInt_FMT " nodes, expected %" PetscInt_FMT, n, user->nodesPerCell);
   }
-  for (PetscInt i = 0; i < user->nodesPerCell; ++i) {
-    for (PetscInt j = 0; j < user->nodesPerCell; ++j) user->elemMat[i * user->nodesPerCell + j] = (i == j) ? (PetscScalar)user->nodesPerCell : -1.0;
-  }
   PetscCall(PetscSectionDestroy(&section));
+
+  /* The cellwise subspace holds one node per cell, whose section offsets are the cell numbers themselves */
+  user->numCells    = cEnd - cStart;
+  user->numDofs     = user->numVertexDofs;
+  user->dofsPerCell = user->nodesPerCell;
+  if (user->mixed == PETSC_TRUE) {
+    PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &section));
+    PetscCall(PetscSectionSetChart(section, pStart, pEnd));
+    for (PetscInt c = cStart; c < cEnd; ++c) PetscCall(PetscSectionSetDof(section, c, 1));
+    PetscCall(PetscSectionSetUp(section));
+    PetscCall(DMClone(dm, &user->cellDM));
+    PetscCall(DMSetLocalSection(user->cellDM, section));
+    PetscCall(PetscSectionDestroy(&section));
+    PetscCall(PetscMalloc1(user->numCells, &user->cellDofMap));
+    for (PetscInt c = cStart; c < cEnd; ++c) user->cellDofMap[c - cStart] = c - cStart;
+    user->numDofs += user->numCells;
+    user->dofsPerCell += 1;
+  }
+  for (PetscInt i = 0; i < user->dofsPerCell; ++i) {
+    for (PetscInt j = 0; j < user->dofsPerCell; ++j) user->elemMat[i * user->dofsPerCell + j] = (i == j) ? (PetscScalar)user->dofsPerCell : -1.0;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode CreateOperator(DM dm, AppCtx *user, Mat *A)
 {
   ISLocalToGlobalMapping ltog;
-  PetscSection           globalSection;
   IS                     cellNumbers;
   const PetscInt        *numbers;
-  PetscInt               cStart, cEnd, numOwned, dNz;
+  PetscInt              *idx;
+  PetscInt               cStart, cEnd, dNz, globalVertices, globalCells = 0, localCellMax = -1, range[2], globalRange[2];
 
   PetscFunctionBeginUser;
-  /* The cell node maps hold local dof numbers, so assemble through the local-to-global map of the section */
-  PetscCall(DMGetLocalToGlobalMapping(dm, &ltog));
-  PetscCall(DMGetGlobalSection(dm, &globalSection));
-  PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &numOwned));
-  dNz = PetscMin(numOwned, user->nodesPerCell * user->nodesPerCell);
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, numOwned, numOwned, PETSC_DETERMINE, PETSC_DETERMINE, dNz, NULL, dNz, NULL, A));
-  PetscCall(MatSetLocalToGlobalMapping(*A, ltog, ltog));
-  PetscCall(MatSetOption(*A, MAT_SYMMETRIC, PETSC_TRUE));
-  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  /* A cell in the overlap lies on several processes, and only the process that owns it adds its element matrix */
+  PetscCall(DMPlexGetDepthStratumGlobalSize(dm, 0, &globalVertices));
   PetscCall(DMPlexCreateCellNumbering(dm, PETSC_TRUE, &cellNumbers));
   PetscCall(ISGetIndices(cellNumbers, &numbers));
-  for (PetscInt c = cStart; c < cEnd; ++c) {
-    const PetscInt *idx = &user->cellNodeMap[(c - cStart) * user->nodesPerCell];
-
-    if (numbers[c - cStart] < 0) continue;
-    PetscCall(MatSetValuesLocal(*A, user->nodesPerCell, idx, user->nodesPerCell, idx, user->elemMat, ADD_VALUES));
+  if (user->mixed == PETSC_TRUE) {
+    for (PetscInt c = 0; c < user->numCells; ++c) {
+      if (numbers[c] >= 0) localCellMax = PetscMax(localCellMax, numbers[c]);
+    }
+    range[0] = 0;
+    range[1] = localCellMax;
+    PetscCall(PetscGlobalMinMaxInt(PetscObjectComm((PetscObject)dm), range, globalRange));
+    globalCells = globalRange[1] + 1;
   }
+  PetscCall(DMGetLocalToGlobalMapping(dm, &ltog));
+  dNz = PetscMin(globalVertices + globalCells, user->dofsPerCell * user->dofsPerCell);
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, globalVertices + globalCells, globalVertices + globalCells, dNz, NULL, dNz, NULL, A));
+  PetscCall(MatSetOption(*A, MAT_SYMMETRIC, PETSC_TRUE));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  PetscCall(PetscMalloc1(user->dofsPerCell, &idx));
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscCall(PetscArraycpy(idx, &user->cellNodeMap[(c - cStart) * user->nodesPerCell], user->nodesPerCell));
+    if (numbers[c - cStart] < 0) continue;
+    PetscCall(ISLocalToGlobalMappingApply(ltog, user->nodesPerCell, idx, idx));
+    if (user->mixed == PETSC_TRUE) idx[user->nodesPerCell] = globalVertices + numbers[c - cStart];
+    PetscCall(MatSetValues(*A, user->dofsPerCell, idx, user->dofsPerCell, idx, user->elemMat, ADD_VALUES));
+  }
+  PetscCall(PetscFree(idx));
   PetscCall(ISRestoreIndices(cellNumbers, &numbers));
   PetscCall(ISDestroy(&cellNumbers));
   PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
@@ -145,13 +181,15 @@ static PetscErrorCode ComputePatchOperator(PC pc, PetscInt point, Vec x, Mat mat
   PetscInt ncell;
 
   PetscFunctionBeginUser;
-  PetscCheck(n % user->nodesPerCell == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Patch dof map size is not a multiple of the cell dof count");
-  ncell = n / user->nodesPerCell;
+  PetscCheck(n % user->dofsPerCell == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Patch dof map size is not a multiple of the cell dof count");
+  ncell = n / user->dofsPerCell;
   PetscCall(MatZeroEntries(mat));
+  /* The patch dof map holds a cell's nodes over all the subspaces together, and a node left out of the patch comes
+     back as -1, which MatSetValues() drops */
   for (PetscInt c = 0; c < ncell; ++c) {
-    const PetscInt *idx = &dofsArray[c * user->nodesPerCell];
+    const PetscInt *idx = &dofsArray[c * user->dofsPerCell];
 
-    PetscCall(MatSetValues(mat, user->nodesPerCell, idx, user->nodesPerCell, idx, user->elemMat, ADD_VALUES));
+    PetscCall(MatSetValues(mat, user->dofsPerCell, idx, user->dofsPerCell, idx, user->elemMat, ADD_VALUES));
   }
   PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
@@ -223,16 +261,21 @@ static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *
   KSP             ksp;
   PC              pc;
   Vec             x, b;
-  DM              dms[1];
-  PetscInt        bs[1] = {1}, nodesPerCell[1], subspaceOffsets[2];
-  const PetscInt *cellNodeMaps[1];
+  DM              dms[2];
+  PetscInt        bs[2]      = {1, 1}, nodesPerCell[2], subspaceOffsets[3];
+  PetscInt        nsubspaces = user->mixed == PETSC_TRUE ? 2 : 1;
+  const PetscInt *cellNodeMaps[2];
 
   PetscFunctionBeginUser;
   nodesPerCell[0]    = user->nodesPerCell;
+  nodesPerCell[1]    = 1;
   subspaceOffsets[0] = 0;
-  subspaceOffsets[1] = user->numDofs;
+  subspaceOffsets[1] = user->numVertexDofs;
+  subspaceOffsets[2] = user->numDofs;
   cellNodeMaps[0]    = user->cellNodeMap;
+  cellNodeMaps[1]    = user->cellDofMap;
   dms[0]             = dm;
+  dms[1]             = user->cellDM;
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
   PetscCall(KSPSetOptionsPrefix(ksp, prefix));
   PetscCall(KSPSetOperators(ksp, A, A));
@@ -242,7 +285,7 @@ static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PCSetType(pc, PCPATCH));
   PetscCall(PCSetDM(pc, dm));
-  PetscCall(PCPatchSetDiscretisationInfo(pc, 1, dms, bs, nodesPerCell, cellNodeMaps, subspaceOffsets, 0, NULL, 0, NULL));
+  PetscCall(PCPatchSetDiscretisationInfo(pc, nsubspaces, dms, bs, nodesPerCell, cellNodeMaps, subspaceOffsets, 0, NULL, 0, NULL));
   PetscCall(PCPatchSetComputeOperator(pc, ComputePatchOperator, user));
   if (patchLabel != NULL) PetscCall(PCPatchSetPatchLabel(pc, patchLabel));
   if (constructLabel != NULL) PetscCall(PCPatchSetConstructLabel(pc, constructLabel, 1));
@@ -307,7 +350,7 @@ int main(int argc, char **argv)
   AppCtx      user;
   DM          dm;
   Mat         A;
-  PetscInt    standardIts, coloredIts;
+  PetscInt    standardIts, coloredIts, vankaIts, coloredVankaIts;
   PetscMPIInt size;
 
   PetscFunctionBeginUser;
@@ -323,8 +366,32 @@ int main(int argc, char **argv)
   PetscCheck(standardIts == coloredIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but colored star patches took %" PetscInt_FMT, standardIts, coloredIts);
   if (size == 1) PetscCall(CompareLabeledPatches(dm, A, &user, standardIts));
 
+  /*
+    A Vanka patch spans the closure of the star, and every cell holding one of those points assembles into it, so
+    grouping them takes a coloring of wider reach than a star patch needs. Reaching too little leaves a cell coupling
+    two patches of a color, which stops the grouped operator from being block diagonal and shows up here as a
+    different iteration count.
+  */
+  PetscCall(SolveWithPatch(dm, A, "vanka_", &user, NULL, NULL, &vankaIts));
+  PetscCall(SolveWithPatch(dm, A, "colored_vanka_", &user, NULL, NULL, &coloredVankaIts));
+  PetscCheck(vankaIts == coloredVankaIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard Vanka patches took %" PetscInt_FMT " iterations, but colored Vanka patches took %" PetscInt_FMT, vankaIts, coloredVankaIts);
+
+  /*
+    Excluding a subspace keeps its dofs at the point a patch was built around and nowhere else, so the patch is no
+    longer the dofs of a point set and only the seeds say which points those are. Building the patches around cells
+    also colors the cell stratum, which the finite-element adjacency leaves edgeless until the reach passes a cell's
+    own closure.
+  */
+  if (user.mixed == PETSC_TRUE) {
+    PetscCall(SolveWithPatch(dm, A, "excluded_vanka_", &user, NULL, NULL, &vankaIts));
+    PetscCall(SolveWithPatch(dm, A, "colored_excluded_vanka_", &user, NULL, NULL, &coloredVankaIts));
+    PetscCheck(vankaIts == coloredVankaIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard Vanka patches with an excluded subspace took %" PetscInt_FMT " iterations, but colored ones took %" PetscInt_FMT, vankaIts, coloredVankaIts);
+  }
+
   PetscCall(MatDestroy(&A));
   PetscCall(PetscFree(user.cellNodeMap));
+  PetscCall(PetscFree(user.cellDofMap));
+  PetscCall(DMDestroy(&user.cellDM));
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
   return 0;
@@ -332,16 +399,32 @@ int main(int argc, char **argv)
 
 /*TEST
 
+  # Grouping patches reproduces the patches it groups only when every patch is solved exactly, so the comparisons
+  # below measure the decomposition rather than the accuracy of the default inexact patch solve
   testset:
     args: -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
           -colored_pc_patch_construct_type star -colored_pc_patch_use_coloring -colored_sub_ksp_type preonly -colored_sub_pc_type lu \
           -labeled_sub_ksp_type preonly -labeled_sub_pc_type lu \
           -restricted_pc_patch_construct_type star -restricted_sub_ksp_type preonly -restricted_sub_pc_type lu \
-          -named_pc_patch_construct_type star -named_pc_patch_construct_label active -named_sub_ksp_type preonly -named_sub_pc_type lu
+          -named_pc_patch_construct_type star -named_pc_patch_construct_label active -named_sub_ksp_type preonly -named_sub_pc_type lu \
+          -vanka_pc_patch_construct_type vanka -vanka_pc_patch_construct_dim 0 -vanka_sub_ksp_type preonly -vanka_sub_pc_type lu \
+          -colored_vanka_pc_patch_construct_type vanka -colored_vanka_pc_patch_construct_dim 0 -colored_vanka_pc_patch_use_coloring -colored_vanka_sub_ksp_type preonly -colored_vanka_sub_pc_type lu
     output_file: output/empty.out
     test:
       suffix: patch_color_star
       args: -cells {{4,4 8,8}}
+    # The Vanka patches of a cellwise subspace, which is what -pc_patch_exclude_subspaces is for. Building them
+    # around cells colors the cell stratum, which the finite-element adjacency leaves edgeless at a reach of one.
+    test:
+      suffix: patch_color_vanka_mixed
+      args: -cells {{4,4 8,8}} -mixed \
+            -excluded_vanka_pc_patch_construct_type vanka -excluded_vanka_pc_patch_construct_codim 0 -excluded_vanka_pc_patch_exclude_subspaces 1 -excluded_vanka_sub_ksp_type preonly -excluded_vanka_sub_pc_type lu \
+            -colored_excluded_vanka_pc_patch_construct_type vanka -colored_excluded_vanka_pc_patch_construct_codim 0 -colored_excluded_vanka_pc_patch_exclude_subspaces 1 -colored_excluded_vanka_pc_patch_use_coloring -colored_excluded_vanka_sub_ksp_type preonly -colored_excluded_vanka_sub_pc_type lu
+    # Vanka patches that leave out every vertex but the one they are built around. The colored patches must keep
+    # each seed vertex and drop the other vertices from every color that reaches them.
+    test:
+      suffix: patch_color_vanka_dim
+      args: -cells {{4,4 8,8}} -vanka_pc_patch_vanka_dim 0 -colored_vanka_pc_patch_vanka_dim 0
     # The restricted patches must be colored over the selected points only
     test:
       suffix: patch_color_star_restricted
