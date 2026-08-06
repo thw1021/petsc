@@ -489,6 +489,8 @@ PETSC_EXTERN PetscErrorCode PCPatchSetSubMatType(PC, MatType);
 PETSC_EXTERN PetscErrorCode PCPatchGetSubMatType(PC, MatType *);
 PETSC_EXTERN PetscErrorCode PCPatchSetCellNumbering(PC, PetscSection);
 PETSC_EXTERN PetscErrorCode PCPatchGetCellNumbering(PC, PetscSection *);
+PETSC_EXTERN PetscErrorCode PCPatchSetConstructLabel(PC, DMLabel, PetscInt);
+PETSC_EXTERN PetscErrorCode PCPatchGetConstructLabel(PC, DMLabel *, PetscInt *);
 PETSC_EXTERN PetscErrorCode PCPatchSetPatchLabel(PC, DMLabel);
 PETSC_EXTERN PetscErrorCode PCPatchGetPatchLabel(PC, DMLabel *);
 PETSC_EXTERN PetscErrorCode PCPatchSetConstructType(PC, PCPatchConstructType, PetscErrorCode (*)(PC, PetscInt *, IS *[], IS *, PetscCtx), PetscCtx);

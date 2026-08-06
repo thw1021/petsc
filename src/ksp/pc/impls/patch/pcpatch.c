@@ -589,6 +589,74 @@ PetscErrorCode PCPatchGetCellNumbering(PC pc, PetscSection *cellNumbering)
 }
 
 /*@
+  PCPatchSetConstructLabel - Restrict the mesh points that a `PCPATCH` preconditioner builds patches around
+
+  Logically Collective
+
+  Input Parameters:
++ pc    - the `PCPATCH` preconditioner
+. label - the `DMLabel` marking the points, or `NULL` to build a patch around every point of the stratum
+- value - the stratum value of `label` marking the points
+
+  Options Database Keys:
++ -pc_patch_construct_label name        - look the label up on the `PC`'s `DM` by name
+- -pc_patch_construct_label_value value - the stratum value of that label marking the points
+
+  Level: advanced
+
+  Notes:
+  Without this, a patch is built around every point of the stratum selected by `-pc_patch_construct_dim` or
+  `-pc_patch_construct_codim`. The points marked by `label` are intersected with that stratum, so a label spanning
+  several strata may be passed unchanged and the usual options still choose which entities are used as seeds.
+
+  This is what a solver on an adaptively refined level wants, where only the entities near the refinement should get a
+  patch. Mark the cells that were genuinely refined, call `DMPlexLabelComplete()` on the label to add their closure,
+  which is exactly the set of entities whose star contains one of those cells, and pass the result here.
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetConstructLabel()`, `PCPatchSetPatchLabel()`, `DMPlexLabelComplete()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchSetConstructLabel(PC pc, DMLabel label, PetscInt value)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (label != NULL) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  PetscCall(PetscObjectReference((PetscObject)label));
+  PetscCall(DMLabelDestroy(&patch->constructLabel));
+  patch->constructLabel = label;
+  patch->constructValue = value;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCPatchGetConstructLabel - Return the `DMLabel` restricting the points a `PCPATCH` preconditioner builds patches around
+
+  Not Collective
+
+  Input Parameter:
+. pc - the `PCPATCH` preconditioner
+
+  Output Parameters:
++ label - the `DMLabel` marking the points, or `NULL` if the whole stratum is used
+- value - the stratum value of `label` marking the points
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchSetConstructLabel()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchGetConstructLabel(PC pc, DMLabel *label, PetscInt *value)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (label != NULL) *label = patch->constructLabel;
+  if (value != NULL) *value = patch->constructValue;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PCPatchSetPatchLabel - Set the patches of a `PCPATCH` preconditioner directly, as the strata of a `DMLabel`
 
   Logically Collective
@@ -610,7 +678,7 @@ PetscErrorCode PCPatchGetCellNumbering(PC pc, PetscSection *cellNumbering)
   their stars must be disjoint for the patch operator to be block diagonal; that is what a coloring of the points
   guarantees, and it is the caller's responsibility here.
 
-.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetPatchLabel()`, `DMPlexCreateColoringLabel()`, `DMLabel`
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetPatchLabel()`, `PCPatchSetConstructLabel()`, `DMPlexCreateColoringLabel()`, `DMLabel`
 @*/
 PetscErrorCode PCPatchSetPatchLabel(PC pc, DMLabel label)
 {
@@ -1331,12 +1399,20 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
 
   PetscCall(PCGetDM(pc, &dm));
   PetscCheck(dm, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "DM not yet set on patch PC");
+  if (patch->constructLabelName != NULL && patch->constructLabel == NULL) {
+    DMLabel label;
+
+    PetscCall(DMGetLabel(dm, patch->constructLabelName, &label));
+    PetscCheck(label != NULL, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "The DM has no label named %s", patch->constructLabelName);
+    PetscCall(PCPatchSetConstructLabel(pc, label, patch->constructValue));
+  }
   PetscCall(DMConvert(dm, DMPLEX, &plex));
   dm = plex;
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
 
   PetscCheck(patch->userPatchLabel == NULL || patch->user_patches == PETSC_FALSE, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "A patch label cannot be combined with user or Python patch construction, since both define the patches");
+  PetscCheck(patch->constructLabel == NULL || (patch->user_patches == PETSC_FALSE && patch->ctype != PC_PATCH_PARDECOMP), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "A construct label cannot be combined with user, Python, or pardecomp patch construction, which do not build patches around mesh points");
   PetscCall(PetscHSetIGetSize(patch->subspaces_to_exclude, &nexclude));
   PetscCheck(nexclude == 0 || patch->userPatchLabel == NULL, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "We cannot support excluding a subspace with a patch label because we do not index patches with a mesh point");
   if (patch->user_patches) {
@@ -1460,6 +1536,13 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         }
         /* Not an owned entity, do not make a cell patch. */
         if (flg == PETSC_TRUE) continue;
+        /* Not a selected entity, do not make a cell patch. The patch is left empty, and the loops below skip it. */
+        if (patch->constructLabel != NULL) {
+          PetscBool selected;
+
+          PetscCall(DMLabelStratumHasPoint(patch->constructLabel, patch->constructValue, v, &selected));
+          if (selected == PETSC_FALSE) continue;
+        }
       }
       PetscCall(patch->patchconstructop((void *)patch, dm, v, ht));
       PetscCall(PCPatchCompleteCellPatch(pc, ht, cht));
@@ -3506,6 +3589,8 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(PetscSectionDestroy(&patch->ownedPointCounts));
   PetscCall(DMLabelDestroy(&patch->patchLabel));
   PetscCall(ISDestroy(&patch->patchValues));
+  /* A construct label resolved from its name belongs to the DM of that setup, so resolve the name again next time */
+  if (patch->constructLabelName != NULL) PetscCall(DMLabelDestroy(&patch->constructLabel));
   PetscCall(PetscSectionDestroy(&patch->cellNumbering));
   PetscCall(PetscSectionDestroy(&patch->gtolCounts));
   PetscCall(ISDestroy(&patch->gtol));
@@ -3615,6 +3700,8 @@ static PetscErrorCode PCDestroy_PATCH(PC pc)
   PetscFunctionBegin;
   PetscCall(PCReset_PATCH(pc));
   PetscCall(DMLabelDestroy(&patch->userPatchLabel));
+  PetscCall(DMLabelDestroy(&patch->constructLabel));
+  PetscCall(PetscFree(patch->constructLabelName));
   PetscCall((*patch->destroysolver)(pc));
   PetscCall(PetscFree(pc->data));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3626,6 +3713,7 @@ static PetscErrorCode PCSetFromOptions_PATCH(PC pc, PetscOptionItems PetscOption
   PCPatchConstructType patchConstructionType = PC_PATCH_STAR;
   char                 sub_mat_type[PETSC_MAX_PATH_LEN];
   char                 option[PETSC_MAX_PATH_LEN];
+  char                 label_name[PETSC_MAX_PATH_LEN];
   const char          *prefix;
   PetscBool            flg, dimflg, codimflg;
   MPI_Comm             comm;
@@ -3659,6 +3747,15 @@ static PetscErrorCode PCSetFromOptions_PATCH(PC pc, PetscOptionItems PetscOption
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_construct_type", patch->classname));
   PetscCall(PetscOptionsEnum(option, "How should the patches be constructed?", "PCPatchSetConstructType", PCPatchConstructTypes, (PetscEnum)patchConstructionType, (PetscEnum *)&patchConstructionType, &flg));
   if (flg) PetscCall(PCPatchSetConstructType(pc, patchConstructionType, NULL, NULL));
+  PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_construct_label", patch->classname));
+  PetscCall(PetscOptionsString(option, "Name of a DMLabel on the DM marking the points to build patches around", "PCPatchSetConstructLabel", patch->constructLabelName, label_name, sizeof(label_name), &flg));
+  if (flg == PETSC_TRUE) {
+    PetscCall(PetscFree(patch->constructLabelName));
+    PetscCall(PetscStrallocpy(label_name, &patch->constructLabelName));
+  }
+  PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_construct_label_value", patch->classname));
+  PetscCall(PetscOptionsInt(option, "Stratum value of the construct label marking the points", "PCPatchSetConstructLabel", patch->constructValue, &patch->constructValue, &flg));
+
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_vanka_dim", patch->classname));
   PetscCall(PetscOptionsInt(option, "Topological dimension of entities for Vanka to ignore", "PCPATCH", patch->vankadim, &patch->vankadim, &flg));
 
@@ -3799,11 +3896,13 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
    a `DM` and equation numbering from a `PetscSection`.
 
    Options Database Keys:
-+ -pc_patch_cells_view   - Views the process local cell numbers for each patch
-. -pc_patch_points_view  - Views the process local mesh point numbers for each patch
-. -pc_patch_g2l_view     - Views the map between global dofs and patch local dofs for each patch
-. -pc_patch_patches_view - Views the global dofs associated with each patch and its boundary
-- -pc_patch_sub_mat_view - Views the matrix associated with each patch
++ -pc_patch_cells_view                  - Views the process local cell numbers for each patch
+. -pc_patch_points_view                 - Views the process local mesh point numbers for each patch
+. -pc_patch_g2l_view                    - Views the map between global dofs and patch local dofs for each patch
+. -pc_patch_patches_view                - Views the global dofs associated with each patch and its boundary
+. -pc_patch_construct_label name        - Builds patches only around the points marked by the named `DMLabel` on the `DM`
+. -pc_patch_construct_label_value value - The stratum value of that label marking the points
+- -pc_patch_sub_mat_view                - Views the matrix associated with each patch
 
    Level: intermediate
 
@@ -3842,6 +3941,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->optionsSet               = PETSC_FALSE;
   patch->iterationSet             = NULL;
   patch->user_patches             = PETSC_FALSE;
+  patch->constructLabel           = NULL;
+  patch->constructLabelName       = NULL;
+  patch->constructValue           = 1;
   patch->userPatchLabel           = NULL;
   patch->patchLabel               = NULL;
   patch->patchValues              = NULL;

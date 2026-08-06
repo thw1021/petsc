@@ -158,21 +158,44 @@ static PetscErrorCode ComputePatchOperator(PC pc, PetscInt point, Vec x, Mat mat
 /*
   One stratum per vertex, each holding the star of that vertex, which is the same decomposition that
   -pc_patch_construct_type star builds internally. Handing it to PCPatchSetPatchLabel() must therefore reproduce the
-  patches that PCPATCH constructs itself.
+  patches that PCPATCH constructs itself. When `active` is given, only the vertices it marks get a patch, which is the
+  decomposition that PCPatchSetConstructLabel() must select.
 */
-static PetscErrorCode CreateVertexPatchLabel(DM dm, DMLabel *label)
+static PetscErrorCode CreateVertexPatchLabel(DM dm, DMLabel active, DMLabel *label)
 {
   PetscInt vStart, vEnd, n = 0;
 
   PetscFunctionBeginUser;
   PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
   PetscCall(DMLabelCreate(PETSC_COMM_SELF, "patches", label));
-  for (PetscInt v = vStart; v < vEnd; ++v) PetscCall(DMLabelSetValue(*label, v, n++));
+  for (PetscInt v = vStart; v < vEnd; ++v) {
+    PetscInt val = 1;
+
+    if (active != NULL) PetscCall(DMLabelGetValue(active, v, &val));
+    if (val == 1) PetscCall(DMLabelSetValue(*label, v, n++));
+  }
   PetscCall(DMPlexLabelCompleteStar(dm, *label));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *user, DMLabel patchLabel, PetscInt *its)
+/*
+  Marks the closure of the first `nCells` cells, or of every cell when `nCells` is negative, which is the set of points
+  whose star contains one of those cells. Selecting every cell must leave the patches unchanged.
+*/
+static PetscErrorCode CreateActiveLabel(DM dm, PetscInt nCells, DMLabel *label)
+{
+  PetscInt cStart, cEnd;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  if (nCells >= 0) cEnd = PetscMin(cStart + nCells, cEnd);
+  PetscCall(DMLabelCreate(PETSC_COMM_SELF, "active", label));
+  for (PetscInt c = cStart; c < cEnd; ++c) PetscCall(DMLabelSetValue(*label, c, 1));
+  PetscCall(DMPlexLabelComplete(dm, *label));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *user, DMLabel patchLabel, DMLabel constructLabel, PetscInt *its)
 {
   KSP             ksp;
   PC              pc;
@@ -199,6 +222,7 @@ static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *
   PetscCall(PCPatchSetDiscretisationInfo(pc, 1, dms, bs, nodesPerCell, cellNodeMaps, subspaceOffsets, 0, NULL, 0, NULL));
   PetscCall(PCPatchSetComputeOperator(pc, ComputePatchOperator, user));
   if (patchLabel != NULL) PetscCall(PCPatchSetPatchLabel(pc, patchLabel));
+  if (constructLabel != NULL) PetscCall(PCPatchSetConstructLabel(pc, constructLabel, 1));
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(MatCreateVecs(A, &x, &b));
   PetscCall(VecSet(x, 0.0));
@@ -212,20 +236,46 @@ static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *
 }
 
 /*
-  The label-based comparison numbers the patches of each process by themselves and includes the vertices it does not
-  own, so it holds on one process only
+  The label-based comparisons number the patches of each process by themselves and include the vertices it does not
+  own, so they hold on one process only
 */
 static PetscErrorCode CompareLabeledPatches(DM dm, Mat A, AppCtx *user, PetscInt standardIts)
 {
-  DMLabel  patchLabel;
-  PetscInt labeledIts;
+  DMLabel  patchLabel, allLabel, activeLabel;
+  PetscInt labeledIts, allIts, activeIts, namedIts;
 
   PetscFunctionBeginUser;
   /* Supplying the star patches as the strata of a label must reproduce the standard star patches */
-  PetscCall(CreateVertexPatchLabel(dm, &patchLabel));
-  PetscCall(SolveWithPatch(dm, A, "labeled_", user, patchLabel, &labeledIts));
+  PetscCall(CreateVertexPatchLabel(dm, NULL, &patchLabel));
+  PetscCall(SolveWithPatch(dm, A, "labeled_", user, patchLabel, NULL, &labeledIts));
   PetscCheck(standardIts == labeledIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but labeled patches took %" PetscInt_FMT, standardIts, labeledIts);
   PetscCall(DMLabelDestroy(&patchLabel));
+
+  /* Restricting the patches to every mesh point must also leave them unchanged */
+  PetscCall(CreateActiveLabel(dm, -1, &allLabel));
+  PetscCall(SolveWithPatch(dm, A, "restricted_", user, NULL, allLabel, &allIts));
+  PetscCheck(standardIts == allIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but patches restricted to every point took %" PetscInt_FMT, standardIts, allIts);
+  PetscCall(DMLabelDestroy(&allLabel));
+
+  /*
+    A genuinely restricted set leaves the dofs outside every patch untouched, so the preconditioner is singular and the
+    solve converges only in the preconditioned norm. That is what local smoothing is: it is one level of a multigrid
+    hierarchy, where the coarse grid handles the rest, and it says nothing on its own. So compare the restriction
+    against the same patches listed explicitly, which must select exactly the same decomposition.
+  */
+  PetscCall(CreateActiveLabel(dm, 2, &activeLabel));
+  PetscCall(CreateVertexPatchLabel(dm, activeLabel, &patchLabel));
+  PetscCall(SolveWithPatch(dm, A, "restricted_", user, NULL, activeLabel, &activeIts));
+  PetscCall(SolveWithPatch(dm, A, "labeled_", user, patchLabel, NULL, &labeledIts));
+  PetscCheck(activeIts == labeledIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Patches restricted to two cells took %" PetscInt_FMT " iterations, but the same patches listed explicitly took %" PetscInt_FMT, activeIts, labeledIts);
+  PetscCall(DMLabelDestroy(&patchLabel));
+
+  /* Naming the same label on the DM must select the same restriction as passing it in */
+  PetscCall(DMAddLabel(dm, activeLabel));
+  PetscCall(SolveWithPatch(dm, A, "named_", user, NULL, NULL, &namedIts));
+  PetscCheck(activeIts == namedIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Patches restricted by a label took %" PetscInt_FMT " iterations, but naming that label on the DM took %" PetscInt_FMT, activeIts, namedIts);
+  PetscCall(DMRemoveLabel(dm, "active", NULL));
+  PetscCall(DMLabelDestroy(&activeLabel));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -244,7 +294,7 @@ int main(int argc, char **argv)
   PetscCall(CreateMesh(PETSC_COMM_WORLD, &user, &dm));
   PetscCall(SetupDiscretization(dm, &user));
   PetscCall(CreateOperator(dm, &user, &A));
-  PetscCall(SolveWithPatch(dm, A, "standard_", &user, NULL, &standardIts));
+  PetscCall(SolveWithPatch(dm, A, "standard_", &user, NULL, NULL, &standardIts));
   if (size == 1) PetscCall(CompareLabeledPatches(dm, A, &user, standardIts));
 
   PetscCall(MatDestroy(&A));
@@ -260,7 +310,9 @@ int main(int argc, char **argv)
     suffix: patch_label_star
     args: -cells {{4,4 8,8}} \
           -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
-          -labeled_sub_ksp_type preonly -labeled_sub_pc_type lu
+          -labeled_sub_ksp_type preonly -labeled_sub_pc_type lu \
+          -restricted_pc_patch_construct_type star -restricted_sub_ksp_type preonly -restricted_sub_pc_type lu \
+          -named_pc_patch_construct_type star -named_pc_patch_construct_label active -named_sub_ksp_type preonly -named_sub_pc_type lu
     output_file: output/empty.out
 
 TEST*/
