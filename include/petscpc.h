@@ -493,6 +493,8 @@ PETSC_EXTERN PetscErrorCode PCPatchSetConstructLabel(PC, DMLabel, PetscInt);
 PETSC_EXTERN PetscErrorCode PCPatchGetConstructLabel(PC, DMLabel *, PetscInt *);
 PETSC_EXTERN PetscErrorCode PCPatchSetPatchLabel(PC, DMLabel);
 PETSC_EXTERN PetscErrorCode PCPatchGetPatchLabel(PC, DMLabel *);
+PETSC_EXTERN PetscErrorCode PCPatchSetPatchSeedLabel(PC, DMLabel);
+PETSC_EXTERN PetscErrorCode PCPatchGetPatchSeedLabel(PC, DMLabel *);
 PETSC_EXTERN PetscErrorCode PCPatchSetConstructType(PC, PCPatchConstructType, PetscErrorCode (*)(PC, PetscInt *, IS *[], IS *, PetscCtx), PetscCtx);
 PETSC_EXTERN PetscErrorCode PCPatchGetConstructType(PC, PCPatchConstructType *, PetscErrorCode (**)(PC, PetscInt *, IS *[], IS *, PetscCtx), PetscCtxRt);
 PETSC_EXTERN PetscErrorCode PCPatchSetDiscretisationInfo(PC, PetscInt, DM[], PetscInt[], PetscInt[], const PetscInt **, const PetscInt[], PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
