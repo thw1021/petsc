@@ -108,7 +108,7 @@ int main(int argc, char **argv)
   DM         dm;
   DMLabel    active = NULL;
   AppCtx     user;
-  PetscInt   ncolors  = 0;
+  PetscInt   ncolors = 0, maxcolors = 0;
   IS        *iscolors = NULL;
   ISColoring coloring = NULL;
 
@@ -120,7 +120,9 @@ int main(int argc, char **argv)
   if (active == NULL) PetscCall(DMPlexCreateColoring(dm, user.depth, user.distance, &coloring));
   else PetscCall(DMPlexCreateColoringLabel(dm, user.depth, user.distance, active, 1, &coloring));
   PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of colors: %" PetscInt_FMT "\n", ncolors));
+  /* Report the largest color count across processes. */
+  PetscCallMPI(MPIU_Allreduce(&ncolors, &maxcolors, 1, MPIU_INT, MPI_MAX, PETSC_COMM_WORLD));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of colors: %" PetscInt_FMT "\n", maxcolors));
   PetscCall(CheckColoring(dm, ncolors, iscolors));
   for (PetscInt c = 0; c < ncolors; c++) {
     PetscCall(ISViewFromOptions(iscolors[c], NULL, "-iscoloring_view"));
@@ -153,6 +155,12 @@ int main(int argc, char **argv)
     test:
       suffix: grid_ordering
       args: -dm_plex_coloring_ordering_type {{rcm nd}separate output}
+
+  # Local coloring tests the induced graph on each rank; the reported count is the maximum across ranks.
+  test:
+    suffix: local
+    nsize: {{1 2}separate output}
+    args: -depth 0 -distance 1 -dm_plex_coloring_local -dm_coord_space 0 -dm_plex_simplex 0 -dm_plex_box_faces 4,4 -petscpartitioner_type simple
 
   # Color only the closure of a few cells.
   test:
