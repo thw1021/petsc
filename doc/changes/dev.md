@@ -88,7 +88,6 @@
 - Add `PCAIR` and `PCPFLAREINV` manual pages, generated from the PFLARE sources when the documentation is built
 - Add `PCParametersInitialize`
 - Fix `PCMG` to honor `PCSetUseAmat(pc, PETSC_FALSE)` at all levels
-- Add Python binding for `PCASMGetLocalSubdomains()`
 
 ## KSP
 
