@@ -57,7 +57,7 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
     PC_TYPE = PETSc.PC.Type.ASM
 
     def checkLocalSubdomains(self, pc, indices, local_indices=None):
-        """Set the subdomains on pc and check that they are returned unchanged."""
+        # Set the subdomains on pc and check that they are returned unchanged.
         is_sub = [PETSc.IS().createGeneral(idx, comm=PETSc.COMM_SELF)
                   for idx in indices]
         is_local = None
@@ -66,7 +66,8 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
                         for idx in local_indices]
         pc.setASMLocalSubdomains(len(is_sub), is_sub, is_local)
 
-        got_sub, got_local = pc.getASMLocalSubdomains()
+        got_nsd, got_sub, got_local = pc.getASMLocalSubdomains()
+        self.assertEqual(got_nsd, len(indices))
         self.assertEqual(len(got_sub), len(indices))
         for got, idx in zip(got_sub, indices):
             self.assertTrue((got.getIndices() == idx).all())
@@ -104,7 +105,8 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
     def testLocalSubdomainsUnset(self):
         # Nothing has been set and the preconditioner has not been set up, so
         # PETSc holds no subdomains yet.
-        got_sub, got_local = self.pc.getASMLocalSubdomains()
+        got_nsd, got_sub, got_local = self.pc.getASMLocalSubdomains()
+        self.assertEqual(got_nsd, PETSc.DECIDE)
         self.assertEqual(got_sub, [])
         self.assertEqual(got_local, [])
 
