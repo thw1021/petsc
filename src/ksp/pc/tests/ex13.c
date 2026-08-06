@@ -9,6 +9,7 @@ typedef struct {
   PetscInt    numDofs;
   PetscInt   *cellNodeMap;
   PetscScalar elemMat[16];
+  PetscBool   unevenColors;
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
@@ -17,11 +18,13 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   PetscBool flg;
 
   PetscFunctionBeginUser;
-  user->cells[0]    = 4;
-  user->cells[1]    = 4;
-  user->cellNodeMap = NULL;
+  user->cells[0]     = 4;
+  user->cells[1]     = 4;
+  user->cellNodeMap  = NULL;
+  user->unevenColors = PETSC_FALSE;
   PetscOptionsBegin(comm, NULL, "PCPATCH color-star test options", "PC");
   PetscCall(PetscOptionsIntArray("-cells", "Number of mesh cells in each direction", "ex13.c", user->cells, &n, &flg));
+  PetscCall(PetscOptionsBool("-check_uneven_colors", "Check that the processes color their own vertices with different numbers of colors", "ex13.c", user->unevenColors, &user->unevenColors, NULL));
   PetscOptionsEnd();
   PetscCheck(flg == PETSC_FALSE || n == 2, comm, PETSC_ERR_ARG_SIZ, "Expected two entries for -cells");
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -29,9 +32,20 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
+  DM               pdm = NULL;
+  PetscPartitioner part;
+
   PetscFunctionBeginUser;
   PetscCall(DMPlexCreateBoxMesh(comm, 2, PETSC_FALSE, user->cells, NULL, NULL, NULL, PETSC_TRUE, 0, PETSC_TRUE, dm));
   PetscCall(DMSetBasicAdjacency(*dm, PETSC_FALSE, PETSC_TRUE));
+  /* A star patch holds every cell around the vertex it is built around, so each process needs one layer of overlap */
+  PetscCall(DMPlexGetPartitioner(*dm, &part));
+  PetscCall(PetscPartitionerSetFromOptions(part));
+  PetscCall(DMPlexDistribute(*dm, 1, NULL, &pdm));
+  if (pdm != NULL) {
+    PetscCall(DMDestroy(dm));
+    *dm = pdm;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -93,18 +107,33 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
 
 static PetscErrorCode CreateOperator(DM dm, AppCtx *user, Mat *A)
 {
-  PetscInt cStart, cEnd, dNz;
+  ISLocalToGlobalMapping ltog;
+  PetscSection           globalSection;
+  IS                     cellNumbers;
+  const PetscInt        *numbers;
+  PetscInt               cStart, cEnd, numOwned, dNz;
 
   PetscFunctionBeginUser;
-  dNz = PetscMin(user->numDofs, user->nodesPerCell * user->nodesPerCell);
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, user->numDofs, user->numDofs, dNz, NULL, dNz, NULL, A));
+  /* The cell node maps hold local dof numbers, so assemble through the local-to-global map of the section */
+  PetscCall(DMGetLocalToGlobalMapping(dm, &ltog));
+  PetscCall(DMGetGlobalSection(dm, &globalSection));
+  PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &numOwned));
+  dNz = PetscMin(numOwned, user->nodesPerCell * user->nodesPerCell);
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, numOwned, numOwned, PETSC_DETERMINE, PETSC_DETERMINE, dNz, NULL, dNz, NULL, A));
+  PetscCall(MatSetLocalToGlobalMapping(*A, ltog, ltog));
   PetscCall(MatSetOption(*A, MAT_SYMMETRIC, PETSC_TRUE));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  /* A cell in the overlap lies on several processes, and only the process that owns it adds its element matrix */
+  PetscCall(DMPlexCreateCellNumbering(dm, PETSC_TRUE, &cellNumbers));
+  PetscCall(ISGetIndices(cellNumbers, &numbers));
   for (PetscInt c = cStart; c < cEnd; ++c) {
     const PetscInt *idx = &user->cellNodeMap[(c - cStart) * user->nodesPerCell];
 
-    PetscCall(MatSetValues(*A, user->nodesPerCell, idx, user->nodesPerCell, idx, user->elemMat, ADD_VALUES));
+    if (numbers[c - cStart] < 0) continue;
+    PetscCall(MatSetValuesLocal(*A, user->nodesPerCell, idx, user->nodesPerCell, idx, user->elemMat, ADD_VALUES));
   }
+  PetscCall(ISRestoreIndices(cellNumbers, &numbers));
+  PetscCall(ISDestroy(&cellNumbers));
   PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*A, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -126,6 +155,26 @@ static PetscErrorCode ComputePatchOperator(PC pc, PetscInt point, Vec x, Mat mat
   }
   PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Colors the vertices as PCPATCH does for star patches and checks that the processes needed different numbers of
+  colors, so that a process that needed fewer has to pad the patch label with empty strata
+*/
+static PetscErrorCode CheckUnevenColors(DM dm)
+{
+  ISColoring coloring;
+  PetscInt   ncolors, range[2], globalRange[2];
+
+  PetscFunctionBeginUser;
+  PetscCall(DMPlexCreateColoringLabel(dm, 0, 1, NULL, 0, &coloring));
+  PetscCall(ISColoringGetColors(coloring, NULL, &ncolors, NULL));
+  PetscCall(ISColoringDestroy(&coloring));
+  range[0] = ncolors;
+  range[1] = ncolors;
+  PetscCall(PetscGlobalMinMaxInt(PetscObjectComm((PetscObject)dm), range, globalRange));
+  PetscCheck(globalRange[0] < globalRange[1], PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Every process colored its vertices with %" PetscInt_FMT " colors, so no process pads the patch label", globalRange[0]);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -209,33 +258,25 @@ static PetscErrorCode SolveWithPatch(DM dm, Mat A, const char prefix[], AppCtx *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc, char **argv)
+/*
+  The label-based comparisons number the patches of each process by themselves and include the vertices it does not
+  own, so they hold on one process only
+*/
+static PetscErrorCode CompareLabeledPatches(DM dm, Mat A, AppCtx *user, PetscInt standardIts)
 {
-  AppCtx   user;
-  DM       dm;
   DMLabel  patchLabel, allLabel, activeLabel;
-  Mat      A;
-  PetscInt standardIts, coloredIts, labeledIts, allIts, activeIts, namedIts;
+  PetscInt labeledIts, allIts, activeIts, namedIts;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
-  PetscCall(CreateMesh(PETSC_COMM_WORLD, &user, &dm));
-  PetscCall(SetupDiscretization(dm, &user));
-  PetscCall(CreateOperator(dm, &user, &A));
-  PetscCall(SolveWithPatch(dm, A, "standard_", &user, NULL, NULL, &standardIts));
-  PetscCall(SolveWithPatch(dm, A, "colored_", &user, NULL, NULL, &coloredIts));
-  PetscCheck(standardIts == coloredIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but colored star patches took %" PetscInt_FMT, standardIts, coloredIts);
-
   /* Supplying the star patches as the strata of a label must reproduce the standard star patches */
   PetscCall(CreateVertexPatchLabel(dm, NULL, &patchLabel));
-  PetscCall(SolveWithPatch(dm, A, "labeled_", &user, patchLabel, NULL, &labeledIts));
+  PetscCall(SolveWithPatch(dm, A, "labeled_", user, patchLabel, NULL, &labeledIts));
   PetscCheck(standardIts == labeledIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but labeled patches took %" PetscInt_FMT, standardIts, labeledIts);
   PetscCall(DMLabelDestroy(&patchLabel));
 
   /* Restricting the patches to every mesh point must also leave them unchanged */
   PetscCall(CreateActiveLabel(dm, -1, &allLabel));
-  PetscCall(SolveWithPatch(dm, A, "restricted_", &user, NULL, allLabel, &allIts));
+  PetscCall(SolveWithPatch(dm, A, "restricted_", user, NULL, allLabel, &allIts));
   PetscCheck(standardIts == allIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but patches restricted to every point took %" PetscInt_FMT, standardIts, allIts);
   PetscCall(DMLabelDestroy(&allLabel));
 
@@ -247,17 +288,40 @@ int main(int argc, char **argv)
   */
   PetscCall(CreateActiveLabel(dm, 2, &activeLabel));
   PetscCall(CreateVertexPatchLabel(dm, activeLabel, &patchLabel));
-  PetscCall(SolveWithPatch(dm, A, "restricted_", &user, NULL, activeLabel, &activeIts));
-  PetscCall(SolveWithPatch(dm, A, "labeled_", &user, patchLabel, NULL, &labeledIts));
+  PetscCall(SolveWithPatch(dm, A, "restricted_", user, NULL, activeLabel, &activeIts));
+  PetscCall(SolveWithPatch(dm, A, "labeled_", user, patchLabel, NULL, &labeledIts));
   PetscCheck(activeIts == labeledIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Patches restricted to two cells took %" PetscInt_FMT " iterations, but the same patches listed explicitly took %" PetscInt_FMT, activeIts, labeledIts);
   PetscCall(DMLabelDestroy(&patchLabel));
 
   /* Naming the same label on the DM must select the same restriction as passing it in */
   PetscCall(DMAddLabel(dm, activeLabel));
-  PetscCall(SolveWithPatch(dm, A, "named_", &user, NULL, NULL, &namedIts));
+  PetscCall(SolveWithPatch(dm, A, "named_", user, NULL, NULL, &namedIts));
   PetscCheck(activeIts == namedIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Patches restricted by a label took %" PetscInt_FMT " iterations, but naming that label on the DM took %" PetscInt_FMT, activeIts, namedIts);
   PetscCall(DMRemoveLabel(dm, "active", NULL));
   PetscCall(DMLabelDestroy(&activeLabel));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+int main(int argc, char **argv)
+{
+  AppCtx      user;
+  DM          dm;
+  Mat         A;
+  PetscInt    standardIts, coloredIts;
+  PetscMPIInt size;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
+  PetscCall(CreateMesh(PETSC_COMM_WORLD, &user, &dm));
+  PetscCall(SetupDiscretization(dm, &user));
+  PetscCall(CreateOperator(dm, &user, &A));
+  if (user.unevenColors == PETSC_TRUE) PetscCall(CheckUnevenColors(dm));
+  PetscCall(SolveWithPatch(dm, A, "standard_", &user, NULL, NULL, &standardIts));
+  PetscCall(SolveWithPatch(dm, A, "colored_", &user, NULL, NULL, &coloredIts));
+  PetscCheck(standardIts == coloredIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but colored star patches took %" PetscInt_FMT, standardIts, coloredIts);
+  if (size == 1) PetscCall(CompareLabeledPatches(dm, A, &user, standardIts));
 
   PetscCall(MatDestroy(&A));
   PetscCall(PetscFree(user.cellNodeMap));
@@ -282,5 +346,21 @@ int main(int argc, char **argv)
     test:
       suffix: patch_color_star_restricted
       args: -cells {{4,4 8,8}} -restricted_pc_patch_use_coloring
+    # Coloring each process's own points must give the same patches. This runs on one process,
+    # where the two colorings coincide, so it checks that the option reaches PCPATCH
+    test:
+      suffix: patch_color_star_local
+      args: -cells {{4,4 8,8}} -restricted_pc_patch_use_coloring -dm_plex_coloring_local
+
+  # On three processes, the simple partition of this mesh leaves the processes coloring their own vertices with
+  # different numbers of colors, which -check_uneven_colors confirms, so a process that needed fewer must pad the
+  # patch label with empty strata for the colored patches to match the standard ones
+  test:
+    suffix: patch_color_star_local_parallel
+    nsize: 3
+    args: -cells 8,2 -petscpartitioner_type simple -dm_plex_coloring_local -check_uneven_colors \
+          -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
+          -colored_pc_patch_construct_type star -colored_pc_patch_use_coloring -colored_sub_ksp_type preonly -colored_sub_pc_type lu
+    output_file: output/empty.out
 
 TEST*/
