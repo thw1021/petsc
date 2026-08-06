@@ -86,5 +86,3 @@ int main(int argc, char **args)
       filter: grep -E "(PETSC ERROR)" | grep -E "(wrong order|Need to call|PCASMGetSubKSP\(\)|main\(\))"
 
 TEST*/
-
-

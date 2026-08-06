@@ -17,17 +17,18 @@ typedef struct {
   PetscErrorCode (*userpatchconstructionop)(PC, PetscInt *, IS **, IS *, PetscCtx ctx);
   void        *userpatchconstructctx;
   IS          *userIS;
-  PetscInt     npatch;         /* Number of patches */
-  PetscBool    user_patches;   /* Flag for user construction of patches */
-  PetscBool    use_coloring;   /* Group star patches by a coloring of the points they are built around */
-  DMLabel      constructLabel; /* Restricts the points patches are built around, NULL to use the whole stratum */
-  PetscInt     constructValue; /* Stratum value of constructLabel selecting those points */
-  DMLabel      userPatchLabel; /* User-supplied patches, one stratum per patch, retained across PCReset() */
-  DMLabel      patchLabel;     /* Points solved for by each patch, one stratum per patch */
-  IS           patchValues;    /* Stratum values of patchLabel, indexed by patch number */
-  PetscInt     dim, codim;     /* Dimension or codimension of mesh points to loop over; only one of them can be set */
-  PetscSection cellCounts;     /* Maps patch -> # cells in patch */
-  IS           cells;          /* [patch][cell in patch]: Cell number */
+  PetscInt     npatch;             /* Number of patches */
+  PetscBool    user_patches;       /* Flag for user construction of patches */
+  PetscBool    use_coloring;       /* Group star patches by a coloring of the points they are built around */
+  DMLabel      constructLabel;     /* Restricts the points patches are built around, NULL to use the whole stratum */
+  PetscInt     constructValue;     /* Stratum value of constructLabel selecting those points */
+  char        *constructLabelName; /* Name of the label on the DM to use as constructLabel, looked up at setup */
+  DMLabel      userPatchLabel;     /* User-supplied patches, one stratum per patch, retained across PCReset() */
+  DMLabel      patchLabel;         /* Points solved for by each patch, one stratum per patch */
+  IS           patchValues;        /* Stratum values of patchLabel, indexed by patch number */
+  PetscInt     dim, codim;         /* Dimension or codimension of mesh points to loop over; only one of them can be set */
+  PetscSection cellCounts;         /* Maps patch -> # cells in patch */
+  IS           cells;              /* [patch][cell in patch]: Cell number */
   IS           extFacets;
   IS           intFacets;
   IS           intFacetsToPatchCell; /* Support of interior facet in local patch point numbering: AKA which two cells touch the facet (in patch local numbering of cells) */
