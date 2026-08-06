@@ -38,6 +38,7 @@ typedef struct {
   Vec          U;     /* U is used to compute Ydot = shift(Y-U) */
   Vec         *YdotI; /* Work vectors to hold the residual evaluation */
   Mat          TJ;    /* KAIJ matrix for the Jacobian of the combined system */
+  Mat          M;     /* mass matrix dF/dUdot for a DAE, assembled from TSSetMassMatrix(); NULL for an explicit ODE */
   PetscScalar *work;  /* Scalar work */
   TSStepStatus status;
   PetscBool    rebuild_completion;
@@ -310,7 +311,7 @@ static PetscErrorCode TSStep_IRK(TS ts)
   PetscScalar   *A_inv = tab->A_inv, *A_inv_rowsum = tab->A_inv_rowsum;
   const PetscInt nstages = irk->nstages;
   SNES           snes;
-  PetscInt       i, j, its, lits, bs;
+  PetscInt       i, j, its, lits;
   TSAdapt        adapt;
   PetscInt       rejections     = 0;
   PetscBool      accept         = PETSC_TRUE;
@@ -318,8 +319,7 @@ static PetscErrorCode TSStep_IRK(TS ts)
 
   PetscFunctionBegin;
   if (!ts->steprollback) PetscCall(VecCopy(ts->vec_sol, irk->U0));
-  PetscCall(VecGetBlockSize(ts->vec_sol, &bs));
-  for (i = 0; i < nstages; i++) PetscCall(VecStrideScatter(ts->vec_sol, i * bs, irk->Z, INSERT_VALUES));
+  for (i = 0; i < nstages; i++) PetscCall(VecStrideScatter(ts->vec_sol, i, irk->Z, INSERT_VALUES));
 
   irk->status = TS_STEP_INCOMPLETE;
   while (!ts->reason && irk->status != TS_STEP_COMPLETE) {
@@ -330,7 +330,7 @@ static PetscErrorCode TSStep_IRK(TS ts)
     PetscCall(SNESGetLinearSolveIterations(snes, &lits));
     ts->snes_its += its;
     ts->ksp_its += lits;
-    PetscCall(VecStrideGatherAll(irk->Z, irk->Y, INSERT_VALUES));
+    for (i = 0; i < nstages; i++) PetscCall(VecStrideGather(irk->Z, i, irk->Y[i], INSERT_VALUES));
     for (i = 0; i < nstages; i++) {
       PetscCall(VecZeroEntries(irk->YdotI[i]));
       for (j = 0; j < nstages; j++) PetscCall(VecAXPY(irk->YdotI[i], A_inv[i + j * nstages] / ts->time_step, irk->Y[j]));
@@ -423,6 +423,7 @@ static PetscErrorCode TSReset_IRK(TS ts)
   PetscCall(VecDestroy(&irk->U));
   PetscCall(VecDestroy(&irk->U0));
   PetscCall(MatDestroy(&irk->TJ));
+  PetscCall(MatDestroy(&irk->M));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -468,7 +469,7 @@ static PetscErrorCode SNESTSFormFunction_IRK(SNES snes, Vec ZC, Vec FC, TS ts)
   PetscFunctionBegin;
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(TSIRKGetVecs(ts, dm, &U));
-  PetscCall(VecStrideGatherAll(ZC, Y, INSERT_VALUES));
+  for (i = 0; i < nstages; i++) PetscCall(VecStrideGather(ZC, i, Y[i], INSERT_VALUES));
   dmsave = ts->dm;
   ts->dm = dm;
   for (i = 0; i < nstages; i++) {
@@ -477,7 +478,7 @@ static PetscErrorCode SNESTSFormFunction_IRK(SNES snes, Vec ZC, Vec FC, TS ts)
     PetscCall(VecAXPY(Ydot, -A_inv_rowsum[i] / h, U)); /* Ydot = (S \otimes In)*Z - (Se \otimes In) U */
     PetscCall(TSComputeIFunction(ts, ts->ptime + ts->time_step * c[i], Y[i], Ydot, YdotI[i], PETSC_FALSE));
   }
-  PetscCall(VecStrideScatterAll(YdotI, FC, INSERT_VALUES));
+  for (i = 0; i < nstages; i++) PetscCall(VecStrideScatter(YdotI[i], i, FC, INSERT_VALUES));
   ts->dm = dmsave;
   PetscCall(TSIRKRestoreVecs(ts, dm, &U));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -499,19 +500,24 @@ static PetscErrorCode SNESTSFormJacobian_IRK(SNES snes, Vec ZC, Mat JC, Mat JCpr
   Vec             *Y = irk->Y, Ydot = irk->Ydot;
   Mat              J;
   PetscScalar     *S;
-  PetscInt         i, j, bs;
+  PetscReal        stagetime = ts->ptime + ts->time_step * c[nstages - 1];
+  PetscBool        massconstant;
+  PetscInt         i, j;
 
   PetscFunctionBegin;
   PetscCall(SNESGetDM(snes, &dm));
   /* irk->Ydot has already been computed in SNESTSFormFunction_IRK (SNES guarantees this) */
   dmsave = ts->dm;
   ts->dm = dm;
-  PetscCall(VecGetBlockSize(Y[nstages - 1], &bs));
-  PetscCheck(ts->equation_type <= TS_EQ_ODE_EXPLICIT, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TSIRK %s does not support implicit formula", irk->method_name); /* TODO: need the mass matrix for DAE  */
-  /* Support explicit formulas only */
-  PetscCall(VecStrideGather(ZC, (nstages - 1) * bs, Y[nstages - 1], INSERT_VALUES));
+  /* Without a mass matrix, TSIRK only supports explicit ODEs (M = I). With a mass matrix supplied through
+     TSSetMassMatrix(), the DAE Jacobian (J \otimes I_s) + (M \otimes A_inv/dt) is assembled via MatCreateKAIJAB(). */
+  PetscCheck(irk->M || ts->equation_type <= TS_EQ_ODE_EXPLICIT, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TSIRK %s does not support DAEs without a mass matrix; call TSSetMassMatrix()", irk->method_name);
+  PetscCall(VecStrideGather(ZC, nstages - 1, Y[nstages - 1], INSERT_VALUES));
+  /* Re-evaluate a time- or state-dependent mass matrix at the last stage; a constant mass matrix was assembled once in TSSetUp_IRK() */
+  PetscCall(TSGetMassMatrixConstant(ts, &massconstant));
+  if (irk->M && !massconstant) PetscCall(TSComputeMassMatrix(ts, dm, stagetime, Y[nstages - 1], irk->M));
   PetscCall(MatKAIJGetAIJ(JC, &J));
-  PetscCall(TSComputeIJacobian(ts, ts->ptime + ts->time_step * c[nstages - 1], Y[nstages - 1], Ydot, 0, J, J, PETSC_FALSE));
+  PetscCall(TSComputeIJacobian(ts, stagetime, Y[nstages - 1], Ydot, 0, J, J, PETSC_FALSE));
   PetscCall(MatKAIJGetS(JC, NULL, NULL, &S));
   for (i = 0; i < nstages; i++)
     for (j = 0; j < nstages; j++) S[i + nstages * j] = tab->A_inv[i + nstages * j] / ts->time_step;
@@ -572,7 +578,8 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
   Mat            J;
   Vec            R;
   const PetscInt nstages = irk->nstages;
-  PetscInt       vsize, bs;
+  PetscInt       lsize;
+  PetscBool      hasmass;
 
   PetscFunctionBegin;
   if (!irk->work) PetscCall(PetscMalloc1(irk->nstages, &irk->work));
@@ -583,10 +590,9 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
   if (!irk->U0) PetscCall(VecDuplicate(ts->vec_sol, &irk->U0));
   if (!irk->Z) {
     PetscCall(VecCreate(PetscObjectComm((PetscObject)ts->vec_sol), &irk->Z));
-    PetscCall(VecGetSize(ts->vec_sol, &vsize));
-    PetscCall(VecSetSizes(irk->Z, PETSC_DECIDE, vsize * irk->nstages));
-    PetscCall(VecGetBlockSize(ts->vec_sol, &bs));
-    PetscCall(VecSetBlockSize(irk->Z, irk->nstages * bs));
+    PetscCall(VecGetLocalSize(ts->vec_sol, &lsize));
+    PetscCall(VecSetSizes(irk->Z, lsize * irk->nstages, PETSC_DECIDE));
+    PetscCall(VecSetBlockSize(irk->Z, irk->nstages));
     PetscCall(VecSetFromOptions(irk->Z));
   }
   PetscCall(TSGetDM(ts, &dm));
@@ -597,9 +603,18 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
   PetscCall(VecDuplicate(irk->Z, &R));
   PetscCall(SNESSetFunction(ts->snes, R, SNESTSFormFunction, ts));
   PetscCall(TSGetIJacobian(ts, &J, NULL, NULL, NULL));
+  /* If a mass matrix is provided, assemble it here and build the combined-stage Jacobian as
+     (J \otimes I_s) + (M \otimes A_inv/dt) via a two-operand KAIJ matrix. A time-dependent mass matrix is
+     re-evaluated in SNESTSFormJacobian_IRK(); a constant one (TSSetMassMatrixConstant()) reuses this assembly. */
+  PetscCall(TSHasMassMatrix(ts, &hasmass));
+  if (hasmass && !irk->M) {
+    PetscCall(DMCreateMatrix(dm, &irk->M));
+    PetscCall(TSComputeMassMatrix(ts, dm, ts->ptime, ts->vec_sol, irk->M));
+  }
   if (!irk->TJ) {
     /* Create the KAIJ matrix for solving the stages */
-    PetscCall(MatCreateKAIJ(J, nstages, nstages, tab->A_inv, tab->I_s, &irk->TJ));
+    if (irk->M) PetscCall(MatCreateKAIJAB(J, irk->M, nstages, nstages, tab->A_inv, tab->I_s, &irk->TJ));
+    else PetscCall(MatCreateKAIJ(J, nstages, nstages, tab->A_inv, tab->I_s, &irk->TJ));
   }
   PetscCall(SNESSetJacobian(ts->snes, irk->TJ, irk->TJ, SNESTSFormJacobian, ts));
   PetscCall(VecDestroy(&R));
