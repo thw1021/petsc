@@ -215,7 +215,7 @@ int main(int argc, char **argv)
   DM       dm;
   DMLabel  patchLabel, allLabel, activeLabel;
   Mat      A;
-  PetscInt standardIts, coloredIts, labeledIts, allIts, activeIts;
+  PetscInt standardIts, coloredIts, labeledIts, allIts, activeIts, namedIts;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -251,6 +251,12 @@ int main(int argc, char **argv)
   PetscCall(SolveWithPatch(dm, A, "labeled_", &user, patchLabel, NULL, &labeledIts));
   PetscCheck(activeIts == labeledIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Patches restricted to two cells took %" PetscInt_FMT " iterations, but the same patches listed explicitly took %" PetscInt_FMT, activeIts, labeledIts);
   PetscCall(DMLabelDestroy(&patchLabel));
+
+  /* Naming the same label on the DM must select the same restriction as passing it in */
+  PetscCall(DMAddLabel(dm, activeLabel));
+  PetscCall(SolveWithPatch(dm, A, "named_", &user, NULL, NULL, &namedIts));
+  PetscCheck(activeIts == namedIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Patches restricted by a label took %" PetscInt_FMT " iterations, but naming that label on the DM took %" PetscInt_FMT, activeIts, namedIts);
+  PetscCall(DMRemoveLabel(dm, "active", NULL));
   PetscCall(DMLabelDestroy(&activeLabel));
 
   PetscCall(MatDestroy(&A));
@@ -266,7 +272,8 @@ int main(int argc, char **argv)
     args: -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
           -colored_pc_patch_construct_type star -colored_pc_patch_use_coloring -colored_sub_ksp_type preonly -colored_sub_pc_type lu \
           -labeled_sub_ksp_type preonly -labeled_sub_pc_type lu \
-          -restricted_pc_patch_construct_type star -restricted_sub_ksp_type preonly -restricted_sub_pc_type lu
+          -restricted_pc_patch_construct_type star -restricted_sub_ksp_type preonly -restricted_sub_pc_type lu \
+          -named_pc_patch_construct_type star -named_pc_patch_construct_label active -named_sub_ksp_type preonly -named_sub_pc_type lu
     output_file: output/empty.out
     test:
       suffix: patch_color_star
