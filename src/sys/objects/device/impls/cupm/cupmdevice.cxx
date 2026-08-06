@@ -430,21 +430,12 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
     PetscCheck((initType.first != PETSC_DEVICE_INIT_EAGER) && !initView.first, comm, PETSC_ERR_USER_INPUT, "Cannot eagerly initialize %s, as doing so results in %s error %d (%s) : %s", cupmName(), cupmName(), static_cast<PetscErrorCode>(cerr), cupmGetErrorName(cerr), cupmGetErrorString(cerr));
     // we won't be initializing anything anyways
     initType.first = PETSC_DEVICE_INIT_NONE;
-    // save the error code for later
-    initId.first = -static_cast<decltype(initId.first)>(cerr);
+    initId.first   = PETSC_CUPM_DEVICE_NONE;
+    initView.first = PETSC_FALSE;
   }
 
   // check again for init type, since the device count may have changed it
-  if (initType.first == PETSC_DEVICE_INIT_NONE) {
-    // id < 0 (excluding PETSC_DECIDE and PETSC_DEVICE_TOPOLOGY_AWARE) indicates an error has occurred during setup
-#if PetscDefined(HAVE_HWLOC)
-    if ((initId.first > 0) || (initId.first == PETSC_DECIDE) || (initId.first == PETSC_DEVICE_TOPOLOGY_AWARE)) initId.first = PETSC_CUPM_DEVICE_NONE;
-#else
-    if ((initId.first > 0) || (initId.first == PETSC_DECIDE)) initId.first = PETSC_CUPM_DEVICE_NONE;
-#endif
-    // initType overrides initView
-    initView.first = PETSC_FALSE;
-  } else {
+  if (initType.first != PETSC_DEVICE_INIT_NONE) {
     PetscCall(PetscDeviceCheckDeviceCount_Internal(ndev));
 #if PetscDefined(HAVE_HWLOC)
     if (initId.first == PETSC_DEVICE_TOPOLOGY_AWARE) {
