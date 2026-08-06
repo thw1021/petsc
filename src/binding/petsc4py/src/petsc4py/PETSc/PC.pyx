@@ -948,13 +948,19 @@ cdef class PC(Object):
         Returns
         -------
         is_sub : list[IS]
-            The index sets that define the subdomains for this process.
+            The index sets that define the subdomains for this process, empty
+            if they have not been created yet.
         is_local : list[IS]
             The index sets that define the local part of the subdomains for
-            this process, empty if they have not been set.
+            this process, empty if they have not been created yet.
 
         Notes
         -----
+        Empty lists are returned when the index sets have not been created
+        yet, which is the case before `setUp` unless they were supplied
+        explicitly to `setASMLocalSubdomains`; this does not mean the number
+        of subdomains is zero.
+
         The `IS` numbering is in the parallel, global numbering of the vector.
 
         See Also
