@@ -102,6 +102,14 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         self.checkLocalSubdomains(pc, [[3 * rank, 3 * rank + 1, 3 * rank + 2]])
         pc.destroy()
 
+    def testLocalSubdomainsCountOnly(self):
+        # A subdomain count without index sets: nsd is set, the lists are not.
+        self.pc.setASMLocalSubdomains(3)
+        got_nsd, got_sub, got_local = self.pc.getASMLocalSubdomains()
+        self.assertEqual(got_nsd, 3)
+        self.assertEqual(got_sub, [])
+        self.assertEqual(got_local, [])
+
     def testLocalSubdomainsUnset(self):
         # Nothing has been set and the preconditioner has not been set up, so
         # PETSc holds no subdomains yet.
