@@ -110,7 +110,7 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
   PETSc has been launched by a process manager capable of binding processes to CPU cores
   (e.g. `mpiexec`, `srun`). For example, the LUMI, Frontier and Setonix HPC systems all
   have nodes comprised of 64-core AMD EPYC "Trento" CPUs connected to 4 AMD MI250X GPUs,
-  each of which is comprised of two Graphics Complex Die (GCD) that appears to the operating
+  each of which is comprised of two Graphics Compute Die (GCD) that appears to the operating
   system as a distinct GPU device. The CPU is divided into four NUMA nodes, each of which is
   divided into two chiplets with a direct connection to each GCD. Each GCD is assigned an
   index from 0 to 7 by the GPU runtime. The diagram below shows how `hwloc` sees one of these
@@ -137,23 +137,23 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
 
   `hwloc` uses the notion of "depth" of devices to describe the different layers of the topology it
   discovers. The top layer is always Machine and is assigned a value 0. Beneath that is the Package
-  layer, assigned depth 1 and generally corresponds to CPU sockets. In order to determine which GCD
-  is topologically closest, PETSc uses hwloc to determine the depth value nearest common ancestor for
-  the CPU the current process is bound to and each device on the system. The higher the depth value,
+  layer, which is assigned depth 1 and generally corresponds to CPU sockets. In order to determine which GCD
+  is topologically closest, PETSc uses `hwloc` to determine the depth value of the nearest common ancestor
+  for the CPU the current process is bound to and each device on the system. The higher the depth value,
   the closer the hardware controller for the device is to CPU core 0, and therefore the closer the GCD
   is to CPU core 0. The table below shows the nearest common ancestor between CPU core 0 and each of the
-  GCD's identified on the system
+  GCDs identified on the system
 
   | PCIe Bus ID | Nearest Common Ancestor to Core 0 | Depth |
   |-------------|----------------------------------:|------:|
   | d1:00.0     | L3 (chiplet)                      |     3 |
   | d6:00.0     | Group (NUMA Node)                 |     2 |
   | c9:00.0     | Package (CPU socket)              |     1 |
-  | ce:00.0     |  Package (CPU socket)             |     1 |
-  | d9:00.0     |  Package (CPU socket)             |     1 |
-  | de:00.0     |  Package (CPU socket)             |     1 |
-  | c1:00.0     |  Package (CPU socket)             |     1 |
-  | c6:00.0     |  Package (CPU socket)             |     1 |
+  | ce:00.0     | Package (CPU socket)              |     1 |
+  | d9:00.0     | Package (CPU socket)              |     1 |
+  | de:00.0     | Package (CPU socket)              |     1 |
+  | c1:00.0     | Package (CPU socket)              |     1 |
+  | c6:00.0     | Package (CPU socket)              |     1 |
 
   Choosing the device with the highest depth value gives the intuitive result that CPU
   core 0 is closest to the GCD on PCIe Bus ID d1:00.0, or GCD 4. In the case where multiple devices
@@ -165,7 +165,7 @@ sypm::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
   - If there is a single GPU on the system, select it and return
   - Enumerate all devices on the system and map PCIe Bus ID to device ID
   - Discover system topology with hwloc
-  - Determine current processes CPU binding
+  - Determine current process's CPU binding
   - Find GPU devices by PCIe Bus ID in discovered topology
   - Find the depth of nearest common ancestor between current CPU core and every GPU device
   - If there is a single device at a maximum depth, select that device and return
@@ -630,7 +630,7 @@ PetscErrorCode PetscDeviceInitializeQueryOptions_Private(MPI_Comm comm, PetscDev
 
   if (initIdx == PETSC_DEVICE_INIT_NONE) {
     /* disabled all device initialization if devices are globally disabled */
-    PetscCheck(*defaultDeviceId == PETSC_DECIDE, comm, PETSC_ERR_USER_INPUT, "You have disabled devices but also specified a particular device to use, these options are mutually exclusive");
+    PetscCheck(*defaultDeviceId == PETSC_DECIDE || *defaultDeviceId == PETSC_DEVICE_TOPOLOGY_AWARE, comm, PETSC_ERR_USER_INPUT, "You have disabled devices but also specified a particular device to use, these options are mutually exclusive");
     *defaultView  = PETSC_FALSE;
     initDeviceIdx = PETSC_DEVICE_HOST;
   } else {

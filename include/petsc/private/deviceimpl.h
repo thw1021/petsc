@@ -160,7 +160,7 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
 /* if someone is ready to rock with more than 128 GPUs on hand then we're in real trouble */
 #define PETSC_DEVICE_MAX_DEVICES 128
 
-#if PetscDefined(HAVE_HWLOC)
+#if PetscDefined(HAVE_HWLOC) && PetscDefined(HAVE_CUPM)
   #define PETSC_DEVICE_TOPOLOGY_AWARE -2
   /* help string and lower bound for the "-device_select" option, shared by device.cxx and impldevicebase.hpp */
   #define PETSC_DEVICE_SELECT_HELP \

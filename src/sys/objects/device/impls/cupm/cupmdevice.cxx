@@ -6,7 +6,9 @@
 #include <csetjmp> // for cuda mpi awareness
 #include <csignal> // SIGSEGV
 #include <iterator>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 namespace Petsc
 {
@@ -18,27 +20,24 @@ namespace cupm
 {
 
 #if PetscDefined(HAVE_HWLOC)
-class hwloc_object_manager {
+class HwlocObjectManager {
 public:
-  hwloc_object_manager();
-  ~hwloc_object_manager();
+  HwlocObjectManager()
+  {
+    if (hwloc_topology_init(&topology) == -1) topology = nullptr;
+    cpuset_mine    = hwloc_bitmap_alloc();
+    sibling_cpuset = hwloc_bitmap_alloc();
+  };
+  ~HwlocObjectManager()
+  {
+    hwloc_bitmap_free(sibling_cpuset);
+    hwloc_bitmap_free(cpuset_mine);
+    if (topology) hwloc_topology_destroy(topology);
+  };
   hwloc_topology_t topology       = nullptr;
   hwloc_cpuset_t   cpuset_mine    = nullptr;
   hwloc_bitmap_t   sibling_cpuset = nullptr;
 };
-
-hwloc_object_manager::hwloc_object_manager()
-{
-  if (hwloc_topology_init(&topology) == -1) topology = nullptr;
-  cpuset_mine    = hwloc_bitmap_alloc();
-  sibling_cpuset = hwloc_bitmap_alloc();
-}
-hwloc_object_manager::~hwloc_object_manager()
-{
-  hwloc_bitmap_free(sibling_cpuset);
-  hwloc_bitmap_free(cpuset_mine);
-  if (topology) hwloc_topology_destroy(topology);
-}
 #endif
 
 // internal "impls" class for CUPMDevice. Each instance represents a single cupm device
@@ -321,11 +320,12 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
     PetscInt max_depth       = -1;
     PetscInt max_count       = 1;
     // Initialise hwloc topology object
-    hwloc_object_manager     hwloc_om;
+    HwlocObjectManager       hwloc_om;
     std::vector<hwloc_obj_t> hwloc_devs(ndev);
     std::vector<hwloc_obj_t> common_ancestors(ndev);
     std::vector<PetscInt>    device_depths(ndev);
-    std::vector<std::string> device_addrs(ndev, std::string(32, 0));
+    std::vector<std::string> device_addrs(ndev, std::string(32, '\0'));
+    hwloc_obj_t              first_cpu = nullptr;
 
     // Ensure initId->first is set to a sensible fallback value if any hwloc
     // calls fail.
@@ -333,7 +333,8 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
 
     // Get PCI Bus addresses for each CUPM device
     for (PetscInt idev = 0; idev < ndev; idev++) {
-      PetscCallCUPM(cupmDeviceGetPCIBusId(&device_addrs[idev][0], 32, idev));
+      auto cerr = cupmDeviceGetPCIBusId(&device_addrs[idev][0], 32, idev);
+      if (cerr != cupmSuccess) PetscFunctionReturn(PETSC_ERR_GPU);
     }
 
     if (!hwloc_om.topology) PetscFunctionReturn(PETSC_ERR_LIB);
@@ -351,7 +352,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
     // the same as the topological order. Create a PU object from the first CPU detected
     // in this cpuset. A PU object is the lowest object in any hwloc topology. It is not
     // allowed to have any child objects.
-    hwloc_obj_t first_cpu = hwloc_get_pu_obj_by_os_index(hwloc_om.topology, hwloc_bitmap_first(hwloc_om.cpuset_mine));
+    first_cpu = hwloc_get_pu_obj_by_os_index(hwloc_om.topology, hwloc_bitmap_first(hwloc_om.cpuset_mine));
     if (!first_cpu) PetscFunctionReturn(PETSC_ERR_LIB);
 
     for (PetscInt idev = 0; idev < ndev; idev++) {
@@ -373,9 +374,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
         max_count       = 1;
         selected_device = idev;
         // Prepare for the case where multiple devices are reported at the same depth level.
-      } else if (common_ancestors[idev]->depth == max_depth) {
-        max_count++;
-      }
+      } else if (common_ancestors[idev]->depth == max_depth) max_count++;
     }
     if (max_count == 1) initId->first = selected_device;
     else {
@@ -398,12 +397,8 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, std::pair
       if (!hwloc_om.sibling_cpuset) PetscFunctionReturn(PETSC_ERR_LIB);
       // Repeat the common ancestor depth calculation for every CPU core detected in the current cgroup
       for (auto this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(hwloc_om.topology, global_cpuset, HWLOC_OBJ_PU, nullptr); this_cpu; this_cpu = hwloc_get_next_obj_inside_cpuset_by_type(hwloc_om.topology, global_cpuset, HWLOC_OBJ_PU, this_cpu)) {
-        for (PetscInt jdev = 0; jdev < ndev; jdev++) {
-          device_depths[jdev] = hwloc_get_common_ancestor_obj(hwloc_om.topology, this_cpu, hwloc_get_non_io_ancestor_obj(hwloc_om.topology, hwloc_devs[jdev]))->depth;
-        }
-        if (*std::max_element(device_depths.begin(), device_depths.end()) == device_depths[devices_at_max_depth[0]]) {
-          hwloc_bitmap_set(hwloc_om.sibling_cpuset, this_cpu->os_index);
-        }
+        for (PetscInt jdev = 0; jdev < ndev; jdev++) device_depths[jdev] = hwloc_get_common_ancestor_obj(hwloc_om.topology, this_cpu, hwloc_get_non_io_ancestor_obj(hwloc_om.topology, hwloc_devs[jdev]))->depth;
+        if (*std::max_element(device_depths.begin(), device_depths.end()) == device_depths[devices_at_max_depth[0]]) hwloc_bitmap_set(hwloc_om.sibling_cpuset, this_cpu->os_index);
       }
       PetscCall(get_device_placement_in_cpuset_(max_count, hwloc_om.sibling_cpuset, first_cpu, hwloc_om.topology, &relative_device_idx));
       initId->first = devices_at_max_depth[relative_device_idx];
