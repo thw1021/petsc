@@ -68,10 +68,8 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         self.assertEqual(len(got_local), 0)
         for got, idx in zip(got_sub, indices):
             self.assertTrue((got.getIndices() == idx).all())
-
-        got_sub = None
-        got_local = None
-        is_sub = None
+        for is in is_sub:
+            is.destroy()
 
     def testLocalSubdomainsWithLocalPart(self):
         pc = self.pc
