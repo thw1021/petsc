@@ -53,5 +53,85 @@ class TestMG(BaseTestPC, unittest.TestCase):
     PC_TYPE = PETSc.PC.Type.MG
 
 
+class TestASMPC(BaseTestPC, unittest.TestCase):
+    PC_TYPE = PETSc.PC.Type.ASM
+
+    def testLocalSubdomains(self):
+        pc = self.pc
+        indices = [[0, 1, 2], [3, 4, 5]]
+        is_sub = [PETSc.IS().createGeneral(idx, comm=PETSc.COMM_SELF)
+                  for idx in indices]
+        pc.setASMLocalSubdomains(len(is_sub), is_sub)
+
+        got_sub, got_local = pc.getASMLocalSubdomains()
+        self.assertEqual(len(got_sub), len(is_sub))
+        self.assertEqual(len(got_local), 0)
+        for got, idx in zip(got_sub, indices):
+            self.assertTrue((got.getIndices() == idx).all())
+
+        got_sub = None
+        got_local = None
+        is_sub = None
+
+    def testLocalSubdomainsWithLocalPart(self):
+        pc = self.pc
+        indices = [[0, 1, 2, 3], [2, 3, 4, 5]]
+        local_indices = [[0, 1], [4, 5]]
+        is_sub = [PETSc.IS().createGeneral(idx, comm=PETSc.COMM_SELF)
+                  for idx in indices]
+        is_local = [PETSc.IS().createGeneral(idx, comm=PETSc.COMM_SELF)
+                    for idx in local_indices]
+        pc.setASMLocalSubdomains(len(is_sub), is_sub, is_local)
+
+        got_sub, got_local = pc.getASMLocalSubdomains()
+        self.assertEqual(len(got_sub), len(is_sub))
+        self.assertEqual(len(got_local), len(is_local))
+        for got, idx in zip(got_sub, indices):
+            self.assertTrue((got.getIndices() == idx).all())
+        for got, idx in zip(got_local, local_indices):
+            self.assertTrue((got.getIndices() == idx).all())
+
+        got_sub = None
+        got_local = None
+        is_sub = None
+        is_local = None
+
+
+class TestASMPCWorld(unittest.TestCase):
+
+    def setUp(self):
+        self.pc = PETSc.PC().create(PETSc.COMM_WORLD)
+        self.pc.setType(PETSc.PC.Type.ASM)
+
+    def tearDown(self):
+        self.pc.destroy()
+        self.pc = None
+        PETSc.garbage_cleanup()
+
+    def testLocalSubdomains(self):
+        # The index sets are in the global numbering of the vector, so give
+        # each process a distinct block of it.
+        rank = PETSc.COMM_WORLD.getRank()
+        indices = [3 * rank, 3 * rank + 1, 3 * rank + 2]
+        is_sub = PETSc.IS().createGeneral(indices, comm=PETSc.COMM_SELF)
+        self.pc.setASMLocalSubdomains(1, [is_sub])
+
+        got_sub, got_local = self.pc.getASMLocalSubdomains()
+        self.assertEqual(len(got_sub), 1)
+        self.assertTrue((got_sub[0].getIndices() == indices).all())
+        self.assertEqual(len(got_local), 0)
+
+        got_sub = None
+        got_local = None
+        is_sub = None
+
+    def testLocalSubdomainsUnset(self):
+        # Nothing has been set and the preconditioner has not been set up, so
+        # PETSc holds no subdomains yet.
+        got_sub, got_local = self.pc.getASMLocalSubdomains()
+        self.assertEqual(got_sub, [])
+        self.assertEqual(got_local, [])
+
+
 if __name__ == '__main__':
     unittest.main()
