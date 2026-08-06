@@ -69,8 +69,6 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         for got, idx in zip(got_sub, indices):
             self.assertTrue((got.getIndices() == idx).all())
 
-        for iset in got_sub:
-            iset.destroy()
         for iset in is_sub:
             iset.destroy()
 
@@ -92,9 +90,9 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         for got, idx in zip(got_local, local_indices):
             self.assertTrue((got.getIndices() == idx).all())
 
-        for iset in got_sub + got_local:
+        for iset in is_sub:
             iset.destroy()
-        for iset in is_sub + is_local:
+        for iset in is_local:
             iset.destroy()
 
 
@@ -122,8 +120,6 @@ class TestASMPCWorld(unittest.TestCase):
         self.assertTrue((got_sub[0].getIndices() == indices).all())
         self.assertEqual(len(got_local), 0)
 
-        for iset in got_sub:
-            iset.destroy()
         is_sub.destroy()
 
     def testLocalSubdomainsUnset(self):
