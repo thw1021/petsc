@@ -283,5 +283,11 @@ int main(int argc, char **argv)
     test:
       suffix: patch_color_star_restricted
       args: -cells {{4,4 8,8}} -restricted_pc_patch_use_coloring
+    # Coloring each process's own points must give the same patches. This runs on one process,
+    # where the two colorings coincide, so it checks that the option reaches PCPATCH; the
+    # parallel coverage is in src/dm/impls/plex/tests/ex104.c
+    test:
+      suffix: patch_color_star_local
+      args: -cells {{4,4 8,8}} -restricted_pc_patch_use_coloring -dm_plex_coloring_local
 
 TEST*/
