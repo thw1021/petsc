@@ -19,6 +19,7 @@ typedef struct {
   IS          *userIS;
   PetscInt     npatch;             /* Number of patches */
   PetscBool    user_patches;       /* Flag for user construction of patches */
+  PetscBool    use_coloring;       /* Group star patches by a coloring of the points they are built around */
   DMLabel      constructLabel;     /* Restricts the points patches are built around, NULL to use the whole stratum */
   PetscInt     constructValue;     /* Stratum value of constructLabel selecting those points */
   char        *constructLabelName; /* Name of the label on the DM to use as constructLabel, looked up at setup */

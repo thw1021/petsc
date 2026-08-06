@@ -1,4 +1,4 @@
-static char help[] = "Compares PCPATCH star patches with patches given as a DMLabel.\n\n";
+static char help[] = "Compares PCPATCH star patches with color-star patches.\n\n";
 
 #include <petscksp.h>
 #include <petscdmplex.h>
@@ -9,6 +9,7 @@ typedef struct {
   PetscInt    numDofs;
   PetscInt   *cellNodeMap;
   PetscScalar elemMat[16];
+  PetscBool   unevenColors;
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
@@ -17,11 +18,13 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   PetscBool flg;
 
   PetscFunctionBeginUser;
-  user->cells[0]    = 4;
-  user->cells[1]    = 4;
-  user->cellNodeMap = NULL;
-  PetscOptionsBegin(comm, NULL, "PCPATCH patch label test options", "PC");
+  user->cells[0]     = 4;
+  user->cells[1]     = 4;
+  user->cellNodeMap  = NULL;
+  user->unevenColors = PETSC_FALSE;
+  PetscOptionsBegin(comm, NULL, "PCPATCH color-star test options", "PC");
   PetscCall(PetscOptionsIntArray("-cells", "Number of mesh cells in each direction", "ex13.c", user->cells, &n, &flg));
+  PetscCall(PetscOptionsBool("-check_uneven_colors", "Check that the processes color their own vertices with different numbers of colors", "ex13.c", user->unevenColors, &user->unevenColors, NULL));
   PetscOptionsEnd();
   PetscCheck(flg == PETSC_FALSE || n == 2, comm, PETSC_ERR_ARG_SIZ, "Expected two entries for -cells");
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -156,6 +159,26 @@ static PetscErrorCode ComputePatchOperator(PC pc, PetscInt point, Vec x, Mat mat
 }
 
 /*
+  Colors the vertices as PCPATCH does for star patches and checks that the processes needed different numbers of
+  colors, so that a process that needed fewer has to pad the patch label with empty strata
+*/
+static PetscErrorCode CheckUnevenColors(DM dm)
+{
+  ISColoring coloring;
+  PetscInt   ncolors, range[2], globalRange[2];
+
+  PetscFunctionBeginUser;
+  PetscCall(DMPlexCreateColoringLabel(dm, 0, 1, NULL, 0, &coloring));
+  PetscCall(ISColoringGetColors(coloring, NULL, &ncolors, NULL));
+  PetscCall(ISColoringDestroy(&coloring));
+  range[0] = ncolors;
+  range[1] = ncolors;
+  PetscCall(PetscGlobalMinMaxInt(PetscObjectComm((PetscObject)dm), range, globalRange));
+  PetscCheck(globalRange[0] < globalRange[1], PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Every process colored its vertices with %" PetscInt_FMT " colors, so no process pads the patch label", globalRange[0]);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   One stratum per vertex, each holding the star of that vertex, which is the same decomposition that
   -pc_patch_construct_type star builds internally. Handing it to PCPatchSetPatchLabel() must therefore reproduce the
   patches that PCPATCH constructs itself. When `active` is given, only the vertices it marks get a patch, which is the
@@ -284,7 +307,7 @@ int main(int argc, char **argv)
   AppCtx      user;
   DM          dm;
   Mat         A;
-  PetscInt    standardIts;
+  PetscInt    standardIts, coloredIts;
   PetscMPIInt size;
 
   PetscFunctionBeginUser;
@@ -294,7 +317,10 @@ int main(int argc, char **argv)
   PetscCall(CreateMesh(PETSC_COMM_WORLD, &user, &dm));
   PetscCall(SetupDiscretization(dm, &user));
   PetscCall(CreateOperator(dm, &user, &A));
+  if (user.unevenColors == PETSC_TRUE) PetscCall(CheckUnevenColors(dm));
   PetscCall(SolveWithPatch(dm, A, "standard_", &user, NULL, NULL, &standardIts));
+  PetscCall(SolveWithPatch(dm, A, "colored_", &user, NULL, NULL, &coloredIts));
+  PetscCheck(standardIts == coloredIts, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Standard star patches took %" PetscInt_FMT " iterations, but colored star patches took %" PetscInt_FMT, standardIts, coloredIts);
   if (size == 1) PetscCall(CompareLabeledPatches(dm, A, &user, standardIts));
 
   PetscCall(MatDestroy(&A));
@@ -306,13 +332,35 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    suffix: patch_label_star
-    args: -cells {{4,4 8,8}} \
-          -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
+  testset:
+    args: -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
+          -colored_pc_patch_construct_type star -colored_pc_patch_use_coloring -colored_sub_ksp_type preonly -colored_sub_pc_type lu \
           -labeled_sub_ksp_type preonly -labeled_sub_pc_type lu \
           -restricted_pc_patch_construct_type star -restricted_sub_ksp_type preonly -restricted_sub_pc_type lu \
           -named_pc_patch_construct_type star -named_pc_patch_construct_label active -named_sub_ksp_type preonly -named_sub_pc_type lu
+    output_file: output/empty.out
+    test:
+      suffix: patch_color_star
+      args: -cells {{4,4 8,8}}
+    # The restricted patches must be colored over the selected points only
+    test:
+      suffix: patch_color_star_restricted
+      args: -cells {{4,4 8,8}} -restricted_pc_patch_use_coloring
+    # Coloring each process's own points must give the same patches. This runs on one process,
+    # where the two colorings coincide, so it checks that the option reaches PCPATCH
+    test:
+      suffix: patch_color_star_local
+      args: -cells {{4,4 8,8}} -restricted_pc_patch_use_coloring -dm_plex_coloring_local
+
+  # On three processes, the simple partition of this mesh leaves the processes coloring their own vertices with
+  # different numbers of colors, which -check_uneven_colors confirms, so a process that needed fewer must pad the
+  # patch label with empty strata for the colored patches to match the standard ones
+  test:
+    suffix: patch_color_star_local_parallel
+    nsize: 3
+    args: -cells 8,2 -petscpartitioner_type simple -dm_plex_coloring_local -check_uneven_colors \
+          -standard_pc_patch_construct_type star -standard_sub_ksp_type preonly -standard_sub_pc_type lu \
+          -colored_pc_patch_construct_type star -colored_pc_patch_use_coloring -colored_sub_ksp_type preonly -colored_sub_pc_type lu
     output_file: output/empty.out
 
 TEST*/
