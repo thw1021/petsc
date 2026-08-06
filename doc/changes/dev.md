@@ -116,6 +116,7 @@
 ## TAO
 
 - Add `TaoGetDM()` and `TaoSetDM()`
+- Add `TaoGetConvergedReasonString()` to retrieve a human readable string describing the `TaoConvergedReason`
 
 ## TaoTerm
 
