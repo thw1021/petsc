@@ -1588,13 +1588,12 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
 // Drop small node-coupling blocks of the prolongator; see the PCGAMGSetProlongatorFilter() manual page
 static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt col_bs, PetscReal thr)
 {
-  PetscInt     rbs, cbs, rStart, rEnd, nfn, local_nnz, ndrows = 0, zoff = 0;
+  PetscInt     rbs, cbs, rStart, rEnd, nfn, local_nnz = 0, max_fn_cols = 0, max_row_cols = 0, ndrows = 0, zoff = 0;
   PetscInt    *cn_gid, *zcols, *drow, *doff, *dcnt;
   PetscReal   *cn_n2;
   PetscReal    thr2 = thr * thr;
   PetscScalar *zeros;
-  PetscBool    no_off_proc;
-  MatInfo      info;
+  PetscBool    no_off_proc, ishipsparse;
 
   PetscFunctionBegin;
   PetscCall(MatGetBlockSizes(Prol, &rbs, &cbs));
@@ -1604,13 +1603,27 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
   PetscCheck((rEnd - rStart) % rbs == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Local rows %" PetscInt_FMT " not divisible by row block size %" PetscInt_FMT, rEnd - rStart, rbs);
   nfn = (rEnd - rStart) / rbs;
 
-  /* The local nonzero count bounds every scratch array: distinct coarse nodes per
-     fine node, dropped columns per row, and total dropped columns are all <= local_nnz */
-  PetscCall(MatGetInfo(Prol, MAT_LOCAL, &info));
-  PetscCall(PetscIntCast(info.nz_used, &local_nnz));
+  /* Pre-pass over the row widths to size the scratch tightly: the total local nonzeros bound
+     the dropped columns (zcols), the widest fine-node block row bounds the distinct coarse
+     nodes of one fine node (cn_gid/cn_n2), and the widest single row bounds the entries
+     zeroed by one MatSetValues() call (zeros) */
+  for (PetscInt fn = 0; fn < nfn; fn++) {
+    PetscInt fn_cols = 0;
 
-  PetscCall(PetscMalloc2(local_nnz, &cn_gid, local_nnz, &cn_n2));
-  PetscCall(PetscCalloc1(local_nnz, &zeros));
+    for (PetscInt rr = 0; rr < rbs; rr++) {
+      PetscInt grow = rStart + fn * rbs + rr, ncols;
+
+      PetscCall(MatGetRow(Prol, grow, &ncols, NULL, NULL));
+      fn_cols += ncols;
+      if (ncols > max_row_cols) max_row_cols = ncols;
+      PetscCall(MatRestoreRow(Prol, grow, &ncols, NULL, NULL));
+    }
+    local_nnz += fn_cols;
+    if (fn_cols > max_fn_cols) max_fn_cols = fn_cols;
+  }
+
+  PetscCall(PetscMalloc2(max_fn_cols, &cn_gid, max_fn_cols, &cn_n2));
+  PetscCall(PetscCalloc1(max_row_cols, &zeros));
   PetscCall(PetscMalloc1(local_nnz, &zcols));
   PetscCall(PetscMalloc3(rEnd - rStart, &drow, rEnd - rStart, &doff, rEnd - rStart, &dcnt));
 
@@ -1690,8 +1703,15 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
   PetscCall(PetscFree(zcols));
   PetscCall(PetscFree3(drow, doff, dcnt));
 
-  /* compress: eliminate the explicit zeros just set (tol = 0 keeps all true nonzeros) */
-  PetscCall(MatFilter(Prol, 0.0, PETSC_TRUE, PETSC_TRUE));
+  /* Compress out the explicit zeros just set. keep must be PETSC_FALSE: with keep, a zero whose
+     local column index equals its local row index survives (an index-based diagonal test that is
+     meaningless for the rectangular Prol), and the step-3 correction in
+     PCGAMGKernelPreservingFilter_AGG() would then rewrite it to a nonzero, leaving a stray entry
+     of a dropped block. MatEliminateZeros() has a known issue with HIPSPARSE (see the bypass in
+     MatFilter()); there the zeros are left in place and the filter does not sparsify. */
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)Prol, &ishipsparse, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
+  if (!ishipsparse) PetscCall(MatEliminateZeros(Prol, PETSC_FALSE));
+  else PetscCall(PetscInfo(pc, "PCGAMGProlongatorBlockFilter_AGG: skipping zero elimination for %s; filtered entries are zeroed but not removed\n", ((PetscObject)Prol)->type_name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2158,11 +2178,11 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
     }
     PetscCall(VecDestroy(&diag));
   }
-  /* A per-level threshold of 0 (from prolongator_filter_scale == 0 on the coarser levels) drops
-     nothing, so skip the whole filter rather than pay for its passes and per-row solves. The
-     setters keep prolongator_filter < 1 and its scale <= 1, so the effective threshold cannot
-     reach the 1.0 at which every block, including the strongest of each fine node, is dropped. */
-  PetscCheck(pfilter < 1.0, comm, PETSC_ERR_ARG_OUTOFRANGE, "Effective prolongator filter threshold %g on level %" PetscInt_FMT " must be less than 1", (double)pfilter, pc_gamg->current_level);
+  /* The setters keep prolongator_filter < 1 and its scale <= 1, so the effective threshold cannot
+     reach the 1.0 at which every block, including the strongest of each fine node, is dropped */
+  PetscCheck(pfilter < 1.0, comm, PETSC_ERR_PLIB, "Effective prolongator filter threshold %g on level %" PetscInt_FMT " must be less than 1", (double)pfilter, pc_gamg->current_level);
+  /* a per-level threshold of 0 (from prolongator_filter_scale == 0 on the coarser levels) drops
+     nothing, so skip the whole filter rather than pay for its passes and per-row solves */
   if (pfilter > 0.0) {
     PetscCall(PetscInfo(pc, "%s: level %" PetscInt_FMT " prolongator filter threshold %g (base %g, scale %g^%" PetscInt_FMT ")\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)pfilter, (double)pc_gamg->prolongator_filter,
                         (double)pc_gamg->prolongator_filter_scale, pc_gamg->current_level));
