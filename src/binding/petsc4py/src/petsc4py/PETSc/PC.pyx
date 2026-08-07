@@ -950,10 +950,10 @@ cdef class PC(Object):
         nsd : int
             The number of subdomains for this process, `DECIDE` if it has
             neither been set nor determined yet.
-        is_sub : list[IS]
+        is_sub : list of IS
             The index sets that define the subdomains for this process, empty
             if they have not been created or set yet.
-        is_local : list[IS]
+        is_local : list of IS
             The index sets that define the local part of the subdomains for
             this process, empty if they have not been created or set yet.
 
