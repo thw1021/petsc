@@ -18,11 +18,10 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 
 ## CodeGraph
 
-If `.codegraph/` exists at the repository root, use the `codegraph` skill before grep/find or
-reading files when you need to locate or understand PETSc C, C++, or Python code, including during
-development and review. The skill contains the PETSc-specific instructions for source navigation,
-runtime dispatch, and blast-radius analysis. If the index does not exist, skip CodeGraph and
-continue with the usual tools; indexing is the user's decision.
+If `.codegraph/` exists at the repository root, use the `codegraph` skill before grep/find or reading files when you need to locate or understand PETSc C, C++, or Python code, including during development and review.
+The skill contains the PETSc-specific instructions for source navigation, runtime dispatch, and blast-radius analysis.
+If the index does not exist, skip CodeGraph and continue with the usual tools; indexing is the user's decision.
+If your tool does not load skills automatically, read `.agents/skills/codegraph/SKILL.md` directly before querying the index.
 
 ## Core Working Rules
 
