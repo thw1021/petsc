@@ -1481,7 +1481,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_ScaLAPACK,
                                        NULL,
                                        NULL,
                                        MatADot_Default,
-                                       /*144*/ MatANorm_Default,
+                                       /*144*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL};

@@ -3121,7 +3121,8 @@ PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
 
   PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(MAT_ANorm, mat, x, 0, 0));
-  PetscUseTypeMethod(mat, anorm, x, val);
+  if (!mat->ops->anorm) PetscCall(MatANorm_Default(mat, x, val));
+  else PetscUseTypeMethod(mat, anorm, x, val);
   PetscCall(PetscLogEventEnd(MAT_ANorm, mat, x, 0, 0));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
