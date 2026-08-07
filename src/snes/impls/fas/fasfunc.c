@@ -1201,20 +1201,21 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
   Input Parameters:
 + snes  - the `SNESFAS` nonlinear multigrid context, obtained from the finest level
 . level - the level (0 is coarsest) whose coarse correction line search is being set
-- ls    - the `SNESLineSearch` object to apply to the correction on that level, or `NULL` to reset it to `SNESLINESEARCHNONE`
+- ls    - the `SNESLineSearch` object to apply to the correction on that level, or `NULL` to remove it
 
-  Options Database Key:
-. -fas_coarse_correction_i_snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - set the coarse correction line search type on level i (see also `-fas_coarse_correction_snes_linesearch_type` for all levels)
+  Options Database Keys:
++ -snes_fas_coarse_correction_linesearch (true|false)                                       - enable a line search for the coarse correction on every level
+- -fas_coarse_correction_i_snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - set the coarse correction line search type on level i (see also `-fas_coarse_correction_snes_linesearch_type` for all levels)
 
   Level: advanced
 
   Notes:
-  The coarse correction line search defaults to `SNESLINESEARCHNONE` (unit step, lambda=1),
-  which is equivalent to the original FAS correction X += I(x^c - Rx).
-  Setting a non-trivial type enables the MG-Opt damping strategy {cite}`nash2000mgopt`,
-  which is useful when monotonic decrease in the residual norm or energy functional is desired
-  (e.g., non-convex problems where the full coarse correction may overshoot without an explicit
-  convergence control strategy).
+  Without a coarse correction line search, the correction X += I(x^c - Rx) is applied directly as a unit
+  step, equivalent to the original FAS correction. Supplying one (or setting
+  `-snes_fas_coarse_correction_linesearch`, which creates one internally) enables the MG-Opt damping
+  strategy {cite}`nash2000mgopt`, which is useful when monotonic decrease in the residual norm or energy
+  functional is desired (e.g., non-convex problems where the full coarse correction may overshoot without
+  an explicit convergence control strategy).
   This has no effect unless `SNESFASGetType()` returns `SNES_FAS_MULTIPLICATIVE`.
 
 .seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `PCMG`
@@ -1235,8 +1236,8 @@ PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, PetscInt level, S
     PetscCall(SNESLineSearchDestroy(&fas->coarseCorrectionLineSearch));
     fas->coarseCorrectionLineSearch = ls;
     PetscCall(SNESLineSearchSetSNES(fas->coarseCorrectionLineSearch, levelsnes));
-  } else if (fas->coarseCorrectionLineSearch) {
-    PetscCall(SNESLineSearchSetType(fas->coarseCorrectionLineSearch, SNESLINESEARCHNONE));
+  } else {
+    PetscCall(SNESLineSearchDestroy(&fas->coarseCorrectionLineSearch));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
