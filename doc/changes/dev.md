@@ -90,8 +90,9 @@
 
 ## KSP
 
-- Fix `KSP` pre- and post-solve callbacks so they can be used with the Eisenstat-Walker forcing terms for `SNES`; pre-solve callbacks run before `KSPSetUp()` and `KSPSetUpOnBlocks()`
+- Fix for `KSP` pre- and post-solve callbacks, that can now be used together with Eisenstat and Walker trick for `SNES`
 - Add `KSPPreSolve()` and `KSPPostSolve()` to run the registered `KSP` pre/post solve callbacks
+- `KSPPreSolve()` now errors if a pre-solve callback set with `KSPSetPreSolve()` modifies the `KSP`'s operator matrices
 - Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
 

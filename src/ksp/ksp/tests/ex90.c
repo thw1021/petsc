@@ -1,12 +1,13 @@
-static char help[] = "Tests KSP pre-solve callback ordering with SNES Eisenstat-Walker.\n\n";
+static char help[] = "Tests KSP pre-solve callbacks with SNES Eisenstat-Walker and the pre-solve matrix modification check.\n\n";
 
 #include <petscsnes.h>
 typedef struct {
   PetscReal expected_rtol;
-  PetscInt  presolve_count, setup_count;
+  PetscInt  presolve_count;
+  PetscBool modify_matrix;
 } CallbackCtx;
 
-static PetscErrorCode FormFunction(PETSC_UNUSED SNES snes, Vec x, Vec f, PETSC_UNUSED PetscCtx ctx)
+static PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
 {
   const PetscScalar *xa;
   PetscScalar       *fa;
@@ -20,7 +21,7 @@ static PetscErrorCode FormFunction(PETSC_UNUSED SNES snes, Vec x, Vec f, PETSC_U
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormJacobian(PETSC_UNUSED SNES snes, Vec x, Mat J, Mat P, PETSC_UNUSED PetscCtx ctx)
+static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, PetscCtx ctx)
 {
   const PetscScalar *xa;
 
@@ -38,14 +39,14 @@ static PetscErrorCode FormJacobian(PETSC_UNUSED SNES snes, Vec x, Mat J, Mat P, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCApply_Identity(PETSC_UNUSED PC pc, Vec x, Vec y)
+static PetscErrorCode PCApply_Identity(PC pc, Vec x, Vec y)
 {
   PetscFunctionBeginUser;
   PetscCall(VecCopy(x, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckPreSolve(KSP ksp, PETSC_UNUSED Vec b, PETSC_UNUSED Vec x, PetscCtx vctx)
+static PetscErrorCode CheckPreSolve(KSP ksp, Vec b, Vec x, PetscCtx vctx)
 {
   CallbackCtx *ctx = (CallbackCtx *)vctx;
   PetscReal    rtol;
@@ -55,17 +56,12 @@ static PetscErrorCode CheckPreSolve(KSP ksp, PETSC_UNUSED Vec b, PETSC_UNUSED Ve
   if (!ctx->presolve_count)
     PetscCheck(PetscAbsReal(rtol - ctx->expected_rtol) <= PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback ran before Eisenstat-Walker updated KSP rtol: expected %g, got %g", (double)ctx->expected_rtol, (double)rtol);
   ++ctx->presolve_count;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+  if (ctx->modify_matrix) {
+    Mat P;
 
-static PetscErrorCode PCSetUp_CheckPreSolve(PC pc)
-{
-  CallbackCtx *ctx;
-
-  PetscFunctionBeginUser;
-  PetscCall(PCShellGetContext(pc, &ctx));
-  PetscCheck(ctx->presolve_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PC setup ran before the user pre-solve callback");
-  ++ctx->setup_count;
+    PetscCall(KSPGetOperators(ksp, NULL, &P));
+    PetscCall(MatScale(P, 2.0));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -76,10 +72,11 @@ int main(int argc, char **argv)
   PC          pc;
   Mat         J;
   Vec         x, f;
-  CallbackCtx ctx = {.expected_rtol = 0.25, .presolve_count = 0, .setup_count = 0};
+  CallbackCtx ctx = {.expected_rtol = 0.25, .presolve_count = 0, .modify_matrix = PETSC_FALSE};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-modify_matrix", &ctx.modify_matrix, NULL));
   PetscCall(VecCreateSeq(PETSC_COMM_WORLD, 1, &x));
   PetscCall(VecDuplicate(x, &f));
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 1, 1, 1, NULL, &J));
@@ -91,13 +88,11 @@ int main(int argc, char **argv)
   PetscCall(PCSetType(pc, PCSHELL));
   PetscCall(PCShellSetContext(pc, &ctx));
   PetscCall(PCShellSetApply(pc, PCApply_Identity));
-  PetscCall(PCShellSetSetUp(pc, PCSetUp_CheckPreSolve));
   PetscCall(KSPSetPreSolve(ksp, CheckPreSolve, &ctx));
   PetscCall(VecSet(x, 3.0));
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(SNESSolve(snes, NULL, x));
   PetscCheck(ctx.presolve_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback was not called");
-  PetscCheck(ctx.setup_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PC setup callback was not called");
   PetscCall(SNESDestroy(&snes));
   PetscCall(MatDestroy(&J));
   PetscCall(VecDestroy(&f));
@@ -112,5 +107,11 @@ int main(int argc, char **argv)
     suffix: 1
     output_file: output/empty.out
     args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12
+
+  test:
+    # Testing errors so only look for errors
+    suffix: 2
+    args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12 -modify_matrix -petsc_ci_portable_error_output -error_output_stdout
+    filter: grep -E "(PETSC ERROR)" | grep -E "(modified the KSP|KSPPreSolve)"
 
 TEST*/
