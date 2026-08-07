@@ -257,37 +257,37 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
     if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHSECANT));
   }
 
-  /* set up the optional coarse-correction line search for multiplicative FAS; defaults to a full unit step.
-     Modeled on PCMG's -mg_levels_pc_type / -mg_levels_0_pc_type convention: PetscOptionsFindPair()'s built-in
-     numbered-prefix fallback makes -fas_coarse_correction_snes_linesearch_type apply to every level while
-     -fas_coarse_correction_<i>_snes_linesearch_type overrides just level i, with no extra lookup code needed. */
-  if (fas->fastype == SNES_FAS_MULTIPLICATIVE) {
-    const char *fineprefix;
-    char        lsprefix[128];
-    PetscBool   createdHere = PETSC_FALSE;
+  /* -snes_fas_coarse_correction_linesearch is global, so read it only here and propagate via
+     SNESFASGetCycleSNES(); reading it per-level would pick up that level's own options prefix instead. */
+  if (fas->fastype == SNES_FAS_MULTIPLICATIVE && isFine) {
+    PetscBool uselinesearch = (PetscBool)(fas->coarseCorrectionLineSearch != NULL);
 
-    if (!fas->coarseCorrectionLineSearch) {
-      PetscCall(SNESGetOptionsPrefix(fas->fine, &fineprefix));
-      PetscCall(SNESLineSearchCreate(PetscObjectComm((PetscObject)snes), &fas->coarseCorrectionLineSearch));
-      PetscCall(SNESLineSearchSetSNES(fas->coarseCorrectionLineSearch, snes));
-      PetscCall(SNESLineSearchSetType(fas->coarseCorrectionLineSearch, SNESLINESEARCHNONE));
-      PetscCall(SNESLineSearchAppendOptionsPrefix(fas->coarseCorrectionLineSearch, fineprefix));
-      PetscCall(PetscSNPrintf(lsprefix, sizeof(lsprefix), "fas_coarse_correction_%" PetscInt_FMT "_", fas->level));
-      PetscCall(SNESLineSearchAppendOptionsPrefix(fas->coarseCorrectionLineSearch, lsprefix));
-      PetscCall(PetscObjectIncrementTabLevel((PetscObject)fas->coarseCorrectionLineSearch, (PetscObject)snes, 1));
-      createdHere = PETSC_TRUE;
-    }
-    PetscCall(SNESLineSearchSetFromOptions(fas->coarseCorrectionLineSearch));
-    /* only clean up the object this call created: a pre-existing object may have been supplied by the user via
-       SNESFASSetCoarseCorrectionLineSearch() before SNESSetFromOptions() ran, and its state (monitors, a custom
-       prefix, etc.) must not be silently discarded just because it resolved to SNESLINESEARCHNONE */
-    if (createdHere) {
-      PetscBool isNone;
+    PetscCall(PetscOptionsBool("-snes_fas_coarse_correction_linesearch", "Use a line search for the multiplicative coarse correction on every level", "SNESFASSetCoarseCorrectionLineSearch", uselinesearch, &uselinesearch, &flg));
+    if (flg) {
+      for (PetscInt lvl = 0; lvl < fas->levels; lvl++) {
+        SNES      levelsnes;
+        SNES_FAS *lfas;
 
-      PetscCall(PetscObjectTypeCompare((PetscObject)fas->coarseCorrectionLineSearch, SNESLINESEARCHNONE, &isNone));
-      if (isNone) PetscCall(SNESLineSearchDestroy(&fas->coarseCorrectionLineSearch));
+        PetscCall(SNESFASGetCycleSNES(snes, lvl, &levelsnes));
+        lfas = (SNES_FAS *)levelsnes->data;
+        if (uselinesearch && !lfas->coarseCorrectionLineSearch) {
+          SNESLineSearch ls;
+          char           lsprefix[128];
+
+          PetscCall(SNESLineSearchCreate(PetscObjectComm((PetscObject)levelsnes), &ls));
+          PetscCall(SNESLineSearchAppendOptionsPrefix(ls, optionsprefix));
+          PetscCall(PetscSNPrintf(lsprefix, sizeof(lsprefix), "fas_coarse_correction_%" PetscInt_FMT "_", lvl));
+          PetscCall(SNESLineSearchAppendOptionsPrefix(ls, lsprefix));
+          PetscCall(PetscObjectIncrementTabLevel((PetscObject)ls, (PetscObject)levelsnes, 1));
+          PetscCall(SNESFASSetCoarseCorrectionLineSearch(snes, lvl, ls));
+          PetscCall(SNESLineSearchDestroy(&ls)); /* Set() took its own reference; drop this local one */
+        } else if (!uselinesearch) {
+          PetscCall(SNESFASSetCoarseCorrectionLineSearch(snes, lvl, NULL));
+        }
+      }
     }
   }
+  if (fas->coarseCorrectionLineSearch) PetscCall(SNESLineSearchSetFromOptions(fas->coarseCorrectionLineSearch));
 
   /* recursive option setting for the smoothers */
   PetscCall(SNESFASCycleGetCorrection(snes, &next));
@@ -629,8 +629,8 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
 {
   SNES_FAS           *fas               = (SNES_FAS *)snes->data;
   PetscBool           monitorCorrection = fas->monitorCorrection;
-  PetscBool           isNone            = PETSC_FALSE, uselinesearch;
-  PetscReal           xonorm            = 0.0;
+  PetscBool           uselinesearch;
+  PetscReal           xonorm = 0.0;
   Vec                 X_c, Xo_c, F_c, B_c, Xhat;
   SNESConvergedReason reason;
   SNES                next;
@@ -694,9 +694,9 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F)
       snes->reason = SNES_DIVERGED_INNER;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
-    /* correct as x <- x + I(x^c - Rx) via the coarse correction line search (NONE by default) */
-    if (fas->coarseCorrectionLineSearch) PetscCall(PetscObjectTypeCompare((PetscObject)fas->coarseCorrectionLineSearch, SNESLINESEARCHNONE, &isNone));
-    uselinesearch = (PetscBool)(fas->fastype == SNES_FAS_MULTIPLICATIVE && fas->coarseCorrectionLineSearch && !isNone);
+    /* correct as x <- x + I(x^c - Rx), optionally via the coarse correction line search enabled by
+       -snes_fas_coarse_correction_linesearch (off by default) */
+    uselinesearch = (PetscBool)(fas->fastype == SNES_FAS_MULTIPLICATIVE && fas->coarseCorrectionLineSearch != NULL);
     if (uselinesearch) {
       /* VecAYPX gives Xo_c - X_c = Rx - x^c; interpolation then yields -(x^c - Rx),
          matching the linesearch convention X_new = X - lambda*Y */
@@ -1036,7 +1036,8 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
 .   -snes_fas_smoothdown d                                                                    - The number of iterations of the pre-smoother
 .   -snes_fas_monitor                                                                         - Monitor progress of all of the levels
 .   -snes_fas_full_downsweep (true|false)                                                     - call the downsmooth on the initial downsweep of full FAS
-.   -fas_coarse_correction_snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell)   - line search for the coarse correction update in multiplicative cycles, on all levels
+.   -snes_fas_coarse_correction_linesearch (true|false)                                       - enable a line search for the multiplicative coarse correction update on every level
+.   -fas_coarse_correction_snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell)   - type of the enabled coarse correction line search, on all levels
 .   -fas_coarse_correction_i_snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - override the coarse correction line search type on level i only
 .   -fas_levels_snes_                                                                         - prefix for `SNES` options for all smoothers
 .   -fas_levels_cycle_snes_                                                                   - prefix for `SNES` options for all cycles
@@ -1051,15 +1052,16 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
    As each level has smoother `SNES` instances(down and potentially up) and a cycle `SNES` instance.
    The cycle `SNES` instance may be used for monitoring convergence on a particular level.
 
-   The coarse correction X += I(x^c - Rx) is applied via a dedicated `SNESLineSearch` at each level (one per
-   recursive `SNESFAS` instance) that defaults to `SNESLINESEARCHNONE` (unit step, lambda=1), equivalent to
-   the original FAS correction. MG-Opt {cite}`nash2000mgopt` generalizes this by adding a line search to the
-   coarse correction, useful when monotonic decrease in the residual norm or energy functional is desired
-   (e.g., non-convex problems where the full coarse correction may overshoot without an explicit convergence
-   control strategy). As with `PCMG`'s `-mg_levels_pc_type` vs. `-mg_levels_0_pc_type` pattern,
-   `-fas_coarse_correction_snes_linesearch_type` sets the type for all levels while
-   `-fas_coarse_correction_i_snes_linesearch_type` overrides only level i; the line search type can also be
-   set directly via `SNESFASSetCoarseCorrectionLineSearch()`, or retrieved via `SNESFASGetCoarseCorrectionLineSearch()`.
+   The coarse correction X += I(x^c - Rx) is applied directly (a unit step, equivalent to the original FAS
+   correction) unless `-snes_fas_coarse_correction_linesearch` is set, in which case a dedicated
+   `SNESLineSearch` is created on every level (one per recursive `SNESFAS` instance) and applied instead.
+   MG-Opt {cite}`nash2000mgopt` generalizes the correction this way, which is useful when monotonic decrease
+   in the residual norm or energy functional is desired (e.g., non-convex problems where the full coarse
+   correction may overshoot without an explicit convergence control strategy). As with `PCMG`'s
+   `-mg_levels_pc_type` vs. `-mg_levels_0_pc_type` pattern, `-fas_coarse_correction_snes_linesearch_type`
+   sets the line search type for all levels while `-fas_coarse_correction_i_snes_linesearch_type` overrides
+   only level i; the line search can also be supplied directly via `SNESFASSetCoarseCorrectionLineSearch()`,
+   or retrieved via `SNESFASGetCoarseCorrectionLineSearch()`.
 
 .seealso: [](ch_snes), `PCMG`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESType`, `SNESFASSetRestriction()`, `SNESFASSetInjection()`,
           `SNESFASFullGetTotal()`, `SNESFASSetType()`, `SNESFASGetType()`, `SNESFASSetLevels()`, `SNESFASGetLevels()`, `SNESFASGetCycleSNES()`,

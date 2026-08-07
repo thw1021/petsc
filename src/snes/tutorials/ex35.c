@@ -364,6 +364,12 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X)
    test:
       suffix: 11_linesearch
       requires: !single
-      args: -da_refine 2 -snes_monitor_short -snes_type fas -snes_fas_type multiplicative -fas_coarse_snes_type newtonls -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_rtol 1.e-5 -fas_coarse_correction_snes_linesearch_type secant -snes_converged_reason
+      args: -da_refine 2 -snes_monitor_short -snes_type fas -snes_fas_type multiplicative -fas_coarse_snes_type newtonls -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_rtol 1.e-5 -snes_fas_coarse_correction_linesearch -fas_coarse_correction_snes_linesearch_type secant -snes_converged_reason
+
+   test:
+      suffix: 11_linesearch_perlevel
+      requires: !single
+      args: -da_refine 2 -snes_monitor_short -snes_type fas -snes_fas_type multiplicative -fas_coarse_snes_type newtonls -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -snes_rtol 1.e-5 -snes_fas_coarse_correction_linesearch -fas_coarse_correction_snes_linesearch_type secant -fas_coarse_correction_1_snes_linesearch_type none -snes_converged_reason -snes_view
+      filter: grep -e "SNES Function norm" -e "Nonlinear solve converged" -e "Coarse correction line search on level" -A2 | grep -v "^SNES Object: 1 MPI process$" | grep -v "^  type: fas$"
 
 TEST*/
