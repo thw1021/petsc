@@ -739,7 +739,6 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
     PetscCheckSameComm(term, 1, Hpre, 5);
   }
-  if (H && !Hpre) Hpre = H;
   PetscCall(TaoTermPreprocessHessianShells(term, x, params, &H, &Hpre));
   if (H) PetscCall(PetscObjectTypeCompare((PetscObject)H, MATMFFD, &is_mffd));
   PetscCall(TaoTermIsComputeHessianFDPossible(term, &is_fdpossible));
