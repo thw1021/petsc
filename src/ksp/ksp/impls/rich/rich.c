@@ -3,6 +3,8 @@
 */
 #include <../src/ksp/ksp/impls/rich/richardsonimpl.h> /*I "petscksp.h" I*/
 
+static PetscErrorCode KSPMatSolve_Richardson(KSP, Mat, Mat);
+
 static PetscErrorCode KSPSetUp_Richardson(KSP ksp)
 {
   KSP_Richardson *richardsonP = (KSP_Richardson *)ksp->data;
@@ -13,6 +15,8 @@ static PetscErrorCode KSPSetUp_Richardson(KSP ksp)
   } else {
     PetscCall(KSPSetWorkVecs(ksp, 2));
   }
+  /* the self-scaled variant has no block analog, so KSPMatSolve() falls back to solving the right-hand sides one at a time */
+  ksp->ops->matsolve = richardsonP->selfscale ? NULL : KSPMatSolve_Richardson;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -143,6 +147,116 @@ static PetscErrorCode KSPSolve_Richardson(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+   Replacement for KSPCheckNorm() in KSPMatSolve_Richardson(), where ksp->vec_sol is not available since the solution is a block of vectors
+*/
+static PetscErrorCode KSPMatSolveCheckNorm_Richardson(KSP ksp, PetscReal rnorm, Mat X)
+{
+  PCFailedReason pcreason;
+
+  PetscFunctionBegin;
+  if (!PetscIsInfOrNanReal(rnorm)) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_NOT_CONVERGED, "KSPMatSolve%s() has not converged due to infinity or NaN norm", ksp->transpose_solve ? "Transpose" : "");
+  PetscCall(PCReduceFailedReason(ksp->pc));
+  PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
+  PetscCall(PetscObjectStateIncrease((PetscObject)X));
+  PetscCall(MatSetInf(X));
+  ksp->reason = pcreason ? KSP_DIVERGED_PC_FAILED : KSP_DIVERGED_NANORINF;
+  ksp->rnorm  = rnorm;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   Block analog of KSP_PCApply(), the null space of Amat is removed from each column of the block of preconditioned vectors as in KSP_RemoveNullSpaceMat()
+*/
+static PetscErrorCode KSPMatSolvePCMatApply_Richardson(KSP ksp, Mat R, Mat Z)
+{
+  PetscFunctionBegin;
+  PetscCall(KSP_PCMatApply(ksp, R, Z));
+  PetscCall(KSP_RemoveNullSpaceMat(ksp, Z));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPMatSolve_Richardson(KSP ksp, Mat B, Mat X)
+{
+  PetscReal       rnorm = 0.0;
+  Mat             Amat, R, Z;
+  PetscInt        i, maxit;
+  KSP_Richardson *richardsonP = (KSP_Richardson *)ksp->data;
+  PetscBool       diagonalscale;
+
+  PetscFunctionBegin;
+  PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
+  PetscCheck(!diagonalscale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
+
+  ksp->its    = 0;
+  ksp->reason = KSP_CONVERGED_ITERATING;
+  maxit       = ksp->max_it;
+  PetscCall(PCGetOperators(ksp->pc, &Amat, NULL));
+  /* the work blocks and the product below are rebuilt on each call, and on each batch when -ksp_matsolve_batch_size is used; caching them in KSP_Richardson, as KSPSolve_Richardson() does with ksp->work, was considered and deliberately rejected to keep the implementation simple, since the number of right-hand sides may change between solves and batching passes MatDenseGetSubMatrix() views */
+  PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &R));
+  PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &Z));
+  /* set the product A X (or A^T X) up once so that only its numeric phase is run in the loop below */
+  PetscCall(MatProductCreateWithMat(Amat, X, NULL, R));
+  PetscCall(MatProductSetType(R, ksp->transpose_solve ? MATPRODUCT_AtB : MATPRODUCT_AB));
+  PetscCall(MatProductSetFromOptions(R));
+  PetscCall(MatProductSymbolic(R));
+
+  if (!ksp->guess_zero) { /*   R <- B - A X      */
+    PetscCall(MatProductNumeric(R));
+    PetscCall(MatAYPX(R, -1.0, B, SAME_NONZERO_PATTERN));
+  } else PetscCall(MatCopy(B, R, SAME_NONZERO_PATTERN));
+
+  for (i = 0; i < maxit; i++) {
+    if (ksp->normtype == KSP_NORM_UNPRECONDITIONED) {
+      PetscCall(MatNorm(R, NORM_FROBENIUS, &rnorm)); /*   rnorm <- ||R||_F  */
+    } else if (ksp->normtype == KSP_NORM_PRECONDITIONED) {
+      PetscCall(KSPMatSolvePCMatApply_Richardson(ksp, R, Z)); /*   Z <- B R          */
+      PetscCall(MatNorm(Z, NORM_FROBENIUS, &rnorm));          /*   rnorm <- ||Z||_F  */
+    } else rnorm = 0.0;
+
+    PetscCall(KSPMatSolveCheckNorm_Richardson(ksp, rnorm, X));
+    if (ksp->reason) break;
+    ksp->rnorm = rnorm;
+    PetscCall(KSPLogResidualHistory(ksp, rnorm));
+    PetscCall((*ksp->converged)(ksp, i, rnorm, &ksp->reason, ksp->cnvP));
+    if (ksp->reason) break;
+    if (ksp->normtype != KSP_NORM_PRECONDITIONED) PetscCall(KSPMatSolvePCMatApply_Richardson(ksp, R, Z)); /*   Z <- B R          */
+
+    PetscCall(MatAXPY(X, richardsonP->scale, Z, SAME_NONZERO_PATTERN)); /*   X  <- X + scale Z */
+    ksp->its++;
+
+    if (i + 1 < maxit || ksp->normtype != KSP_NORM_NONE) {
+      PetscCall(MatProductNumeric(R)); /*   R  <- B - A X     */
+      PetscCall(MatAYPX(R, -1.0, B, SAME_NONZERO_PATTERN));
+    }
+  }
+  if (!ksp->reason) {
+    if (ksp->normtype == KSP_NORM_UNPRECONDITIONED) {
+      PetscCall(MatNorm(R, NORM_FROBENIUS, &rnorm)); /*   rnorm <- ||R||_F  */
+    } else if (ksp->normtype == KSP_NORM_PRECONDITIONED) {
+      PetscCall(KSPMatSolvePCMatApply_Richardson(ksp, R, Z)); /*   Z <- B R          */
+      PetscCall(MatNorm(Z, NORM_FROBENIUS, &rnorm));          /*   rnorm <- ||Z||_F  */
+    } else rnorm = 0.0;
+
+    PetscCall(KSPMatSolveCheckNorm_Richardson(ksp, rnorm, X));
+    if (!ksp->reason) {
+      ksp->rnorm = rnorm;
+      PetscCall(KSPLogResidualHistory(ksp, rnorm));
+      if (ksp->its >= ksp->max_it) {
+        if (ksp->normtype != KSP_NORM_NONE) {
+          PetscCall((*ksp->converged)(ksp, i, rnorm, &ksp->reason, ksp->cnvP));
+          if (!ksp->reason) ksp->reason = KSP_DIVERGED_ITS;
+        } else ksp->reason = KSP_CONVERGED_ITS;
+      }
+    }
+  }
+  PetscCall(MatProductClear(R));
+  PetscCall(MatDestroy(&R));
+  PetscCall(MatDestroy(&Z));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode KSPView_Richardson(KSP ksp, PetscViewer viewer)
 {
   KSP_Richardson *richardsonP = (KSP_Richardson *)ksp->data;
@@ -200,7 +314,9 @@ static PetscErrorCode KSPRichardsonSetSelfScale_Richardson(KSP ksp, PetscBool se
   KSP_Richardson *richardsonP;
 
   PetscFunctionBegin;
-  richardsonP            = (KSP_Richardson *)ksp->data;
+  richardsonP = (KSP_Richardson *)ksp->data;
+  /* KSPSetUp_Richardson() picks both the number of work vectors and ksp->ops->matsolve from this flag, so setup must be run again */
+  if (richardsonP->selfscale != selfscale) ksp->setupstage = KSP_SETUP_NEW;
   richardsonP->selfscale = selfscale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -247,8 +363,13 @@ static PetscErrorCode KSPBuildResidual_Richardson(KSP ksp, Vec t, Vec v, Vec *V)
 
    `-ksp_type richardson -pc_type jacobi` gives one classical Jacobi preconditioning
 
+   `KSPMatSolve()` and `KSPMatSolveTranspose()` are supported natively, that is, the iteration is performed on the whole block of right-hand sides at once,
+   except with `KSPRichardsonSetSelfScale()`, for which the right-hand sides are solved one at a time. The convergence of the block iteration is tested on the
+   Frobenius norm of the block of (preconditioned) residuals and, with a nonzero initial guess, the relative tolerance is by default based on the Frobenius norm
+   of the block of (preconditioned) right-hand sides, as in `KSPSolve()`. `KSPConvergedDefaultSetUIRNorm()` can be used to base it on the initial residual norm instead
+
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`,
-          `KSPRichardsonSetScale()`, `KSPPREONLY`, `KSPRichardsonSetSelfScale()`
+          `KSPRichardsonSetScale()`, `KSPPREONLY`, `KSPRichardsonSetSelfScale()`, `KSPMatSolve()`
 M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_Richardson(KSP ksp)
@@ -265,6 +386,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_Richardson(KSP ksp)
 
   ksp->ops->setup          = KSPSetUp_Richardson;
   ksp->ops->solve          = KSPSolve_Richardson;
+  ksp->ops->matsolve       = KSPMatSolve_Richardson;
   ksp->ops->destroy        = KSPDestroy_Richardson;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidual_Richardson;

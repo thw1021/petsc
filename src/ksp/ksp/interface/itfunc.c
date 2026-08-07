@@ -832,6 +832,9 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   PetscFunctionBegin;
   level++;
   comm = PetscObjectComm((PetscObject)ksp);
+  /* ksp->mat_rhs is only set around the ksp->ops->matsolve call in KSPMatSolve_Private(), which clears it on the success path but not when the type method errors out.
+     Clearing it here, as KSPReset() also does, maintains the invariant that KSPConvergedDefault() never reads a block of right-hand sides that the enclosing solve does not own */
+  ksp->mat_rhs = NULL;
   if (x && x == b) {
     PetscCheck(ksp->guess_zero, comm, PETSC_ERR_ARG_INCOMP, "Cannot use x == b with nonzero initial guess");
     PetscCall(VecDuplicate(b, &x));
@@ -1263,7 +1266,11 @@ static PetscErrorCode KSPMatSolve_Private(KSP ksp, Mat B, Mat X)
     PetscCall(PetscInfo(ksp, "KSP type %s%s solving using batches of width at most %" PetscInt_FMT "\n", ((PetscObject)ksp)->type_name, ksp->transpose_solve ? " transpose" : "", Bbn));
     /* if -ksp_matsolve_batch_size is greater than the actual number of columns, do a single solve with all columns */
     if (Bbn >= N2) {
+      /* reset the residual history list if requested, as in KSPSolve_Private(), since KSPMatSolve() supports -ksp_converged_rate, which reads that history */
+      if (ksp->res_hist_reset) ksp->res_hist_len = 0;
+      ksp->mat_rhs = B;
       PetscUseTypeMethod(ksp, matsolve, B, X);
+      ksp->mat_rhs = NULL;
       if (ksp->viewFinalRes) PetscCall(KSPViewFinalMatResidual_Internal(ksp, B, X, ksp->viewerFinalRes, ksp->formatFinalRes, 0));
 
       PetscCall(KSPConvergedReasonViewFromOptions(ksp));
@@ -1277,7 +1284,10 @@ static PetscErrorCode KSPMatSolve_Private(KSP ksp, Mat B, Mat X)
       for (n2 = 0; n2 < N2; n2 += Bbn) {
         PetscCall(MatDenseGetSubMatrix(B, PETSC_DECIDE, PETSC_DECIDE, n2, PetscMin(n2 + Bbn, N2), &vB));
         PetscCall(MatDenseGetSubMatrix(X, PETSC_DECIDE, PETSC_DECIDE, n2, PetscMin(n2 + Bbn, N2), &vX));
+        if (ksp->res_hist_reset) ksp->res_hist_len = 0;
+        ksp->mat_rhs = vB;
         PetscUseTypeMethod(ksp, matsolve, vB, vX);
+        ksp->mat_rhs = NULL;
         if (ksp->viewFinalRes) PetscCall(KSPViewFinalMatResidual_Internal(ksp, vB, vX, ksp->viewerFinalRes, ksp->formatFinalRes, n2));
 
         PetscCall(KSPConvergedReasonViewFromOptions(ksp));
@@ -1335,7 +1345,7 @@ static PetscErrorCode KSPMatSolve_Private(KSP ksp, Mat B, Mat X)
 
   Unlike with `KSPSolve()`, `B` and `X` must be different matrices.
 
-.seealso: [](ch_ksp), `KSPSolve()`, `MatMatSolve()`, `KSPMatSolveTranspose()`, `MATDENSE`, `KSPHPDDM`, `PCBJACOBI`, `PCASM`, `KSPSetMatSolveBatchSize()`
+.seealso: [](ch_ksp), `KSPSolve()`, `MatMatSolve()`, `KSPMatSolveTranspose()`, `MATDENSE`, `KSPHPDDM`, `KSPRICHARDSON`, `PCBJACOBI`, `PCASM`, `KSPSetMatSolveBatchSize()`
 @*/
 PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 {
@@ -1363,7 +1373,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
   Unlike `KSPSolveTranspose()`,
   `B` and `X` must be different matrices and the transposed matrix cannot be assembled explicitly for the user.
 
-.seealso: [](ch_ksp), `KSPSolveTranspose()`, `MatMatTransposeSolve()`, `KSPMatSolve()`, `MATDENSE`, `KSPHPDDM`, `PCBJACOBI`, `PCASM`
+.seealso: [](ch_ksp), `KSPSolveTranspose()`, `MatMatTransposeSolve()`, `KSPMatSolve()`, `MATDENSE`, `KSPHPDDM`, `KSPRICHARDSON`, `PCBJACOBI`, `PCASM`
 @*/
 PetscErrorCode KSPMatSolveTranspose(KSP ksp, Mat B, Mat X)
 {
@@ -1502,6 +1512,7 @@ PetscErrorCode KSPReset(KSP ksp)
   PetscCall(VecDestroy(&ksp->diagonal));
   PetscCall(VecDestroy(&ksp->truediagonal));
 
+  ksp->mat_rhs    = NULL;
   ksp->setupstage = KSP_SETUP_NEW;
   ksp->nmax       = PETSC_DECIDE;
   PetscFunctionReturn(PETSC_SUCCESS);

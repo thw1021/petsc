@@ -95,6 +95,9 @@
 - Add `KSPPreSolve()` and `KSPPostSolve()` to run the registered `KSP` pre/post solve callbacks
 - Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
+- Add native support for `KSPMatSolve()` and `KSPMatSolveTranspose()` with `KSPRICHARDSON`, which iterates on the whole block of right-hand sides instead of solving them one at a time
+- Change `KSPConvergedDefault()` to base the relative tolerance on the Frobenius norm of the block of (preconditioned) right-hand sides during a `KSPMatSolve()` with a nonzero initial guess, matching `KSPSolve()`
+- Change `KSPMatSolve()` and `KSPMatSolveTranspose()` to reset the residual history at the start of each solve, and of each batch when `-ksp_matsolve_batch_size` is used, as `KSPSolve()` does, unless `KSPSetResidualHistory()` was called with `reset` set to `PETSC_FALSE`
 
 ## SNES
 
