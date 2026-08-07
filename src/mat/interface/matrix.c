@@ -3072,7 +3072,8 @@ PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
   PetscCall(PetscLogEventBegin(MAT_ADot, mat, x, y, 0));
-  PetscUseTypeMethod(mat, adot, x, y, val);
+  if (mat->ops->adot) PetscUseTypeMethod(mat, adot, x, y, val);
+  else PetscCall(MatADot_Default(mat, x, y, val));
   PetscCall(PetscLogEventEnd(MAT_ADot, mat, x, y, 0));
   PetscCall(VecLockReadPop(y));
   PetscCall(VecLockReadPop(x));
