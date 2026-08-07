@@ -134,6 +134,34 @@ class BaseTestMatAnyDense:
         underlyingA = AT.getTransposeMat()
         self.assertTrue(underlyingA.equal(A))
 
+    def testADot(self):
+        self._preallocate()
+        self._set_values()
+        self.A.assemble()
+        x, y = self.A.createVecs()
+        x.setRandom()
+        y.setRandom()
+        adot = self.A.aDot(x, y)
+        expected = (self.A @ x).dot(y)
+        self.assertAlmostEqual(adot, expected)
+        x.destroy()
+        y.destroy()
+
+    def testANorm(self):
+        M, N = self.A.getSize()
+        # only for square matrices
+        if M != N:
+            return
+        self._preallocate()
+        self._set_values()
+        self.A.assemble()
+        x = self.A.createVec()
+        x.setRandom()
+        norm = self.A.aNorm()
+        expected = np.sqrt((self.A @ x).dot(x))
+        self.assertAlmostEqual(norm, expected)
+        x.destroy()
+
     def _preallocate(self):
         self.A.setPreallocationDense(None)
 
@@ -395,7 +423,6 @@ class TestMatMPIDense_B_G77_B5(TestMatMPIDense_B_G77):
 
 class TestMatMPIDense_B_G89_B5(TestMatMPIDense_B_G89):
     BSIZE = 5
-
 
 # -----
 

@@ -2956,7 +2956,7 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat, Vec v1, Vec v2, Vec v3)
 PetscErrorCode MatADot_Default(Mat mat, Vec x, Vec y, PetscScalar *val)
 {
   PetscFunctionBegin;
-  if (!mat->dot_vec) PetscCall(MatCreateVecs(mat, &mat->dot_vec, NULL));
+  if (!mat->dot_vec) PetscCall(MatCreateVecs(mat, NULL, &mat->dot_vec));
   PetscCall(MatMult(mat, x, mat->dot_vec));
   PetscCall(VecDot(mat->dot_vec, y, val));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3025,7 +3025,8 @@ PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
   PetscCall(PetscLogEventBegin(MAT_ADot, mat, x, y, 0));
-  PetscUseTypeMethod(mat, adot, x, y, val);
+  if (!mat->ops->adot) PetscCall(MatADot_Default(mat, x, y, val));
+  else PetscUseTypeMethod(mat, adot, x, y, val);
   PetscCall(PetscLogEventEnd(MAT_ADot, mat, x, y, 0));
   PetscCall(VecLockReadPop(y));
   PetscCall(VecLockReadPop(x));
@@ -3076,7 +3077,8 @@ PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
 
   PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(MAT_ANorm, mat, x, 0, 0));
-  PetscUseTypeMethod(mat, anorm, x, val);
+  if (!mat->ops->anorm) PetscCall(MatANorm_Default(mat, x, val));
+  else PetscUseTypeMethod(mat, anorm, x, val);
   PetscCall(PetscLogEventEnd(MAT_ANorm, mat, x, 0, 0));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
