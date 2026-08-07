@@ -1206,7 +1206,7 @@ static const struct _MatOps MatOps_Values = {MatSetValues_MPISELL,
                                              NULL,
                                              NULL,
                                              MatADot_Default,
-                                             /*144*/ MatANorm_Default,
+                                             /*144*/ NULL,
                                              NULL,
                                              NULL,
                                              NULL};
