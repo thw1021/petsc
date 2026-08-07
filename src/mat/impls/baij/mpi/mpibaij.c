@@ -2539,7 +2539,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        MatCopyHashToXAIJ_MPI_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
+                                       /*144*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL};

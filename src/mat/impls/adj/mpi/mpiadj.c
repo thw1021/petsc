@@ -712,7 +712,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAdj,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
+                                       /*144*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL};
