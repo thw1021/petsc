@@ -15,6 +15,7 @@ typedef struct {
   PetscReal term2_scale;
   PetscInt  map_row_size;
   PetscBool separate_hpre;
+  PetscBool repeat_setfromoptions;
 } TestCtx;
 
 /* Forward declarations */
@@ -73,6 +74,28 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao_term));
   PetscCall(TaoSolve(tao_term));
 
+  if (ctx.repeat_setfromoptions) {
+    TaoTerm     objective;
+    TaoTermMask mask_before = TAOTERM_MASK_NONE, mask_after;
+    PetscInt    max_it;
+
+    if (ctx.use_term2) {
+      PetscCall(TaoGetTerm(tao_term, NULL, &objective, NULL, NULL));
+      PetscCall(TaoTermSumGetTermMask(objective, 2, &mask_before));
+      PetscCall(PetscOptionsSetValue(NULL, "-tao_term_sum_reg2_mask", "none"));
+    }
+    PetscCall(PetscOptionsSetValue(NULL, "-tao_max_it", "7"));
+    PetscCall(TaoSetFromOptions(tao_term));
+    PetscCall(TaoGetMaximumIterations(tao_term, &max_it));
+    PetscCheck(max_it == 7, comm, PETSC_ERR_PLIB, "Repeated TaoSetFromOptions() did not update -tao_max_it");
+    if (ctx.use_term2) {
+      PetscCall(TaoTermSumGetTermMask(objective, 2, &mask_after));
+      PetscCheck(mask_after == mask_before, comm, PETSC_ERR_PLIB, "Repeated TaoSetFromOptions() changed structural TaoTerm options after setup");
+    }
+    PetscCall(TaoSolve(tao_term));
+    PetscCall(PetscPrintf(comm, "Repeated TaoSetFromOptions() check passed\n"));
+  }
+
   if (ctx.use_term1) {
     PetscCall(VecDestroy(&term1_params));
     PetscCall(MatDestroy(&term1_A));
@@ -99,16 +122,17 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(AppCtxCreate(comm, &ctx->user));
 
   /* Default configuration */
-  ctx->use_term1        = PETSC_FALSE;
-  ctx->use_term2        = PETSC_FALSE;
-  ctx->term1_has_A      = PETSC_FALSE;
-  ctx->term1_has_params = PETSC_FALSE;
-  ctx->term2_has_A      = PETSC_FALSE;
-  ctx->term2_has_params = PETSC_FALSE;
-  ctx->term1_scale      = 0.1;
-  ctx->term2_scale      = 0.05;
-  ctx->map_row_size     = ctx->user->n - 1;
-  ctx->separate_hpre    = PETSC_FALSE;
+  ctx->use_term1             = PETSC_FALSE;
+  ctx->use_term2             = PETSC_FALSE;
+  ctx->term1_has_A           = PETSC_FALSE;
+  ctx->term1_has_params      = PETSC_FALSE;
+  ctx->term2_has_A           = PETSC_FALSE;
+  ctx->term2_has_params      = PETSC_FALSE;
+  ctx->term1_scale           = 0.1;
+  ctx->term2_scale           = 0.05;
+  ctx->map_row_size          = ctx->user->n - 1;
+  ctx->separate_hpre         = PETSC_FALSE;
+  ctx->repeat_setfromoptions = PETSC_FALSE;
 
   PetscOptionsBegin(comm, "", "TaoTerm Coverage Test Options", "TAO");
   PetscCall(PetscOptionsBool("-use_term1", "Use first additional term", "", ctx->use_term1, &ctx->use_term1, NULL));
@@ -121,6 +145,7 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(PetscOptionsReal("-term2_scale", "Scaling for term 2", "", ctx->term2_scale, &ctx->term2_scale, NULL));
   PetscCall(PetscOptionsInt("-map_row_size", "Row size of mapping matrix", "", ctx->map_row_size, &ctx->map_row_size, NULL));
   PetscCall(PetscOptionsBool("-separate_hpre", "Use a separate preconditioning matrix for the legacy callback term", "", ctx->separate_hpre, &ctx->separate_hpre, NULL));
+  PetscCall(PetscOptionsBool("-repeat_setfromoptions", "Call TaoSetFromOptions() again after TaoSolve()", "", ctx->repeat_setfromoptions, &ctx->repeat_setfromoptions, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -250,5 +275,18 @@ static PetscErrorCode FormHessian_TaoTerm(Tao tao, Vec X, Mat H, Mat Hpre, void 
     filter: grep -E "parameter vector space|rows=.*cols=|Solution converged"
     args: -tao_type nls -use_term1 -term1_has_params -term1_has_A
     args: -reg1_tao_term_type halfl2squared -tao_view ::ascii_info_detail
+
+  test:
+    suffix: repeat_setfromoptions
+    args: -repeat_setfromoptions -tao_fd_gradient
+    filter: grep "Repeated TaoSetFromOptions"
+
+  test:
+    suffix: repeat_setfromoptions_sum
+    args: -tao_type nls -use_term1 -use_term2 -repeat_setfromoptions
+    args: -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
+    args: -tao_term_sum_reg2_mask hessian
+    filter: grep "Repeated TaoSetFromOptions"
+    output_file: output/taotermtest1_repeat_setfromoptions.out
 
 TEST*/
