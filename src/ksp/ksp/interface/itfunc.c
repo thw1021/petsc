@@ -1127,7 +1127,9 @@ static PetscErrorCode KSPUseExplicitTranspose_Private(KSP ksp)
   Mat J, Jpre;
 
   PetscFunctionBegin;
+  ksp->transpose_solve = PETSC_FALSE;
   PetscCall(KSPGetOperators(ksp, &J, &Jpre));
+  if (J == ksp->transpose.AT && Jpre == ksp->transpose.BT) PetscFunctionReturn(PETSC_SUCCESS);
   if (!ksp->transpose.reuse_transpose) {
     PetscCall(MatTranspose(J, MAT_INITIAL_MATRIX, &ksp->transpose.AT));
     if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_INITIAL_MATRIX, &ksp->transpose.BT));
@@ -1171,25 +1173,8 @@ PetscErrorCode KSPSolveTranspose(KSP ksp, Vec b, Vec x)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (b) PetscValidHeaderSpecific(b, VEC_CLASSID, 2);
   if (x) PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
-  if (ksp->transpose.use_explicittranspose) {
-    Mat J, Jpre;
-    PetscCall(KSPGetOperators(ksp, &J, &Jpre));
-    if (!ksp->transpose.reuse_transpose) {
-      PetscCall(MatTranspose(J, MAT_INITIAL_MATRIX, &ksp->transpose.AT));
-      if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_INITIAL_MATRIX, &ksp->transpose.BT));
-      ksp->transpose.reuse_transpose = PETSC_TRUE;
-    } else {
-      PetscCall(MatTranspose(J, MAT_REUSE_MATRIX, &ksp->transpose.AT));
-      if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_REUSE_MATRIX, &ksp->transpose.BT));
-    }
-    if (J == Jpre && ksp->transpose.BT != ksp->transpose.AT) {
-      PetscCall(PetscObjectReference((PetscObject)ksp->transpose.AT));
-      ksp->transpose.BT = ksp->transpose.AT;
-    }
-    PetscCall(KSPSetOperators(ksp, ksp->transpose.AT, ksp->transpose.BT));
-  } else {
-    ksp->transpose_solve = PETSC_TRUE;
-  }
+  if (ksp->transpose.use_explicittranspose) PetscCall(KSPUseExplicitTranspose_Private(ksp));
+  else ksp->transpose_solve = PETSC_TRUE;
   PetscCall(KSPSolve_Private(ksp, b, x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
