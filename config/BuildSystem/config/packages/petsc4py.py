@@ -16,6 +16,7 @@ class Configure(config.package.Package):
     import nargs
     help.addArgument('PETSc', '-with-petsc4py=<bool>', nargs.ArgBool(None, False, 'Build PETSc Python bindings (petsc4py)'))
     help.addArgument('PETSc', '-with-petsc4py-test-np=<np>',nargs.ArgInt(None, None, min=1, help='Number of processes to use for petsc4py tests'))
+    help.addArgument('PETSc', '-with-petsc4py-install-prefix=<dir>',nargs.Arg(None, None, 'Install prefix of petsc4py'))
     help.addArgument('PETSc', '-with-numpy-include=<dir>', nargs.Arg(None, None, 'Path to numpy headers from numpy.get_include() (default: autodetect)'))
     return
 
@@ -45,7 +46,10 @@ class Configure(config.package.Package):
 
   def Install(self):
     import os
-    installLibPath = os.path.join(self.installDir, 'lib')
+    if 'with-petsc4py-install-prefix' in self.argDB and self.argDB['with-petsc4py-install-prefix']:
+      installLibPath = self.argDB['with-petsc4py-install-prefix']
+    else:
+      installLibPath = os.path.join(self.installDir, 'lib')
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -74,7 +78,7 @@ class Configure(config.package.Package):
     if numpy_include is not None:
       newdir += 'NUMPY_INCLUDE="'+numpy_include+'" '
 
-    self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
+    self.addDefine('PETSC4PY_INSTALL_PATH','"'+installLibPath+'"')
     cflags = ''
     # by default, multiple flags are added by setup.py (-DNDEBUG -O3 -g), no matter the type of PETSc build
     # this is problematic with Intel compilers, which take extremely long to compile bindings when using -g
