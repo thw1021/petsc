@@ -5477,6 +5477,16 @@ PetscErrorCode MatGetRowSum(Mat mat, Vec v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatParentStateDestroy_Private(PetscCtxRt ptr)
+{
+  MatParentState *rb = *(MatParentState **)ptr;
+
+  PetscFunctionBegin;
+  PetscCall(MatDestroy(&rb->parent));
+  PetscCall(PetscFree(rb));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatTransposeSetPrecursor - Set the matrix from which the second matrix will receive numerical transpose data with a call to `MatTranspose`(A,`MAT_REUSE_MATRIX`,&B)
   when B was not obtained with `MatTranspose`(A,`MAT_INITIAL_MATRIX`,&B)
@@ -5495,6 +5505,9 @@ PetscErrorCode MatGetRowSum(Mat mat, Vec v)
   Normally the use of `MatTranspose`(A, `MAT_REUSE_MATRIX`, &B) requires that `B` was obtained with a call to `MatTranspose`(A, `MAT_INITIAL_MATRIX`, &B). This
   routine allows bypassing that call.
 
+  Developer Note:
+  The composed `MatTransposeParent` stores a `MatParentState`, which owns a reference to the precursor `mat`, keeping it alive, and tracks its identity and state to validate and update a `MAT_REUSE_MATRIX` transpose.
+
 .seealso: [](ch_matrices), `Mat`, `MatTransposeSymbolic()`, `MatTranspose()`, `MatMultTranspose()`, `MatMultTransposeAdd()`, `MatIsTranspose()`, `MatReuse`, `MAT_INITIAL_MATRIX`, `MAT_REUSE_MATRIX`, `MAT_INPLACE_MATRIX`
 @*/
 PetscErrorCode MatTransposeSetPrecursor(Mat mat, Mat B)
@@ -5506,7 +5519,9 @@ PetscErrorCode MatTransposeSetPrecursor(Mat mat, Mat B)
   rb->id    = ((PetscObject)mat)->id;
   rb->state = 0;
   PetscCall(MatGetNonzeroState(mat, &rb->nonzerostate));
-  PetscCall(PetscObjectContainerCompose((PetscObject)B, "MatTransposeParent", rb, PetscCtxDestroyDefault));
+  PetscCall(PetscObjectReference((PetscObject)mat));
+  rb->parent = mat;
+  PetscCall(PetscObjectContainerCompose((PetscObject)B, "MatTransposeParent", rb, MatParentStateDestroy_Private));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5526,7 +5541,7 @@ static PetscErrorCode MatTranspose_Private(Mat mat, MatReuse reuse, Mat *B, Pets
   MatCheckPreallocated(mat, 1);
   if (reuse == MAT_REUSE_MATRIX) {
     PetscCall(PetscObjectQuery((PetscObject)*B, "MatTransposeParent", (PetscObject *)&rB));
-    PetscCheck(rB, PetscObjectComm((PetscObject)*B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from call to MatTranspose(). Suggest MatTransposeSetPrecursor().");
+    PetscCheck(rB, PetscObjectComm((PetscObject)*B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from call to MatTranspose(); suggest MatTransposeSetPrecursor()");
     PetscCall(PetscContainerGetPointer(rB, &rb));
     PetscCheck(rb->id == ((PetscObject)mat)->id, PetscObjectComm((PetscObject)*B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from input matrix");
     if (rb->state == ((PetscObject)mat)->state) PetscFunctionReturn(PETSC_SUCCESS);
