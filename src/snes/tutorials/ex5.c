@@ -882,7 +882,7 @@ int main(int argc, char **argv)
 
    test:
      suffix: 5_fas_multiplicative_linesearch
-     args: -par 5 -snes_type fas -snes_fas_type multiplicative -da_refine 4 -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_max_it 3 -fas_levels_snes_type ngmres -fas_levels_snes_max_it 4 -snes_fas_coarse_correction_linesearch -fas_coarse_correction_snes_linesearch_type secant -snes_monitor_short -snes_converged_reason -snes_max_it 30
+     args: -par 5 -snes_type fas -snes_fas_type multiplicative -da_refine 4 -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_max_it 3 -fas_levels_snes_type ngmres -fas_levels_snes_max_it 4 -snes_fas_use_coarse_correction_linesearch -fas_coarse_correction_snes_linesearch_type secant -snes_monitor_short -snes_converged_reason -snes_max_it 30
      requires: !single
 
    test:
