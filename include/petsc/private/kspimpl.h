@@ -163,9 +163,11 @@ struct _p_KSP {
 
   PetscBool transpose_solve; /* solve transpose system instead */
   struct {
-    Mat       AT, BT;
-    PetscBool use_explicittranspose; /* transpose the system explicitly in KSP[Mat]SolveTranspose() */
-    PetscBool reuse_transpose;       /* reuse the previous transposed system */
+    Mat           A, B, AT, BT;
+    PetscObjectId Aid, Bid;              /* IDs of A and B when the transposes were formed */
+    PetscBool     solve_requested;       /* KSP[Mat]SolveTranspose() was called */
+    PetscBool     use_explicittranspose; /* transpose the system explicitly in KSP[Mat]SolveTranspose() */
+    PetscBool     reuse_transpose;       /* reuse the previous transposed system */
   } transpose;
 
   KSPNormType normtype; /* type of norm used for convergence tests */
