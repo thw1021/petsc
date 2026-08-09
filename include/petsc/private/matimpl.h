@@ -785,6 +785,7 @@ typedef struct {
   PetscObjectId    id;
   PetscObjectState state;
   PetscObjectState nonzerostate;
+  Mat              parent;
 } MatParentState;
 
 PETSC_EXTERN PetscErrorCode MatFactorDumpMatrix(Mat);
