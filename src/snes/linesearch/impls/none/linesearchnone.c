@@ -58,7 +58,7 @@ static PetscErrorCode SNESLineSearchView_None(SNESLineSearch linesearch, PetscVi
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    if (linesearch->lambda != 1.) PetscCall(PetscViewerASCIIPrintf(viewer, "  damping factor: %g\n", (double)linesearch->lambda));
+    if (linesearch->damping != 1.) PetscCall(PetscViewerASCIIPrintf(viewer, "  damping factor: %g\n", (double)linesearch->lambda));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

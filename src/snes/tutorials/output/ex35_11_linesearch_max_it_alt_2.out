@@ -1,0 +1,213 @@
+  0 SNES Function norm 1.300000000000e+01
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [6.88663, 7.85626, 12.4586]
+        Line search: lambdas = [0.840246, 0.920123, 1.], fnorms = [6.58658, 6.66286, 6.88663]
+        Line search: lambdas = [0.840246, 0.840246, 0.840246], fnorms = [6.58658, 6.58658, 6.58658]
+        Line search: abs(delLambda) = 1.77636e-15 < ltol = 1e-08
+        Line search terminated: lambda = 0.840246, fnorm = 6.58658
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [7.01976, 6.93803, 10.0538]
+      Line search: lambdas = [0.739454, 0.869727, 1.], fnorms = [6.47567, 6.61589, 7.01976]
+      Line search: abs(delFnrm) = 0. <= atol = 1e-15
+      Line search terminated: lambda = 0.739454, fnorm = 6.47567
+  1 SNES Function norm 3.769016907569e+00
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [2.3589, 2.18015, 3.09762]
+        Line search: lambdas = [0.678244, 0.839122, 1.], fnorms = [2.09614, 2.16482, 2.3589]
+        Line search: lambdas = [0.678244, 0.678244, 0.678244], fnorms = [2.09614, 2.09614, 2.09614]
+        Line search: abs(delLambda) = 2.77556e-15 < ltol = 1e-08
+        Line search terminated: lambda = 0.678244, fnorm = 2.09614
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [2.56363, 2.5454, 3.38994]
+      Line search: lambdas = [0.740881, 0.870441, 1.], fnorms = [2.42622, 2.46129, 2.56363]
+      Line search: lambdas = [0.740881, 0.740881, 0.740881], fnorms = [2.42622, 2.42622, 2.42622]
+      Line search: abs(delLambda) = 1.69864e-14 < ltol = 1e-08
+      Line search terminated: lambda = 0.740881, fnorm = 2.42622
+  2 SNES Function norm 1.425042422570e+00
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [1.02472, 1.00367, 1.27598]
+        Line search: lambdas = [0.717811, 0.858906, 1.], fnorms = [0.971797, 0.985295, 1.02472]
+        Line search: lambdas = [0.717811, 0.717811, 0.717811], fnorms = [0.971797, 0.971797, 0.971797]
+        Line search: abs(delLambda) = 6.85008e-14 < ltol = 1e-08
+        Line search terminated: lambda = 0.717811, fnorm = 0.971797
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.914531, 0.927899, 1.29149]
+      Line search: lambdas = [0.765741, 0.882871, 1.], fnorms = [0.866316, 0.878618, 0.914531]
+      Line search: lambdas = [0.765741, 0.765741, 0.765741], fnorms = [0.866316, 0.866316, 0.866316]
+      Line search: abs(delLambda) = 4.86278e-14 < ltol = 1e-08
+      Line search terminated: lambda = 0.765741, fnorm = 0.866316
+  3 SNES Function norm 5.099310675745e-01
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.365387, 0.362764, 0.475119]
+        Line search: lambdas = [0.74006, 0.87003, 1.], fnorms = [0.34717, 0.351813, 0.365387]
+        Line search: lambdas = [0.74006, 0.74006, 0.74006], fnorms = [0.34717, 0.34717, 0.34717]
+        Line search: abs(delLambda) = 1.29008e-13 < ltol = 1e-08
+        Line search terminated: lambda = 0.74006, fnorm = 0.34717
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.313448, 0.331831, 0.484146]
+      Line search: lambdas = [0.802759, 0.90138, 1.], fnorms = [0.299169, 0.302802, 0.313448]
+      Line search: lambdas = [0.802759, 0.802759, 0.802759], fnorms = [0.299169, 0.299169, 0.299169]
+      Line search: abs(delLambda) = 6.85008e-14 < ltol = 1e-08
+      Line search terminated: lambda = 0.802759, fnorm = 0.299169
+  4 SNES Function norm 1.761567581642e-01
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.126789, 0.125315, 0.162821]
+        Line search: lambdas = [0.733377, 0.866688, 1.], fnorms = [0.120358, 0.121998, 0.126789]
+        Line search: abs(delFnrm) = 1.69163e-16 <= atol = 1e-15
+        Line search terminated: lambda = 0.733377, fnorm = 0.120358
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.108617, 0.114605, 0.166198]
+      Line search: lambdas = [0.800817, 0.900408, 1.], fnorms = [0.103702, 0.104953, 0.108617]
+      Line search: lambdas = [0.800817, 0.800817, 0.800817], fnorms = [0.103702, 0.103702, 0.103702]
+      Line search: abs(delLambda) = 1.21347e-13 < ltol = 1e-08
+      Line search terminated: lambda = 0.800817, fnorm = 0.103702
+  5 SNES Function norm 6.092031044837e-02
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.0439205, 0.0433906, 0.0563179]
+        Line search: lambdas = [0.732674, 0.866337, 1.], fnorms = [0.0416914, 0.0422597, 0.0439205]
+        Line search: lambdas = [0.732674, 0.732674, 0.732674], fnorms = [0.0416914, 0.0416914, 0.0416914]
+        Line search: abs(delLambda) = 3.13416e-13 < ltol = 1e-08
+        Line search terminated: lambda = 0.732674, fnorm = 0.0416914
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.0374906, 0.0396279, 0.0575251]
+      Line search: lambdas = [0.802361, 0.901181, 1.], fnorms = [0.0358132, 0.0362399, 0.0374906]
+      Line search: lambdas = [0.802361, 0.802361, 0.802361], fnorms = [0.0358132, 0.0358132, 0.0358132]
+      Line search: abs(delLambda) = 1.26887e-12 < ltol = 1e-08
+      Line search terminated: lambda = 0.802361, fnorm = 0.0358132
+  6 SNES Function norm 2.107720179396e-02
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.0151764, 0.0149665, 0.0193956]
+        Line search: lambdas = [0.730043, 0.865022, 1.], fnorms = [0.0143951, 0.0145943, 0.0151764]
+        Line search: abs(delFnrm) = 1.78721e-16 <= atol = 1e-15
+        Line search terminated: lambda = 0.730043, fnorm = 0.0143951
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.0129781, 0.0137049, 0.0198498]
+      Line search: lambdas = [0.801909, 0.900955, 1.], fnorms = [0.0124004, 0.0125473, 0.0129781]
+      Line search: abs(delFnrm) = 3.55898e-16 <= atol = 1e-15
+      Line search terminated: lambda = 0.801909, fnorm = 0.0124004
+  7 SNES Function norm 7.290838512331e-03
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.00525397, 0.0051722, 0.00669542]
+        Line search: lambdas = [0.727481, 0.863741, 1.], fnorms = [0.00497921, 0.0050493, 0.00525397]
+        Line search: abs(delFnrm) = 2.56871e-16 <= atol = 1e-15
+        Line search terminated: lambda = 0.727481, fnorm = 0.00497921
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.00448292, 0.00474027, 0.00686502]
+      Line search: lambdas = [0.803257, 0.901629, 1.], fnorms = [0.00428618, 0.0043362, 0.00448292]
+      Line search: abs(delFnrm) = 3.37361e-17 <= atol = 1e-15
+      Line search terminated: lambda = 0.803257, fnorm = 0.00428618
+  8 SNES Function norm 2.520571640837e-03
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.00182131, 0.00178789, 0.00230867]
+        Line search: lambdas = [0.723249, 0.861624, 1.], fnorms = [0.00172391, 0.00174877, 0.00182131]
+        Line search: abs(delFnrm) = 6.52588e-17 <= atol = 1e-15
+        Line search terminated: lambda = 0.723249, fnorm = 0.00172391
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.00154865, 0.00163901, 0.00237094]
+      Line search: lambdas = [0.804408, 0.902204, 1.], fnorms = [0.00148182, 0.0014988, 0.00154865]
+      Line search: abs(delFnrm) = 4.08594e-17 <= atol = 1e-15
+      Line search terminated: lambda = 0.804408, fnorm = 0.00148182
+  9 SNES Function norm 8.709785163854e-04
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.000631874, 0.00061858, 0.000796637]
+        Line search: lambdas = [0.719057, 0.859529, 1.], fnorms = [0.000597379, 0.000606187, 0.000631874]
+        Line search: abs(delFnrm) = 5.21446e-17 <= atol = 1e-15
+        Line search terminated: lambda = 0.719057, fnorm = 0.000597379
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.000534483, 0.000566508, 0.000819045]
+      Line search: lambdas = [0.80603, 0.903015, 1.], fnorms = [0.000511855, 0.000517604, 0.000534483]
+      Line search: abs(delFnrm) = 2.87174e-17 <= atol = 1e-15
+      Line search terminated: lambda = 0.80603, fnorm = 0.000511855
+ 10 SNES Function norm 3.008293462106e-04
+        Line search: lambdas = [1., 0.5, 0.], fnorms = [0.000219172, 0.000213988, 0.000274812]
+        Line search: lambdas = [0.714884, 0.857442, 1.], fnorms = [0.000206972, 0.000210089, 0.000219172]
+        Line search: abs(delFnrm) = 1.85351e-17 <= atol = 1e-15
+        Line search terminated: lambda = 0.714884, fnorm = 0.000206972
+      Line search: lambdas = [1., 0.5, 0.], fnorms = [0.000184444, 0.000195725, 0.000282752]
+      Line search: lambdas = [0.807409, 0.903704, 1.], fnorms = [0.000176774, 0.000178722, 0.000184444]
+      Line search: abs(delFnrm) = 1.77143e-18 <= atol = 1e-15
+      Line search terminated: lambda = 0.807409, fnorm = 0.000176774
+ 11 SNES Function norm 1.038698362627e-04
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+SNES Object: 1 MPI process
+  type: fas
+    type is MULTIPLICATIVE, levels=3, cycles=1
+    Not using Galerkin computed coarse grid function evaluation
+    Coarse grid solver -- level 0 -------------------------------
+    SNES Object: (fas_coarse_) 1 MPI process
+      type: newtonls
+      maximum iterations=50, maximum function evaluations=10000
+      tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+      total number of linear solver iterations=1
+      total number of function evaluations=1
+      norm schedule ALWAYS
+      SNESLineSearch Object: (fas_coarse_) 1 MPI process
+        type: bt
+          interpolation: cubic
+          alpha=1.000000e-04
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=40
+      KSP Object: (fas_coarse_) 1 MPI process
+        type: preonly
+        maximum iterations=10000, initial guess is zero
+        tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+        left preconditioning
+        not checking for convergence
+      PC Object: (fas_coarse_) 1 MPI process
+        type: lu
+          out-of-place factorization
+          tolerance for zero pivot 2.22045e-14
+          matrix ordering: nd
+          factor fill ratio given 5., needed 1.875
+            Factored matrix:
+              Mat Object: (fas_coarse_) 1 MPI process
+                type: seqaij
+                rows=16, cols=16
+                package used to perform factorization: petsc
+                total: nonzeros=120, allocated nonzeros=120
+                  using I-node routines: found 12 nodes, limit used is 5
+        linear system matrix, which is also used to construct the preconditioner:
+        Mat Object: 1 MPI process
+          type: seqaij
+          rows=16, cols=16
+          total: nonzeros=64, allocated nonzeros=64
+          total number of mallocs used during MatSetValues calls=0
+            not using I-node routines
+    Down solver (pre-smoother) on level 1 -------------------------------
+    SNES Object: (fas_levels_1_) 1 MPI process
+      type: nrichardson
+      maximum iterations=1, maximum function evaluations=30000
+      tolerances: relative=0., absolute=0., solution=0.
+      total number of function evaluations=4
+      norm schedule FINALONLY
+      SNESLineSearch Object: (fas_levels_1_) 1 MPI process
+        type: secant
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=1
+    solution vector:
+      Vec Object: Coarse correction 1 MPI process
+        type: seq
+        length=49
+        length=49
+    Up solver (post-smoother) same as down solver (pre-smoother)
+    Coarse correction line search on level 1 -------------------------------
+    SNESLineSearch Object: (fas_coarse_correction_1_) 1 MPI process
+      type: secant
+      maxlambda=1.000000e+00, minlambda=1.000000e-12
+      tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+      maximum iterations=5
+    Down solver (pre-smoother) on level 2 -------------------------------
+    SNES Object: (fas_levels_2_) 1 MPI process
+      type: nrichardson
+      maximum iterations=1, maximum function evaluations=30000
+      tolerances: relative=0., absolute=0., solution=0.
+      total number of function evaluations=4
+      norm schedule FINALONLY
+      SNESLineSearch Object: (fas_levels_2_) 1 MPI process
+        type: secant
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=1
+    solution vector:
+      Vec Object: Updated Fine solution 1 MPI process
+        type: seq
+        length=169
+        length=169
+    Up solver (post-smoother) same as down solver (pre-smoother)
+    Coarse correction line search on level 2 -------------------------------
+    SNESLineSearch Object: (fas_coarse_correction_2_) 1 MPI process
+      type: secant
+      maxlambda=1.000000e+00, minlambda=1.000000e-12
+      tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+      maximum iterations=5
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-05, absolute=1e-50, solution=1e-08
+  total number of function evaluations=66
+  norm schedule ALWAYS
+solution vector:
+  Vec Object: Updated Fine solution 1 MPI process
+    type: seq
+    length=169
+    length=169

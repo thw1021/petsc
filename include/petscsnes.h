@@ -1454,7 +1454,7 @@ PETSC_EXTERN PetscErrorCode SNESFASGetSmoother(SNES, PetscInt, SNES *);
 PETSC_EXTERN PetscErrorCode SNESFASGetSmootherUp(SNES, PetscInt, SNES *);
 PETSC_EXTERN PetscErrorCode SNESFASGetSmootherDown(SNES, PetscInt, SNES *);
 PETSC_EXTERN PetscErrorCode SNESFASGetCoarseSolve(SNES, SNES *);
-PETSC_EXTERN PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES, PetscInt, SNESLineSearch);
+PETSC_EXTERN PetscErrorCode SNESFASSetUseCoarseCorrectionLineSearch(SNES, PetscBool);
 PETSC_EXTERN PetscErrorCode SNESFASGetCoarseCorrectionLineSearch(SNES, PetscInt, SNESLineSearch *);
 
 /* parameters for full FAS */
