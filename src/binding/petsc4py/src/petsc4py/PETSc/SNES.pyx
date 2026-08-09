@@ -651,6 +651,7 @@ cdef class SNES(Object):
         cdef PetscInt clevel = asInt(level)
         cdef SNESLineSearch linesearch = SNESLineSearch()
         CHKERR(SNESFASGetCoarseCorrectionLineSearch(self.snes, clevel, &linesearch.snesls))
+        if linesearch.snesls == NULL: return None
         CHKERR(PetscINCREF(linesearch.obj))
         return linesearch
 

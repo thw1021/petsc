@@ -8,8 +8,6 @@ static PetscErrorCode SNESReset_FAS(SNES snes)
   SNES_FAS *fas = (SNES_FAS *)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESFASSetUseCoarseCorrectionLineSearch_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESFASGetCoarseCorrectionLineSearch_C", NULL));
   PetscCall(SNESDestroy(&fas->smoothu));
   PetscCall(SNESDestroy(&fas->smoothd));
   PetscCall(MatDestroy(&fas->inject));
@@ -28,6 +26,8 @@ static PetscErrorCode SNESDestroy_FAS(SNES snes)
   SNES_FAS *fas = (SNES_FAS *)snes->data;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESFASSetUseCoarseCorrectionLineSearch_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESFASGetCoarseCorrectionLineSearch_C", NULL));
   /* recursively resets and then destroys */
   PetscCall(SNESReset_FAS(snes));
   PetscCall(SNESDestroy(&fas->next));
@@ -181,7 +181,7 @@ static PetscErrorCode SNESSetUp_FAS(SNES snes)
 }
 
 /*
-  Creates  the coarse correction line searches used by SNESFAS depending on the flags
+  Creates the coarse correction line searches used by SNESFAS depending on the flags
   fas->fastype == SNES_FAS_MULTIPLICATIVE and fas->useCoarseCorrectionLineSearch
 */
 static PetscErrorCode SNESFASSetUpCoarseCorrectionLineSearch_Private(SNES snes)
