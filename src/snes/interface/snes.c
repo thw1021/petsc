@@ -1178,6 +1178,15 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
     PetscCall(KSPGetPC(snes->ksp, &pc));
     PetscCall(PCGetType(pc, &pctype));
+    /* If the first two conditions in the following conditional are true, we know a matrix-free Mat
+       will be used eventually with the PC, but we cannot provide the matrix-free Mat to the PC here
+       since we do not have enough information to construct it here (it is constructed after the
+       start of SNESSetUp()). If we do not set the PCNONE here, then the PCSetFromOptions() called
+       from KSPSetFromOptions() below will use PCGetDefaultType_Private() to set a PCType
+       appropriate for the current pc->pmat that will likely not work for the matrix-free Mat, thus
+       producing a later confusing error message. A significant refactoring of how SNES handles
+       matrix-free Mat would be needed to eliminate the next line of code. Note that if the PC type
+       has already been set (third condition), we do not override it */
     if (snes->mf && !snes->mf_operator && !pctype) PetscCall(PCSetType(pc, PCNONE));
     PetscCall(KSPSetFromOptions(snes->ksp));
   }
