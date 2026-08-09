@@ -778,11 +778,31 @@ int main(int argc, char **args)
     suffix: 1_cuda
     args: -local {{0 1}} -xgpu {{0 1}} -bgpu {{0 1}} -A_mat_type {{seqaijcusparse seqaij}} -testshellops {{0 1}}
 
+  # RARt is skipped for aijkokkos because the R*A products with a dense R it needs are not defined
+  test:
+    output_file: output/empty.out
+    requires: kokkos_kernels
+    suffix: 1_kokkos
+    args: -local {{0 1}} -A_mat_type aijkokkos -testrart 0
+
+  test:
+    output_file: output/empty.out
+    requires: cuda kokkos_kernels
+    suffix: 1_kokkos_cuda
+    args: -local {{0 1}} -xgpu {{0 1}} -bgpu {{0 1}} -A_mat_type aijkokkos -testrart 0
+
   test:
     output_file: output/empty.out
     nsize: 2
     suffix: 1_par
     args: -local {{0 1}} -testmatmatt 0
+
+  test:
+    output_file: output/empty.out
+    nsize: 2
+    requires: kokkos_kernels
+    suffix: 1_par_kokkos
+    args: -local {{0 1}} -testmatmatt 0 -A_mat_type aijkokkos -testrart 0
 
   test:
     output_file: output/empty.out
