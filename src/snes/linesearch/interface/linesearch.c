@@ -63,6 +63,10 @@ PetscErrorCode SNESLineSearchMonitor(SNESLineSearch ls)
   PetscInt i, n = ls->numbermonitors;
 
   PetscFunctionBegin;
+  /* ls->tablevel is only a snapshot of ls->snes's tablevel taken when the line search was created;
+     if the owning SNES's own tablevel later changes (e.g. SNESFASSetLevels() destroying and rebuilding
+     the FAS level hierarchy), the snapshot goes stale. Resync here so the monitor output indents correctly. */
+  if (ls->snes) PetscCall(PetscObjectIncrementTabLevel((PetscObject)ls, (PetscObject)ls->snes, 1));
   for (i = 0; i < n; i++) PetscCall((*ls->monitorftns[i])(ls, ls->monitorcontext[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
