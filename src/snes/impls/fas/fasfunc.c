@@ -1219,9 +1219,9 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
 
   All the line search options, see `SNESLineSearchSetFromOptions()`, can be set using the options database prefix `-fas_coarse_correction_i_` for any particular level `i`,
   or all levels with `-fas_coarse_correction_`.
-  See `SNESFASGetCoarseCorrectionLineSearch()` for how to access the line searches at which point you can also change their options using the `SNESLineSearch` API
+  See `SNESFASGetCoarseCorrectionLineSearch()` for how to access the line searches at which point you can also change their options using the `SNESLineSearch` API.
 
-  Must be called before `SNESSetFromOptions()`
+  Must be called before `SNESSetFromOptions()`.
 
 .seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `PCMG`, `SNESLineSearchSetFromOptions()`
 @*/
@@ -1242,14 +1242,14 @@ PetscErrorCode SNESFASSetUseCoarseCorrectionLineSearch(SNES snes, PetscBool use)
 - level - the level (0 is coarsest) whose coarse correction line search is being retrieved
 
   Output Parameter:
-. ls - the `SNESLineSearch` object; `NULL` if none has been configured yet for this level (e.g., before `SNESSetFromOptions()` has run)
+. ls - the `SNESLineSearch` object; `NULL` if no line search has been requested with `SNESFASSetUseCoarseCorrectionLineSearch()` or `-snes_fas_use_coarse_correction_linesearch`
 
   Level: advanced
 
   Notes:
   This does not create the line search as a side effect; it returns whatever `SNESLineSearch` currently exists for the requested level, or `NULL`.
 
-  Must be called after `SNESSetFromOptions()`
+  Must be called after `SNESSetFromOptions()`.
 
 .seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASSetUseCoarseCorrectionLineSearch()`, `SNESLineSearch`
 @*/

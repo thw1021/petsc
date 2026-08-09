@@ -624,7 +624,7 @@ cdef class SNES(Object):
 
     def setFASUseCoarseCorrectionLineSearch(
         self,
-        cuse: bool) -> None:
+        use: bool) -> None:
         """Use a line search for the coarse correction in the FAS cycle.
 
         Logically collective.
@@ -635,6 +635,7 @@ cdef class SNES(Object):
         petsc.SNESFASSetUseCoarseCorrectionLineSearch, petsc.SNESFAS
 
         """
+        cdef PetscBool cuse = asBool(use)
         CHKERR(SNESFASSetUseCoarseCorrectionLineSearch(self.snes, cuse))
 
     def getFASCoarseCorrectionLineSearch(self, level: int) -> SNESLineSearch:

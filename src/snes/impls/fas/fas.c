@@ -180,10 +180,6 @@ static PetscErrorCode SNESSetUp_FAS(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  Creates the coarse correction line searches used by SNESFAS depending on the flags
-  fas->fastype == SNES_FAS_MULTIPLICATIVE and fas->useCoarseCorrectionLineSearch
-*/
 static PetscErrorCode SNESFASSetUpCoarseCorrectionLineSearch_Private(SNES snes)
 {
   SNES_FAS   *fas = (SNES_FAS *)snes->data;
@@ -191,7 +187,7 @@ static PetscErrorCode SNESFASSetUpCoarseCorrectionLineSearch_Private(SNES snes)
 
   PetscFunctionBegin;
   PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
-  for (PetscInt lvl = 0; lvl < fas->levels; lvl++) {
+  for (PetscInt lvl = 1; lvl < fas->levels; lvl++) {
     SNES           levelsnes;
     SNES_FAS      *lfas;
     SNESLineSearch ls;
@@ -296,7 +292,7 @@ static PetscErrorCode SNESSetFromOptions_FAS(SNES snes, PetscOptionItems PetscOp
   if (isFine && fas->fastype == SNES_FAS_MULTIPLICATIVE && fas->useCoarseCorrectionLineSearch) {
     PetscCall(SNESFASSetUpCoarseCorrectionLineSearch_Private(snes));
 
-    for (PetscInt lvl = 0; lvl < fas->levels; lvl++) {
+    for (PetscInt lvl = 1; lvl < fas->levels; lvl++) {
       SNES      levelsnes;
       SNES_FAS *lfas;
 
