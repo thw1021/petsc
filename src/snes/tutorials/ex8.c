@@ -175,6 +175,6 @@ int main(int argc, char **argv)
   test:
     requires: !single
     suffix: fas_multiplicative_linesearch
-    args: -petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -dm_refine_hierarchy 4 -snes_type fas -snes_fas_type multiplicative -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_max_it 3 -fas_levels_snes_type ngmres -fas_levels_snes_max_it 4 -snes_fas_coarse_correction_linesearch -fas_coarse_correction_snes_linesearch_type bt -snes_monitor_short -snes_converged_reason -snes_max_it 20
+    args: -petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -dm_refine_hierarchy 4 -snes_type fas -snes_fas_type multiplicative -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_max_it 3 -fas_levels_snes_type ngmres -fas_levels_snes_max_it 4 -snes_fas_use_coarse_correction_linesearch -fas_coarse_correction_snes_linesearch_type bt -snes_monitor_short -snes_converged_reason -snes_max_it 20
 
 TEST*/

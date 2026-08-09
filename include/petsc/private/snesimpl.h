@@ -443,12 +443,13 @@ MC*/
 
   Synopsis:
   #include <snesimpl.h>
-  void SNESCheckLineSearchFailure(SNES snes)
+  void SNESCheckLineSearchFailure(SNES snes, SNESLineSearch ls)
 
   Collective
 
   Input Parameters:
-. snes  - the `SNES` solver object
++ snes - the `SNES` solver object
+- ls   - the line search
 
   Level: developer
 
@@ -461,10 +462,10 @@ MC*/
 .seealso: [](ch_snes), `SNESLineSearchApply()`, `SNESSetFunctionDomainError()`, `PETSC_ERR_CONV_FAILED`, `SNESSetErrorIfNotConverged()`, `SNES_DIVERGED_FUNCTION_DOMAIN`,
           `SNESConvergedReason`, `SNES_DIVERGED_FUNCTION_NAN`, `SNESSolve()`, `SNESSetMaxNonlinearStepFailures()`
 MC*/
-#define SNESCheckLineSearchFailure(snes) \
+#define SNESCheckLineSearchFailure(snes, ls) \
   do { \
     SNESLineSearchReason lsreason; \
-    PetscCall(SNESLineSearchGetReason(snes->linesearch, &lsreason)); \
+    PetscCall(SNESLineSearchGetReason(ls, &lsreason)); \
     if (lsreason) { \
       if (lsreason == SNES_LINESEARCH_FAILED_FUNCTION_DOMAIN) { \
         PetscCheck(!snes->errorifnotconverged, PetscObjectComm((PetscObject)snes), PETSC_ERR_NOT_CONVERGED, "SNESLineSearchApply() has produced failure with function domain"); \

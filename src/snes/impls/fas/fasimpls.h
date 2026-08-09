@@ -22,6 +22,7 @@ typedef struct {
   Mat  restrct;     /* restriction operator */
   Vec  rscale;      /* the pointwise scaling of the restriction operator */
 
+  PetscBool      useCoarseCorrectionLineSearch;
   SNESLineSearch coarseCorrectionLineSearch; /* optional line search for X += lambda*I(x^c - Rx); NONE (unit step) by default */
 
   PetscBool monitorCorrection; /* monitor the coarse correction step */

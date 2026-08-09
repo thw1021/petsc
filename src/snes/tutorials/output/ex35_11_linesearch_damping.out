@@ -1,16 +1,27 @@
   0 SNES Function norm 1.300000000000e+01
-  1 SNES Function norm 3.663327242625e+00
-  2 SNES Function norm 1.376479097063e+00
-  3 SNES Function norm 4.864978879585e-01
-  4 SNES Function norm 1.665630670799e-01
-  5 SNES Function norm 5.711785588501e-02
-  6 SNES Function norm 1.960701742832e-02
-  7 SNES Function norm 6.734861640371e-03
-  8 SNES Function norm 2.313407405287e-03
-  9 SNES Function norm 7.946336625736e-04
- 10 SNES Function norm 2.729139161528e-04
- 11 SNES Function norm 9.372360369035e-05
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+  1 SNES Function norm 6.108380794757e+00
+  2 SNES Function norm 3.238079890815e+00
+  3 SNES Function norm 1.931788861712e+00
+  4 SNES Function norm 1.158234068905e+00
+  5 SNES Function norm 6.942045056116e-01
+  6 SNES Function norm 4.161820012883e-01
+  7 SNES Function norm 2.495221145330e-01
+  8 SNES Function norm 1.496025579206e-01
+  9 SNES Function norm 8.969489721274e-02
+ 10 SNES Function norm 5.377671161642e-02
+ 11 SNES Function norm 3.224176320265e-02
+ 12 SNES Function norm 1.933044570937e-02
+ 13 SNES Function norm 1.158947997387e-02
+ 14 SNES Function norm 6.948408897067e-03
+ 15 SNES Function norm 4.165876161868e-03
+ 16 SNES Function norm 2.497624044456e-03
+ 17 SNES Function norm 1.497433690443e-03
+ 18 SNES Function norm 8.977760573119e-04
+ 19 SNES Function norm 5.382553612897e-04
+ 20 SNES Function norm 3.227072047373e-04
+ 21 SNES Function norm 1.934768140557e-04
+ 22 SNES Function norm 1.159976450463e-04
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
 SNES Object: 1 MPI process
   type: fas
     type is MULTIPLICATIVE, levels=3, cycles=1
@@ -77,6 +88,7 @@ SNES Object: 1 MPI process
     Coarse correction line search on level 1 -------------------------------
     SNESLineSearch Object: (fas_coarse_correction_1_) 1 MPI process
       type: none
+        damping factor: 0.5
       maxlambda=1.000000e+00, minlambda=1.000000e-12
       tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
       maximum iterations=1
@@ -100,13 +112,14 @@ SNES Object: 1 MPI process
     Up solver (post-smoother) same as down solver (pre-smoother)
     Coarse correction line search on level 2 -------------------------------
     SNESLineSearch Object: (fas_coarse_correction_2_) 1 MPI process
-      type: secant
+      type: none
+        damping factor: 0.5
       maxlambda=1.000000e+00, minlambda=1.000000e-12
       tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
       maximum iterations=1
   maximum iterations=10000, maximum function evaluations=30000
   tolerances: relative=1e-05, absolute=1e-50, solution=1e-08
-  total number of function evaluations=34
+  total number of function evaluations=23
   norm schedule ALWAYS
 solution vector:
   Vec Object: Updated Fine solution 1 MPI process
