@@ -1194,51 +1194,41 @@ PetscErrorCode SNESFASFullGetTotal(SNES snes, PetscBool *total)
 }
 
 /*@
-  SNESFASSetCoarseCorrectionLineSearch - Set the line search applied to the coarse correction update on a particular level of a multiplicative `SNESFAS` cycle.
+  SNESFASSetUseCoarseCorrectionLineSearch - Tells a `SNESFAS` to apply a line search to the coarse correction update on a multiplicative `SNESFAS` cycle.
 
   Logically Collective
 
   Input Parameters:
-+ snes  - the `SNESFAS` nonlinear multigrid context, obtained from the finest level
-. level - the level (0 is coarsest) whose coarse correction line search is being set
-- ls    - the `SNESLineSearch` object to apply to the correction on that level, or `NULL` to remove it
++ snes - the `SNESFAS` nonlinear multigrid context
+- use  - use a line search
 
   Options Database Keys:
-+ -snes_fas_coarse_correction_linesearch (true|false)                                       - enable a line search for the coarse correction on every level
++ -snes_fas_use_coarse_correction_linesearch (true|false)                                   - use a line search for the coarse correction on every level
 - -fas_coarse_correction_i_snes_linesearch_type (none|bt|secant|cp|nleqerr|bisection|shell) - set the coarse correction line search type on level i (see also `-fas_coarse_correction_snes_linesearch_type` for all levels)
 
   Level: advanced
 
   Notes:
-  Without a coarse correction line search, the correction X += I(x^c - Rx) is applied directly as a unit
-  step, equivalent to the original FAS correction. Supplying one (or setting
-  `-snes_fas_coarse_correction_linesearch`, which creates one internally) enables the MG-Opt damping
+  Without a coarse correction line search, the correction $X += I(x^c - Rx)$ is applied directly as a unit
+  step, equivalent to the original FAS correction. Calling this function or using `-snes_fas_use_coarse_correction_linesearch`, enables the MG-Opt damping
   strategy {cite}`nash2000mgopt`, which is useful when monotonic decrease in the residual norm or energy
   functional is desired (e.g., non-convex problems where the full coarse correction may overshoot without
   an explicit convergence control strategy).
+
   This has no effect unless `SNESFASGetType()` returns `SNES_FAS_MULTIPLICATIVE`.
 
-.seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `PCMG`
-@*/
-PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, PetscInt level, SNESLineSearch ls)
-{
-  SNES_FAS *fas;
-  SNES      levelsnes;
+  All the line search options, see `SNESLineSearchSetFromOptions()`, can be set using the options database prefix `-fas_coarse_correction_i_` for any particular level `i`,
+  or all levels with `-fas_coarse_correction_`.
+  See `SNESFASGetCoarseCorrectionLineSearch()` for how to access the line searches at which point you can also change their options using the `SNESLineSearch` API
 
+  Must be called before `SNESSetFromOptions()`
+
+.seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASGetCoarseCorrectionLineSearch()`, `SNESLineSearch`, `PCMG`, `SNESLineSearchSetFromOptions()`
+@*/
+PetscErrorCode SNESFASSetUseCoarseCorrectionLineSearch(SNES snes, PetscBool use)
+{
   PetscFunctionBegin;
-  PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
-  if (ls) PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 3);
-  PetscCall(SNESFASGetCycleSNES(snes, level, &levelsnes));
-  fas = (SNES_FAS *)levelsnes->data;
-  if (fas->fastype != SNES_FAS_MULTIPLICATIVE) PetscCall(PetscInfo(snes, "SNESFASSetCoarseCorrectionLineSearch() has no effect unless the current SNESFASType is SNES_FAS_MULTIPLICATIVE (currently %s)\n", SNESFASTypes[fas->fastype]));
-  if (ls) {
-    PetscCall(PetscObjectReference((PetscObject)ls));
-    PetscCall(SNESLineSearchDestroy(&fas->coarseCorrectionLineSearch));
-    fas->coarseCorrectionLineSearch = ls;
-    PetscCall(SNESLineSearchSetSNES(fas->coarseCorrectionLineSearch, levelsnes));
-  } else {
-    PetscCall(SNESLineSearchDestroy(&fas->coarseCorrectionLineSearch));
-  }
+  PetscTryMethod(snes, "SNESFASSetUseCoarseCorrectionLineSearch_C", (SNES, PetscBool), (snes, use));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1256,21 +1246,16 @@ PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(SNES snes, PetscInt level, S
 
   Level: advanced
 
-  Note:
+  Notes:
   This does not create the line search as a side effect; it returns whatever `SNESLineSearch` currently exists for the requested level, or `NULL`.
 
-.seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASSetCoarseCorrectionLineSearch()`, `SNESLineSearch`
+  Must be called after `SNESSetFromOptions()`
+
+.seealso: [](ch_snes), `SNES`, `SNESFAS`, `SNESFASSetUseCoarseCorrectionLineSearch()`, `SNESLineSearch`
 @*/
 PetscErrorCode SNESFASGetCoarseCorrectionLineSearch(SNES snes, PetscInt level, SNESLineSearch *ls)
 {
-  SNES_FAS *fas;
-  SNES      levelsnes;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
-  PetscAssertPointer(ls, 3);
-  PetscCall(SNESFASGetCycleSNES(snes, level, &levelsnes));
-  fas = (SNES_FAS *)levelsnes->data;
-  *ls = fas->coarseCorrectionLineSearch;
+  PetscUseMethod(snes, "SNESFASGetCoarseCorrectionLineSearch_C", (SNES, PetscInt, SNESLineSearch *), (snes, level, ls));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

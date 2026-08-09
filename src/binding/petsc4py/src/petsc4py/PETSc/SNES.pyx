@@ -622,33 +622,29 @@ cdef class SNES(Object):
         CHKERR(PetscINCREF(smooth.obj))
         return smooth
 
-    def setFASCoarseCorrectionLineSearch(
+    def setFASUseCoarseCorrectionLineSearch(
         self,
-        level: int,
-        SNESLineSearch linesearch=None) -> None:
-        """Set the line search for coarse correction on a level of a multiplicative FAS cycle.
+        cuse: bool) -> None:
+        """Use a line search for the coarse correction in the FAS cycle.
 
         Logically collective.
 
         See Also
         --------
         getFASCoarseCorrectionLineSearch
-        petsc.SNESFASSetCoarseCorrectionLineSearch, petsc.SNESFAS
+        petsc.SNESFASSetUseCoarseCorrectionLineSearch, petsc.SNESFAS
 
         """
-        cdef PetscInt clevel = asInt(level)
-        cdef PetscSNESLineSearch ls = NULL
-        if linesearch is not None: ls = linesearch.snesls
-        CHKERR(SNESFASSetCoarseCorrectionLineSearch(self.snes, clevel, ls))
+        CHKERR(SNESFASSetUseCoarseCorrectionLineSearch(self.snes, cuse))
 
     def getFASCoarseCorrectionLineSearch(self, level: int) -> SNESLineSearch:
-        """Return the line search for coarse correction on a level of a multiplicative FAS cycle.
+        """Return the line search for coarse correction in the FAS cycle.
 
         Not collective.
 
         See Also
         --------
-        setFASCoarseCorrectionLineSearch
+        setFASUseCoarseCorrectionLineSearch
         petsc.SNESFASGetCoarseCorrectionLineSearch, petsc.SNESFAS
 
         """

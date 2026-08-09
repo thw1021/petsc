@@ -125,7 +125,7 @@ cdef extern from * nogil:
     PetscErrorCode SNESFASGetSmoother(PetscSNES, PetscInt, PetscSNES*)
     PetscErrorCode SNESFASGetSmootherDown(PetscSNES, PetscInt, PetscSNES*)
     PetscErrorCode SNESFASGetSmootherUp(PetscSNES, PetscInt, PetscSNES*)
-    PetscErrorCode SNESFASSetCoarseCorrectionLineSearch(PetscSNES, PetscInt, PetscSNESLineSearch)
+    PetscErrorCode SNESFASSetUseCoarseCorrectionLineSearch(PetscSNES, PetscBool)
     PetscErrorCode SNESFASGetCoarseCorrectionLineSearch(PetscSNES, PetscInt, PetscSNESLineSearch*)
 
     PetscErrorCode SNESGetNPC(PetscSNES, PetscSNES*)
