@@ -11,8 +11,7 @@
 */
 
 #include <../src/ksp/ksp/impls/gmres/fgmres/fgmresimpl.h> /*I  "petscksp.h"  I*/
-#define FGMRES_DELTA_DIRECTIONS 10
-#define FGMRES_DEFAULT_MAXK     30
+#define FGMRES_DEFAULT_MAXK 30
 static PetscErrorCode KSPFGMRESGetNewVectors(KSP, PetscInt);
 static PetscErrorCode KSPFGMRESUpdateHessenberg(KSP, PetscInt, PetscBool, PetscReal *);
 static PetscErrorCode KSPFGMRESBuildSoln(PetscScalar *, Vec, Vec, KSP, PetscInt);
@@ -550,6 +549,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FGMRES(KSP ksp)
   PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_UNPRECONDITIONED, PC_RIGHT, 3));
   PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_NONE, PC_RIGHT, 1));
 
+  PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetVectorAllocationSize_C", KSPGMRESSetVectorAllocationSize_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetPreAllocateVectors_C", KSPGMRESSetPreAllocateVectors_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetOrthogonalization_C", KSPGMRESSetOrthogonalization_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESGetOrthogonalization_C", KSPGMRESGetOrthogonalization_GMRES));
@@ -561,7 +561,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FGMRES(KSP ksp)
 
   fgmres->haptol         = 1.0e-30;
   fgmres->q_preallocate  = PETSC_FALSE;
-  fgmres->delta_allocate = FGMRES_DELTA_DIRECTIONS;
+  fgmres->delta_allocate = GMRES_DELTA_DIRECTIONS;
   fgmres->orthog         = KSPGMRESClassicalGramSchmidtOrthogonalization;
   fgmres->nrs            = NULL;
   fgmres->sol_temp       = NULL;

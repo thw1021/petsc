@@ -95,6 +95,7 @@
 - Add `KSPPreSolve()` and `KSPPostSolve()` to run the registered `KSP` pre/post solve callbacks
 - Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
+- Add `KSPGMRESSetVectorAllocationSize()` to indicate how many additional vectors are allocated each time more restart vectors are allocated for GMRES implementations
 
 ## SNES
 
