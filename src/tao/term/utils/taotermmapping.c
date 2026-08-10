@@ -1,12 +1,29 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/matimpl.h>
 
-static PetscErrorCode TaoTermMatSnapshotGet(Mat mat, TaoTermMatSnapshot *snapshot)
+/* A NULL mat records the (0, 0, 0) snapshot, which no live PetscObject can produce. */
+PETSC_INTERN PetscErrorCode TaoTermMatSnapshotGet(Mat mat, TaoTermMatSnapshot *snapshot)
 {
   PetscFunctionBegin;
-  PetscCall(PetscObjectGetId((PetscObject)mat, &snapshot->id));
-  PetscCall(MatGetState(mat, &snapshot->state));
-  PetscCall(MatGetNonzeroState(mat, &snapshot->nonzero_state));
+  if (mat) {
+    PetscCall(PetscObjectGetId((PetscObject)mat, &snapshot->id));
+    PetscCall(MatGetState(mat, &snapshot->state));
+    PetscCall(MatGetNonzeroState(mat, &snapshot->nonzero_state));
+  } else {
+    snapshot->id            = 0;
+    snapshot->state         = 0;
+    snapshot->nonzero_state = 0;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermMatSnapshotMatches(Mat mat, const TaoTermMatSnapshot *snapshot, PetscBool *matches)
+{
+  TaoTermMatSnapshot current;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermMatSnapshotGet(mat, &current));
+  *matches = (PetscBool)(current.id == snapshot->id && current.state == snapshot->state && current.nonzero_state == snapshot->nonzero_state);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -457,6 +474,45 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
     if (mapped_H) PetscCall(TaoTermMappedHessianStateGet(unmapped_H, mt->map, mapped_H, &mt->mapped_H_state));
     if (mapped_Hpre && mapped_Hpre != mapped_H) PetscCall(TaoTermMappedHessianStateGet(unmapped_Hpre, mt->map, mapped_Hpre, &mt->mapped_Hpre_state));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Return borrowed references to the canonical raw (term-space, unscaled) Hessian matrices of
+   `mt`, materializing them on the mapping when the term can create them.
+
+   *raw_Hpre falls back to *raw_H when the mapping has no separate Hpre storage:
+   `TaoTermComputeHessian()` documents (H, NULL) and (H, H) as equivalent, and classic
+   `TaoSetHessian()` callbacks expect a valid Hpre.  *raw_H may still be NULL on return, when
+   no storage exists and the term does not define `TaoTermCreateHessianMatrices()`; the caller
+   decides how to report that. */
+PETSC_INTERN PetscErrorCode TaoTermMappingEnsureRawHessians(TaoTermMapping *mt, Mat *raw_H, Mat *raw_Hpre)
+{
+  PetscFunctionBegin;
+  if (!mt->_unmapped_H && !mt->_mapped_H) {
+    PetscBool is_defined = PETSC_FALSE;
+
+    PetscCall(TaoTermIsCreateHessianMatricesDefined(mt->term, &is_defined));
+    if (is_defined) {
+      Mat H = NULL, Hpre = NULL;
+
+      PetscCall(TaoTermCreateHessianMatrices(mt->term, &H, (mt->_unmapped_Hpre || mt->_mapped_Hpre) ? NULL : &Hpre));
+      mt->_unmapped_H = H;
+      if (Hpre) mt->_unmapped_Hpre = Hpre;
+      if (!mt->map) {
+        if (H && !mt->_mapped_H) {
+          PetscCall(PetscObjectReference((PetscObject)H));
+          mt->_mapped_H = H;
+        }
+        if (Hpre && !mt->_mapped_Hpre) {
+          PetscCall(PetscObjectReference((PetscObject)Hpre));
+          mt->_mapped_Hpre = Hpre;
+        }
+      }
+    }
+  }
+  *raw_H    = mt->_unmapped_H ? mt->_unmapped_H : mt->_mapped_H;
+  *raw_Hpre = mt->_unmapped_Hpre ? mt->_unmapped_Hpre : mt->_mapped_Hpre;
+  if (!*raw_Hpre) *raw_Hpre = *raw_H;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

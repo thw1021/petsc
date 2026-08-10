@@ -344,6 +344,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeGradient(TaoTermMapping *, Vec,
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMapping *, Vec, Vec, InsertMode, PetscReal *, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *, Vec, Vec, InsertMode, Mat, Mat);
 PETSC_INTERN PetscErrorCode TaoTermMappingApplyHessian(TaoTermMapping *, InsertMode, Mat, Mat, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoTermMappingEnsureRawHessians(TaoTermMapping *, Mat *, Mat *);
+PETSC_INTERN PetscErrorCode TaoTermMatSnapshotGet(Mat, TaoTermMatSnapshot *);
+PETSC_INTERN PetscErrorCode TaoTermMatSnapshotMatches(Mat, const TaoTermMatSnapshot *, PetscBool *);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *, Vec, Vec, Mat, Vec, InsertMode, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingSetUp(TaoTermMapping *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateSolutionVec(TaoTermMapping *, Vec *);
