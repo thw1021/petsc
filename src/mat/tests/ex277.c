@@ -156,6 +156,21 @@ int main(int argc, char **argv)
 
   if (p == q) PetscCall(CheckInvertBlockDiagonal(A, p, q, S, T));
 
+  /* Swapping the second operand after the KAIJ has been set up must take effect: with B replaced by the identity the
+     matrix becomes (A x T) + (I x S), so the reference for the second term is rebuilt over the identity as well. */
+  PetscCall(MatKAIJSetB(K2, NULL));
+  PetscCall(MatKAIJGetB(K2, &Bget));
+  PetscCheck(!Bget, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatKAIJGetB() did not report the identity after MatKAIJSetB(K, NULL)");
+  PetscCall(MatDestroy(&KBS));
+  PetscCall(MatCreateKAIJ(A, p, q, S, NULL, &KBS)); /* I \otimes S */
+  PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatKAIJSetB(K, NULL)"));
+
+  /* ... and setting it back to a general operand must take effect too */
+  PetscCall(MatKAIJSetB(K2, B));
+  PetscCall(MatDestroy(&KBS));
+  PetscCall(MatCreateKAIJ(B, p, q, NULL, S, &KBS)); /* B \otimes S */
+  PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatKAIJSetB(K, B)"));
+
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatCreateKAIJAB() MatMult matches (A x T) + (B x S)\n"));
 
   PetscCall(PetscFree2(S, T));
