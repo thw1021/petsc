@@ -69,11 +69,11 @@ static PetscErrorCode CheckInvertBlockDiagonal(Mat A, PetscInt p, PetscInt q, co
 
 int main(int argc, char **argv)
 {
-  Mat          A, B, K2, KAT, KBS, Bget;
+  Mat          A, B, K2, KAT, KBS, Bget, Dblk;
   Vec          x, y2, yr, ytmp;
   PetscScalar *S, *T;
   PetscScalar  vals[3];
-  PetscInt     n = 30, i, j, nc, p = 3, q = 3, rstart, rend, cols[3];
+  PetscInt     n = 30, i, j, nc, p = 3, q = 3, rstart, rend, cols[3], mk, nk, md, nd;
   PetscBool    bnull = PETSC_FALSE;
 
   PetscFunctionBeginUser;
@@ -127,6 +127,13 @@ int main(int argc, char **argv)
   PetscCall(MatKAIJGetB(K2, &Bget));
   PetscCheck(Bget == (bnull ? NULL : B), PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatKAIJGetB() did not return the matrix given to MatCreateKAIJAB()");
 
+  /* MatGetDiagonalBlock() must work before the first MatMult(), which is what otherwise builds the cached
+     sequential submatrices of a MATMPIKAIJ */
+  PetscCall(MatGetDiagonalBlock(K2, &Dblk));
+  PetscCall(MatGetLocalSize(K2, &mk, &nk));
+  PetscCall(MatGetLocalSize(Dblk, &md, &nd));
+  PetscCheck(md == mk && nd == nk, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatGetDiagonalBlock() returned a %" PetscInt_FMT " x %" PetscInt_FMT " block, expected %" PetscInt_FMT " x %" PetscInt_FMT, md, nd, mk, nk);
+
   /* Reference operators */
   PetscCall(MatCreateKAIJ(A, p, q, NULL, T, &KAT));            /* A \otimes T */
   if (bnull) PetscCall(MatCreateKAIJ(B, p, q, S, NULL, &KBS)); /* I \otimes S (matches identity B) */
@@ -143,6 +150,12 @@ int main(int argc, char **argv)
   PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatScale(A)"));
   PetscCall(MatScale(B, -0.8));
   PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatScale(B)"));
+
+  /* The reassembly above destroys and recreates the cached submatrices, so the diagonal block must be re-fetched
+     rather than reused; querying it again has to hand back the rebuilt one, not the freed pointer from before. */
+  PetscCall(MatGetDiagonalBlock(K2, &Dblk));
+  PetscCall(MatGetLocalSize(Dblk, &md, &nd));
+  PetscCheck(md == mk && nd == nk, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatGetDiagonalBlock() returned a %" PetscInt_FMT " x %" PetscInt_FMT " block after reassembly, expected %" PetscInt_FMT " x %" PetscInt_FMT, md, nd, mk, nk);
 
   /* Changing the dense blocks after setup must invalidate the cached submatrices too, since those hold copies of S
      and T. The reference is rebuilt from scratch rather than updated in place, so that a missed invalidation on both

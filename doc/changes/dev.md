@@ -81,6 +81,8 @@
 - Add new `MatType` `MATSEQBAIJLIBXSMM` and `MATMPIBAIJLIBXSMM`
 - Add `MatCreateKAIJAB()`, `MatKAIJSetB()` and `MatKAIJGetB()` so a `MATKAIJ` matrix can represent (A x T) + (B x S) with a general second
   operand `B` instead of the identity; `MatSOR()`, `MatGetRow()` and `MatConvert()` are not supported when `B` is not the identity
+- Add support for `MatGetDiagonalBlock()` with `MATMPIKAIJ`, which previously errored; this allows `PCPBJACOBI` to be used with a parallel `MATKAIJ`
+- Change `MatKAIJSetAIJ()` to release a previously set `MATAIJ` matrix and to require `MATSEQAIJ` for a `MATSEQKAIJ` and `MATMPIAIJ` for a `MATMPIKAIJ`
 
 ## MatCoarsen
 
