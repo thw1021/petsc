@@ -1280,8 +1280,18 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
     Mat             hessian = NULL, hessian_pre = NULL;
 
     if (!TaoTermHessianMasked(summand->mask)) {
-      PetscCall(TaoTermSumHessCacheGetHessian(term, x, sub_param, &sum->hessian_cache, i, H ? &hessian : NULL, Hpre && Hpre != H ? &hessian_pre : NULL));
-      PetscCall(TaoTermMappingApplyHessian(summand, mode, hessian, hessian_pre, H, Hpre == H ? NULL : Hpre));
+      Mat raw_H, raw_Hpre;
+
+      PetscCall(TaoTermMappingEnsureRawHessians(summand, &raw_H, &raw_Hpre));
+      if (raw_H) {
+        PetscCall(TaoTermSumHessCacheGetHessian(term, x, sub_param, &sum->hessian_cache, i, H ? &hessian : NULL, Hpre && Hpre != H ? &hessian_pre : NULL));
+        PetscCall(TaoTermMappingApplyHessian(summand, mode, hessian, hessian_pre, H, Hpre == H ? NULL : Hpre));
+      } else {
+        /* Some terms can evaluate into caller-provided assembled matrices but cannot create
+           persistent raw storage.  Preserve that workflow without publishing a cache entry;
+           Hessian-vector fallback still requires storage in TaoTermSumHessCacheGetHessian(). */
+        PetscCall(TaoTermMappingComputeHessian(summand, x, sub_param, mode, H, Hpre == H ? NULL : Hpre));
+      }
       inserted = PETSC_TRUE;
     }
   }

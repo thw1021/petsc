@@ -478,7 +478,10 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
 }
 
 /* Return borrowed references to the canonical raw (term-space, unscaled) Hessian matrices of
-   `mt`, materializing them on the mapping when the term can create them.
+   `mt`, materializing them on the mapping when the term can create them.  For a mapped term,
+   only the unmapped matrices are raw storage; mapped matrices are outer-space PtAP targets and
+   never substitute for missing raw storage.  Without a map, mapped and unmapped storage have
+   the same layout and may alias.
 
    *raw_Hpre falls back to *raw_H when the mapping has no separate Hpre storage:
    `TaoTermComputeHessian()` documents (H, NULL) and (H, H) as equivalent, and classic
@@ -488,14 +491,14 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
 PETSC_INTERN PetscErrorCode TaoTermMappingEnsureRawHessians(TaoTermMapping *mt, Mat *raw_H, Mat *raw_Hpre)
 {
   PetscFunctionBegin;
-  if (!mt->_unmapped_H && !mt->_mapped_H) {
+  if (!mt->_unmapped_H && (mt->map || !mt->_mapped_H)) {
     PetscBool is_defined = PETSC_FALSE;
 
     PetscCall(TaoTermIsCreateHessianMatricesDefined(mt->term, &is_defined));
     if (is_defined) {
       Mat H = NULL, Hpre = NULL;
 
-      PetscCall(TaoTermCreateHessianMatrices(mt->term, &H, (mt->_unmapped_Hpre || mt->_mapped_Hpre) ? NULL : &Hpre));
+      PetscCall(TaoTermCreateHessianMatrices(mt->term, &H, (mt->_unmapped_Hpre || (!mt->map && mt->_mapped_Hpre)) ? NULL : &Hpre));
       mt->_unmapped_H = H;
       if (Hpre) mt->_unmapped_Hpre = Hpre;
       if (!mt->map) {
@@ -510,8 +513,13 @@ PETSC_INTERN PetscErrorCode TaoTermMappingEnsureRawHessians(TaoTermMapping *mt, 
       }
     }
   }
-  *raw_H    = mt->_unmapped_H ? mt->_unmapped_H : mt->_mapped_H;
-  *raw_Hpre = mt->_unmapped_Hpre ? mt->_unmapped_Hpre : mt->_mapped_Hpre;
+  if (mt->map) {
+    *raw_H    = mt->_unmapped_H;
+    *raw_Hpre = mt->_unmapped_Hpre;
+  } else {
+    *raw_H    = mt->_unmapped_H ? mt->_unmapped_H : mt->_mapped_H;
+    *raw_Hpre = mt->_unmapped_Hpre ? mt->_unmapped_Hpre : mt->_mapped_Hpre;
+  }
   if (!*raw_Hpre) *raw_Hpre = *raw_H;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

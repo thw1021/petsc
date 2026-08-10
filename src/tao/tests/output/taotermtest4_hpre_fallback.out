@@ -1,0 +1,3 @@
+H-only summand storage fills a distinct outer Hpre
+Mapped-only storage uses separately created raw storage
+No-storage summand evaluates into assembled caller output
