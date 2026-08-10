@@ -209,11 +209,8 @@ int main(int argc, char **args)
     PetscCall(VecLoad(x, viewer));
     PetscCall(PetscViewerDestroy(&viewer));
     initialguess = PETSC_TRUE;
-  } else if (initialguess) {
-    PetscCall(VecSet(x, 1.0));
-  } else {
-    PetscCall(VecSet(x, 0.0));
-  }
+  } else if (initialguess) PetscCall(VecSet(x, 1.0));
+  else PetscCall(VecSet(x, 0.0));
 
   /* Check scaling in A */
   flg = PETSC_FALSE;
@@ -291,9 +288,7 @@ int main(int argc, char **args)
       PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, 4, &BtB));
       PetscCall(KSPSetOperators(ksp, A, BtB));
       PetscCall(MatDestroy(&BtB));
-    } else {
-      PetscCall(KSPSetOperators(ksp, A, A));
-    }
+    } else PetscCall(KSPSetOperators(ksp, A, A));
     PetscCall(KSPSetFromOptions(ksp));
 
     /* if we test BDDC, make sure pmat is of type MATIS */
@@ -338,21 +333,12 @@ int main(int argc, char **args)
       }
       PetscCall(KSPGetIterationNumber(ksp, &its));
       if (cknorm) { /* Check error for each rhs */
-        if (trans) {
-          PetscCall(MatMultTranspose(A, x, u));
-        } else {
-          PetscCall(MatMult(A, x, u));
-        }
+        if (trans) PetscCall(MatMultTranspose(A, x, u));
+        else PetscCall(MatMult(A, x, u));
         PetscCall(VecAXPY(u, -1.0, b));
         PetscCall(VecNorm(u, NORM_2, &norm));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Number of iterations = %3" PetscInt_FMT "\n", its));
-        if (!PetscIsNanScalar(norm)) {
-          if (norm < 1.e-12) {
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm < 1.e-12\n"));
-          } else {
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm %g\n", (double)norm));
-          }
-        }
+        if (!PetscIsNanScalar(norm)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm %g\n", (double)norm));
       }
     } /* while (num_rhs--) */
 
@@ -393,13 +379,7 @@ int main(int argc, char **args)
       PetscCall(PetscViewerDestroy(&viewer));
     } else {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of iterations = %3" PetscInt_FMT "\n", its));
-      if (!PetscIsNanReal(norm)) {
-        if (norm < 1.e-12) {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Residual norm < 1.e-12\n"));
-        } else {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Residual norm %g\n", (double)norm));
-        }
-      }
+      if (!PetscIsNanReal(norm)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Residual norm %g\n", (double)norm));
     }
     PetscCall(PetscOptionsGetString(NULL, NULL, "-solution", file[3], sizeof(file[3]), &flg));
     if (flg) {
