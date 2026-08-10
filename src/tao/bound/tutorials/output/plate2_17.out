@@ -1,29 +1,29 @@
 
 ---- Minimum Surface Area With Plate Problem -----
 mx:8, my:8, bmx:2, bmy:5, height:0.3
-  0 TAO,  Function value: 1.83917,  Residual: 0.44807
-  1 TAO,  Function value: 1.79522,  Residual: 0.58077
-  2 TAO,  Function value: 1.68677,  Residual: 0.332042
-  3 TAO,  Function value: 1.65405,  Residual: 0.477018
-  4 TAO,  Function value: 1.61302,  Residual: 0.142922
-  5 TAO,  Function value: 1.60888,  Residual: 0.0809677
-  6 TAO,  Function value: 1.60667,  Residual: 0.0648005
-  7 TAO,  Function value: 1.60351,  Residual: 0.0601214
-  8 TAO,  Function value: 1.60249,  Residual: 0.066145
-  9 TAO,  Function value: 1.60164,  Residual: 0.0368939
- 10 TAO,  Function value: 1.60133,  Residual: 0.0252556
- 11 TAO,  Function value: 1.6012,  Residual: 0.0137144
- 12 TAO,  Function value: 1.60116,  Residual: 0.00557861
- 13 TAO,  Function value: 1.60115,  Residual: 0.00396689
- 14 TAO,  Function value: 1.60115,  Residual: 0.00147233
- 15 TAO,  Function value: 1.60115,  Residual: 0.00119981
- 16 TAO,  Function value: 1.60115,  Residual: 0.00101585
- 17 TAO,  Function value: 1.60115,  Residual: 0.00139896
- 18 TAO,  Function value: 1.60115,  Residual: 0.000311967
- 19 TAO,  Function value: 1.60115,  Residual: 0.000165684
- 20 TAO,  Function value: 1.60115,  Residual: 0.000124522
- 21 TAO,  Function value: 1.60115,  Residual: 0.000148965
- 22 TAO,  Function value: 1.60115,  Residual: 5.30587e-05
+  0 TAO,  Function value: 1.83917,  Residual: 0.44807 
+  1 TAO,  Function value: 1.79522,  Residual: 0.58077 
+  2 TAO,  Function value: 1.68677,  Residual: 0.332042 
+  3 TAO,  Function value: 1.65405,  Residual: 0.477018 
+  4 TAO,  Function value: 1.61302,  Residual: 0.142922 
+  5 TAO,  Function value: 1.60888,  Residual: 0.0809677 
+  6 TAO,  Function value: 1.60667,  Residual: 0.0648005 
+  7 TAO,  Function value: 1.60351,  Residual: 0.0601214 
+  8 TAO,  Function value: 1.60249,  Residual: 0.066145 
+  9 TAO,  Function value: 1.60164,  Residual: 0.0368939 
+ 10 TAO,  Function value: 1.60133,  Residual: 0.0252556 
+ 11 TAO,  Function value: 1.6012,  Residual: 0.0137144 
+ 12 TAO,  Function value: 1.60116,  Residual: 0.00557861 
+ 13 TAO,  Function value: 1.60115,  Residual: 0.00396689 
+ 14 TAO,  Function value: 1.60115,  Residual: 0.00147233 
+ 15 TAO,  Function value: 1.60115,  Residual: 0.00119981 
+ 16 TAO,  Function value: 1.60115,  Residual: 0.00101585 
+ 17 TAO,  Function value: 1.60115,  Residual: 0.00139896 
+ 18 TAO,  Function value: 1.60115,  Residual: 0.000311967 
+ 19 TAO,  Function value: 1.60115,  Residual: 0.000165684 
+ 20 TAO,  Function value: 1.60115,  Residual: 0.000124522 
+ 21 TAO,  Function value: 1.60115,  Residual: 0.000148965 
+ 22 TAO,  Function value: 1.60115,  Residual: 5.30587e-05 
 Tao Object: 1 MPI process
   type: bqnkls
     Tao Object: (tao_bnk_cg_) 1 MPI process
