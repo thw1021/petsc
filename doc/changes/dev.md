@@ -95,12 +95,14 @@
 - Add `KSPPreSolve()` and `KSPPostSolve()` to run the registered `KSP` pre/post solve callbacks
 - Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
+- Deprecate `KSPMonitorResidualShort()` and `-ksp_monitor_short`
 
 ## SNES
 
 - Change `SNESSetUp()` to not overwrite the NPC application context if one has previously been set on the NPC
 - Change `SNESComputeJacobian()` to call the user-provided Jacobian function when a left NPC is active and the solver is not `SNESASPIN`
 - Add support for nonlinear preconditioners with a `DM` different from the parent `SNES` `DM`. Calling `SNESSetNPC()` will no longer enforce default parameters on the npc.
+- Deprecate `SNESMonitorDefaultShort()` and `-snes_monitor_short`
 
 ## SNESLineSearch
 
@@ -116,6 +118,7 @@
 ## TAO
 
 - Add `TaoGetDM()` and `TaoSetDM()`
+- Deprecate `TaoMonitorDefaultShort()` and `-tao_monitor_short`
 
 ## TaoTerm
 
