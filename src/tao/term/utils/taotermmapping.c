@@ -1,7 +1,24 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/matimpl.h>
 
-/* A NULL mat records the (0, 0, 0) snapshot, which no live PetscObject can produce. */
+/*
+  TaoTermMatSnapshotGet - Record the ID , state, and nonzero-pattern state of a matrix
+
+  Not Collective
+
+  Input Parameter:
+. mat - the matrix, or `NULL`
+
+  Output Parameter:
+. snapshot - the matrix snapshot
+
+  Level: developer
+
+  Note:
+  A `NULL` matrix produces the snapshot `(0, 0, 0)`, which cannot match a live `PetscObject`.
+
+.seealso: `TaoTermMatSnapshot`, `TaoTermMatSnapshotMatches()`
+*/
 PETSC_INTERN PetscErrorCode TaoTermMatSnapshotGet(Mat mat, TaoTermMatSnapshot *snapshot)
 {
   PetscFunctionBegin;
@@ -17,6 +34,22 @@ PETSC_INTERN PetscErrorCode TaoTermMatSnapshotGet(Mat mat, TaoTermMatSnapshot *s
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  TaoTermMatSnapshotMatches - Determine whether a matrix matches a recorded snapshot
+
+  Not Collective
+
+  Input Parameters:
++ mat      - the matrix, or `NULL`
+- snapshot - a snapshot produced by `TaoTermMatSnapshotGet()`
+
+  Output Parameter:
+. matches - `PETSC_TRUE` if the matrix ID, state, and nonzero-pattern state all match
+
+  Level: developer
+
+.seealso: `TaoTermMatSnapshot`, `TaoTermMatSnapshotGet()`
+*/
 PETSC_INTERN PetscErrorCode TaoTermMatSnapshotMatches(Mat mat, const TaoTermMatSnapshot *snapshot, PetscBool *matches)
 {
   TaoTermMatSnapshot current;
@@ -477,17 +510,30 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Return borrowed references to the canonical raw (term-space, unscaled) Hessian matrices of
-   `mt`, materializing them on the mapping when the term can create them.  For a mapped term,
-   only the unmapped matrices are raw storage; mapped matrices are outer-space PtAP targets and
-   never substitute for missing raw storage.  Without a map, mapped and unmapped storage have
-   the same layout and may alias.
+/*
+  TaoTermMappingEnsureRawHessians - Get or create the canonical raw Hessian storage for a `TaoTermMapping`
 
-   *raw_Hpre falls back to *raw_H when the mapping has no separate Hpre storage:
-   `TaoTermComputeHessian()` documents (H, NULL) and (H, H) as equivalent, and classic
-   `TaoSetHessian()` callbacks expect a valid Hpre.  *raw_H may still be NULL on return, when
-   no storage exists and the term does not define `TaoTermCreateHessianMatrices()`; the caller
-   decides how to report that. */
+  Collective
+
+  Input Parameter:
+. mt - the `TaoTermMapping`
+
+  Output Parameters:
++ raw_H    - the term-space, unscaled Hessian matrix, or `NULL` if none can be created
+- raw_Hpre - the term-space, unscaled preconditioning matrix, or `NULL` if `raw_H` is `NULL`
+
+  Level: developer
+
+  Notes:
+  For a mapped term, only `mt->_unmapped_H` and `mt->_unmapped_Hpre` are raw storage;
+  `mt->_mapped_H` and `mt->_mapped_Hpre` are outer-space `MatPtAP()` targets.  Without a map,
+  mapped and unmapped storage have the same layout and may alias.
+
+  Missing raw storage is created with `TaoTermCreateHessianMatrices()` when that operation is
+  defined.  If no separate raw preconditioning matrix exists, `raw_Hpre` is set to `raw_H`.
+
+.seealso: `TaoTermMapping`, `TaoTermCreateHessianMatrices()`, `TaoTermMappingApplyHessian()`
+*/
 PETSC_INTERN PetscErrorCode TaoTermMappingEnsureRawHessians(TaoTermMapping *mt, Mat *raw_H, Mat *raw_Hpre)
 {
   PetscFunctionBegin;
@@ -524,8 +570,33 @@ PETSC_INTERN PetscErrorCode TaoTermMappingEnsureRawHessians(TaoTermMapping *mt, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Apply already-computed, raw Hessian matrices through `mt` and accumulate them in `H` and
-   `Hpre`.  The raw matrices are unscaled and live in the term solution space. */
+/*
+  TaoTermMappingApplyHessian - Map, scale, and accumulate raw Hessian matrices into destination matrices
+
+  Collective
+
+  Input Parameters:
++ mt            - the `TaoTermMapping`
+. mode          - `INSERT_VALUES` or `ADD_VALUES`
+. unmapped_H    - (optional) the raw, unscaled Hessian in the term solution space
+- unmapped_Hpre - (optional) the raw, unscaled preconditioning matrix in the term solution space
+
+  Output Parameters:
++ H    - (optional) the destination Hessian in the outer solution space
+- Hpre - (optional) the destination preconditioning matrix in the outer solution space
+
+  Level: developer
+
+  Notes:
+  If `mt->map` is set, this routine forms `map^T * unmapped_H * map` and the corresponding
+  preconditioning matrix using the mapping's cached mapped storage.  Otherwise the raw matrices
+  are used directly.
+
+  `INSERT_VALUES` overwrites each destination and `ADD_VALUES` accumulates into it.  In both
+  cases the contribution is scaled by `mt->scale`.
+
+.seealso: `TaoTermMapping`, `TaoTermMappingEnsureRawHessians()`, `TaoTermMappingComputeHessian()`
+*/
 PETSC_INTERN PetscErrorCode TaoTermMappingApplyHessian(TaoTermMapping *mt, InsertMode mode, Mat unmapped_H, Mat unmapped_Hpre, Mat H, Mat Hpre)
 {
   Mat mapped_H = unmapped_H, mapped_Hpre = unmapped_Hpre;

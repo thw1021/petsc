@@ -81,35 +81,34 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Cache infrastructure for per-summand Hessian and Hessian-vector paths.
+/*
+  TaoTermSumHessCacheEntryPrepare - Prepare a summand's Hessian cache entry for an evaluation point
 
-  Why this exists: TaoTermComputeHessianMult_Sum() applies H_i v for each summand.  When the
-  summand has neither a mapped Hessian-mult callback nor a hessianmult op on the underlying
-  term, the only fallback is to assemble the unmapped Hessian H_i and call MatMult(H_i, ...).
-  When the summand has a hessianmult op but no mapped callback, we instead need the mapped
-  evaluation point Ax = map * x to feed the op.  A Krylov solver typically applies H many
-  times at the same x, so we cache both H_i and Ax across calls.
+  Not Collective
 
-  Cache layout: one entry per summand, lazily sized to sum->n_terms.  If sum->n_terms changes
-  the whole cache is dropped (size mismatch -> reset -> realloc).  An entry owns only one
-  mapped-solution Vec; it holds no matrix references.  The matrices themselves are the summand
-  mapping's canonical raw storage (TaoTermMappingEnsureRawHessians()), re-read on every lookup,
-  so replacing that storage cannot leave a dangling alias here.  Two validity bits track
-  whether the matrices and vector are fresh for the recorded (x, params, map) key.  Ax depends
-  on x and the map; we conservatively invalidate it on a parameter change as well, which costs
-  at most one redundant MatMult per parameter change.
+  Input Parameters:
++ term   - the `TAOTERMSUM`
+. x      - the outer-space solution vector
+. params - the summand parameter vector, or `NULL`
+. cache  - the sum's Hessian cache
+- index  - the summand index
 
-  Cache key: matching (x_id, x_state, p_id, p_state, map_id, map_state).  When params or the
-  map is NULL we treat its (id, state) as (0, 0) on both sides, which is consistent because
-  PetscObjectId never returns 0 for a real PetscObject.  Including the map ensures that an
-  in-place update between Hessian evaluations invalidates both cached Ax and any Hessian
-  evaluated at that mapped point, while an unchanged map remains cached across Krylov products.
+  Output Parameters:
++ summand_out - the indexed summand mapping
+- entry_out   - the prepared cache entry
 
-  The matrix snapshots (id, state, nonzero state) detect changes made outside this cache: a
-  setter replacing the storage changes the id, an external write changes the state.  Both
-  assembled Hessian and Hessian-vector fallback evaluations use this cache, so a known
-  evaluation publishes its new key while an unknown mutation causes the next lookup to miss.
-  entry->Ax is allocated via MatCreateVecs() on summand->map the first time. */
+  Level: developer
+
+  Notes:
+  The cache is lazily allocated with one entry per summand.  Each entry is keyed by the object
+  identity and state of `x`, `params`, and the summand map; `NULL` parameters or maps use the
+  sentinel `(0, 0)`.  A key change invalidates both the raw Hessian and mapped-point caches.
+
+  This routine does not evaluate a Hessian or mapped point.  Those values are computed lazily by
+  `TaoTermSumHessCacheGetHessian()` and `TaoTermSumHessCacheEntryGetMappedX()`.
+
+.seealso: `TaoTermSumHessCacheGetHessian()`, `TaoTermSumHessCacheEntryGetMappedX()`
+*/
 static PetscErrorCode TaoTermSumHessCacheEntryPrepare(TaoTerm term, Vec x, Vec params, TaoTermSumHessCache *cache, PetscInt index, TaoTermMapping **summand_out, TaoTermSumHessCacheEntry **entry_out)
 {
   TaoTerm_Sum              *sum = (TaoTerm_Sum *)term->data;
@@ -183,20 +182,35 @@ static PetscErrorCode TaoTermSumHessCacheGetMappedX(TaoTerm term, Vec x, Vec par
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Return the raw, unscaled Hessian matrices at (x, params) for summand `index`, computing and
-   caching them on miss.
+/*
+  TaoTermSumHessCacheGetHessian - Get a summand's cached raw Hessian matrices at an evaluation point
 
-   The returned matrices are borrowed references to the summand's canonical raw storage (see
-   TaoTermMappingEnsureRawHessians()); the cache holds no references of its own, only the
-   (x, params, map) key and per-matrix state snapshots.  A snapshot mismatch -- the storage was
-   replaced by a setter, or written outside this cache -- forces recomputation.
+  Collective
 
-   On a miss both H and Hpre are always computed together, even when the caller requests only
-   one of them: a single TaoTermComputeHessian() call fills both, passing a NULL Hpre instead
-   would break classic TaoSetHessian() callbacks that expect a valid matrix, and passing H as a
-   stand-in Hpre would corrupt H whenever the term computes genuinely different Hpre values.
-   The only waste is a redundant Hpre fill for a summand with distinct Hpre storage when the
-   outer Hessian is matrix-free and Hpre is never assembled. */
+  Input Parameters:
++ term   - the `TAOTERMSUM`
+. x      - the outer-space solution vector
+. params - the summand parameter vector, or `NULL`
+. cache  - the sum's Hessian cache
+- index  - the summand index
+
+  Output Parameters:
++ hessian     - (optional) the raw, unscaled Hessian
+- hessian_pre - (optional) the raw, unscaled preconditioning matrix
+
+  Level: developer
+
+  Notes:
+  The returned matrices are borrowed from the summand mapping's canonical raw storage.  The
+  cache stores only the evaluation key and matrix snapshots; replacing or modifying either
+  matrix therefore forces recomputation.
+
+  On a miss, `TaoTermComputeHessian()` computes both matrices together.  Supplying both preserves
+  callbacks that require a valid preconditioning matrix and avoids aliasing distinct Hessian and
+  preconditioning results.
+
+.seealso: `TaoTermSumHessCacheEntryPrepare()`, `TaoTermMappingEnsureRawHessians()`, `TaoTermComputeHessian()`
+*/
 static PetscErrorCode TaoTermSumHessCacheGetHessian(TaoTerm term, Vec x, Vec params, TaoTermSumHessCache *cache, PetscInt index, Mat *hessian, Mat *hessian_pre)
 {
   TaoTermMapping           *summand;
@@ -1274,10 +1288,11 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
      once at creation in TaoTermCreateHessianMatrices_Sum(), so no MatZeroEntries() is needed
      here: the INSERT_VALUES summand resets the contents. */
   for (PetscInt i = 0; i < sum->n_terms; i++) {
-    TaoTermMapping *summand   = &sum->terms[i];
-    Vec             sub_param = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
-    InsertMode      mode      = inserted ? ADD_VALUES : INSERT_VALUES;
-    Mat             hessian = NULL, hessian_pre = NULL;
+    TaoTermMapping *summand     = &sum->terms[i];
+    Vec             sub_param   = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
+    InsertMode      mode        = inserted ? ADD_VALUES : INSERT_VALUES;
+    Mat             hessian     = NULL;
+    Mat             hessian_pre = NULL;
 
     if (!TaoTermHessianMasked(summand->mask)) {
       Mat raw_H, raw_Hpre;
