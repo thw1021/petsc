@@ -893,17 +893,13 @@ end program plate2f
 !      requires: !complex
 !
 !   test:
-!      args: -tao_monitor_short -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bqnls -tao_gatol 1.e-4
-!      filter: sort -b
-!      filter_output: sort -b
+!      args: -tao_monitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bqnls -tao_gatol 1.e-4
 !      requires: !single
 !
 !   test:
 !      suffix: 2
 !      nsize: 2
-!      args: -tao_monitor_short -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bqnls -tao_gatol 1.e-4
-!      filter: sort -b
-!      filter_output: sort -b
+!      args: -tao_monitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bqnls -tao_gatol 1.e-4
 !      requires: !single
 !
 !TEST*/

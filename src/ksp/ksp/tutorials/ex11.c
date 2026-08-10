@@ -195,11 +195,7 @@ int main(int argc, char **args)
   PetscCall(VecAXPY(x, none, u));
   PetscCall(VecNorm(x, NORM_2, &norm));
   PetscCall(KSPGetIterationNumber(ksp, &its));
-  if (norm < 1.e-12) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error < 1.e-12 iterations %" PetscInt_FMT "\n", its));
-  } else {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g iterations %" PetscInt_FMT "\n", (double)norm, its));
-  }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g iterations %" PetscInt_FMT "\n", (double)norm, its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they
@@ -221,11 +217,11 @@ int main(int argc, char **args)
       requires: complex
 
    test:
-      args: -n 6 -norandom -pc_type none -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always
+      args: -n 6 -norandom -pc_type none -ksp_monitor -ksp_gmres_cgs_refinement_type refine_always
 
    testset:
       suffix: deflation
-      args: -norandom -pc_type deflation -ksp_monitor_short
+      args: -norandom -pc_type deflation -ksp_monitor
       requires: superlu_dist
 
       test:
