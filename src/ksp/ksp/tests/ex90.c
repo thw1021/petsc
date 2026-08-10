@@ -111,6 +111,7 @@ int main(int argc, char **argv)
   test:
     # Testing errors so only look for errors
     suffix: 2
+    requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
     args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12 -modify_matrix -petsc_ci_portable_error_output -error_output_stdout
     filter: grep -E "(PETSC ERROR)" | grep -E "(modified the KSP|KSPPreSolve)"
 
