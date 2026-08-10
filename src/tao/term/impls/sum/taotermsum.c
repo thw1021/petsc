@@ -13,8 +13,8 @@ typedef struct _n_TaoTermSumHessCacheEntry {
   PetscObjectState   x_state;
   PetscObjectState   p_state;
   PetscObjectState   map_state;
-  TaoTermMatSnapshot hessian_state;     /* snapshot of the summand's raw Hessian at the last computation */
-  TaoTermMatSnapshot hessian_pre_state; /* snapshot of the summand's raw Hessian preconditioning matrix */
+  TaoTermMatSnapshot hessian_state;     /* snapshot of the summand's unmapped Hessian at the last computation */
+  TaoTermMatSnapshot hessian_pre_state; /* snapshot of the summand's unmapped Hessian preconditioning matrix */
   PetscBool          hessian_valid;     /* set when the matrices have been computed at the recorded key */
   PetscBool          Ax_valid;          /* set when entry->Ax has been computed at the recorded x */
   Vec                Ax;                /* cached mapped solution mt->map * x for the summand; NULL when no map */
@@ -102,7 +102,7 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   Notes:
   The cache is lazily allocated with one entry per summand.  Each entry is keyed by the object
   identity and state of `x`, `params`, and the summand map; `NULL` parameters or maps use the
-  sentinel `(0, 0)`.  A key change invalidates both the raw Hessian and mapped-point caches.
+  sentinel `(0, 0)`.  A key change invalidates both the unmapped Hessian and mapped-point caches.
 
   This routine does not evaluate a Hessian or mapped point.  Those values are computed lazily by
   `TaoTermSumHessCacheGetHessian()` and `TaoTermSumHessCacheEntryGetMappedX()`.
@@ -183,7 +183,7 @@ static PetscErrorCode TaoTermSumHessCacheGetMappedX(TaoTerm term, Vec x, Vec par
 }
 
 /*
-  TaoTermSumHessCacheGetHessian - Get a summand's cached raw Hessian matrices at an evaluation point
+  TaoTermSumHessCacheGetHessian - Get a summand's cached unmapped Hessian matrices at an evaluation point
 
   Collective
 
@@ -195,13 +195,13 @@ static PetscErrorCode TaoTermSumHessCacheGetMappedX(TaoTerm term, Vec x, Vec par
 - index  - the summand index
 
   Output Parameters:
-+ hessian     - (optional) the raw, unscaled Hessian
-- hessian_pre - (optional) the raw, unscaled preconditioning matrix
++ hessian     - (optional) the unmapped, unscaled Hessian
+- hessian_pre - (optional) the unmapped, unscaled preconditioning matrix
 
   Level: developer
 
   Notes:
-  The returned matrices are borrowed from the summand mapping's canonical raw storage.  The
+  The returned matrices are borrowed from the summand mapping's canonical unmapped storage.  The
   cache stores only the evaluation key and matrix snapshots; replacing or modifying either
   matrix therefore forces recomputation.
 
@@ -209,32 +209,32 @@ static PetscErrorCode TaoTermSumHessCacheGetMappedX(TaoTerm term, Vec x, Vec par
   callbacks that require a valid preconditioning matrix and avoids aliasing distinct Hessian and
   preconditioning results.
 
-.seealso: `TaoTermSumHessCacheEntryPrepare()`, `TaoTermMappingEnsureRawHessians()`, `TaoTermComputeHessian()`
+.seealso: `TaoTermSumHessCacheEntryPrepare()`, `TaoTermMappingGetUnmappedHessians()`, `TaoTermComputeHessian()`
 */
 static PetscErrorCode TaoTermSumHessCacheGetHessian(TaoTerm term, Vec x, Vec params, TaoTermSumHessCache *cache, PetscInt index, Mat *hessian, Mat *hessian_pre)
 {
   TaoTermMapping           *summand;
   TaoTermSumHessCacheEntry *entry;
   Vec                       Ax;
-  Mat                       raw_H, raw_Hpre;
+  Mat                       unmapped_H, unmapped_Hpre;
   PetscBool                 H_matches, Hpre_matches;
 
   PetscFunctionBegin;
   PetscCall(TaoTermSumHessCacheEntryPrepare(term, x, params, cache, index, &summand, &entry));
-  PetscCall(TaoTermMappingEnsureRawHessians(summand, &raw_H, &raw_Hpre));
-  PetscCheck(raw_H, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "Summand %" PetscInt_FMT " has no Hessian matrix storage and its term cannot create any; provide matrices (e.g. with TaoSetHessian() or TaoTermSumSetTermHessianMatrices()) or a Hessian-vector product", index);
-  PetscCall(TaoTermMatSnapshotMatches(raw_H, &entry->hessian_state, &H_matches));
-  PetscCall(TaoTermMatSnapshotMatches(raw_Hpre, &entry->hessian_pre_state, &Hpre_matches));
+  PetscCall(TaoTermMappingGetUnmappedHessians(summand, &unmapped_H, &unmapped_Hpre));
+  PetscCheck(unmapped_H, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "Summand %" PetscInt_FMT " has no Hessian matrix storage and its term cannot create any; provide matrices (e.g. with TaoSetHessian() or TaoTermSumSetTermHessianMatrices()) or a Hessian-vector product", index);
+  PetscCall(TaoTermMatSnapshotMatches(unmapped_H, &entry->hessian_state, &H_matches));
+  PetscCall(TaoTermMatSnapshotMatches(unmapped_Hpre, &entry->hessian_pre_state, &Hpre_matches));
   if (!H_matches || !Hpre_matches) entry->hessian_valid = PETSC_FALSE;
   if (!entry->hessian_valid) {
     PetscCall(TaoTermSumHessCacheEntryGetMappedX(summand, entry, x, &Ax));
-    PetscCall(TaoTermComputeHessian(summand->term, summand->map ? Ax : x, params, raw_H, raw_Hpre));
-    PetscCall(TaoTermMatSnapshotGet(raw_H, &entry->hessian_state));
-    PetscCall(TaoTermMatSnapshotGet(raw_Hpre, &entry->hessian_pre_state));
+    PetscCall(TaoTermComputeHessian(summand->term, summand->map ? Ax : x, params, unmapped_H, unmapped_Hpre));
+    PetscCall(TaoTermMatSnapshotGet(unmapped_H, &entry->hessian_state));
+    PetscCall(TaoTermMatSnapshotGet(unmapped_Hpre, &entry->hessian_pre_state));
     entry->hessian_valid = PETSC_TRUE;
   }
-  if (hessian) *hessian = raw_H;
-  if (hessian_pre) *hessian_pre = raw_Hpre;
+  if (hessian) *hessian = unmapped_H;
+  if (hessian_pre) *hessian_pre = unmapped_Hpre;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1295,15 +1295,15 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
     Mat             hessian_pre = NULL;
 
     if (!TaoTermHessianMasked(summand->mask)) {
-      Mat raw_H, raw_Hpre;
+      Mat unmapped_H, unmapped_Hpre;
 
-      PetscCall(TaoTermMappingEnsureRawHessians(summand, &raw_H, &raw_Hpre));
-      if (raw_H) {
+      PetscCall(TaoTermMappingGetUnmappedHessians(summand, &unmapped_H, &unmapped_Hpre));
+      if (unmapped_H) {
         PetscCall(TaoTermSumHessCacheGetHessian(term, x, sub_param, &sum->hessian_cache, i, H ? &hessian : NULL, Hpre && Hpre != H ? &hessian_pre : NULL));
         PetscCall(TaoTermMappingApplyHessian(summand, mode, hessian, hessian_pre, H, Hpre == H ? NULL : Hpre));
       } else {
         /* Some terms can evaluate into caller-provided assembled matrices but cannot create
-           persistent raw storage.  Preserve that workflow without publishing a cache entry;
+           persistent unmapped storage.  Preserve that workflow without publishing a cache entry;
            Hessian-vector fallback still requires storage in TaoTermSumHessCacheGetHessian(). */
         PetscCall(TaoTermMappingComputeHessian(summand, x, sub_param, mode, H, Hpre == H ? NULL : Hpre));
       }
