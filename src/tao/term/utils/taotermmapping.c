@@ -460,6 +460,31 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Apply already-computed, raw Hessian matrices through `mt` and accumulate them in `H` and
+   `Hpre`.  The raw matrices are unscaled and live in the term solution space. */
+PETSC_INTERN PetscErrorCode TaoTermMappingApplyHessian(TaoTermMapping *mt, InsertMode mode, Mat unmapped_H, Mat unmapped_Hpre, Mat H, Mat Hpre)
+{
+  Mat mapped_H = unmapped_H, mapped_Hpre = unmapped_Hpre;
+
+  PetscFunctionBegin;
+  TaoTermMappingCheckInsertMode(mt, mode);
+  if (mt->map) {
+    if (H && unmapped_H) {
+      if (!mt->_mapped_H) PetscCall(TaoTermMappingCreateMappedHessianPlaceholder(mt, &mt->_mapped_H));
+      mapped_H = mt->_mapped_H;
+    } else mapped_H = NULL;
+    if (Hpre && unmapped_Hpre) {
+      if (unmapped_Hpre == unmapped_H) mapped_Hpre = mapped_H;
+      else {
+        if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreateMappedHessianPlaceholder(mt, &mt->_mapped_Hpre));
+        mapped_Hpre = mt->_mapped_Hpre;
+      }
+    } else mapped_Hpre = NULL;
+  }
+  PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mapped_H, mapped_Hpre, unmapped_H, unmapped_Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // Either called by TaoComputeHessian (one term in Tao), or by TAOTERMSUM
 //
 // First case: (one term in Tao)
@@ -474,8 +499,8 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
 //     -> TaoTermComputeHessian
 //       -> TaoTermComputeHessian_Sum
 //         -> for(i:n_terms)
-//         -> TaoTermMappingComputeHessian
-//           -> (unmapped_H may not == mapped_H)
+//         -> TaoTermSumHessCacheGetHessian
+//         -> TaoTermMappingApplyHessian
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec x, Vec params, InsertMode mode, Mat H, Mat Hpre)
 {
   Vec Ax;
