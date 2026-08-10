@@ -219,12 +219,11 @@ petsc4py-install:
     - (cd "${PWD}/${T_DESTDIR}" && find * -exec install -v -D "{}" "/{}" \; )
     - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
 
-petsc4py-pip:
+.petsc4py-pip:
   extends: .stage-2
   tags:
     - gce-u24-stage1
   variables:
-    PETSC_CONFIGURE_OPTIONS: --with-mpi=0 --with-fc=0
     CFLAGS: -O0
   script:
     - python3 -m venv pip-builds
@@ -240,6 +239,22 @@ petsc4py-pip:
     - python -m pip list
     - python -m petsc --prefix
     - python -m petsc4py
+
+petsc4py-pip:
+  extends: .petsc4py-pip
+  variables:
+    PETSC_CONFIGURE_OPTIONS: --with-mpi=0 --with-fc=0
+  # CIBUILDWHEEL=1 exercises the wheel relocation path in config/install.py
+  parallel:
+    matrix:
+      - CIBUILDWHEEL: ['0', '1']
+
+# setup.py detects the MPI compilers from PATH, which nothing else covers
+petsc4py-pip-mpi:
+  extends: .petsc4py-pip
+  variables:
+    PETSC_CONFIGURE_OPTIONS: --with-fc=0
+    CIBUILDWHEEL: '1'
 
 petsc-dist:
   extends: .stage-2
