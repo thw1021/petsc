@@ -593,7 +593,7 @@ PETSC_DEPRECATED_FUNCTION(3, 23, 0, "KSPMonitorResidualDraw()", ) static inline 
 }
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualDrawLG;
 PETSC_EXTERN PetscErrorCode       KSPMonitorResidualDrawLGCreate(PetscViewer, PetscViewerFormat, PetscCtx, PetscViewerAndFormat **);
-PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualShort;
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 26, 0, "KSPMonitorResidual()", ) KSPMonitorRegisterFn KSPMonitorResidualShort;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualRange;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidual;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidualView;
