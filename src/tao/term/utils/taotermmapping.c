@@ -60,10 +60,10 @@ PETSC_INTERN PetscErrorCode TaoTermMatSnapshotMatches(Mat mat, const TaoTermMatS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappedHessianStateGet(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *state)
+static PetscErrorCode TaoTermMappedHessianStateGet(Mat unmapped, Mat map, Mat mapped, TaoTermMappedHessianState *state)
 {
   PetscFunctionBegin;
-  PetscCall(TaoTermMatSnapshotGet(raw, &state->raw));
+  PetscCall(TaoTermMatSnapshotGet(unmapped, &state->unmapped));
   PetscCall(TaoTermMatSnapshotGet(map, &state->map));
   PetscCall(TaoTermMatSnapshotGet(mapped, &state->mapped));
   state->valid = PETSC_TRUE;
@@ -88,30 +88,30 @@ static PetscErrorCode TaoTermMappingCreateMappedHessianPlaceholder(TaoTermMappin
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat raw, Mat map, Mat mapped, TaoTermMappedHessianState *cached, PetscBool *refreshed)
+static PetscErrorCode TaoTermMappingUpdateMappedHessian(Mat unmapped, Mat map, Mat mapped, TaoTermMappedHessianState *cached, PetscBool *refreshed)
 {
   TaoTermMappedHessianState current;
   Mat                       fresh             = NULL;
   PetscBool                 structure_changed = PETSC_FALSE, values_changed = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermMappedHessianStateGet(raw, map, mapped, &current));
+  PetscCall(TaoTermMappedHessianStateGet(unmapped, map, mapped, &current));
   if (!cached->valid) structure_changed = PETSC_TRUE;
   else {
-    if (cached->raw.id != current.raw.id || cached->raw.nonzero_state != current.raw.nonzero_state) structure_changed = PETSC_TRUE;
+    if (cached->unmapped.id != current.unmapped.id || cached->unmapped.nonzero_state != current.unmapped.nonzero_state) structure_changed = PETSC_TRUE;
     if (cached->map.id != current.map.id || cached->map.nonzero_state != current.map.nonzero_state) structure_changed = PETSC_TRUE;
     if (cached->mapped.id != current.mapped.id || cached->mapped.nonzero_state != current.mapped.nonzero_state) structure_changed = PETSC_TRUE;
-    if (cached->raw.state != current.raw.state || cached->map.state != current.map.state || cached->mapped.state != current.mapped.state) values_changed = PETSC_TRUE;
+    if (cached->unmapped.state != current.unmapped.state || cached->map.state != current.map.state || cached->mapped.state != current.mapped.state) values_changed = PETSC_TRUE;
   }
   *refreshed = PETSC_FALSE;
   if (structure_changed) {
-    PetscCall(MatPtAP(raw, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &fresh));
+    PetscCall(MatPtAP(unmapped, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &fresh));
     /* `mapped` may already be referenced by Tao or KSP. Preserve the outer object they hold while
        replacing its obsolete product implementation and symbolic data with those from `fresh`. */
     PetscCall(MatHeaderReplace(mapped, &fresh));
     *refreshed = PETSC_TRUE;
   } else if (values_changed) {
-    PetscCall(MatPtAP(raw, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped));
+    PetscCall(MatPtAP(unmapped, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped));
     *refreshed = PETSC_TRUE;
   }
   /* The caller records the final cache state after any term scaling has modified `mapped`. */
@@ -224,7 +224,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjective(TaoTermMapping *mt, V
 
   Output Parameters:
 + mapped_g   - row-space buffer sized like `g`
-- unmapped_g - column-space buffer the `TaoTerm` writes its raw result into
+- unmapped_g - column-space buffer the `TaoTerm` writes its unmapped result into
 
   Level: developer
 
@@ -348,6 +348,53 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
 }
 
 /*
+  TaoTermMappingEnsureUnmappedHessians - Lazily create the canonical unmapped Hessian storage for a `TaoTermMapping`
+
+  Collective
+
+  Input Parameter:
+. mt - the `TaoTermMapping`
+
+  Level: developer
+
+  Notes:
+  If usable unmapped Hessian storage already exists (`mt->_unmapped_H`, or `mt->_mapped_H` when
+  there is no map and the two layouts coincide), this does nothing.  Otherwise the Hessian and
+  any requested distinct preconditioning storage are created with
+  `TaoTermCreateHessianMatrices()` when the `TaoTerm` defines that operation.  Preexisting
+  preconditioning storage is preserved.
+
+  Without a map the mapped and unmapped storage have the same layout, so newly created matrices
+  also fill empty `mt->_mapped_H` / `mt->_mapped_Hpre` slots.
+
+.seealso: `TaoTermMapping`, `TaoTermCreateHessianMatrices()`, `TaoTermMappingGetUnmappedHessians()`
+*/
+static PetscErrorCode TaoTermMappingEnsureUnmappedHessians(TaoTermMapping *mt)
+{
+  PetscBool is_defined = PETSC_FALSE;
+  Mat       H = NULL, Hpre = NULL;
+
+  PetscFunctionBegin;
+  if (mt->_unmapped_H || (!mt->map && mt->_mapped_H)) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TaoTermIsCreateHessianMatricesDefined(mt->term, &is_defined));
+  if (!is_defined) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TaoTermCreateHessianMatrices(mt->term, &H, (mt->_unmapped_Hpre || (!mt->map && mt->_mapped_Hpre)) ? NULL : &Hpre));
+  mt->_unmapped_H = H;
+  if (Hpre) mt->_unmapped_Hpre = Hpre;
+  if (!mt->map) {
+    if (H && !mt->_mapped_H) {
+      PetscCall(PetscObjectReference((PetscObject)H));
+      mt->_mapped_H = H;
+    }
+    if (Hpre && !mt->_mapped_Hpre) {
+      PetscCall(PetscObjectReference((PetscObject)Hpre));
+      mt->_mapped_Hpre = Hpre;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   TaoTermMappingGetHessians - Get the column-space (unmapped) and row-space (mapped)
   Hessian matrices for a `TaoTerm`
 
@@ -400,27 +447,8 @@ static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode m
     if (H && mt->_mapped_H) *mapped_H = mt->_mapped_H;
     if (Hpre && mt->_mapped_Hpre) *mapped_Hpre = mt->_mapped_Hpre;
   }
-  if (mode == ADD_VALUES || mt->map) {
-    // we will need _unmapped_H / _unmapped_Hpre
-    if (!mt->_unmapped_H) {
-      PetscBool is_defined = PETSC_FALSE;
-
-      PetscCall(TaoTermIsCreateHessianMatricesDefined(mt->term, &is_defined));
-      if (is_defined) {
-        PetscCall(MatDestroy(&mt->_unmapped_Hpre));
-        PetscCall(TaoTermCreateHessianMatrices(mt->term, &mt->_unmapped_H, &mt->_unmapped_Hpre));
-      }
-      if (!mt->map) {
-        PetscCall(PetscObjectReference((PetscObject)mt->_unmapped_H));
-        PetscCall(MatDestroy(&mt->_mapped_H));
-        mt->_mapped_H = mt->_unmapped_H;
-
-        PetscCall(PetscObjectReference((PetscObject)mt->_unmapped_Hpre));
-        PetscCall(MatDestroy(&mt->_mapped_Hpre));
-        mt->_mapped_Hpre = mt->_unmapped_Hpre;
-      }
-    }
-  }
+  // ADD_VALUES accumulation and mapped terms both need internal unmapped storage
+  if (mode == ADD_VALUES || mt->map) PetscCall(TaoTermMappingEnsureUnmappedHessians(mt));
   if (mode == ADD_VALUES) {
     if (H) {
       if (!mt->_mapped_H) PetscCall(MatDuplicate(H, MAT_DO_NOT_COPY_VALUES, &mt->_mapped_H));
@@ -537,28 +565,7 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
 PETSC_INTERN PetscErrorCode TaoTermMappingGetUnmappedHessians(TaoTermMapping *mt, Mat *unmapped_H, Mat *unmapped_Hpre)
 {
   PetscFunctionBegin;
-  if (!mt->_unmapped_H && (mt->map || !mt->_mapped_H)) {
-    PetscBool is_defined = PETSC_FALSE;
-
-    PetscCall(TaoTermIsCreateHessianMatricesDefined(mt->term, &is_defined));
-    if (is_defined) {
-      Mat H = NULL, Hpre = NULL;
-
-      PetscCall(TaoTermCreateHessianMatrices(mt->term, &H, (mt->_unmapped_Hpre || (!mt->map && mt->_mapped_Hpre)) ? NULL : &Hpre));
-      mt->_unmapped_H = H;
-      if (Hpre) mt->_unmapped_Hpre = Hpre;
-      if (!mt->map) {
-        if (H && !mt->_mapped_H) {
-          PetscCall(PetscObjectReference((PetscObject)H));
-          mt->_mapped_H = H;
-        }
-        if (Hpre && !mt->_mapped_Hpre) {
-          PetscCall(PetscObjectReference((PetscObject)Hpre));
-          mt->_mapped_Hpre = Hpre;
-        }
-      }
-    }
-  }
+  PetscCall(TaoTermMappingEnsureUnmappedHessians(mt));
   if (mt->map) {
     *unmapped_H    = mt->_unmapped_H;
     *unmapped_Hpre = mt->_unmapped_Hpre;
@@ -578,8 +585,8 @@ PETSC_INTERN PetscErrorCode TaoTermMappingGetUnmappedHessians(TaoTermMapping *mt
   Input Parameters:
 + mt            - the `TaoTermMapping`
 . mode          - `INSERT_VALUES` or `ADD_VALUES`
-. unmapped_H    - (optional) the raw, unscaled Hessian in the term solution space
-- unmapped_Hpre - (optional) the raw, unscaled preconditioning matrix in the term solution space
+. unmapped_H    - (optional) the unmapped, unscaled Hessian in the term solution space
+- unmapped_Hpre - (optional) the unmapped, unscaled preconditioning matrix in the term solution space
 
   Output Parameters:
 + H    - (optional) the destination Hessian in the outer solution space
@@ -589,8 +596,8 @@ PETSC_INTERN PetscErrorCode TaoTermMappingGetUnmappedHessians(TaoTermMapping *mt
 
   Notes:
   If `mt->map` is set, this routine forms `map^T * unmapped_H * map` and the corresponding
-  preconditioning matrix using the mapping's cached mapped storage.  Otherwise the raw matrices
-  are used directly.
+  preconditioning matrix using the mapping's cached mapped storage.  Otherwise the unmapped
+  matrices are used directly.
 
   `INSERT_VALUES` overwrites each destination and `ADD_VALUES` accumulates into it.  In both
   cases the contribution is scaled by `mt->scale`.

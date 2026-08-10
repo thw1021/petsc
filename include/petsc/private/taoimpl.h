@@ -46,7 +46,7 @@ typedef struct {
 } TaoTermMatSnapshot;
 
 typedef struct {
-  TaoTermMatSnapshot raw;
+  TaoTermMatSnapshot unmapped;
   TaoTermMatSnapshot map;
   TaoTermMatSnapshot mapped;
   PetscBool          valid;
