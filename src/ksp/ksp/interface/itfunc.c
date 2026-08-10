@@ -1112,6 +1112,8 @@ PetscErrorCode KSPSolve(KSP ksp, Vec b, Vec x)
   if (b) PetscValidHeaderSpecific(b, VEC_CLASSID, 2);
   if (x) PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
   PetscCall(KSPRestoreExplicitTranspose_Private(ksp));
+  /* transpose_solve: PETSC_TRUE applies the operators transposed, PETSC_FALSE applies them as-is;
+     solve_requested: PETSC_TRUE means KSP[Mat]SolveTranspose() was requested, PETSC_FALSE means KSP[Mat]Solve() */
   ksp->transpose_solve           = PETSC_FALSE;
   ksp->transpose.solve_requested = PETSC_FALSE;
   PetscCall(KSPSolve_Private(ksp, b, x));
