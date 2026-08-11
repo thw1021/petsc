@@ -36,8 +36,8 @@ int main(int argc, char **argv)
   TestCtx           ctx;
   Tao               tao_term, ctao;
   Vec               x_term, cx;
-  Mat               H_term, Hpre_term, cH;
-  TaoTerm           term1 = NULL, objective;
+  Mat               H_term, Hpre_term, cH, cHpre;
+  TaoTerm           term1        = NULL, objective;
   ExampleClassicCtx cctx         = {0};
   Vec               term1_params = NULL;
   Mat               term1_A;
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   }
   PetscCall(VecDuplicate(x_term, &cx));
   PetscCall(VecCopy(x_term, cx));
-  PetscCall(ExampleClassicCreateTao(comm, tao_term, cx, &cctx, &ctao, &cH));
+  PetscCall(ExampleClassicCreateTao(comm, tao_term, cx, &cctx, &ctao, &cH, &cHpre));
   PetscCall(TaoSolve(tao_term));
   PetscCall(TaoSolve(ctao));
   PetscCall(ExampleClassicCompareResults(tao_term, x_term, ctao, cx));
@@ -113,7 +113,9 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoDestroy(&ctao));
+  if (cHpre != cH) PetscCall(MatDestroy(&cHpre));
   PetscCall(MatDestroy(&cH));
+  PetscCall(VecDestroy(&cctx.hessian_x));
   PetscCall(VecDestroy(&cx));
   if (ctx.use_term1) {
     PetscCall(VecDestroy(&term1_params));
@@ -605,5 +607,179 @@ static PetscErrorCode SetClassicLeaf(TaoTerm term, Mat map, Vec parameters, Pets
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
     args: -t_tao_view ::ascii_info_detail
+
+  testset:
+    filter: grep -E "Classic callback comparison passed|unused database options|Option left"
+    output_file: output/taotermtest1_classic_comparison.out
+    args: -t_tao_type nls -c_tao_type nls -use_term1 -term1_shell
+    args: -t_tao_term_hessian_mat_type shell -options_left
+
+    test:
+      suffix: r045_added_analytic
+      args: -term1_hessian_mult false -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask hessian
+
+    test:
+      suffix: r046_added_fd
+      args: -term1_hessian_mult false -reg1_tao_term_hessian_use_fd true -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask hessian
+
+    test:
+      suffix: r047_added_hessianmult
+      args: -term1_scale 100 -t_tao_term_sum_t_callbacks_mask hessian
+
+    test:
+      suffix: r049_mapped_added_fd
+      args: -term1_has_A -map_row_size 11 -term1_scale 100 -term1_hessian_mult false
+      args: -reg1_tao_term_hessian_use_fd true -t_tao_term_sum_t_callbacks_mask hessian
+
+    test:
+      suffix: r050_mapped_added_hessianmult
+      args: -term1_has_A -map_row_size 11 -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask hessian
+
+    test:
+      suffix: r051_callback_analytic
+      args: -t_tao_term_sum_reg1_mask hessian
+
+    test:
+      suffix: r052_callback_fd
+      args: -t_callbacks_tao_term_hessian_use_fd true -t_tao_term_sum_reg1_mask hessian
+
+    test:
+      suffix: r053_callback_hessianmult
+      args: -callback_hessian_mult -t_tao_term_sum_reg1_mask hessian
+
+    test:
+      suffix: r054_analytic_analytic
+      args: -term1_hessian_mult false
+
+    test:
+      suffix: r055_analytic_fd
+      args: -term1_hessian_mult false -reg1_tao_term_hessian_use_fd true
+
+    test:
+      suffix: r057_fd_fd
+      args: -t_callbacks_tao_term_hessian_use_fd true -term1_hessian_mult false
+      args: -reg1_tao_term_hessian_use_fd true
+
+    test:
+      suffix: r060_mapped_analytic_analytic
+      args: -term1_has_A -map_row_size 11 -term1_hessian_mult false
+
+    test:
+      suffix: r061_mapped_analytic_fd
+      args: -term1_has_A -map_row_size 11 -term1_hessian_mult false
+      args: -reg1_tao_term_hessian_use_fd true
+
+    test:
+      suffix: r063_mapped_fd_fd
+      args: -term1_has_A -map_row_size 11 -t_callbacks_tao_term_hessian_use_fd true
+      args: -term1_hessian_mult false -reg1_tao_term_hessian_use_fd true
+
+    test:
+      suffix: r064_mapped_fd_hessianmult
+      args: -term1_has_A -map_row_size 11 -t_callbacks_tao_term_hessian_use_fd true
+
+    test:
+      suffix: r065_mapped_hessianmult_hessianmult
+      args: -term1_has_A -map_row_size 11 -callback_hessian_mult
+
+    test:
+      suffix: r066_added_analytic_separate_hpre
+      args: -term1_hessian_mult false -term1_scale 100 -t_tao_term_sum_t_callbacks_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r067_added_fd_separate_hpre
+      args: -term1_hessian_mult false -reg1_tao_term_hessian_use_fd true -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r068_added_hessianmult_separate_hpre
+      args: -term1_scale 100 -t_tao_term_sum_t_callbacks_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r069_mapped_added_analytic_separate_hpre
+      args: -term1_has_A -map_row_size 11 -term1_hessian_mult false -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r070_mapped_added_fd_separate_hpre
+      args: -term1_has_A -map_row_size 11 -term1_hessian_mult false -term1_scale 100
+      args: -reg1_tao_term_hessian_use_fd true -t_tao_term_sum_t_callbacks_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r071_mapped_added_hessianmult_separate_hpre
+      args: -term1_has_A -map_row_size 11 -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r072_callback_analytic_separate_hpre
+      args: -t_tao_term_sum_reg1_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r073_callback_fd_separate_hpre
+      args: -t_callbacks_tao_term_hessian_use_fd true -t_tao_term_sum_reg1_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r074_callback_hessianmult_separate_hpre
+      args: -callback_hessian_mult -t_tao_term_sum_reg1_mask hessian
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r075_analytic_analytic_separate_hpre
+      args: -term1_hessian_mult false
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r076_analytic_fd_separate_hpre
+      args: -term1_hessian_mult false -reg1_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r078_fd_fd_separate_hpre
+      args: -t_callbacks_tao_term_hessian_use_fd true -term1_hessian_mult false
+      args: -reg1_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r079_fd_hessianmult_separate_hpre
+      args: -t_callbacks_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r081_mapped_analytic_analytic_separate_hpre
+      args: -term1_has_A -map_row_size 11 -term1_hessian_mult false
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r082_mapped_analytic_fd_separate_hpre
+      args: -term1_has_A -map_row_size 11 -term1_hessian_mult false
+      args: -reg1_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r084_mapped_fd_fd_separate_hpre
+      args: -term1_has_A -map_row_size 11 -t_callbacks_tao_term_hessian_use_fd true
+      args: -term1_hessian_mult false -reg1_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r085_mapped_fd_hessianmult_separate_hpre
+      args: -term1_has_A -map_row_size 11 -t_callbacks_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r086_mapped_hessianmult_hessianmult_separate_hpre
+      args: -term1_has_A -map_row_size 11 -callback_hessian_mult
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
 
 TEST*/

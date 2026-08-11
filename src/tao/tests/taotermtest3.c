@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   Tao               tao, ctao;
   TaoTerm           data, regularizer;
   ExampleClassicCtx cctx = {0};
-  Mat               A, cH;
+  Mat               A, cH, cHpre;
   Vec               b, x, cx;
   PetscBool         change_structure = PETSC_FALSE;
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
   cctx.leaves[1].scale      = lambda;
   PetscCall(VecDuplicate(x, &cx));
   PetscCall(VecCopy(x, cx));
-  PetscCall(ExampleClassicCreateTao(PETSC_COMM_WORLD, tao, cx, &cctx, &ctao, &cH));
+  PetscCall(ExampleClassicCreateTao(PETSC_COMM_WORLD, tao, cx, &cctx, &ctao, &cH, &cHpre));
 
   PetscCall(TaoSolve(tao));
   PetscCall(TaoSolve(ctao));
@@ -90,7 +90,9 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&b));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&cx));
+  if (cHpre != cH) PetscCall(MatDestroy(&cHpre));
   PetscCall(MatDestroy(&cH));
+  PetscCall(VecDestroy(&cctx.hessian_x));
   PetscCall(PetscFinalize());
   return 0;
 }

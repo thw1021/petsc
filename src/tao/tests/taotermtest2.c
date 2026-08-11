@@ -30,7 +30,7 @@ int main(int argc, char **argv)
   TermCtx           ctx[2];
   ExampleClassicCtx cctx    = {0};
   Mat               maps[2] = {NULL, NULL};
-  Mat               cH;
+  Mat               cH, cHpre;
   Vec               targets[2] = {NULL, NULL}, x, cx;
   PetscReal         scales[2]  = {1.0, 0.25};
   PetscInt          nterms = 1, m = 10;
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
   if (check_first_hessian_only) PetscCheck(nterms == 2 && !(masks[0] & TAOTERM_MASK_HESSIAN) && (masks[1] & TAOTERM_MASK_HESSIAN), comm, PETSC_ERR_ARG_WRONG, "-check_first_hessian_only requires only the second term's Hessian to be masked");
   PetscCall(VecDuplicate(x, &cx));
   PetscCall(VecCopy(x, cx));
-  PetscCall(ExampleClassicCreateTao(comm, tao, cx, &cctx, &ctao, &cH));
+  PetscCall(ExampleClassicCreateTao(comm, tao, cx, &cctx, &ctao, &cH, &cHpre));
   PetscCall(TaoSolve(tao));
   PetscCall(TaoSolve(ctao));
   PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
@@ -124,7 +124,9 @@ int main(int argc, char **argv)
   PetscCall(PetscPrintf(comm, "Least-squares TaoTerm operator check passed\n"));
 
   PetscCall(TaoDestroy(&ctao));
+  if (cHpre != cH) PetscCall(MatDestroy(&cHpre));
   PetscCall(MatDestroy(&cH));
+  PetscCall(VecDestroy(&cctx.hessian_x));
   PetscCall(VecDestroy(&cx));
   for (PetscInt i = 0; i < nterms; i++) {
     PetscCall(TaoTermDestroy(&terms[i]));

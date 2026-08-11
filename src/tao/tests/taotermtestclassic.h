@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
   PetscInt           nleaves;
   ExampleClassicLeaf leaves[3];
+  Vec                hessian_x;
 } ExampleClassicCtx;
 
 static PetscErrorCode ExampleClassicGetTermVector(ExampleClassicLeaf *leaf, Vec x, Vec *y, PetscBool *destroy)
@@ -137,11 +138,10 @@ static PetscErrorCode ExampleClassicFormObjectiveGradient(Tao tao, Vec x, PetscR
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleClassicFormHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *vctx)
+static PetscErrorCode ExampleClassicAssembleHessian(ExampleClassicCtx *ctx, Vec x, Mat H)
 {
-  ExampleClassicCtx *ctx = (ExampleClassicCtx *)vctx;
-  Vec                work;
-  PetscReal          unused;
+  Vec       work;
+  PetscReal unused;
 
   PetscFunctionBeginUser;
   PetscCall(MatZeroEntries(H));
@@ -153,26 +153,117 @@ static PetscErrorCode ExampleClassicFormHessian(Tao tao, Vec x, Mat H, Mat Hpre,
   }
   PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  if (Hpre && Hpre != H) PetscCall(MatCopy(H, Hpre, DIFFERENT_NONZERO_PATTERN));
   PetscCall(VecDestroy(&work));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, ExampleClassicCtx *ctx, Tao *tao, Mat *H)
+static PetscErrorCode ExampleClassicApplyHessian(ExampleClassicCtx *ctx, Vec x, Vec v, Vec Hv)
+{
+  Vec       y, diff, Av, HAv, contribution;
+  PetscBool destroy_y;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecZeroEntries(Hv));
+  PetscCall(VecDuplicate(Hv, &contribution));
+  for (PetscInt i = 0; i < ctx->nleaves; i++) {
+    ExampleClassicLeaf *leaf = &ctx->leaves[i];
+
+    if (leaf->mask & TAOTERM_MASK_HESSIAN) continue;
+    PetscCall(ExampleClassicGetTermVector(leaf, x, &y, &destroy_y));
+    PetscCall(VecDuplicate(y, &diff));
+    PetscCall(VecDuplicate(y, &Av));
+    PetscCall(VecDuplicate(y, &HAv));
+    if (leaf->parameters) PetscCall(VecWAXPY(diff, -1.0, leaf->parameters, y));
+    else PetscCall(VecCopy(y, diff));
+    if (leaf->map) PetscCall(MatMult(leaf->map, v, Av));
+    else PetscCall(VecCopy(v, Av));
+    if (leaf->type == EXAMPLE_CLASSIC_L1) {
+      if (leaf->epsilon == 0.0) PetscCall(VecZeroEntries(HAv));
+      else {
+        PetscCall(VecPointwiseMult(HAv, diff, diff));
+        PetscCall(VecShift(HAv, leaf->epsilon * leaf->epsilon));
+        PetscCall(VecPow(HAv, -1.5));
+        PetscCall(VecScale(HAv, leaf->epsilon * leaf->epsilon));
+        PetscCall(VecPointwiseMult(HAv, HAv, Av));
+      }
+    } else PetscCall(VecCopy(Av, HAv));
+    if (leaf->map) PetscCall(MatMultTranspose(leaf->map, HAv, contribution));
+    else PetscCall(VecCopy(HAv, contribution));
+    PetscCall(VecAXPY(Hv, leaf->scale, contribution));
+    PetscCall(VecDestroy(&HAv));
+    PetscCall(VecDestroy(&Av));
+    PetscCall(VecDestroy(&diff));
+    if (destroy_y) PetscCall(VecDestroy(&y));
+  }
+  PetscCall(VecDestroy(&contribution));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ExampleClassicMatMult(Mat H, Vec v, Vec Hv)
+{
+  ExampleClassicCtx *ctx;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatShellGetContext(H, &ctx));
+  PetscCheck(ctx->hessian_x, PetscObjectComm((PetscObject)H), PETSC_ERR_ARG_WRONGSTATE, "Classic shell Hessian has not been evaluated at a solution");
+  PetscCall(ExampleClassicApplyHessian(ctx, ctx->hessian_x, v, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ExampleClassicFormHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *vctx)
+{
+  ExampleClassicCtx *ctx = (ExampleClassicCtx *)vctx;
+  PetscBool          is_shell;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscObjectTypeCompare((PetscObject)H, MATSHELL, &is_shell));
+  if (is_shell) {
+    PetscCall(PetscObjectReference((PetscObject)x));
+    PetscCall(VecDestroy(&ctx->hessian_x));
+    ctx->hessian_x = x;
+    /* Clear shifts and scales left by the previous TAONLS iteration before publishing the Hessian at x. */
+    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+    if (Hpre && Hpre != H) PetscCall(ExampleClassicAssembleHessian(ctx, x, Hpre));
+  } else {
+    PetscCall(ExampleClassicAssembleHessian(ctx, x, H));
+    if (Hpre && Hpre != H) PetscCall(MatCopy(H, Hpre, DIFFERENT_NONZERO_PATTERN));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, ExampleClassicCtx *ctx, Tao *tao, Mat *H, Mat *Hpre)
 {
   TaoType   type;
+  Mat       source_H, source_Hpre;
   PetscInt  n, nlocal;
   PetscInt  max_it, max_funcs;
   PetscReal gatol, grtol, gttol;
-  PetscBool is_nls;
+  PetscBool is_nls, is_shell;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetSize(x, &n));
   PetscCall(VecGetLocalSize(x, &nlocal));
-  PetscCall(MatCreateAIJ(comm, nlocal, nlocal, n, n, n, NULL, n, NULL, H));
-  PetscCall(MatSetOption(*H, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
-  PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
+  PetscCall(TaoSetUp(source));
+  PetscCall(TaoGetHessianMatrices(source, &source_H, &source_Hpre));
+  PetscCall(PetscObjectTypeCompare((PetscObject)source_H, MATSHELL, &is_shell));
+  if (is_shell) {
+    PetscCall(MatCreateShell(comm, nlocal, nlocal, n, n, ctx, H));
+    PetscCall(MatShellSetOperation(*H, MATOP_MULT, (PetscErrorCodeFn *)ExampleClassicMatMult));
+    PetscCall(MatSetOption(*H, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(MatSetOption(*H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+  } else {
+    PetscCall(MatCreateAIJ(comm, nlocal, nlocal, n, n, n, NULL, n, NULL, H));
+    PetscCall(MatSetOption(*H, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+    PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
+  }
+  if (source_Hpre != source_H) {
+    PetscCall(MatCreateAIJ(comm, nlocal, nlocal, n, n, n, NULL, n, NULL, Hpre));
+    PetscCall(MatSetOption(*Hpre, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+    PetscCall(MatAssemblyBegin(*Hpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(*Hpre, MAT_FINAL_ASSEMBLY));
+  } else *Hpre = *H;
   PetscCall(TaoCreate(comm, tao));
   PetscCall(TaoSetOptionsPrefix(*tao, "c_"));
   PetscCall(TaoGetType(source, &type));
@@ -185,8 +276,9 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
   PetscCall(TaoSetMaximumFunctionEvaluations(*tao, max_funcs));
   PetscCall(TaoSetSolution(*tao, x));
   PetscCall(TaoSetObjectiveAndGradient(*tao, NULL, ExampleClassicFormObjectiveGradient, ctx));
+  PetscCall(TaoSetFromOptions(*tao));
   PetscCall(PetscObjectTypeCompare((PetscObject)*tao, TAONLS, &is_nls));
-  if (is_nls) PetscCall(TaoSetHessian(*tao, *H, *H, ExampleClassicFormHessian, ctx));
+  if (is_nls) PetscCall(TaoSetHessian(*tao, *H, *Hpre, ExampleClassicFormHessian, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
