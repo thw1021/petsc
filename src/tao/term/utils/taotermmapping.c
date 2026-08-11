@@ -358,11 +358,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
   Level: developer
 
   Notes:
-  If usable unmapped Hessian storage already exists (`mt->_unmapped_H`, or `mt->_mapped_H` when
-  there is no map and the two layouts coincide), this does nothing.  Otherwise the Hessian and
-  any requested distinct preconditioning storage are created with
-  `TaoTermCreateHessianMatrices()` when the `TaoTerm` defines that operation.  Preexisting
-  preconditioning storage is preserved.
+  Missing Hessian storage and any missing distinct preconditioning storage are created
+  independently with `TaoTermCreateHessianMatrices()` when the `TaoTerm` defines that operation.
+  Preexisting storage is preserved.
 
   Without a map the mapped and unmapped storage have the same layout, so newly created matrices
   also fill empty `mt->_mapped_H` / `mt->_mapped_Hpre` slots.
@@ -371,15 +369,20 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
 */
 static PetscErrorCode TaoTermMappingEnsureUnmappedHessians(TaoTermMapping *mt)
 {
-  PetscBool is_defined = PETSC_FALSE;
-  Mat       H = NULL, Hpre = NULL;
+  Mat       existing_H, existing_Hpre, H = NULL, Hpre = NULL;
+  PetscBool is_defined = PETSC_FALSE, Hpre_is_H, create_H, create_Hpre;
 
   PetscFunctionBegin;
-  if (mt->_unmapped_H || (!mt->map && mt->_mapped_H)) PetscFunctionReturn(PETSC_SUCCESS);
+  existing_H    = mt->_unmapped_H ? mt->_unmapped_H : (!mt->map ? mt->_mapped_H : NULL);
+  existing_Hpre = mt->_unmapped_Hpre ? mt->_unmapped_Hpre : (!mt->map ? mt->_mapped_Hpre : NULL);
+  PetscCall(TaoTermGetCreateHessianMode(mt->term, &Hpre_is_H, NULL, NULL));
+  create_H    = (PetscBool)!existing_H;
+  create_Hpre = (PetscBool)(!existing_Hpre && (create_H || !Hpre_is_H));
+  if (!create_H && !create_Hpre) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoTermIsCreateHessianMatricesDefined(mt->term, &is_defined));
   if (!is_defined) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(TaoTermCreateHessianMatrices(mt->term, &H, (mt->_unmapped_Hpre || (!mt->map && mt->_mapped_Hpre)) ? NULL : &Hpre));
-  mt->_unmapped_H = H;
+  PetscCall(TaoTermCreateHessianMatrices(mt->term, create_H ? &H : NULL, create_Hpre ? &Hpre : NULL));
+  if (H) mt->_unmapped_H = H;
   if (Hpre) mt->_unmapped_Hpre = Hpre;
   if (!mt->map) {
     if (H && !mt->_mapped_H) {
