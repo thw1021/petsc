@@ -1328,8 +1328,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSBAIJ,
                                        MatCopyHashToXAIJ_Seq_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ MatADot_Default,
-                                       MatANorm_Default,
+                                       /*144*/ NULL,
+                                       NULL,
                                        NULL,
                                        NULL};
 
