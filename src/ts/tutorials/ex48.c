@@ -569,8 +569,7 @@ static PetscErrorCode MassMatrix(TS ts, PetscReal t, Vec U, Mat M, void *actx)
     PetscCall(PetscDSSetJacobian(ds, PSI, PSI, g0_mass, NULL, NULL, NULL));
     if (ctx->modelType == TWO_FILD) PetscCall(PetscDSSetJacobian(ds, OMEGA, OMEGA, g0_mass, NULL, NULL, NULL));
     PetscCall(PetscObjectCompose((PetscObject)dm, "ex48_mass_dm", (PetscObject)dmc));
-    PetscCall(DMDestroy(&dmc));
-    PetscCall(PetscObjectQuery((PetscObject)dm, "ex48_mass_dm", (PetscObject *)&dmc));
+    PetscCall(PetscObjectDereference((PetscObject)dmc)); /* dm owns it now, but dmc stays valid for use below */
   }
   PetscCall(MatZeroEntries(M));
   /* g0_mass() ignores the state, but the integrator still tabulates u at the quadrature points, so hand it a defined vector */
