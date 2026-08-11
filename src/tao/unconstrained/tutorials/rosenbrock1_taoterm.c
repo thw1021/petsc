@@ -249,6 +249,10 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
      args: -tao_type nls -tao_term_hessian_mat_type shell -set_hessian_mult -tao_nls_sval 1e-1 -tao_monitor_short
 
    test:
+     suffix: snes_mf_operator
+     args: -tao_type snes -snes_mf_operator -pc_type none -tao_converged_reason
+
+   test:
      suffix: add_term
      args: -tao_type nls -tao_add_terms extra_ -extra_tao_term_type halfl2squared -tao_view ::ascii_info_detail
 
