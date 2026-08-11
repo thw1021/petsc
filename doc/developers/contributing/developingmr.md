@@ -150,8 +150,16 @@ $ git checkout -b yourname/fix-component-name origin/main
   When possible (this depends on the capabilities of the LLM CLI), `make branch-review` runs interactively and leaves the terminal in the LLM CLI when the review is complete.
   This allows users to issue additional commands to the LLM CLI, such as requesting that it fix certain issues it may have detected in the review.
 
-  Many LLM CLIs look for skills in `.agents/skills` directory.
-  Claude Code looks in `.claude/skills`, hence the PETSc Git repository has a soft link from `.claude/skills` to `.agents/skills`.
+  PETSc provides repository-specific instructions for LLM coding tools in `AGENTS.md` and reusable skills in `.agents/skills`.
+  Claude Code loads `AGENTS.md` through `CLAUDE.md` and finds the same skills through the `.claude/skills` symbolic link.
+
+  One of these skills integrates [CodeGraph](https://colbymchenry.github.io/codegraph/) with PETSc source navigation and review.
+  Install the CodeGraph CLI with `npx @colbymchenry/codegraph`, then run `codegraph init` from the PETSc repository root to create the local `.codegraph/` index.
+  The index is ignored by Git.
+  CodeGraph's installer enables anonymous usage telemetry by default; opt out with `codegraph telemetry off`, `CODEGRAPH_TELEMETRY=0`, or the cross-tool `DO_NOT_TRACK=1`.
+  When the index exists, `AGENTS.md` directs compatible LLM coding tools to load the CodeGraph skill before navigating source.
+  If the index does not exist, they continue without it.
+  This applies to general development work and to `make branch-review`, whose review skill follows `AGENTS.md`.
 
 (sec_clean_commit_history)=
 
