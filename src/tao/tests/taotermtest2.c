@@ -590,4 +590,278 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
       suffix: r125_both_mapped_fd_fd_separate_hpre
       args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
 
+  testset:
+    filter: grep -E "Classic callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_classic_operator_comparison.out
+    args: -second_term -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
+
+    test:
+      suffix: r126_second_analytic
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r127_second_fd
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_data_mask hessian -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r128_second_hessianmult
+      args: -no_map -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r129_mapped_second_analytic
+      args: -data_use_map false -extra_use_map true -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r130_mapped_second_fd
+      args: -data_use_map false -extra_use_map true -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_data_mask hessian
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r131_mapped_second_hessianmult
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r132_first_analytic
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r133_first_fd
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r134_first_hessianmult
+      args: -no_map -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r136_mapped_first_fd
+      args: -data_use_map true -extra_use_map false -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_extra_mask hessian
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r137_mapped_first_hessianmult
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r139_analytic_fd
+      args: -no_map -provide_hessian_mult false -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r140_analytic_hessianmult
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult true
+
+    test:
+      suffix: r141_fd_fd
+      args: -no_map -provide_hessian_mult false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r142_fd_hessianmult
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult true
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r143_hessianmult_hessianmult
+      args: -no_map
+
+    test:
+      suffix: r144_mapped_analytic_analytic
+      args: -data_use_map true -extra_use_map false -provide_hessian_mult false
+
+    test:
+      suffix: r145_mapped_analytic_fd
+      args: -data_use_map true -extra_use_map false -provide_hessian_mult false
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r147_mapped_fd_fd
+      args: -data_use_map true -extra_use_map false -provide_hessian_mult false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r151_both_mapped_analytic_fd
+      args: -provide_hessian_mult false -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r152_both_mapped_analytic_hessianmult
+      args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
+
+    test:
+      suffix: r153_both_mapped_fd_fd
+      args: -provide_hessian_mult false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r154_both_mapped_fd_hessianmult
+      args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
+      args: -data_tao_term_hessian_use_fd
+
+  testset:
+    filter: grep -E "Classic callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_classic_operator_comparison.out
+    args: -second_term -split_hpre -shell_tao_type nls
+    args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
+    args: -shell_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r156_second_analytic_separate_hpre
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r157_second_fd_separate_hpre
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_data_mask hessian -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r158_second_hessianmult_separate_hpre
+      args: -no_map -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r159_mapped_second_analytic_separate_hpre
+      args: -data_use_map false -extra_use_map true -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r160_mapped_second_fd_separate_hpre
+      args: -data_use_map false -extra_use_map true -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_data_mask hessian
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r161_mapped_second_hessianmult_separate_hpre
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r162_first_analytic_separate_hpre
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r163_first_fd_separate_hpre
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
+      args: -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r164_first_hessianmult_separate_hpre
+      args: -no_map -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r165_mapped_first_analytic_separate_hpre
+      args: -data_use_map true -extra_use_map false -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r166_mapped_first_fd_separate_hpre
+      args: -data_use_map true -extra_use_map false -data_provide_hessian_mult false
+      args: -extra_provide_hessian_mult false -shell_tao_term_sum_extra_mask hessian
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r167_mapped_first_hessianmult_separate_hpre
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r169_analytic_fd_separate_hpre
+      args: -no_map -provide_hessian_mult false -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r170_analytic_hessianmult_separate_hpre
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult true
+
+    test:
+      suffix: r171_fd_fd_separate_hpre
+      args: -no_map -provide_hessian_mult false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r172_fd_hessianmult_separate_hpre
+      args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult true
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r173_hessianmult_hessianmult_separate_hpre
+      args: -no_map
+
+    test:
+      suffix: r174_mapped_analytic_analytic_separate_hpre
+      args: -data_use_map true -extra_use_map false -provide_hessian_mult false
+
+    test:
+      suffix: r175_mapped_analytic_fd_separate_hpre
+      args: -data_use_map true -extra_use_map false -provide_hessian_mult false
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r177_mapped_fd_fd_separate_hpre
+      args: -data_use_map true -extra_use_map false -provide_hessian_mult false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r179_mapped_hessianmult_hessianmult_separate_hpre
+      args: -data_use_map true -extra_use_map false
+
+    test:
+      suffix: r181_both_mapped_analytic_fd_separate_hpre
+      args: -provide_hessian_mult false -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r182_both_mapped_analytic_hessianmult_separate_hpre
+      args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
+
+    test:
+      suffix: r183_both_mapped_fd_fd_separate_hpre
+      args: -provide_hessian_mult false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r184_both_mapped_fd_hessianmult_separate_hpre
+      args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r185_both_mapped_hessianmult_hessianmult_separate_hpre
+
+  testset:
+    filter: grep -E "Classic callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_classic_operator_comparison.out
+    args: -second_term -shell_tao_type nls -shell_tao_term_hessian_mat_type mffd
+
+    test:
+      suffix: r186_mffd_second
+      args: -no_map -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r187_mffd_mapped_second
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r188_mffd_first
+      args: -no_map -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r189_mffd_mapped_first
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r190_mffd_both
+      args: -no_map
+
+    test:
+      suffix: r192_mffd_both_mapped
+
+  test:
+    suffix: r018_hessianmult_separate_hpre
+    filter: grep -E "Classic callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_classic_operator_comparison.out
+    args: -no_map -split_hpre -shell_tao_type nls
+    args: -data_tao_term_hessian_mat_type shell -data_tao_term_hessian_pre_is_hessian false
+    args: -data_tao_term_hessian_pre_mat_type aij
+
 TEST*/

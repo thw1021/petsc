@@ -7,7 +7,7 @@ static PetscErrorCode FormObjectiveGradient(TaoTerm, Vec, Vec, PetscReal *, Vec)
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode SetMap(Mat, PetscBool, PetscBool);
 static PetscErrorCode SetTarget(Vec, PetscReal);
-static PetscErrorCode CheckHessianAction(Tao, Mat, PetscReal, Vec);
+static PetscErrorCode CheckHessianAction(Tao, Mat, PetscReal, PetscReal, Vec);
 static PetscErrorCode CheckSolution(Mat, Vec, PetscReal, Vec);
 
 int main(int argc, char **argv)
@@ -19,7 +19,9 @@ int main(int argc, char **argv)
   ExampleClassicCtx cctx = {0};
   Mat               A, cH, cHpre;
   Vec               b, x, cx;
-  PetscBool         change_structure = PETSC_FALSE;
+  PetscReal         hessian_tolerance = 1.e-9;
+  PetscBool         change_structure  = PETSC_FALSE;
+  PetscBool         use_fd            = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -52,6 +54,8 @@ int main(int argc, char **argv)
   PetscCall(TaoAddTerm(tao, "data_", 1.0, data, b, A));
   PetscCall(TaoAddTerm(tao, "reg_", lambda, regularizer, NULL, NULL));
   PetscCall(TaoSetFromOptions(tao));
+  PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
+  if (use_fd) hessian_tolerance = 2.e-5;
   cctx.nleaves              = 2;
   cctx.leaves[0].type       = EXAMPLE_CLASSIC_LEAST_SQUARES;
   cctx.leaves[0].map        = A;
@@ -67,12 +71,12 @@ int main(int argc, char **argv)
   PetscCall(TaoSolve(ctao));
   PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
   PetscCall(CheckSolution(A, b, lambda, x));
-  PetscCall(CheckHessianAction(tao, A, lambda, x));
+  PetscCall(CheckHessianAction(tao, A, lambda, hessian_tolerance, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial least-squares solution check passed\n"));
 
   PetscCall(SetMap(A, PETSC_TRUE, change_structure));
   PetscCall(SetTarget(b, 1.5));
-  PetscCall(CheckHessianAction(tao, A, lambda, x));
+  PetscCall(CheckHessianAction(tao, A, lambda, hessian_tolerance, x));
   PetscCall(VecZeroEntries(x));
   PetscCall(VecZeroEntries(cx));
   PetscCall(TaoSolve(tao));
@@ -150,7 +154,7 @@ static PetscErrorCode SetTarget(Vec b, PetscReal scale)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckHessianAction(Tao tao, Mat A, PetscReal lambda, Vec x)
+static PetscErrorCode CheckHessianAction(Tao tao, Mat A, PetscReal lambda, PetscReal tolerance, Vec x)
 {
   Mat       H, Hpre;
   Vec       v, Av, actual, expected;
@@ -169,7 +173,13 @@ static PetscErrorCode CheckHessianAction(Tao tao, Mat A, PetscReal lambda, Vec x
   PetscCall(MatMult(H, v, actual));
   PetscCall(VecAXPY(actual, -1.0, expected));
   PetscCall(VecNorm(actual, NORM_2, &error));
-  PetscCheck(error <= 1.e-9, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Hessian action after updating the map differs from the current mapped operator by %g", (double)error);
+  PetscCheck(error <= tolerance, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Hessian action after updating the map differs from the current mapped operator by %g", (double)error);
+  if (Hpre != H) {
+    PetscCall(MatMult(Hpre, v, actual));
+    PetscCall(VecAXPY(actual, -1.0, expected));
+    PetscCall(VecNorm(actual, NORM_2, &error));
+    PetscCheck(error <= tolerance, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Hessian preconditioning action after updating the map differs from the current mapped operator by %g", (double)error);
+  }
   PetscCall(VecDestroy(&expected));
   PetscCall(VecDestroy(&actual));
   PetscCall(VecDestroy(&Av));
@@ -227,6 +237,26 @@ static PetscErrorCode CheckSolution(Mat A, Vec b, PetscReal lambda, Vec x)
   test:
     suffix: map_values_shell
     args: -tao_type nls -tao_term_hessian_mat_type shell
+    filter: grep -E "solution check passed"
+    output_file: output/taotermtest3_map_values_shell.out
+
+  test:
+    suffix: r148_map_values_shell_fd
+    args: -tao_type nls -tao_term_hessian_mat_type shell -data_tao_term_hessian_use_fd
+    filter: grep -E "solution check passed"
+    output_file: output/taotermtest3_map_values_shell.out
+
+  test:
+    suffix: r176_map_values_shell_separate_hpre
+    args: -tao_type nls -tao_term_hessian_mat_type shell
+    args: -tao_term_hessian_pre_is_hessian false -tao_term_hessian_pre_mat_type aij
+    filter: grep -E "solution check passed"
+    output_file: output/taotermtest3_map_values_shell.out
+
+  test:
+    suffix: r178_map_values_shell_fd_separate_hpre
+    args: -tao_type nls -tao_term_hessian_mat_type shell -data_tao_term_hessian_use_fd
+    args: -tao_term_hessian_pre_is_hessian false -tao_term_hessian_pre_mat_type aij
     filter: grep -E "solution check passed"
     output_file: output/taotermtest3_map_values_shell.out
 
