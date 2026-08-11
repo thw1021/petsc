@@ -202,28 +202,28 @@ PetscErrorCode FormJacobian_Grid(GridCtx *grid, Mat jac)
 /*TEST
 
     test:
-      args: -ksp_monitor_short
+      args: -ksp_monitor
 
     test:
       suffix: 2
-      args: -ksp_monitor_short
+      args: -ksp_monitor
       nsize: 3
 
     test:
       suffix: ml_1
-      args: -ksp_monitor_short -pc_type ml -mat_no_inode
+      args: -ksp_monitor -pc_type ml -mat_no_inode
       nsize: 3
       requires: ml
 
     test:
       suffix: ml_2
-      args: -ksp_monitor_short -pc_type ml -mat_no_inode -ksp_max_it 3
+      args: -ksp_monitor -pc_type ml -mat_no_inode -ksp_max_it 3
       nsize: 3
       requires: ml
 
     test:
       suffix: ml_3
-      args: -ksp_monitor_short -pc_type ml -mat_no_inode -pc_mg_type ADDITIVE -ksp_max_it 7
+      args: -ksp_monitor -pc_type ml -mat_no_inode -pc_mg_type ADDITIVE -ksp_max_it 7
       nsize: 1
       requires: ml
 
