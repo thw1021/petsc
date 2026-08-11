@@ -80,5 +80,5 @@
     Linear npc_ solve converged due to CONVERGED_RTOL iterations 8
  40 SNES Function norm 3.54815e-07
     Linear npc_ solve converged due to CONVERGED_RTOL iterations 8
- 41 SNES Function norm < 1.e-11
+ 41 SNES Function norm 8.006876614272e-12
 CONVERGED_FNORM_RELATIVE Number of nonlinear iterations = 41

@@ -4,4 +4,4 @@ Running cg with none preconditioning
   2 KSP Residual norm 0.471405
   3 KSP Residual norm 0.353553
   4 KSP Residual norm 0.282843
-  5 KSP Residual norm < 1.e-11
+  5 KSP Residual norm 3.150891133835e-16

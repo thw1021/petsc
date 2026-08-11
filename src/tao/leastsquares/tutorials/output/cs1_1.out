@@ -1,7 +1,7 @@
-iter =   0, Function value 1.05503, Residual: 0.0225435 
-iter =   1, Function value 0.391065, Residual: 0.0360531 
-iter =   2, Function value 0.114254, Residual: 0.0366085 
-iter =   3, Function value 5.78927e-29, Residual: < 1.0e-11 
+  0 TAO,  Function value: 1.05503,  Residual: 0.0225435
+  1 TAO,  Function value: 0.391065,  Residual: 0.0360531
+  2 TAO,  Function value: 0.114254,  Residual: 0.0366085
+  3 TAO,  Function value: 5.78927e-29,  Residual: 1.11671e-14
 -------- result x, residual f=A*x-b, and Jacobian=A. -------- 
 Vec Object: 1 MPI process
   type: seq

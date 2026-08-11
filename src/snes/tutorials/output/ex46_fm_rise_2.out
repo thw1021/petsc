@@ -6,5 +6,5 @@
   5 SNES Function norm 0.0046555
   6 SNES Function norm 5.17909e-05
   7 SNES Function norm 2.6205e-09
-  8 SNES Function norm < 1.e-11
+  8 SNES Function norm 9.918126462684e-16
 Number of SNES iterations = 8
