@@ -112,16 +112,17 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)x, "Approximate Solution"));
   PetscCall(PetscObjectSetName((PetscObject)U, "Exact Solution"));
 
-  /*
-     Set SNES/KSP/KSP/PC runtime options, e.g.,
-         -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
-  */
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_set_pc_type_lu", &test_set_pc_type_lu, NULL));
   if (test_set_pc_type_lu) {
     PetscCall(SNESGetKSP(snes, &ksp));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, PCLU));
   }
+
+  /*
+     Set SNES/KSP/KSP/PC runtime options, e.g.,
+         -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
+  */
   PetscCall(SNESSetFromOptions(snes));
 
   /*
@@ -399,13 +400,13 @@ PetscErrorCode Monitor(SNES snes, PetscInt its, PetscReal fnorm, PetscCtx ctx)
 
    test:
       suffix: incompatible_mf_pc
-      args: -snes_mf -pc_type lu -petsc_ci_portable_error_output -error_output_stdout
+      args: -nox -snes_mf -pc_type lu -petsc_ci_portable_error_output -error_output_stdout
       filter: grep "factorization type LU and matrix type mffd"
       requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
 
    test:
       suffix: incompatible_mf_pc_api
-      args: -snes_mf -test_set_pc_type_lu -petsc_ci_portable_error_output -error_output_stdout
+      args: -nox -snes_mf -test_set_pc_type_lu -petsc_ci_portable_error_output -error_output_stdout
       filter: grep "factorization type LU and matrix type mffd"
       output_file: output/ex2_incompatible_mf_pc.out
       requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
