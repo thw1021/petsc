@@ -437,6 +437,28 @@ static PetscErrorCode SetClassicLeaf(TaoTerm term, Mat map, Vec parameters, Pets
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A
     args: -t_tao_term_hessian_mat_type mffd
 
+  testset:
+    filter: grep -E "Classic callback comparison passed|unused database options|Option left"
+    output_file: output/taotermtest1_classic_comparison.out
+    args: -t_tao_type nls -c_tao_type nls -use_term1 -term1_shell
+    args: -t_tao_term_hessian_mat_type mffd -options_left
+
+    test:
+      suffix: r087_mffd_added
+      args: -term1_scale 100 -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
+
+    test:
+      suffix: r088_mffd_mapped_added
+      args: -term1_has_A -map_row_size 11 -term1_scale 100
+      args: -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
+
+    test:
+      suffix: r089_mffd_callback
+      args: -t_tao_term_sum_reg1_mask objective,gradient,hessian
+
+    test:
+      suffix: r090_mffd_both
+
   test:
     suffix: callback_fd
     filter: grep "Classic callback comparison passed"

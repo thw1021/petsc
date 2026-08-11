@@ -239,7 +239,7 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
   PetscInt  n, nlocal;
   PetscInt  max_it, max_funcs;
   PetscReal gatol, grtol, gttol;
-  PetscBool is_nls, is_shell;
+  PetscBool is_nls, is_mffd, is_shell;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetSize(x, &n));
@@ -247,7 +247,12 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
   PetscCall(TaoSetUp(source));
   PetscCall(TaoGetHessianMatrices(source, &source_H, &source_Hpre));
   PetscCall(PetscObjectTypeCompare((PetscObject)source_H, MATSHELL, &is_shell));
-  if (is_shell) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)source_H, MATMFFD, &is_mffd));
+  if (is_mffd) {
+    PetscCall(MatCreateMFFD(comm, nlocal, nlocal, n, n, H));
+    PetscCall(MatSetOption(*H, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(MatSetOption(*H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+  } else if (is_shell) {
     PetscCall(MatCreateShell(comm, nlocal, nlocal, n, n, ctx, H));
     PetscCall(MatShellSetOperation(*H, MATOP_MULT, (PetscErrorCodeFn *)ExampleClassicMatMult));
     PetscCall(MatSetOption(*H, MAT_SYMMETRIC, PETSC_TRUE));
@@ -278,7 +283,7 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
   PetscCall(TaoSetObjectiveAndGradient(*tao, NULL, ExampleClassicFormObjectiveGradient, ctx));
   PetscCall(TaoSetFromOptions(*tao));
   PetscCall(PetscObjectTypeCompare((PetscObject)*tao, TAONLS, &is_nls));
-  if (is_nls) PetscCall(TaoSetHessian(*tao, *H, *Hpre, ExampleClassicFormHessian, ctx));
+  if (is_nls) PetscCall(TaoSetHessian(*tao, *H, *Hpre, is_mffd ? TaoDefaultComputeHessianMFFD : ExampleClassicFormHessian, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
