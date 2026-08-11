@@ -174,6 +174,7 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
   PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
   PetscCall(TaoCreate(comm, tao));
+  PetscCall(TaoSetOptionsPrefix(*tao, "c_"));
   PetscCall(TaoGetType(source, &type));
   PetscCall(TaoSetType(*tao, type));
   PetscCall(TaoGetTolerances(source, &gatol, &grtol, &gttol));
