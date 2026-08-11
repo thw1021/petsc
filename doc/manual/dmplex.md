@@ -118,7 +118,7 @@ DMPlexStratify(dm);
 Once a DMPlex grid is created, there are several ways of querying to the grid to determine relations between different mesh points.
 The most obvious functions for this to this point are `DMPlexGetCone()` and `DMPlexGetSupport()`, which simply return the information given above to create the DAG in the first place.
 
-There are more advanced and useful functions to.
+There are more advanced functions too.
 `DMPlexGetTransitiveClosure()` will return all the points which are in the cone/support of a given point recursively.
 For example, given a cell, the transitive cone will contain the points of the faces, edges, and vertices which are "owned" by that cell.
 Similarly, the transitive support of a vertex will return the edges, faces, and cells which "touch" that vertex.
