@@ -1,4 +1,5 @@
 #include <petsctao.h>
+#include "taotermtestclassic.h"
 
 static char help[] = "Resolve a regularized least-squares problem after updating its observation operator.\n";
 
@@ -11,13 +12,14 @@ static PetscErrorCode CheckSolution(Mat, Vec, PetscReal, Vec);
 
 int main(int argc, char **argv)
 {
-  const PetscInt  n      = 8;
-  const PetscReal lambda = 0.2;
-  Tao             tao;
-  TaoTerm         data, regularizer;
-  Mat             A;
-  Vec             b, x;
-  PetscBool       change_structure = PETSC_FALSE;
+  const PetscInt    n      = 8;
+  const PetscReal   lambda = 0.2;
+  Tao               tao, ctao;
+  TaoTerm           data, regularizer;
+  ExampleClassicCtx cctx = {0};
+  Mat               A, cH;
+  Vec               b, x, cx;
+  PetscBool         change_structure = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -50,8 +52,19 @@ int main(int argc, char **argv)
   PetscCall(TaoAddTerm(tao, "data_", 1.0, data, b, A));
   PetscCall(TaoAddTerm(tao, "reg_", lambda, regularizer, NULL, NULL));
   PetscCall(TaoSetFromOptions(tao));
+  cctx.nleaves              = 2;
+  cctx.leaves[0].type       = EXAMPLE_CLASSIC_LEAST_SQUARES;
+  cctx.leaves[0].map        = A;
+  cctx.leaves[0].parameters = b;
+  cctx.leaves[0].scale      = 1.0;
+  cctx.leaves[1].type       = EXAMPLE_CLASSIC_HALF_L2;
+  cctx.leaves[1].scale      = lambda;
+  PetscCall(VecDuplicate(x, &cx));
+  PetscCall(VecCopy(x, cx));
+  PetscCall(ExampleClassicCreateTao(PETSC_COMM_WORLD, tao, cx, &cctx, &ctao, &cH));
 
   PetscCall(TaoSolve(tao));
+  PetscCall(TaoSolve(ctao));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(CheckHessianAction(tao, A, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial least-squares solution check passed\n"));
@@ -60,17 +73,22 @@ int main(int argc, char **argv)
   PetscCall(SetTarget(b, 1.5));
   PetscCall(CheckHessianAction(tao, A, lambda, x));
   PetscCall(VecZeroEntries(x));
+  PetscCall(VecZeroEntries(cx));
   PetscCall(TaoSolve(tao));
+  PetscCall(TaoSolve(ctao));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Updated least-squares solution check passed\n"));
   PetscCall(TaoViewFromOptions(tao, NULL, "-tao_view"));
 
   PetscCall(TaoDestroy(&tao));
+  PetscCall(TaoDestroy(&ctao));
   PetscCall(TaoTermDestroy(&data));
   PetscCall(TaoTermDestroy(&regularizer));
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&b));
   PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&cx));
+  PetscCall(MatDestroy(&cH));
   PetscCall(PetscFinalize());
   return 0;
 }

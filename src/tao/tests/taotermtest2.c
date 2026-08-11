@@ -1,4 +1,5 @@
 #include <petsctao.h>
+#include "taotermtestclassic.h"
 
 static char help[] = "Solve one or two linear least-squares data terms through TaoAddTerm().\n";
 
@@ -21,20 +22,24 @@ static PetscErrorCode CheckOperator(Tao, Vec, Mat *, PetscReal *, PetscInt, Pets
 
 int main(int argc, char **argv)
 {
-  const PetscInt n = 10;
-  Tao            tao;
-  TaoTerm        terms[2]   = {NULL, NULL};
-  TermCtx        ctx        = {PETSC_FALSE, PETSC_TRUE, PETSC_FALSE, 0};
-  Mat            maps[2]    = {NULL, NULL};
-  Vec            targets[2] = {NULL, NULL}, x;
-  PetscReal      scales[2]  = {1.0, 0.25};
-  PetscInt       nterms = 1, m = 10;
-  PetscBool      second_term = PETSC_FALSE, no_map = PETSC_FALSE, check_hessian_mult = PETSC_FALSE;
-  PetscBool      parameters_none = PETSC_FALSE, parameters_required = PETSC_FALSE, use_fd = PETSC_FALSE;
-  PetscBool      none_with_parameters = PETSC_FALSE, required_without_parameters = PETSC_FALSE;
-  PetscBool      check_first_hessian_only = PETSC_FALSE;
-  PetscBool      check_hessian_cache      = PETSC_FALSE;
-  MPI_Comm       comm;
+  const PetscInt    n = 10;
+  Tao               tao;
+  Tao               ctao;
+  TaoTerm           terms[2] = {NULL, NULL};
+  TaoTerm           objective;
+  TermCtx           ctx     = {PETSC_FALSE, PETSC_TRUE, PETSC_FALSE, 0};
+  ExampleClassicCtx cctx    = {0};
+  Mat               maps[2] = {NULL, NULL};
+  Mat               cH;
+  Vec               targets[2] = {NULL, NULL}, x, cx;
+  PetscReal         scales[2]  = {1.0, 0.25};
+  PetscInt          nterms = 1, m = 10;
+  PetscBool         second_term = PETSC_FALSE, no_map = PETSC_FALSE, check_hessian_mult = PETSC_FALSE;
+  PetscBool         parameters_none = PETSC_FALSE, parameters_required = PETSC_FALSE, use_fd = PETSC_FALSE;
+  PetscBool         none_with_parameters = PETSC_FALSE, required_without_parameters = PETSC_FALSE;
+  PetscBool         check_first_hessian_only = PETSC_FALSE;
+  PetscBool         check_hessian_cache      = PETSC_FALSE;
+  MPI_Comm          comm;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -81,11 +86,28 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoSetFromOptions(tao));
+  cctx.nleaves = nterms;
+  if (nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
+  for (PetscInt i = 0; i < nterms; i++) {
+    cctx.leaves[i].type       = EXAMPLE_CLASSIC_LEAST_SQUARES;
+    cctx.leaves[i].map        = maps[i];
+    cctx.leaves[i].parameters = targets[i];
+    cctx.leaves[i].scale      = scales[i];
+    cctx.leaves[i].mask       = TAOTERM_MASK_NONE;
+    if (nterms > 1) PetscCall(TaoTermSumGetTermMask(objective, i, &cctx.leaves[i].mask));
+  }
+  PetscCall(VecDuplicate(x, &cx));
+  PetscCall(VecCopy(x, cx));
+  PetscCall(ExampleClassicCreateTao(comm, tao, cx, &cctx, &ctao, &cH));
   PetscCall(TaoSolve(tao));
+  PetscCall(TaoSolve(ctao));
   PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
   PetscCall(CheckOperator(tao, x, maps, scales, nterms, check_first_hessian_only ? 1 : nterms, ctx.split_hpre && !use_fd ? 2.0 : 1.0, check_hessian_mult, check_hessian_cache, &ctx));
   PetscCall(PetscPrintf(comm, "Least-squares TaoTerm operator check passed\n"));
 
+  PetscCall(TaoDestroy(&ctao));
+  PetscCall(MatDestroy(&cH));
+  PetscCall(VecDestroy(&cx));
   for (PetscInt i = 0; i < nterms; i++) {
     PetscCall(TaoTermDestroy(&terms[i]));
     PetscCall(VecDestroy(&targets[i]));

@@ -1,10 +1,12 @@
-const char help[] = "Solve a Rosenbrock problem with regularizers added through TaoAddTerm().\n";
+const char help[] = "Solve a least-squares problem with regularizers added through TaoAddTerm().\n";
 
 #include <petsctao.h>
-#include "../unconstrained/tutorials/rosenbrock4.h"
+#include "taotermtestclassic.h"
 
 typedef struct {
-  AppCtx    user; /* Note: AppCtx is a pointer type in rosenbrock4.h */
+  MPI_Comm  comm;
+  PetscInt  n;
+  Vec       target;
   PetscBool use_term1;
   PetscBool term1_has_A;
   PetscBool term1_has_params;
@@ -24,18 +26,20 @@ static PetscErrorCode TestCtxFinalize(TestCtx *);
 static PetscErrorCode CreateTaoTermWithOptions(TestCtx *, TaoTerm *, Vec *, Mat *, const char *, const char *, PetscBool, PetscBool);
 static PetscErrorCode FormFunctionGradient_TaoTerm(Tao, Vec, PetscReal *, Vec, void *);
 static PetscErrorCode FormHessian_TaoTerm(Tao, Vec, Mat, Mat, void *);
+static PetscErrorCode SetClassicLeaf(TaoTerm, Mat, Vec, PetscReal, ExampleClassicLeaf *);
 
 int main(int argc, char **argv)
 {
-  TestCtx  ctx;
-  Tao      tao_term;
-  Vec      x_term;
-  Mat      H_term, Hpre_term;
-  TaoTerm  term1, term2;
-  Vec      term1_params = NULL;
-  Vec      term2_params = NULL;
-  Mat      term1_A, term2_A;
-  MPI_Comm comm;
+  TestCtx           ctx;
+  Tao               tao_term, ctao;
+  Vec               x_term, cx;
+  Mat               H_term, Hpre_term, cH;
+  TaoTerm           term1 = NULL, term2 = NULL, objective;
+  ExampleClassicCtx cctx         = {0};
+  Vec               term1_params = NULL;
+  Vec               term2_params = NULL;
+  Mat               term1_A, term2_A;
+  MPI_Comm          comm;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -45,14 +49,14 @@ int main(int argc, char **argv)
   PetscCall(TaoCreate(comm, &tao_term));
   PetscCall(TaoSetType(tao_term, TAOLMVM));
 
-  /* Create Rosenbrock objective using traditional TaoSet interface with user context */
-  PetscCall(CreateHessian(ctx.user, &H_term));
+  /* Create a least-squares objective using the traditional TaoSet interface */
+  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, ctx.n, ctx.n, 1, NULL, 0, NULL, &H_term));
   if (ctx.separate_hpre) {
     PetscCall(MatAssemblyBegin(H_term, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H_term, MAT_FINAL_ASSEMBLY));
     PetscCall(MatDuplicate(H_term, MAT_COPY_VALUES, &Hpre_term));
   } else Hpre_term = H_term;
-  PetscCall(CreateVectors(ctx.user, H_term, &x_term, NULL));
+  PetscCall(MatCreateVecs(H_term, &x_term, NULL));
   PetscCall(VecZeroEntries(x_term));
   PetscCall(TaoSetSolution(tao_term, x_term));
   PetscCall(TaoSetObjectiveAndGradient(tao_term, NULL, FormFunctionGradient_TaoTerm, &ctx));
@@ -62,17 +66,29 @@ int main(int argc, char **argv)
   if (ctx.use_term1) {
     PetscCall(CreateTaoTermWithOptions(&ctx, &term1, &term1_params, &term1_A, "reg1_", "A1_", ctx.term1_has_A, ctx.term1_has_params));
     PetscCall(TaoAddTerm(tao_term, "reg1_", ctx.term1_scale, term1, term1_params, term1_A));
-    PetscCall(TaoTermDestroy(&term1));
   }
   /* Add term 2 if requested */
   if (ctx.use_term2) {
     PetscCall(CreateTaoTermWithOptions(&ctx, &term2, &term2_params, &term2_A, "reg2_", "A2_", ctx.term2_has_A, ctx.term2_has_params));
     PetscCall(TaoAddTerm(tao_term, "reg2_", ctx.term2_scale, term2, term2_params, term2_A));
-    PetscCall(TaoTermDestroy(&term2));
   }
 
   PetscCall(TaoSetFromOptions(tao_term));
+  cctx.nleaves              = 1 + (PetscInt)ctx.use_term1 + (PetscInt)ctx.use_term2;
+  cctx.leaves[0].type       = EXAMPLE_CLASSIC_LEAST_SQUARES;
+  cctx.leaves[0].parameters = ctx.target;
+  cctx.leaves[0].scale      = 1.0;
+  if (ctx.use_term1) PetscCall(SetClassicLeaf(term1, term1_A, term1_params, ctx.term1_scale, &cctx.leaves[1]));
+  if (ctx.use_term2) PetscCall(SetClassicLeaf(term2, term2_A, term2_params, ctx.term2_scale, &cctx.leaves[1 + (PetscInt)ctx.use_term1]));
+  if (cctx.nleaves > 1) {
+    PetscCall(TaoGetTerm(tao_term, NULL, &objective, NULL, NULL));
+    for (PetscInt i = 0; i < cctx.nleaves; i++) PetscCall(TaoTermSumGetTermMask(objective, i, &cctx.leaves[i].mask));
+  }
+  PetscCall(VecDuplicate(x_term, &cx));
+  PetscCall(VecCopy(x_term, cx));
+  PetscCall(ExampleClassicCreateTao(comm, tao_term, cx, &cctx, &ctao, &cH));
   PetscCall(TaoSolve(tao_term));
+  PetscCall(TaoSolve(ctao));
 
   if (ctx.repeat_setfromoptions) {
     TaoTerm     objective;
@@ -93,9 +109,13 @@ int main(int argc, char **argv)
       PetscCheck(mask_after == mask_before, comm, PETSC_ERR_PLIB, "Repeated TaoSetFromOptions() changed structural TaoTerm options after setup");
     }
     PetscCall(TaoSolve(tao_term));
+    PetscCall(TaoSolve(ctao));
     PetscCall(PetscPrintf(comm, "Repeated TaoSetFromOptions() check passed\n"));
   }
 
+  PetscCall(TaoDestroy(&ctao));
+  PetscCall(MatDestroy(&cH));
+  PetscCall(VecDestroy(&cx));
   if (ctx.use_term1) {
     PetscCall(VecDestroy(&term1_params));
     PetscCall(MatDestroy(&term1_A));
@@ -105,6 +125,8 @@ int main(int argc, char **argv)
     PetscCall(MatDestroy(&term2_A));
   }
   PetscCall(TaoDestroy(&tao_term));
+  PetscCall(TaoTermDestroy(&term1));
+  PetscCall(TaoTermDestroy(&term2));
   PetscCall(VecDestroy(&x_term));
   PetscCall(MatDestroy(&H_term));
   if (ctx.separate_hpre) PetscCall(MatDestroy(&Hpre_term));
@@ -115,13 +137,14 @@ int main(int argc, char **argv)
 
 static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
 {
+  PetscInt rstart, rend;
+
   PetscFunctionBeginUser;
   PetscCall(PetscMemzero(ctx, sizeof(TestCtx)));
 
-  /* Initialize Rosenbrock contexts */
-  PetscCall(AppCtxCreate(comm, &ctx->user));
-
   /* Default configuration */
+  ctx->comm                  = comm;
+  ctx->n                     = 10;
   ctx->use_term1             = PETSC_FALSE;
   ctx->use_term2             = PETSC_FALSE;
   ctx->term1_has_A           = PETSC_FALSE;
@@ -130,7 +153,7 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   ctx->term2_has_params      = PETSC_FALSE;
   ctx->term1_scale           = 0.1;
   ctx->term2_scale           = 0.05;
-  ctx->map_row_size          = ctx->user->n - 1;
+  ctx->map_row_size          = ctx->n - 1;
   ctx->separate_hpre         = PETSC_FALSE;
   ctx->repeat_setfromoptions = PETSC_FALSE;
 
@@ -147,6 +170,11 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(PetscOptionsBool("-separate_hpre", "Use a separate preconditioning matrix for the legacy callback term", "", ctx->separate_hpre, &ctx->separate_hpre, NULL));
   PetscCall(PetscOptionsBool("-repeat_setfromoptions", "Call TaoSetFromOptions() again after TaoSolve()", "", ctx->repeat_setfromoptions, &ctx->repeat_setfromoptions, NULL));
   PetscOptionsEnd();
+  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, ctx->n, &ctx->target));
+  PetscCall(VecGetOwnershipRange(ctx->target, &rstart, &rend));
+  for (PetscInt i = rstart; i < rend; i++) PetscCall(VecSetValue(ctx->target, i, 1.0 + 0.05 * (i + 1), INSERT_VALUES));
+  PetscCall(VecAssemblyBegin(ctx->target));
+  PetscCall(VecAssemblyEnd(ctx->target));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -154,13 +182,13 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
 static PetscErrorCode TestCtxFinalize(TestCtx *ctx)
 {
   PetscFunctionBeginUser;
-  PetscCall(AppCtxDestroy(&ctx->user));
+  PetscCall(VecDestroy(&ctx->target));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec *params, Mat *A, const char *term_prefix, const char *A_prefix, PetscBool has_A, PetscBool has_params)
 {
-  MPI_Comm    comm = ctx->user->comm;
+  MPI_Comm    comm = ctx->comm;
   PetscMPIInt size;
 
   PetscFunctionBeginUser;
@@ -172,7 +200,7 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   /* Create parameters if requested */
   if (has_params) {
     PetscCall(VecCreate(comm, params));
-    PetscCall(VecSetSizes(*params, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n));
+    PetscCall(VecSetSizes(*params, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->n));
     PetscCall(VecSetFromOptions(*params));
     PetscCall(VecSetRandom(*params, NULL));
   }
@@ -181,7 +209,7 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   if (has_A) {
     PetscCall(MatCreate(comm, A));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*A, A_prefix));
-    PetscCall(MatSetSizes(*A, PETSC_DECIDE, PETSC_DECIDE, ctx->map_row_size, ctx->user->n));
+    PetscCall(MatSetSizes(*A, PETSC_DECIDE, PETSC_DECIDE, ctx->map_row_size, ctx->n));
     PetscCall(MatSetType(*A, MATAIJ)); /* Set default type before SetFromOptions */
     PetscCall(MatSetFromOptions(*A));
     /* Check matrix type and set up accordingly */
@@ -195,17 +223,24 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   /* Create TaoTerm, set prefix, and configure from options */
   PetscCall(TaoTermCreate(comm, term));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, term_prefix));
-  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n, 1));
+  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->n, 1));
   PetscCall(TaoTermSetFromOptions(*term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode FormFunctionGradient_TaoTerm(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 {
-  TestCtx *ctx = (TestCtx *)ptr;
+  TestCtx    *ctx = (TestCtx *)ptr;
+  Vec         diff;
+  PetscScalar dot;
 
   PetscFunctionBeginUser;
-  PetscCall(FormObjectiveGradient(tao, X, f, G, ctx->user));
+  PetscCall(VecDuplicate(X, &diff));
+  PetscCall(VecWAXPY(diff, -1.0, ctx->target, X));
+  PetscCall(VecDot(diff, diff, &dot));
+  *f = 0.5 * PetscRealPart(dot);
+  PetscCall(VecCopy(diff, G));
+  PetscCall(VecDestroy(&diff));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -215,7 +250,34 @@ static PetscErrorCode FormHessian_TaoTerm(Tao tao, Vec X, Mat H, Mat Hpre, void 
 
   PetscFunctionBeginUser;
   if (ctx->separate_hpre) PetscCheck(!Hpre || Hpre != H, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Distinct callback Hessian storage was aliased during evaluation");
-  PetscCall(FormHessian(tao, X, H, Hpre, ctx->user));
+  PetscCall(MatZeroEntries(H));
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatShift(H, 1.0));
+  if (Hpre && Hpre != H) {
+    PetscCall(MatZeroEntries(Hpre));
+    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatShift(Hpre, 1.0));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SetClassicLeaf(TaoTerm term, Mat map, Vec parameters, PetscReal scale, ExampleClassicLeaf *leaf)
+{
+  TaoTermType type;
+  PetscBool   is_l1, is_l2;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermGetType(term, &type));
+  PetscCall(PetscStrcmp(type, TAOTERML1, &is_l1));
+  PetscCall(PetscStrcmp(type, TAOTERMHALFL2SQUARED, &is_l2));
+  PetscCheck(is_l1 || is_l2, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "Classic reference supports only L1 and half-L2 added terms, not %s", type);
+  leaf->type       = is_l1 ? EXAMPLE_CLASSIC_L1 : EXAMPLE_CLASSIC_HALF_L2;
+  leaf->map        = map;
+  leaf->parameters = parameters;
+  leaf->scale      = scale;
+  if (is_l1) PetscCall(TaoTermL1GetEpsilon(term, &leaf->epsilon));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
