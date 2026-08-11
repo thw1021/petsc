@@ -154,9 +154,12 @@ $ git checkout -b yourname/fix-component-name origin/main
   Claude Code loads `AGENTS.md` through `CLAUDE.md` and finds the same skills through the `.claude/skills` symbolic link.
 
   One of these skills integrates [CodeGraph](https://colbymchenry.github.io/codegraph/) with PETSc source navigation and review.
-  Install the CodeGraph CLI with `npx @colbymchenry/codegraph`, then run `codegraph init` from the PETSc repository root to create the local `.codegraph/` index.
-  The index is ignored by Git.
+  Install the CodeGraph CLI with `npx @colbymchenry/codegraph`.
+  The installer is interactive and prompts to add `codegraph` to your PATH (required) and whether to configure globally or per-project.
+  Choose **global** to avoid modifying tracked files; the project-local option writes to `AGENTS.md`, which should not be committed without review.
+  Then run `codegraph init` from the PETSc repository root to create the local `.codegraph/` index, which is ignored by Git.
   CodeGraph's installer enables anonymous usage telemetry by default; opt out with `codegraph telemetry off`, `CODEGRAPH_TELEMETRY=0`, or the cross-tool `DO_NOT_TRACK=1`.
+  After installation completes, restart your agent/LLM CLI session so the CodeGraph MCP server loads.
   When the index exists, `AGENTS.md` directs compatible LLM coding tools to load the CodeGraph skill before navigating source.
   If the index does not exist, they continue without it.
   This applies to general development work and to `make branch-review`, whose review skill follows `AGENTS.md`.

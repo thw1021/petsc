@@ -21,8 +21,8 @@ returns relevant source, relationships, callers, and blast-radius information in
 Use whichever CodeGraph interface is available, and always target the PETSc repository root:
 
 - With the `codegraph_explore` tool, pass the PETSc root as `projectPath`.
-- With shell access, pass the PETSc root explicitly using `codegraph status <petsc-root>` and
-  `codegraph explore --path <petsc-root> "..."`.
+- With shell access, confirm the index with `codegraph status <petsc-root>`, then run
+  `codegraph explore "..."` from the PETSc root so the query resolves against PETSc's index.
 - Confirm `<petsc-root>/.codegraph/` exists before querying it.
 
 Do not silently use an enclosing repository's index. If the PETSc index is absent, skip CodeGraph,
@@ -96,6 +96,8 @@ Use these checks to scope the requested change, not to expand it into unrelated 
 ## Practical rules
 
 - Treat source returned by `codegraph_explore` as already read; do not fetch the same source again.
+  Before editing a file, read it directly — declaration blocks, `PetscFunctionBegin` pairing, and
+  the `/*TEST*/` block lie outside a symbol-scoped snippet.
 - Use other repository-inspection capabilities only for details CodeGraph did not cover,
   especially macro expansion, function-pointer assignment, generated files, preprocessor
   variants, and text-only configuration.
