@@ -276,12 +276,12 @@ PetscErrorCode MySNESMonitor(SNES snes, PetscInt its, PetscReal fnorm, PetscView
 /*TEST
 
     test:
-      args: -da_grid_x 20 -ts_max_time 3 -ts_time_step 1e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -ksp_monitor_short
+      args: -da_grid_x 20 -ts_max_time 3 -ts_time_step 1e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -ksp_monitor
       requires: !single
 
     test:
       suffix: 2
-      args: -da_grid_x 20 -ts_max_time 0.11 -ts_time_step 1e-1 -ts_type glle -ts_monitor -ksp_monitor_short
+      args: -da_grid_x 20 -ts_max_time 0.11 -ts_time_step 1e-1 -ts_type glle -ts_monitor -ksp_monitor
       requires: !single
 
     test:
