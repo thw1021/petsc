@@ -1,0 +1,2 @@
+[0]PETSC ERROR: A pre-solve callback set with KSPSetPreSolve() modified the KSP's A matrix; pre-solve callbacks may only modify the right-hand side and solution vectors
+[0]PETSC ERROR: #1 KSPPreSolve() at itcreate.c:0
