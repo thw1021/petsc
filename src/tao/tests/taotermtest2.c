@@ -18,7 +18,7 @@ static PetscErrorCode FormHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 static PetscErrorCode CreateMap(MPI_Comm, PetscInt, PetscInt, PetscReal, Mat *);
 static PetscErrorCode CreateDataTerm(MPI_Comm, const char[], PetscInt, TermCtx *, TaoTerm *);
 static PetscErrorCode AddExpectedAction(Mat, PetscReal, Vec, Vec, Vec);
-static PetscErrorCode CheckOperator(Tao, Vec, Mat *, PetscReal *, TaoTermMask *, PetscInt, PetscReal, PetscBool, PetscBool, PetscBool, PetscInt *);
+static PetscErrorCode CheckOperator(Tao, Vec, Mat *, PetscReal *, TaoTermMask *, PetscBool *, PetscInt, PetscBool, PetscBool, PetscBool, PetscBool, PetscInt *);
 
 int main(int argc, char **argv)
 {
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
   PetscInt          nterms = 1, m = 10;
   PetscBool         use_map[2] = {PETSC_TRUE, PETSC_TRUE}, provide_hessian_mult[2] = {PETSC_TRUE, PETSC_TRUE};
   PetscBool         second_term = PETSC_FALSE, no_map = PETSC_FALSE, check_hessian_mult = PETSC_FALSE, separate_callbacks = PETSC_FALSE, split_hpre = PETSC_FALSE;
-  PetscBool         parameters_none = PETSC_FALSE, parameters_required = PETSC_FALSE, use_fd = PETSC_FALSE;
+  PetscBool         parameters_none = PETSC_FALSE, parameters_required = PETSC_FALSE, use_fd[2] = {PETSC_FALSE, PETSC_FALSE};
   PetscBool         none_with_parameters = PETSC_FALSE, required_without_parameters = PETSC_FALSE;
   PetscBool         check_first_hessian_only = PETSC_FALSE;
   PetscBool         check_hessian_cache      = PETSC_FALSE;
@@ -119,8 +119,9 @@ int main(int argc, char **argv)
   PetscCall(TaoSolve(tao));
   PetscCall(TaoSolve(ctao));
   PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
-  PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
-  PetscCall(CheckOperator(tao, x, maps, scales, masks, nterms, split_hpre && !use_fd ? 2.0 : 1.0, check_hessian_mult, check_hessian_cache, provide_hessian_mult[0] || provide_hessian_mult[1], &hessian_evals));
+  PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd[0], NULL));
+  if (nterms > 1) PetscCall(PetscOptionsGetBool(NULL, "extra_", "-tao_term_hessian_use_fd", &use_fd[1], NULL));
+  PetscCall(CheckOperator(tao, x, maps, scales, masks, use_fd, nterms, split_hpre, check_hessian_mult, check_hessian_cache, provide_hessian_mult[0] || provide_hessian_mult[1], &hessian_evals));
   PetscCall(PetscPrintf(comm, "Least-squares TaoTerm operator check passed\n"));
 
   PetscCall(TaoDestroy(&ctao));
@@ -254,10 +255,10 @@ static PetscErrorCode AddExpectedAction(Mat A, PetscReal scale, Vec v, Vec expec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales[], TaoTermMask masks[], PetscInt nterms, PetscReal hpre_factor, PetscBool check_hessian_mult, PetscBool check_hessian_cache, PetscBool any_hessian_mult, PetscInt *hessian_evals)
+static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales[], TaoTermMask masks[], PetscBool use_fd[], PetscInt nterms, PetscBool split_hpre, PetscBool check_hessian_mult, PetscBool check_hessian_cache, PetscBool any_hessian_mult, PetscInt *hessian_evals)
 {
   Mat       H, Hpre, H2 = NULL;
-  Vec       v, actual, expected, work;
+  Vec       v, actual, expected, expected_pre, work;
   PetscReal error, tolerance = 2.e-5;
   PetscInt  active_hessian_terms = 0, evals_before;
 
@@ -265,12 +266,15 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
   PetscCall(VecDuplicate(x, &v));
   PetscCall(VecDuplicate(x, &actual));
   PetscCall(VecDuplicate(x, &expected));
+  PetscCall(VecDuplicate(x, &expected_pre));
   PetscCall(VecDuplicate(x, &work));
   PetscCall(VecSet(v, 1.0));
   PetscCall(VecZeroEntries(expected));
+  PetscCall(VecZeroEntries(expected_pre));
   for (PetscInt i = 0; i < nterms; i++) {
     if (masks[i] & TAOTERM_MASK_HESSIAN) continue;
     PetscCall(AddExpectedAction(maps[i], scales[i], v, expected, work));
+    PetscCall(AddExpectedAction(maps[i], split_hpre && !use_fd[i] ? 2.0 * scales[i] : scales[i], v, expected_pre, work));
     active_hessian_terms++;
   }
   PetscCheck(active_hessian_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "At least one term must contribute to the Hessian");
@@ -284,7 +288,7 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
 
   if (Hpre != H) {
     PetscCall(MatMult(Hpre, v, actual));
-    PetscCall(VecAXPY(actual, -hpre_factor, expected));
+    PetscCall(VecAXPY(actual, -1.0, expected_pre));
     PetscCall(VecNorm(actual, NORM_2, &error));
     PetscCheck(error <= tolerance, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Tao preconditioning action differs from its exact mapped action by %g", (double)error);
   }
@@ -318,6 +322,7 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
   PetscCall(VecDestroy(&v));
   PetscCall(VecDestroy(&actual));
   PetscCall(VecDestroy(&expected));
+  PetscCall(VecDestroy(&expected_pre));
   PetscCall(VecDestroy(&work));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -440,5 +445,149 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
     output_file: output/taotermtest2_classic_operator_comparison.out
     args: -second_term -data_use_map true -extra_use_map false
     args: -shell_tao_type nls -shell_tao_term_hessian_mat_type mffd
+
+  testset:
+    filter: grep -E "Classic callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_classic_operator_comparison.out
+    args: -second_term -shell_tao_type nls
+
+    test:
+      suffix: r092_second_analytic
+      args: -no_map -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r093_second_fd
+      args: -no_map -shell_tao_term_sum_data_mask hessian -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r094_mapped_second_analytic
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r095_mapped_second_fd
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r096_first_analytic
+      args: -no_map -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r097_first_fd
+      args: -no_map -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r098_mapped_first_analytic
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r099_mapped_first_fd
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r100_analytic_analytic
+      args: -no_map
+
+    test:
+      suffix: r101_analytic_fd
+      args: -no_map -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r102_fd_fd
+      args: -no_map -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r104_mapped_analytic_fd
+      args: -data_use_map true -extra_use_map false -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r105_mapped_fd_fd
+      args: -data_use_map true -extra_use_map false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r107_both_mapped_analytic_fd
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r108_both_mapped_fd_fd
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+  testset:
+    filter: grep -E "Classic callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_classic_operator_comparison.out
+    args: -second_term -split_hpre -shell_tao_type nls
+    args: -shell_tao_term_hessian_pre_is_hessian false -shell_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r109_second_analytic_separate_hpre
+      args: -no_map -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r110_second_fd_separate_hpre
+      args: -no_map -shell_tao_term_sum_data_mask hessian -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r111_mapped_second_analytic_separate_hpre
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+
+    test:
+      suffix: r112_mapped_second_fd_separate_hpre
+      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r113_first_analytic_separate_hpre
+      args: -no_map -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r114_first_fd_separate_hpre
+      args: -no_map -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r115_mapped_first_analytic_separate_hpre
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+
+    test:
+      suffix: r116_mapped_first_fd_separate_hpre
+      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
+      args: -data_tao_term_hessian_use_fd
+
+    test:
+      suffix: r117_analytic_analytic_separate_hpre
+      args: -no_map
+
+    test:
+      suffix: r118_analytic_fd_separate_hpre
+      args: -no_map -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r119_fd_fd_separate_hpre
+      args: -no_map -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r120_mapped_analytic_analytic_separate_hpre
+      args: -data_use_map true -extra_use_map false
+
+    test:
+      suffix: r121_mapped_analytic_fd_separate_hpre
+      args: -data_use_map true -extra_use_map false -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r122_mapped_fd_fd_separate_hpre
+      args: -data_use_map true -extra_use_map false
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r123_both_mapped_analytic_analytic_separate_hpre
+
+    test:
+      suffix: r124_both_mapped_analytic_fd_separate_hpre
+      args: -extra_tao_term_hessian_use_fd
+
+    test:
+      suffix: r125_both_mapped_fd_fd_separate_hpre
+      args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
 
 TEST*/
