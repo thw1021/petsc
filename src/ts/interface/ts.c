@@ -1390,8 +1390,8 @@ PetscErrorCode TSSetIJacobian(TS ts, Mat Amat, Mat Pmat, TSIJacobianFn *f, Petsc
   This is used by implicit integrators that solve DAEs $F(t, U, \dot U) = 0$ with a possibly singular mass matrix $M$.
   Only `TSIRK` currently consumes it; other integrators ignore it.
 
-  The callback is stored on the `TS`'s `DM` and copied to coarser `DM`s by `DMTSCopy()`, so it is available at every
-  level of a geometric multigrid hierarchy. `TSIRK` currently assembles the mass matrix only on the fine `DM`.
+  The callback is stored on the `TS`'s `DM` and copied to coarser `DM`s by `DMTSCopy()`, so it is available at
+  every level of a geometric multigrid hierarchy. `TSIRK` currently assembles the mass matrix only on the fine `DM`.
 
 .seealso: [](ch_ts), `TS`, `TSMassMatrixFn`, `TSGetMassMatrix()`, `TSComputeMassMatrix()`, `TSSetIJacobian()`, `TSIRK`
 @*/
@@ -1569,7 +1569,9 @@ PetscErrorCode TSComputeMassMatrix(TS ts, PetscReal t, Vec U, Mat M)
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(DMTSGetMassMatrix(dm, &func, &ctx));
   PetscCheck(func, PetscObjectComm((PetscObject)ts), PETSC_ERR_USER, "Must call TSSetMassMatrix() before TSComputeMassMatrix()");
+  PetscCall(PetscLogEventBegin(TS_JacobianEval, U, ts, M, 0));
   PetscCallBack("TS callback mass matrix", (*func)(ts, t, U, M, ctx));
+  PetscCall(PetscLogEventEnd(TS_JacobianEval, U, ts, M, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
