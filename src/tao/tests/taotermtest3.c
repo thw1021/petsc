@@ -6,6 +6,7 @@ static PetscErrorCode FormObjectiveGradient(TaoTerm, Vec, Vec, PetscReal *, Vec)
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode SetMap(Mat, PetscBool, PetscBool);
 static PetscErrorCode SetTarget(Vec, PetscReal);
+static PetscErrorCode CheckHessianAction(Tao, Mat, PetscReal, Vec);
 static PetscErrorCode CheckSolution(Mat, Vec, PetscReal, Vec);
 
 int main(int argc, char **argv)
@@ -52,10 +53,12 @@ int main(int argc, char **argv)
 
   PetscCall(TaoSolve(tao));
   PetscCall(CheckSolution(A, b, lambda, x));
+  PetscCall(CheckHessianAction(tao, A, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial least-squares solution check passed\n"));
 
   PetscCall(SetMap(A, PETSC_TRUE, change_structure));
   PetscCall(SetTarget(b, 1.5));
+  PetscCall(CheckHessianAction(tao, A, lambda, x));
   PetscCall(VecZeroEntries(x));
   PetscCall(TaoSolve(tao));
   PetscCall(CheckSolution(A, b, lambda, x));
@@ -125,6 +128,33 @@ static PetscErrorCode SetTarget(Vec b, PetscReal scale)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckHessianAction(Tao tao, Mat A, PetscReal lambda, Vec x)
+{
+  Mat       H, Hpre;
+  Vec       v, Av, actual, expected;
+  PetscReal error;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatCreateVecs(A, &v, &Av));
+  PetscCall(VecDuplicate(v, &actual));
+  PetscCall(VecDuplicate(v, &expected));
+  PetscCall(VecSet(v, 1.0));
+  PetscCall(MatMult(A, v, Av));
+  PetscCall(MatMultTranspose(A, Av, expected));
+  PetscCall(VecAXPY(expected, lambda, v));
+  PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
+  PetscCall(TaoComputeHessian(tao, x, H, Hpre));
+  PetscCall(MatMult(H, v, actual));
+  PetscCall(VecAXPY(actual, -1.0, expected));
+  PetscCall(VecNorm(actual, NORM_2, &error));
+  PetscCheck(error <= 1.e-9, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Hessian action after updating the map differs from the current mapped operator by %g", (double)error);
+  PetscCall(VecDestroy(&expected));
+  PetscCall(VecDestroy(&actual));
+  PetscCall(VecDestroy(&Av));
+  PetscCall(VecDestroy(&v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode CheckSolution(Mat A, Vec b, PetscReal lambda, Vec x)
 {
   KSP       ksp;
@@ -171,5 +201,11 @@ static PetscErrorCode CheckSolution(Mat A, Vec b, PetscReal lambda, Vec x)
     args: -change_structure -tao_type nls -tao_view ::ascii_info_detail
     filter: grep -E "solution check passed|Hessian (preconditioning )?MatType|rows=.*cols=|Solution converged"
     output_file: output/taotermtest3_map_values.out
+
+  test:
+    suffix: map_values_shell
+    args: -tao_type nls -tao_term_hessian_mat_type shell
+    filter: grep -E "solution check passed"
+    output_file: output/taotermtest3_map_values_shell.out
 
 TEST*/

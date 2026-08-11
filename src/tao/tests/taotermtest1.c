@@ -214,6 +214,7 @@ static PetscErrorCode FormHessian_TaoTerm(Tao tao, Vec X, Mat H, Mat Hpre, void 
   TestCtx *ctx = (TestCtx *)ptr;
 
   PetscFunctionBeginUser;
+  if (ctx->separate_hpre) PetscCheck(!Hpre || Hpre != H, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Distinct callback Hessian storage was aliased during evaluation");
   PetscCall(FormHessian(tao, X, H, Hpre, ctx->user));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -263,6 +264,13 @@ static PetscErrorCode FormHessian_TaoTerm(Tao tao, Vec X, Mat H, Mat Hpre, void 
     args: -tao_type nls -separate_hpre -use_term1 -reg1_tao_term_type halfl2squared
     args: -tao_term_hessian_pre_is_hessian false -tao_term_hessian_pre_mat_type aij
     args: -tao_view ::ascii_info_detail
+
+  test:
+    suffix: promoted_separate_hpre_shell
+    filter: grep "Solution converged"
+    args: -tao_type nls -separate_hpre -use_term1 -reg1_tao_term_type halfl2squared
+    args: -tao_term_hessian_mat_type shell -tao_view ::ascii_info_detail
+    output_file: output/taotermtest1_promoted_separate_hpre_shell.out
 
   test:
     suffix: halfl2_parameters
