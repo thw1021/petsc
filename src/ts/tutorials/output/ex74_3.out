@@ -2,7 +2,7 @@
       0 KSP Residual norm 0.0902246
       1 KSP Residual norm 0.072483
       2 KSP Residual norm 0.0723051
-      3 KSP Residual norm < 1.e-11
+      3 KSP Residual norm 5.493746920672e-12
 KSP final norm of residual 1.84999e-09
 1 TS dt 0.125 time 0.125
       0 KSP Residual norm 1.079e-11

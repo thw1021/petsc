@@ -16,12 +16,12 @@
     Linear solve converged due to CONVERGED_RTOL iterations 2
     1 SNES Function norm 9.10598e-07
     Linear solve converged due to CONVERGED_RTOL iterations 2
-    2 SNES Function norm < 1.e-11
+    2 SNES Function norm 1.834299326259e-12
   0 SNES Function norm 0.021012
   Linear solve converged due to CONVERGED_RTOL iterations 2
   1 SNES Function norm 3.84069e-08
   Linear solve converged due to CONVERGED_RTOL iterations 2
-  2 SNES Function norm < 1.e-11
+  2 SNES Function norm 9.285883446075e-14
 SNES Object: 1 MPI process
   type: newtonls
   maximum iterations=50, maximum function evaluations=10000
