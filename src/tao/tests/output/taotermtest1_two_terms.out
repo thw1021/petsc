@@ -1,7 +1,0 @@
-        Hessian MatType (tao_term_hessian_mat_type): aij
-                Hessian MatType (tao_term_hessian_mat_type): seqaij
-                Hessian MatType (tao_term_hessian_mat_type): diagonal
-                Hessian MatType (tao_term_hessian_mat_type): diagonal
-            rows=2, cols=2
-      rows=2, cols=2
-  Solution converged:    ||g(X)|| <= gatol
