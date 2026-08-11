@@ -1,4 +1,4 @@
-  0 KSP Residual norm 5.130971799960e-01
+  0 KSP Residual norm 0.513097
   1 KSP Residual norm 3.852828014035e-16
 KSP Object: 1 MPI process
   type: gmres

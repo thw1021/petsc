@@ -2,19 +2,19 @@
 ---- Minimum Surface Area Problem -----
 mx: 10     my: 10   
 
-  0 TAO,  Function value: 1.46076,  Residual: 0.207785 
-  1 TAO,  Function value: 1.43496,  Residual: 0.126468 
-  2 TAO,  Function value: 1.42314,  Residual: 0.0822064 
-  3 TAO,  Function value: 1.41923,  Residual: 0.055373 
-  4 TAO,  Function value: 1.41849,  Residual: 0.00941383 
-  5 TAO,  Function value: 1.41848,  Residual: 0.00351767 
-  6 TAO,  Function value: 1.41847,  Residual: 0.00237548 
-  7 TAO,  Function value: 1.41847,  Residual: 0.00190227 
-  8 TAO,  Function value: 1.41847,  Residual: 0.00145434 
-  9 TAO,  Function value: 1.41847,  Residual: 0.000880069 
- 10 TAO,  Function value: 1.41847,  Residual: 0.000549563 
- 11 TAO,  Function value: 1.41847,  Residual: 0.000170076 
- 12 TAO,  Function value: 1.41847,  Residual: 4.85476e-05 
+  0 TAO,  Function value: 1.46076,  Residual: 0.207785
+  1 TAO,  Function value: 1.43496,  Residual: 0.126468
+  2 TAO,  Function value: 1.42314,  Residual: 0.0822064
+  3 TAO,  Function value: 1.41923,  Residual: 0.055373
+  4 TAO,  Function value: 1.41849,  Residual: 0.00941383
+  5 TAO,  Function value: 1.41848,  Residual: 0.00351767
+  6 TAO,  Function value: 1.41847,  Residual: 0.00237548
+  7 TAO,  Function value: 1.41847,  Residual: 0.00190227
+  8 TAO,  Function value: 1.41847,  Residual: 0.00145434
+  9 TAO,  Function value: 1.41847,  Residual: 0.000880069
+ 10 TAO,  Function value: 1.41847,  Residual: 0.000549563
+ 11 TAO,  Function value: 1.41847,  Residual: 0.000170076
+ 12 TAO,  Function value: 1.41847,  Residual: 4.85476e-05
 Tao Object: 3 MPI processes
   type: snes
   SNES Object: 3 MPI processes
