@@ -30,14 +30,14 @@
     6 KSP Residual norm 6.761e-11
     7 KSP Residual norm 3.817e-11
     8 KSP Residual norm 1.796e-11
-    9 KSP Residual norm < 1.e-11
-   10 KSP Residual norm < 1.e-11
-   11 KSP Residual norm < 1.e-11
-   12 KSP Residual norm < 1.e-11
-   13 KSP Residual norm < 1.e-11
-   14 KSP Residual norm < 1.e-11
-   15 KSP Residual norm < 1.e-11
-   16 KSP Residual norm < 1.e-11
-   17 KSP Residual norm < 1.e-11
+    9 KSP Residual norm 2.911333726930e-12
+   10 KSP Residual norm 8.019413087298e-13
+   11 KSP Residual norm 4.601137882469e-13
+   12 KSP Residual norm 3.099367613775e-13
+   13 KSP Residual norm 2.240788371596e-13
+   14 KSP Residual norm 1.683064540927e-13
+   15 KSP Residual norm 1.161296098821e-13
+   16 KSP Residual norm 6.314798318137e-14
+   17 KSP Residual norm 1.998077602488e-14
   3 SNES Function norm 6.260e-11
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3

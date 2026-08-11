@@ -8,7 +8,7 @@
     0 SNES Function norm 97.202
     1 SNES Function norm 0.223636
     2 SNES Function norm 1.59623e-06
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm 2.445239247489e-12
 2 TS dt 0.0384615 time 0.0769231
     0 SNES Function norm 91.9215
     1 SNES Function norm 0.0323546
@@ -37,7 +37,7 @@
     0 SNES Function norm 71.1175
     1 SNES Function norm 0.0861585
     2 SNES Function norm 8.55732e-07
-    3 SNES Function norm < 1.e-11
+    3 SNES Function norm 7.024629942332e-12
 9 TS dt 0.0384615 time 0.346154
     0 SNES Function norm 68.6491
     1 SNES Function norm 0.0546354

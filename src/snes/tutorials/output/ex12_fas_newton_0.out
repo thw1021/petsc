@@ -14,7 +14,7 @@
       0 SNES Function norm 0.168478
       1 SNES Function norm 0.00165933
       2 SNES Function norm 1.62594e-07
-      3 SNES Function norm < 1.e-11
+      3 SNES Function norm 2.831068712794e-15
     0 SNES Function norm 1.69667
     1 SNES Function norm 0.163849
   2 SNES Function norm 0.163849
@@ -22,7 +22,7 @@
     1 SNES Function norm 0.00249421
       0 SNES Function norm 0.000417676
       1 SNES Function norm 1.00749e-08
-      2 SNES Function norm < 1.e-11
+      2 SNES Function norm 1.387778780781e-16
     0 SNES Function norm 0.00265254
     1 SNES Function norm 5.66326e-07
   3 SNES Function norm 5.66326e-07

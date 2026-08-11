@@ -21,7 +21,7 @@
   Residual norms for fc_ solve.
   0 KSP Residual norm 0.145891
     Residual norms for fc_fieldsplit_pressure_ solve.
-    0 KSP Residual norm < 1.e-11
+    0 KSP Residual norm 0.000000000000e+00
   1 KSP Residual norm 0.0413945
     Residual norms for fc_fieldsplit_pressure_ solve.
     0 KSP Residual norm 1.
@@ -236,7 +236,7 @@ PC Object: (fc_) 4 MPI processes
   Residual norms for fc_ solve.
   0 KSP Residual norm 0.0747999
     Residual norms for fc_fieldsplit_pressure_ solve.
-    0 KSP Residual norm < 1.e-11
+    0 KSP Residual norm 0.000000000000e+00
   1 KSP Residual norm 0.0189051
     Residual norms for fc_fieldsplit_pressure_ solve.
     0 KSP Residual norm 1.
