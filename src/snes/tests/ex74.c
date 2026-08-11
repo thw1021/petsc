@@ -1,4 +1,4 @@
-static char help[] = "Tests KSP pre-solve callbacks with SNES Eisenstat-Walker and the pre-solve matrix modification check.\n\n";
+static char help[] = "Tests SNES Eisenstat-Walker with KSP pre-solve callbacks and the pre-solve matrix modification check.\n\n";
 
 #include <petscsnes.h>
 typedef struct {
