@@ -162,6 +162,8 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
 {
   TaoType   type;
   PetscInt  n, nlocal;
+  PetscInt  max_it, max_funcs;
+  PetscReal gatol, grtol, gttol;
   PetscBool is_nls;
 
   PetscFunctionBeginUser;
@@ -174,9 +176,40 @@ static PetscErrorCode ExampleClassicCreateTao(MPI_Comm comm, Tao source, Vec x, 
   PetscCall(TaoCreate(comm, tao));
   PetscCall(TaoGetType(source, &type));
   PetscCall(TaoSetType(*tao, type));
+  PetscCall(TaoGetTolerances(source, &gatol, &grtol, &gttol));
+  PetscCall(TaoSetTolerances(*tao, gatol, grtol, gttol));
+  PetscCall(TaoGetMaximumIterations(source, &max_it));
+  PetscCall(TaoSetMaximumIterations(*tao, max_it));
+  PetscCall(TaoGetMaximumFunctionEvaluations(source, &max_funcs));
+  PetscCall(TaoSetMaximumFunctionEvaluations(*tao, max_funcs));
   PetscCall(TaoSetSolution(*tao, x));
   PetscCall(TaoSetObjectiveAndGradient(*tao, NULL, ExampleClassicFormObjectiveGradient, ctx));
   PetscCall(PetscObjectTypeCompare((PetscObject)*tao, TAONLS, &is_nls));
   if (is_nls) PetscCall(TaoSetHessian(*tao, *H, *H, ExampleClassicFormHessian, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ExampleClassicCompareResults(Tao ttao, Vec tx, Tao ctao, Vec cx)
+{
+  const PetscReal solution_rtol = 1.e-3, objective_rtol = 1.e-4, gradient_rtol = 1.e-3;
+  Vec             diff;
+  PetscReal       tnorm, cnorm, error, scale, tf, cf, tg, cg;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecDuplicate(tx, &diff));
+  PetscCall(VecWAXPY(diff, -1.0, cx, tx));
+  PetscCall(VecNorm(diff, NORM_2, &error));
+  PetscCall(VecNorm(tx, NORM_2, &tnorm));
+  PetscCall(VecNorm(cx, NORM_2, &cnorm));
+  scale = 1.0 + PetscMax(tnorm, cnorm);
+  PetscCheck(error <= solution_rtol * scale, PetscObjectComm((PetscObject)ttao), PETSC_ERR_PLIB, "TaoTerm and classic solutions differ by %g relative to scale %g", (double)error, (double)scale);
+  PetscCall(TaoGetSolutionStatus(ttao, NULL, &tf, &tg, NULL, NULL, NULL));
+  PetscCall(TaoGetSolutionStatus(ctao, NULL, &cf, &cg, NULL, NULL, NULL));
+  scale = 1.0 + PetscMax(PetscAbsReal(tf), PetscAbsReal(cf));
+  PetscCheck(PetscAbsReal(tf - cf) <= objective_rtol * scale, PetscObjectComm((PetscObject)ttao), PETSC_ERR_PLIB, "TaoTerm and classic final objectives differ by %g relative to scale %g", (double)PetscAbsReal(tf - cf), (double)scale);
+  scale = 1.0 + PetscMax(PetscAbsReal(tg), PetscAbsReal(cg));
+  PetscCheck(PetscAbsReal(tg - cg) <= gradient_rtol * scale, PetscObjectComm((PetscObject)ttao), PETSC_ERR_PLIB, "TaoTerm and classic final gradient norms differ by %g relative to scale %g", (double)PetscAbsReal(tg - cg), (double)scale);
+  PetscCall(VecDestroy(&diff));
+  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ttao), "Classic callback comparison passed\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

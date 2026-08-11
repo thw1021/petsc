@@ -65,6 +65,7 @@ int main(int argc, char **argv)
 
   PetscCall(TaoSolve(tao));
   PetscCall(TaoSolve(ctao));
+  PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(CheckHessianAction(tao, A, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial least-squares solution check passed\n"));
@@ -76,6 +77,7 @@ int main(int argc, char **argv)
   PetscCall(VecZeroEntries(cx));
   PetscCall(TaoSolve(tao));
   PetscCall(TaoSolve(ctao));
+  PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Updated least-squares solution check passed\n"));
   PetscCall(TaoViewFromOptions(tao, NULL, "-tao_view"));
