@@ -1,6 +1,7 @@
 static char help[] = "Tests MatCreateKAIJAB() with a general second operand: K = (A x T) + (B x S).\n\n";
 
 #include <petscmat.h>
+#include <petsc/private/petscimpl.h> /* PetscObjectStateGet() */
 
 /* Verify K2 = (A \otimes T) + (B \otimes S) built with MatCreateKAIJAB() against the sum of two
    single-operand KAIJ matrices: KAIJ(A, NULL, T) = A \otimes T and KAIJ(B, NULL, S) = B \otimes S.
@@ -69,12 +70,14 @@ static PetscErrorCode CheckInvertBlockDiagonal(Mat A, PetscInt p, PetscInt q, co
 
 int main(int argc, char **argv)
 {
-  Mat          A, B, K2, KAT, KBS, Bget, Dblk;
-  Vec          x, y2, yr, ytmp;
-  PetscScalar *S, *T;
-  PetscScalar  vals[3];
-  PetscInt     n = 30, i, j, nc, p = 3, q = 3, rstart, rend, cols[3], mk, nk, md, nd;
-  PetscBool    bnull = PETSC_FALSE;
+  Mat                A, B, K2, KAT, KBS, Bget, Dblk;
+  Vec                x, y2, yr, ytmp;
+  PetscScalar       *S, *T;
+  PetscScalar        vals[3];
+  const PetscScalar *dblk1, *dblk2;
+  PetscObjectState   st0, st1, nz0, nz1;
+  PetscInt           n = 30, i, j, nc, p = 3, q = 3, rstart, rend, cols[3], mk, nk, md, nd, row0 = 0;
+  PetscBool          bnull = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -169,6 +172,25 @@ int main(int argc, char **argv)
 
   if (p == q) PetscCall(CheckInvertBlockDiagonal(A, p, q, S, T));
 
+  /* The array handed back by MatInvertBlockDiagonal() must stay owned by the KAIJ matrix. PCPBJACOBI caches it across
+     solves, and with KSPSetReusePreconditioner() an operand may be reassembled, and the cached sequential submatrices
+     rebuilt underneath it, before the array is read again; if the array belonged to a submatrix it would be freed by
+     that rebuild. Reassemble A and force the rebuild through a MatMult(), then check the pointer is unchanged. */
+  if (p == q) {
+    PetscCall(MatInvertBlockDiagonal(K2, &dblk1));
+    /* Hold a reference to the current submatrix across the rebuild. Without it the released buffer is usually handed
+       straight back by the next malloc, so a pointer that did belong to the submatrix would still compare equal and the
+       check below would pass by luck; keeping the old submatrix alive forces any such buffer to move. */
+    PetscCall(MatGetDiagonalBlock(K2, &Dblk));
+    PetscCall(PetscObjectReference((PetscObject)Dblk));
+    PetscCall(MatScale(A, 1.1));
+    PetscCall(MatMult(K2, x, y2)); /* rebuilds the cached submatrices, releasing the previous ones */
+    PetscCall(MatInvertBlockDiagonal(K2, &dblk2));
+    PetscCheck(dblk1 == dblk2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatInvertBlockDiagonal() returned an array that a later rebuild of the cached submatrices invalidated");
+    PetscCall(MatDestroy(&Dblk));
+    PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatScale(A) with a cached block diagonal"));
+  }
+
   /* Swapping the second operand after the KAIJ has been set up must take effect: with B replaced by the identity the
      matrix becomes (A x T) + (I x S), so the reference for the second term is rebuilt over the identity as well. */
   PetscCall(MatKAIJSetB(K2, NULL));
@@ -183,6 +205,37 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&KBS));
   PetscCall(MatCreateKAIJ(B, p, q, NULL, S, &KBS)); /* B \otimes S */
   PetscCall(CheckMult(K2, KAT, KBS, x, y2, yr, ytmp, "after MatKAIJSetB(K, B)"));
+
+  /* Assembling the KAIJ matrix after an operand is reassembled must raise its object state, so a KSP/PC that holds it
+     re-sets up, and must forward the operand's nonzero state, so a value-only change is not reported as a nonzero-pattern
+     change. This runs after every CheckMult() above so that mutating A here disturbs nothing. */
+  PetscCall(PetscObjectStateGet((PetscObject)K2, &st0));
+  PetscCall(MatGetNonzeroState(K2, &nz0));
+  PetscCall(MatScale(A, 2.0)); /* value change, same nonzero pattern */
+  PetscCall(MatAssemblyBegin(K2, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(K2, MAT_FINAL_ASSEMBLY));
+  PetscCall(PetscObjectStateGet((PetscObject)K2, &st1));
+  PetscCall(MatGetNonzeroState(K2, &nz1));
+  PetscCheck(st1 != st0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Assembling the KAIJ matrix after reassembling an operand did not raise its object state");
+  PetscCheck(nz1 == nz0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A value-only change to an operand was reported as a nonzero-pattern change of the KAIJ matrix");
+
+  /* A genuine new nonzero in A must reach the KAIJ matrix's nonzero state. Row 0 of the tridiagonal A holds two entries
+     in a slot preallocated for three, so (0, 2) is a new location that needs no reallocation. */
+  if (n > 2) {
+    PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+    if (rstart == 0) {
+      cols[0] = 2;
+      vals[0] = 0.25;
+      PetscCall(MatSetValues(A, 1, &row0, 1, cols, vals, INSERT_VALUES));
+    }
+    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatGetNonzeroState(K2, &nz0));
+    PetscCall(MatAssemblyBegin(K2, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(K2, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatGetNonzeroState(K2, &nz1));
+    PetscCheck(nz1 != nz0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A new nonzero in an operand was not forwarded to the KAIJ matrix's nonzero state");
+  }
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatCreateKAIJAB() MatMult matches (A x T) + (B x S)\n"));
 

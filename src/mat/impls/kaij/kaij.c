@@ -306,6 +306,27 @@ static PetscErrorCode MatKAIJInvalidateCache_Private(Mat A)
 }
 
 /*
+  Record the operands' current nonzero states as the baseline that MatAssemblyEnd_KAIJ() compares against. Called when an
+  operand is attached (MatKAIJSetAIJ()/MatKAIJSetB()) and at MatSetUp_KAIJ(), so the baseline reflects the operands as
+  they stand and only genuine later pattern changes are forwarded to the KAIJ matrix's nonzero state.
+*/
+static PetscErrorCode MatKAIJResetOperandNnzState_Private(Mat A)
+{
+  Mat_SeqKAIJ *a = (Mat_SeqKAIJ *)A->data;
+  Mat          aij;
+  PetscMPIInt  size;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
+  aij            = size == 1 ? a->AIJ : ((Mat_MPIKAIJ *)A->data)->A;
+  a->aijnnzstate = 0;
+  a->bnnzstate   = 0;
+  if (aij) PetscCall(MatGetNonzeroState(aij, &a->aijnnzstate));
+  if (a->B) PetscCall(MatGetNonzeroState(a->B, &a->bnnzstate));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   The (B \otimes S) term is applied over the layout of the AIJ operand, so B must share that layout in both the
   sequential and the parallel case. The setters call this as well as MatSetUp_KAIJ(), because MatSetUp() runs the type
   method only once while either operand may be replaced afterwards. Nothing is checked before both operands are set;
@@ -379,6 +400,7 @@ PetscErrorCode MatKAIJSetAIJ(Mat A, Mat aij)
   }
   PetscCall(MatKAIJCheckOperandLayout_Private(A));
   PetscCall(MatKAIJInvalidateCache_Private(A));
+  PetscCall(MatKAIJResetOperandNnzState_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -430,6 +452,7 @@ PetscErrorCode MatKAIJSetB(Mat A, Mat B)
   PetscCall(MatKAIJCheckOperandLayout_Private(A));
   /* The second operand changed, so the submatrices must be rebuilt even when neither operand has been reassembled */
   PetscCall(MatKAIJInvalidateCache_Private(A));
+  PetscCall(MatKAIJResetOperandNnzState_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -767,7 +790,38 @@ static PetscErrorCode MatSetUp_KAIJ(Mat A)
     PetscCall(MatKAIJ_build_AIJ_OAIJ(A));
   }
 
+  /* Prime the operand nonzero states so MatAssemblyEnd_KAIJ() forwards only genuine post-setup pattern changes */
+  PetscCall(MatKAIJResetOperandNnzState_Private(A));
+
   A->assembled = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Reassembling an operand does not raise the object state of the KAIJ matrix that wraps it, so a KSP or PC holding the
+  KAIJ matrix would keep a preconditioner built from the previous entries. Following the reassembly with
+  MatAssemblyBegin()/MatAssemblyEnd() on the KAIJ matrix is the documented remedy (see MatCreateKAIJ()); this hook makes
+  that call carry the operands' nonzero-pattern changes into the KAIJ matrix's own nonzero state, exactly as
+  MatAssemblyEnd_Nest() does for MATNEST, so that the state reported by MatGetNonzeroState() stays a faithful function of
+  the operands and a PC sees DIFFERENT_NONZERO_PATTERN only when an operand's pattern really changed. The operands are
+  assembled by the user, so unlike MATNEST this does not assemble them here.
+*/
+static PetscErrorCode MatAssemblyEnd_KAIJ(Mat A, MatAssemblyType type)
+{
+  Mat_SeqKAIJ     *a = (Mat_SeqKAIJ *)A->data;
+  Mat              aij;
+  PetscObjectState aijnnz = 0, bnnz = 0;
+  PetscMPIInt      size;
+
+  PetscFunctionBegin;
+  if (type == MAT_FLUSH_ASSEMBLY) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
+  aij = size == 1 ? a->AIJ : ((Mat_MPIKAIJ *)A->data)->A;
+  if (aij) PetscCall(MatGetNonzeroState(aij, &aijnnz));
+  if (a->B) PetscCall(MatGetNonzeroState(a->B, &bnnz));
+  if (aijnnz != a->aijnnzstate || bnnz != a->bnnzstate) A->nonzerostate++;
+  a->aijnnzstate = aijnnz;
+  a->bnnzstate   = bnnz;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1410,13 +1464,26 @@ static PetscErrorCode MatMult_MPIKAIJ(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  The inverted block diagonal computed by the sequential submatrix cannot be handed to the caller directly: callers such as
+  PCPBJACOBI keep the returned pointer across solves, while MatKAIJ_build_AIJ_OAIJ() destroys and recreates b->AIJ, and with it
+  that buffer, as soon as either operand is reassembled. Copy into a buffer owned by this matrix instead. It is released only by
+  MatKAIJInvalidateCache_Private(), which raises the state of this matrix so that a cached pointer is refreshed before it is read
+  again, and by MatDestroy_MPIKAIJ(), after which no caller may hold the matrix at all.
+*/
 static PetscErrorCode MatInvertBlockDiagonal_MPIKAIJ(Mat A, const PetscScalar **values)
 {
-  Mat_MPIKAIJ *b = (Mat_MPIKAIJ *)A->data;
+  Mat_MPIKAIJ       *b = (Mat_MPIKAIJ *)A->data;
+  const PetscScalar *diag;
+  PetscInt           nb;
 
   PetscFunctionBegin;
   PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ is up to date. */
-  PetscUseTypeMethod(b->AIJ, invertblockdiagonal, values);
+  PetscUseTypeMethod(b->AIJ, invertblockdiagonal, &diag);
+  nb = b->p * b->p * b->A->rmap->n; /* MatInvertBlockDiagonal_SeqKAIJ() requires p == q */
+  if (!b->ibdiag) PetscCall(PetscMalloc1(nb, &b->ibdiag));
+  PetscCall(PetscArraycpy(b->ibdiag, diag, nb));
+  if (values) *values = b->ibdiag;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1652,13 +1719,22 @@ static PetscErrorCode MatCreateSubMatrix_KAIJ(Mat mat, IS isrow, IS iscol, MatRe
 
   This function increases the reference count on the `MATAIJ` matrix, so the user is free to destroy the matrix if it is not needed.
 
-  Changes to the entries of the `MATAIJ` matrix will immediately affect the `MATKAIJ` matrix.
+  Changes to the entries of the `MATAIJ` matrix will immediately affect the `MATKAIJ` matrix, so `MatMult()` and the other operations
+  always use the current entries. Reassembling an operand does not, however, raise the object state of the `MATKAIJ` matrix itself, and
+  a `PC` decides whether to rebuild from that state, so follow the reassembly with `MatAssemblyBegin()`/`MatAssemblyEnd()` on the
+  `MATKAIJ` matrix, exactly as for any other matrix handed to a `KSP`; otherwise the preconditioner is reused unchanged. Assembling the
+  `MATKAIJ` matrix forwards the operands' nonzero states to it, so a `PC` sees a changed nonzero pattern only when an operand's pattern
+  actually changed. Changing `S` or `T` with `MatKAIJSetS()`, `MatKAIJSetT()`, or `MatKAIJRestoreS()`/`MatKAIJRestoreT()` raises the
+  state on its own.
 
   Developer Notes:
   In the `MATMPIKAIJ` case, the internal 'AIJ' and 'OAIJ' sequential KAIJ matrices are kept up to date by tracking the object state
   of the AIJ matrix 'A' that describes the blockwise action of the `MATMPIKAIJ` matrix and, if the object state has changed, lazily
   rebuilding 'AIJ' and 'OAIJ' just before executing operations with the `MATMPIKAIJ` matrix. If new types of operations are added,
   routines implementing those must also ensure these are rebuilt when needed (by calling the internal MatKAIJ_build_AIJ_OAIJ() routine).
+  That rebuild also recreates the ghost scatter and is therefore collective, so every operation that triggers it is collective on a
+  `MATMPIKAIJ` even when the generic interface documents it otherwise; `MatGetDiagonalBlock()`, documented as not collective, must
+  still be called by all processes for a `MATMPIKAIJ`.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateKAIJAB()`, `MatKAIJSetAIJ()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MatKAIJGetAIJ()`, `MatKAIJGetS()`, `MatKAIJGetT()`, `MATKAIJ`
 @*/
@@ -1706,11 +1782,11 @@ PetscErrorCode MatCreateKAIJ(Mat A, PetscInt p, PetscInt q, const PetscScalar S[
 
   This function increases the reference count on both `MATAIJ` matrices, so the user is free to destroy them if they are not needed.
 
-  When `B` is not the identity, `MatMult()`, `MatMultAdd()`, and `MatInvertBlockDiagonal()` (hence `PCPBJACOBI`) are
-  supported; the remaining operations raise an error in that case. These are `MatSOR()`, `MatGetRow()`, `MatConvert()`,
-  and the operations built on `MatConvert()`\: `MatCreateSubMatrix()` and `MatView()` in any format other than
-  `PETSC_VIEWER_ASCII_INFO`, `PETSC_VIEWER_ASCII_INFO_DETAIL`, or `PETSC_VIEWER_ASCII_IMPL`. In particular
-  `-mat_view` and `-ksp_view_mat` will error on such a matrix.
+  When `B` is not the identity, `MatMult()`, `MatMultAdd()`, `MatGetDiagonalBlock()`, and `MatInvertBlockDiagonal()`
+  (hence `PCPBJACOBI`) are supported; the remaining operations raise an error in that case. These are `MatSOR()`,
+  `MatGetRow()`, `MatConvert()`, and the operations built on `MatConvert()`\: `MatCreateSubMatrix()` and `MatView()` in
+  any format other than `PETSC_VIEWER_ASCII_INFO`, `PETSC_VIEWER_ASCII_INFO_DETAIL`, or `PETSC_VIEWER_ASCII_IMPL`. In
+  particular `-mat_view` and `-ksp_view_mat` will error on such a matrix.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateKAIJ()`, `MatKAIJSetAIJ()`, `MatKAIJSetB()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MATKAIJ`
 @*/
@@ -1789,6 +1865,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_KAIJ(Mat A)
   }
   A->ops->setup           = MatSetUp_KAIJ;
   A->ops->view            = MatView_KAIJ;
+  A->ops->assemblyend     = MatAssemblyEnd_KAIJ;
   A->ops->createsubmatrix = MatCreateSubMatrix_KAIJ;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
