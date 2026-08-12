@@ -1,4 +1,0 @@
-Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
-Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): seqaij
-Mask (tao_term_sum_reg1_mask): hessian
-Reference callback comparison passed

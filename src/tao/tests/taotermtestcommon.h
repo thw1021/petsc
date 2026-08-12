@@ -366,7 +366,6 @@ static PetscErrorCode ExampleReferenceSolveAndCompare(Tao source, Vec source_x, 
   PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)source), &viewer));
   PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO_DETAIL));
   PetscCall(TaoView(source, viewer));
-  PetscCall(TaoView(reference->tao, viewer));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscCall(ExampleCompareResults(source, source_x, reference->tao, reference->x));
   PetscFunctionReturn(PETSC_SUCCESS);
