@@ -13,18 +13,19 @@ Labels:
   boundary: 1 strata with value/size (1 (4))
   0 SNES Function norm 70.6653
     0 KSP Residual norm 70.6653
-    1 KSP Residual norm 12.4495
-    2 KSP Residual norm 1.57
-    3 KSP Residual norm 0.0968038
-    4 KSP Residual norm 0.0157716
-    5 KSP Residual norm 0.00118517
-    6 KSP Residual norm 0.000166696
-    7 KSP Residual norm 1.27168e-05
-    8 KSP Residual norm 3.20202e-07
-    9 KSP Residual norm 1.24856e-08
-   10 KSP Residual norm < 1.e-11
-  Linear solve converged due to CONVERGED_RTOL iterations 10
-  1 SNES Function norm < 1.e-11
+    1 KSP Residual norm 13.5915
+    2 KSP Residual norm 2.00302
+    3 KSP Residual norm 0.134688
+    4 KSP Residual norm 0.0161933
+    5 KSP Residual norm 0.00234529
+    6 KSP Residual norm 0.000302233
+    7 KSP Residual norm 3.76609e-05
+    8 KSP Residual norm 3.9963e-06
+    9 KSP Residual norm 4.16497e-07
+   10 KSP Residual norm 5.86842e-08
+   11 KSP Residual norm 2.45391e-09
+  Linear solve converged due to CONVERGED_RTOL iterations 11
+  1 SNES Function norm 2.45393e-09
 DM Object: Mesh 4 MPI processes
   type: plex
 Mesh in 3 dimensions:
@@ -42,21 +43,21 @@ Field deformation:
   adjacency FEM
   0 SNES Function norm 28.7004
     0 KSP Residual norm 28.7004
-    1 KSP Residual norm 7.18027
-    2 KSP Residual norm 1.31424
-    3 KSP Residual norm 0.215472
-    4 KSP Residual norm 0.034999
-    5 KSP Residual norm 0.00608692
-    6 KSP Residual norm 0.000974161
-    7 KSP Residual norm 0.000163003
-    8 KSP Residual norm 2.90666e-05
-    9 KSP Residual norm 4.38273e-06
-   10 KSP Residual norm 7.31475e-07
-   11 KSP Residual norm 1.23618e-07
-   12 KSP Residual norm 2.04823e-08
-   13 KSP Residual norm 3.61867e-09
-   14 KSP Residual norm 6.240e-10
+    1 KSP Residual norm 7.45989
+    2 KSP Residual norm 1.34805
+    3 KSP Residual norm 0.221363
+    4 KSP Residual norm 0.0363018
+    5 KSP Residual norm 0.00633085
+    6 KSP Residual norm 0.00101534
+    7 KSP Residual norm 0.000166203
+    8 KSP Residual norm 2.97921e-05
+    9 KSP Residual norm 4.43702e-06
+   10 KSP Residual norm 7.73588e-07
+   11 KSP Residual norm 1.27249e-07
+   12 KSP Residual norm 2.21129e-08
+   13 KSP Residual norm 3.75396e-09
+   14 KSP Residual norm 6.575e-10
   Linear solve converged due to CONVERGED_RTOL iterations 14
-  1 SNES Function norm 6.240e-10
+  1 SNES Function norm 6.575e-10
 [0] 0) N=          27, max displ=4.1232123e+01, error=1.852e+01
 [0] 1) N=         441, max displ=5.3174288e+01, disp diff= 1.19e+01, error=6.579e+00, rate=1.5

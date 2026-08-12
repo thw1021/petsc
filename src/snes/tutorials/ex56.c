@@ -475,6 +475,22 @@ int main(int argc, char **args)
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0,0,0 -dm_plex_box_upper 1,1,1 -dm_plex_box_faces 2,2,1 -petscpartitioner_simple_process_grid 2,2,1 -max_conv_its 2 -petscspace_degree 2 -snes_max_it 1 -ksp_type cg -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_coarse_eq_limit 10 -pc_gamg_aggressive_coarsening 1 -ksp_converged_reason -use_mat_nearnullspace true -my_dm_view -snes_type ksponly
     timeoutfactor: 2
 
+  # MIS-1 (no aggressive coarsening) with a filtered graph makes aggregates too small for the near-null-space QR;
+  # pbjacobi hits the singular coarse operator (zero pivot) unless small aggregates are merged
+  testset:
+    requires: !single
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0,0,0 -dm_plex_box_upper 1,1,1 -run_type 1 -dm_plex_box_faces 2,2,1 -max_conv_its 3 -lx 1. -alpha .01 -petscspace_degree 2 -snes_max_it 1 -snes_type ksponly -ksp_type cg -ksp_max_it 200 -ksp_rtol 1.e-8 -ksp_norm_type unpreconditioned -ksp_converged_reason -use_mat_nearnullspace true -pc_type gamg -pc_gamg_coarse_eq_limit 200 -pc_gamg_aggressive_coarsening 0 -pc_gamg_threshold 0.05 -mg_levels_pc_type pbjacobi -mg_coarse_pc_type bjacobi -mg_coarse_ksp_type preonly
+    timeoutfactor: 2
+    output_file: output/ex56_small_aggs.out
+    filter: sed -e "s/iterations 6/iterations 7/" -e "s/4\.123212[0-9]/4.1232123/" -e "s/5\.317428[0-9]/5.3174288/" -e "s/5\.906389[0-9]/5.9063893/"
+    test:
+      suffix: small_aggs
+      nsize: 1
+    test:
+      suffix: small_aggs_par
+      nsize: 4
+      args: -petscpartitioner_type simple -petscpartitioner_simple_process_grid 2,2,1
+
   # HYPRE PtAP broken with complex numbers
   test:
     suffix: hypre
