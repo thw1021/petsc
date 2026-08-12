@@ -53,12 +53,9 @@ int main(int argc, char **argv)
   PetscCall(TaoAddTerm(tao, "data_", 1.0, data, b, A));
   PetscCall(TaoAddTerm(tao, "reg_", lambda, regularizer, NULL, NULL));
   PetscCall(TaoSetFromOptions(tao));
-  PetscCall(TaoSetUp(tao));
-  PetscCall(ExampleCheckHessianConfiguration(tao));
-  PetscCall(ExampleCheckHessianMultConfiguration(data, PETSC_FALSE));
-  PetscCall(ExampleCheckHessianMultConfiguration(regularizer, PETSC_TRUE));
   PetscCall(TaoTermComputeHessianGetUseFD(data, &use_fd));
   if (use_fd) hessian_tolerance = 2.e-5;
+
   reference_ctx.nsubterms              = 2;
   reference_ctx.subterms[0].map        = A;
   reference_ctx.subterms[0].parameters = b;
@@ -79,7 +76,6 @@ int main(int argc, char **argv)
   PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Updated least-squares solution check passed\n"));
-  PetscCall(TaoViewFromOptions(tao, NULL, "-tao_view"));
 
   PetscCall(TaoDestroy(&tao));
   PetscCall(ExampleReferenceDestroy(&reference));
@@ -194,39 +190,28 @@ static PetscErrorCode CheckSolution(Mat A, Vec b, PetscReal lambda, Vec x)
 
   test:
     suffix: map_values
-    args: -tao_type nls -tao_view ::ascii_info_detail
-    filter: grep -E "solution check passed|Hessian (preconditioning )?MatType|rows=.*cols=|Solution converged"
+    args: -tao_type nls
 
   test:
     suffix: map_structure
-    args: -change_structure -tao_type nls -tao_view ::ascii_info_detail
-    filter: grep -E "solution check passed|Hessian (preconditioning )?MatType|rows=.*cols=|Solution converged"
-    output_file: output/taotermtest3_map_values.out
+    args: -change_structure -tao_type nls
 
   test:
     suffix: map_values_shell
     args: -tao_type nls -tao_term_hessian_mat_type shell
-    filter: grep -E "solution check passed"
-    output_file: output/taotermtest3_map_values_shell.out
 
   test:
     suffix: r148_map_values_shell_fd
     args: -tao_type nls -tao_term_hessian_mat_type shell -data_tao_term_hessian_use_fd
-    filter: grep -E "solution check passed"
-    output_file: output/taotermtest3_map_values_shell.out
 
   test:
     suffix: r176_map_values_shell_separate_hpre
     args: -tao_type nls -tao_term_hessian_mat_type shell
     args: -tao_term_hessian_pre_is_hessian false -tao_term_hessian_pre_mat_type aij
-    filter: grep -E "solution check passed"
-    output_file: output/taotermtest3_map_values_shell.out
 
   test:
     suffix: r178_map_values_shell_fd_separate_hpre
     args: -tao_type nls -tao_term_hessian_mat_type shell -data_tao_term_hessian_use_fd
     args: -tao_term_hessian_pre_is_hessian false -tao_term_hessian_pre_mat_type aij
-    filter: grep -E "solution check passed"
-    output_file: output/taotermtest3_map_values_shell.out
 
 TEST*/

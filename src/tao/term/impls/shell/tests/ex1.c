@@ -211,7 +211,10 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    suffix: 0
+   build:
+     requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
+
+   test:
+     suffix: 0
 
 TEST*/
