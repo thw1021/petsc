@@ -190,7 +190,7 @@ static PetscErrorCode TestOptionsSetFromOptions(MPI_Comm comm, TestOptions *opti
   extra->scale                = 0.25;
   data->size                  = 10;
   extra->size                 = 12;
-  options->parameters_mode = TAOTERM_PARAMETERS_OPTIONAL;
+  options->parameters_mode    = TAOTERM_PARAMETERS_OPTIONAL;
   PetscOptionsBegin(comm, "", help, "Tao");
   PetscCall(PetscOptionsBool("-second_term", "Add a second least-squares data term", NULL, second_term, &second_term, NULL));
   PetscCall(PetscOptionsBool("-no_map", "Add terms directly in the Tao solution space", NULL, no_map, &no_map, NULL));
@@ -212,10 +212,10 @@ static PetscErrorCode TestOptionsSetFromOptions(MPI_Comm comm, TestOptions *opti
   PetscOptionsEnd();
 
   options->nterms          = second_term ? 2 : 1;
-  extra->size              = extra->use_map ? 12 : 10;
-  extra->supply_parameters = data->supply_parameters;
   data->size               = data->use_map ? m : 10;
+  extra->size              = extra->use_map ? 12 : 10;
   data->supply_parameters  = options->parameters_mode != TAOTERM_PARAMETERS_NONE;
+  extra->supply_parameters = data->supply_parameters;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
