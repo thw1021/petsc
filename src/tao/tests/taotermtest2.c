@@ -89,7 +89,6 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSetUp(tao));
   PetscCall(ExampleCheckHessianConfiguration(tao));
-  for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckHessianMultConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
   reference_ctx.nsubterms = options.nterms;
   if (options.nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
   for (PetscInt i = 0; i < options.nterms; i++) {

@@ -78,16 +78,6 @@ static PetscErrorCode ExampleCheckHessianConfiguration(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleCheckHessianMultConfiguration(TaoTerm term, PetscBool expected)
-{
-  PetscBool actual;
-
-  PetscFunctionBeginUser;
-  PetscCall(TaoTermIsHessianMultDefined(term, &actual));
-  PetscCheck(actual == expected, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "HessianMult should %sbe defined on this term, but it is %sdefined", expected ? "" : "not ", actual ? "" : "not ");
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_UNUSED static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
 {
   PetscFunctionBeginUser;

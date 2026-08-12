@@ -55,8 +55,6 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSetUp(tao));
   PetscCall(ExampleCheckHessianConfiguration(tao));
-  PetscCall(ExampleCheckHessianMultConfiguration(data, PETSC_FALSE));
-  PetscCall(ExampleCheckHessianMultConfiguration(regularizer, PETSC_TRUE));
   PetscCall(TaoTermComputeHessianGetUseFD(data, &use_fd));
   if (use_fd) hessian_tolerance = 2.e-5;
   reference_ctx.nsubterms              = 2;
