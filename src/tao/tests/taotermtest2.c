@@ -383,118 +383,105 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
     requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
   testset:
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|parameter vector space|Mask \(|rows=.*cols=|Solution converged|operator check passed" | grep -v "MatType.*undefined"
 
     test:
       suffix: assembled
-      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_type nls
 
     test:
       suffix: rectangular_map
-      args: -m 15 -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -m 15 -shell_tao_type nls
 
     test:
       suffix: separate_callbacks
-      args: -separate_callbacks -shell_tao_type nls -shell_tao_view ::ascii_info_detail
-      filter: grep -E "methods have been set|Hessian (preconditioning )?MatType|parameter vector space|rows=.*cols=|Solution converged|operator check passed" | grep -v "MatType.*undefined"
+      args: -separate_callbacks -shell_tao_type nls
 
     test:
       suffix: mapped_separate_hpre
-      args: -split_hpre -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -split_hpre -shell_tao_type nls
 
     test:
       suffix: mapped_fd
-      args: -data_tao_term_hessian_use_fd -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -data_tao_term_hessian_use_fd -shell_tao_type nls
 
     test:
       suffix: mapped_fd_separate_hpre
-      args: -split_hpre -data_tao_term_hessian_use_fd -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -split_hpre -data_tao_term_hessian_use_fd -shell_tao_type nls
 
     test:
       suffix: two_mapped_assembled
-      args: -second_term -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -second_term -shell_tao_type nls
 
     test:
       suffix: fallback_unmapped
       args: -second_term -no_map -provide_hessian_mult false -shell_tao_type nls
-      args: -shell_tao_term_hessian_mat_type shell -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_term_hessian_mat_type shell
 
     test:
       suffix: fallback_mapped
       args: -second_term -provide_hessian_mult false -shell_tao_type nls
-      args: -shell_tao_term_hessian_mat_type shell -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_term_hessian_mat_type shell
 
     test:
       suffix: fallback_separate_hpre
       args: -second_term -no_map -provide_hessian_mult false -split_hpre -shell_tao_type nls
       args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
-      args: -shell_tao_term_hessian_pre_mat_type aij -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_term_hessian_pre_mat_type aij
 
     test:
       suffix: fallback_mapped_separate_hpre
       args: -second_term -provide_hessian_mult false -split_hpre -shell_tao_type nls
       args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
-      args: -shell_tao_term_hessian_pre_mat_type aij -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_term_hessian_pre_mat_type aij
 
     test:
       suffix: sum_hessian_mult
       args: -second_term -check_hessian_mult -shell_tao_type nls
-      args: -shell_tao_term_hessian_mat_type shell -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_term_hessian_mat_type shell
 
     test:
       suffix: shared_hessian_cache
       args: -second_term -provide_hessian_mult false -check_hessian_cache -shell_tao_type nls
-      filter: grep -E "Shared Hessian cache check passed|operator check passed"
 
     test:
       suffix: parameters_none
-      args: -second_term -parameters none -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -second_term -parameters none -shell_tao_type nls
 
     test:
       suffix: parameters_required
-      args: -second_term -parameters required -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -second_term -parameters required -shell_tao_type nls
 
     test:
       suffix: hessian_only_model
       args: -second_term -shell_tao_term_sum_extra_mask objective,gradient
-      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_type nls
 
     test:
       suffix: shell_masked_hessian
       args: -second_term -provide_hessian_mult false
       args: -shell_tao_term_sum_extra_mask hessian -shell_tao_term_hessian_mat_type shell
-      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -shell_tao_type nls
 
   test:
     suffix: asymmetric_map_assembled
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -data_use_map true -extra_use_map false -shell_tao_type nls
 
   test:
     suffix: mixed_direct_fallback
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -data_use_map false -extra_use_map true
     args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
     args: -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
 
   test:
     suffix: sum_fd_mapped
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls -shell_tao_fd_hessian
 
   test:
     suffix: sum_fd_mapped_separate_callbacks
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls -shell_tao_fd_hessian
     args: -separate_callbacks
 
   testset:
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls
 
     test:
@@ -561,8 +548,6 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
       args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
 
   testset:
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -split_hpre -shell_tao_type nls
     args: -shell_tao_term_hessian_pre_is_hessian false -shell_tao_term_hessian_pre_mat_type aij
 
@@ -637,8 +622,6 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
       args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
 
   testset:
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
 
     test:
@@ -749,8 +732,6 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
       args: -data_tao_term_hessian_use_fd
 
   testset:
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -split_hpre -shell_tao_type nls
     args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
     args: -shell_tao_term_hessian_pre_mat_type aij
@@ -876,8 +857,6 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
 
   test:
     suffix: r018_hessianmult_separate_hpre
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -no_map -split_hpre -shell_tao_type nls
     args: -data_tao_term_hessian_mat_type shell -data_tao_term_hessian_pre_is_hessian false
     args: -data_tao_term_hessian_pre_mat_type aij
