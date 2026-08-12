@@ -95,7 +95,7 @@
 - Add `KSPPreSolve()` and `KSPPostSolve()` to run the registered `KSP` pre/post solve callbacks
 - Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
-- Deprecate `KSPMonitorResidualShort()` and `-ksp_monitor_short`
+- Deprecate `KSPMonitorResidualShort()`, `-ksp_monitor_short`, and the `preconditioned_residual_short` monitor registry name
 
 ## SNES
 
@@ -118,7 +118,8 @@
 ## TAO
 
 - Add `TaoGetDM()` and `TaoSetDM()`
-- Deprecate `TaoMonitorDefaultShort()` and `-tao_monitor_short`
+- Deprecate `TaoMonitorDefaultShort()`, `-tao_monitor_short`, and `-tao_monitor_short_interval`
+- Change the deprecated `TaoSMonitor()` and `-tao_smonitor` to use the full-precision default monitor
 
 ## TaoTerm
 

@@ -1831,7 +1831,13 @@ PetscErrorCode TaoMonitorGlobalization(Tao tao, PetscViewerAndFormat *vf)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// deprecated - intentionally has no manual page
+/*
+  Same as TaoMonitorDefault() except it prints fewer digits of the residual as the residual gets smaller.
+  This is because the later digits are meaningless and are often different on different machines; by using this routine different
+  machines will usually generate the same output.
+
+  Deprecated: Intentionally has no manual page
+*/
 PetscErrorCode TaoMonitorDefaultShort(Tao tao, PetscViewerAndFormat *vf)
 {
   PetscViewer viewer = vf->viewer;
