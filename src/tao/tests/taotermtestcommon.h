@@ -35,6 +35,25 @@ typedef struct {
   ExampleCtx *ctx;
 } ExampleReference;
 
+static PetscErrorCode ExampleCheckRequestedHessianType(Tao tao, const char prefix[])
+{
+  MatType   actual;
+  Mat       H;
+  char      requested[256] = MATAIJ;
+  PetscBool matches, requested_aij;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscOptionsGetString(NULL, prefix, "-tao_term_hessian_mat_type", requested, sizeof(requested), NULL));
+  PetscCall(TaoSetUp(tao));
+  PetscCall(TaoGetHessianMatrices(tao, &H, NULL));
+  PetscCall(MatGetType(H, &actual));
+  PetscCall(PetscStrcmp(requested, MATAIJ, &requested_aij));
+  if (requested_aij) PetscCall(PetscObjectTypeCompareAny((PetscObject)H, &matches, MATSEQAIJ, MATMPIAIJ, ""));
+  else PetscCall(PetscObjectTypeCompare((PetscObject)H, requested, &matches));
+  PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Requested Hessian MatType %s, but Tao uses %s", requested, actual);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
 {
   PetscFunctionBeginUser;

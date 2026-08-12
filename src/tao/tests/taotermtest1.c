@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     PetscCall(TaoAddTerm(state.tao, "reg1_", ctx->term1.scale, ctx->term1.term, ctx->term1.parameters, ctx->term1.map));
   }
   PetscCall(TaoSetFromOptions(state.tao));
+  PetscCall(ExampleCheckRequestedHessianType(state.tao, "t_"));
   state.reference_ctx.nleaves              = ctx->use_term1 ? 2 : 1;
   state.reference_ctx.leaves[0].parameters = ctx->target;
   state.reference_ctx.leaves[0].scale      = 1.0;
@@ -349,7 +350,7 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
     suffix: promoted_shell_fd_direct
     filter: grep "Reference callback comparison passed"
     output_file: output/taotermtest1_reference_comparison.out
-    args: -t_tao_type nls -use_term1 -term1_shell -t_tao_fd_hessian
+    args: -t_tao_type nls -use_term1 -term1_shell -t_callbacks_tao_term_hessian_use_fd
     args: -term1_hessian_mult -t_tao_term_hessian_mat_type shell
 
   test:
@@ -369,6 +370,7 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
 
   test:
     suffix: promoted_mapped_mffd
+    TODO: TAOTERMSUM does not support an outer MFFD Hessian
     filter: grep "Reference callback comparison passed"
     output_file: output/taotermtest1_reference_comparison.out
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A
@@ -382,19 +384,23 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
 
     test:
       suffix: r087_mffd_added
+      TODO: TAOTERMSUM does not support an outer MFFD Hessian
       args: -term1_scale 100 -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
 
     test:
       suffix: r088_mffd_mapped_added
+      TODO: TAOTERMSUM does not support an outer MFFD Hessian
       args: -term1_has_A -map_row_size 11 -term1_scale 100
       args: -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
 
     test:
       suffix: r089_mffd_callback
+      TODO: TAOTERMSUM does not support an outer MFFD Hessian
       args: -t_tao_term_sum_reg1_mask objective,gradient,hessian
 
     test:
       suffix: r090_mffd_both
+      TODO: TAOTERMSUM does not support an outer MFFD Hessian
 
   test:
     suffix: callback_fd
@@ -712,6 +718,11 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
     test:
       suffix: r079_fd_hessianmult_separate_hpre
       args: -t_callbacks_tao_term_hessian_use_fd true
+      args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
+
+    test:
+      suffix: r080_hessianmult_hessianmult_separate_hpre
+      args: -callback_hessian_mult
       args: -separate_hpre -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
 
     test:
