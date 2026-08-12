@@ -14,6 +14,7 @@
 - Change the policy so that documentation changes/fixes/additions are added to the `main` branch, not the `release` branch
 - Change the `make branch-review` rule to `[PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname] make branch-review`. Add support for Gemini, Codex, OpenCode, and other LLM CLIs.
   Replace the use of `CLAUDE_OPTS` with `PETSC_LLM_CLI_OPTS` and `PETSC_LLM_MODEL`
+- Add a CodeGraph skill and repository guidance so LLM coding tools automatically use an existing local PETSc CodeGraph index when navigating or reviewing source
 
 ## Configure/Build
 
