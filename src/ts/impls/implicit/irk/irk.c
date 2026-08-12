@@ -520,7 +520,7 @@ static PetscErrorCode SNESTSFormJacobian_IRK(SNES snes, Vec ZC, Mat JC, Mat JCpr
   /* Re-evaluate a time- or state-dependent mass matrix at the last stage; a constant mass matrix was assembled once in TSSetUp_IRK() */
   PetscCall(TSGetMassMatrixConstant(ts, &massconstant));
   if (irk->M && !massconstant) PetscCall(TSComputeMassMatrix(ts, stagetime, Y[nstages - 1], irk->M));
-  PetscCall(MatKAIJGetAIJ(JC, &J));
+  PetscCall(MatKAIJGetA(JC, &J));
   PetscCall(TSComputeIJacobian(ts, stagetime, Y[nstages - 1], Ydot, 0, J, J, PETSC_FALSE));
   PetscCall(MatKAIJGetS(JC, NULL, NULL, &S));
   for (i = 0; i < nstages; i++)
