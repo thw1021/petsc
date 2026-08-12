@@ -483,6 +483,8 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
   Currently, when `-tao_fd_hessian` is used with a `TAOTERMSUM`, no summand may mask its gradient or Hessian because
   the Hessian is computed by differentiating the complete sum gradient.
 
+  `TAOTERMSUM` does not support `-tao_mf_hessian`.
+
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
 PetscErrorCode TaoSetFromOptions(Tao tao)
@@ -655,11 +657,13 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
       PetscCall(MatDestroy(&H));
     }
     if (use_mf_hessian) {
-      PetscBool is_callback;
+      PetscBool is_callback, is_sum;
       Mat       H;
 
       // Check that tao has only one TaoTerm with type TAOTERMCALLBACK
       PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
+      PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+      PetscCheck(!is_sum, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOTERMSUM does not support matrix-free finite-difference Hessians");
       if (is_callback) {
         // Create Hessian via TaoTermCreateHessianMFFD
         PetscCall(TaoTermCreateHessianMFFD(tao->objective_term.term, &H));

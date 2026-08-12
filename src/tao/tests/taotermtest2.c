@@ -445,14 +445,6 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
     args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
     args: -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
 
-  test:
-    suffix: asymmetric_map_mffd
-    TODO: TAOTERMSUM does not support an outer MFFD Hessian
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
-    args: -second_term -data_use_map true -extra_use_map false
-    args: -shell_tao_type nls -shell_tao_term_hessian_mat_type mffd
-
   testset:
     filter: grep -E "Reference callback comparison passed|operator check passed"
     output_file: output/taotermtest2_reference_operator_comparison.out
@@ -834,40 +826,6 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
 
     test:
       suffix: r185_both_mapped_hessianmult_hessianmult_separate_hpre
-
-  testset:
-    filter: grep -E "Reference callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_reference_operator_comparison.out
-    args: -second_term -shell_tao_type nls -shell_tao_term_hessian_mat_type mffd
-
-    test:
-      suffix: r186_mffd_second
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -no_map -shell_tao_term_sum_data_mask hessian
-
-    test:
-      suffix: r187_mffd_mapped_second
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -data_use_map false -extra_use_map true -shell_tao_term_sum_data_mask hessian
-
-    test:
-      suffix: r188_mffd_first
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -no_map -shell_tao_term_sum_extra_mask hessian
-
-    test:
-      suffix: r189_mffd_mapped_first
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -data_use_map true -extra_use_map false -shell_tao_term_sum_extra_mask hessian
-
-    test:
-      suffix: r190_mffd_both
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -no_map
-
-    test:
-      suffix: r192_mffd_both_mapped
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
 
   test:
     suffix: r018_hessianmult_separate_hpre

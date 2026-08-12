@@ -21,6 +21,9 @@ const char *const TaoTermParametersModes[] = {"optional", "none", "required", "T
 
   Level: beginner
 
+  Note:
+  `TAOTERMSUM` does not support `mffd` for `-tao_term_hessian_mat_type type`.
+
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermCreate()`,
@@ -288,11 +291,13 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   if (term->H_mattype) deft = term->H_mattype;
   PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
-    PetscBool is_mffd, is_shell, is_callbacks;
+    PetscBool is_mffd, is_shell, is_callbacks, is_sum;
     PetscCall(PetscStrcmp(typeName, MATMFFD, &is_mffd));
     if (is_mffd) {
       PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSHELL, &is_shell));
       PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMCALLBACKS, &is_callbacks));
+      PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
+      PetscCheck(!is_sum, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TAOTERMSUM does not support MFFD Hessian matrices");
       if (is_shell || is_callbacks) {
         PetscCall(PetscFree(term->H_mattype));
         PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));

@@ -443,40 +443,6 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
     args: -t_tao_term_hessian_mat_type shell
 
   test:
-    suffix: promoted_mapped_mffd
-    TODO: TAOTERMSUM does not support an outer MFFD Hessian
-    filter: grep "Reference callback comparison passed"
-    output_file: output/taotermtest1_reference_comparison.out
-    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A
-    args: -t_tao_term_hessian_mat_type mffd
-
-  testset:
-    filter: grep -E "Reference callback comparison passed|unused database options|Option left"
-    output_file: output/taotermtest1_reference_comparison.out
-    args: -t_tao_type nls -c_tao_type nls -use_term1 -term1_shell
-    args: -t_tao_term_hessian_mat_type mffd -options_left
-
-    test:
-      suffix: r087_mffd_added
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -term1_scale 100 -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
-
-    test:
-      suffix: r088_mffd_mapped_added
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -term1_has_A -map_row_size 11 -term1_scale 100
-      args: -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
-
-    test:
-      suffix: r089_mffd_callback
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-      args: -t_tao_term_sum_reg1_mask objective,gradient,hessian
-
-    test:
-      suffix: r090_mffd_both
-      TODO: TAOTERMSUM does not support an outer MFFD Hessian
-
-  test:
     suffix: callback_fd
     filter: grep "Reference callback comparison passed"
     output_file: output/taotermtest1_reference_comparison.out
