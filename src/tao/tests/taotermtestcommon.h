@@ -35,22 +35,46 @@ typedef struct {
   ExampleCtx *ctx;
 } ExampleReference;
 
-static PetscErrorCode ExampleCheckRequestedHessianType(Tao tao, const char prefix[])
+static PetscErrorCode ExampleMatTypeMatches(Mat mat, MatType requested, PetscBool *matches)
 {
-  MatType   actual;
-  Mat       H, Hpre;
-  char      requested[256] = MATAIJ;
-  PetscBool matches, requested_aij, pre_is_hessian, pre_is_hessian_set;
+  Mat expected;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscOptionsGetString(NULL, prefix, "-tao_term_hessian_mat_type", requested, sizeof(requested), NULL));
-  PetscCall(TaoSetUp(tao));
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)mat), &expected));
+  PetscCall(MatSetType(expected, requested));
+  PetscCall(PetscObjectObjectTypeCompare((PetscObject)mat, (PetscObject)expected, matches));
+  PetscCall(MatDestroy(&expected));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ExampleCheckHessianConfiguration(Tao tao)
+{
+  const char *prefix;
+  TaoTerm     objective;
+  MatType     actual;
+  Mat         H, Hpre;
+  char        requested[256];
+  PetscBool   matches, requested_set, pre_is_hessian = PETSC_FALSE, pre_is_hessian_set;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)objective, &prefix));
   PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
-  PetscCall(MatGetType(H, &actual));
-  PetscCall(PetscStrcmp(requested, MATAIJ, &requested_aij));
-  if (requested_aij) PetscCall(PetscObjectTypeCompareAny((PetscObject)H, &matches, MATSEQAIJ, MATMPIAIJ, ""));
-  else PetscCall(PetscObjectTypeCompare((PetscObject)H, requested, &matches));
-  PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Requested Hessian MatType %s, but Tao uses %s", requested, actual);
+  if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(H && Hpre, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "TaoSetUp() created only one Hessian matrix");
+
+  PetscCall(PetscOptionsGetString(NULL, prefix, "-tao_term_hessian_mat_type", requested, sizeof(requested), &requested_set));
+  if (requested_set) {
+    PetscCall(ExampleMatTypeMatches(H, requested, &matches));
+    PetscCall(MatGetType(H, &actual));
+    PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Requested Hessian MatType %s, but Tao uses %s", requested, actual);
+  }
+  PetscCall(PetscOptionsGetString(NULL, prefix, "-tao_term_hessian_pre_mat_type", requested, sizeof(requested), &requested_set));
+  if (requested_set && Hpre != H) {
+    PetscCall(ExampleMatTypeMatches(Hpre, requested, &matches));
+    PetscCall(MatGetType(Hpre, &actual));
+    PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Requested Hessian preconditioning MatType %s, but Tao uses %s", requested, actual);
+  }
   PetscCall(PetscOptionsGetBool(NULL, prefix, "-tao_term_hessian_pre_is_hessian", &pre_is_hessian, &pre_is_hessian_set));
   if (pre_is_hessian_set)
     PetscCheck(pre_is_hessian == (Hpre == H), PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Requested -%stao_term_hessian_pre_is_hessian %s, but the Hessian and preconditioning matrices are %s", prefix ? prefix : "", pre_is_hessian ? "true" : "false", Hpre == H ? "aliased" : "distinct");

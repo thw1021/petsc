@@ -87,7 +87,8 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoSetFromOptions(tao));
-  PetscCall(ExampleCheckRequestedHessianType(tao, options.nterms > 1 ? "shell_" : "data_"));
+  PetscCall(TaoSetUp(tao));
+  PetscCall(ExampleCheckHessianConfiguration(tao));
   for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckSubtermHessianConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
   reference_ctx.nsubterms = options.nterms;
   if (options.nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
