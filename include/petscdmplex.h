@@ -304,6 +304,7 @@ PETSC_EXTERN PetscErrorCode DMPlexReconcileLabel(DM, MPI_Op, PetscInt, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexLabelAddCells(DM, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexLabelAddFaceCells(DM, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexLabelClearCells(DM, DMLabel);
+PETSC_EXTERN PetscErrorCode DMPlexForceLabelDepthMarking(DM, DMLabel);
 
 PETSC_EXTERN PetscErrorCode DMPlexGetRefinementLimit(DM, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMPlexSetRefinementLimit(DM, PetscReal);

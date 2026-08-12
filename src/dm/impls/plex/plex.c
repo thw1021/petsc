@@ -7562,7 +7562,7 @@ static inline PetscErrorCode updatePointBC_private(PetscSection section, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode updatePointFields_private(PetscSection section, PetscInt point, const PetscInt *perm, const PetscScalar *flip, PetscInt f, void (*fuse)(PetscScalar *, PetscScalar), PetscBool setBC, const PetscInt clperm[], const PetscScalar values[], PetscInt *offset, PetscScalar array[])
+static inline PetscErrorCode updatePointFields_private(PetscSection section, PetscInt point, const PetscInt *perm, const PetscScalar *flip, PetscInt f, PetscInt Ncc, const PetscInt comps[], void (*fuse)(PetscScalar *, PetscScalar), PetscBool setBC, const PetscInt clperm[], const PetscScalar values[], PetscInt *offset, PetscScalar array[])
 {
   PetscScalar    *a;
   PetscInt        fdof, foff, fcdof, foffset = *offset;
@@ -7575,20 +7575,44 @@ static inline PetscErrorCode updatePointFields_private(PetscSection section, Pet
   PetscCall(PetscSectionGetFieldOffset(section, point, f, &foff));
   a = &array[foff];
   if (!fcdof || setBC) {
-    if (clperm) {
-      if (perm) {
-        for (b = 0; b < fdof; b++) fuse(&a[b], values[clperm[foffset + perm[b]]] * (flip ? flip[perm[b]] : 1.));
+    if (!comps) {
+      if (clperm) {
+        if (perm) {
+          for (b = 0; b < fdof; b++) fuse(&a[b], values[clperm[foffset + perm[b]]] * (flip ? flip[perm[b]] : 1.));
+        } else {
+          for (b = 0; b < fdof; b++) fuse(&a[b], values[clperm[foffset + b]] * (flip ? flip[b] : 1.));
+        }
       } else {
-        for (b = 0; b < fdof; b++) fuse(&a[b], values[clperm[foffset + b]] * (flip ? flip[b] : 1.));
+        if (perm) {
+          for (b = 0; b < fdof; b++) fuse(&a[b], values[foffset + perm[b]] * (flip ? flip[perm[b]] : 1.));
+        } else {
+          for (b = 0; b < fdof; b++) fuse(&a[b], values[foffset + b] * (flip ? flip[b] : 1.));
+        }
       }
     } else {
+      PetscInt ci = 0;
+
+      PetscCheck(!clperm, PETSC_COMM_SELF, PETSC_ERR_SUP, "Components cannot currently be selected with a closured permutation");
       if (perm) {
-        for (b = 0; b < fdof; b++) fuse(&a[b], values[foffset + perm[b]] * (flip ? flip[perm[b]] : 1.));
+        for (b = 0; b < fdof; b++) {
+          // There might be problems here since it assumes comps are sorted
+          if (comps[ci] == perm[b]) {
+            fuse(&a[b], values[foffset + perm[b]] * (flip ? flip[perm[b]] : 1.));
+            ++ci;
+          }
+        }
       } else {
-        for (b = 0; b < fdof; b++) fuse(&a[b], values[foffset + b] * (flip ? flip[b] : 1.));
+        for (b = 0; b < fdof; b++) {
+          if (comps[ci] == b) {
+            fuse(&a[b], values[foffset + b] * (flip ? flip[b] : 1.));
+            ++ci;
+          }
+        }
       }
+      PetscCheck(!fdof || ci == Ncc, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not every component was selected");
     }
   } else {
+    PetscCheck(!comps, PETSC_COMM_SELF, PETSC_ERR_SUP, "Components cannot currently be selected on a constrained dof");
     PetscCall(PetscSectionGetFieldConstraintIndices(section, point, f, &fcdofs));
     if (clperm) {
       if (perm) {
@@ -7874,7 +7898,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
           const PetscInt     point = points[2 * p];
           const PetscInt    *perm  = perms ? perms[p] : NULL;
           const PetscScalar *flip  = flips ? flips[p] : NULL;
-          PetscCall(updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, clperm, values, &offset, array));
+          PetscCall(updatePointFields_private(section, point, perm, flip, f, -1, NULL, insert, PETSC_FALSE, clperm, values, &offset, array));
         }
         break;
       case INSERT_ALL_VALUES:
@@ -7882,7 +7906,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
           const PetscInt     point = points[2 * p];
           const PetscInt    *perm  = perms ? perms[p] : NULL;
           const PetscScalar *flip  = flips ? flips[p] : NULL;
-          PetscCall(updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, clperm, values, &offset, array));
+          PetscCall(updatePointFields_private(section, point, perm, flip, f, -1, NULL, insert, PETSC_TRUE, clperm, values, &offset, array));
         }
         break;
       case INSERT_BC_VALUES:
@@ -7898,7 +7922,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
           const PetscInt     point = points[2 * p];
           const PetscInt    *perm  = perms ? perms[p] : NULL;
           const PetscScalar *flip  = flips ? flips[p] : NULL;
-          PetscCall(updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, clperm, values, &offset, array));
+          PetscCall(updatePointFields_private(section, point, perm, flip, f, -1, NULL, add, PETSC_FALSE, clperm, values, &offset, array));
         }
         break;
       case ADD_ALL_VALUES:
@@ -7906,7 +7930,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
           const PetscInt     point = points[2 * p];
           const PetscInt    *perm  = perms ? perms[p] : NULL;
           const PetscScalar *flip  = flips ? flips[p] : NULL;
-          PetscCall(updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, clperm, values, &offset, array));
+          PetscCall(updatePointFields_private(section, point, perm, flip, f, -1, NULL, add, PETSC_TRUE, clperm, values, &offset, array));
         }
         break;
       case ADD_BC_VALUES:
@@ -8057,7 +8081,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscScalar *flip  = flips ? flips[p] : NULL;
         PetscCall(CheckPoint_Private(label, labelId, section, point, f, &offset, &contains));
         if (!contains) continue;
-        PetscCall(updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, NULL, values, &offset, array));
+        PetscCall(updatePointFields_private(section, point, perm, flip, f, Ncc, comps, insert, PETSC_FALSE, NULL, values, &offset, array));
       }
       break;
     case INSERT_ALL_VALUES:
@@ -8067,7 +8091,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscScalar *flip  = flips ? flips[p] : NULL;
         PetscCall(CheckPoint_Private(label, labelId, section, point, f, &offset, &contains));
         if (!contains) continue;
-        PetscCall(updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, NULL, values, &offset, array));
+        PetscCall(updatePointFields_private(section, point, perm, flip, f, Ncc, comps, insert, PETSC_TRUE, NULL, values, &offset, array));
       }
       break;
     case INSERT_BC_VALUES:
@@ -8087,7 +8111,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscScalar *flip  = flips ? flips[p] : NULL;
         PetscCall(CheckPoint_Private(label, labelId, section, point, f, &offset, &contains));
         if (!contains) continue;
-        PetscCall(updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, NULL, values, &offset, array));
+        PetscCall(updatePointFields_private(section, point, perm, flip, f, Ncc, comps, add, PETSC_FALSE, NULL, values, &offset, array));
       }
       break;
     case ADD_ALL_VALUES:
@@ -8097,7 +8121,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscScalar *flip  = flips ? flips[p] : NULL;
         PetscCall(CheckPoint_Private(label, labelId, section, point, f, &offset, &contains));
         if (!contains) continue;
-        PetscCall(updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, NULL, values, &offset, array));
+        PetscCall(updatePointFields_private(section, point, perm, flip, f, Ncc, comps, add, PETSC_TRUE, NULL, values, &offset, array));
       }
       break;
     default:
@@ -11881,5 +11905,59 @@ PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, IS
     PetscCall(ISShift(iscolors[c], offset, iscolors[c]));
   }
   PetscCall(ISColoringRestoreIS(*coloring, PETSC_USE_POINTER, &iscolors));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexForceLabelDepthMarking - Change label markers to the depth for each point
+
+  Not Collective
+
+  Input Parameters:
++ dm    - the `DMPlex` object
+- label - the `DMLabel` object
+
+  Level: advanced
+
+  Note:
+  This is often used to prepare a `DMLabel` for use with the cohesive cell `DMPlexTransform`.
+
+.seealso: [](ch_unstructured), `DMPlex`, `DMLabel`
+@*/
+PetscErrorCode DMPlexForceLabelDepthMarking(DM dm, DMLabel label)
+{
+  IS valueIS;
+  const PetscInt *values;
+  PetscInt pdepth, Nv;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMPLEX);
+  PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  PetscCall(DMLabelGetValueIS(label, &valueIS));
+  PetscCall(ISGetIndices(valueIS, &values));
+  PetscCall(ISGetLocalSize(valueIS, &Nv));
+  for (PetscInt v = 0; v < Nv; ++v) {
+    const PetscInt  value = values[v];
+    IS              pointIS;
+    const PetscInt *points;
+    PetscInt        Np;
+
+    PetscCall(DMLabelGetStratumIS(label, value, &pointIS));
+    PetscCall(ISGetIndices(pointIS, &points));
+    PetscCall(ISGetLocalSize(pointIS, &Np));
+    for (PetscInt p = 0; p < Np; ++p) {
+      PetscInt point = points[p];
+
+      PetscCall(DMPlexGetPointDepth(dm, point, &pdepth));
+      if (pdepth != value) {
+        PetscCall(DMLabelClearValue(label, point, value));
+        PetscCall(DMLabelSetValue(label, point, pdepth));
+      }
+    }
+    PetscCall(ISRestoreIndices(pointIS, &points));
+    PetscCall(ISDestroy(&pointIS));
+  }
+  PetscCall(ISRestoreIndices(valueIS, &values));
+  PetscCall(ISDestroy(&valueIS));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

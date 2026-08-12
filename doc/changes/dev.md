@@ -183,6 +183,7 @@
 - Add `DM_COORD_MAP_ROTATE`
 - Add `DM_SHAPE_DIIID`
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
+- Add `DMPlexForceLabelDepthMarking()`
 
 ## FE/FV
 
