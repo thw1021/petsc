@@ -629,7 +629,8 @@ PetscErrorCode KSPGetOperatorsSet(KSP ksp, PetscBool *mat, PetscBool *pmat)
   Level: developer
 
   Notes:
-  The function provided here `presolve` is used to modify the right hand side, and possibly the matrix, of the linear system to be solved.
+  The function provided here `presolve` is used to modify the right-hand side of the linear system to be solved. It must not modify the
+  associated matrices; `KSPPreSolve()` checks this and errors if a matrix is changed.
   The function provided with `KSPSetPostSolve()` then modifies the resulting solution of that linear system to obtain the correct solution
   to the initial linear system.
 
@@ -681,19 +682,61 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, PetscCtx ctx)
 
   Level: developer
 
-  Note:
+  Notes:
   `KSPPreSolve()` is typically used within `KSPSolve()`, so most users would not generally call this routine themselves.
+
+  The state of the `KSP`'s operator matrices is checked before and after the callback registered with `KSPSetPreSolve()` runs; an error
+  is raised if the callback changed either matrix, since pre-solve callbacks are only permitted to modify `rhs` and `sol`. `PCSetUp()`
+  has already run by the time this check happens, so callback-side changes that affect the preconditioner but do not alter the
+  operator matrices themselves (for example `PCFieldSplitSetIS()`, changing a null space, or setting `PC` options) are not caught by
+  this check and are silently ignored.
 
 .seealso: [](ch_ksp), `KSPSolve()`, `KSP`, `KSPSetPreSolve()`, `KSPPostSolve()`, `SNESKSPSetUseEW()`
 @*/
 PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
 {
+  Mat              Amat = NULL, Pmat = NULL;
+  PetscBool        matset, pmatset;
+  PetscObjectState Amat_ostate = 0, Pmat_ostate = 0, Amat_state, Pmat_state;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(rhs, VEC_CLASSID, 2);
   PetscValidHeaderSpecific(sol, VEC_CLASSID, 3);
   if (ksp->presolve_ew) PetscCall((*ksp->presolve_ew)(ksp, rhs, sol, ksp->prectx_ew));
-  if (ksp->presolve) PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
+  if (ksp->presolve) {
+    PetscCall(KSPGetOperatorsSet(ksp, &matset, &pmatset));
+    PetscCall(KSPGetOperators(ksp, matset ? &Amat : NULL, pmatset ? &Pmat : NULL));
+    if (matset) {
+      PetscCall(PetscObjectReference((PetscObject)Amat));
+      PetscCall(PetscObjectStateGet((PetscObject)Amat, &Amat_ostate));
+    }
+    if (pmatset) {
+      PetscCall(PetscObjectReference((PetscObject)Pmat));
+      PetscCall(PetscObjectStateGet((PetscObject)Pmat, &Pmat_ostate));
+    }
+    PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
+    if (matset) {
+      Mat       Amat_new = NULL;
+      PetscBool matset_new;
+
+      PetscCall(KSPGetOperatorsSet(ksp, &matset_new, NULL));
+      PetscCall(KSPGetOperators(ksp, matset_new ? &Amat_new : NULL, NULL));
+      PetscCall(PetscObjectStateGet((PetscObject)Amat, &Amat_state));
+      PetscCall(PetscObjectDereference((PetscObject)Amat));
+      PetscCheck(matset_new && Amat_new == Amat && Amat_state == Amat_ostate, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's A matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
+    }
+    if (pmatset) {
+      Mat       Pmat_new = NULL;
+      PetscBool pmatset_new;
+
+      PetscCall(KSPGetOperatorsSet(ksp, NULL, &pmatset_new));
+      PetscCall(KSPGetOperators(ksp, NULL, pmatset_new ? &Pmat_new : NULL));
+      PetscCall(PetscObjectStateGet((PetscObject)Pmat, &Pmat_state));
+      PetscCall(PetscObjectDereference((PetscObject)Pmat));
+      PetscCheck(pmatset_new && Pmat_new == Pmat && Pmat_state == Pmat_ostate, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's preconditioner matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
