@@ -7,7 +7,7 @@ typedef struct {
   Vec         parameters;
   PetscReal   scale;
   TaoTermMask mask;
-} ExampleLeaf;
+} ExampleSubterm;
 
 typedef struct {
   TaoTerm     term;
@@ -23,8 +23,8 @@ typedef struct {
 } ExampleTerm;
 
 typedef struct {
-  PetscInt    nleaves;
-  ExampleLeaf leaves[3];
+  PetscInt       nsubterms;
+  ExampleSubterm subterms[3];
 } ExampleCtx;
 
 typedef struct {
@@ -57,9 +57,9 @@ static PetscErrorCode ExampleCheckRequestedHessianType(Tao tao, const char prefi
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Verify that the requested Hessian configuration landed on this leaf.  This checks
+/* Verify that the requested Hessian configuration landed on this subterm.  This checks
    configured state, not which route later executes. */
-static PetscErrorCode ExampleCheckLeafHessianConfiguration(TaoTerm term, PetscBool expect_hessian_mult)
+static PetscErrorCode ExampleCheckSubtermHessianConfiguration(TaoTerm term, PetscBool expect_hessian_mult)
 {
   const char *prefix;
   PetscBool   requested_fd = PETSC_FALSE, requested_fd_set, actual_fd, has_mult;
@@ -84,13 +84,13 @@ PETSC_UNUSED static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_UNUSED static PetscErrorCode ExampleTermSetLeaf(ExampleTerm *term, ExampleLeaf *leaf)
+PETSC_UNUSED static PetscErrorCode ExampleTermSetSubterm(ExampleTerm *term, ExampleSubterm *subterm)
 {
   PetscFunctionBeginUser;
-  leaf->map        = term->map;
-  leaf->parameters = term->parameters;
-  leaf->scale      = term->scale;
-  leaf->mask       = term->mask;
+  subterm->map        = term->map;
+  subterm->parameters = term->parameters;
+  subterm->scale      = term->scale;
+  subterm->mask       = term->mask;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -154,12 +154,12 @@ PETSC_UNUSED static PetscErrorCode ExampleIdentityLeastSquaresHessianMult(TaoTer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleMapSolution(ExampleLeaf *leaf, Vec x, Vec *mapped_x, PetscBool *destroy)
+static PetscErrorCode ExampleMapSolution(ExampleSubterm *subterm, Vec x, Vec *mapped_x, PetscBool *destroy)
 {
   PetscFunctionBeginUser;
-  if (leaf->map) {
-    PetscCall(MatCreateVecs(leaf->map, NULL, mapped_x));
-    PetscCall(MatMult(leaf->map, x, *mapped_x));
+  if (subterm->map) {
+    PetscCall(MatCreateVecs(subterm->map, NULL, mapped_x));
+    PetscCall(MatMult(subterm->map, x, *mapped_x));
     *destroy = PETSC_TRUE;
   } else {
     *mapped_x = x;
@@ -168,7 +168,7 @@ static PetscErrorCode ExampleMapSolution(ExampleLeaf *leaf, Vec x, Vec *mapped_x
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleComputeLeaf(ExampleLeaf *leaf, Vec x, PetscBool need_f, PetscBool need_g, PetscBool need_h, PetscReal *f, Vec gx, Mat Hx)
+static PetscErrorCode ExampleComputeSubterm(ExampleSubterm *subterm, Vec x, PetscBool need_f, PetscBool need_g, PetscBool need_h, PetscReal *f, Vec gx, Mat Hx)
 {
   Mat         contribution = NULL;
   Vec         mapped_x, diff, mapped_g = NULL, diag = NULL;
@@ -176,32 +176,32 @@ static PetscErrorCode ExampleComputeLeaf(ExampleLeaf *leaf, Vec x, PetscBool nee
   PetscBool   destroy_mapped_x;
 
   PetscFunctionBeginUser;
-  PetscCall(ExampleMapSolution(leaf, x, &mapped_x, &destroy_mapped_x));
+  PetscCall(ExampleMapSolution(subterm, x, &mapped_x, &destroy_mapped_x));
   PetscCall(VecDuplicate(mapped_x, &diff));
-  if (leaf->parameters) PetscCall(VecWAXPY(diff, -1.0, leaf->parameters, mapped_x));
+  if (subterm->parameters) PetscCall(VecWAXPY(diff, -1.0, subterm->parameters, mapped_x));
   else PetscCall(VecCopy(mapped_x, diff));
   if (need_f) {
     PetscCall(VecDot(diff, diff, &dot));
     *f = 0.5 * PetscRealPart(dot);
-    *f *= leaf->scale;
+    *f *= subterm->scale;
   }
   if (need_g) {
-    if (leaf->map) {
+    if (subterm->map) {
       PetscCall(VecDuplicate(diff, &mapped_g));
       PetscCall(VecCopy(diff, mapped_g));
-      PetscCall(MatMultTranspose(leaf->map, mapped_g, gx));
+      PetscCall(MatMultTranspose(subterm->map, mapped_g, gx));
     } else PetscCall(VecCopy(diff, gx));
-    PetscCall(VecScale(gx, leaf->scale));
+    PetscCall(VecScale(gx, subterm->scale));
     PetscCall(VecDestroy(&mapped_g));
   }
   if (need_h) {
-    if (leaf->map) PetscCall(MatTransposeMatMult(leaf->map, leaf->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &contribution));
+    if (subterm->map) PetscCall(MatTransposeMatMult(subterm->map, subterm->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &contribution));
     else {
       PetscCall(VecDuplicate(diff, &diag));
       PetscCall(VecSet(diag, 1.0));
       PetscCall(MatCreateDiagonal(diag, &contribution));
     }
-    PetscCall(MatAXPY(Hx, leaf->scale, contribution, DIFFERENT_NONZERO_PATTERN));
+    PetscCall(MatAXPY(Hx, subterm->scale, contribution, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatDestroy(&contribution));
     PetscCall(VecDestroy(&diag));
   }
@@ -214,20 +214,20 @@ static PetscErrorCode ExampleFormObjectiveGradient(Tao tao, Vec x, PetscReal *f,
 {
   ExampleCtx *ctx = (ExampleCtx *)vctx;
   Vec         work;
-  PetscReal   leaf_f;
+  PetscReal   subterm_f;
 
   PetscFunctionBeginUser;
   *f = 0.0;
   PetscCall(VecZeroEntries(g));
   PetscCall(VecDuplicate(g, &work));
-  for (PetscInt i = 0; i < ctx->nleaves; i++) {
-    ExampleLeaf *leaf   = &ctx->leaves[i];
-    PetscBool    need_f = !(leaf->mask & TAOTERM_MASK_OBJECTIVE);
-    PetscBool    need_g = !(leaf->mask & TAOTERM_MASK_GRADIENT);
+  for (PetscInt i = 0; i < ctx->nsubterms; i++) {
+    ExampleSubterm *subterm = &ctx->subterms[i];
+    PetscBool       need_f  = !(subterm->mask & TAOTERM_MASK_OBJECTIVE);
+    PetscBool       need_g  = !(subterm->mask & TAOTERM_MASK_GRADIENT);
 
-    leaf_f = 0.0;
-    PetscCall(ExampleComputeLeaf(leaf, x, need_f, need_g, PETSC_FALSE, &leaf_f, work, NULL));
-    if (need_f) *f += leaf_f;
+    subterm_f = 0.0;
+    PetscCall(ExampleComputeSubterm(subterm, x, need_f, need_g, PETSC_FALSE, &subterm_f, work, NULL));
+    if (need_f) *f += subterm_f;
     if (need_g) PetscCall(VecAXPY(g, 1.0, work));
   }
   PetscCall(VecDestroy(&work));
@@ -242,10 +242,10 @@ static PetscErrorCode ExampleAssembleHessian(ExampleCtx *ctx, Vec x, Mat H)
   PetscFunctionBeginUser;
   PetscCall(MatZeroEntries(H));
   PetscCall(MatCreateVecs(H, &work, NULL));
-  for (PetscInt i = 0; i < ctx->nleaves; i++) {
-    ExampleLeaf *leaf = &ctx->leaves[i];
+  for (PetscInt i = 0; i < ctx->nsubterms; i++) {
+    ExampleSubterm *subterm = &ctx->subterms[i];
 
-    if (!(leaf->mask & TAOTERM_MASK_HESSIAN)) PetscCall(ExampleComputeLeaf(leaf, x, PETSC_FALSE, PETSC_FALSE, PETSC_TRUE, &unused, work, H));
+    if (!(subterm->mask & TAOTERM_MASK_HESSIAN)) PetscCall(ExampleComputeSubterm(subterm, x, PETSC_FALSE, PETSC_FALSE, PETSC_TRUE, &unused, work, H));
   }
   PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
@@ -260,16 +260,16 @@ static PetscErrorCode ExampleApplyHessian(ExampleCtx *ctx, Vec v, Vec Hv)
   PetscFunctionBeginUser;
   PetscCall(VecZeroEntries(Hv));
   PetscCall(VecDuplicate(Hv, &contribution));
-  for (PetscInt i = 0; i < ctx->nleaves; i++) {
-    ExampleLeaf *leaf = &ctx->leaves[i];
+  for (PetscInt i = 0; i < ctx->nsubterms; i++) {
+    ExampleSubterm *subterm = &ctx->subterms[i];
 
-    if (leaf->mask & TAOTERM_MASK_HESSIAN) continue;
-    if (leaf->map) {
-      PetscCall(MatCreateVecs(leaf->map, NULL, &mapped_v));
-      PetscCall(MatMult(leaf->map, v, mapped_v));
-      PetscCall(MatMultTranspose(leaf->map, mapped_v, contribution));
+    if (subterm->mask & TAOTERM_MASK_HESSIAN) continue;
+    if (subterm->map) {
+      PetscCall(MatCreateVecs(subterm->map, NULL, &mapped_v));
+      PetscCall(MatMult(subterm->map, v, mapped_v));
+      PetscCall(MatMultTranspose(subterm->map, mapped_v, contribution));
     } else PetscCall(VecCopy(v, contribution));
-    PetscCall(VecAXPY(Hv, leaf->scale, contribution));
+    PetscCall(VecAXPY(Hv, subterm->scale, contribution));
     PetscCall(VecDestroy(&mapped_v));
   }
   PetscCall(VecDestroy(&contribution));

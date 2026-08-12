@@ -54,15 +54,15 @@ int main(int argc, char **argv)
   PetscCall(TaoAddTerm(tao, "reg_", lambda, regularizer, NULL, NULL));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(ExampleCheckRequestedHessianType(tao, NULL));
-  PetscCall(ExampleCheckLeafHessianConfiguration(data, PETSC_FALSE));
-  PetscCall(ExampleCheckLeafHessianConfiguration(regularizer, PETSC_TRUE));
+  PetscCall(ExampleCheckSubtermHessianConfiguration(data, PETSC_FALSE));
+  PetscCall(ExampleCheckSubtermHessianConfiguration(regularizer, PETSC_TRUE));
   PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
   if (use_fd) hessian_tolerance = 2.e-5;
-  reference_ctx.nleaves              = 2;
-  reference_ctx.leaves[0].map        = A;
-  reference_ctx.leaves[0].parameters = b;
-  reference_ctx.leaves[0].scale      = 1.0;
-  reference_ctx.leaves[1].scale      = lambda;
+  reference_ctx.nsubterms              = 2;
+  reference_ctx.subterms[0].map        = A;
+  reference_ctx.subterms[0].parameters = b;
+  reference_ctx.subterms[0].scale      = 1.0;
+  reference_ctx.subterms[1].scale      = lambda;
   PetscCall(ExampleReferenceCreate(PETSC_COMM_WORLD, tao, x, &reference_ctx, &reference));
 
   PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));

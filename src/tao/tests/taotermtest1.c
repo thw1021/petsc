@@ -30,7 +30,8 @@ typedef struct {
 } TestState;
 
 /* Forward declarations */
-static PetscErrorCode TestCtxInitialize(MPI_Comm, TestCtx *);
+static PetscErrorCode TestCtxProcessOptions(MPI_Comm, TestCtx *);
+static PetscErrorCode TestCreateData(TestState *);
 static PetscErrorCode TestStateDestroy(TestState *);
 static PetscErrorCode TestRepeatedSetFromOptions(TestState *);
 static PetscErrorCode CreateTaoTermWithOptions(TestCtx *, ExampleTerm *, const char *, const char *);
@@ -41,7 +42,7 @@ static PetscErrorCode Hessian_Term1(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode HessianMult_Term1(TaoTerm, Vec, Vec, Vec, Vec);
 static PetscErrorCode CheckConfiguredHessianState(TestState *);
 static PetscErrorCode CheckReferenceHessianOperators(TestState *);
-static PetscErrorCode CheckMaskedLeavesUntouched(TestState *);
+static PetscErrorCode CheckMaskedSubtermsUntouched(TestState *);
 static PetscErrorCode CheckReferenceTermType(TaoTerm);
 
 int main(int argc, char **argv)
@@ -55,20 +56,13 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
 
-  PetscCall(TestCtxInitialize(comm, ctx));
+  PetscCall(TestCtxProcessOptions(comm, ctx));
   PetscCall(TaoCreate(comm, &state.tao));
   PetscCall(TaoSetOptionsPrefix(state.tao, "t_"));
   PetscCall(TaoSetType(state.tao, TAOLMVM));
 
   /* Create a least-squares objective using the traditional TaoSet interface */
-  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, ctx->n, ctx->n, 1, NULL, 0, NULL, &state.H));
-  if (ctx->separate_hpre) {
-    PetscCall(MatAssemblyBegin(state.H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(state.H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatDuplicate(state.H, MAT_COPY_VALUES, &state.Hpre));
-  } else state.Hpre = state.H;
-  PetscCall(MatCreateVecs(state.H, &state.x, NULL));
-  PetscCall(VecZeroEntries(state.x));
+  PetscCall(TestCreateData(&state));
   PetscCall(TaoSetSolution(state.tao, state.x));
   PetscCall(TaoSetObjectiveAndGradient(state.tao, NULL, FormFunctionGradient_Callback, ctx));
   PetscCall(TaoSetHessian(state.tao, state.H, state.Hpre, FormHessian_Callback, ctx));
@@ -82,36 +76,35 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(state.tao));
   PetscCall(ExampleCheckRequestedHessianType(state.tao, "t_"));
   PetscCall(CheckConfiguredHessianState(&state));
-  state.reference_ctx.nleaves              = ctx->use_term1 ? 2 : 1;
-  state.reference_ctx.leaves[0].parameters = ctx->target;
-  state.reference_ctx.leaves[0].scale      = 1.0;
+
+  state.reference_ctx.nsubterms              = ctx->use_term1 ? 2 : 1;
+  state.reference_ctx.subterms[0].parameters = ctx->target;
+  state.reference_ctx.subterms[0].scale      = 1.0;
+
   if (ctx->use_term1) {
     PetscCall(CheckReferenceTermType(ctx->term1.term));
-    PetscCall(ExampleTermSetLeaf(&ctx->term1, &state.reference_ctx.leaves[1]));
+    PetscCall(ExampleTermSetSubterm(&ctx->term1, &state.reference_ctx.subterms[1]));
   }
-  if (state.reference_ctx.nleaves > 1) {
+  if (state.reference_ctx.nsubterms > 1) {
     PetscCall(TaoGetTerm(state.tao, NULL, &objective, NULL, NULL));
-    for (PetscInt i = 0; i < state.reference_ctx.nleaves; i++) PetscCall(TaoTermSumGetTermMask(objective, i, &state.reference_ctx.leaves[i].mask));
+    for (PetscInt i = 0; i < state.reference_ctx.nsubterms; i++) PetscCall(TaoTermSumGetTermMask(objective, i, &state.reference_ctx.subterms[i].mask));
   }
   PetscCall(ExampleReferenceCreate(comm, state.tao, state.x, &state.reference_ctx, &state.reference));
   PetscCall(ExampleReferenceSolveAndCompare(state.tao, state.x, &state.reference));
   PetscCall(CheckReferenceHessianOperators(&state));
 
   if (ctx->repeat_setfromoptions) PetscCall(TestRepeatedSetFromOptions(&state));
-  PetscCall(CheckMaskedLeavesUntouched(&state));
+  PetscCall(CheckMaskedSubtermsUntouched(&state));
   PetscCall(TestStateDestroy(&state));
   PetscCall(PetscFinalize());
   return 0;
 }
 
-static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
+static PetscErrorCode TestCtxProcessOptions(MPI_Comm comm, TestCtx *ctx)
 {
-  PetscInt rstart, rend;
-
   PetscFunctionBeginUser;
   PetscCall(PetscMemzero(ctx, sizeof(TestCtx)));
 
-  /* Default configuration */
   ctx->comm                       = comm;
   ctx->n                          = 10;
   ctx->use_term1                  = PETSC_FALSE;
@@ -135,11 +128,28 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(PetscOptionsBool("-callback_hessian_mult", "Register HessianMult on the legacy callback term", "", ctx->callback_hessian_mult, &ctx->callback_hessian_mult, NULL));
   PetscCall(PetscOptionsBool("-repeat_setfromoptions", "Call TaoSetFromOptions() again after TaoSolve()", "", ctx->repeat_setfromoptions, &ctx->repeat_setfromoptions, NULL));
   PetscOptionsEnd();
-  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, ctx->n, &ctx->target));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestCreateData(TestState *state)
+{
+  TestCtx *ctx = &state->ctx;
+  PetscInt rstart, rend;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatCreateAIJ(ctx->comm, PETSC_DECIDE, PETSC_DECIDE, ctx->n, ctx->n, 1, NULL, 0, NULL, &state->H));
+  if (ctx->separate_hpre) {
+    PetscCall(MatAssemblyBegin(state->H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(state->H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatDuplicate(state->H, MAT_COPY_VALUES, &state->Hpre));
+  } else state->Hpre = state->H;
+  PetscCall(MatCreateVecs(state->H, &state->x, NULL));
+  PetscCall(VecCreateMPI(ctx->comm, PETSC_DECIDE, ctx->n, &ctx->target));
   PetscCall(VecGetOwnershipRange(ctx->target, &rstart, &rend));
   for (PetscInt i = rstart; i < rend; i++) PetscCall(VecSetValue(ctx->target, i, 1.0 + 0.05 * (i + 1), INSERT_VALUES));
   PetscCall(VecAssemblyBegin(ctx->target));
   PetscCall(VecAssemblyEnd(ctx->target));
+  PetscCall(VecZeroEntries(state->x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -299,22 +309,19 @@ static PetscErrorCode HessianMult_Term1(TaoTerm term, Vec x, Vec parameters, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Verify that the requested per-leaf Hessian state landed on the leaves the options
-   name: the finite-difference flag must sit on the leaf itself (not on the enclosing
-   sum) and HessianMult must be defined exactly when the driver registered it. */
 static PetscErrorCode CheckConfiguredHessianState(TestState *state)
 {
   TestCtx *ctx = &state->ctx;
-  TaoTerm  objective, callbacks_leaf;
+  TaoTerm  objective, callbacks_subterm;
 
   PetscFunctionBeginUser;
   PetscCall(TaoGetTerm(state->tao, NULL, &objective, NULL, NULL));
-  callbacks_leaf = objective;
+  callbacks_subterm = objective;
   if (ctx->use_term1) {
-    PetscCall(TaoTermSumGetTerm(objective, 0, NULL, NULL, &callbacks_leaf, NULL));
-    PetscCall(ExampleCheckLeafHessianConfiguration(ctx->term1.term, ctx->term1_shell ? ctx->term1.provide_hessian_mult : PETSC_TRUE));
+    PetscCall(TaoTermSumGetTerm(objective, 0, NULL, NULL, &callbacks_subterm, NULL));
+    PetscCall(ExampleCheckSubtermHessianConfiguration(ctx->term1.term, ctx->term1_shell ? ctx->term1.provide_hessian_mult : PETSC_TRUE));
   }
-  PetscCall(ExampleCheckLeafHessianConfiguration(callbacks_leaf, ctx->callback_hessian_mult));
+  PetscCall(ExampleCheckSubtermHessianConfiguration(callbacks_subterm, ctx->callback_hessian_mult));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -333,24 +340,22 @@ static PetscErrorCode CheckReferenceHessianOperators(TestState *state)
   PetscCall(TaoComputeHessian(state->reference.tao, state->x, cH, cHpre));
   PetscCall(TaoComputeHessian(state->tao, state->x, tH, tHpre));
   PetscCall(MatMultEqual(cH, tH, 5, &equal));
-  PetscCheck(equal, ctx->comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian operators differ");
+  PetscCheck(equal, ctx->comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessians differ");
   PetscCall(MatMultEqual(cHpre, tHpre, 5, &equal));
-  PetscCheck(equal, ctx->comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian preconditioning operators differ");
+  PetscCheck(equal, ctx->comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian preconditioners differ");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* A Hessian-masked summand must not invoke its Hessian or HessianMult callback, even
-   if an accidental evaluation does not affect the result. */
-static PetscErrorCode CheckMaskedLeavesUntouched(TestState *state)
+static PetscErrorCode CheckMaskedSubtermsUntouched(TestState *state)
 {
   TestCtx *ctx = &state->ctx;
 
   PetscFunctionBeginUser;
   if (!ctx->use_term1) PetscFunctionReturn(PETSC_SUCCESS);
-  if (state->reference_ctx.leaves[0].mask & TAOTERM_MASK_HESSIAN)
+  if (state->reference_ctx.subterms[0].mask & TAOTERM_MASK_HESSIAN)
     PetscCheck(ctx->callback_hessian_evals == 0 && ctx->callback_hessianmult_evals == 0, ctx->comm, PETSC_ERR_PLIB, "Hessian-masked callback term was evaluated (%" PetscInt_FMT " Hessian, %" PetscInt_FMT " HessianMult calls)", ctx->callback_hessian_evals,
                ctx->callback_hessianmult_evals);
-  if (ctx->term1_shell && (state->reference_ctx.leaves[1].mask & TAOTERM_MASK_HESSIAN))
+  if (ctx->term1_shell && (state->reference_ctx.subterms[1].mask & TAOTERM_MASK_HESSIAN))
     PetscCheck(ctx->term1_hessian_evals == 0 && ctx->term1_hessianmult_evals == 0, ctx->comm, PETSC_ERR_PLIB, "Hessian-masked term 1 was evaluated (%" PetscInt_FMT " Hessian, %" PetscInt_FMT " HessianMult calls)", ctx->term1_hessian_evals, ctx->term1_hessianmult_evals);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -358,13 +363,12 @@ static PetscErrorCode CheckMaskedLeavesUntouched(TestState *state)
 static PetscErrorCode CheckReferenceTermType(TaoTerm term)
 {
   TaoTermType type;
-  PetscBool   is_l2, is_shell;
+  PetscBool   supported;
 
   PetscFunctionBeginUser;
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)term, &supported, TAOTERMHALFL2SQUARED, TAOTERMSHELL, ""));
   PetscCall(TaoTermGetType(term, &type));
-  PetscCall(PetscStrcmp(type, TAOTERMHALFL2SQUARED, &is_l2));
-  PetscCall(PetscStrcmp(type, TAOTERMSHELL, &is_shell));
-  PetscCheck(is_l2 || is_shell, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "Reference supports only half-L2 and shell least-squares added terms, not %s", type);
+  PetscCheck(supported, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "Reference supports only half-L2 and shell least-squares added terms, not %s", type);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

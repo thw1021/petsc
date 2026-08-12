@@ -88,12 +88,12 @@ int main(int argc, char **argv)
 
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(ExampleCheckRequestedHessianType(tao, options.nterms > 1 ? "shell_" : "data_"));
-  for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckLeafHessianConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
-  reference_ctx.nleaves = options.nterms;
+  for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckSubtermHessianConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
+  reference_ctx.nsubterms = options.nterms;
   if (options.nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
   for (PetscInt i = 0; i < options.nterms; i++) {
     if (options.nterms > 1) PetscCall(TaoTermSumGetTermMask(objective, i, &options.terms[i].mask));
-    PetscCall(ExampleTermSetLeaf(&options.terms[i], &reference_ctx.leaves[i]));
+    PetscCall(ExampleTermSetSubterm(&options.terms[i], &reference_ctx.subterms[i]));
   }
   if (options.check_first_hessian_only)
     PetscCheck(options.nterms == 2 && !(options.terms[0].mask & TAOTERM_MASK_HESSIAN) && (options.terms[1].mask & TAOTERM_MASK_HESSIAN), comm, PETSC_ERR_ARG_WRONG, "-check_first_hessian_only requires only the second term's Hessian to be masked");
