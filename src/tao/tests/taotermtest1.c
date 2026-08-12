@@ -40,6 +40,7 @@ static PetscErrorCode FormHessianMult_Callback(Tao, Vec, Vec, Vec, void *);
 static PetscErrorCode Hessian_Term1(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode HessianMult_Term1(TaoTerm, Vec, Vec, Vec, Vec);
 static PetscErrorCode CheckConfiguredHessianState(TestState *);
+static PetscErrorCode CheckReferenceHessianOperators(TestState *);
 static PetscErrorCode CheckMaskedLeavesUntouched(TestState *);
 static PetscErrorCode CheckReferenceTermType(TaoTerm);
 
@@ -94,6 +95,7 @@ int main(int argc, char **argv)
   }
   PetscCall(ExampleReferenceCreate(comm, state.tao, state.x, &state.reference_ctx, &state.reference));
   PetscCall(ExampleReferenceSolveAndCompare(state.tao, state.x, &state.reference));
+  PetscCall(CheckReferenceHessianOperators(&state));
 
   if (ctx->repeat_setfromoptions) PetscCall(TestRepeatedSetFromOptions(&state));
   PetscCall(CheckMaskedLeavesUntouched(&state));
@@ -313,6 +315,35 @@ static PetscErrorCode CheckConfiguredHessianState(TestState *state)
     PetscCall(ExampleCheckLeafHessianConfiguration(ctx->term1.term, ctx->term1_shell ? ctx->term1.provide_hessian_mult : PETSC_TRUE));
   }
   PetscCall(ExampleCheckLeafHessianConfiguration(callbacks_leaf, ctx->callback_hessian_mult));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CheckReferenceHessianOperators(TestState *state)
+{
+  TestCtx  *ctx = &state->ctx;
+  Mat       cH, cHpre, tH, tHpre;
+  PetscInt  callback_hessian_evals, callback_hessianmult_evals, term1_hessian_evals, term1_hessianmult_evals;
+  PetscBool equal, is_nls;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscObjectTypeCompare((PetscObject)state->tao, TAONLS, &is_nls));
+  if (!is_nls) PetscFunctionReturn(PETSC_SUCCESS);
+  callback_hessian_evals     = ctx->callback_hessian_evals;
+  callback_hessianmult_evals = ctx->callback_hessianmult_evals;
+  term1_hessian_evals        = ctx->term1_hessian_evals;
+  term1_hessianmult_evals    = ctx->term1_hessianmult_evals;
+  PetscCall(TaoGetHessianMatrices(state->reference.tao, &cH, &cHpre));
+  PetscCall(TaoGetHessianMatrices(state->tao, &tH, &tHpre));
+  PetscCall(TaoComputeHessian(state->reference.tao, state->x, cH, cHpre));
+  PetscCall(TaoComputeHessian(state->tao, state->x, tH, tHpre));
+  PetscCall(MatMultEqual(cH, tH, 5, &equal));
+  PetscCheck(equal, state->ctx.comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian operators differ");
+  PetscCall(MatMultEqual(cHpre, tHpre, 5, &equal));
+  PetscCheck(equal, state->ctx.comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian preconditioning operators differ");
+  ctx->callback_hessian_evals     = callback_hessian_evals;
+  ctx->callback_hessianmult_evals = callback_hessianmult_evals;
+  ctx->term1_hessian_evals        = term1_hessian_evals;
+  ctx->term1_hessianmult_evals    = term1_hessianmult_evals;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
