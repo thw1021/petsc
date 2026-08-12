@@ -2,25 +2,29 @@
 
 #include <petsctao.h>
 
-typedef enum {
-  EXAMPLE_LEAST_SQUARES,
-  EXAMPLE_HALF_L2,
-  EXAMPLE_L1
-} ExampleLeafType;
+typedef struct {
+  Mat         map;
+  Vec         parameters;
+  PetscReal   scale;
+  TaoTermMask mask;
+} ExampleLeaf;
 
 typedef struct {
-  ExampleLeafType type;
-  Mat             map;
-  Vec             parameters;
-  PetscReal       scale;
-  PetscReal       epsilon;
-  TaoTermMask     mask;
-} ExampleLeaf;
+  TaoTerm     term;
+  Vec         parameters;
+  Mat         map;
+  PetscInt    size;
+  PetscReal   scale;
+  PetscBool   use_map;
+  PetscBool   supply_parameters;
+  PetscBool   provide_hessian_mult;
+  PetscBool   use_fd;
+  TaoTermMask mask;
+} ExampleTerm;
 
 typedef struct {
   PetscInt    nleaves;
   ExampleLeaf leaves[3];
-  Vec         hessian_x;
 } ExampleCtx;
 
 typedef struct {
@@ -31,7 +35,27 @@ typedef struct {
   ExampleCtx *ctx;
 } ExampleReference;
 
-static PETSC_UNUSED PetscErrorCode ExampleIdentityLeastSquaresObjective(TaoTerm term, Vec x, Vec parameters, PetscReal *f)
+static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
+{
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermDestroy(&term->term));
+  PetscCall(VecDestroy(&term->parameters));
+  PetscCall(MatDestroy(&term->map));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ExampleTermSetLeaf(ExampleTerm *term, ExampleLeaf *leaf)
+{
+  PetscFunctionBeginUser;
+  leaf->map        = term->map;
+  leaf->parameters = term->parameters;
+  leaf->scale      = term->scale;
+  leaf->mask       = term->mask;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* These callbacks operate in the term space; TaoTermMapping applies any map and its transpose. */
+static PetscErrorCode ExampleIdentityLeastSquaresObjective(TaoTerm term, Vec x, Vec parameters, PetscReal *f)
 {
   Vec         work;
   PetscScalar dot;
@@ -65,7 +89,7 @@ static PetscErrorCode ExampleIdentityLeastSquaresObjectiveGradient(TaoTerm term,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PETSC_UNUSED PetscErrorCode ExampleIdentityLeastSquaresHessian(TaoTerm term, Vec x, Vec parameters, Mat H, Mat Hpre)
+static PetscErrorCode ExampleIdentityLeastSquaresHessian(TaoTerm term, Vec x, Vec parameters, Mat H, Mat Hpre)
 {
   PetscFunctionBeginUser;
   if (H) {
@@ -83,101 +107,66 @@ static PETSC_UNUSED PetscErrorCode ExampleIdentityLeastSquaresHessian(TaoTerm te
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PETSC_UNUSED PetscErrorCode ExampleIdentityLeastSquaresHessianMult(TaoTerm term, Vec x, Vec parameters, Vec v, Vec Hv)
+static PetscErrorCode ExampleIdentityLeastSquaresHessianMult(TaoTerm term, Vec x, Vec parameters, Vec v, Vec Hv)
 {
   PetscFunctionBeginUser;
   PetscCall(VecCopy(v, Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleGetTermVector(ExampleLeaf *leaf, Vec x, Vec *y, PetscBool *destroy)
+static PetscErrorCode ExampleMapSolution(ExampleLeaf *leaf, Vec x, Vec *mapped_x, PetscBool *destroy)
 {
   PetscFunctionBeginUser;
   if (leaf->map) {
-    PetscCall(MatCreateVecs(leaf->map, NULL, y));
-    PetscCall(MatMult(leaf->map, x, *y));
+    PetscCall(MatCreateVecs(leaf->map, NULL, mapped_x));
+    PetscCall(MatMult(leaf->map, x, *mapped_x));
     *destroy = PETSC_TRUE;
   } else {
-    *y       = x;
-    *destroy = PETSC_FALSE;
+    *mapped_x = x;
+    *destroy  = PETSC_FALSE;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode ExampleComputeLeaf(ExampleLeaf *leaf, Vec x, PetscBool need_f, PetscBool need_g, PetscBool need_h, PetscReal *f, Vec gx, Mat Hx)
 {
-  Mat         D = NULL, contribution = NULL;
-  Vec         y, diff, gy = NULL, diag = NULL;
-  PetscScalar dot, sum;
-  PetscBool   destroy_y;
-  PetscInt    n;
+  Mat         contribution = NULL;
+  Vec         mapped_x, diff, mapped_g = NULL, diag = NULL;
+  PetscScalar dot;
+  PetscBool   destroy_mapped_x;
 
   PetscFunctionBeginUser;
-  PetscCall(ExampleGetTermVector(leaf, x, &y, &destroy_y));
-  PetscCall(VecDuplicate(y, &diff));
-  if (leaf->parameters) PetscCall(VecWAXPY(diff, -1.0, leaf->parameters, y));
-  else PetscCall(VecCopy(y, diff));
+  PetscCall(ExampleMapSolution(leaf, x, &mapped_x, &destroy_mapped_x));
+  PetscCall(VecDuplicate(mapped_x, &diff));
+  if (leaf->parameters) PetscCall(VecWAXPY(diff, -1.0, leaf->parameters, mapped_x));
+  else PetscCall(VecCopy(mapped_x, diff));
   if (need_f) {
-    if (leaf->type == EXAMPLE_L1) {
-      if (leaf->epsilon == 0.0) PetscCall(VecNorm(diff, NORM_1, f));
-      else {
-        PetscCall(VecDuplicate(diff, &diag));
-        PetscCall(VecPointwiseMult(diag, diff, diff));
-        PetscCall(VecShift(diag, leaf->epsilon * leaf->epsilon));
-        PetscCall(VecSqrtAbs(diag));
-        PetscCall(VecSum(diag, &sum));
-        PetscCall(VecGetSize(diag, &n));
-        *f = PetscRealPart(sum) - n * leaf->epsilon;
-        PetscCall(VecDestroy(&diag));
-      }
-    } else {
-      PetscCall(VecDot(diff, diff, &dot));
-      *f = 0.5 * PetscRealPart(dot);
-    }
+    PetscCall(VecDot(diff, diff, &dot));
+    *f = 0.5 * PetscRealPart(dot);
     *f *= leaf->scale;
   }
   if (need_g) {
-    PetscCall(VecDuplicate(diff, &gy));
-    if (leaf->type == EXAMPLE_L1) {
-      if (leaf->epsilon == 0.0) PetscCall(VecPointwiseSign(gy, diff, VEC_SIGN_ZERO_TO_ZERO));
-      else {
-        PetscCall(VecDuplicate(diff, &diag));
-        PetscCall(VecPointwiseMult(diag, diff, diff));
-        PetscCall(VecShift(diag, leaf->epsilon * leaf->epsilon));
-        PetscCall(VecSqrtAbs(diag));
-        PetscCall(VecPointwiseDivide(gy, diff, diag));
-        PetscCall(VecDestroy(&diag));
-      }
-    } else PetscCall(VecCopy(diff, gy));
-    if (leaf->map) PetscCall(MatMultTranspose(leaf->map, gy, gx));
-    else PetscCall(VecCopy(gy, gx));
+    if (leaf->map) {
+      PetscCall(VecDuplicate(diff, &mapped_g));
+      PetscCall(VecCopy(diff, mapped_g));
+      PetscCall(MatMultTranspose(leaf->map, mapped_g, gx));
+    } else PetscCall(VecCopy(diff, gx));
     PetscCall(VecScale(gx, leaf->scale));
-    PetscCall(VecDestroy(&gy));
+    PetscCall(VecDestroy(&mapped_g));
   }
   if (need_h) {
-    PetscCall(VecDuplicate(diff, &diag));
-    PetscCall(VecSet(diag, 1.0));
-    if (leaf->type == EXAMPLE_L1) {
-      if (leaf->epsilon == 0.0) PetscCall(VecZeroEntries(diag));
-      else {
-        PetscCall(VecPointwiseMult(diag, diff, diff));
-        PetscCall(VecShift(diag, leaf->epsilon * leaf->epsilon));
-        PetscCall(VecPow(diag, -1.5));
-        PetscCall(VecScale(diag, leaf->epsilon * leaf->epsilon));
-      }
-    }
-    PetscCall(MatCreateDiagonal(diag, &D));
-    if (leaf->map) PetscCall(MatPtAP(D, leaf->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &contribution));
+    if (leaf->map) PetscCall(MatTransposeMatMult(leaf->map, leaf->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &contribution));
     else {
-      PetscCall(MatDuplicate(D, MAT_COPY_VALUES, &contribution));
+      PetscCall(VecDuplicate(diff, &diag));
+      PetscCall(VecSet(diag, 1.0));
+      PetscCall(MatCreateDiagonal(diag, &contribution));
     }
     PetscCall(MatAXPY(Hx, leaf->scale, contribution, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatDestroy(&contribution));
-    PetscCall(MatDestroy(&D));
     PetscCall(VecDestroy(&diag));
   }
   PetscCall(VecDestroy(&diff));
-  if (destroy_y) PetscCall(VecDestroy(&y));
+  if (destroy_mapped_x) PetscCall(VecDestroy(&mapped_x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -224,10 +213,9 @@ static PetscErrorCode ExampleAssembleHessian(ExampleCtx *ctx, Vec x, Mat H)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleApplyHessian(ExampleCtx *ctx, Vec x, Vec v, Vec Hv)
+static PetscErrorCode ExampleApplyHessian(ExampleCtx *ctx, Vec v, Vec Hv)
 {
-  Vec       y, diff, Av, HAv, contribution;
-  PetscBool destroy_y;
+  Vec mapped_v = NULL, contribution;
 
   PetscFunctionBeginUser;
   PetscCall(VecZeroEntries(Hv));
@@ -236,31 +224,13 @@ static PetscErrorCode ExampleApplyHessian(ExampleCtx *ctx, Vec x, Vec v, Vec Hv)
     ExampleLeaf *leaf = &ctx->leaves[i];
 
     if (leaf->mask & TAOTERM_MASK_HESSIAN) continue;
-    PetscCall(ExampleGetTermVector(leaf, x, &y, &destroy_y));
-    PetscCall(VecDuplicate(y, &diff));
-    PetscCall(VecDuplicate(y, &Av));
-    PetscCall(VecDuplicate(y, &HAv));
-    if (leaf->parameters) PetscCall(VecWAXPY(diff, -1.0, leaf->parameters, y));
-    else PetscCall(VecCopy(y, diff));
-    if (leaf->map) PetscCall(MatMult(leaf->map, v, Av));
-    else PetscCall(VecCopy(v, Av));
-    if (leaf->type == EXAMPLE_L1) {
-      if (leaf->epsilon == 0.0) PetscCall(VecZeroEntries(HAv));
-      else {
-        PetscCall(VecPointwiseMult(HAv, diff, diff));
-        PetscCall(VecShift(HAv, leaf->epsilon * leaf->epsilon));
-        PetscCall(VecPow(HAv, -1.5));
-        PetscCall(VecScale(HAv, leaf->epsilon * leaf->epsilon));
-        PetscCall(VecPointwiseMult(HAv, HAv, Av));
-      }
-    } else PetscCall(VecCopy(Av, HAv));
-    if (leaf->map) PetscCall(MatMultTranspose(leaf->map, HAv, contribution));
-    else PetscCall(VecCopy(HAv, contribution));
+    if (leaf->map) {
+      PetscCall(MatCreateVecs(leaf->map, NULL, &mapped_v));
+      PetscCall(MatMult(leaf->map, v, mapped_v));
+      PetscCall(MatMultTranspose(leaf->map, mapped_v, contribution));
+    } else PetscCall(VecCopy(v, contribution));
     PetscCall(VecAXPY(Hv, leaf->scale, contribution));
-    PetscCall(VecDestroy(&HAv));
-    PetscCall(VecDestroy(&Av));
-    PetscCall(VecDestroy(&diff));
-    if (destroy_y) PetscCall(VecDestroy(&y));
+    PetscCall(VecDestroy(&mapped_v));
   }
   PetscCall(VecDestroy(&contribution));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -272,8 +242,7 @@ static PetscErrorCode ExampleMatMult(Mat H, Vec v, Vec Hv)
 
   PetscFunctionBeginUser;
   PetscCall(MatShellGetContext(H, &ctx));
-  PetscCheck(ctx->hessian_x, PetscObjectComm((PetscObject)H), PETSC_ERR_ARG_WRONGSTATE, "Reference shell Hessian has not been evaluated at a solution");
-  PetscCall(ExampleApplyHessian(ctx, ctx->hessian_x, v, Hv));
+  PetscCall(ExampleApplyHessian(ctx, v, Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -285,9 +254,6 @@ static PetscErrorCode ExampleFormHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *
   PetscFunctionBeginUser;
   PetscCall(PetscObjectTypeCompare((PetscObject)H, MATSHELL, &is_shell));
   if (is_shell) {
-    PetscCall(PetscObjectReference((PetscObject)x));
-    PetscCall(VecDestroy(&ctx->hessian_x));
-    ctx->hessian_x = x;
     /* Clear shifts and scales left by the previous TAONLS iteration before publishing the Hessian at x. */
     PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
@@ -406,7 +372,6 @@ static PetscErrorCode ExampleReferenceDestroy(ExampleReference *reference)
   if (reference->Hpre != reference->H) PetscCall(MatDestroy(&reference->Hpre));
   PetscCall(MatDestroy(&reference->H));
   PetscCall(VecDestroy(&reference->x));
-  if (reference->ctx) PetscCall(VecDestroy(&reference->ctx->hessian_x));
   reference->ctx = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

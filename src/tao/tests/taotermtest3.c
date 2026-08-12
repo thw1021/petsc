@@ -56,11 +56,9 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
   if (use_fd) hessian_tolerance = 2.e-5;
   reference_ctx.nleaves              = 2;
-  reference_ctx.leaves[0].type       = EXAMPLE_LEAST_SQUARES;
   reference_ctx.leaves[0].map        = A;
   reference_ctx.leaves[0].parameters = b;
   reference_ctx.leaves[0].scale      = 1.0;
-  reference_ctx.leaves[1].type       = EXAMPLE_HALF_L2;
   reference_ctx.leaves[1].scale      = lambda;
   PetscCall(ExampleReferenceCreate(PETSC_COMM_WORLD, tao, x, &reference_ctx, &reference));
 
