@@ -2051,6 +2051,26 @@ PetscErrorCode MatZeroEntries_SeqDense(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatSetInf_SeqDense(Mat A)
+{
+  // MSVC gives "divide by zero" error at compile time - so declare as volatile to skip this check.
+  volatile PetscReal one = 1.0, zero = 0.0;
+  Mat_SeqDense      *l   = (Mat_SeqDense *)A->data;
+  PetscInt           lda = l->lda, m = A->rmap->n, n = A->cmap->n, i, j;
+  PetscScalar       *v;
+  PetscScalar        inf;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  inf = one / zero;
+  PetscCall(PetscFPTrapPop());
+  PetscCall(MatDenseGetArrayWrite(A, &v));
+  for (j = 0; j < n; j++)
+    for (i = 0; i < m; i++) v[i + j * lda] = inf;
+  PetscCall(MatDenseRestoreArrayWrite(A, &v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatZeroRows_SeqDense(Mat A, PetscInt N, const PetscInt rows[], PetscScalar diag, Vec x, Vec b)
 {
   Mat_SeqDense      *l = (Mat_SeqDense *)A->data;
@@ -3122,7 +3142,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       NULL,
+                                       MatSetInf_SeqDense,
                                        /* 34*/ MatDuplicate_SeqDense,
                                        NULL,
                                        NULL,
