@@ -40,7 +40,7 @@ static PetscErrorCode FormHessian_Callback(Tao, Vec, Mat, Mat, void *);
 static PetscErrorCode FormHessianMult_Callback(Tao, Vec, Vec, Vec, void *);
 static PetscErrorCode Hessian_Term1(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode HessianMult_Term1(TaoTerm, Vec, Vec, Vec, Vec);
-static PetscErrorCode CheckConfiguredHessianState(TestState *);
+static PetscErrorCode CheckObjectiveHessianMultConfiguration(TestState *);
 static PetscErrorCode CheckReferenceHessianOperators(TestState *);
 static PetscErrorCode CheckMaskedSubtermsUntouched(TestState *);
 static PetscErrorCode CheckReferenceTermType(TaoTerm);
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(state.tao));
   PetscCall(TaoSetUp(state.tao));
   PetscCall(ExampleCheckHessianConfiguration(state.tao));
-  PetscCall(CheckConfiguredHessianState(&state));
+  PetscCall(CheckObjectiveHessianMultConfiguration(&state));
 
   state.reference_ctx.nsubterms              = ctx->use_term1 ? 2 : 1;
   state.reference_ctx.subterms[0].parameters = ctx->target;
@@ -310,19 +310,40 @@ static PetscErrorCode HessianMult_Term1(TaoTerm term, Vec x, Vec parameters, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckConfiguredHessianState(TestState *state)
+static PetscErrorCode CheckObjectiveHessianMultConfiguration(TestState *state)
 {
-  TestCtx *ctx = &state->ctx;
-  TaoTerm  objective, callbacks_subterm;
+  TestCtx  *ctx = &state->ctx;
+  TaoTerm   objective, callbacks_subterm = NULL;
+  PetscInt  nsubterms;
+  PetscBool is_callbacks, is_sum, found_added_subterm = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(TaoGetTerm(state->tao, NULL, &objective, NULL, NULL));
-  callbacks_subterm = objective;
   if (ctx->use_term1) {
-    PetscCall(TaoTermSumGetTerm(objective, 0, NULL, NULL, &callbacks_subterm, NULL));
-    PetscCall(ExampleCheckSubtermHessianConfiguration(ctx->term1.term, ctx->term1_shell ? ctx->term1.provide_hessian_mult : PETSC_TRUE));
+    PetscCall(PetscObjectTypeCompare((PetscObject)objective, TAOTERMSUM, &is_sum));
+    PetscCheck(is_sum, ctx->comm, PETSC_ERR_PLIB, "Expected the objective to be a TaoTerm sum");
+    PetscCall(TaoTermSumGetNumberTerms(objective, &nsubterms));
+    PetscCheck(nsubterms == 2, ctx->comm, PETSC_ERR_PLIB, "Expected two objective subterms, found %" PetscInt_FMT, nsubterms);
+    for (PetscInt i = 0; i < nsubterms; i++) {
+      TaoTerm subterm;
+
+      PetscCall(TaoTermSumGetTerm(objective, i, NULL, NULL, &subterm, NULL));
+      PetscCall(PetscObjectTypeCompare((PetscObject)subterm, TAOTERMCALLBACKS, &is_callbacks));
+      if (is_callbacks) {
+        PetscCheck(!callbacks_subterm, ctx->comm, PETSC_ERR_PLIB, "Found multiple callback objective subterms");
+        callbacks_subterm = subterm;
+      }
+      if (subterm == ctx->term1.term) found_added_subterm = PETSC_TRUE;
+    }
+    PetscCheck(found_added_subterm, ctx->comm, PETSC_ERR_PLIB, "The objective does not contain term 1");
+    PetscCall(ExampleCheckHessianMultConfiguration(ctx->term1.term, ctx->term1_shell ? ctx->term1.provide_hessian_mult : PETSC_TRUE));
+  } else {
+    PetscCall(PetscObjectTypeCompare((PetscObject)objective, TAOTERMCALLBACKS, &is_callbacks));
+    PetscCheck(is_callbacks, ctx->comm, PETSC_ERR_PLIB, "Expected the objective to contain the Tao callbacks");
+    callbacks_subterm = objective;
   }
-  PetscCall(ExampleCheckSubtermHessianConfiguration(callbacks_subterm, ctx->callback_hessian_mult));
+  PetscCheck(callbacks_subterm, ctx->comm, PETSC_ERR_PLIB, "The objective does not contain a callback subterm");
+  PetscCall(ExampleCheckHessianMultConfiguration(callbacks_subterm, ctx->callback_hessian_mult));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

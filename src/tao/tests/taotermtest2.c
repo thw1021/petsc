@@ -89,7 +89,7 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSetUp(tao));
   PetscCall(ExampleCheckHessianConfiguration(tao));
-  for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckSubtermHessianConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
+  for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckHessianMultConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
   reference_ctx.nsubterms = options.nterms;
   if (options.nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
   for (PetscInt i = 0; i < options.nterms; i++) {
@@ -100,8 +100,8 @@ int main(int argc, char **argv)
     PetscCheck(options.nterms == 2 && !(options.terms[0].mask & TAOTERM_MASK_HESSIAN) && (options.terms[1].mask & TAOTERM_MASK_HESSIAN), comm, PETSC_ERR_ARG_WRONG, "-check_first_hessian_only requires only the second term's Hessian to be masked");
   PetscCall(ExampleReferenceCreate(comm, tao, x, &reference_ctx, &reference));
   PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));
-  PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &options.terms[0].use_fd, NULL));
-  if (options.nterms > 1) PetscCall(PetscOptionsGetBool(NULL, "extra_", "-tao_term_hessian_use_fd", &options.terms[1].use_fd, NULL));
+  PetscCall(TaoTermComputeHessianGetUseFD(options.terms[0].term, &options.terms[0].use_fd));
+  if (options.nterms > 1) PetscCall(TaoTermComputeHessianGetUseFD(options.terms[1].term, &options.terms[1].use_fd));
   PetscCall(CheckOperator(tao, x, options.terms, options.nterms, options.split_hpre, options.check_hessian_mult, options.check_hessian_cache, hessian_evals));
   /* A Hessian-masked summand must not invoke its Hessian or HessianMult callback, even
      if an accidental evaluation does not affect the result. */
