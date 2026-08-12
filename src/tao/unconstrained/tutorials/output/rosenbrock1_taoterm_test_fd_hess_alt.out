@@ -9,10 +9,10 @@ iter =   6, Function value 0.0331258, Residual: 2.48771
 iter =   7, Function value 0.0119116, Residual: 1.77387
 iter =   8, Function value 0.00292615, Residual: 1.00799
 iter =   9, Function value 0.000357211, Residual: 0.409402
-iter =  10, Function value 1.02571e-05, Residual: 0.0746266
-iter =  11, Function value 1.26288e-08, Residual: 0.0027539
-iter =  12, Function value 2.1174e-14, Residual: 3.45776e-06
-iter =  13, Function value 2.16365e-24, Residual: < 1.0e-11
+iter =  10, Function value 1.02571e-05, Residual: 0.0746263
+iter =  11, Function value 1.26288e-08, Residual: 0.00275394
+iter =  12, Function value 2.11741e-14, Residual: 3.45813e-06
+iter =  13, Function value 2.16333e-24, Residual: < 1.0e-11
 Tao Object: 1 MPI process
   type: nls
     Newton steps: 13
@@ -70,8 +70,8 @@ Tao Object: 1 MPI process
         not using I-node routines
   total KSP iterations: 13
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=8.57087e-12
-  Objective value=2.16365e-24
+  Residual in Function/Gradient:=8.57066e-12
+  Objective value=2.16333e-24
   total number of iterations=13,                          (max: 50)
   total number of function/gradient evaluations=63,      (max: unlimited)
   total number of Hessian evaluations=14
