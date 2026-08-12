@@ -322,28 +322,20 @@ static PetscErrorCode CheckReferenceHessianOperators(TestState *state)
 {
   TestCtx  *ctx = &state->ctx;
   Mat       cH, cHpre, tH, tHpre;
-  PetscInt  callback_hessian_evals, callback_hessianmult_evals, term1_hessian_evals, term1_hessianmult_evals;
-  PetscBool equal, is_nls;
+  PetscBool equal, c_is_nls, t_is_nls;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscObjectTypeCompare((PetscObject)state->tao, TAONLS, &is_nls));
-  if (!is_nls) PetscFunctionReturn(PETSC_SUCCESS);
-  callback_hessian_evals     = ctx->callback_hessian_evals;
-  callback_hessianmult_evals = ctx->callback_hessianmult_evals;
-  term1_hessian_evals        = ctx->term1_hessian_evals;
-  term1_hessianmult_evals    = ctx->term1_hessianmult_evals;
+  PetscCall(PetscObjectTypeCompare((PetscObject)state->tao, TAONLS, &t_is_nls));
+  PetscCall(PetscObjectTypeCompare((PetscObject)state->reference.tao, TAONLS, &c_is_nls));
+  if (!t_is_nls || !c_is_nls) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoGetHessianMatrices(state->reference.tao, &cH, &cHpre));
   PetscCall(TaoGetHessianMatrices(state->tao, &tH, &tHpre));
   PetscCall(TaoComputeHessian(state->reference.tao, state->x, cH, cHpre));
   PetscCall(TaoComputeHessian(state->tao, state->x, tH, tHpre));
   PetscCall(MatMultEqual(cH, tH, 5, &equal));
-  PetscCheck(equal, state->ctx.comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian operators differ");
+  PetscCheck(equal, ctx->comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian operators differ");
   PetscCall(MatMultEqual(cHpre, tHpre, 5, &equal));
-  PetscCheck(equal, state->ctx.comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian preconditioning operators differ");
-  ctx->callback_hessian_evals     = callback_hessian_evals;
-  ctx->callback_hessianmult_evals = callback_hessianmult_evals;
-  ctx->term1_hessian_evals        = term1_hessian_evals;
-  ctx->term1_hessianmult_evals    = term1_hessianmult_evals;
+  PetscCheck(equal, ctx->comm, PETSC_ERR_PLIB, "Reference and TaoTerm Hessian preconditioning operators differ");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
