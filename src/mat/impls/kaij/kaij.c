@@ -328,21 +328,31 @@ static PetscErrorCode MatKAIJResetOperandNnzState_Private(Mat A)
 
 /*
   The (B \otimes S) term is applied over the layout of the AIJ operand, so B must share that layout in both the
-  sequential and the parallel case. The setters call this as well as MatSetUp_KAIJ(), because MatSetUp() runs the type
-  method only once while either operand may be replaced afterwards. Nothing is checked before both operands are set;
-  MatSetUp_KAIJ() runs the check again once they are.
+  sequential and the parallel case. In the parallel case B must additionally share A's off-diagonal ghost columns;
+  that is verified in MatKAIJ_build_AIJ_OAIJ(), where the ghost scatter that B reuses is built. The setters call this
+  as well as MatSetUp_KAIJ(), because MatSetUp() runs the type method only once while either operand may be replaced
+  afterwards. Nothing is checked before both operands are set; MatSetUp_KAIJ() runs the check again once they are.
 */
 static PetscErrorCode MatKAIJCheckOperandLayout_Private(Mat A)
 {
   Mat_SeqKAIJ *a = (Mat_SeqKAIJ *)A->data;
   Mat          aij;
   PetscMPIInt  size;
+  PetscBool    rcong, ccong;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
   aij = size == 1 ? a->AIJ : ((Mat_MPIKAIJ *)A->data)->A;
-  /* PETSC_COMM_SELF because the local sizes compared here may match on some ranks and differ on others */
-  PetscCheck(!a->B || !aij || (aij->rmap->N == a->B->rmap->N && aij->cmap->N == a->B->cmap->N && aij->rmap->n == a->B->rmap->n && aij->cmap->n == a->B->cmap->n), PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "The B matrix must share the row and column layout of the AIJ matrix");
+  if (a->B && aij) {
+    PetscCall(PetscLayoutSetUp(aij->rmap));
+    PetscCall(PetscLayoutSetUp(aij->cmap));
+    PetscCall(PetscLayoutSetUp(a->B->rmap));
+    PetscCall(PetscLayoutSetUp(a->B->cmap));
+    /* PetscLayoutCompare() checks the global size and the parallel range, so it returns the same result on every rank */
+    PetscCall(PetscLayoutCompare(aij->rmap, a->B->rmap, &rcong));
+    PetscCall(PetscLayoutCompare(aij->cmap, a->B->cmap, &ccong));
+    PetscCheck(rcong && ccong, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_INCOMP, "The B matrix must share the row and column layout of the AIJ matrix");
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
