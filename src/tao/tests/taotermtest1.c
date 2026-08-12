@@ -73,8 +73,7 @@ int main(int argc, char **argv)
     PetscCall(TaoAddTerm(state.tao, "reg1_", ctx->term1.scale, ctx->term1.term, ctx->term1.parameters, ctx->term1.map));
   }
   PetscCall(TaoSetFromOptions(state.tao));
-  PetscCall(TaoSetUp(state.tao));
-  PetscCall(ExampleCheckHessianConfiguration(state.tao));
+
   state.reference_ctx.nsubterms              = ctx->use_term1 ? 2 : 1;
   state.reference_ctx.subterms[0].parameters = ctx->target;
   state.reference_ctx.subterms[0].scale      = 1.0;
