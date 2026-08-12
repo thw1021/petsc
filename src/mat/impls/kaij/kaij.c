@@ -288,24 +288,6 @@ PetscErrorCode MatKAIJRestoreTRead(Mat A, const PetscScalar *T[])
 }
 
 /*
-  Drop everything the KAIJ matrix caches from its operands: the inverted block diagonal and, in the parallel case, the
-  sequential submatrices, which hold copies of S and T. MatKAIJRestoreS() and MatKAIJRestoreT() report the same kind of
-  change by increasing the state of the KAIJ matrix, so raising it here is all that MatKAIJ_build_AIJ_OAIJ() and
-  MatInvertBlockDiagonal_SeqKAIJ() need to notice. The block diagonal is freed rather than kept because p and q may
-  have changed, which changes the size of that buffer.
-*/
-static PetscErrorCode MatKAIJInvalidateCache_Private(Mat A)
-{
-  Mat_SeqKAIJ *a = (Mat_SeqKAIJ *)A->data;
-
-  PetscFunctionBegin;
-  PetscCall(PetscFree(a->ibdiag));
-  a->ibdiagvalid = PETSC_FALSE;
-  PetscCall(PetscObjectStateIncrease((PetscObject)A));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
   Record the operands' current nonzero states as the baseline that MatAssemblyEnd_KAIJ() compares against. Called when an
   operand is attached (MatKAIJSetA()/MatKAIJSetB()) and at MatSetUp_KAIJ(), so the baseline reflects the operands as
   they stand and only genuine later pattern changes are forwarded to the KAIJ matrix's nonzero state.
@@ -410,7 +392,7 @@ PetscErrorCode MatKAIJSetA(Mat A, Mat a)
     m->A = a;
   }
   PetscCall(MatKAIJCheckOperandLayout_Private(A));
-  PetscCall(MatKAIJInvalidateCache_Private(A));
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscCall(MatKAIJResetOperandNnzState_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -464,7 +446,7 @@ PetscErrorCode MatKAIJSetB(Mat A, Mat B)
   a->B = B;
   PetscCall(MatKAIJCheckOperandLayout_Private(A));
   /* The second operand changed, so the submatrices must be rebuilt even when neither operand has been reassembled */
-  PetscCall(MatKAIJInvalidateCache_Private(A));
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscCall(MatKAIJResetOperandNnzState_Private(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -533,7 +515,7 @@ PetscErrorCode MatKAIJSetS(Mat A, PetscInt p, PetscInt q, const PetscScalar S[])
 
   a->p = p;
   a->q = q;
-  PetscCall(MatKAIJInvalidateCache_Private(A));
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -634,7 +616,7 @@ PetscErrorCode MatKAIJSetT(Mat A, PetscInt p, PetscInt q, const PetscScalar T[])
 
   a->p = p;
   a->q = q;
-  PetscCall(MatKAIJInvalidateCache_Private(A));
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1048,7 +1030,12 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A, const PetscScalar **
     if (values) *values = b->ibdiag;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  if (!b->ibdiag) PetscCall(PetscMalloc1(dof2 * m, &b->ibdiag));
+  /* the block size or the operand row count may have changed the size the buffer needs */
+  if (b->ibdiag && b->ibdiagcount != dof2 * m) PetscCall(PetscFree(b->ibdiag));
+  if (!b->ibdiag) {
+    PetscCall(PetscMalloc1(dof2 * m, &b->ibdiag));
+    b->ibdiagcount = dof2 * m;
+  }
   if (values) *values = b->ibdiag;
   diag = b->ibdiag;
 
@@ -1480,9 +1467,10 @@ static PetscErrorCode MatMult_MPIKAIJ(Mat A, Vec xx, Vec yy)
 /*
   The inverted block diagonal computed by the sequential submatrix cannot be handed to the caller directly: callers such as
   PCPBJACOBI keep the returned pointer across solves, while MatKAIJ_build_AIJ_OAIJ() destroys and recreates b->AIJ, and with it
-  that buffer, as soon as either operand is reassembled. Copy into a buffer owned by this matrix instead. It is released only by
-  MatKAIJInvalidateCache_Private(), which raises the state of this matrix so that a cached pointer is refreshed before it is read
-  again, and by MatDestroy_MPIKAIJ(), after which no caller may hold the matrix at all.
+  that buffer, as soon as either operand is reassembled. Copy into a buffer owned by this matrix instead. That buffer keeps the
+  same address while its size is unchanged; it is reallocated only when the block size or operand row count changes, and those
+  happen through a setter that also raises this matrix's state, so a cached pointer is refreshed before it is read again. It is
+  released by MatDestroy_MPIKAIJ(), after which no caller may hold the matrix at all.
 */
 static PetscErrorCode MatInvertBlockDiagonal_MPIKAIJ(Mat A, const PetscScalar **values)
 {
@@ -1494,7 +1482,12 @@ static PetscErrorCode MatInvertBlockDiagonal_MPIKAIJ(Mat A, const PetscScalar **
   PetscCall(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ is up to date. */
   PetscUseTypeMethod(b->AIJ, invertblockdiagonal, &diag);
   nb = b->p * b->p * b->A->rmap->n; /* MatInvertBlockDiagonal_SeqKAIJ() requires p == q */
-  if (!b->ibdiag) PetscCall(PetscMalloc1(nb, &b->ibdiag));
+  /* the block size or the operand row count may have changed the size the buffer needs */
+  if (b->ibdiag && b->ibdiagcount != nb) PetscCall(PetscFree(b->ibdiag));
+  if (!b->ibdiag) {
+    PetscCall(PetscMalloc1(nb, &b->ibdiag));
+    b->ibdiagcount = nb;
+  }
   PetscCall(PetscArraycpy(b->ibdiag, diag, nb));
   if (values) *values = b->ibdiag;
   PetscFunctionReturn(PETSC_SUCCESS);
