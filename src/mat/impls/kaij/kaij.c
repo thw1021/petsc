@@ -433,6 +433,8 @@ PetscErrorCode MatKAIJSetA(Mat A, Mat a)
   case it must also share its off-diagonal ghost columns, for example by being assembled from the same `DM`; both
   requirements are enforced.
 
+  A common use for `B` is a mass matrix from a differential-algebraic equation; see `MatCreateKAIJAB()`.
+
 .seealso: [](ch_matrices), `Mat`, `MATKAIJ`, `MatCreateKAIJAB()`, `MatKAIJGetB()`, `MatKAIJSetA()`, `MatKAIJSetS()`
 @*/
 PetscErrorCode MatKAIJSetB(Mat A, Mat B)
@@ -1788,6 +1790,11 @@ PetscErrorCode MatCreateKAIJ(Mat A, PetscInt p, PetscInt q, const PetscScalar S[
 .ve
   The resulting matrix is (np \times nq)
 
+  A common source of a non-identity `B` is a differential-algebraic equation integrated with an implicit Runge-Kutta
+  method. In that case the first operand `A` is the Jacobian $\partial F/\partial U$ and the second operand `B` is the
+  (possibly singular) mass matrix $M = \partial F/\partial \dot{U}$; a `NULL` `B` recovers the identity mass matrix of an
+  ODE with no algebraic constraints. See `TSIRK` and `TSSetMassMatrix()`.
+
   `B` must share the parallel row and column layout of `A`, and in the `MATMPIKAIJ` case it must share the nonzero
   structure of `A` (the same off-diagonal ghost columns), for example by assembling both from the same `DM`.
 
@@ -1836,6 +1843,9 @@ PetscErrorCode MatCreateKAIJAB(Mat A, Mat B, PetscInt p, PetscInt q, const Petsc
 
   `MatCreateKAIJ()` leaves the second operand as the identity, giving the common (I \otimes S + A \otimes T) form; a general
   `B` is set with `MatCreateKAIJAB()` or `MatKAIJSetB()`, which supports fewer operations (see `MatCreateKAIJAB()`).
+
+  A general `B` lets a `MATKAIJ` matrix carry a mass matrix, which is how `TSIRK` assembles the stage system of a
+  differential-algebraic equation; see `MatCreateKAIJAB()` and `TSSetMassMatrix()`.
 
 .seealso: [](ch_matrices), `Mat`, `MatKAIJSetA()`, `MatKAIJSetB()`, `MatKAIJSetS()`, `MatKAIJSetT()`, `MatKAIJGetA()`, `MatKAIJGetB()`, `MatKAIJGetS()`, `MatKAIJGetT()`, `MatCreateKAIJ()`, `MatCreateKAIJAB()`
 M*/
