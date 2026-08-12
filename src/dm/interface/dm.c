@@ -6382,6 +6382,117 @@ PetscErrorCode DMUseTensorOrder(DM dm, PetscBool tensor)
 }
 
 /*@
+  DMComputeExactFieldSolution - Compute the exact solution for a given `DM` and set of fields, using the `PetscDS` information.
+
+  Collective
+
+  Input Parameters:
++ dm     - The `DM`
+. time   - The time
+. Nf     - The number of fields, or `PETSC_DECIDE` to use all fields
+- fields - The fields to compute the exact solution for, or `NULL` for all fields
+
+  Output Parameters:
++ u   - The vector will be filled with exact solution values, or `NULL`
+- u_t - The vector will be filled with the time derivative of exact solution values, or `NULL`
+
+  Level: developer
+
+  Note:
+  The user must call `PetscDSSetExactSolution()` before using this routine
+
+.seealso: [](ch_dmbase), `DM`, `DMComputeExactSolution()`, `PetscDSSetExactSolution()`
+@*/
+PetscErrorCode DMComputeExactFieldSolution(DM dm, PetscReal time, PetscInt Nf, const PetscInt fields[], Vec u, Vec u_t)
+{
+  PetscErrorCode (**exacts)(PetscInt, PetscReal, const PetscReal x[], PetscInt, PetscScalar *u, PetscCtx ctx);
+  void   **ectxs;
+  Vec      locu, locu_t;
+  PetscInt oNf, Nds, s;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (u) {
+    PetscValidHeaderSpecific(u, VEC_CLASSID, 3);
+    PetscCall(DMGetLocalVector(dm, &locu));
+    PetscCall(VecSet(locu, 0.));
+  }
+  if (u_t) {
+    PetscValidHeaderSpecific(u_t, VEC_CLASSID, 4);
+    PetscCall(DMGetLocalVector(dm, &locu_t));
+    PetscCall(VecSet(locu_t, 0.));
+  }
+  PetscCall(DMGetNumFields(dm, &oNf));
+  PetscCheck(Nf <= oNf, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Nf (%" PetscInt_FMT ") must be less than or equal to the number of fields (%" PetscInt_FMT ")", Nf, oNf);
+  PetscCall(PetscMalloc2(oNf, &exacts, oNf, &ectxs));
+  PetscCall(DMGetNumDS(dm, &Nds));
+  for (s = 0; s < Nds; ++s) {
+    PetscDS         ds;
+    DMLabel         label;
+    IS              fieldIS;
+    const PetscInt *dsfields, id = 1;
+    PetscInt        dsNf;
+
+    PetscCall(DMGetRegionNumDS(dm, s, &label, &fieldIS, &ds, NULL));
+    PetscCall(PetscDSGetNumFields(ds, &dsNf));
+    PetscCall(ISGetIndices(fieldIS, &dsfields));
+    if (u) {
+      PetscCall(PetscArrayzero(exacts, oNf));
+      PetscCall(PetscArrayzero(ectxs, oNf));
+      for (PetscInt f = 0; f < dsNf; ++f) {
+        const PetscInt field = dsfields[f];
+        PetscInt       g;
+
+        if (Nf > 0) {
+          for (g = 0; g < Nf; ++g) if (fields[g] == field) break;
+          if (g == Nf) continue;
+        }
+        PetscCall(PetscDSGetExactSolution(ds, field, &exacts[field], &ectxs[field]));
+      }
+      if (label) PetscCall(DMProjectFunctionLabelLocal(dm, time, label, 1, &id, 0, NULL, exacts, ectxs, INSERT_ALL_VALUES, locu));
+      else PetscCall(DMProjectFunctionLocal(dm, time, exacts, ectxs, INSERT_ALL_VALUES, locu));
+    }
+    if (u_t) {
+      PetscCall(PetscArrayzero(exacts, oNf));
+      PetscCall(PetscArrayzero(ectxs, oNf));
+      for (PetscInt f = 0; f < dsNf; ++f) {
+        const PetscInt field = dsfields[f];
+        PetscInt       g;
+
+        if (Nf > 0) {
+          for (g = 0; g < Nf; ++g) if (fields[g] == field) break;
+          if (g == Nf) continue;
+        }
+        PetscCall(PetscDSGetExactSolutionTimeDerivative(ds, field, &exacts[field], &ectxs[field]));
+      }
+      if (label) PetscCall(DMProjectFunctionLabelLocal(dm, time, label, 1, &id, 0, NULL, exacts, ectxs, INSERT_ALL_VALUES, locu_t));
+      else PetscCall(DMProjectFunctionLocal(dm, time, exacts, ectxs, INSERT_ALL_VALUES, locu_t));
+    }
+    PetscCall(ISRestoreIndices(fieldIS, &dsfields));
+  }
+  if (u) {
+    PetscCall(PetscObjectSetName((PetscObject)u, "Exact Solution"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)u, "exact_"));
+  }
+  if (u_t) {
+    PetscCall(PetscObjectSetName((PetscObject)u_t, "Exact Solution Time Derivative"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)u_t, "exact_t_"));
+  }
+  PetscCall(PetscFree2(exacts, ectxs));
+  if (u) {
+    PetscCall(DMLocalToGlobalBegin(dm, locu, INSERT_ALL_VALUES, u));
+    PetscCall(DMLocalToGlobalEnd(dm, locu, INSERT_ALL_VALUES, u));
+    PetscCall(DMRestoreLocalVector(dm, &locu));
+  }
+  if (u_t) {
+    PetscCall(DMLocalToGlobalBegin(dm, locu_t, INSERT_ALL_VALUES, u_t));
+    PetscCall(DMLocalToGlobalEnd(dm, locu_t, INSERT_ALL_VALUES, u_t));
+    PetscCall(DMRestoreLocalVector(dm, &locu_t));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   DMComputeExactSolution - Compute the exact solution for a given `DM`, using the `PetscDS` information.
 
   Collective
@@ -6399,75 +6510,12 @@ PetscErrorCode DMUseTensorOrder(DM dm, PetscBool tensor)
   Note:
   The user must call `PetscDSSetExactSolution()` before using this routine
 
-.seealso: [](ch_dmbase), `DM`, `PetscDSSetExactSolution()`
+.seealso: [](ch_dmbase), `DM`, `DMComputeExactFieldSolution()`, `PetscDSSetExactSolution()`
 @*/
 PetscErrorCode DMComputeExactSolution(DM dm, PetscReal time, Vec u, Vec u_t)
 {
-  PetscErrorCode (**exacts)(PetscInt, PetscReal, const PetscReal x[], PetscInt, PetscScalar *u, PetscCtx ctx);
-  void   **ectxs;
-  Vec      locu, locu_t;
-  PetscInt Nf, Nds, s;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  if (u) {
-    PetscValidHeaderSpecific(u, VEC_CLASSID, 3);
-    PetscCall(DMGetLocalVector(dm, &locu));
-    PetscCall(VecSet(locu, 0.));
-  }
-  if (u_t) {
-    PetscValidHeaderSpecific(u_t, VEC_CLASSID, 4);
-    PetscCall(DMGetLocalVector(dm, &locu_t));
-    PetscCall(VecSet(locu_t, 0.));
-  }
-  PetscCall(DMGetNumFields(dm, &Nf));
-  PetscCall(PetscMalloc2(Nf, &exacts, Nf, &ectxs));
-  PetscCall(DMGetNumDS(dm, &Nds));
-  for (s = 0; s < Nds; ++s) {
-    PetscDS         ds;
-    DMLabel         label;
-    IS              fieldIS;
-    const PetscInt *fields, id = 1;
-    PetscInt        dsNf;
-
-    PetscCall(DMGetRegionNumDS(dm, s, &label, &fieldIS, &ds, NULL));
-    PetscCall(PetscDSGetNumFields(ds, &dsNf));
-    PetscCall(ISGetIndices(fieldIS, &fields));
-    PetscCall(PetscArrayzero(exacts, Nf));
-    PetscCall(PetscArrayzero(ectxs, Nf));
-    if (u) {
-      for (PetscInt f = 0; f < dsNf; ++f) PetscCall(PetscDSGetExactSolution(ds, fields[f], &exacts[fields[f]], &ectxs[fields[f]]));
-      if (label) PetscCall(DMProjectFunctionLabelLocal(dm, time, label, 1, &id, 0, NULL, exacts, ectxs, INSERT_ALL_VALUES, locu));
-      else PetscCall(DMProjectFunctionLocal(dm, time, exacts, ectxs, INSERT_ALL_VALUES, locu));
-    }
-    if (u_t) {
-      PetscCall(PetscArrayzero(exacts, Nf));
-      PetscCall(PetscArrayzero(ectxs, Nf));
-      for (PetscInt f = 0; f < dsNf; ++f) PetscCall(PetscDSGetExactSolutionTimeDerivative(ds, fields[f], &exacts[fields[f]], &ectxs[fields[f]]));
-      if (label) PetscCall(DMProjectFunctionLabelLocal(dm, time, label, 1, &id, 0, NULL, exacts, ectxs, INSERT_ALL_VALUES, locu_t));
-      else PetscCall(DMProjectFunctionLocal(dm, time, exacts, ectxs, INSERT_ALL_VALUES, locu_t));
-    }
-    PetscCall(ISRestoreIndices(fieldIS, &fields));
-  }
-  if (u) {
-    PetscCall(PetscObjectSetName((PetscObject)u, "Exact Solution"));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)u, "exact_"));
-  }
-  if (u_t) {
-    PetscCall(PetscObjectSetName((PetscObject)u, "Exact Solution Time Derivative"));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)u_t, "exact_t_"));
-  }
-  PetscCall(PetscFree2(exacts, ectxs));
-  if (u) {
-    PetscCall(DMLocalToGlobalBegin(dm, locu, INSERT_ALL_VALUES, u));
-    PetscCall(DMLocalToGlobalEnd(dm, locu, INSERT_ALL_VALUES, u));
-    PetscCall(DMRestoreLocalVector(dm, &locu));
-  }
-  if (u_t) {
-    PetscCall(DMLocalToGlobalBegin(dm, locu_t, INSERT_ALL_VALUES, u_t));
-    PetscCall(DMLocalToGlobalEnd(dm, locu_t, INSERT_ALL_VALUES, u_t));
-    PetscCall(DMRestoreLocalVector(dm, &locu_t));
-  }
+  PetscCall(DMComputeExactFieldSolution(dm, time, PETSC_DECIDE, NULL, u, u_t));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -8348,37 +8396,42 @@ PetscErrorCode DMIsBoundaryPoint(DM dm, PetscInt point, PetscBool *isBd)
 @*/
 PetscErrorCode DMHasBound(DM dm, PetscBool *hasBound)
 {
-  PetscDS  ds;
-  PetscInt Nf, numBd;
+  PetscInt Nds;
 
   PetscFunctionBegin;
   *hasBound = PETSC_FALSE;
-  PetscCall(DMGetDS(dm, &ds));
-  PetscCall(PetscDSGetNumFields(ds, &Nf));
-  for (PetscInt f = 0; f < Nf; ++f) {
-    PetscSimplePointFn *lfunc, *ufunc;
+  PetscCall(DMGetNumDS(dm, &Nds));
+  for (PetscInt s = 0; s < Nds; ++s) {
+    PetscDS  ds;
+    PetscInt Nf, numBd;
 
-    PetscCall(PetscDSGetLowerBound(ds, f, &lfunc, NULL));
-    PetscCall(PetscDSGetUpperBound(ds, f, &ufunc, NULL));
-    if (lfunc || ufunc) *hasBound = PETSC_TRUE;
-  }
+    PetscCall(DMGetRegionNumDS(dm, s, NULL, NULL, &ds, NULL));
+    PetscCall(PetscDSGetNumFields(ds, &Nf));
+    for (PetscInt f = 0; f < Nf; ++f) {
+      PetscSimplePointFn *lfunc, *ufunc;
 
-  PetscCall(PetscDSGetNumBoundary(ds, &numBd));
-  PetscCall(PetscDSUpdateBoundaryLabels(ds, dm));
-  for (PetscInt b = 0; b < numBd; ++b) {
-    PetscWeakForm           wf;
-    DMBoundaryConditionType type;
-    const char             *name;
-    DMLabel                 label;
-    PetscInt                numids;
-    const PetscInt         *ids;
-    PetscInt                field, Nc;
-    const PetscInt         *comps;
-    PetscVoidFn            *bvfunc;
-    void                   *ctx;
+      PetscCall(PetscDSGetLowerBound(ds, f, &lfunc, NULL));
+      PetscCall(PetscDSGetUpperBound(ds, f, &ufunc, NULL));
+      if (lfunc || ufunc) *hasBound = PETSC_TRUE;
+    }
 
-    PetscCall(PetscDSGetBoundary(ds, b, &wf, &type, &name, &label, &numids, &ids, &field, &Nc, &comps, &bvfunc, NULL, &ctx));
-    if (type == DM_BC_LOWER_BOUND || type == DM_BC_UPPER_BOUND) *hasBound = PETSC_TRUE;
+    PetscCall(PetscDSGetNumBoundary(ds, &numBd));
+    PetscCall(PetscDSUpdateBoundaryLabels(ds, dm));
+    for (PetscInt b = 0; b < numBd; ++b) {
+      PetscWeakForm           wf;
+      DMBoundaryConditionType type;
+      const char             *name;
+      DMLabel                 label;
+      PetscInt                numids;
+      const PetscInt         *ids;
+      PetscInt                field, Nc;
+      const PetscInt         *comps;
+      PetscVoidFn            *bvfunc;
+      void                   *ctx;
+
+      PetscCall(PetscDSGetBoundary(ds, b, &wf, &type, &name, &label, &numids, &ids, &field, &Nc, &comps, &bvfunc, NULL, &ctx));
+      if (type == DM_BC_LOWER_BOUND || type == DM_BC_UPPER_BOUND) *hasBound = PETSC_TRUE;
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

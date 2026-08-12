@@ -168,34 +168,37 @@ static PetscErrorCode SNESMonitorFields_ASCII(SNES snes, PetscInt its, PetscReal
 {
   Vec                res;
   DM                 dm;
-  PetscSection       s;
+  PetscSection       gs;
   const PetscScalar *r;
   PetscReal         *norms;
-  PetscInt           numFields, f, pStart, pEnd, p;
+  PetscInt           Nf, pStart, pEnd, n;
 
   PetscFunctionBegin;
   PetscCall(SNESGetFunction(snes, &res, NULL, NULL));
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetLocalSection(dm, &s));
-  PetscCall(PetscSectionGetNumFields(s, &numFields));
-  PetscCall(PetscSectionGetChart(s, &pStart, &pEnd));
-  PetscCall(PetscCalloc1(numFields, &norms));
+  PetscCall(DMGetGlobalSection(dm, &gs));
+  PetscCall(PetscSectionGetNumFields(gs, &Nf));
+  PetscCall(PetscSectionGetChart(gs, &pStart, &pEnd));
+  PetscCall(PetscCalloc1(Nf, &norms));
+  PetscCall(VecGetLocalSize(res, &n));
   PetscCall(VecGetArrayRead(res, &r));
-  for (p = pStart; p < pEnd; ++p) {
-    for (f = 0; f < numFields; ++f) {
+  for (PetscInt p = pStart; p < pEnd; ++p) {
+    for (PetscInt f = 0; f < Nf; ++f) {
       PetscInt fdof, foff, d;
 
-      PetscCall(PetscSectionGetFieldDof(s, p, f, &fdof));
-      PetscCall(PetscSectionGetFieldOffset(s, p, f, &foff));
+      PetscCall(PetscSectionGetFieldDof(gs, p, f, &fdof));
+      PetscCall(PetscSectionGetFieldOffset(gs, p, f, &foff));
+      if (foff < 0) continue;
+      PetscCheck(foff + fdof <= n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field offset %" PetscInt_FMT " + dof %" PetscInt_FMT " exceeds local size %" PetscInt_FMT, foff, fdof, n);
       for (d = 0; d < fdof; ++d) norms[f] += PetscRealPart(PetscSqr(r[foff + d]));
     }
   }
   PetscCall(VecRestoreArrayRead(res, &r));
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, norms, numFields, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, norms, Nf, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
-  for (f = 0; f < numFields; ++f) {
+  for (PetscInt f = 0; f < Nf; ++f) {
     if (f > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", (double)PetscSqrtReal(norms[f])));
   }
@@ -1202,61 +1205,93 @@ PetscErrorCode DMSNESCheckFromOptions(SNES snes, Vec u)
 @*/
 PetscErrorCode DMPlexSetSNESVariableBounds(DM dm, SNES snes)
 {
-  PetscDS              ds;
-  Vec                  lb, ub;
-  PetscSimplePointFn **lfuncs, **ufuncs;
-  void               **lctxs, **uctxs;
-  PetscBool            hasBound, hasLower = PETSC_FALSE, hasUpper = PETSC_FALSE;
-  PetscInt             Nf;
+  Vec       lb, ub, loclb, locub;
+  PetscInt  Nds;
+  PetscBool hasBound, hasLower = PETSC_FALSE, hasUpper = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(DMHasBound(dm, &hasBound));
   if (!hasBound) PetscFunctionReturn(PETSC_SUCCESS);
-  // TODO Generalize for multiple DSes
-  PetscCall(DMGetDS(dm, &ds));
-  PetscCall(PetscDSGetNumFields(ds, &Nf));
-  PetscCall(PetscMalloc4(Nf, &lfuncs, Nf, &lctxs, Nf, &ufuncs, Nf, &uctxs));
-  for (PetscInt f = 0; f < Nf; ++f) {
-    PetscCall(PetscDSGetLowerBound(ds, f, &lfuncs[f], &lctxs[f]));
-    PetscCall(PetscDSGetUpperBound(ds, f, &ufuncs[f], &uctxs[f]));
-    if (lfuncs[f]) hasLower = PETSC_TRUE;
-    if (ufuncs[f]) hasUpper = PETSC_TRUE;
-  }
   PetscCall(DMCreateGlobalVector(dm, &lb));
   PetscCall(DMCreateGlobalVector(dm, &ub));
   PetscCall(PetscObjectSetName((PetscObject)lb, "Lower Bound"));
   PetscCall(PetscObjectSetName((PetscObject)ub, "Upper Bound"));
-  if (hasLower) {
-    Vec locb;
+  PetscCall(DMGetLocalVector(dm, &loclb));
+  PetscCall(VecSet(loclb, PETSC_NINFINITY));
+  PetscCall(DMGetLocalVector(dm, &locub));
+  PetscCall(VecSet(locub, PETSC_INFINITY));
+  PetscCall(DMGetNumDS(dm, &Nds));
+  for (PetscInt s = 0; s < Nds; ++s) {
+    PetscDS              ds;
+    DMLabel              label;
+    PetscSimplePointFn **lfuncs, **ufuncs;
+    void               **lctxs, **uctxs;
+    PetscBool            hasLowerReg = PETSC_FALSE, hasUpperReg = PETSC_FALSE;
+    PetscInt             Nf, Nbd, id = 1;
 
-    PetscCall(DMGetLocalVector(dm, &locb));
-    PetscCall(VecSet(locb, PETSC_NINFINITY));
-    PetscCall(DMProjectFunctionLocal(dm, 0., lfuncs, lctxs, INSERT_VALUES, locb));
-    PetscCall(DMPlexInsertBounds(dm, PETSC_TRUE, 0., locb));
-    PetscCall(DMLocalToGlobalBegin(dm, locb, INSERT_VALUES, lb));
-    PetscCall(DMLocalToGlobalEnd(dm, locb, INSERT_VALUES, lb));
-    PetscCall(DMRestoreLocalVector(dm, &locb));
+    PetscCall(DMGetRegionNumDS(dm, s, &label, NULL, &ds, NULL));
+    PetscCall(PetscDSGetNumFields(ds, &Nf));
+    PetscCall(PetscMalloc4(Nf, &lfuncs, Nf, &lctxs, Nf, &ufuncs, Nf, &uctxs));
+    // Bound function over the entire domain
+    for (PetscInt f = 0; f < Nf; ++f) {
+      PetscCall(PetscDSGetLowerBound(ds, f, &lfuncs[f], &lctxs[f]));
+      PetscCall(PetscDSGetUpperBound(ds, f, &ufuncs[f], &uctxs[f]));
+      if (lfuncs[f]) hasLowerReg = PETSC_TRUE;
+      if (ufuncs[f]) hasUpperReg = PETSC_TRUE;
+    }
+    if (hasLowerReg) PetscCall(DMProjectFunctionLabelLocal(dm, 0., label, 1, &id, 0, NULL, lfuncs, lctxs, INSERT_VALUES, loclb));
+    if (hasUpperReg) PetscCall(DMProjectFunctionLabelLocal(dm, 0., label, 1, &id, 0, NULL, ufuncs, uctxs, INSERT_VALUES, locub));
+    // Bound functions over boundaries
+    PetscCall(PetscDSGetNumBoundary(ds, &Nbd));
+    for (PetscInt bd = 0; bd < Nbd; ++bd) {
+      PetscWeakForm           wf;
+      DMBoundaryConditionType bdt;
+      DMLabel                 label;
+      const PetscInt         *values, *comps;
+      PetscInt                Nv, Nc, field;
+      PetscVoidFn            *func;
+      PetscCtx                ctx;
+
+      PetscCall(PetscDSGetBoundary(ds, bd, &wf, &bdt, NULL, &label, &Nv, &values, &field, &Nc, &comps, &func, NULL, &ctx));
+      PetscCheck(field < Nf, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "field %" PetscInt_FMT " out of range for Nf = %" PetscInt_FMT, field, Nf);
+      for (PetscInt f = 0; f < Nf; ++f) lfuncs[f] = lctxs[f] = ufuncs[f] = uctxs[f] = NULL;
+      if (bdt == DM_BC_LOWER_BOUND) {
+        lfuncs[field] = (PetscSimplePointFn *)func;
+        lctxs[field]  = ctx;
+        PetscCall(DMProjectFunctionLabelLocal(dm, 0., label, Nv, values, Nc, comps, lfuncs, lctxs, INSERT_VALUES, loclb));
+        hasLowerReg = PETSC_TRUE;
+      }
+      if (bdt == DM_BC_UPPER_BOUND) {
+        ufuncs[field] = (PetscSimplePointFn *)func;
+        uctxs[field]  = ctx;
+        PetscCall(DMProjectFunctionLabelLocal(dm, 0., label, Nv, values, Nc, comps, ufuncs, uctxs, INSERT_VALUES, locub));
+        hasUpperReg = PETSC_TRUE;
+      }
+    }
+    hasLower = hasLower || hasLowerReg;
+    hasUpper = hasUpper || hasUpperReg;
+    PetscCall(PetscFree4(lfuncs, lctxs, ufuncs, uctxs));
+  }
+  if (hasLower) {
+    PetscCall(DMPlexInsertBounds(dm, PETSC_TRUE, 0., loclb));
+    PetscCall(DMLocalToGlobalBegin(dm, loclb, INSERT_VALUES, lb));
+    PetscCall(DMLocalToGlobalEnd(dm, loclb, INSERT_VALUES, lb));
   } else {
     PetscCall(VecSet(lb, PETSC_NINFINITY));
   }
   if (hasUpper) {
-    Vec locb;
-
-    PetscCall(DMGetLocalVector(dm, &locb));
-    PetscCall(VecSet(locb, PETSC_INFINITY));
-    PetscCall(DMProjectFunctionLocal(dm, 0., ufuncs, uctxs, INSERT_VALUES, locb));
-    PetscCall(DMPlexInsertBounds(dm, PETSC_FALSE, 0., locb));
-    PetscCall(DMLocalToGlobalBegin(dm, locb, INSERT_VALUES, ub));
-    PetscCall(DMLocalToGlobalEnd(dm, locb, INSERT_VALUES, ub));
-    PetscCall(DMRestoreLocalVector(dm, &locb));
+    PetscCall(DMPlexInsertBounds(dm, PETSC_FALSE, 0., locub));
+    PetscCall(DMLocalToGlobalBegin(dm, locub, INSERT_VALUES, ub));
+    PetscCall(DMLocalToGlobalEnd(dm, locub, INSERT_VALUES, ub));
   } else {
     PetscCall(VecSet(ub, PETSC_INFINITY));
   }
+  PetscCall(DMRestoreLocalVector(dm, &loclb));
+  PetscCall(DMRestoreLocalVector(dm, &locub));
   PetscCall(VecViewFromOptions(lb, NULL, "-dm_plex_snes_lb_view"));
   PetscCall(VecViewFromOptions(ub, NULL, "-dm_plex_snes_ub_view"));
   PetscCall(SNESVISetVariableBounds(snes, lb, ub));
   PetscCall(VecDestroy(&lb));
   PetscCall(VecDestroy(&ub));
-  PetscCall(PetscFree4(lfuncs, lctxs, ufuncs, uctxs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
