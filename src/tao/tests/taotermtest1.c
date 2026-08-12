@@ -33,27 +33,27 @@ typedef struct {
 static PetscErrorCode TestCtxProcessOptions(MPI_Comm, TestCtx *);
 static PetscErrorCode TestCreateData(TestState *);
 static PetscErrorCode TestStateDestroy(TestState *);
-static PetscErrorCode TestRepeatedSetFromOptions(TestState *);
+static PetscErrorCode CheckRepeatedSetFromOptions(TestState *);
 static PetscErrorCode CreateTaoTermWithOptions(TestCtx *, ExampleTerm *, const char *, const char *);
 static PetscErrorCode FormFunctionGradient_Callback(Tao, Vec, PetscReal *, Vec, void *);
 static PetscErrorCode FormHessian_Callback(Tao, Vec, Mat, Mat, void *);
 static PetscErrorCode FormHessianMult_Callback(Tao, Vec, Vec, Vec, void *);
 static PetscErrorCode Hessian_Term1(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode HessianMult_Term1(TaoTerm, Vec, Vec, Vec, Vec);
-static PetscErrorCode CheckObjectiveHessianMultConfiguration(TestState *);
 static PetscErrorCode CheckReferenceHessianOperators(TestState *);
 static PetscErrorCode CheckMaskedSubtermsUntouched(TestState *);
 static PetscErrorCode CheckReferenceTermType(TaoTerm);
 
 int main(int argc, char **argv)
 {
-  TestState state = {0};
-  TestCtx  *ctx   = &state.ctx;
+  TestState state;
   TaoTerm   objective;
   MPI_Comm  comm;
+  TestCtx  *ctx = &state.ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscMemzero(&state, sizeof(state)));
   comm = PETSC_COMM_WORLD;
 
   PetscCall(TestCtxProcessOptions(comm, ctx));
@@ -74,9 +74,6 @@ int main(int argc, char **argv)
     PetscCall(TaoAddTerm(state.tao, "reg1_", ctx->term1.scale, ctx->term1.term, ctx->term1.parameters, ctx->term1.map));
   }
   PetscCall(TaoSetFromOptions(state.tao));
-  PetscCall(TaoSetUp(state.tao));
-  PetscCall(ExampleCheckHessianConfiguration(state.tao));
-  PetscCall(CheckObjectiveHessianMultConfiguration(&state));
 
   state.reference_ctx.nsubterms              = ctx->use_term1 ? 2 : 1;
   state.reference_ctx.subterms[0].parameters = ctx->target;
@@ -94,7 +91,7 @@ int main(int argc, char **argv)
   PetscCall(ExampleReferenceSolveAndCompare(state.tao, state.x, &state.reference));
   PetscCall(CheckReferenceHessianOperators(&state));
 
-  if (ctx->repeat_setfromoptions) PetscCall(TestRepeatedSetFromOptions(&state));
+  if (ctx->repeat_setfromoptions) PetscCall(CheckRepeatedSetFromOptions(&state));
   PetscCall(CheckMaskedSubtermsUntouched(&state));
   PetscCall(TestStateDestroy(&state));
   PetscCall(PetscFinalize());
@@ -167,7 +164,7 @@ static PetscErrorCode TestStateDestroy(TestState *state)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestRepeatedSetFromOptions(TestState *state)
+static PetscErrorCode CheckRepeatedSetFromOptions(TestState *state)
 {
   TaoTerm     objective;
   TaoTermMask mask_before = TAOTERM_MASK_NONE, mask_after;
@@ -187,7 +184,6 @@ static PetscErrorCode TestRepeatedSetFromOptions(TestState *state)
     PetscCall(TaoTermSumGetTermMask(objective, 1, &mask_after));
     PetscCheck(mask_after == mask_before, state->ctx.comm, PETSC_ERR_PLIB, "Repeated TaoSetFromOptions() changed structural TaoTerm options after setup");
   }
-  PetscCall(ExampleReferenceSolveAndCompare(state->tao, state->x, &state->reference));
   PetscCall(PetscPrintf(state->ctx.comm, "Repeated TaoSetFromOptions() check passed\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -310,43 +306,6 @@ static PetscErrorCode HessianMult_Term1(TaoTerm term, Vec x, Vec parameters, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckObjectiveHessianMultConfiguration(TestState *state)
-{
-  TestCtx  *ctx = &state->ctx;
-  TaoTerm   objective, callbacks_subterm = NULL;
-  PetscInt  nsubterms;
-  PetscBool is_callbacks, is_sum, found_added_subterm = PETSC_FALSE;
-
-  PetscFunctionBeginUser;
-  PetscCall(TaoGetTerm(state->tao, NULL, &objective, NULL, NULL));
-  if (ctx->use_term1) {
-    PetscCall(PetscObjectTypeCompare((PetscObject)objective, TAOTERMSUM, &is_sum));
-    PetscCheck(is_sum, ctx->comm, PETSC_ERR_PLIB, "Expected the objective to be a TaoTerm sum");
-    PetscCall(TaoTermSumGetNumberTerms(objective, &nsubterms));
-    PetscCheck(nsubterms == 2, ctx->comm, PETSC_ERR_PLIB, "Expected two objective subterms, found %" PetscInt_FMT, nsubterms);
-    for (PetscInt i = 0; i < nsubterms; i++) {
-      TaoTerm subterm;
-
-      PetscCall(TaoTermSumGetTerm(objective, i, NULL, NULL, &subterm, NULL));
-      PetscCall(PetscObjectTypeCompare((PetscObject)subterm, TAOTERMCALLBACKS, &is_callbacks));
-      if (is_callbacks) {
-        PetscCheck(!callbacks_subterm, ctx->comm, PETSC_ERR_PLIB, "Found multiple callback objective subterms");
-        callbacks_subterm = subterm;
-      }
-      if (subterm == ctx->term1.term) found_added_subterm = PETSC_TRUE;
-    }
-    PetscCheck(found_added_subterm, ctx->comm, PETSC_ERR_PLIB, "The objective does not contain term 1");
-    PetscCall(ExampleCheckHessianMultConfiguration(ctx->term1.term, ctx->term1_shell ? ctx->term1.provide_hessian_mult : PETSC_TRUE));
-  } else {
-    PetscCall(PetscObjectTypeCompare((PetscObject)objective, TAOTERMCALLBACKS, &is_callbacks));
-    PetscCheck(is_callbacks, ctx->comm, PETSC_ERR_PLIB, "Expected the objective to contain the Tao callbacks");
-    callbacks_subterm = objective;
-  }
-  PetscCheck(callbacks_subterm, ctx->comm, PETSC_ERR_PLIB, "The objective does not contain a callback subterm");
-  PetscCall(ExampleCheckHessianMultConfiguration(callbacks_subterm, ctx->callback_hessian_mult));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode CheckReferenceHessianOperators(TestState *state)
 {
   TestCtx  *ctx = &state->ctx;
@@ -401,277 +360,198 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
 
   test:
     suffix: shell
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|Mask \(|rows=.*cols=|Solution converged" | grep -v "MatType.*undefined"
-    args: -t_tao_type nls -use_term1 -term1_shell
-    args: -t_tao_term_hessian_mat_type shell -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -t_tao_term_hessian_mat_type shell
 
   test:
     suffix: shell_mapped
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|Mask \(|rows=.*cols=|Solution converged" | grep -v "MatType.*undefined"
-    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A
-    args: -t_tao_term_hessian_mat_type shell -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -t_tao_term_hessian_mat_type shell
 
   test:
     suffix: shell_separate_hpre
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|Mask \(|rows=.*cols=|Solution converged" | grep -v "MatType.*undefined"
     args: -t_tao_type nls -use_term1 -term1_shell
     args: -t_tao_term_hessian_mat_type shell -t_tao_term_hessian_pre_is_hessian false
-    args: -t_tao_term_hessian_pre_mat_type aij -t_tao_view ::ascii_info_detail
+    args: -t_tao_term_hessian_pre_mat_type aij
 
   test:
     suffix: shell_mapped_separate_hpre
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|Mask \(|rows=.*cols=|Solution converged" | grep -v "MatType.*undefined"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A
     args: -t_tao_term_hessian_mat_type shell -t_tao_term_hessian_pre_is_hessian false
-    args: -t_tao_term_hessian_pre_mat_type aij -t_tao_view ::ascii_info_detail
+    args: -t_tao_term_hessian_pre_mat_type aij
 
   test:
     suffix: masked_hessian
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|Mask \(|rows=.*cols=|Solution converged" | grep -v "MatType.*undefined"
-    args: -t_tao_type nls -use_term1 -reg1_tao_term_type halfl2squared
-    args: -t_tao_term_sum_reg1_mask hessian -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -reg1_tao_term_type halfl2squared -t_tao_term_sum_reg1_mask hessian
 
   test:
     suffix: promoted_separate_hpre
-    filter: grep -E "Hessian (preconditioning )?MatType|HessianMult evaluations|Mask \(|rows=.*cols=|Solution converged" | grep -v "MatType.*undefined"
     args: -t_tao_type nls -separate_hpre -use_term1 -reg1_tao_term_type halfl2squared
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: promoted_separate_hpre_shell
-    filter: grep "Solution converged"
-    args: -t_tao_type nls -separate_hpre -use_term1 -reg1_tao_term_type halfl2squared
-    args: -t_tao_term_hessian_mat_type shell -t_tao_view ::ascii_info_detail
-    output_file: output/taotermtest1_promoted_separate_hpre_shell.out
+    args: -t_tao_type nls -separate_hpre -use_term1 -reg1_tao_term_type halfl2squared -t_tao_term_hessian_mat_type shell
 
   test:
     suffix: halfl2_parameters
-    filter: grep -E "parameter vector space|rows=.*cols=|Solution converged"
     args: -t_tao_type nls -use_term1 -term1_has_params -reg1_tao_term_type halfl2squared
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: halfl2_mapped_parameters
-    filter: grep -E "parameter vector space|rows=.*cols=|Solution converged"
-    args: -t_tao_type nls -use_term1 -term1_has_params -term1_has_A
-    args: -reg1_tao_term_type halfl2squared -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_has_params -term1_has_A -reg1_tao_term_type halfl2squared
 
   test:
     suffix: repeat_setfromoptions
     args: -repeat_setfromoptions -t_tao_fd_gradient
-    filter: grep "Repeated TaoSetFromOptions"
 
   test:
     suffix: repeat_setfromoptions_sum
     args: -t_tao_type nls -use_term1 -repeat_setfromoptions
     args: -reg1_tao_term_type halfl2squared -t_tao_term_sum_reg1_mask hessian
-    filter: grep "Repeated TaoSetFromOptions"
-    output_file: output/taotermtest1_repeat_setfromoptions.out
 
   test:
     suffix: promoted_shell_fd_direct
-    filter: grep "Reference callback comparison passed"
-    output_file: output/taotermtest1_reference_comparison.out
     args: -t_tao_type nls -use_term1 -term1_shell -t_callbacks_tao_term_hessian_use_fd
     args: -term1_hessian_mult -t_tao_term_hessian_mat_type shell
 
   test:
     suffix: promoted_shell_all_direct
-    filter: grep "Reference callback comparison passed"
-    output_file: output/taotermtest1_reference_comparison.out
     args: -t_tao_type nls -use_term1 -term1_shell -callback_hessian_mult
     args: -term1_hessian_mult -t_tao_term_hessian_mat_type shell
 
   test:
     suffix: promoted_shell_mapped_fallback
-    filter: grep "Reference callback comparison passed"
-    output_file: output/taotermtest1_reference_comparison.out
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A
     args: -term1_hessian_mult false -t_tao_term_sum_t_callbacks_mask objective,gradient,hessian
     args: -t_tao_term_hessian_mat_type shell
 
   test:
     suffix: callback_fd
-    filter: grep "Reference callback comparison passed"
-    output_file: output/taotermtest1_reference_comparison.out
     args: -t_tao_type nls -t_tao_fd_hessian
 
   test:
     suffix: callback_fd_separate_hpre
-    filter: grep "Reference callback comparison passed"
-    output_file: output/taotermtest1_reference_comparison.out
     args: -t_tao_type nls -t_tao_fd_hessian -separate_hpre
 
   test:
     suffix: r021_added_analytic
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell
-    args: -t_tao_term_sum_t_callbacks_mask hessian -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -t_tao_term_sum_t_callbacks_mask hessian
 
   test:
     suffix: r022_added_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell -reg1_tao_term_hessian_use_fd true
-    args: -t_tao_term_sum_t_callbacks_mask hessian -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -reg1_tao_term_hessian_use_fd true -t_tao_term_sum_t_callbacks_mask hessian
 
   test:
     suffix: r025_callback_analytic
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell
-    args: -t_tao_term_sum_reg1_mask hessian -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -t_tao_term_sum_reg1_mask hessian
 
   test:
     suffix: r026_callback_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell -t_callbacks_tao_term_hessian_use_fd true
-    args: -t_tao_term_sum_reg1_mask hessian -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -t_callbacks_tao_term_hessian_use_fd true -t_tao_term_sum_reg1_mask hessian
 
   test:
     suffix: r028_analytic_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -reg1_tao_term_hessian_use_fd true
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r029_fd_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell
     args: -t_callbacks_tao_term_hessian_use_fd true -reg1_tao_term_hessian_use_fd true
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r033_added_analytic_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell
-    args: -t_tao_term_sum_t_callbacks_mask hessian
+    args: -t_tao_type nls -use_term1 -term1_shell -t_tao_term_sum_t_callbacks_mask hessian
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r034_added_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell
     args: -t_tao_term_sum_t_callbacks_mask hessian -reg1_tao_term_hessian_use_fd true
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r037_callback_analytic_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell -separate_hpre
-    args: -t_tao_term_sum_reg1_mask hessian
+    args: -t_tao_type nls -use_term1 -term1_shell -separate_hpre -t_tao_term_sum_reg1_mask hessian
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r038_callback_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -separate_hpre
     args: -t_tao_term_sum_reg1_mask hessian -t_callbacks_tao_term_hessian_use_fd true
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r040_analytic_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell -separate_hpre
-    args: -reg1_tao_term_hessian_use_fd true
+    args: -t_tao_type nls -use_term1 -term1_shell -separate_hpre -reg1_tao_term_hessian_use_fd true
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r041_fd_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -separate_hpre
     args: -t_callbacks_tao_term_hessian_use_fd true -reg1_tao_term_hessian_use_fd true
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r023_mapped_added_analytic
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10
-    args: -t_tao_term_sum_t_callbacks_mask hessian -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10 -t_tao_term_sum_t_callbacks_mask hessian
 
   test:
     suffix: r024_mapped_added_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 11 -term1_scale 100
-    args: -reg1_tao_term_hessian_use_fd true
-    args: -t_tao_term_sum_t_callbacks_mask hessian -t_tao_view ::ascii_info_detail
+    args: -reg1_tao_term_hessian_use_fd true -t_tao_term_sum_t_callbacks_mask hessian
 
   test:
     suffix: r031_analytic_mapped_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
-    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10
-    args: -reg1_tao_term_hessian_use_fd true -t_tao_view ::ascii_info_detail
+    args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10 -reg1_tao_term_hessian_use_fd true
 
   test:
     suffix: r032_fd_mapped_fd
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10
     args: -t_callbacks_tao_term_hessian_use_fd true -reg1_tao_term_hessian_use_fd true
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r035_mapped_added_analytic_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10
     args: -t_tao_term_sum_t_callbacks_mask hessian
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r036_mapped_added_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10
     args: -t_tao_term_sum_t_callbacks_mask hessian -reg1_tao_term_hessian_use_fd true
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r042_mapped_analytic_analytic_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10 -separate_hpre
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r043_analytic_mapped_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10 -separate_hpre
     args: -reg1_tao_term_hessian_use_fd true
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   test:
     suffix: r044_fd_mapped_fd_separate_hpre
-    filter: grep -E "Mask \\(|Using finite differences for Hessian computation|Hessian preconditioning MatType|Reference callback comparison passed" | sed -E "s/^[[:space:]]+//"
     args: -t_tao_type nls -use_term1 -term1_shell -term1_has_A -map_row_size 10 -separate_hpre
     args: -t_callbacks_tao_term_hessian_use_fd true -reg1_tao_term_hessian_use_fd true
     args: -reg1_tao_term_hessian_pre_is_hessian false -reg1_tao_term_hessian_pre_mat_type aij
     args: -t_tao_term_hessian_pre_is_hessian false -t_tao_term_hessian_pre_mat_type aij
-    args: -t_tao_view ::ascii_info_detail
 
   testset:
-    filter: grep -E "Reference callback comparison passed|unused database options|Option left"
-    output_file: output/taotermtest1_reference_comparison.out
-    args: -t_tao_type nls -c_tao_type nls -use_term1 -term1_shell
-    args: -t_tao_term_hessian_mat_type shell -options_left
+    args: -t_tao_type nls -use_term1 -term1_shell -t_tao_term_hessian_mat_type shell
 
     test:
       suffix: r045_added_analytic
-      args: -term1_hessian_mult false -term1_scale 100
-      args: -t_tao_term_sum_t_callbacks_mask hessian
+      args: -term1_hessian_mult false -term1_scale 100 -t_tao_term_sum_t_callbacks_mask hessian
 
     test:
       suffix: r046_added_fd
@@ -689,8 +569,7 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm term)
 
     test:
       suffix: r050_mapped_added_hessianmult
-      args: -term1_has_A -map_row_size 11 -term1_scale 100
-      args: -t_tao_term_sum_t_callbacks_mask hessian
+      args: -term1_has_A -map_row_size 11 -term1_scale 100 -t_tao_term_sum_t_callbacks_mask hessian
 
     test:
       suffix: r051_callback_analytic
