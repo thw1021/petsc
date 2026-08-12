@@ -9,10 +9,11 @@
   PetscScalar     *S; \
   PetscScalar     *T; \
   PetscScalar     *ibdiag; \
-  PetscObjectState ibdiagstate;  /* state of AIJ when ibdiag was last computed */ \
+  PetscInt         ibdiagcount;  /* number of PetscScalars allocated in ibdiag; it is reallocated when the block size or operand row count changes the required size */ \
+  PetscObjectState ibdiagstate;  /* state of A when ibdiag was last computed */ \
   PetscObjectState ibdiagbstate; /* state of B when ibdiag was last computed */ \
   PetscObjectState ibdiagkstate; /* state of the KAIJ matrix itself, which MatKAIJRestoreS() and MatKAIJRestoreT() increase, when ibdiag was last computed */ \
-  PetscObjectState aijnnzstate;  /* nonzero state of the AIJ operand at the last assembly of the KAIJ matrix; MatAssemblyEnd_KAIJ() forwards operand nonzero-pattern changes to the KAIJ matrix */ \
+  PetscObjectState aijnnzstate;  /* nonzero state of the A operand at the last assembly of the KAIJ matrix; MatAssemblyEnd_KAIJ() forwards operand nonzero-pattern changes to the KAIJ matrix */ \
   PetscObjectState bnnzstate;    /* nonzero state of the B operand at the last assembly of the KAIJ matrix */ \
   PetscBool        ibdiagvalid, getrowactive, isTI; \
   struct { \
