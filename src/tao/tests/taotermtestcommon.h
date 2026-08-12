@@ -75,7 +75,7 @@ static PetscErrorCode ExampleCheckLeafHessianConfiguration(TaoTerm term, PetscBo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
+PETSC_UNUSED static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
 {
   PetscFunctionBeginUser;
   PetscCall(TaoTermDestroy(&term->term));
@@ -84,7 +84,7 @@ static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleTermSetLeaf(ExampleTerm *term, ExampleLeaf *leaf)
+PETSC_UNUSED static PetscErrorCode ExampleTermSetLeaf(ExampleTerm *term, ExampleLeaf *leaf)
 {
   PetscFunctionBeginUser;
   leaf->map        = term->map;
@@ -95,7 +95,7 @@ static PetscErrorCode ExampleTermSetLeaf(ExampleTerm *term, ExampleLeaf *leaf)
 }
 
 /* These callbacks operate in the term space; TaoTermMapping applies any map and its transpose. */
-static PetscErrorCode ExampleIdentityLeastSquaresObjective(TaoTerm term, Vec x, Vec parameters, PetscReal *f)
+PETSC_UNUSED static PetscErrorCode ExampleIdentityLeastSquaresObjective(TaoTerm term, Vec x, Vec parameters, PetscReal *f)
 {
   Vec         work;
   PetscScalar dot;
@@ -129,7 +129,7 @@ static PetscErrorCode ExampleIdentityLeastSquaresObjectiveGradient(TaoTerm term,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleIdentityLeastSquaresHessian(TaoTerm term, Vec x, Vec parameters, Mat H, Mat Hpre)
+PETSC_UNUSED static PetscErrorCode ExampleIdentityLeastSquaresHessian(TaoTerm term, Vec x, Vec parameters, Mat H, Mat Hpre)
 {
   PetscFunctionBeginUser;
   if (H) {
@@ -147,7 +147,7 @@ static PetscErrorCode ExampleIdentityLeastSquaresHessian(TaoTerm term, Vec x, Ve
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ExampleIdentityLeastSquaresHessianMult(TaoTerm term, Vec x, Vec parameters, Vec v, Vec Hv)
+PETSC_UNUSED static PetscErrorCode ExampleIdentityLeastSquaresHessianMult(TaoTerm term, Vec x, Vec parameters, Vec v, Vec Hv)
 {
   PetscFunctionBeginUser;
   PetscCall(VecCopy(v, Hv));

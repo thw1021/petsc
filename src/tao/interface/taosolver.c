@@ -480,6 +480,9 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
 
   The `-tao_add_terms` option accepts at most 16 prefixes.
 
+  Currently, when `-tao_fd_hessian` is used with a `TAOTERMSUM`, no summand may mask its gradient or Hessian because
+  the Hessian is computed by differentiating the complete sum gradient.
+
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
 PetscErrorCode TaoSetFromOptions(Tao tao)

@@ -1359,6 +1359,13 @@ static PetscErrorCode TaoTermSetUp_Sum(TaoTerm term)
 
   PetscFunctionBegin;
   PetscCheck(sum->n_terms > 0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMSUM has no terms; add at least one with TaoTermSumSetNumberTerms() or TaoTermSumAddTerm()");
+  if (term->fd_hessian) {
+    for (PetscInt i = 0; i < sum->n_terms; i++) {
+      TaoTermMask mask = sum->terms[i].mask;
+
+      PetscCheck(!TaoTermGradientMasked(mask) && !TaoTermHessianMasked(mask), PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "Sum-level finite-difference Hessian does not support masked gradients or Hessians; summand %" PetscInt_FMT " has an incompatible mask", i);
+    }
+  }
   PetscCall(PetscCalloc1(sum->n_terms, &mats));
   PetscCall(MatGetLayouts(term->solution_factory, &layout, &clayout));
   if (layout->setupcalled == PETSC_FALSE) layout = NULL;
