@@ -35,59 +35,6 @@ typedef struct {
   ExampleCtx *ctx;
 } ExampleReference;
 
-static PetscErrorCode ExampleMatTypeMatches(Mat mat, MatType requested, PetscBool *matches)
-{
-  Mat expected;
-
-  PetscFunctionBeginUser;
-  PetscCall(MatCreate(PetscObjectComm((PetscObject)mat), &expected));
-  PetscCall(MatSetType(expected, requested));
-  PetscCall(PetscObjectObjectTypeCompare((PetscObject)mat, (PetscObject)expected, matches));
-  PetscCall(MatDestroy(&expected));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode ExampleCheckHessianConfiguration(Tao tao)
-{
-  TaoTerm   objective;
-  MatType   expected_H_type, expected_Hpre_type, actual;
-  Mat       H, Hpre;
-  PetscBool expected_alias, matches;
-
-  PetscFunctionBeginUser;
-  PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
-  PetscCall(TaoGetHessianMatrices(tao, &H, &Hpre));
-  if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCheck(H && Hpre, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "TaoSetUp() created only one Hessian matrix");
-
-  PetscCall(TaoTermGetCreateHessianMode(objective, &expected_alias, &expected_H_type, &expected_Hpre_type));
-  if (expected_H_type) {
-    PetscCall(ExampleMatTypeMatches(H, expected_H_type, &matches));
-    PetscCall(MatGetType(H, &actual));
-    PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Expected Hessian MatType %s, but Tao uses %s", expected_H_type, actual);
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "Checked Hessian type: expected %s, actual %s\n", expected_H_type, actual));
-  }
-  if (!expected_alias && expected_Hpre_type) {
-    PetscCall(ExampleMatTypeMatches(Hpre, expected_Hpre_type, &matches));
-    PetscCall(MatGetType(Hpre, &actual));
-    PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Expected Hessian preconditioning MatType %s, but Tao uses %s", expected_Hpre_type, actual);
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "Checked Hessian preconditioning type: expected %s, actual %s\n", expected_Hpre_type, actual));
-  }
-  if (expected_H_type)
-    PetscCheck(expected_alias == (Hpre == H), PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Expected the Hessian and preconditioning matrices to be %s, but they are %s", expected_alias ? "aliased" : "distinct", Hpre == H ? "aliased" : "distinct");
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode ExampleCheckHessianMultConfiguration(TaoTerm term, PetscBool expected)
-{
-  PetscBool actual;
-
-  PetscFunctionBeginUser;
-  PetscCall(TaoTermIsHessianMultDefined(term, &actual));
-  PetscCheck(actual == expected, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "HessianMult should %sbe defined on this term, but it is %sdefined", expected ? "" : "not ", actual ? "" : "not ");
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_UNUSED static PetscErrorCode ExampleTermDestroy(ExampleTerm *term)
 {
   PetscFunctionBeginUser;
@@ -186,7 +133,7 @@ static PetscErrorCode ExampleComputeSubterm(ExampleSubterm *subterm, Vec x, Pets
   Mat         contribution = NULL;
   Vec         mapped_x, diff, mapped_g = NULL, diag = NULL;
   PetscScalar dot;
-  PetscBool   destroy_mapped_x;
+  PetscBool   destroy_mapped_x = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(ExampleMapSolution(subterm, x, &mapped_x, &destroy_mapped_x));
@@ -411,9 +358,15 @@ static PetscErrorCode ExampleReferenceCreate(MPI_Comm comm, Tao source, Vec sour
 
 static PetscErrorCode ExampleReferenceSolveAndCompare(Tao source, Vec source_x, ExampleReference *reference)
 {
+  PetscViewer viewer;
+
   PetscFunctionBeginUser;
   PetscCall(TaoSolve(source));
   PetscCall(TaoSolve(reference->tao));
+  PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)source), &viewer));
+  PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO_DETAIL));
+  PetscCall(TaoView(source, viewer));
+  PetscCall(PetscViewerPopFormat(viewer));
   PetscCall(ExampleCompareResults(source, source_x, reference->tao, reference->x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -49,6 +49,7 @@ static PetscErrorCode TestHpreFallback(MPI_Comm comm)
   Vec       x;
   PetscReal norm;
   PetscInt  n = 4;
+  PetscBool equal;
 
   PetscFunctionBeginUser;
   PetscCall(MatCreateSeqAIJ(comm, n, n, 3, NULL, &H0));
@@ -81,9 +82,8 @@ static PetscErrorCode TestHpreFallback(MPI_Comm comm)
   /* Assembled outer Hessian with a distinct preconditioning matrix: the summand's H-only
      storage must serve both, with the Hessian standing in for the missing Hpre */
   PetscCall(TaoTermComputeHessian(sum, x, NULL, Hout, Hpre_out));
-  PetscCall(MatAXPY(Hpre_out, -1.0, Hout, DIFFERENT_NONZERO_PATTERN));
-  PetscCall(MatNorm(Hpre_out, NORM_FROBENIUS, &norm));
-  PetscCheck(norm <= 1.e-9, comm, PETSC_ERR_PLIB, "outer Hpre differs from outer Hessian by %g", (double)norm);
+  PetscCall(MatMultEqual(Hpre_out, Hout, 5, &equal));
+  PetscCheck(equal, comm, PETSC_ERR_PLIB, "outer Hpre differs from outer Hessian");
   PetscCall(MatNorm(Hout, NORM_FROBENIUS, &norm));
   PetscCheck(PetscAbsReal(norm - 2.0 * PetscSqrtReal((PetscReal)n)) <= 1.e-9, comm, PETSC_ERR_PLIB, "outer Hessian norm %g does not match the summand Hessian", (double)norm);
   PetscCall(PetscPrintf(comm, "H-only summand storage fills a distinct outer Hpre\n"));
@@ -191,8 +191,8 @@ static PetscErrorCode TestCreatedDistinctHpre(MPI_Comm comm)
   TaoTerm   sum, t0;
   Mat       map, supplied_H, stored_H, stored_Hpre, Hout, Hpre_out;
   Vec       x;
-  PetscReal norm;
   PetscInt  index;
+  PetscBool equal;
 
   PetscFunctionBeginUser;
   PetscCall(TaoTermCreateShell(comm, NULL, NULL, &t0));
@@ -228,9 +228,8 @@ static PetscErrorCode TestCreatedDistinctHpre(MPI_Comm comm)
   PetscCall(TaoTermSumGetTermHessianMatrices(sum, index, &stored_H, &stored_Hpre, NULL, NULL));
   PetscCheck(stored_H == supplied_H, comm, PETSC_ERR_PLIB, "Supplied unmapped Hessian was replaced");
   PetscCheck(stored_Hpre && stored_Hpre != stored_H, comm, PETSC_ERR_PLIB, "A distinct unmapped preconditioning matrix was not created");
-  PetscCall(MatAXPY(Hpre_out, -1.0, Hout, DIFFERENT_NONZERO_PATTERN));
-  PetscCall(MatNorm(Hpre_out, NORM_FROBENIUS, &norm));
-  PetscCheck(norm <= 1.e-9, comm, PETSC_ERR_PLIB, "Created preconditioning matrix differs from the Hessian by %g", (double)norm);
+  PetscCall(MatMultEqual(Hpre_out, Hout, 5, &equal));
+  PetscCheck(equal, comm, PETSC_ERR_PLIB, "Created preconditioning matrix differs from the Hessian");
   PetscCall(PetscPrintf(comm, "H-only storage with a creator preserves H and creates a distinct Hpre\n"));
 
   PetscCall(VecDestroy(&x));
@@ -248,8 +247,8 @@ static PetscErrorCode TestSumIdempotence(MPI_Comm comm)
   TaoTerm   sum, l1, tridiagonal;
   Mat       H, Hcopy;
   Vec       x;
-  PetscReal norm;
   PetscInt  index, n = 4;
+  PetscBool equal;
 
   PetscFunctionBeginUser;
   PetscCall(TaoTermCreate(comm, &l1));
@@ -279,9 +278,8 @@ static PetscErrorCode TestSumIdempotence(MPI_Comm comm)
   PetscCall(TaoTermComputeHessian(sum, x, NULL, H, NULL));
   PetscCall(MatDuplicate(H, MAT_COPY_VALUES, &Hcopy));
   PetscCall(TaoTermComputeHessian(sum, x, NULL, H, NULL));
-  PetscCall(MatAXPY(Hcopy, -1.0, H, DIFFERENT_NONZERO_PATTERN));
-  PetscCall(MatNorm(Hcopy, NORM_FROBENIUS, &norm));
-  PetscCheck(norm <= 1.e-10, comm, PETSC_ERR_PLIB, "Repeated sum Hessian evaluation changed the matrix by %g", (double)norm);
+  PetscCall(MatMultEqual(H, Hcopy, 5, &equal));
+  PetscCheck(equal, comm, PETSC_ERR_PLIB, "Repeated sum Hessian evaluation changed the matrix");
   PetscCall(PetscPrintf(comm, "Repeated partial-overwrite sum Hessian evaluation is idempotent\n"));
 
   PetscCall(VecDestroy(&x));
