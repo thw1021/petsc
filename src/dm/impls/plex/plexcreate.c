@@ -5145,14 +5145,14 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
   }
   // Allow cohesive label creation
   //   Faces are input, completed, and all points are marked with their depth
-  PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_cohesive_label_", &option, NULL, &flg));
+  PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_depth_label_", &option, NULL, &flg));
   if (flg) {
     DMLabel    label;
     PetscInt   points[1024], n, pStart, pEnd, Nl = 1;
     PetscBool  noCreate = PETSC_FALSE;
     char       fulloption[PETSC_MAX_PATH_LEN];
     char       name[PETSC_MAX_PATH_LEN];
-    const char opt[]  = "dm_plex_cohesive_label_";
+    const char opt[]  = "dm_plex_depth_label_";
     char      *suffix = NULL;
     size_t     len;
 
@@ -5548,7 +5548,7 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
   PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_cohesive_label_", &option, NULL, &flg));
   if (flg) {
     DMLabel    label;
-    PetscInt   points[1024], n, Nl = 1;
+    PetscInt   Nl = 1;
     char       fulloption[PETSC_MAX_PATH_LEN];
     char       name[PETSC_MAX_PATH_LEN];
     const char opt[]  = "dm_plex_cohesive_label_";
@@ -5564,13 +5564,12 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
       if (l > 0) name[len - 1] = (char)('0' + l);
       fulloption[0] = 0;
       PetscCall(PetscStrlcat(fulloption, "-", sizeof(fulloption)));
-      if (((PetscObject)dm)->prefix) PetscCall(PetscStrlcat(fulloption, ((PetscObject)dm)->prefix, sizeof(fulloption)));
       PetscCall(PetscStrlcat(fulloption, opt, sizeof(fulloption)));
       PetscCall(PetscStrlcat(fulloption, name, sizeof(fulloption)));
-      n = 1024;
-      PetscCall(PetscOptionsGetIntArray(NULL, ((PetscObject)dm)->prefix, fulloption, points, &n, &flg));
+      PetscCall(PetscOptionsHasName(NULL, ((PetscObject)dm)->prefix, fulloption, &flg));
       if (!flg) break;
       PetscCall(DMGetLabel(dm, name, &label));
+      PetscCall(DMPlexForceLabelDepthMarking(dm, label));
       PetscCall(DMPlexOrientLabel(dm, label));
       PetscCall(DMPlexLabelCohesiveComplete(dm, label, NULL, 1, PETSC_FALSE, NULL));
     }
@@ -5815,6 +5814,7 @@ non_refine:
       PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)cdm, phases[ph]));
       PetscCall(PetscInfo(dm, "Options phase %s for DM %s\n", phases[ph], dm->hdr.name));
       PetscCall(DMSetFromOptions(dm));
+      PetscCall(DMViewFromOptions(dm, NULL, "-phase_dm_view"));
       PetscCall(PetscObjectSetOptionsPrefix((PetscObject)dm, oldPrefix));
       PetscCall(DMGetCoordinateDM(dm, &cdm));
       PetscCall(PetscObjectSetOptionsPrefix((PetscObject)cdm, oldCoordPrefix));
