@@ -26,10 +26,10 @@ Tao Object: 1 MPI process
                 type: shell
                 solution vector space: N = 8 [VecType standard (tao_term_solution_vec_type)]
                 parameter vector space: (optional) K = 8 [VecType standard (tao_term_parameters_vec_type)]
-                default Hessian MatType (tao_term_hessian_mat_type): aij
+                Using finite differences for Hessian computation
                 No context has been set
                 The following methods have been set: objectiveandgradient, hessian,
-                total number of function/gradient evaluations=8
+                total number of function/gradient evaluations=26
                 total number of Hessian evaluations=2
             Map:
               Mat Object: 1 MPI process
@@ -77,7 +77,7 @@ Tao Object: 1 MPI process
       rows=8, cols=8
   total KSP iterations: 14
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=2.91721e-10
+  Residual in Function/Gradient:=2.91715e-10
   Objective value=0.414701
   total number of iterations=2,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
@@ -114,10 +114,10 @@ Tao Object: 1 MPI process
                 type: shell
                 solution vector space: N = 8 [VecType standard (tao_term_solution_vec_type)]
                 parameter vector space: (optional) K = 8 [VecType standard (tao_term_parameters_vec_type)]
-                default Hessian MatType (tao_term_hessian_mat_type): aij
+                Using finite differences for Hessian computation
                 No context has been set
                 The following methods have been set: objectiveandgradient, hessian,
-                total number of function/gradient evaluations=16
+                total number of function/gradient evaluations=70
                 total number of Hessian evaluations=6
             Map:
               Mat Object: 1 MPI process
@@ -165,7 +165,7 @@ Tao Object: 1 MPI process
       rows=8, cols=8
   total KSP iterations: 14
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=6.58876e-11
+  Residual in Function/Gradient:=6.58883e-11
   Objective value=0.677403
   total number of iterations=2,                          (max: 50)
   total number of function evaluations=10,                  (max: unlimited)
