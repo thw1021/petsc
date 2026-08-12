@@ -445,6 +445,19 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
     args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
     args: -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
 
+  test:
+    suffix: sum_fd_mapped
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
+    args: -second_term -shell_tao_type nls -shell_tao_fd_hessian
+
+  test:
+    suffix: sum_fd_mapped_separate_callbacks
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
+    args: -second_term -shell_tao_type nls -shell_tao_fd_hessian
+    args: -separate_callbacks
+
   testset:
     filter: grep -E "Reference callback comparison passed|operator check passed"
     output_file: output/taotermtest2_reference_operator_comparison.out
