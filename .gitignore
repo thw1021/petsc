@@ -193,4 +193,4 @@ configtest.mod
 *gcovr-report.json
 arch-*/gcovr/*
 *-arch/gcovr/*
-.codegraph
+/.codegraph/

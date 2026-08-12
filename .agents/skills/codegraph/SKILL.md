@@ -6,8 +6,8 @@ description: >-
   API, package utility, object operation, implementation, backend, registration, or composed
   method; when finding callers and the blast radius of a change; or when comparing sibling
   implementations. Target PETSc's own index explicitly so queries use the intended graph.
-  CodeGraph is optional: if the index is absent or runtime dispatch is unresolved, continue with
-  normal repository inspection without blocking.
+  CodeGraph is optional: if the index is absent, no CodeGraph tool or CLI is available, or
+  runtime dispatch is unresolved, continue with normal repository inspection without blocking.
 ---
 
 # CodeGraph for PETSc
@@ -25,9 +25,10 @@ Use whichever CodeGraph interface is available, and always target the PETSc repo
   `codegraph explore "..."` from the PETSc root so the query resolves against PETSc's index.
 - Confirm `<petsc-root>/.codegraph/` exists before querying it.
 
-Do not silently use an enclosing repository's index. If the PETSc index is absent, skip CodeGraph,
-continue with normal repository inspection, and mention that the user can run `codegraph init`
-from the PETSc root. Indexing is the user's decision; do not initialize it automatically.
+Do not silently use an enclosing repository's index. If the PETSc index is absent, or no
+CodeGraph tool or CLI is available, skip CodeGraph, continue with normal repository inspection,
+and (if the index is what's missing) mention that the user can run `codegraph init` from the
+PETSc root. Indexing is the user's decision; do not initialize it automatically.
 
 ## Search before implementing
 
