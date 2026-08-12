@@ -7,6 +7,7 @@ typedef struct {
   PetscBool separate_callbacks;
   PetscBool split_hpre;
   PetscInt *hessian_evals;
+  PetscInt *hessianmult_evals;
 } TermCtx;
 
 typedef enum {
@@ -32,11 +33,12 @@ typedef struct {
 } TestOptions;
 
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
+static PetscErrorCode FormHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 static PetscErrorCode TestOptionsSetFromOptions(MPI_Comm, TestOptions *);
 static PetscErrorCode CreateMap(MPI_Comm, PetscInt, PetscInt, PetscReal, Mat *);
 static PetscErrorCode CreateDataTerm(MPI_Comm, const char[], TermCtx *, ExampleTerm *);
 static PetscErrorCode AddExpectedAction(Mat, PetscReal, Vec, Vec, Vec);
-static PetscErrorCode CheckOperator(Tao, Vec, ExampleTerm *, PetscInt, PetscBool, PetscBool, PetscBool, PetscInt *);
+static PetscErrorCode CheckOperator(Tao, Vec, ExampleTerm *, PetscInt, PetscBool, PetscBool, PetscBool, const PetscInt *);
 
 int main(int argc, char **argv)
 {
@@ -48,7 +50,7 @@ int main(int argc, char **argv)
   ExampleReference reference;
   TestOptions      options;
   Vec              x;
-  PetscInt         hessian_evals = 0;
+  PetscInt         hessian_evals[2] = {0, 0}, hessianmult_evals[2] = {0, 0};
   MPI_Comm         comm;
 
   PetscFunctionBeginUser;
@@ -58,7 +60,8 @@ int main(int argc, char **argv)
   for (PetscInt i = 0; i < options.nterms; i++) {
     ctx[i].separate_callbacks = options.separate_callbacks;
     ctx[i].split_hpre         = options.split_hpre;
-    ctx[i].hessian_evals      = &hessian_evals;
+    ctx[i].hessian_evals      = &hessian_evals[i];
+    ctx[i].hessianmult_evals  = &hessianmult_evals[i];
   }
 
   PetscCall(VecCreateMPI(comm, PETSC_DECIDE, n, &x));
@@ -85,6 +88,7 @@ int main(int argc, char **argv)
 
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(ExampleCheckRequestedHessianType(tao, options.nterms > 1 ? "shell_" : "data_"));
+  for (PetscInt i = 0; i < options.nterms; i++) PetscCall(ExampleCheckLeafHessianConfiguration(options.terms[i].term, options.terms[i].provide_hessian_mult));
   reference_ctx.nleaves = options.nterms;
   if (options.nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
   for (PetscInt i = 0; i < options.nterms; i++) {
@@ -97,7 +101,12 @@ int main(int argc, char **argv)
   PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));
   PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &options.terms[0].use_fd, NULL));
   if (options.nterms > 1) PetscCall(PetscOptionsGetBool(NULL, "extra_", "-tao_term_hessian_use_fd", &options.terms[1].use_fd, NULL));
-  PetscCall(CheckOperator(tao, x, options.terms, options.nterms, options.split_hpre, options.check_hessian_mult, options.check_hessian_cache, &hessian_evals));
+  PetscCall(CheckOperator(tao, x, options.terms, options.nterms, options.split_hpre, options.check_hessian_mult, options.check_hessian_cache, hessian_evals));
+  /* A Hessian-masked summand must not invoke its Hessian or HessianMult callback, even
+     if an accidental evaluation does not affect the result. */
+  for (PetscInt i = 0; i < options.nterms; i++)
+    if (options.terms[i].mask & TAOTERM_MASK_HESSIAN)
+      PetscCheck(hessian_evals[i] == 0 && hessianmult_evals[i] == 0, comm, PETSC_ERR_PLIB, "Hessian-masked term %" PetscInt_FMT " was evaluated (%" PetscInt_FMT " Hessian, %" PetscInt_FMT " HessianMult calls)", i, hessian_evals[i], hessianmult_evals[i]);
   PetscCall(PetscPrintf(comm, "Least-squares TaoTerm operator check passed\n"));
 
   PetscCall(ExampleReferenceDestroy(&reference));
@@ -127,6 +136,17 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hp
     PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
     PetscCall(MatShift(Hpre, ctx->split_hpre ? 2.0 : 1.0));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode FormHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  TermCtx *ctx;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermShellGetContext(term, &ctx));
+  (*ctx->hessianmult_evals)++;
+  PetscCall(ExampleIdentityLeastSquaresHessianMult(term, x, params, v, Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -214,7 +234,7 @@ static PetscErrorCode CreateDataTerm(MPI_Comm comm, const char prefix[], TermCtx
   PetscCall(TaoTermShellSetCreateHessianMatrices(term->term, TaoTermCreateHessianMatricesDefault));
   PetscCall(TaoTermSetCreateHessianMode(term->term, ctx->split_hpre ? PETSC_FALSE : PETSC_TRUE, MATAIJ, ctx->split_hpre ? MATAIJ : NULL));
   PetscCall(TaoTermShellSetHessian(term->term, FormHessian));
-  if (term->provide_hessian_mult) PetscCall(TaoTermShellSetHessianMult(term->term, ExampleIdentityLeastSquaresHessianMult));
+  if (term->provide_hessian_mult) PetscCall(TaoTermShellSetHessianMult(term->term, FormHessianMult));
   PetscCall(TaoTermSetFromOptions(term->term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -234,12 +254,12 @@ static PetscErrorCode AddExpectedAction(Mat A, PetscReal scale, Vec v, Vec expec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscInt nterms, PetscBool split_hpre, PetscBool check_hessian_mult, PetscBool check_hessian_cache, PetscInt *hessian_evals)
+static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscInt nterms, PetscBool split_hpre, PetscBool check_hessian_mult, PetscBool check_hessian_cache, const PetscInt *hessian_evals)
 {
   Mat       H, Hpre, H2 = NULL;
   Vec       v, actual, expected, expected_pre, work;
   PetscReal error, tolerance = 2.e-5;
-  PetscInt  active_hessian_terms = 0, evals_before;
+  PetscInt  active_hessian_terms = 0, evals_before, evals_after;
   PetscBool any_hessian_mult     = PETSC_FALSE;
 
   PetscFunctionBeginUser;
@@ -282,16 +302,21 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
   if (check_hessian_cache) {
     PetscCheck(!any_hessian_mult, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "-check_hessian_cache requires all HessianMult callbacks to be disabled");
     PetscCall(VecShift(x, 0.125));
-    evals_before = *hessian_evals;
+    evals_before = 0;
+    for (PetscInt i = 0; i < nterms; i++) evals_before += hessian_evals[i];
     PetscCall(TaoComputeHessian(tao, x, H, Hpre));
-    PetscCheck(*hessian_evals == evals_before + active_hessian_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "First Hessian evaluation at a new point called %" PetscInt_FMT " callbacks, expected %" PetscInt_FMT, *hessian_evals - evals_before, active_hessian_terms);
+    evals_after = 0;
+    for (PetscInt i = 0; i < nterms; i++) evals_after += hessian_evals[i];
+    PetscCheck(evals_after == evals_before + active_hessian_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "First Hessian evaluation at a new point called %" PetscInt_FMT " callbacks, expected %" PetscInt_FMT, evals_after - evals_before, active_hessian_terms);
     PetscCall(MatDuplicate(H, MAT_DO_NOT_COPY_VALUES, &H2));
     PetscCall(MatAssemblyBegin(H2, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H2, MAT_FINAL_ASSEMBLY));
-    evals_before = *hessian_evals;
+    evals_before = evals_after;
     PetscCall(TaoComputeHessian(tao, x, H2, H2));
     PetscCall(TaoComputeHessianMult(tao, x, v, actual));
-    PetscCheck(*hessian_evals == evals_before, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Repeated Hessian and HessianMult evaluations called %" PetscInt_FMT " redundant Hessian callbacks", *hessian_evals - evals_before);
+    evals_after = 0;
+    for (PetscInt i = 0; i < nterms; i++) evals_after += hessian_evals[i];
+    PetscCheck(evals_after == evals_before, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Repeated Hessian and HessianMult evaluations called %" PetscInt_FMT " redundant Hessian callbacks", evals_after - evals_before);
     PetscCall(MatMult(H2, v, work));
     PetscCall(VecAXPY(work, -1.0, expected));
     PetscCall(VecNorm(work, NORM_2, &error));
