@@ -1,10 +1,8 @@
 #include <petsctao.h>
-#include "taotermtestclassic.h"
+#include "taotermtestcommon.h"
 
 static char help[] = "Resolve a regularized least-squares problem after updating its observation operator.\n";
 
-static PetscErrorCode FormObjectiveGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
-static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode SetMap(Mat, PetscBool, PetscBool);
 static PetscErrorCode SetTarget(Vec, PetscReal);
 static PetscErrorCode CheckHessianAction(Tao, Mat, PetscReal, PetscReal, Vec);
@@ -12,16 +10,17 @@ static PetscErrorCode CheckSolution(Mat, Vec, PetscReal, Vec);
 
 int main(int argc, char **argv)
 {
-  const PetscInt    n      = 8;
-  const PetscReal   lambda = 0.2;
-  Tao               tao, ctao;
-  TaoTerm           data, regularizer;
-  ExampleClassicCtx cctx = {0};
-  Mat               A, cH, cHpre;
-  Vec               b, x, cx;
-  PetscReal         hessian_tolerance = 1.e-9;
-  PetscBool         change_structure  = PETSC_FALSE;
-  PetscBool         use_fd            = PETSC_FALSE;
+  const PetscInt   n      = 8;
+  const PetscReal  lambda = 0.2;
+  Tao              tao;
+  TaoTerm          data, regularizer;
+  ExampleCtx       reference_ctx = {0};
+  ExampleReference reference;
+  Mat              A;
+  Vec              b, x;
+  PetscReal        hessian_tolerance = 1.e-9;
+  PetscBool        change_structure  = PETSC_FALSE;
+  PetscBool        use_fd            = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -37,10 +36,10 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data, "data_"));
   PetscCall(TaoTermSetSolutionSizes(data, PETSC_DECIDE, n, 1));
   PetscCall(TaoTermSetParametersSizes(data, PETSC_DECIDE, n, 1));
-  PetscCall(TaoTermShellSetObjectiveAndGradient(data, FormObjectiveGradient));
+  PetscCall(TaoTermShellSetObjectiveAndGradient(data, ExampleIdentityLeastSquaresObjectiveGradient));
   PetscCall(TaoTermShellSetCreateHessianMatrices(data, TaoTermCreateHessianMatricesDefault));
   PetscCall(TaoTermSetCreateHessianMode(data, PETSC_TRUE, MATAIJ, NULL));
-  PetscCall(TaoTermShellSetHessian(data, FormHessian));
+  PetscCall(TaoTermShellSetHessian(data, ExampleIdentityLeastSquaresHessian));
   PetscCall(TaoTermSetFromOptions(data));
 
   PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &regularizer));
@@ -56,20 +55,16 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd, NULL));
   if (use_fd) hessian_tolerance = 2.e-5;
-  cctx.nleaves              = 2;
-  cctx.leaves[0].type       = EXAMPLE_CLASSIC_LEAST_SQUARES;
-  cctx.leaves[0].map        = A;
-  cctx.leaves[0].parameters = b;
-  cctx.leaves[0].scale      = 1.0;
-  cctx.leaves[1].type       = EXAMPLE_CLASSIC_HALF_L2;
-  cctx.leaves[1].scale      = lambda;
-  PetscCall(VecDuplicate(x, &cx));
-  PetscCall(VecCopy(x, cx));
-  PetscCall(ExampleClassicCreateTao(PETSC_COMM_WORLD, tao, cx, &cctx, &ctao, &cH, &cHpre));
+  reference_ctx.nleaves              = 2;
+  reference_ctx.leaves[0].type       = EXAMPLE_LEAST_SQUARES;
+  reference_ctx.leaves[0].map        = A;
+  reference_ctx.leaves[0].parameters = b;
+  reference_ctx.leaves[0].scale      = 1.0;
+  reference_ctx.leaves[1].type       = EXAMPLE_HALF_L2;
+  reference_ctx.leaves[1].scale      = lambda;
+  PetscCall(ExampleReferenceCreate(PETSC_COMM_WORLD, tao, x, &reference_ctx, &reference));
 
-  PetscCall(TaoSolve(tao));
-  PetscCall(TaoSolve(ctao));
-  PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
+  PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(CheckHessianAction(tao, A, lambda, hessian_tolerance, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial least-squares solution check passed\n"));
@@ -78,49 +73,21 @@ int main(int argc, char **argv)
   PetscCall(SetTarget(b, 1.5));
   PetscCall(CheckHessianAction(tao, A, lambda, hessian_tolerance, x));
   PetscCall(VecZeroEntries(x));
-  PetscCall(VecZeroEntries(cx));
-  PetscCall(TaoSolve(tao));
-  PetscCall(TaoSolve(ctao));
-  PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
+  PetscCall(VecZeroEntries(reference.x));
+  PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));
   PetscCall(CheckSolution(A, b, lambda, x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Updated least-squares solution check passed\n"));
   PetscCall(TaoViewFromOptions(tao, NULL, "-tao_view"));
 
   PetscCall(TaoDestroy(&tao));
-  PetscCall(TaoDestroy(&ctao));
+  PetscCall(ExampleReferenceDestroy(&reference));
   PetscCall(TaoTermDestroy(&data));
   PetscCall(TaoTermDestroy(&regularizer));
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&b));
   PetscCall(VecDestroy(&x));
-  PetscCall(VecDestroy(&cx));
-  if (cHpre != cH) PetscCall(MatDestroy(&cHpre));
-  PetscCall(MatDestroy(&cH));
-  PetscCall(VecDestroy(&cctx.hessian_x));
   PetscCall(PetscFinalize());
   return 0;
-}
-
-static PetscErrorCode FormObjectiveGradient(TaoTerm term, Vec x, Vec params, PetscReal *f, Vec g)
-{
-  PetscScalar dot;
-
-  PetscFunctionBeginUser;
-  PetscCall(VecWAXPY(g, -1.0, params, x));
-  PetscCall(VecDot(g, g, &dot));
-  *f = 0.5 * PetscRealPart(dot);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
-{
-  PetscFunctionBeginUser;
-  PetscCall(MatZeroEntries(H));
-  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatShift(H, 1.0));
-  if (Hpre && Hpre != H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
-  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetMap(Mat A, PetscBool update, PetscBool change_structure)

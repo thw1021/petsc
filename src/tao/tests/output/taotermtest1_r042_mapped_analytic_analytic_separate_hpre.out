@@ -1,4 +1,4 @@
 Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
 Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): seqaij
 default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
-Classic callback comparison passed
+Reference callback comparison passed

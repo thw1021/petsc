@@ -1,5 +1,5 @@
 #include <petsctao.h>
-#include "taotermtestclassic.h"
+#include "taotermtestcommon.h"
 
 static char help[] = "Solve one or two linear least-squares data terms through TaoAddTerm().\n";
 
@@ -10,11 +10,33 @@ typedef struct {
   PetscInt *hessian_evals;
 } TermCtx;
 
-static PetscErrorCode FormObjective(TaoTerm, Vec, Vec, PetscReal *);
-static PetscErrorCode FormGradient(TaoTerm, Vec, Vec, Vec);
-static PetscErrorCode FormObjectiveGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
+typedef enum {
+  TEST_PARAMETERS_OPTIONAL,
+  TEST_PARAMETERS_NONE,
+  TEST_PARAMETERS_REQUIRED,
+  TEST_PARAMETERS_NONE_WITH_PARAMETERS,
+  TEST_PARAMETERS_REQUIRED_WITHOUT_PARAMETERS
+} TestParameters;
+
+static const char *const TestParametersTypes[] = {"optional", "none", "required", "none_with_parameters", "required_without_parameters", "TestParameters", "TEST_PARAMETERS_", NULL};
+
+typedef struct {
+  PetscBool             second_term;
+  PetscBool             use_map[2];
+  PetscBool             provide_hessian_mult[2];
+  PetscBool             separate_callbacks;
+  PetscBool             split_hpre;
+  PetscBool             check_hessian_mult;
+  PetscBool             check_first_hessian_only;
+  PetscBool             check_hessian_cache;
+  TestParameters        parameters_test;
+  TaoTermParametersMode parameters_mode;
+  PetscBool             supply_parameters;
+  PetscInt              m;
+} TestOptions;
+
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
-static PetscErrorCode FormHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
+static PetscErrorCode TestOptionsSetFromOptions(MPI_Comm, TestOptions *);
 static PetscErrorCode CreateMap(MPI_Comm, PetscInt, PetscInt, PetscReal, Mat *);
 static PetscErrorCode CreateDataTerm(MPI_Comm, const char[], PetscInt, TermCtx *, TaoTerm *);
 static PetscErrorCode AddExpectedAction(Mat, PetscReal, Vec, Vec, Vec);
@@ -22,58 +44,31 @@ static PetscErrorCode CheckOperator(Tao, Vec, Mat *, PetscReal *, TaoTermMask *,
 
 int main(int argc, char **argv)
 {
-  const PetscInt    n = 10;
-  Tao               tao;
-  Tao               ctao;
-  TaoTerm           terms[2] = {NULL, NULL};
-  TaoTerm           objective;
-  TermCtx           ctx[2];
-  ExampleClassicCtx cctx    = {0};
-  Mat               maps[2] = {NULL, NULL};
-  Mat               cH, cHpre;
-  Vec               targets[2] = {NULL, NULL}, x, cx;
-  PetscReal         scales[2]  = {1.0, 0.25};
-  PetscInt          nterms = 1, m = 10;
-  PetscBool         use_map[2] = {PETSC_TRUE, PETSC_TRUE}, provide_hessian_mult[2] = {PETSC_TRUE, PETSC_TRUE};
-  PetscBool         second_term = PETSC_FALSE, no_map = PETSC_FALSE, check_hessian_mult = PETSC_FALSE, separate_callbacks = PETSC_FALSE, split_hpre = PETSC_FALSE;
-  PetscBool         parameters_none = PETSC_FALSE, parameters_required = PETSC_FALSE, use_fd[2] = {PETSC_FALSE, PETSC_FALSE};
-  PetscBool         none_with_parameters = PETSC_FALSE, required_without_parameters = PETSC_FALSE;
-  PetscBool         check_first_hessian_only = PETSC_FALSE;
-  PetscBool         check_hessian_cache      = PETSC_FALSE;
-  TaoTermMask       masks[2]                 = {TAOTERM_MASK_NONE, TAOTERM_MASK_NONE};
-  PetscInt          hessian_evals            = 0;
-  MPI_Comm          comm;
+  const PetscInt   n = 10;
+  Tao              tao;
+  TaoTerm          terms[2] = {NULL, NULL};
+  TaoTerm          objective;
+  TermCtx          ctx[2];
+  ExampleCtx       reference_ctx = {0};
+  ExampleReference reference;
+  TestOptions      options;
+  Mat              maps[2]    = {NULL, NULL};
+  Vec              targets[2] = {NULL, NULL}, x;
+  PetscReal        scales[2]  = {1.0, 0.25};
+  PetscInt         nterms, hessian_evals = 0;
+  PetscBool        use_fd[2] = {PETSC_FALSE, PETSC_FALSE};
+  TaoTermMask      masks[2]  = {TAOTERM_MASK_NONE, TAOTERM_MASK_NONE};
+  MPI_Comm         comm;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
-  PetscOptionsBegin(comm, "", help, "Tao");
-  PetscCall(PetscOptionsBool("-second_term", "Add a second least-squares data term", NULL, second_term, &second_term, NULL));
-  PetscCall(PetscOptionsBool("-no_map", "Add terms directly in the Tao solution space", NULL, no_map, &no_map, NULL));
-  use_map[0] = use_map[1] = (PetscBool)!no_map;
-  PetscCall(PetscOptionsBool("-data_use_map", "Map the first data term", NULL, use_map[0], &use_map[0], NULL));
-  PetscCall(PetscOptionsBool("-extra_use_map", "Map the second data term", NULL, use_map[1], &use_map[1], NULL));
-  PetscCall(PetscOptionsBool("-separate_callbacks", "Register separate objective and gradient callbacks", NULL, separate_callbacks, &separate_callbacks, NULL));
-  PetscCall(PetscOptionsBool("-provide_hessian_mult", "Register the direct Hessian-vector callback on both terms by default", NULL, provide_hessian_mult[0], &provide_hessian_mult[0], NULL));
-  provide_hessian_mult[1] = provide_hessian_mult[0];
-  PetscCall(PetscOptionsBool("-data_provide_hessian_mult", "Register HessianMult on the first data term", NULL, provide_hessian_mult[0], &provide_hessian_mult[0], NULL));
-  PetscCall(PetscOptionsBool("-extra_provide_hessian_mult", "Register HessianMult on the second data term", NULL, provide_hessian_mult[1], &provide_hessian_mult[1], NULL));
-  PetscCall(PetscOptionsBool("-split_hpre", "Use a distinct raw preconditioning matrix equal to two times the Hessian", NULL, split_hpre, &split_hpre, NULL));
-  PetscCall(PetscOptionsBool("-check_hessian_mult", "Compare TaoComputeHessianMult() with the exact least-squares action", NULL, check_hessian_mult, &check_hessian_mult, NULL));
-  PetscCall(PetscOptionsBool("-parameters_none", "Configure every term with parameter mode NONE", NULL, parameters_none, &parameters_none, NULL));
-  PetscCall(PetscOptionsBool("-parameters_required", "Configure every term with parameter mode REQUIRED", NULL, parameters_required, &parameters_required, NULL));
-  PetscCall(PetscOptionsBool("-none_with_parameters", "Deliberately supply parameters to terms configured with parameter mode NONE", NULL, none_with_parameters, &none_with_parameters, NULL));
-  PetscCall(PetscOptionsBool("-required_without_parameters", "Deliberately omit parameters from terms configured with parameter mode REQUIRED", NULL, required_without_parameters, &required_without_parameters, NULL));
-  PetscCall(PetscOptionsBool("-check_first_hessian_only", "Expect only the first data term to contribute to the Hessian", NULL, check_first_hessian_only, &check_first_hessian_only, NULL));
-  PetscCall(PetscOptionsBool("-check_hessian_cache", "Check that assembled Hessian and HessianMult evaluations share cached raw Hessians", NULL, check_hessian_cache, &check_hessian_cache, NULL));
-  PetscCall(PetscOptionsInt("-m", "Number of observations in the first data set", NULL, m, &m, NULL));
-  PetscOptionsEnd();
-  PetscCheck(!parameters_none || !parameters_required, comm, PETSC_ERR_USER_INPUT, "Select at most one explicit parameter mode");
-  nterms = second_term ? 2 : 1;
+  PetscCall(TestOptionsSetFromOptions(comm, &options));
+  nterms = options.second_term ? 2 : 1;
   for (PetscInt i = 0; i < nterms; i++) {
-    ctx[i].separate_callbacks   = separate_callbacks;
-    ctx[i].provide_hessian_mult = provide_hessian_mult[i];
-    ctx[i].split_hpre           = split_hpre;
+    ctx[i].separate_callbacks   = options.separate_callbacks;
+    ctx[i].provide_hessian_mult = options.provide_hessian_mult[i];
+    ctx[i].split_hpre           = options.split_hpre;
     ctx[i].hessian_evals        = &hessian_evals;
   }
 
@@ -85,15 +80,14 @@ int main(int argc, char **argv)
   PetscCall(TaoSetSolution(tao, x));
 
   for (PetscInt i = 0; i < nterms; i++) {
-    const PetscInt mi = use_map[i] ? (i ? n + 2 : m) : n;
+    const PetscInt mi = options.use_map[i] ? (i ? n + 2 : options.m) : n;
     char           prefix[16];
 
     PetscCall(PetscStrncpy(prefix, i ? "extra_" : "data_", sizeof(prefix)));
-    if (use_map[i]) PetscCall(CreateMap(comm, mi, n, i ? 0.75 : 1.0, &maps[i]));
+    if (options.use_map[i]) PetscCall(CreateMap(comm, mi, n, i ? 0.75 : 1.0, &maps[i]));
     PetscCall(CreateDataTerm(comm, prefix, mi, &ctx[i], &terms[i]));
-    if (parameters_none || none_with_parameters) PetscCall(TaoTermSetParametersMode(terms[i], TAOTERM_PARAMETERS_NONE));
-    else if (parameters_required || required_without_parameters) PetscCall(TaoTermSetParametersMode(terms[i], TAOTERM_PARAMETERS_REQUIRED));
-    if (!parameters_none && !required_without_parameters) {
+    PetscCall(TaoTermSetParametersMode(terms[i], options.parameters_mode));
+    if (options.supply_parameters) {
       PetscCall(VecCreateMPI(comm, PETSC_DECIDE, mi, &targets[i]));
       PetscCall(VecSet(targets[i], 1.0 + i));
     }
@@ -101,34 +95,26 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoSetFromOptions(tao));
-  cctx.nleaves = nterms;
+  reference_ctx.nleaves = nterms;
   if (nterms > 1) PetscCall(TaoGetTerm(tao, NULL, &objective, NULL, NULL));
   for (PetscInt i = 0; i < nterms; i++) {
-    cctx.leaves[i].type       = EXAMPLE_CLASSIC_LEAST_SQUARES;
-    cctx.leaves[i].map        = maps[i];
-    cctx.leaves[i].parameters = targets[i];
-    cctx.leaves[i].scale      = scales[i];
-    cctx.leaves[i].mask       = TAOTERM_MASK_NONE;
-    if (nterms > 1) PetscCall(TaoTermSumGetTermMask(objective, i, &cctx.leaves[i].mask));
-    masks[i] = cctx.leaves[i].mask;
+    reference_ctx.leaves[i].type       = EXAMPLE_LEAST_SQUARES;
+    reference_ctx.leaves[i].map        = maps[i];
+    reference_ctx.leaves[i].parameters = targets[i];
+    reference_ctx.leaves[i].scale      = scales[i];
+    reference_ctx.leaves[i].mask       = TAOTERM_MASK_NONE;
+    if (nterms > 1) PetscCall(TaoTermSumGetTermMask(objective, i, &reference_ctx.leaves[i].mask));
+    masks[i] = reference_ctx.leaves[i].mask;
   }
-  if (check_first_hessian_only) PetscCheck(nterms == 2 && !(masks[0] & TAOTERM_MASK_HESSIAN) && (masks[1] & TAOTERM_MASK_HESSIAN), comm, PETSC_ERR_ARG_WRONG, "-check_first_hessian_only requires only the second term's Hessian to be masked");
-  PetscCall(VecDuplicate(x, &cx));
-  PetscCall(VecCopy(x, cx));
-  PetscCall(ExampleClassicCreateTao(comm, tao, cx, &cctx, &ctao, &cH, &cHpre));
-  PetscCall(TaoSolve(tao));
-  PetscCall(TaoSolve(ctao));
-  PetscCall(ExampleClassicCompareResults(tao, x, ctao, cx));
+  if (options.check_first_hessian_only) PetscCheck(nterms == 2 && !(masks[0] & TAOTERM_MASK_HESSIAN) && (masks[1] & TAOTERM_MASK_HESSIAN), comm, PETSC_ERR_ARG_WRONG, "-check_first_hessian_only requires only the second term's Hessian to be masked");
+  PetscCall(ExampleReferenceCreate(comm, tao, x, &reference_ctx, &reference));
+  PetscCall(ExampleReferenceSolveAndCompare(tao, x, &reference));
   PetscCall(PetscOptionsGetBool(NULL, "data_", "-tao_term_hessian_use_fd", &use_fd[0], NULL));
   if (nterms > 1) PetscCall(PetscOptionsGetBool(NULL, "extra_", "-tao_term_hessian_use_fd", &use_fd[1], NULL));
-  PetscCall(CheckOperator(tao, x, maps, scales, masks, use_fd, nterms, split_hpre, check_hessian_mult, check_hessian_cache, provide_hessian_mult[0] || provide_hessian_mult[1], &hessian_evals));
+  PetscCall(CheckOperator(tao, x, maps, scales, masks, use_fd, nterms, options.split_hpre, options.check_hessian_mult, options.check_hessian_cache, options.provide_hessian_mult[0] || options.provide_hessian_mult[1], &hessian_evals));
   PetscCall(PetscPrintf(comm, "Least-squares TaoTerm operator check passed\n"));
 
-  PetscCall(TaoDestroy(&ctao));
-  if (cHpre != cH) PetscCall(MatDestroy(&cHpre));
-  PetscCall(MatDestroy(&cH));
-  PetscCall(VecDestroy(&cctx.hessian_x));
-  PetscCall(VecDestroy(&cx));
+  PetscCall(ExampleReferenceDestroy(&reference));
   for (PetscInt i = 0; i < nterms; i++) {
     PetscCall(TaoTermDestroy(&terms[i]));
     PetscCall(VecDestroy(&targets[i]));
@@ -138,40 +124,6 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&x));
   PetscCall(PetscFinalize());
   return 0;
-}
-
-static PetscErrorCode FormObjective(TaoTerm term, Vec x, Vec params, PetscReal *f)
-{
-  Vec         work;
-  PetscScalar dot;
-
-  PetscFunctionBeginUser;
-  PetscCall(VecDuplicate(x, &work));
-  if (params) PetscCall(VecWAXPY(work, -1.0, params, x));
-  else PetscCall(VecCopy(x, work));
-  PetscCall(VecDot(work, work, &dot));
-  *f = 0.5 * PetscRealPart(dot);
-  PetscCall(VecDestroy(&work));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode FormGradient(TaoTerm term, Vec x, Vec params, Vec g)
-{
-  PetscFunctionBeginUser;
-  if (params) PetscCall(VecWAXPY(g, -1.0, params, x));
-  else PetscCall(VecCopy(x, g));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode FormObjectiveGradient(TaoTerm term, Vec x, Vec params, PetscReal *f, Vec g)
-{
-  PetscScalar dot;
-
-  PetscFunctionBeginUser;
-  PetscCall(FormGradient(term, x, params, g));
-  PetscCall(VecDot(g, g, &dot));
-  *f = 0.5 * PetscRealPart(dot);
-  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
@@ -196,10 +148,39 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+static PetscErrorCode TestOptionsSetFromOptions(MPI_Comm comm, TestOptions *options)
 {
+  PetscBool no_map = PETSC_FALSE;
+
   PetscFunctionBeginUser;
-  PetscCall(VecCopy(v, Hv));
+  PetscCall(PetscMemzero(options, sizeof(*options)));
+  options->use_map[0] = options->use_map[1] = PETSC_TRUE;
+  options->provide_hessian_mult[0] = options->provide_hessian_mult[1] = PETSC_TRUE;
+  options->parameters_test                                            = TEST_PARAMETERS_OPTIONAL;
+  options->parameters_mode                                            = TAOTERM_PARAMETERS_OPTIONAL;
+  options->supply_parameters                                          = PETSC_TRUE;
+  options->m                                                          = 10;
+  PetscOptionsBegin(comm, "", help, "Tao");
+  PetscCall(PetscOptionsBool("-second_term", "Add a second least-squares data term", NULL, options->second_term, &options->second_term, NULL));
+  PetscCall(PetscOptionsBool("-no_map", "Add terms directly in the Tao solution space", NULL, no_map, &no_map, NULL));
+  options->use_map[0] = options->use_map[1] = (PetscBool)!no_map;
+  PetscCall(PetscOptionsBool("-data_use_map", "Map the first data term", NULL, options->use_map[0], &options->use_map[0], NULL));
+  PetscCall(PetscOptionsBool("-extra_use_map", "Map the second data term", NULL, options->use_map[1], &options->use_map[1], NULL));
+  PetscCall(PetscOptionsBool("-separate_callbacks", "Register separate objective and gradient callbacks", NULL, options->separate_callbacks, &options->separate_callbacks, NULL));
+  PetscCall(PetscOptionsBool("-provide_hessian_mult", "Register the direct Hessian-vector callback on both terms by default", NULL, options->provide_hessian_mult[0], &options->provide_hessian_mult[0], NULL));
+  options->provide_hessian_mult[1] = options->provide_hessian_mult[0];
+  PetscCall(PetscOptionsBool("-data_provide_hessian_mult", "Register HessianMult on the first data term", NULL, options->provide_hessian_mult[0], &options->provide_hessian_mult[0], NULL));
+  PetscCall(PetscOptionsBool("-extra_provide_hessian_mult", "Register HessianMult on the second data term", NULL, options->provide_hessian_mult[1], &options->provide_hessian_mult[1], NULL));
+  PetscCall(PetscOptionsBool("-split_hpre", "Use a distinct raw preconditioning matrix equal to two times the Hessian", NULL, options->split_hpre, &options->split_hpre, NULL));
+  PetscCall(PetscOptionsBool("-check_hessian_mult", "Compare TaoComputeHessianMult() with the exact least-squares action", NULL, options->check_hessian_mult, &options->check_hessian_mult, NULL));
+  PetscCall(PetscOptionsBool("-check_first_hessian_only", "Expect only the first data term to contribute to the Hessian", NULL, options->check_first_hessian_only, &options->check_first_hessian_only, NULL));
+  PetscCall(PetscOptionsBool("-check_hessian_cache", "Check that assembled Hessian and HessianMult evaluations share cached raw Hessians", NULL, options->check_hessian_cache, &options->check_hessian_cache, NULL));
+  PetscCall(PetscOptionsEnum("-parameters", "Parameter contract and whether the test obeys it", NULL, TestParametersTypes, (PetscEnum)options->parameters_test, (PetscEnum *)&options->parameters_test, NULL));
+  PetscCall(PetscOptionsInt("-m", "Number of observations in the first data set", NULL, options->m, &options->m, NULL));
+  PetscOptionsEnd();
+  if (options->parameters_test == TEST_PARAMETERS_NONE || options->parameters_test == TEST_PARAMETERS_NONE_WITH_PARAMETERS) options->parameters_mode = TAOTERM_PARAMETERS_NONE;
+  else if (options->parameters_test == TEST_PARAMETERS_REQUIRED || options->parameters_test == TEST_PARAMETERS_REQUIRED_WITHOUT_PARAMETERS) options->parameters_mode = TAOTERM_PARAMETERS_REQUIRED;
+  options->supply_parameters = (PetscBool)(options->parameters_test != TEST_PARAMETERS_NONE && options->parameters_test != TEST_PARAMETERS_REQUIRED_WITHOUT_PARAMETERS);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -229,13 +210,13 @@ static PetscErrorCode CreateDataTerm(MPI_Comm comm, const char prefix[], PetscIn
   PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, m, 1));
   PetscCall(TaoTermSetParametersSizes(*term, PETSC_DECIDE, m, 1));
   if (ctx->separate_callbacks) {
-    PetscCall(TaoTermShellSetObjective(*term, FormObjective));
-    PetscCall(TaoTermShellSetGradient(*term, FormGradient));
-  } else PetscCall(TaoTermShellSetObjectiveAndGradient(*term, FormObjectiveGradient));
+    PetscCall(TaoTermShellSetObjective(*term, ExampleIdentityLeastSquaresObjective));
+    PetscCall(TaoTermShellSetGradient(*term, ExampleIdentityLeastSquaresGradient));
+  } else PetscCall(TaoTermShellSetObjectiveAndGradient(*term, ExampleIdentityLeastSquaresObjectiveGradient));
   PetscCall(TaoTermShellSetCreateHessianMatrices(*term, TaoTermCreateHessianMatricesDefault));
   PetscCall(TaoTermSetCreateHessianMode(*term, ctx->split_hpre ? PETSC_FALSE : PETSC_TRUE, MATAIJ, ctx->split_hpre ? MATAIJ : NULL));
   PetscCall(TaoTermShellSetHessian(*term, FormHessian));
-  if (ctx->provide_hessian_mult) PetscCall(TaoTermShellSetHessianMult(*term, FormHessianMult));
+  if (ctx->provide_hessian_mult) PetscCall(TaoTermShellSetHessianMult(*term, ExampleIdentityLeastSquaresHessianMult));
   PetscCall(TaoTermSetFromOptions(*term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -398,11 +379,11 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
 
     test:
       suffix: parameters_none
-      args: -second_term -parameters_none -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -second_term -parameters none -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
     test:
       suffix: parameters_required
-      args: -second_term -parameters_required -shell_tao_type nls -shell_tao_view ::ascii_info_detail
+      args: -second_term -parameters required -shell_tao_type nls -shell_tao_view ::ascii_info_detail
 
     test:
       suffix: hessian_only_model
@@ -417,38 +398,38 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
 
   test:
     suffix: none_with_parameters
-    args: -none_with_parameters -shell_tao_type nls -petsc_ci_portable_error_output -error_output_stdout
+    args: -parameters none_with_parameters -shell_tao_type nls -petsc_ci_portable_error_output -error_output_stdout
     filter: grep -E "Parameters passed to a TaoTerm with TAOTERM_PARAMETERS_NONE"
 
   test:
     suffix: required_without_parameters
-    args: -required_without_parameters -shell_tao_type nls -petsc_ci_portable_error_output -error_output_stdout
+    args: -parameters required_without_parameters -shell_tao_type nls -petsc_ci_portable_error_output -error_output_stdout
     filter: grep -E "Parameters required but not provided for a TaoTerm with TAOTERM_PARAMETERS_REQUIRED"
 
   test:
     suffix: asymmetric_map_assembled
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -data_use_map true -extra_use_map false -shell_tao_type nls
 
   test:
     suffix: mixed_direct_fallback
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -data_use_map false -extra_use_map true
     args: -data_provide_hessian_mult false -extra_provide_hessian_mult true
     args: -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
 
   test:
     suffix: asymmetric_map_mffd
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -data_use_map true -extra_use_map false
     args: -shell_tao_type nls -shell_tao_term_hessian_mat_type mffd
 
   testset:
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls
 
     test:
@@ -515,8 +496,8 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
       args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
 
   testset:
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -split_hpre -shell_tao_type nls
     args: -shell_tao_term_hessian_pre_is_hessian false -shell_tao_term_hessian_pre_mat_type aij
 
@@ -591,8 +572,8 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
       args: -data_tao_term_hessian_use_fd -extra_tao_term_hessian_use_fd
 
   testset:
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls -shell_tao_term_hessian_mat_type shell
 
     test:
@@ -703,8 +684,8 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
       args: -data_tao_term_hessian_use_fd
 
   testset:
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -split_hpre -shell_tao_type nls
     args: -shell_tao_term_hessian_mat_type shell -shell_tao_term_hessian_pre_is_hessian false
     args: -shell_tao_term_hessian_pre_mat_type aij
@@ -829,8 +810,8 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
       suffix: r185_both_mapped_hessianmult_hessianmult_separate_hpre
 
   testset:
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -second_term -shell_tao_type nls -shell_tao_term_hessian_mat_type mffd
 
     test:
@@ -858,8 +839,8 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, Mat maps[], PetscReal scales
 
   test:
     suffix: r018_hessianmult_separate_hpre
-    filter: grep -E "Classic callback comparison passed|operator check passed"
-    output_file: output/taotermtest2_classic_operator_comparison.out
+    filter: grep -E "Reference callback comparison passed|operator check passed"
+    output_file: output/taotermtest2_reference_operator_comparison.out
     args: -no_map -split_hpre -shell_tao_type nls
     args: -data_tao_term_hessian_mat_type shell -data_tao_term_hessian_pre_is_hessian false
     args: -data_tao_term_hessian_pre_mat_type aij

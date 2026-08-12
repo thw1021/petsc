@@ -1,4 +1,4 @@
 Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): aij
 Using finite differences for Hessian computation
 Mask (tao_term_sum_reg1_mask): hessian
-Classic callback comparison passed
+Reference callback comparison passed
