@@ -177,6 +177,7 @@ PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, M
     PetscCall(MatSetUp(Hpre));
   }
   PetscCall(SNESComputeJacobianDefault(snes, x, H ? H : Hpre, Hpre ? Hpre : H, NULL));
+  if (H && Hpre && H != Hpre) PetscCall(MatCopy(Hpre, H, DIFFERENT_NONZERO_PATTERN));
   PetscCall(SNESDestroy(&snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
