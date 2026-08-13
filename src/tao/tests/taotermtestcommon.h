@@ -133,7 +133,7 @@ static PetscErrorCode ExampleComputeSubterm(ExampleSubterm *subterm, Vec x, Pets
   Mat         contribution = NULL;
   Vec         mapped_x, diff, mapped_g = NULL, diag = NULL;
   PetscScalar dot;
-  PetscBool   destroy_mapped_x;
+  PetscBool   destroy_mapped_x = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(ExampleMapSolution(subterm, x, &mapped_x, &destroy_mapped_x));
