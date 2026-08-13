@@ -1,7 +1,7 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 
-/*
-  TaoSetHessianStorage_Internal - Set the Hessian matrices stored by a `Tao`
+/*@
+  TaoSetHessianMatrices - Sets the matrices used by a `Tao` solver for the Hessian and to construct the preconditioner
 
   Logically Collective
 
@@ -10,32 +10,39 @@
 . H    - (optional) the Hessian matrix
 - Hpre - (optional) the matrix used to construct the preconditioner
 
-  Level: developer
+  Level: intermediate
 
   Notes:
-  This routine only replaces the matrices held by `tao`; it does not set a Hessian callback or
-  change how the active `TaoTerm` computes its Hessian.  It is used by `TaoSetHessian()` after
-  that routine configures the callback and by internal Hessian policies such as
-  `-tao_fd_hessian`, which need solver-level matrix storage without installing a callback.
+  This routine sets the final Hessian matrices used by the `Tao` solver. It does not set a Hessian callback,
+  change how the `TaoTerm` computes its Hessian, or set Hessian matrices for individual summands of a `TAOTERMSUM`.
 
-  This routine holds a reference to each non-`NULL` matrix.  A `NULL` matrix leaves the
+  This routine holds a reference to each non-`NULL` matrix. A `NULL` matrix leaves the
   corresponding stored matrix unchanged.
 
-.seealso: `TaoSetHessian()`, `TaoGetHessianMatrices()`, `TaoTermComputeHessianSetUseFD()`
-*/
-PETSC_INTERN PetscErrorCode TaoSetHessianStorage_Internal(Tao tao, Mat H, Mat Hpre)
+.seealso: `TaoGetHessianMatrices()`, `TaoSetHessian()`, `TaoComputeHessian()`, `TaoTermSumSetTermHessianMatrices()`
+@*/
+PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
 {
+  Mat newH, newHpre;
+
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (H) {
-    PetscCall(PetscObjectReference((PetscObject)H));
-    PetscCall(MatDestroy(&tao->hessian));
-    tao->hessian = H;
+    PetscValidHeaderSpecific(H, MAT_CLASSID, 2);
+    PetscCheckSameComm(tao, 1, H, 2);
   }
   if (Hpre) {
-    PetscCall(PetscObjectReference((PetscObject)Hpre));
-    PetscCall(MatDestroy(&tao->hessian_pre));
-    tao->hessian_pre = Hpre;
+    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
+    PetscCheckSameComm(tao, 1, Hpre, 3);
   }
+  newH    = H ? H : tao->hessian;
+  newHpre = Hpre ? Hpre : tao->hessian_pre;
+  PetscCall(PetscObjectReference((PetscObject)newH));
+  PetscCall(PetscObjectReference((PetscObject)newHpre));
+  PetscCall(MatDestroy(&tao->hessian));
+  PetscCall(MatDestroy(&tao->hessian_pre));
+  tao->hessian     = newH;
+  tao->hessian_pre = newHpre;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -65,7 +72,7 @@ PETSC_INTERN PetscErrorCode TaoSetHessianStorage_Internal(Tao tao, Mat H, Mat Hp
   This routine must be called before `TaoAddTerm()`. Once `TaoAddTerm()` has replaced the callback objective,
   Hessian routines and matrix creation must be configured on the individual `TaoTerm`s instead.
 
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, `TaoGetHessian()`
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetHessianMatrices()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, `TaoGetHessian()`
 @*/
 PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec x, Mat H, Mat Hpre, PetscCtx ctx), PetscCtx ctx)
 {
@@ -86,7 +93,7 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
   PetscCall(TaoTermCallbacksSetHessian(tao->callbacks, func, ctx));
   /* Callback registration and solver-level matrix ownership are separate concerns.  Store the
      matrices here after the callback-objective check and callback registration have succeeded. */
-  PetscCall(TaoSetHessianStorage_Internal(tao, H, Hpre));
+  PetscCall(TaoSetHessianMatrices(tao, H, Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -141,15 +148,14 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
   Input Parameters:
 + tao  - the `Tao` context
 . func - the Hessian-vector product evaluation routine
-- ctx  - [optional] user-defined context for private data for the Hessian-vector product
-         evaluation routine (may be `NULL`)
+- ctx  - [optional] application-specific context for the Hessian-vector product evaluation routine (may be `NULL`)
 
   Calling sequence of `func`:
 + tao - the `Tao` context
 . x   - the point at which the Hessian is evaluated
 . v   - the vector that the Hessian is applied to
 . Hv  - the resulting Hessian-vector product
-- ctx - [optional] user-defined Hessian-vector product context
+- ctx - [optional] application-specific Hessian-vector product context
 
   Level: intermediate
 
@@ -176,14 +182,14 @@ PetscErrorCode TaoSetHessianMult(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x,
 
   Output Parameters:
 + func - the Hessian-vector product evaluation routine
-- ctx  - user-defined context for private data for the Hessian-vector product evaluation routine
+- ctx  - application-specific context for the Hessian-vector product evaluation routine
 
   Calling sequence of `func`:
 + tao - the `Tao` context
 . x   - the point at which the Hessian is evaluated
 . v   - the vector that the Hessian is applied to
 . Hv  - the resulting Hessian-vector product
-- ctx - [optional] user-defined Hessian-vector product context
+- ctx - [optional] application-specific Hessian-vector product context
 
   Level: intermediate
 
@@ -211,7 +217,7 @@ PetscErrorCode TaoGetHessianMult(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetHessianMatrices()`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`
 @*/
 PetscErrorCode TaoGetHessianMatrices(Tao tao, Mat *H, Mat *Hpre)
 {
