@@ -1128,7 +1128,7 @@ PetscErrorCode DMTSGetIJacobian(DM dm, TSIJacobianFn **func, PetscCtxRt ctx)
   Input Parameters:
 + dm   - `DM` to be used with `TS`
 . func - mass matrix evaluation routine, see `TSMassMatrixFn` for the calling sequence
-- ctx  - context for the mass matrix evaluation (may be `NULL`)
+- ctx  - application context for the mass matrix evaluation (may be `NULL`)
 
   Level: developer
 
@@ -1192,7 +1192,7 @@ PetscErrorCode DMTSSetMassMatrixContextDestroy(DM dm, PetscCtxDestroyFn *f)
 
   Output Parameters:
 + func - mass matrix evaluation function, for calling sequence see `TSMassMatrixFn`
-- ctx  - context for the mass matrix evaluation
+- ctx  - application context for the mass matrix evaluation
 
   Level: developer
 

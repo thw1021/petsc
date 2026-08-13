@@ -741,7 +741,7 @@ PETSC_EXTERN_TYPEDEF typedef TSIJacobianFn *TSIJacobian;
 . t   - the time at which the mass matrix is evaluated
 . U   - the state vector at which the mass matrix is evaluated
 . M   - the mass matrix $\partial F/\partial \dot U$ to be filled; it is pre-created by the framework with the correct layout
-- ctx - [optional] user-defined context for the mass matrix evaluation routine
+- ctx - [optional] application context for the mass matrix evaluation routine
 
   Level: intermediate
 
