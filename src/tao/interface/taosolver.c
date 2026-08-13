@@ -257,7 +257,7 @@ PetscErrorCode TaoSetUp(Tao tao)
       PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term.term, &is_defined));
       if (is_defined) PetscCall(TaoTermMappingCreateHessianMatrices(&tao->objective_term, &tao->hessian, &tao->hessian_pre));
     }
-    PetscCheck(tao->hessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetHessian()");
+    PetscCheck(tao->hessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetHessian() or TaoSetHessianMatrices()");
   }
   PetscTryTypeMethod(tao, setup);
   tao->setupcalled = PETSC_TRUE;
@@ -652,7 +652,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
       PetscCall(MatSetType(H, MATAIJ));
       PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
       PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
-      PetscCall(TaoSetHessianStorage_Internal(tao, H, H));
+      PetscCall(TaoSetHessianMatrices(tao, H, H));
       PetscCall(TaoTermComputeHessianSetUseFD(tao->objective_term.term, PETSC_TRUE));
       PetscCall(MatDestroy(&H));
     }
