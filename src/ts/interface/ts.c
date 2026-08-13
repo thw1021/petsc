@@ -1382,7 +1382,7 @@ PetscErrorCode TSSetIJacobian(TS ts, Mat Amat, Mat Pmat, TSIJacobianFn *f, Petsc
   Input Parameters:
 + ts   - the `TS` context obtained from `TSCreate()`
 . func - the mass matrix evaluation routine, see `TSMassMatrixFn` for the calling sequence
-- ctx  - user-defined context for the mass matrix evaluation routine (may be `NULL`)
+- ctx  - application context for the mass matrix evaluation routine (may be `NULL`)
 
   Level: intermediate
 
@@ -1416,7 +1416,7 @@ PetscErrorCode TSSetMassMatrix(TS ts, TSMassMatrixFn *func, PetscCtx ctx)
 
   Output Parameters:
 + func - the mass matrix evaluation routine (or `NULL`), see `TSMassMatrixFn` for the calling sequence
-- ctx  - the user-defined context (or `NULL`)
+- ctx  - the application context (or `NULL`)
 
   Level: intermediate
 
