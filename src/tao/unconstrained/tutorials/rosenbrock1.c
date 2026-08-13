@@ -140,7 +140,7 @@ static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 + tao - the Tao context
 . X   - input vector
 . V   - vector to multiply by the Hessian
-- ptr - optional user-defined context, as set by TaoSetHessianMult()
+- ptr - optional application-specific context, as set by TaoSetHessianMult()
 
   Output Parameter:
 . HV - the Hessian-vector product

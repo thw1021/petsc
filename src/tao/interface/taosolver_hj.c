@@ -148,15 +148,14 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
   Input Parameters:
 + tao  - the `Tao` context
 . func - the Hessian-vector product evaluation routine
-- ctx  - [optional] user-defined context for private data for the Hessian-vector product
-         evaluation routine (may be `NULL`)
+- ctx  - [optional] application-specific context for the Hessian-vector product evaluation routine (may be `NULL`)
 
   Calling sequence of `func`:
 + tao - the `Tao` context
 . x   - the point at which the Hessian is evaluated
 . v   - the vector that the Hessian is applied to
 . Hv  - the resulting Hessian-vector product
-- ctx - [optional] user-defined Hessian-vector product context
+- ctx - [optional] application-specific Hessian-vector product context
 
   Level: intermediate
 
@@ -183,14 +182,14 @@ PetscErrorCode TaoSetHessianMult(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x,
 
   Output Parameters:
 + func - the Hessian-vector product evaluation routine
-- ctx  - user-defined context for private data for the Hessian-vector product evaluation routine
+- ctx  - application-specific context for the Hessian-vector product evaluation routine
 
   Calling sequence of `func`:
 + tao - the `Tao` context
 . x   - the point at which the Hessian is evaluated
 . v   - the vector that the Hessian is applied to
 . Hv  - the resulting Hessian-vector product
-- ctx - [optional] user-defined Hessian-vector product context
+- ctx - [optional] application-specific Hessian-vector product context
 
   Level: intermediate
 
