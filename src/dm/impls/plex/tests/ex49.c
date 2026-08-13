@@ -262,6 +262,14 @@ int main(int argc, char **argv)
     args: -dm_plex_simplex 0 -dm_plex_box_bd none,none -dm_plex_box_faces 3,3 -petscspace_degree 1 \
           -dm_view -offsets_view
 
+  # A chart permutation makes the local storage slot of a point differ from a running count over
+  # the chart, so the local-to-global map must be indexed by the local section's offsets.  Serial
+  # and unconstrained, the map must still come out as the identity.
+  test:
+    suffix: reorder_ltog
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -petscspace_degree 1 \
+          -dm_reorder_section -dm_reorder_section_type reverse -offsets_view -ltog_view
+
   test:
     suffix: 1d_sfc
     args: -dm_plex_simplex 0 -dm_plex_dim 1 -dm_plex_shape zbox -dm_plex_box_faces 3 1 -dm_view -coord_ltog_view
