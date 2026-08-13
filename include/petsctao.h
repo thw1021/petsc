@@ -438,7 +438,10 @@ PETSC_EXTERN PetscErrorCode TaoMonitorSetFromOptions(Tao, const char[], const ch
 PETSC_EXTERN PetscErrorCode TaoMonitorCancel(Tao);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefault(Tao, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGlobalization(Tao, PetscViewerAndFormat *);
-PETSC_EXTERN PetscErrorCode TaoMonitorDefaultShort(Tao, PetscViewerAndFormat *);
+PETSC_DEPRECATED_FUNCTION(3, 26, 0, "TaoMonitorDefault()", ) static inline PetscErrorCode TaoMonitorDefaultShort(Tao tao, PetscViewerAndFormat *vf)
+{
+  return TaoMonitorDefault(tao, vf);
+}
 PETSC_EXTERN PetscErrorCode TaoMonitorConstraintNorm(Tao, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolution(Tao, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TaoMonitorResidual(Tao, PetscViewerAndFormat *);
