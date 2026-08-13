@@ -1131,19 +1131,23 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm, ISLocalToGlobalMapping *ltog)
       PetscCall(PetscSectionGetChart(section, &pStart, &pEnd));
       PetscCall(PetscSectionGetStorageSize(section, &n));
       PetscCall(PetscMalloc1(n, &ltog)); /* We want the local+overlap size */
-      for (p = pStart, l = 0; p < pEnd; ++p) {
-        PetscInt bdof, cdof, dof, off, c, cind;
+      for (p = pStart; p < pEnd; ++p) {
+        PetscInt bdof, cdof, dof, off, loff, c, cind;
 
         /* Should probably use constrained dofs */
         PetscCall(PetscSectionGetDof(section, p, &dof));
         PetscCall(PetscSectionGetConstraintDof(section, p, &cdof));
         PetscCall(PetscSectionGetConstraintIndices(section, p, &cdofs));
         PetscCall(PetscSectionGetOffset(sectionGlobal, p, &off));
+        /* The local section may carry a chart permutation (`DMReorderSectionSetDefault()`), so the
+           local storage slot of point p is its local offset, not a running count over the chart. */
+        PetscCall(PetscSectionGetOffset(section, p, &loff));
         /* If you have dofs, and constraints, and they are unequal, we set the blocksize to 1 */
         bdof = cdof && (dof - cdof) ? 1 : dof;
         if (dof) bs = bs < 0 ? bdof : PetscGCD(bs, bdof);
 
-        for (c = 0, cind = 0; c < dof; ++c, ++l) {
+        for (c = 0, cind = 0; c < dof; ++c) {
+          l = loff + c;
           if (cind < cdof && c == cdofs[cind]) {
             ltog[l] = off < 0 ? off - c : -(off + c + 1);
             cind++;
