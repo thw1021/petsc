@@ -29,7 +29,7 @@ Tao Object: (shell_) 1 MPI process
                 Using finite differences for Hessian computation
                 Context has been set
                 The following methods have been set: objectiveandgradient, hessian, hessianmult,
-                total number of function/gradient evaluations=186
+                total number of function/gradient evaluations=181
                 total number of Hessian evaluations=15
             Map: unmapped
           Summand 1:
@@ -42,10 +42,9 @@ Tao Object: (shell_) 1 MPI process
                 default Hessian MatType (tao_term_hessian_mat_type): aij
                 Context has been set
                 The following methods have been set: objectiveandgradient, hessian, hessianmult,
-                total number of function/gradient evaluations=21
+                total number of function/gradient evaluations=16
             Map: unmapped
             Mask (tao_term_sum_extra_mask): hessian
-        total number of function evaluations=5
         total number of function/gradient evaluations=16
         total number of Hessian evaluations=15
     Map: unmapped
@@ -89,7 +88,6 @@ Tao Object: (shell_) 1 MPI process
   Residual in Function/Gradient:=4.41765e-09
   Objective value=1.
   total number of iterations=15,                          (max: 50)
-  total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=16,      (max: unlimited)
   total number of Hessian evaluations=15
   Solution converged:    ||g(X)|| <= gatol

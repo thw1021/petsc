@@ -504,10 +504,12 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
     test:
       suffix: r096_first_analytic
       args: -no_map -shell_tao_term_sum_extra_mask hessian
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r097_first_fd
       args: -no_map -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r098_mapped_first_analytic
@@ -571,10 +573,12 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
     test:
       suffix: r113_first_analytic_separate_hpre
       args: -no_map -shell_tao_term_sum_extra_mask hessian
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r114_first_fd_separate_hpre
       args: -no_map -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r115_mapped_first_analytic_separate_hpre
@@ -657,15 +661,18 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
       suffix: r132_first_analytic
       args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
       args: -shell_tao_term_sum_extra_mask hessian
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r133_first_fd
       args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
       args: -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r134_first_hessianmult
       args: -no_map -shell_tao_term_sum_extra_mask hessian
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r136_mapped_first_fd
@@ -769,15 +776,18 @@ static PetscErrorCode CheckOperator(Tao tao, Vec x, ExampleTerm terms[], PetscIn
       suffix: r162_first_analytic_separate_hpre
       args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
       args: -shell_tao_term_sum_extra_mask hessian
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r163_first_fd_separate_hpre
       args: -no_map -data_provide_hessian_mult false -extra_provide_hessian_mult false
       args: -shell_tao_term_sum_extra_mask hessian -data_tao_term_hessian_use_fd
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r164_first_hessianmult_separate_hpre
       args: -no_map -shell_tao_term_sum_extra_mask hessian
+      args: -shell_tao_nls_init_type constant -c_tao_nls_init_type constant
 
     test:
       suffix: r165_mapped_first_analytic_separate_hpre
