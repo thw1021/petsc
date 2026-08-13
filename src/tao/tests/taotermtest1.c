@@ -46,13 +46,14 @@ static PetscErrorCode CheckReferenceTermType(TaoTerm);
 
 int main(int argc, char **argv)
 {
-  TestState state = {0};
-  TestCtx  *ctx   = &state.ctx;
+  TestState state;
   TaoTerm   objective;
   MPI_Comm  comm;
+  TestCtx  *ctx = &state.ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscMemzero(&state, sizeof(state)));
   comm = PETSC_COMM_WORLD;
 
   PetscCall(TestCtxProcessOptions(comm, ctx));
