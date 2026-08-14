@@ -373,24 +373,24 @@ class Configure(config.base.Configure):
     if log: log.write('Did not detect '+name+' compiler\n')
 
   @staticmethod
-  def isGcc110plus(compiler, log):
-    '''returns true if the compiler is a GNU compiler, version 11.0.x or later'''
-    return Configure.isGNUVersionAtLeast(compiler, (11,0), 'Gcc110plus', log)
-
-  @staticmethod
-  def isGcc150plus(compiler, log):
-    '''returns true if the compiler is a GNU compiler, version 15.0.x or later'''
-    return Configure.isGNUVersionAtLeast(compiler, (15,0), 'Gcc150plus', log)
-
-  @staticmethod
-  def isGfortran100plus(compiler, log):
-    '''returns true if the compiler is a GNU compiler, version 10.0.x or later'''
-    return Configure.isGNUVersionAtLeast(compiler, (10,0), 'GFortran100plus', log)
-
-  @staticmethod
-  def isGfortran8plus(compiler, log):
+  def isGNU80plus(compiler, log):
     '''returns true if the compiler is a GNU compiler, version 8 or later'''
-    return Configure.isGNUVersionAtLeast(compiler, (8,0), 'GFortran8plus', log)
+    return Configure.isGNUVersionAtLeast(compiler, (8,0), 'GNU80plus', log)
+
+  @staticmethod
+  def isGNU100plus(compiler, log):
+    '''returns true if the compiler is a GNU compiler, version 10.0.x or later'''
+    return Configure.isGNUVersionAtLeast(compiler, (10,0), 'GNU100plus', log)
+
+  @staticmethod
+  def isGNU110plus(compiler, log):
+    '''returns true if the compiler is a GNU compiler, version 11.0.x or later'''
+    return Configure.isGNUVersionAtLeast(compiler, (11,0), 'GNU110plus', log)
+
+  @staticmethod
+  def isGNU150plus(compiler, log):
+    '''returns true if the compiler is a GNU compiler, version 15.0.x or later'''
+    return Configure.isGNUVersionAtLeast(compiler, (15,0), 'GNU150plus', log)
 
   @staticmethod
   def isSun(compiler, log):
