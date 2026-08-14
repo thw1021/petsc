@@ -32,6 +32,7 @@ int main(int argc, char **argv)
   PetscReal   lambda_1 = 0.1;
   PetscReal   lambda_2 = 0.1;
   Tao         tao;
+  VecType     vec_type;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -52,8 +53,19 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomSetInterval(rand, -1.0, 1.0));
   PetscCall(PetscRandomSetFromOptions(rand));
 
-  // create the model data, A, W and b
-  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
+  /*
+    Create the model data, A, W and b.
+
+    MatSetFromOptions() lets -Amat_mat_type/-Dmat_mat_type select a device MatType
+    (e.g. densecuda).  Everything else in this example derives its VecType and MatType
+    from A and D, so those two options are enough to move the whole problem to a device.
+   */
+  PetscCall(MatCreate(comm, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, m, n));
+  PetscCall(MatSetType(A, MATDENSE));
+  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)A, "Amat_"));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
   PetscCall(MatSetRandom(A, rand));
   PetscCall(MatCreateVecs(A, NULL, &b));
   PetscCall(VecSetRandom(b, rand));
@@ -65,7 +77,12 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&w));
 
   // create the dictionary data, D and y
-  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, k, n, NULL, &D));
+  PetscCall(MatCreate(comm, &D));
+  PetscCall(MatSetSizes(D, PETSC_DECIDE, PETSC_DECIDE, k, n));
+  PetscCall(MatSetType(D, MATDENSE));
+  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)D, "Dmat_"));
+  PetscCall(MatSetFromOptions(D));
+  PetscCall(MatSetUp(D));
   PetscCall(MatSetRandom(D, rand));
   PetscCall(MatCreateVecs(D, NULL, &y));
   PetscCall(VecSetRandom(y, rand));
@@ -75,25 +92,33 @@ int main(int argc, char **argv)
   if (set_prefix) {
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)b, "bvec_"));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)A, "Amat_"));
   }
   if (set_name) PetscCall(PetscObjectSetName((PetscObject)data_term, "Data TaoTerm"));
   PetscCall(TaoAddTerm(tao, "data_", 1.0, data_term, b, A));
   PetscCall(TaoTermDestroy(&data_term));
 
-  // the L2 term,  (1/2) lambda_2 || x ||_2^2
+  /*
+    The L2 term,  (1/2) lambda_2 || x ||_2^2.  Its solution space is the column space of A, so
+    it takes its `VecType` from A: a term built only from sizes would default to a host vector
+    and force copies off of the device on every objective and gradient evaluation.
+   */
   PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &l2_reg_term));
+  PetscCall(MatGetVecType(A, &vec_type));
+  PetscCall(TaoTermSetSolutionVecType(l2_reg_term, vec_type));
+  PetscCall(TaoTermSetParametersVecType(l2_reg_term, vec_type));
   if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
   if (set_name) PetscCall(PetscObjectSetName((PetscObject)l2_reg_term, "Ridge TaoTerm"));
   PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoTermDestroy(&l2_reg_term));
 
-  // the L1 term,  lambda_1 || Dx - y ||_1
+  // the L1 term,  lambda_1 || Dx - y ||_1.  Its solution space is the row space of D
   PetscCall(TaoTermCreateL1(comm, PETSC_DECIDE, k, 0.0, &l1_reg_term));
+  PetscCall(MatGetVecType(D, &vec_type));
+  PetscCall(TaoTermSetSolutionVecType(l1_reg_term, vec_type));
+  PetscCall(TaoTermSetParametersVecType(l1_reg_term, vec_type));
   if (set_prefix) {
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l1_reg_term, "lasso_"));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)y, "yvec_"));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)D, "Dmat_"));
   }
   if (set_name) PetscCall(PetscObjectSetName((PetscObject)l1_reg_term, "Lasso TaoTerm"));
   PetscCall(TaoAddTerm(tao, "lasso_", lambda_1, l1_reg_term, y, D));
@@ -220,6 +245,28 @@ int main(int argc, char **argv)
   test:
     suffix: extra_info_view
     args: -tao_type nls -tao_add_terms extra_ -extra_tao_term_type halfl2squared -tao_term_sum_extra_scale 1.0 -tao_view
+
+  # The device run must reproduce the host answer.  -Amat_mat_type/-Dmat_mat_type put A and D
+  # on the device; every vector and Hessian in the TaoTermSum tree derives its type from them.
+  testset:
+    args: -tao_type nls -tao_monitor_short -lasso_tao_term_l1_epsilon 0.1
+    output_file: output/elastic_net_regularization_device.out
+    test:
+      suffix: device_host
+    test:
+      suffix: device_cuda
+      requires: cuda
+      args: -Amat_mat_type densecuda -Dmat_mat_type densecuda -tao_term_hessian_mat_type densecuda
+
+  # Guards against a summand silently falling back to host vectors or a host Hessian MatType.
+  # The preconditioner is pinned to jacobi so the view reflects the TaoTerm tree only: the
+  # default ilu factors the Hessian with a host MATSEQDENSE.
+  test:
+    suffix: device_cuda_view
+    requires: cuda
+    args: -tao_type nls -lasso_tao_term_l1_epsilon 0.1 -tao_view ::ascii_info_detail
+    args: -Amat_mat_type densecuda -Dmat_mat_type densecuda -tao_term_hessian_mat_type densecuda
+    args: -tao_nls_pc_type jacobi
 
   # Exercises the outer-sum Hessian-shell path: TaoTermComputeHessianMult_Sum
   # dispatches MatMult on the MATSHELL outer Hessian through the per-summand
