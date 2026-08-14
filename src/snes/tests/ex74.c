@@ -29,14 +29,14 @@ static PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, PetscCtx ctx)
   PetscFunctionBeginUser;
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(MatSetValue(P, 0, 0, 2.0 * xa[0], INSERT_VALUES));
-  PetscCall(VecRestoreArrayRead(x, &xa));
   PetscCall(MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(P, MAT_FINAL_ASSEMBLY));
   if (J != P) {
-    PetscCall(MatCopy(P, J, SAME_NONZERO_PATTERN));
+    PetscCall(MatSetValue(J, 0, 0, 2.0 * xa[0], INSERT_VALUES));
     PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
   }
+  PetscCall(VecRestoreArrayRead(x, &xa));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -76,12 +76,13 @@ static PetscErrorCode CheckPreSolve(KSP ksp, Vec b, Vec x, PetscCtx vctx)
 
 int main(int argc, char **argv)
 {
-  SNES        snes;
-  KSP         ksp;
-  PC          pc;
-  Mat         J, P;
-  Vec         x, f;
-  CallbackCtx ctx = {.expected_rtol = 0.25, .presolve_count = 0, .modify_amat = PETSC_FALSE, .modify_pmat = PETSC_FALSE, .replace_amat = PETSC_FALSE};
+  SNES                snes;
+  KSP                 ksp;
+  PC                  pc;
+  Mat                 J, P;
+  Vec                 x, f;
+  SNESConvergedReason reason;
+  CallbackCtx         ctx = {.expected_rtol = 0.25, .presolve_count = 0, .modify_amat = PETSC_FALSE, .modify_pmat = PETSC_FALSE, .replace_amat = PETSC_FALSE};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -103,7 +104,9 @@ int main(int argc, char **argv)
   PetscCall(VecSet(x, 3.0));
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(SNESSolve(snes, NULL, x));
-  PetscCheck(ctx.presolve_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback was not called");
+  PetscCall(SNESGetConvergedReason(snes, &reason));
+  PetscCheck(reason > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNESSolve() did not converge, reason %s", SNESConvergedReasons[reason]);
+  PetscCheck(ctx.presolve_count > 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "User pre-solve callback ran %" PetscInt_FMT " time(s); expected more than one SNES iteration to exercise the Eisenstat-Walker rtol update", ctx.presolve_count);
   PetscCall(SNESDestroy(&snes));
   PetscCall(MatDestroy(&J));
   PetscCall(MatDestroy(&P));
@@ -120,25 +123,19 @@ int main(int argc, char **argv)
     output_file: output/empty.out
     args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12
 
-  test:
+  testset:
     # Testing errors so only look for errors
-    suffix: 2
     requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
-    args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12 -modify_amat -petsc_ci_portable_error_output -error_output_stdout
+    args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12 -petsc_ci_portable_error_output -error_output_stdout
     filter: grep -E "(PETSC ERROR)" | grep -E "(modified the KSP|KSPPreSolve)"
-
-  test:
-    # Testing errors so only look for errors
-    suffix: 3
-    requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
-    args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12 -modify_pmat -petsc_ci_portable_error_output -error_output_stdout
-    filter: grep -E "(PETSC ERROR)" | grep -E "(modified the KSP|KSPPreSolve)"
-
-  test:
-    # Testing errors so only look for errors
-    suffix: 4
-    requires: !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
-    args: -snes_linesearch_type bt -snes_ksp_ew -snes_ksp_ew_rtol0 0.25 -snes_rtol 1e-12 -replace_amat -petsc_ci_portable_error_output -error_output_stdout
-    filter: grep -E "(PETSC ERROR)" | grep -E "(modified the KSP|KSPPreSolve)"
+    test:
+      suffix: 2
+      args: -modify_amat
+    test:
+      suffix: 3
+      args: -modify_pmat
+    test:
+      suffix: 4
+      args: -replace_amat
 
 TEST*/

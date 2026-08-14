@@ -670,10 +670,10 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, PetscCtx ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPPreSolveCheckOperator_Private(KSP ksp, Mat mat, PetscObjectState ostate, PetscBool is_amat)
+static PetscErrorCode KSPPreSolveOperatorUnchanged_Private(KSP ksp, Mat mat, PetscObjectState ostate, PetscBool is_amat, PetscBool *unchanged)
 {
   Mat              mat_new = NULL;
-  PetscBool        matset_new, unchanged;
+  PetscBool        matset_new;
   PetscObjectState state;
 
   PetscFunctionBegin;
@@ -685,9 +685,7 @@ static PetscErrorCode KSPPreSolveCheckOperator_Private(KSP ksp, Mat mat, PetscOb
     PetscCall(KSPGetOperators(ksp, NULL, matset_new ? &mat_new : NULL));
   }
   PetscCall(PetscObjectStateGet((PetscObject)mat, &state));
-  unchanged = (PetscBool)(matset_new && mat_new == mat && state == ostate);
-  PetscCall(PetscObjectDereference((PetscObject)mat));
-  PetscCheck(unchanged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's %s matrix; pre-solve callbacks may only modify the right-hand side and solution vectors", is_amat ? "A" : "preconditioner");
+  *unchanged = (PetscBool)(matset_new && mat_new == mat && state == ostate);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -710,8 +708,10 @@ static PetscErrorCode KSPPreSolveCheckOperator_Private(KSP ksp, Mat mat, PetscOb
   is raised if the callback changed either matrix, since pre-solve callbacks are only permitted to modify `rhs` and `sol`. This check
   only detects changes to the `Amat`/`Pmat` objects themselves and says nothing about other changes a callback might make. `PCSetUp()`
   has already run by the time the callback runs, so callback-side changes that only affect the preconditioner setup (for example
-  `PCFieldSplitSetIS()` or setting `PC` options) have no effect, since `PCSetUp()` will not run again before the matrices are used.
-  Changes that are encountered during preconditioner application, such as setting a null space with `MatSetNullSpace()`, **do** take effect.
+  `PCFieldSplitSetIS()` or setting `PC` options) have no effect on this solve, unless the callback also resets the `PC`'s setup state
+  (for example via `PCSetType()` or `PCReset()`), in which case `PCSetUp()` runs again automatically inside the following `PCApply()`,
+  before the matrices are used. Changes that are encountered during preconditioner application, such as setting a null space with
+  `MatSetNullSpace()`, **do** take effect.
 
 .seealso: [](ch_ksp), `KSPSolve()`, `KSP`, `KSPSetPreSolve()`, `KSPPostSolve()`, `SNESKSPSetUseEW()`
 @*/
@@ -738,8 +738,20 @@ PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
       PetscCall(PetscObjectStateGet((PetscObject)Pmat, &Pmat_ostate));
     }
     PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
-    if (matset) PetscCall(KSPPreSolveCheckOperator_Private(ksp, Amat, Amat_ostate, PETSC_TRUE));
-    if (pmatset) PetscCall(KSPPreSolveCheckOperator_Private(ksp, Pmat, Pmat_ostate, PETSC_FALSE));
+    if (matset) {
+      PetscBool unchanged;
+
+      PetscCall(KSPPreSolveOperatorUnchanged_Private(ksp, Amat, Amat_ostate, PETSC_TRUE, &unchanged));
+      PetscCall(PetscObjectDereference((PetscObject)Amat));
+      PetscCheck(unchanged, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's A matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
+    }
+    if (pmatset) {
+      PetscBool unchanged;
+
+      PetscCall(KSPPreSolveOperatorUnchanged_Private(ksp, Pmat, Pmat_ostate, PETSC_FALSE, &unchanged));
+      PetscCall(PetscObjectDereference((PetscObject)Pmat));
+      PetscCheck(unchanged, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's preconditioner matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
