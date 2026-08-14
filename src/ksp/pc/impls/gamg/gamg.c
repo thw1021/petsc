@@ -1810,7 +1810,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   MPI_Comm           comm;
   char               prefix[256], tname[32];
   PetscInt           i, n;
-  PetscReal          tscale;
+  PetscReal          tscale = pc_gamg->threshold_scale;
   const char        *pcpre;
   static const char *LayoutTypes[] = {"compact", "spread", "PCGAMGLayoutType", "PC_GAMG_LAYOUT", NULL};
 
@@ -1833,7 +1833,6 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   PetscCall(PetscOptionsInt("-pc_gamg_process_eq_limit", "Limit (goal) on number of equations per process on coarse grids", "PCGAMGSetProcEqLim", pc_gamg->min_eq_proc, &pc_gamg->min_eq_proc, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_coarse_eq_limit", "Limit on number of equations for the coarse grid", "PCGAMGSetCoarseEqLim", pc_gamg->coarse_eq_limit, &pc_gamg->coarse_eq_limit, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_asm_hem_aggs", "Number of HEM matching passed in aggregates for ASM smoother", "PCGAMGASMSetHEM", pc_gamg->asm_hem_aggs, &pc_gamg->asm_hem_aggs, NULL));
-  tscale = pc_gamg->threshold_scale;
   PetscCall(PetscOptionsReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", tscale, &tscale, &flag));
   if (flag) PetscCall(PCGAMGSetThresholdScale(pc, tscale)); /* through the setter so the range is checked */
   n = PETSC_MG_MAXLEVELS;
