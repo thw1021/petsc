@@ -229,6 +229,21 @@ $(OBJDIR)/%.o : %.cu | $$(@D)/.DIR
 	$(PETSC_COMPILE.cu) $(abspath $<) -o $@ # Compile first so that if there is an error, it comes from a normal compile
 	@$(PETSC_GENDEPS.cu) $(abspath $<) -o $(@:%.o=%.d) # Generate the dependencies for later
 
+# sfnvshmem.cu calls NVSHMEM device functions (nvshmemx_signal_op() and friends) whose
+# implementations live in libnvshmem_device.a rather than in a header, so this translation unit
+# needs relocatable device code and a separate device link. libpetsc is linked by the host
+# compiler, which cannot do that, so the device-linked object is merged back into the expected
+# .o with "ld -r" and the rest of the build is left untouched.
+ifneq ($(NVSHMEM_LIB),)
+# nvcc -dlink rejects linker flags such as -Wl,-rpath, and only the device library is relevant here
+NVSHMEM_DLINK_LIBS := $(filter -L%,$(NVSHMEM_LIB)) -lnvshmem_device
+$(OBJDIR)/src/vec/is/sf/impls/basic/nvshmem/sfnvshmem.o : src/vec/is/sf/impls/basic/nvshmem/sfnvshmem.cu | $$(@D)/.DIR
+	$(PETSC_COMPILE.cu) -rdc=true $(abspath $<) -o $(@:%.o=%.rdc.o)
+	$(CUDAC) $(CUDAC_FLAGS) -Xcompiler -fPIC -dlink $(@:%.o=%.rdc.o) -o $(@:%.o=%.dlink.o) $(NVSHMEM_DLINK_LIBS)
+	ld -r $(@:%.o=%.rdc.o) $(@:%.o=%.dlink.o) -o $@
+	@$(PETSC_GENDEPS.cu) $(abspath $<) -o $(@:%.o=%.d)
+endif
+
 FCMOD = cd
 $(OBJDIR)/%.o : %.F | $$(@D)/.DIR
 ifeq ($(FC_MODULE_OUTPUT_FLAG),)

@@ -12,7 +12,8 @@ class Configure(config.package.Package):
     self.buildLanguages    = ['CUDA'] # requires nvcc
     #self.functions         = ['nvshmem_init', 'nvshmem_finalize']
     self.includes          = ['nvshmem.h']
-    self.liblist           = [['libnvshmem.a','libcuda.a'], ['nvshmem.lib','cuda.lib']]
+    # NVSHMEM 3.0 split the single libnvshmem into a host shared library and a device static library
+    self.liblist           = [['libnvshmem_host.so','libnvshmem_device.a','libcuda.a'], ['libnvshmem.a','libcuda.a'], ['nvshmem.lib','cuda.lib']]
     return
 
   def setupDependencies(self, framework):

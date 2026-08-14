@@ -1,4 +1,5 @@
-#include <petsc/private/cudavecimpl.h>
+#include <petscdevice_cuda.h>
+#include <petsc/private/veccupmimpl.h> /* for the PetscNvshmem*() prototypes */
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <mpi.h>
 #include <nvshmem.h>
@@ -8,10 +9,11 @@ PetscErrorCode PetscNvshmemInitializeCheck(void)
 {
   PetscFunctionBegin;
   if (!PetscNvshmemInitialized) { /* Note NVSHMEM does not provide a routine to check whether it is initialized */
-    nvshmemx_init_attr_t attr;
+    nvshmemx_init_attr_t attr = NVSHMEMX_INIT_ATTR_INITIALIZER; /* NVSHMEM >= 3.0 version-stamps this struct; it must not be left uninitialized */
+
     attr.mpi_comm = &PETSC_COMM_WORLD;
     PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
-    PetscCall(nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM, &attr));
+    PetscCallExternal(nvshmemx_init_attr, NVSHMEMX_INIT_WITH_MPI_COMM, &attr);
     PetscNvshmemInitialized = PETSC_TRUE;
     PetscBeganNvshmem       = PETSC_TRUE;
   }
@@ -22,8 +24,8 @@ PetscErrorCode PetscNvshmemMalloc(size_t size, void **ptr)
 {
   PetscFunctionBegin;
   PetscCall(PetscNvshmemInitializeCheck());
-  *ptr = nvshmem_malloc(size);
-  PetscCheck(*ptr, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "nvshmem_malloc() failed to allocate %zu bytes", size);
+  *ptr = nvshmem_malloc(size); /* returns NULL for size 0, which is not an error */
+  PetscCheck(*ptr || !size, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "nvshmem_malloc() failed to allocate %zu bytes", size);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -31,8 +33,8 @@ PetscErrorCode PetscNvshmemCalloc(size_t size, void **ptr)
 {
   PetscFunctionBegin;
   PetscCall(PetscNvshmemInitializeCheck());
-  *ptr = nvshmem_calloc(size, 1);
-  PetscCheck(*ptr, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "nvshmem_calloc() failed to allocate %zu bytes", size);
+  *ptr = nvshmem_calloc(size, 1); /* returns NULL for size 0, which is not an error */
+  PetscCheck(*ptr || !size, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "nvshmem_calloc() failed to allocate %zu bytes", size);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -86,7 +88,6 @@ PetscErrorCode PetscSFReset_Basic_NVSHMEM(PetscSF sf)
 /* Set up NVSHMEM related fields for an SF of type SFBASIC (only after PetscSFSetup_Basic() already set up dependent fields) */
 static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
   PetscInt       i, nRemoteRootRanks, nRemoteLeafRanks;
   PetscMPIInt    tag;
@@ -180,7 +181,6 @@ PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf, PetscMemType rootmtype, const
   /* Check if the sf is eligible for NVSHMEM, if we have not checked yet.
      Note the check result <use_nvshmem> must be the same over comm, since an SFLink must be collectively either NVSHMEM or MPI.
   */
-  sf->checked_nvshmem_eligibility = PETSC_TRUE;
   if (sf->use_nvshmem && !sf->checked_nvshmem_eligibility) {
     /* Only use NVSHMEM for SFBASIC on PETSC_COMM_WORLD  */
     PetscCall(PetscObjectTypeCompare((PetscObject)sf, PETSCSFBASIC, &isBasic));
@@ -226,7 +226,6 @@ PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf, PetscMemType rootmtype, const
 /* Build dependence between <stream> and <remoteCommStream> at the entry of NVSHMEM communication */
 static PetscErrorCode PetscSFLinkBuildDependenceBegin(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas    = (PetscSF_Basic *)sf->data;
   PetscInt       buflen = (direction == PETSCSF_ROOT2LEAF) ? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
 
@@ -241,7 +240,6 @@ static PetscErrorCode PetscSFLinkBuildDependenceBegin(PetscSF sf, PetscSFLink li
 /* Build dependence between <stream> and <remoteCommStream> at the exit of NVSHMEM communication */
 static PetscErrorCode PetscSFLinkBuildDependenceEnd(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas    = (PetscSF_Basic *)sf->data;
   PetscInt       buflen = (direction == PETSCSF_ROOT2LEAF) ? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
 
@@ -268,7 +266,7 @@ __global__ static void NvshmemSendSignals(PetscInt n, uint64_t *sig, PetscInt *s
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
   /* Each thread puts one remote signal */
-  if (i < n) nvshmemx_uint64_signal(sig + sigdisp[i], newval, ranks[i]);
+  if (i < n) nvshmemx_signal_op(sig + sigdisp[i], newval, NVSHMEM_SIGNAL_SET, ranks[i]);
 }
 
 /* Wait until local signals equal to the expected value and then set them to a new value
@@ -351,7 +349,6 @@ __global__ static void GetDataFromRemotelyAccessible(PetscInt nsrcranks, PetscMP
 /* Start communication -- Get data in the given direction */
 static PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
 
   PetscInt nsrcranks, ndstranks, nLocallyAccessible = 0;
@@ -447,7 +444,6 @@ static PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf, PetscSFLink li
 */
 static PetscErrorCode PetscSFLinkGetDataEnd_NVSHMEM(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
   uint64_t      *srcsig;
   PetscInt       nsrcranks, *srcsigdisp;
@@ -526,7 +522,6 @@ __global__ static void WaitSignalsFromLocallyAccessible(PetscInt ndstranks, Pets
 /* Put data in the given direction  */
 static PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
   PetscInt       ndstranks, nLocallyAccessible = 0;
   char          *src, *dst;
@@ -606,7 +601,7 @@ __global__ static void PutDataEnd(PetscInt nsrcranks, PetscInt ndstranks, PetscM
   /* According to Akhil@NVIDIA, IB is orderred, so no fence is needed for remote PEs.
      For local PEs, we already called nvshmemx_quiet_on_stream(). Therefore, we are good to send signals to all dst ranks now.
   */
-  for (int i = 0; i < ndstranks; i++) nvshmemx_uint64_signal(dstsig + dstsigdisp[i], 1, dstranks[i]); /* set sig to 1 */
+  for (int i = 0; i < ndstranks; i++) nvshmemx_signal_op(dstsig + dstsigdisp[i], 1, NVSHMEM_SIGNAL_SET, dstranks[i]); /* set sig to 1 */
 
   /* 2. Wait for signals from src ranks (if any) */
   if (nsrcranks) {
@@ -618,7 +613,6 @@ __global__ static void PutDataEnd(PetscInt nsrcranks, PetscInt ndstranks, PetscM
 /* Finish the communication -- A receiver waits until it can access its receive buffer */
 static PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
   PetscMPIInt   *dstranks;
   uint64_t      *dstsig;
@@ -680,8 +674,6 @@ static PetscErrorCode PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM(PetscSF s
 /* Destructor when the link uses nvshmem for communication */
 static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf, PetscSFLink link)
 {
-  cudaError_t cerr;
-
   PetscFunctionBegin;
   PetscCallCUDA(cudaEventDestroy(link->dataReady));
   PetscCallCUDA(cudaEventDestroy(link->endRemoteComm));
@@ -699,7 +691,6 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf, PetscSFLink link)
 
 PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf, MPI_Datatype unit, PetscMemType rootmtype, const void *rootdata, PetscMemType leafmtype, const void *leafdata, MPI_Op op, PetscSFOperation sfop, PetscSFLink *mylink)
 {
-  cudaError_t    cerr;
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
   PetscSFLink   *p, link;
   PetscBool      match, rootdirect[2], leafdirect[2];
