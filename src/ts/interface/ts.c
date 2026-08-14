@@ -1390,6 +1390,10 @@ PetscErrorCode TSSetIJacobian(TS ts, Mat Amat, Mat Pmat, TSIJacobianFn *f, Petsc
   This is used by implicit integrators that solve DAEs $F(t, U, \dot U) = 0$ with a possibly singular mass matrix $M$.
   Only `TSIRK` currently consumes it; other integrators ignore it.
 
+  You do not create the matrix $M$ yourself. The consuming integrator creates it with the correct layout and passes it to
+  `func` (a `TSMassMatrixFn`), which only fills its entries. `TSIRK` creates $M$ by duplicating the Jacobian matrix set with
+  `TSSetIJacobian()`, so $M$ shares the Jacobian's nonzero pattern; fill only the entries the mass matrix needs.
+
   The callback is stored on the `TS`'s `DM` and copied to coarser `DM`s by `DMTSCopy()`, so it is available at
   every level of a geometric multigrid hierarchy. `TSIRK` currently assembles the mass matrix only on the fine `DM`.
 
