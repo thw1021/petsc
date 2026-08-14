@@ -629,6 +629,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_AGMRES(KSP ksp)
   ksp->ops->computeextremesingularvalues = KSPComputeExtremeSingularValues_GMRES;
   ksp->ops->computeeigenvalues           = KSPComputeEigenvalues_GMRES;
 
+  PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetVectorAllocationSize_C", KSPGMRESSetVectorAllocationSize_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetPreAllocateVectors_C", KSPGMRESSetPreAllocateVectors_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetOrthogonalization_C", KSPGMRESSetOrthogonalization_GMRES));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGMRESSetRestart_C", KSPGMRESSetRestart_GMRES));
@@ -647,7 +648,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_AGMRES(KSP ksp)
 
   agmres->haptol         = 1.0e-30;
   agmres->q_preallocate  = 0;
-  agmres->delta_allocate = AGMRES_DELTA_DIRECTIONS;
+  agmres->delta_allocate = GMRES_DELTA_DIRECTIONS;
   agmres->orthog         = KSPGMRESClassicalGramSchmidtOrthogonalization;
   agmres->nrs            = NULL;
   agmres->sol_temp       = NULL;
