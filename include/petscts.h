@@ -746,7 +746,9 @@ PETSC_EXTERN_TYPEDEF typedef TSIJacobianFn *TSIJacobian;
   Level: intermediate
 
   Notes:
-  The routine fills the provided matrix `M`; it should not create or destroy it. This mirrors `TSIJacobianFn`.
+  The routine fills the provided matrix `M`; it should not create or destroy it. This mirrors `TSIJacobianFn`. The
+  integrator supplies `M` pre-created with the correct layout; for `TSIRK` it is a duplicate of the matrix set with
+  `TSSetIJacobian()`, so `M` has the Jacobian's nonzero pattern.
   As for `TSIJacobianFn`, the routine is responsible for zeroing any stale entries and for leaving `M` fully
   assembled; `TSComputeMassMatrix()` does not call `MatZeroEntries()` or `MatAssemblyBegin()`/`MatAssemblyEnd()`.
 
