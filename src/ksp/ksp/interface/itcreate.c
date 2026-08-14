@@ -629,7 +629,8 @@ PetscErrorCode KSPGetOperatorsSet(KSP ksp, PetscBool *mat, PetscBool *pmat)
   Level: developer
 
   Notes:
-  The function provided here `presolve` is used to modify the right hand side, and possibly the matrix, of the linear system to be solved.
+  The function provided here `presolve` is used to modify the right-hand side of the linear system to be solved. It must not modify the
+  associated matrices; `KSPPreSolve()` checks this and errors if a matrix is changed.
   The function provided with `KSPSetPostSolve()` then modifies the resulting solution of that linear system to obtain the correct solution
   to the initial linear system.
 
@@ -669,6 +670,27 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, PetscCtx ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode KSPPreSolveCheckOperator_Private(KSP ksp, Mat mat, PetscObjectState ostate, PetscBool is_amat)
+{
+  Mat              mat_new = NULL;
+  PetscBool        matset_new, unchanged;
+  PetscObjectState state;
+
+  PetscFunctionBegin;
+  if (is_amat) {
+    PetscCall(KSPGetOperatorsSet(ksp, &matset_new, NULL));
+    PetscCall(KSPGetOperators(ksp, matset_new ? &mat_new : NULL, NULL));
+  } else {
+    PetscCall(KSPGetOperatorsSet(ksp, NULL, &matset_new));
+    PetscCall(KSPGetOperators(ksp, NULL, matset_new ? &mat_new : NULL));
+  }
+  PetscCall(PetscObjectStateGet((PetscObject)mat, &state));
+  unchanged = (PetscBool)(matset_new && mat_new == mat && state == ostate);
+  PetscCall(PetscObjectDereference((PetscObject)mat));
+  PetscCheck(unchanged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's %s matrix; pre-solve callbacks may only modify the right-hand side and solution vectors", is_amat ? "A" : "preconditioner");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   KSPPreSolve - Runs the KSP pre-solve callbacks. Used in conjunction with `KSPSetPreSolve()` or the Eisenstat-Walker method.
 
@@ -681,19 +703,44 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, PetscCtx ctx)
 
   Level: developer
 
-  Note:
+  Notes:
   `KSPPreSolve()` is typically used within `KSPSolve()`, so most users would not generally call this routine themselves.
+
+  The state of the `KSP`'s operator matrices is checked before and after the callback registered with `KSPSetPreSolve()` runs; an error
+  is raised if the callback changed either matrix, since pre-solve callbacks are only permitted to modify `rhs` and `sol`. This check
+  only detects changes to the `Amat`/`Pmat` objects themselves and says nothing about other changes a callback might make. `PCSetUp()`
+  has already run by the time the callback runs, so callback-side changes that only affect the preconditioner setup (for example
+  `PCFieldSplitSetIS()` or setting `PC` options) have no effect, since `PCSetUp()` will not run again before the matrices are used.
+  Changes that are encountered during preconditioner application, such as setting a null space with `MatSetNullSpace()`, **do** take effect.
 
 .seealso: [](ch_ksp), `KSPSolve()`, `KSP`, `KSPSetPreSolve()`, `KSPPostSolve()`, `SNESKSPSetUseEW()`
 @*/
 PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
 {
+  Mat              Amat = NULL, Pmat = NULL;
+  PetscBool        matset, pmatset;
+  PetscObjectState Amat_ostate = 0, Pmat_ostate = 0;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(rhs, VEC_CLASSID, 2);
   PetscValidHeaderSpecific(sol, VEC_CLASSID, 3);
   if (ksp->presolve_ew) PetscCall((*ksp->presolve_ew)(ksp, rhs, sol, ksp->prectx_ew));
-  if (ksp->presolve) PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
+  if (ksp->presolve) {
+    PetscCall(KSPGetOperatorsSet(ksp, &matset, &pmatset));
+    PetscCall(KSPGetOperators(ksp, matset ? &Amat : NULL, pmatset ? &Pmat : NULL));
+    if (matset) {
+      PetscCall(PetscObjectReference((PetscObject)Amat));
+      PetscCall(PetscObjectStateGet((PetscObject)Amat, &Amat_ostate));
+    }
+    if (pmatset) {
+      PetscCall(PetscObjectReference((PetscObject)Pmat));
+      PetscCall(PetscObjectStateGet((PetscObject)Pmat, &Pmat_ostate));
+    }
+    PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
+    if (matset) PetscCall(KSPPreSolveCheckOperator_Private(ksp, Amat, Amat_ostate, PETSC_TRUE));
+    if (pmatset) PetscCall(KSPPreSolveCheckOperator_Private(ksp, Pmat, Pmat_ostate, PETSC_FALSE));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
