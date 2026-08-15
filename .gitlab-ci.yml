@@ -358,6 +358,8 @@ pause-for-approval:
   artifacts:
     paths:
       - ai-review.*
+      - mr-*-changes.json
+      - mr-*-diff.txt
     expire_in: one week
 
 ai-review:
