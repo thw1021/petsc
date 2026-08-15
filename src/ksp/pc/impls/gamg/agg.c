@@ -247,12 +247,15 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
   relative to the largest block Frobenius norm in the same fine-node block row so the decision is invariant to the differing scales of the near-null space modes.
   The comparison is strict, so the strongest block of a fine node always survives. On coarser levels the threshold is scaled by `PCGAMGSetProlongatorFilterScale()`.
   Dropping whole blocks (rather than individual entries) keeps complete coarse-node blocks in every surviving fine row, so the near-null space correction below
-  remains full rank.
+  remains full rank. The dropped entries are removed from the sparsity pattern with `MatEliminateZeros()`; on matrix types that do not support it (for example,
+  `MATAIJHIPSPARSE`) they are zeroed but remain in the pattern, so the coarse operators are unchanged in structure and the complexity and memory reduction is not
+  realized (reported with `-info`).
 
   After filtering, each row of the prolongator is corrected so that the filtered prolongator still reproduces the near-null space exactly, that is, P applied to the coarse
   representation of the near-null space equals the fine near-null space. With a single near-null space vector each row is simply rescaled; with several, a small symmetric
   positive-definite system (of size the number of near-null space vectors) is solved for each row and the resulting correction, a combination of the coarse near-null space
-  vectors, is added to the surviving entries of the row. Rows with fewer surviving entries than near-null space vectors are left uncorrected.
+  vectors, is added to the surviving entries of the row. Rows with fewer surviving entries than near-null space vectors are left uncorrected, as are, in the single-vector
+  case, rows whose near-null space entry is zero or whose required scale factor would be extremely large (an empty or nearly empty filtered row).
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGGetProlongatorFilter()`, `PCGAMGSetProlongatorFilterScale()`, `PCGAMGSetLowMemoryFilter()`
 @*/

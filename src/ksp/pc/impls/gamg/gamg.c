@@ -1490,7 +1490,7 @@ static PetscErrorCode PCGAMGASMSetHEM_GAMG(PC pc, PetscInt n)
 /*@
   PCGAMGSetThreshold - Relative threshold to use for dropping edges in aggregation graph
 
-  Not Collective
+  Logically Collective
 
   Input Parameters:
 + pc - the preconditioner context
@@ -1522,6 +1522,7 @@ PetscErrorCode PCGAMGSetThreshold(PC pc, PetscReal v[], PetscInt n)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   if (n) PetscAssertPointer(v, 2);
+  PetscValidLogicalCollectiveInt(pc, n, 3);
   PetscTryMethod(pc, "PCGAMGSetThreshold_C", (PC, PetscReal[], PetscInt), (pc, v, n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1815,6 +1816,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   char               prefix[256], tname[32];
   PetscInt           i, n;
   PetscReal          tscale = pc_gamg->threshold_scale;
+  PetscReal          tarr[PETSC_MG_MAXLEVELS];
   const char        *pcpre;
   static const char *LayoutTypes[] = {"compact", "spread", "PCGAMGLayoutType", "PC_GAMG_LAYOUT", NULL};
 
@@ -1840,9 +1842,10 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   PetscCall(PetscOptionsReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", tscale, &tscale, &flag));
   if (flag) PetscCall(PCGAMGSetThresholdScale(pc, tscale)); /* through the setter so the range is checked */
   n = PETSC_MG_MAXLEVELS;
-  PetscCall(PetscOptionsRealArray("-pc_gamg_threshold", "Relative threshold to use for dropping edges in aggregation graph", "PCGAMGSetThreshold", pc_gamg->threshold, &n, &flag));
-  if (flag) PetscCall(PCGAMGSetThreshold(pc, pc_gamg->threshold, n)); /* through the setter so the range is checked */
-  else                                                                /* -pc_gamg_threshold_scale may have changed above; rederive the unspecified coarser levels */
+  PetscCall(PetscArraycpy(tarr, pc_gamg->threshold, PETSC_MG_MAXLEVELS));
+  PetscCall(PetscOptionsRealArray("-pc_gamg_threshold", "Relative threshold to use for dropping edges in aggregation graph", "PCGAMGSetThreshold", tarr, &n, &flag));
+  if (flag) PetscCall(PCGAMGSetThreshold(pc, tarr, n)); /* through the setter so the range is checked */
+  else                                                  /* -pc_gamg_threshold_scale may have changed above; rederive the unspecified coarser levels */
     for (i = 1; i < PETSC_MG_MAXLEVELS; i++) pc_gamg->threshold[i] = pc_gamg->threshold[i - 1] * pc_gamg->threshold_scale;
   PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels (should get from base class)", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
   PetscCheck(pc_gamg->Nlevels <= PETSC_MG_MAXLEVELS, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_mg_levels (%" PetscInt_FMT ") >= PETSC_MG_MAXLEVELS (%d)", pc_gamg->Nlevels, PETSC_MG_MAXLEVELS);
