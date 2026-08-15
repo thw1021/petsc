@@ -1,5 +1,10 @@
 ### 4. Read and review the diff
-- Fetch with `glab api "projects/:id/merge_requests/<MR_IID>/changes" | jq '.changes |= map(select(.new_path | endswith(".out") | not))'` to drop `.out` files (test reference output, not code). Or read a local diff file and skip `.out` hunks.
+- MR review: build a text diff file:
+  - `glab api "projects/:id/merge_requests/<MR_IID>/changes?access_raw_diffs=true" > mr-<MR_IID>-changes.json`
+  - `jq -r '.changes[] | "=== " + (if .new_file then "new " elif .deleted_file then "deleted " elif .renamed_file then "renamed " else "" end) + .old_path + " -> " + .new_path + (if (.new_path | endswith(".out")) then " [.out reference; body omitted]" elif .diff == "" then "\n(binary or no textual change)" else "\n" + .diff end)' mr-<MR_IID>-changes.json > mr-<MR_IID>-diff.txt`
+  - Completeness: `grep -c '^=== ' mr-<MR_IID>-diff.txt` must equal `jq '.changes | length' mr-<MR_IID>-changes.json`, and `jq '.overflow' mr-<MR_IID>-changes.json` must be `false`; otherwise the fetch failed or the diff is partial — stop and report, do not review.
+- Local-branch review: use the existing `branch-review.diff`.
+- Review the whole diff file — every line, not just the start. If it is too large to read at once, read it in successive parts through to the end; do not skip any.
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
