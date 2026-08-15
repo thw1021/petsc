@@ -1,0 +1,155 @@
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    68.11 us
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    67.93 us
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    73.81 us
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    57.42 us
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    67.62 us
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    57.24 us
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   114.46 us
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   110.43 us
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   114.55 us
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=   106.16 us
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=   106.47 us
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=   115.43 us
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   183.83 us
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   184.20 us
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   179.34 us
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   151.41 us
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   152.22 us
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   151.33 us
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   724.34 us
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   731.40 us
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   727.34 us
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   423.86 us
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   423.63 us
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   440.41 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    69.35 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    64.54 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    59.69 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    64.45 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    54.55 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    54.49 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   115.82 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   111.99 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   112.60 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=   116.61 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=   130.06 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=   128.40 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   181.28 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   187.01 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   185.64 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   149.53 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   157.13 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   156.71 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   726.27 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   732.02 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   732.33 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   421.88 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   412.20 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   422.70 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    72.21 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    75.02 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    67.14 us
+# v4 barrier-free arrival counters + leader-poll, 2026-08-15
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    49.11 us  v4
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    49.83 us  v4
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    50.08 us  v4
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    48.04 us  v4
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    49.85 us  v4
+mode=branch-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    48.11 us  v4
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   102.68 us  v4
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   104.09 us  v4
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=   101.87 us  v4
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    96.83 us  v4
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    92.36 us  v4
+mode=branch-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    92.42 us  v4
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   163.60 us  v4
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   163.63 us  v4
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   164.58 us  v4
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   132.77 us  v4
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   133.23 us  v4
+mode=branch-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   132.84 us  v4
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   698.08 us  v4
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   696.92 us  v4
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   700.03 us  v4
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   391.67 us  v4
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   391.65 us  v4
+mode=branch-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   386.62 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    40.80 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    42.49 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.25 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    46.10 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.31 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    47.77 us  v4
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    95.03 us  v4
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    92.88 us  v4
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    95.01 us  v4
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    92.29 us  v4
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    87.58 us  v4
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    87.71 us  v4
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   155.63 us  v4
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   156.07 us  v4
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   155.62 us  v4
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   127.23 us  v4
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   130.71 us  v4
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   122.11 us  v4
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   694.92 us  v4
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   695.75 us  v4
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   694.99 us  v4
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   381.96 us  v4
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   382.11 us  v4
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   384.75 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    51.98 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    51.98 us  v4
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    47.96 us  v4
+# allreduce (direct all-pull) arm, v4 protocol
+mode=allred-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    43.98 us  v4ar
+mode=allred-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.45 us  v4ar
+mode=allred-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.69 us  v4ar
+mode=allred-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    46.44 us  v4ar
+mode=allred-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    43.97 us  v4ar
+mode=allred-dev nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    46.54 us  v4ar
+mode=allred-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    93.07 us  v4ar
+mode=allred-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    92.33 us  v4ar
+mode=allred-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    91.11 us  v4ar
+mode=allred-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    90.41 us  v4ar
+mode=allred-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    85.92 us  v4ar
+mode=allred-dev nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    85.54 us  v4ar
+mode=allred-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   139.67 us  v4ar
+mode=allred-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   141.61 us  v4ar
+mode=allred-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   141.56 us  v4ar
+mode=allred-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   118.27 us  v4ar
+mode=allred-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   118.81 us  v4ar
+mode=allred-dev nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   123.57 us  v4ar
+mode=allred-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   596.53 us  v4ar
+mode=allred-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   595.63 us  v4ar
+mode=allred-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   595.24 us  v4ar
+mode=allred-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   326.25 us  v4ar
+mode=allred-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   330.55 us  v4ar
+mode=allred-dev nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   326.84 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    42.67 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    41.75 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.93 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    42.69 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    42.68 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.84 us  v4ar
+mode=allred-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    86.04 us  v4ar
+mode=allred-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    85.49 us  v4ar
+mode=allred-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=32 per_iter=    84.00 us  v4ar
+mode=allred-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    81.17 us  v4ar
+mode=allred-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    76.72 us  v4ar
+mode=allred-pk  nvshmem-dev d=65536    msg=    512 KB  G=8   P=4   grid=64 per_iter=    76.30 us  v4ar
+mode=allred-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   136.51 us  v4ar
+mode=allred-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   134.99 us  v4ar
+mode=allred-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=32 per_iter=   131.85 us  v4ar
+mode=allred-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   108.07 us  v4ar
+mode=allred-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   117.80 us  v4ar
+mode=allred-pk  nvshmem-dev d=131072   msg=   1024 KB  G=8   P=4   grid=64 per_iter=   112.79 us  v4ar
+mode=allred-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   590.98 us  v4ar
+mode=allred-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   589.75 us  v4ar
+mode=allred-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=32 per_iter=   589.51 us  v4ar
+mode=allred-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   316.97 us  v4ar
+mode=allred-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   315.81 us  v4ar
+mode=allred-pk  nvshmem-dev d=524288   msg=   4096 KB  G=8   P=4   grid=64 per_iter=   320.52 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    48.48 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    46.35 us  v4ar
+mode=allred-pk  nvshmem-dev d=8192     msg=     64 KB  G=32  P=16  grid=32 per_iter=    46.44 us  v4ar

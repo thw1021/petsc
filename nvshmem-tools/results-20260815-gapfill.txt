@@ -1,0 +1,58 @@
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=65536    msg=    512 KB  G=32  P=16  per_iter=    68.20 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=65536    msg=    512 KB  G=32  P=16  per_iter=    69.45 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=65536    msg=    512 KB  G=32  P=16  per_iter=    69.16 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=32  P=16  grid=64 per_iter=   103.65 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=32  P=16  grid=64 per_iter=   108.87 us
+mode=branch-pk  nvshmem-dev d=65536    msg=    512 KB  G=32  P=16  grid=64 per_iter=    98.71 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=131072   msg=   1024 KB  G=32  P=16  per_iter=    90.85 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=131072   msg=   1024 KB  G=32  P=16  per_iter=    89.70 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=131072   msg=   1024 KB  G=32  P=16  per_iter=    89.58 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=32  P=16  grid=64 per_iter=   160.80 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=32  P=16  grid=64 per_iter=   151.57 us
+mode=branch-pk  nvshmem-dev d=131072   msg=   1024 KB  G=32  P=16  grid=64 per_iter=   156.80 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=524288   msg=   4096 KB  G=32  P=16  per_iter=   227.04 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=524288   msg=   4096 KB  G=32  P=16  per_iter=   227.04 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=524288   msg=   4096 KB  G=32  P=16  per_iter=   227.30 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=32  P=16  grid=64 per_iter=   494.12 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=32  P=16  grid=64 per_iter=   487.97 us
+mode=branch-pk  nvshmem-dev d=524288   msg=   4096 KB  G=32  P=16  grid=64 per_iter=   491.05 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   161.81 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   161.37 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   163.60 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   164.90 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   164.40 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   161.62 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   163.31 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   163.72 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   161.41 us
+mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   163.23 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   106.68 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   107.62 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   107.15 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   106.65 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   107.19 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   106.72 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   107.17 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   109.68 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   106.62 us
+mode=branch     nccl=2.28.3 d=8192     msg=     64 KB  G=8   P=4   per_iter=   107.75 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    31.90 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    31.89 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    31.98 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    31.99 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    32.04 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    33.74 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    33.94 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    32.76 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    37.32 us
+mode=branch-gr  nccl=2.28.3 graph_k=10  d=8192     msg=     64 KB  G=8   P=4   per_iter=    32.12 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    42.26 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    43.95 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    46.06 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.08 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    42.34 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    46.09 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    43.07 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    43.06 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.23 us
+mode=branch-pk  nvshmem-dev d=8192     msg=     64 KB  G=8   P=4   grid=32 per_iter=    44.10 us
