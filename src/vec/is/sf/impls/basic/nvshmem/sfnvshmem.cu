@@ -525,11 +525,11 @@ static PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf, PetscSFLink li
   PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
   PetscInt       ndstranks, nLocallyAccessible = 0;
   char          *src, *dst;
-  PetscInt      *srcdisp_h, *dstdisp_h;
+  PetscInt      *srcdisp_h, *dstdisp_h, *dstsigdisp_h;
   PetscInt      *srcdisp_d, *dstdisp_d;
   PetscMPIInt   *dstranks_h;
   PetscMPIInt   *dstranks_d;
-  uint64_t      *srcsig;
+  uint64_t      *srcsig, *dstsig;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkBuildDependenceBegin(sf, link, direction));
@@ -546,6 +546,9 @@ static PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf, PetscSFLink li
     dstdisp_d  = bas->leafbufdisp_d;
     dstranks_h = bas->iranks + bas->ndiranks; /* remote leaf ranks */
     dstranks_d = bas->iranks_d;
+
+    dstsig       = link->leafRecvSig; /* fused put+signal sets the receiver's RecvSig with the data */
+    dstsigdisp_h = bas->leafsigdisp;
   } else { /* put data in leafbuf to rootbuf */
     ndstranks = sf->nRemoteRootRanks;
     src       = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
@@ -559,6 +562,9 @@ static PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf, PetscSFLink li
     dstdisp_d  = sf->rootbufdisp_d;
     dstranks_h = sf->ranks + sf->ndranks; /* remote root ranks */
     dstranks_d = sf->ranks_d;
+
+    dstsig       = link->rootRecvSig;
+    dstsigdisp_h = sf->rootsigdisp;
   }
 
   /* Wait for signals and then put data to dst ranks using non-blocking nvshmem_put, which are finished in PetscSFLinkPutDataEnd_NVSHMEM */
@@ -582,26 +588,39 @@ static PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf, PetscSFLink li
       if (nvshmem_ptr(dst, pe)) { /* If return a non-null pointer, then <pe> is locally accessible */
         size_t nelems = (srcdisp_h[i + 1] - srcdisp_h[i]) * link->unitbytes;
         /* Initiate the nonblocking communication */
-        nvshmemx_putmem_nbi_on_stream(dst + dstdisp_h[i] * link->unitbytes, src + (srcdisp_h[i] - srcdisp_h[0]) * link->unitbytes, nelems, pe, link->remoteCommStream);
+        if (sf->use_nvshmem_putsig) {
+          /* Fused put+signal: the receiver's arrival signal is delivered after the data by API
+             contract, so no quiet is needed for ordering and PutDataEnd() need not signal
+             locally accessible PEs -- one less stream op, and the receiver unblocks at
+             data-arrival time instead of at the sender's PutDataEnd() */
+          nvshmemx_putmem_signal_nbi_on_stream(dst + dstdisp_h[i] * link->unitbytes, src + (srcdisp_h[i] - srcdisp_h[0]) * link->unitbytes, nelems, dstsig + dstsigdisp_h[i], 1, NVSHMEM_SIGNAL_SET, pe, link->remoteCommStream);
+        } else {
+          nvshmemx_putmem_nbi_on_stream(dst + dstdisp_h[i] * link->unitbytes, src + (srcdisp_h[i] - srcdisp_h[0]) * link->unitbytes, nelems, pe, link->remoteCommStream);
+        }
       }
     }
   }
 
-  if (nLocallyAccessible) nvshmemx_quiet_on_stream(link->remoteCommStream); /* Calling nvshmem_fence/quiet() does not fence the above nvshmemx_putmem_nbi_on_stream! */
+  if (nLocallyAccessible && !sf->use_nvshmem_putsig) nvshmemx_quiet_on_stream(link->remoteCommStream); /* Calling nvshmem_fence/quiet() does not fence the above nvshmemx_putmem_nbi_on_stream! */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* A one-thread kernel. The thread takes in charge all remote PEs */
-__global__ static void PutDataEnd(PetscInt nsrcranks, PetscInt ndstranks, PetscMPIInt *dstranks, uint64_t *dstsig, PetscInt *dstsigdisp)
+__global__ static void PutDataEnd(PetscInt nsrcranks, PetscInt ndstranks, PetscMPIInt *dstranks, uint64_t *dstsig, PetscInt *dstsigdisp, const char *dst, PetscBool putsig)
 {
   /* TODO: Shall we finished the non-blocking remote puts? */
 
-  /* 1. Send a signal to each dst rank */
+  /* 1. Send a signal to each dst rank.
 
-  /* According to Akhil@NVIDIA, IB is orderred, so no fence is needed for remote PEs.
-     For local PEs, we already called nvshmemx_quiet_on_stream(). Therefore, we are good to send signals to all dst ranks now.
+     According to Akhil@NVIDIA, IB is orderred, so no fence is needed for remote PEs.
+     With the fused put+signal protocol (putsig), locally accessible PEs already received
+     their signal with the data in PetscSFLinkPutDataBegin_NVSHMEM(), so signal only the
+     remotely accessible ones; without it, the earlier nvshmemx_quiet_on_stream() ordered
+     the local puts and we signal every dst rank here.
   */
-  for (int i = 0; i < ndstranks; i++) nvshmemx_signal_op(dstsig + dstsigdisp[i], 1, NVSHMEM_SIGNAL_SET, dstranks[i]); /* set sig to 1 */
+  for (int i = 0; i < ndstranks; i++) {
+    if (!putsig || !nvshmem_ptr(dst, dstranks[i])) nvshmemx_signal_op(dstsig + dstsigdisp[i], 1, NVSHMEM_SIGNAL_SET, dstranks[i]); /* set sig to 1 */
+  }
 
   /* 2. Wait for signals from src ranks (if any) */
   if (nsrcranks) {
@@ -617,6 +636,7 @@ static PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf, PetscSFLink link
   PetscMPIInt   *dstranks;
   uint64_t      *dstsig;
   PetscInt       nsrcranks, ndstranks, *dstsigdisp;
+  const char    *dst;
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) { /* put root data to leaf */
@@ -626,6 +646,7 @@ static PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf, PetscSFLink link
     dstranks   = bas->iranks_d;      /* leaf ranks */
     dstsig     = link->leafRecvSig;  /* I will set my leaf ranks's RecvSig */
     dstsigdisp = bas->leafsigdisp_d; /* for my i-th remote leaf rank, I will access its signal at offset leafsigdisp[i] */
+    dst        = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   } else {                           /* LEAF2ROOT */
     nsrcranks = bas->nRemoteLeafRanks;
 
@@ -633,10 +654,11 @@ static PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf, PetscSFLink link
     dstranks   = sf->ranks_d;
     dstsig     = link->rootRecvSig;
     dstsigdisp = sf->rootsigdisp_d;
+    dst        = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   }
 
   if (nsrcranks || ndstranks) {
-    PutDataEnd<<<1, 1, 0, link->remoteCommStream>>>(nsrcranks, ndstranks, dstranks, dstsig, dstsigdisp);
+    PutDataEnd<<<1, 1, 0, link->remoteCommStream>>>(nsrcranks, ndstranks, dstranks, dstsig, dstsigdisp, dst, sf->use_nvshmem_putsig);
     PetscCallCUDA(cudaGetLastError());
   }
   PetscCall(PetscSFLinkBuildDependenceEnd(sf, link, direction));

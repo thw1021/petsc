@@ -71,6 +71,12 @@ int main(int argc, char *argv[])
       args: -vec_type cuda
 
     test:
+      suffix: cuda_nvshmem
+      requires: cuda nvshmem
+      args: -vec_type cuda -use_nvshmem -use_nvshmem_putsig {{0 1}}
+      env: NVSHMEM_SYMMETRIC_SIZE=32M
+
+    test:
       suffix: hip
       requires: hip
       args: -vec_type hip

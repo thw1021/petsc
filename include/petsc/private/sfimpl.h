@@ -114,6 +114,7 @@ struct _p_PetscSF {
 #if defined(PETSC_HAVE_NVSHMEM)
   PetscBool use_nvshmem;                 /* TRY to use nvshmem on cuda devices with this SF when possible */
   PetscBool use_nvshmem_get;             /* If true, use nvshmem_get based protocol, otherwise, use nvshmem_put based protocol */
+  PetscBool use_nvshmem_putsig;          /* In the put protocol, fuse the data put and the arrival signal into one nvshmemx_putmem_signal_nbi_on_stream() for locally accessible PEs */
   PetscBool checked_nvshmem_eligibility; /* Have we checked eligibility of using NVSHMEM on this sf? */
   PetscBool setup_nvshmem;               /* Have we already set up NVSHMEM related fields below? These fields are built on-demand */
   PetscInt  leafbuflen_rmax;             /* max leafbuflen[REMOTE] over comm */
