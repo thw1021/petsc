@@ -247,9 +247,9 @@ PetscErrorCode PCGAMGSetGraphSymmetrize(PC pc, PetscBool b)
   relative to the largest block Frobenius norm in the same fine-node block row so the decision is invariant to the differing scales of the near-null space modes.
   The comparison is strict, so the strongest block of a fine node always survives. On coarser levels the threshold is scaled by `PCGAMGSetProlongatorFilterScale()`.
   Dropping whole blocks (rather than individual entries) keeps complete coarse-node blocks in every surviving fine row, so the near-null space correction below
-  remains full rank. The dropped entries are removed from the sparsity pattern with `MatEliminateZeros()`; on matrix types that do not support it (for example,
-  `MATAIJHIPSPARSE`) they are zeroed but remain in the pattern, so the coarse operators are unchanged in structure and the complexity and memory reduction is not
-  realized (reported with `-info`).
+  remains full rank. The dropped entries are removed from the sparsity pattern with `MatEliminateZeros()`; on matrix types that do not implement it, and on
+  HIPSPARSE where it is bypassed due to a known issue, they are zeroed but remain in the pattern, so the coarse operators are unchanged in structure and the
+  complexity and memory reduction is not realized (reported with `-info`).
 
   After filtering, each row of the prolongator is corrected so that the filtered prolongator still reproduces the near-null space exactly, that is, P applied to the coarse
   representation of the near-null space equals the fine near-null space. With a single near-null space vector each row is simply rescaled; with several, a small symmetric
@@ -1726,6 +1726,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
   const PetscReal *Bc_data = pc_gamg->data;
   Vec             *Bc_vecs, *B_vecs;
   PetscScalar     *Bc_arr;
+  PetscBool        no_off_proc;
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(pc, "Kernel-preserving filter of prolongator with threshold %g, nSAvec=%" PetscInt_FMT "\n", (double)threshold, nSAvec));
@@ -2054,8 +2055,12 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     if (comm_size > 1) PetscCall(PetscFree(Bc_ghosted));
   }
 
+  /* all insertions (none in the scalar branch) are in local rows; skip the off-process assembly communication */
+  PetscCall(MatGetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, &no_off_proc));
+  PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(Prol, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, no_off_proc));
 
   for (PetscInt k = 0; k < nSAvec; k++) {
     PetscCall(VecDestroy(&Bc_vecs[k]));
