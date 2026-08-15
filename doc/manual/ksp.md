@@ -1132,9 +1132,8 @@ constructor (or the `-mat_type` from the command line). For instance,
   >   reduce operator complexity and improve solve time with minimal impact on convergence. See `PCGAMGSetProlongatorFilter()`.
   > - `-pc_gamg_prolongator_filter_scale scale` Scale the prolongator filter threshold by `scale` on each successive coarser
   >   level; the threshold on level $l$ is `thr` times `scale` to the power $l$, with $l=0$ the finest level. A value below 1
-  >   filters less aggressively on the coarser levels, where the prolongator is denser; a value above 1 filters more
-  >   aggressively there, but the resulting threshold must remain below 1 on every level. The default is 1.
-  >   See `PCGAMGSetProlongatorFilterScale()`.
+  >   filters less aggressively on the coarser levels, where the prolongator is denser; values above 1 are not allowed. The
+  >   default is 1. See `PCGAMGSetProlongatorFilterScale()`.
 
 - Control the amount of parallelism on the levels
 

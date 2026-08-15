@@ -1494,7 +1494,7 @@ static PetscErrorCode PCGAMGASMSetHEM_GAMG(PC pc, PetscInt n)
 
   Input Parameters:
 + pc - the preconditioner context
-. v  - array of threshold values for finest `n` levels; 0.0 means keep all nonzero entries in the graph; negative means keep even zero entries in the graph
+. v  - array of threshold values for finest `n` levels; each value must be less than 1; 0.0 means drop only zero entries (keep all nonzero entries in the graph); negative means keep even zero entries in the graph
 - n  - number of threshold values provided in array
 
   Options Database Key:
@@ -1533,7 +1533,11 @@ static PetscErrorCode PCGAMGSetThreshold_GAMG(PC pc, PetscReal v[], PetscInt n)
   PetscInt i;
 
   PetscFunctionBegin;
-  for (i = 0; i < PetscMin(n, PETSC_MG_MAXLEVELS); i++) pc_gamg->threshold[i] = v[i];
+  for (i = 0; i < PetscMin(n, PETSC_MG_MAXLEVELS); i++) {
+    PetscCheck(v[i] < 1.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Threshold %g (entry %" PetscInt_FMT ") must be less than 1", (double)v[i], i);
+    pc_gamg->threshold[i] = v[i];
+  }
+  if (i == 0) i = 1; /* n == 0: keep threshold[0] and derive the coarser levels from it */
   for (; i < PETSC_MG_MAXLEVELS; i++) pc_gamg->threshold[i] = pc_gamg->threshold[i - 1] * pc_gamg->threshold_scale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1837,13 +1841,9 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   if (flag) PetscCall(PCGAMGSetThresholdScale(pc, tscale)); /* through the setter so the range is checked */
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscOptionsRealArray("-pc_gamg_threshold", "Relative threshold to use for dropping edges in aggregation graph", "PCGAMGSetThreshold", pc_gamg->threshold, &n, &flag));
-  if (!flag || n < PETSC_MG_MAXLEVELS) {
-    if (!flag) n = 1;
-    i = n;
-    do {
-      pc_gamg->threshold[i] = pc_gamg->threshold[i - 1] * pc_gamg->threshold_scale;
-    } while (++i < PETSC_MG_MAXLEVELS);
-  }
+  if (flag) PetscCall(PCGAMGSetThreshold(pc, pc_gamg->threshold, n)); /* through the setter so the range is checked */
+  else                                                                /* -pc_gamg_threshold_scale may have changed above; rederive the unspecified coarser levels */
+    for (i = 1; i < PETSC_MG_MAXLEVELS; i++) pc_gamg->threshold[i] = pc_gamg->threshold[i - 1] * pc_gamg->threshold_scale;
   PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels (should get from base class)", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
   PetscCheck(pc_gamg->Nlevels <= PETSC_MG_MAXLEVELS, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_mg_levels (%" PetscInt_FMT ") >= PETSC_MG_MAXLEVELS (%d)", pc_gamg->Nlevels, PETSC_MG_MAXLEVELS);
   n = PETSC_MG_MAXLEVELS;

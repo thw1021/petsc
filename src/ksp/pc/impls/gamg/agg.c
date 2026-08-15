@@ -297,7 +297,7 @@ PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
 
   Input Parameters:
 + pc    - the preconditioner context
-- scale - non-negative per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
+- scale - per-level multiplier in [0,1]; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
 
   Options Database Key:
 . -pc_gamg_prolongator_filter_scale scale - per-level scaling of the prolongator filter threshold (1.0=default)
@@ -305,9 +305,8 @@ PetscErrorCode PCGAMGGetProlongatorFilter(PC pc, PetscReal *thr)
   Level: intermediate
 
   Note:
-  A scale below 1 filters less aggressively on the coarser levels, where the prolongator is denser; a scale above 1 filters more aggressively there. The effective
-  threshold must remain below 1 on every level, otherwise `PCSetUp()` errors: at a threshold of 1 the filter keeps only the strongest block of each fine node and
-  above 1 it drops that block too, zeroing the prolongator.
+  A scale below 1 filters less aggressively on the coarser levels, where the prolongator is denser. Values above 1, which would make coarser levels filter more
+  aggressively than the finest, are not allowed. A scale of 0 disables filtering on all levels but the finest.
 
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetProlongatorFilter()`, `PCGAMGGetProlongatorFilterScale()`
 @*/
@@ -329,7 +328,7 @@ PetscErrorCode PCGAMGSetProlongatorFilterScale(PC pc, PetscReal scale)
 . pc - the preconditioner context
 
   Output Parameter:
-. scale - non-negative per-level multiplier; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
+. scale - per-level multiplier in [0,1]; the effective threshold on level l is `prolongator_filter` times `scale` raised to the power l, where level 0 is the finest
 
   Level: intermediate
 
@@ -417,6 +416,7 @@ static PetscErrorCode PCGAMGSetProlongatorFilter_AGG(PC pc, PetscReal thr)
 
   PetscFunctionBegin;
   PetscCheck(thr >= 0.0 && thr < 1.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Relative prolongator filter threshold %g must be in [0,1)", (double)thr);
+  if (thr > 0.2) PetscCall(PetscInfo(pc, "Warning: prolongator filter threshold %g is unusually large; typical values are 0.01 to 0.1\n", (double)thr));
   pc_gamg->prolongator_filter = thr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -437,9 +437,7 @@ static PetscErrorCode PCGAMGSetProlongatorFilterScale_AGG(PC pc, PetscReal scale
   PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
-  /* only the sign is checked here; the effective per-level threshold thr*scale^level is bounded in
-     PCGAMGProlongator_AGG(), where the level is known */
-  PetscCheck(scale >= 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Prolongator filter scale %g must be non-negative", (double)scale);
+  PetscCheck(scale >= 0.0 && scale <= 1.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Prolongator filter scale %g must be in [0,1]", (double)scale);
   pc_gamg->prolongator_filter_scale = scale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1702,17 +1700,20 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
 
   /* Compress out the explicit zeros just set, so the filter actually sparsifies. keep must be
      PETSC_FALSE: with keep, a zero whose local column index equals its local row index survives (an
-     index-based diagonal test that is meaningless for the rectangular Prol). MatEliminateZeros() has
-     a known issue with HIPSPARSE (see the bypass in MatFilter()), so there the zeros are left in the
-     sparsity pattern; the step-3 correction in PCGAMGKernelPreservingFilter_AGG() skips exactly-zero
-     entries, so a dropped block stays dropped either way, it just still costs storage here. */
+     index-based diagonal test that is meaningless for the rectangular Prol). The compression is done
+     in place, deliberately: a MatDuplicate()/MatHeaderReplace() copy as in MatFilter() would return
+     the freed CSR tail to the allocator, at the cost of a peak-memory spike. MatEliminateZeros() has
+     a known issue with HIPSPARSE (see the bypass in MatFilter()) and is not implemented by all matrix
+     types; in those cases the zeros are left in the sparsity pattern; the step-3 correction in
+     PCGAMGKernelPreservingFilter_AGG() skips exactly-zero entries, so a dropped block stays dropped
+     either way, it just still costs storage here. */
   PetscCall(PetscObjectTypeCompareAny((PetscObject)Prol, &ishipsparse, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
-  if (!ishipsparse) PetscCall(MatEliminateZeros(Prol, PETSC_FALSE));
+  if (!ishipsparse && Prol->ops->eliminatezeros) PetscCall(MatEliminateZeros(Prol, PETSC_FALSE));
   else PetscCall(PetscInfo(pc, "PCGAMGProlongatorBlockFilter_AGG: skipping zero elimination for %s; filtered entries are zeroed but not removed\n", ((PetscObject)Prol)->type_name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Restore the near-null space constraint P*B_c = B after filtering; see the PCGAMGSetProlongatorFilter() manual page
+// Filter the prolongator by fine-node/coarse-node coupling blocks, then restore the near-null space constraint P*B_c = B; see the PCGAMGSetProlongatorFilter() manual page
 static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscReal threshold)
 {
   PC_MG           *mg      = (PC_MG *)pc->data;
@@ -2182,11 +2183,6 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
     }
     PetscCall(VecDestroy(&diag));
   }
-  /* PCGAMGSetProlongatorFilter() bounds the base threshold but the per-level scale has no upper bound, so
-     the effective threshold is checked here, where the level is known. The block test is strict, so at a
-     threshold of 1 only the strongest block of each fine node survives and above 1 nothing does */
-  PetscCheck(pfilter < 1.0, comm, PETSC_ERR_ARG_OUTOFRANGE, "Effective prolongator filter threshold %g on level %" PetscInt_FMT " (base %g, scale %g^%" PetscInt_FMT ") must be less than 1; reduce -pc_gamg_prolongator_filter_scale", (double)pfilter,
-             pc_gamg->current_level, (double)pc_gamg->prolongator_filter, (double)pc_gamg->prolongator_filter_scale, pc_gamg->current_level);
   /* a per-level threshold of 0 (from prolongator_filter_scale == 0 on the coarser levels) drops
      nothing, so skip the whole filter rather than pay for its passes and per-row solves */
   if (pfilter > 0.0) {
