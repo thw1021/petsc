@@ -1,5 +1,9 @@
 ### 4. Read and review the diff
-- Fetch with `glab api "projects/:id/merge_requests/<MR_IID>/changes" | jq '.changes |= map(select(.new_path | endswith(".out") | not))'` to drop `.out` files (test reference output, not code). Or read a local diff file and skip `.out` hunks.
+- Build a text diff file, then Read it (page with offset/limit if large):
+  - `glab api "projects/:id/merge_requests/<MR_IID>/changes?access_raw_diffs=true" > mr-<MR_IID>-changes.json`
+  - `jq -r '.changes[] | select(.new_path | endswith(".out") | not) | "=== " + .old_path + " -> " + .new_path + "\n" + .diff' mr-<MR_IID>-changes.json > mr-<MR_IID>-diff.txt`
+  - If `jq '.overflow' mr-<MR_IID>-changes.json` is `true`, GitLab truncated the diff; report it.
+- Local-branch review: Read the existing `branch-review.diff` (page if large).
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
