@@ -1,5 +1,8 @@
 ### 4. Read and review the diff
-- Fetch with `glab api "projects/:id/merge_requests/<MR_IID>/changes" | jq '.changes |= map(select(.new_path | endswith(".out") | not))'` to drop `.out` files (test reference output, not code). Or read a local diff file and skip `.out` hunks.
+- Fetch to files, then Read the `-diff.json`:
+  - `glab api "projects/:id/merge_requests/<MR_IID>/changes" > mr-<MR_IID>-changes.json`
+  - `jq '.changes |= map(select(.new_path | endswith(".out") | not))' mr-<MR_IID>-changes.json > mr-<MR_IID>-diff.json` — drops `.out`.
+- Local-branch review: the diff file already exists (review-branch); Read it.
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
