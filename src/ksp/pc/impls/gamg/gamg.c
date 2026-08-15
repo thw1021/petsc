@@ -1888,8 +1888,8 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
                                                equations on each process that has degrees of freedom
 . -pc_gamg_coarse_eq_limit limit             - set maximum number of equations on coarsest grid to aim for
 . -pc_gamg_reuse_interpolation (true|false)  - when rebuilding the algebraic multigrid preconditioner reuse the previously computed interpolations (should always be true)
-. -pc_gamg_threshold l0,l1,...               - before aggregating the graph `PCGAMG` will remove small values from the graph on each level (< 0 does no filtering)
-- -pc_gamg_threshold_scale scale             - scaling of threshold on each coarser grid if not specified
+. -pc_gamg_threshold l0,l1,...               - before aggregating the graph `PCGAMG` will remove small values from the graph on each level; each value must be less than 1, 0 drops only zero entries, and a negative value keeps even zero entries
+- -pc_gamg_threshold_scale scale             - scaling of threshold, in [0,1], on each coarser grid if not specified
 
   Options Database Keys for Aggregation:
 + -pc_gamg_agg_nsmooths nsmooth                       - number of smoothing steps to use with smooth aggregation to construct prolongation

@@ -1726,7 +1726,6 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
   const PetscReal *Bc_data = pc_gamg->data;
   Vec             *Bc_vecs, *B_vecs;
   PetscScalar     *Bc_arr;
-  PetscBool        no_off_proc;
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(pc, "Kernel-preserving filter of prolongator with threshold %g, nSAvec=%" PetscInt_FMT "\n", (double)threshold, nSAvec));
@@ -1821,6 +1820,7 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
     PetscMPIInt      comm_size;
     PetscHMapI       ghost_gid_to_lid; /* global ghost col index -> local ghost index (0-based) */
     PetscInt         num_ghosts = 0;
+    PetscBool        no_off_proc;
 
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)Prol), &comm_size));
     if (comm_size > 1) {
@@ -2053,14 +2053,15 @@ static PetscErrorCode PCGAMGKernelPreservingFilter_AGG(PC pc, Mat Prol, PetscRea
 
     PetscCall(PetscHMapIDestroy(&ghost_gid_to_lid));
     if (comm_size > 1) PetscCall(PetscFree(Bc_ghosted));
-  }
 
-  /* all insertions (none in the scalar branch) are in local rows; skip the off-process assembly communication */
-  PetscCall(MatGetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, &no_off_proc));
-  PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
-  PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(Prol, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, no_off_proc));
+    /* all insertions are in local rows; skip the off-process assembly communication. The scalar
+       branch needs no assembly at all: MatDiagonalScale() requires and preserves assembly */
+    PetscCall(MatGetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, &no_off_proc));
+    PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+    PetscCall(MatAssemblyBegin(Prol, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Prol, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatSetOption(Prol, MAT_NO_OFF_PROC_ENTRIES, no_off_proc));
+  }
 
   for (PetscInt k = 0; k < nSAvec; k++) {
     PetscCall(VecDestroy(&Bc_vecs[k]));
