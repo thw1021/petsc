@@ -1,5 +1,10 @@
 ### 4. Read and review the diff
-- Fetch with `glab api "projects/:id/merge_requests/<MR_IID>/changes" | jq '.changes |= map(select(.new_path | endswith(".out") | not))'` to drop `.out` files (test reference output, not code). Or read a local diff file and skip `.out` hunks.
+- MR review: build a text diff file:
+  - `glab api "projects/:id/merge_requests/<MR_IID>/changes?access_raw_diffs=true" > mr-<MR_IID>-changes.json`
+  - `jq -r '.changes[] | "=== " + (if .new_file then "new " elif .deleted_file then "deleted " elif .renamed_file then "renamed " else "" end) + .old_path + " -> " + .new_path + (if (.new_path | endswith(".out")) then " [.out reference; body omitted]" elif (.collapsed or .too_large) then "\n(diff withheld by GitLab)" elif (.a_mode != .b_mode and .a_mode != "0" and .b_mode != "0") then "\n(mode " + .a_mode + " -> " + .b_mode + (if ((.diff // "") == "") then ", no content change)" else ")\n" + .diff end) elif ((.diff // "") == "") then "\n(binary or no textual change)" else "\n" + .diff end)' mr-<MR_IID>-changes.json > mr-<MR_IID>-diff.txt`
+  - Stop and report unless both hold: `jq -e '(.changes|length)>0 and .overflow==false and ([.changes[]|select((.new_path|endswith(".out")|not) and ((.collapsed or .too_large) or (((.diff // "")=="") and .a_mode==.b_mode and (.new_path|test("\\.(c|h|cxx|cpp|hpp|cu|py|F90|f90|sh|md|yml|yaml|rst|tex)$")))))]|length)==0' mr-<MR_IID>-changes.json` (no source file withheld or silently empty), and `grep -c '^=== ' mr-<MR_IID>-diff.txt` equals `jq '.changes|length' mr-<MR_IID>-changes.json`.
+- Local-branch review: use the existing `branch-review.txt`.
+- `wc -l` the diff file and review through to that last line, in parts if needed.
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
