@@ -22,7 +22,7 @@ Only post findings that have a **concrete, actionable fix** (a code change the a
 Each posted comment opens a discussion thread the author must resolve — avoid noise.
 
 ## 9. Post inline comments as DiffNotes
-Use the GitLab Discussions API with JSON input to create inline DiffNote comments.
+Use the GitLab Discussions API with JSON input to create inline DiffNote comments. `<BASE_SHA>`/`<HEAD_SHA>`/`<START_SHA>` are the `diff_refs` recorded in @../review-mr/identify.md Section 2.
 
 **IMPORTANT:** Use `--input -` with `-H "Content-Type: application/json"` — the `-f` flag with bracket notation does NOT work for nested `position` fields.
 
