@@ -8,8 +8,7 @@ Run each command as a separate Bash call with no shell metacharacters (no `$(...
 If `glab mr list` returns 0 MRs, stop and report. If >1, ask which IID.
 
 ### 2. Get MR metadata
-1. `glab api "projects/:id/merge_requests/<MR_IID>"` — record `sha` as `<MR_HEAD_SHA>` and `source_branch`.
-2. `glab api "projects/:id/merge_requests/<MR_IID>/changes"` — diff payload.
+1. `glab api "projects/:id/merge_requests/<MR_IID>"` — record `sha` as `<MR_HEAD_SHA>`, `source_branch`, and `diff_refs` (`base_sha`, `head_sha`, `start_sha`). The diff is fetched in @review-procedure.md Section 4.
 
 ### 3. Drift check
 `<source_branch>` comes from the GitLab API and is trusted (GitLab validates branch names; PETSc convention narrows further).
