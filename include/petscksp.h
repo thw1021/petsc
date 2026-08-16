@@ -653,6 +653,10 @@ PETSC_EXTERN PetscErrorCode KSPSetDiagonalScale(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetDiagonalScale(KSP, PetscBool *);
 PETSC_EXTERN PetscErrorCode KSPSetDiagonalScaleFix(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetDiagonalScaleFix(KSP, PetscBool *);
+PETSC_EXTERN PetscErrorCode KSPSetLeftDiagonalScale(KSP, Vec);
+PETSC_EXTERN PetscErrorCode KSPGetLeftDiagonalScale(KSP, Vec *);
+PETSC_EXTERN PetscErrorCode KSPSetRightDiagonalScale(KSP, Vec);
+PETSC_EXTERN PetscErrorCode KSPGetRightDiagonalScale(KSP, Vec *);
 
 /*S
   KSPConvergedReasonViewFn - A prototype of a function used with `KSPConvergedReasonViewSet()`
