@@ -945,12 +945,12 @@ static PetscBool PetscCIOption(const char *name)
 - viewer  - must be an `PETSCVIEWERASCII` viewer
 
   Options Database Key:
-. -options_view - Activates `PetscOptionsView()` within `PetscFinalize()`
+. -options_view (true|false) - Activates `PetscOptionsView()` within `PetscFinalize()`.
 
   Level: advanced
 
   Note:
-  Only the MPI rank 0 of the `MPI_Comm` used to create view prints the option values. Other processes
+  Only the MPI rank 0 of the `MPI_Comm` used to create `viewer` displays the option values. Other processes
   may have different values but they are not printed.
 
 .seealso: `PetscOptionsAllUsed()`
@@ -3370,24 +3370,25 @@ PetscErrorCode PetscOptionsGetStringArray(PetscOptions options, const char pre[]
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems PetscOptionsObject, const char oldname[], const char newname[], const char version[], const char info[])
+PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems PetscOptionsObject, const char inprefix[], const char oldname[], const char newname[], const char version[], const char info[])
 {
   PetscBool         found, quiet;
   const char       *value;
   const char *const quietopt = "-options_suppress_deprecated_warnings";
   char              msg[4096];
-  char             *prefix  = NULL;
+  const char       *prefix  = NULL;
   PetscOptions      options = NULL;
   MPI_Comm          comm    = PETSC_COMM_SELF;
 
   PetscFunctionBegin;
-  PetscAssertPointer(oldname, 2);
-  PetscAssertPointer(version, 4);
+  PetscAssertPointer(oldname, 3);
+  PetscAssertPointer(version, 5);
   if (PetscOptionsObject) {
     prefix  = PetscOptionsObject->prefix;
     options = PetscOptionsObject->options;
     comm    = PetscOptionsObject->comm;
-  }
+  } else prefix = inprefix;
+
   PetscCall(PetscOptionsFindPair(options, prefix, oldname, &value, &found));
   if (found) {
     if (newname) {
@@ -3400,7 +3401,19 @@ PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems PetscOptionsObjec
         PetscCall(PetscOptionsSetValue(options, newname, value));
         if (prefix) PetscCall(PetscOptionsPrefixPop(options));
       }
-      PetscCall(PetscOptionsClearValue(options, oldname));
+      if (prefix) {
+        size_t l1, l2;
+        char  *prefixoldname;
+
+        PetscCall(PetscStrlen(prefix, &l1));
+        PetscCall(PetscStrlen(oldname, &l2));
+        PetscCall(PetscMalloc(1 + l1 + l2, &prefixoldname));
+        PetscCall(PetscStrncpy(prefixoldname, "-", l1 + l2 + 1));
+        PetscCall(PetscStrlcat(prefixoldname, prefix, l1 + l2 + 1));
+        PetscCall(PetscStrlcat(prefixoldname, oldname + 1, l1 + l2 + 1));
+        PetscCall(PetscOptionsClearValue(options, prefixoldname));
+        PetscCall(PetscFree(prefixoldname));
+      } else PetscCall(PetscOptionsClearValue(options, oldname));
     }
     quiet = PETSC_FALSE;
     PetscCall(PetscOptionsGetBool(options, NULL, quietopt, &quiet, NULL));
