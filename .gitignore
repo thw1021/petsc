@@ -193,3 +193,8 @@ configtest.mod
 *gcovr-report.json
 arch-*/gcovr/*
 *-arch/gcovr/*
+ai-review.*
+branch-review.txt
+mr-*-changes.json
+mr-*-meta.json
+mr-*-diff.txt

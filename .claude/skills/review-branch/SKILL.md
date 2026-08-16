@@ -16,6 +16,13 @@ MB=$(git merge-base origin/main <SRC>) && git merge-base --is-ancestor "$MB" ori
 
 If `origin/main` doesn't resolve (`git rev-parse --verify -q origin/main` exits non-zero), first run `git fetch -q --no-tags origin +release:refs/remotes/origin/release +main:refs/remotes/origin/main`, then retry. Any other failure: abort and report — do not guess `DEST`.
 
-State `DEST`, then run `git diff --stat <DEST>...<SRC> -- ':(exclude)*.out'` to size the change, and `git diff <DEST>...<SRC> -- ':(exclude)*.out'` to capture it (it is included in the tool output; page through it if large) — do **not** re-run `git diff` per file; the captured diff already contains every file. Any options (e.g. `--stat`) must precede the revision args, not follow the pathspec.
+State `DEST`, then size with `git diff --shortstat <DEST>...<SRC> -- ':(exclude)*.out'`. Build `branch-review.txt`:
+
+- `git diff --name-status <DEST>...<SRC> -- ':(exclude)*.out' > branch-review.txt`
+- `git diff --name-status <DEST>...<SRC> -- '*.out' >> branch-review.txt`
+- `git diff <DEST>...<SRC> -- ':(exclude)*.out' >> branch-review.txt`
+- Stop and report if the file is empty, or if `grep -c '^diff --git' branch-review.txt` does not equal `awk -F'\t' '/^[A-Z][0-9]*\t/ && $NF !~ /\.out"?$/ {n++} END {print n+0}' branch-review.txt`.
+
+Read it in full. Do **not** re-run `git diff` per file. Options (e.g. `--shortstat`) must precede the revision args, not follow the pathspec.
 
 Then follow @../review-mr/review-procedure.md (Sections 4–6) to classify, verify, and report findings. Report to stdout only — skip Section 7; do not write `ai-review.html`.
