@@ -484,9 +484,9 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   PetscCall(PetscOptionsBool("-pc_gamg_graph_symmetrize", "Symmetrize graph for coarsening", "PCGAMGSetGraphSymmetrize", pc_gamg_agg->graph_symmetrize, &pc_gamg_agg->graph_symmetrize, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter", "Relative Frobenius-norm threshold for block filtering of the prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", thr, &thr, &flg));
+  PetscCall(PetscOptionsBoundedReal("-pc_gamg_prolongator_filter", "Relative Frobenius-norm threshold for block filtering of the prolongator (0=disabled)", "PCGAMGSetProlongatorFilter", thr, &thr, &flg, 0.0));
   if (flg) PetscCall(PCGAMGSetProlongatorFilter(pc, thr));
-  PetscCall(PetscOptionsReal("-pc_gamg_prolongator_filter_scale", "Per-level scaling of the prolongator filter threshold", "PCGAMGSetProlongatorFilterScale", scale, &scale, &flg));
+  PetscCall(PetscOptionsRangeReal("-pc_gamg_prolongator_filter_scale", "Per-level scaling of the prolongator filter threshold", "PCGAMGSetProlongatorFilterScale", scale, &scale, &flg, 0.0, 1.0));
   if (flg) PetscCall(PCGAMGSetProlongatorFilterScale(pc, scale));
 
   PetscOptionsHeadEnd();

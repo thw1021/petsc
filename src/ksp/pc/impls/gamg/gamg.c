@@ -1839,8 +1839,8 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   PetscCall(PetscOptionsInt("-pc_gamg_process_eq_limit", "Limit (goal) on number of equations per process on coarse grids", "PCGAMGSetProcEqLim", pc_gamg->min_eq_proc, &pc_gamg->min_eq_proc, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_coarse_eq_limit", "Limit on number of equations for the coarse grid", "PCGAMGSetCoarseEqLim", pc_gamg->coarse_eq_limit, &pc_gamg->coarse_eq_limit, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_asm_hem_aggs", "Number of HEM matching passed in aggregates for ASM smoother", "PCGAMGASMSetHEM", pc_gamg->asm_hem_aggs, &pc_gamg->asm_hem_aggs, NULL));
-  PetscCall(PetscOptionsReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", tscale, &tscale, &flag));
-  if (flag) PetscCall(PCGAMGSetThresholdScale(pc, tscale)); /* through the setter so the range is checked */
+  PetscCall(PetscOptionsRangeReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", tscale, &tscale, &flag, 0.0, 1.0));
+  if (flag) PetscCall(PCGAMGSetThresholdScale(pc, tscale));
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscArraycpy(tarr, pc_gamg->threshold, PETSC_MG_MAXLEVELS));
   PetscCall(PetscOptionsRealArray("-pc_gamg_threshold", "Relative threshold to use for dropping edges in aggregation graph", "PCGAMGSetThreshold", tarr, &n, &flag));
