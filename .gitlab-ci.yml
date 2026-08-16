@@ -356,8 +356,12 @@ pause-for-approval:
     auto_stop_in: one week
     deployment_tier: development
   artifacts:
+    when: always
     paths:
       - ai-review.*
+      - mr-*-raw.diff
+      - mr-*-meta.json
+      - mr-*-diff.txt
     expire_in: one week
 
 ai-review:
