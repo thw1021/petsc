@@ -1,6 +1,7 @@
-Run each command as a separate Bash call with no shell metacharacters (no `$(...)`, pipes, `;`, `&&`/`||`, redirections, here-docs).
+Run each command in this file as a separate shell command with no shell metacharacters (no `$(...)`, pipes, `;`, `&&`/`||`, redirections, here-docs).
 
 ### 1. Identify the MR — resolve `<MR_IID>`
+Reject any `<MR_IID>` that isn't `^[0-9]+$`.
 - Number given (e.g. `8786`) → use it.
 - Diff file given → ask user for source branch, then `glab mr list --source-branch <branch>`.
 - Nothing given → `git branch --show-current` (if empty, ask); then `glab mr list --source-branch <branch>`.
@@ -8,8 +9,7 @@ Run each command as a separate Bash call with no shell metacharacters (no `$(...
 If `glab mr list` returns 0 MRs, stop and report. If >1, ask which IID.
 
 ### 2. Get MR metadata
-1. `glab api "projects/:id/merge_requests/<MR_IID>"` — record `sha` as `<MR_HEAD_SHA>` and `source_branch`.
-2. `glab api "projects/:id/merge_requests/<MR_IID>/changes"` — diff payload.
+1. `glab api "projects/:id/merge_requests/<MR_IID>"` — record `sha` as `<MR_HEAD_SHA>`, `source_branch`, and `diff_refs` (`base_sha`, `head_sha`, `start_sha`). The diff is fetched in @review-procedure.md Section 4.
 
 ### 3. Drift check
 `<source_branch>` comes from the GitLab API and is trusted (GitLab validates branch names; PETSc convention narrows further).
