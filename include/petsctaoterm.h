@@ -228,11 +228,30 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec 
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianMultFn)(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv);
 
+/*S
+  TaoTermProximalMapFn - A prototype of a `TaoTerm` function that implements `TaoTermProximalMap()`
+
+  Calling Sequence:
++ term  - the term $f$
+. p     - parameters for $f$ (may be `NULL`, see `TaoTermGetParametersMode()`)
+. alpha - scale for $f$
+. reg   - (optional) regularization term $g$; `NULL` means `TAOTERMHALFL2SQUARED`
+. q     - parameters for $g$ (may be `NULL`, see `TaoTermGetParametersMode()`)
+. beta  - positive scale for $g$
+- x     - output, the minimizer of $\alpha f(x;p) + \beta g(x;q)$
+
+  Level: developer
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermProximalMap()`, `TAOTERMHALFL2SQUARED`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermProximalMapFn)(TaoTerm term, Vec p, PetscReal alpha, TaoTerm reg, Vec q, PetscReal beta, Vec x);
+
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjective(TaoTerm, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessian(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, PetscCtx, PetscCtxDestroyFn *, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, PetscCtx);

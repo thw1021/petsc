@@ -639,6 +639,66 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 }
 
 /*@
+  TaoTermProximalMap - Compute a proximal map for a `TaoTerm`.
+
+  Collective
+
+  Input Parameters:
++ term  - the term $f$
+. p     - parameters for $f$ (may be `NULL`, see `TaoTermGetParametersMode()`)
+. alpha - scale for $f$
+. reg   - (optional) regularization term $g$; `NULL` means `TAOTERMHALFL2SQUARED`
+. q     - parameters for $g$ (may be `NULL`, see `TaoTermGetParametersMode()`)
+- beta  - positive scale for $g$
+
+  Output Parameter:
+. x - minimizer of $\alpha f(x;p) + \beta g(x;q)$; may be the same vector as `p`, `q`, or both
+
+  Level: intermediate
+
+  Notes:
+  The result is the same as if the values of `p` and `q` on entry were used with a distinct output vector.
+  Thus, if `x` is the same vector as `p`, `q`, or both, the implementation preserves any input values
+  needed after writing to `x`. The vectors `p` and `q` may also be the same vector.
+  An input vector that is not the same vector as `x` is not modified. The parameter requirements of
+  `term` are enforced even if `alpha` is zero. If `reg` is not
+  `NULL`, its parameter requirements are enforced for `q`. If `reg` is `NULL`, `q` is optional;
+  `q == NULL` selects the zero-centered `TAOTERMHALFL2SQUARED`.
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeObjective()`, `TAOTERMHALFL2SQUARED`
+@*/
+PetscErrorCode TaoTermProximalMap(TaoTerm term, Vec p, PetscReal alpha, TaoTerm reg, Vec q, PetscReal beta, Vec x)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(term->parameters_mode != TAOTERM_PARAMETERS_NONE || p == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Parameters passed to a TaoTerm with TAOTERM_PARAMETERS_NONE");
+  PetscCheck(term->parameters_mode != TAOTERM_PARAMETERS_REQUIRED || p, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Parameters required but not provided for a TaoTerm with TAOTERM_PARAMETERS_REQUIRED");
+  if (p) {
+    PetscValidHeaderSpecific(p, VEC_CLASSID, 2);
+    PetscCheckSameComm(term, 1, p, 2);
+  }
+  PetscValidLogicalCollectiveReal(term, alpha, 3);
+  PetscCheck(alpha >= 0.0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Term scale must be nonnegative");
+  if (reg) {
+    PetscValidHeaderSpecific(reg, TAOTERM_CLASSID, 4);
+    PetscCheckSameComm(term, 1, reg, 4);
+    PetscCheck(reg->parameters_mode != TAOTERM_PARAMETERS_NONE || q == NULL, PetscObjectComm((PetscObject)reg), PETSC_ERR_ARG_WRONG, "Parameters passed to a TaoTerm with TAOTERM_PARAMETERS_NONE");
+    PetscCheck(reg->parameters_mode != TAOTERM_PARAMETERS_REQUIRED || q, PetscObjectComm((PetscObject)reg), PETSC_ERR_ARG_WRONG, "Parameters required but not provided for a TaoTerm with TAOTERM_PARAMETERS_REQUIRED");
+  }
+  if (q) {
+    PetscValidHeaderSpecific(q, VEC_CLASSID, 5);
+    PetscCheckSameComm(term, 1, q, 5);
+  }
+  PetscValidLogicalCollectiveReal(term, beta, 6);
+  PetscCheck(beta > 0.0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Regularizer scale must be positive");
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 7);
+  PetscCheckSameComm(term, 1, x, 7);
+  PetscCheck(term->ops->proximalmap, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TaoTerm type %s does not implement a proximal map", ((PetscObject)term)->type_name);
+  PetscUseTypeMethod(term, proximalmap, p, alpha, reg, q, beta, x);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoTermComputeHessian - Evaluate the Hessian of a `TaoTerm`
   (with respect to the solution variables) for a given solution vector and parameter vector
 
