@@ -308,6 +308,7 @@ struct _p_TaoTerm {
   PetscInt nhess;     // actual Hessian callback invocations
   PetscInt nhessmult; // actual Hessian-mult callback invocations
 
+  PetscReal lipschitz;
   PetscReal fd_delta;    // for TaoTermComputeGradientFD()
   PetscBool fd_gradient; // use finite differences for the gradient
   PetscBool fd_hessian;  // use finite differences for the Hessian

@@ -1,0 +1,58 @@
+Tao Object: 1 MPI process
+  type: fb
+    Backtracking linesearch scaling parameter: xi=1.
+    Using Nesterov-type acceleration
+      f Term:
+      TaoTerm Object: 1 MPI process
+        type: shell
+        solution vector space: N = 20
+        Context has been set
+        The following methods have been set: objectiveandgradient,
+        total number of function/gradient evaluations=3006
+      g Term:
+      TaoTerm Object: 1 MPI process
+        type: l1
+        solution vector space: N = 20
+        parameter vector space: (optional) K = 20
+        epsilon (tao_term_l1_epsilon): 0.
+        total number of function evaluations=1001
+      Regularizer Term:
+      TaoTerm Object: 1 MPI process
+        type: halfl2squared
+        solution vector space: N = 20
+        parameter vector space: (optional) K = 20
+  Objective function:
+    TaoTerm Object: 1 MPI process
+      type: sum
+      solution vector space: N = 20
+      parameter vector space: (optional) K = 20
+      Sum of 2 terms: 10. f_0(x; [p_0]) + f_1(x)
+      f_0:
+        TaoTerm Object: 1 MPI process
+          type: l1
+          solution vector space: N = 20
+          parameter vector space: (optional) K = 20
+          epsilon (tao_term_l1_epsilon): 0.
+          total number of function evaluations=1001
+      f_1:
+        TaoTerm Object: 1 MPI process
+          type: shell
+          solution vector space: N = 20
+          Context has been set
+          The following methods have been set: objectiveandgradient,
+          total number of function/gradient evaluations=3006
+  TaoLineSearch Object: 1 MPI process
+    type: ps
+      PS linesearch    eta=0.5     memsize=1
+    maximum function evaluations=30
+    tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+    total number of function evaluations=0
+    total number of gradient evaluations=0
+    total number of function/gradient evaluations=0
+    Termination reason: SUCCESS
+  convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=1e-08
+  Residual in Function/Gradient:=3.80604
+  Objective value=17.5479
+  total number of iterations=1001,                          (max: 1000)
+  Solver failed:    Maximum Iterations
+relative reconstruction error: ||x-xGT||/||xGT|| = 3.7388e+00.

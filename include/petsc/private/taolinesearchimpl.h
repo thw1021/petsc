@@ -16,6 +16,10 @@ struct _TaoLineSearchOps {
   PetscErrorCode (*reset)(TaoLineSearch);
   PetscErrorCode (*destroy)(TaoLineSearch);
   PetscErrorCode (*monitor)(TaoLineSearch);
+  PetscErrorCode (*preapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*update)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postupdate)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
 };
 
 struct _p_TaoLineSearch {
@@ -54,6 +58,7 @@ struct _p_TaoLineSearch {
   PetscInt                     nfeval;
   PetscInt                     ngeval;
   PetscInt                     nfgeval;
+  PetscInt                     nproxeval;
   TaoLineSearchConvergedReason reason;
 
   PetscReal rtol;    /* relative tol for acceptable step (rtol>0) */

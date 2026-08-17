@@ -307,9 +307,10 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
   ls->stepdirection = s;
 
   PetscCall(TaoLineSearchSetUp(ls));
-  ls->nfeval  = 0;
-  ls->ngeval  = 0;
-  ls->nfgeval = 0;
+  ls->nfeval    = 0;
+  ls->ngeval    = 0;
+  ls->nfgeval   = 0;
+  ls->nproxeval = 0;
   /* Check parameter values */
   if (ls->ftol < 0.0) {
     PetscCall(PetscInfo(ls, "Bad Line Search Parameter: ftol (%g) < 0\n", (double)ls->ftol));
@@ -402,6 +403,10 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
   ls->ops->view           = NULL;
   ls->ops->setfromoptions = NULL;
   ls->ops->destroy        = NULL;
+  ls->ops->preapply       = NULL;
+  ls->ops->postapply      = NULL;
+  ls->ops->update         = NULL;
+  ls->ops->postupdate     = NULL;
   ls->setupcalled         = PETSC_FALSE;
   PetscCall((*r)(ls));
   PetscCall(PetscObjectChangeTypeName((PetscObject)ls, type));
@@ -565,6 +570,30 @@ PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch ls, Petsc
   *nfeval  = ls->nfeval;
   *ngeval  = ls->ngeval;
   *nfgeval = ls->nfgeval;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoLineSearchGetNumberProximalEvaluations - Gets the number of proximal-map evaluations
+
+  Not Collective
+
+  Input Parameter:
+. ls - the `TaoLineSearch` context
+
+  Output Parameter:
+. nproxeval - number of proximal-map evaluations
+
+  Level: intermediate
+
+.seealso: `TaoLineSearch`, `TaoLineSearchGetNumberFunctionEvaluations()`
+@*/
+PetscErrorCode TaoLineSearchGetNumberProximalEvaluations(TaoLineSearch ls, PetscInt *nproxeval)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(nproxeval, 2);
+  *nproxeval = ls->nproxeval;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

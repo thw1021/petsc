@@ -254,6 +254,8 @@ PETSC_EXTERN PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm, Vec, Vec
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessian(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermSetLipschitz(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermGetLipschitz(TaoTerm, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, PetscCtx, PetscCtxDestroyFn *, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, PetscCtx);

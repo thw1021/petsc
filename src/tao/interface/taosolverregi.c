@@ -1,5 +1,7 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 
+PETSC_EXTERN PetscErrorCode TaoCreate_FB(Tao);
+
 PETSC_EXTERN PetscErrorCode TaoCreate_LMVM(Tao);
 PETSC_EXTERN PetscErrorCode TaoCreate_NLS(Tao);
 PETSC_EXTERN PetscErrorCode TaoCreate_NTR(Tao);
@@ -111,6 +113,7 @@ PetscErrorCode TaoRegisterAll(void)
   PetscCall(TaoRegister(TAOADMM, TaoCreate_ADMM));
   PetscCall(TaoRegister(TAOALMM, TaoCreate_ALMM));
   PetscCall(TaoRegister(TAOSNES, TaoCreate_SNES));
+  PetscCall(TaoRegister(TAOFB, TaoCreate_FB));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }

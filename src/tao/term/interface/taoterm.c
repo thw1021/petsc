@@ -699,6 +699,53 @@ PetscErrorCode TaoTermProximalMap(TaoTerm term, Vec p, PetscReal alpha, TaoTerm 
 }
 
 /*@
+  TaoTermSetLipschitz - Set the Lipschitz constant of a term's gradient.
+
+  Logically Collective
+
+  Input Parameters:
++ term      - a `TaoTerm`
+- lipschitz - a nonnegative Lipschitz constant; zero means unknown
+
+  Level: intermediate
+
+.seealso: `TaoTermGetLipschitz()`, `TaoTerm`
+@*/
+PetscErrorCode TaoTermSetLipschitz(TaoTerm term, PetscReal lipschitz)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(term, lipschitz, 2);
+  PetscCheck(lipschitz >= 0.0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Lipschitz constant must be nonnegative");
+  term->lipschitz = lipschitz;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermGetLipschitz - Get the Lipschitz constant of a term's gradient.
+
+  Not Collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. lipschitz - the Lipschitz constant, or zero if unknown
+
+  Level: intermediate
+
+.seealso: `TaoTermSetLipschitz()`, `TaoTerm`
+@*/
+PetscErrorCode TaoTermGetLipschitz(TaoTerm term, PetscReal *lipschitz)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(lipschitz, 2);
+  *lipschitz = term->lipschitz;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoTermComputeHessian - Evaluate the Hessian of a `TaoTerm`
   (with respect to the solution variables) for a given solution vector and parameter vector
 

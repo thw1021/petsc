@@ -3135,7 +3135,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, &is_grad));
     // Empty callback term
     if (!(is_obj || is_objgrad || is_grad)) {
-      PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
+      PetscCall(TaoTermMappingSetData(&tao->objective_term, prefix, scale, term, map));
       PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
       // Empty callback term. Destroy hessians, as they are not needed
@@ -3174,7 +3174,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)old_sum, tao_prefix));
     PetscCall(TaoTermSumSetNumberTerms(old_sum, 1));
-    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao->objective_term.term, &term_prefix));
+    PetscCall(TaoTermMappingGetData(&tao->objective_term, &term_prefix, NULL, NULL, NULL));
     PetscCall(TaoTermSumSetTerm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
     PetscCall(TaoTermSumSetTermHessianMatrices(old_sum, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
     PetscCall(MatDestroy(&tao->hessian));
