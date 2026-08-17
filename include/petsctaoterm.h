@@ -29,6 +29,7 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMSUM`           - a sum of multiple other `TaoTerm`s
 . `TAOTERMHALFL2SQUARED` - $\tfrac{1}{2}\|x - p\|_2^2$
 . `TAOTERML1`            - $\|x - p\|_1$
+. `TAOTERMBOX`           - indicator function for componentwise lower and upper bounds
 . `TAOTERMQUADRATIC`     - a quadratic form $\tfrac{1}{2}(x - p)^T A (x - p)$
 - `TAOTERMCALLBACKS`     - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
 
@@ -42,6 +43,7 @@ typedef const char *TaoTermType;
 #define TAOTERMSUM           "sum"
 #define TAOTERMHALFL2SQUARED "halfl2squared"
 #define TAOTERML1            "l1"
+#define TAOTERMBOX           "box"
 #define TAOTERMQUADRATIC     "quadratic"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
@@ -287,6 +289,8 @@ PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, Petsc
 PETSC_EXTERN PetscErrorCode TaoTermCreateL1(MPI_Comm, PetscInt, PetscInt, PetscReal, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermL1SetEpsilon(TaoTerm, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
+
+PETSC_EXTERN PetscErrorCode TaoTermBoxSetBounds(TaoTerm, PetscReal, PetscReal, Vec, Vec);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateQuadratic(Mat, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticGetMat(TaoTerm, Mat *);
