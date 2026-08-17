@@ -100,10 +100,17 @@ class Configure(config.package.CMakePackage):
 
     if self.cuda.found or self.hip.found:
       if self.slate.found:
-        args.append('-DSTRUMPACK_USE_SLATE=ON')
+        args.append('-DTPL_ENABLE_SLATE=ON')
       else:
-        args.append('-DSTRUMPACK_USE_SLATE=OFF')
+        args.append('-DTPL_ENABLE_SLATE=OFF')
         self.logPrintWarning('Strumpack requires SLATE as a GPU enabled ScaLAPACK alternative, reconfigure with --download-slate')
+
+    if self.cuda.found or self.hip.found:
+      if self.magma.found:
+        args.append('-DTPL_ENABLE_MAGMA=ON')
+      else:
+        args.append('-DTPL_ENABLE_MAGMA=OFF')
+        self.logPrintWarning('Strumpack requires MAGMA, reconfigure with --download-magma')
 
     return args
 
