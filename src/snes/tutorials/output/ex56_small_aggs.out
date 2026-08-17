@@ -1,0 +1,6 @@
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+    Linear solve converged due to CONVERGED_RTOL iterations 8
+    Linear solve converged due to CONVERGED_RTOL iterations 10
+[0] 0) N=          27, max displ=4.1232123e+01, error=1.852e+01
+[0] 1) N=         441, max displ=5.3174288e+01, disp diff= 1.19e+01, error=6.579e+00, rate=1.5
+[0] 2) N=        4725, max displ=5.9063893e+01, disp diff= 5.89e+00, error=6.899e-01, rate=3.3
