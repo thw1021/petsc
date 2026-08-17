@@ -74,7 +74,7 @@ PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetHessianMatrices()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, `TaoGetHessian()`
 @*/
-PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec x, Mat H, Mat Hpre, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, TaoHessianFn *func, PetscCtx ctx)
 {
   PetscBool is_callbacks;
 
@@ -131,7 +131,7 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessianMatrices()`
 @*/
-PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, PetscCtx ctx), PetscCtxRt ctx)
+PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, TaoHessianFn **func, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -164,7 +164,7 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetHessian()`, `TaoComputeHessianMult()`, `TaoGetHessianMult()`
 @*/
-PetscErrorCode TaoSetHessianMult(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, Vec v, Vec Hv, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode TaoSetHessianMult(Tao tao, TaoHessianMultFn *func, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -195,7 +195,7 @@ PetscErrorCode TaoSetHessianMult(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x,
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetHessianMult()`, `TaoComputeHessianMult()`, `TaoGetHessian()`
 @*/
-PetscErrorCode TaoGetHessianMult(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, Vec v, Vec Hv, PetscCtx ctx), PetscCtxRt ctx)
+PetscErrorCode TaoGetHessianMult(Tao tao, TaoHessianMultFn **func, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
