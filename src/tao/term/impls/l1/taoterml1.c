@@ -11,7 +11,7 @@ struct _n_TaoTerm_L1 {
   PetscReal        d_sum;
   PetscObjectId    d_x_id, d_p_id;
   PetscObjectState d_x_state, d_p_state;
-  Vec              diag;
+  Vec              diag, proxwork;
   PetscObjectId    diag_x_id, diag_p_id;
   PetscObjectState diag_x_state, diag_p_state;
   PetscReal        diag_epsilon;
@@ -25,6 +25,7 @@ static PetscErrorCode TaoTermDestroy_L1(TaoTerm term)
   PetscCall(VecDestroy(&l1->diff));
   PetscCall(VecDestroy(&l1->d));
   PetscCall(VecDestroy(&l1->diag));
+  PetscCall(VecDestroy(&l1->proxwork));
   PetscCall(PetscFree(l1));
   term->data = NULL;
   PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
@@ -226,6 +227,40 @@ static PetscErrorCode TaoTermComputeHessianMult_L1(TaoTerm term, Vec x, Vec para
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermProximalMap_L1(TaoTerm term, Vec p, PetscReal alpha, TaoTerm reg, Vec q, PetscReal beta, Vec x)
+{
+  TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
+  PetscBool   is_l2;
+  PetscReal   threshold;
+  Vec         shift = p;
+
+  PetscFunctionBegin;
+  if (reg) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)reg, TAOTERMHALFL2SQUARED, &is_l2));
+    PetscCheck(is_l2, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TAOTERML1 only supports TAOTERMHALFL2SQUARED as its proximal regularizer");
+  }
+  if (alpha == 0.0) {
+    if (q) {
+      if (q != x) PetscCall(VecCopy(q, x));
+    } else PetscCall(VecZeroEntries(x));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCheck(l1->epsilon == 0.0, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TAOTERML1 proximal maps are not implemented for a positive smoothing parameter");
+  threshold = alpha / beta;
+  if (p && p == x) {
+    PetscCall(VecIfNotCongruentGetSameLayoutVec(x, &l1->proxwork));
+    PetscCall(VecCopy(p, l1->proxwork));
+    shift = l1->proxwork;
+  }
+  if (q) {
+    if (q != x) PetscCall(VecCopy(q, x));
+  } else PetscCall(VecZeroEntries(x));
+  if (shift) PetscCall(VecAXPY(x, -1.0, shift));
+  PetscCall(TaoSoftThreshold(x, -threshold, threshold, x));
+  if (shift) PetscCall(VecAXPY(x, 1.0, shift));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat *Hpre)
 {
   PetscBool is_hdiag, is_hprediag;
@@ -401,6 +436,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_L1;
   term->ops->hessian                    = TaoTermComputeHessian_L1;
   term->ops->hessianmult                = TaoTermComputeHessianMult_L1;
+  term->ops->proximalmap                = TaoTermProximalMap_L1;
   term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_L1;
   term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_L1;
 
