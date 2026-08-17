@@ -655,15 +655,15 @@ static PetscErrorCode TaoBRGNSetDictionaryMatrix_BRGN(Tao tao, Mat dict)
 
 .seealso: `Tao`, `Mat`, `TAOBRGN`
 @*/
-PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao tao, Vec u, PetscReal *val, Vec g, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao tao, TaoObjectiveAndGradientFn *func, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", (Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *), (tao, func, ctx));
+  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", (Tao, TaoObjectiveAndGradientFn *, void *), (tao, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine_BRGN(Tao tao, PetscErrorCode (*func)(Tao tao, Vec u, PetscReal *val, Vec g, PetscCtx ctx), PetscCtx ctx)
+static PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine_BRGN(Tao tao, TaoObjectiveAndGradientFn *func, PetscCtx ctx)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
 
