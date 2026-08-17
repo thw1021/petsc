@@ -1110,6 +1110,8 @@ PetscErrorCode DMCreateLocalVector(DM dm, Vec *vec)
 
   If the `DM` has a local section, it must have been set up with `PetscSectionSetUp()` before the mapping is built, otherwise an error is raised.
 
+  The mapping is owned by the `DM`: do not destroy it. It is invalidated by a subsequent call to `DMSetLocalSection()` or `DMSetGlobalSection()`.
+
 .seealso: [](ch_dmbase), `DM`, `DMCreateLocalVector()`, `DMCreateGlobalVector()`, `VecSetLocalToGlobalMapping()`, `MatSetLocalToGlobalMapping()`,
           `DMCreateMatrix()`
 @*/
@@ -1144,6 +1146,9 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm, ISLocalToGlobalMapping *ltog)
         PetscCall(PetscSectionGetConstraintIndices(section, p, &cdofs));
         PetscCall(PetscSectionGetOffset(sectionGlobal, p, &off));
         PetscCall(PetscSectionGetOffset(section, p, &loff));
+        /* A set-up section can still carry offsets that do not index the local storage: field-major
+           sections disable the point offsets and submesh sections keep the parent's offsets */
+        PetscCheck(!dof || (loff >= 0 && loff + dof <= n), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Local section offset %" PetscInt_FMT " + dof %" PetscInt_FMT " of point %" PetscInt_FMT " is outside the local storage [0, %" PetscInt_FMT ")", loff, dof, p, n);
         /* If you have dofs, and constraints, and they are unequal, we set the blocksize to 1 */
         bdof = cdof && (dof - cdof) ? 1 : dof;
         if (dof) bs = bs < 0 ? bdof : PetscGCD(bs, bdof);
@@ -4557,7 +4562,8 @@ PetscErrorCode DMGetLocalSection(DM dm, PetscSection *section)
   Level: intermediate
 
   Note:
-  Any existing Section will be destroyed
+  Any existing Section will be destroyed. The global section, the section `PetscSF`, and any local-to-global mapping previously obtained from the `DM` are
+  invalidated and will be rebuilt on their next access.
 
 .seealso: [](ch_dmbase), `DM`, `PetscSection`, `DMGetLocalSection()`, `DMSetGlobalSection()`
 @*/
@@ -4846,7 +4852,8 @@ PetscErrorCode DMGetGlobalSection(DM dm, PetscSection *section)
   Level: intermediate
 
   Note:
-  Any existing `PetscSection` will be destroyed
+  Any existing `PetscSection` will be destroyed. The section `PetscSF` and any local-to-global mapping previously obtained from the `DM` are invalidated and will
+  be rebuilt on their next access.
 
 .seealso: [](ch_dmbase), `DM`, `DMGetGlobalSection()`, `DMSetLocalSection()`
 @*/
