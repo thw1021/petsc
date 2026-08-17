@@ -242,11 +242,11 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
 
    test:
      suffix: hessianmult
-     args: -tao_type nls -tao_term_hessian_mat_type shell -set_hessian_mult -tao_monitor_short -tao_view
+     args: -tao_type nls -tao_term_hessian_mat_type shell -set_hessian_mult -tao_monitor -tao_view
 
    test:
      suffix: hessianmult_pert
-     args: -tao_type nls -tao_term_hessian_mat_type shell -set_hessian_mult -tao_nls_sval 1e-1 -tao_monitor_short
+     args: -tao_type nls -tao_term_hessian_mat_type shell -set_hessian_mult -tao_nls_sval 1e-1 -tao_monitor
 
    test:
      suffix: snes_mf_operator
