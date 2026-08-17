@@ -2,6 +2,7 @@
 #include <petsc/private/dmimpl.h>      /*I      "petscdm.h"          I*/
 #include <petsc/private/dmlabelimpl.h> /*I      "petscdmlabel.h"     I*/
 #include <petsc/private/petscdsimpl.h> /*I      "petscds.h"     I*/
+#include <petsc/private/sectionimpl.h>
 #include <petscdmplex.h>
 #include <petscdmceed.h>
 #include <petscdmfield.h>
@@ -1127,6 +1128,8 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm, ISLocalToGlobalMapping *ltog)
       PetscInt       *ltog;
       PetscInt        pStart, pEnd, n, p, k, l;
 
+      /* the loop below reads the local section offsets, which do not exist before setup */
+      PetscCheck(section->setup, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "The local section must be set up with PetscSectionSetUp() before DMGetLocalToGlobalMapping()");
       PetscCall(DMGetGlobalSection(dm, &sectionGlobal));
       PetscCall(PetscSectionGetChart(section, &pStart, &pEnd));
       PetscCall(PetscSectionGetStorageSize(section, &n));
