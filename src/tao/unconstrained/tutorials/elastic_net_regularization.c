@@ -228,6 +228,6 @@ int main(int argc, char **argv)
   # when the outer Hessian is a MATSHELL.
   test:
     suffix: shell_hessian
-    args: -tao_type nls -tao_term_hessian_mat_type shell -lasso_tao_term_l1_epsilon 0.1 -tao_monitor_short
+    args: -tao_type nls -tao_term_hessian_mat_type shell -lasso_tao_term_l1_epsilon 0.1 -tao_monitor
 
 TEST*/
