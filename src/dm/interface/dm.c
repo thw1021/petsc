@@ -1139,8 +1139,6 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm, ISLocalToGlobalMapping *ltog)
         PetscCall(PetscSectionGetConstraintDof(section, p, &cdof));
         PetscCall(PetscSectionGetConstraintIndices(section, p, &cdofs));
         PetscCall(PetscSectionGetOffset(sectionGlobal, p, &off));
-        /* The local section may carry a chart permutation (`DMReorderSectionSetDefault()`), so the
-           local storage slot of point p is its local offset, not a running count over the chart. */
         PetscCall(PetscSectionGetOffset(section, p, &loff));
         /* If you have dofs, and constraints, and they are unequal, we set the blocksize to 1 */
         bdof = cdof && (dof - cdof) ? 1 : dof;
