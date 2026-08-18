@@ -345,7 +345,7 @@ pause-for-approval:
         unset GITLAB_TOKEN
         REVIEW_CMD="/review-mr"
       fi
-      # --max-turns 100: large MRs were hitting the 30-turn cap before the review finished.
+      # --max-turns 200: raised from the 30-turn default, then again from 100, because large MRs hit the cap before the review finished.
       claude -p "${REVIEW_CMD} ${CI_MERGE_REQUEST_IID}" --model "${ANTHROPIC_MODEL}" --dangerously-skip-permissions --max-turns 200
   timeout: 1h
   allow_failure: true
