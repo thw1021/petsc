@@ -1,16 +1,18 @@
-  0 TAO,  Function value: 153.798,  Residual: 132.652 
-  1 TAO,  Function value: 19.6011,  Residual: 1.73952 
-  2 TAO,  Function value: 19.561,  Residual: 0.0251996 
-  3 TAO,  Function value: 19.561,  Residual: 2.02571e-05 
-  4 TAO,  Function value: 19.561,  Residual: 1.33274e-11 
+  0 TAO,  Function value: 105.86,  Residual: 293.715 
+  1 TAO,  Function value: 46.5532,  Residual: 1.89456 
+  2 TAO,  Function value: 46.5061,  Residual: 1.73699 
+  3 TAO,  Function value: 46.4943,  Residual: 1.07817 
+  4 TAO,  Function value: 46.4932,  Residual: 0.00575194 
+  5 TAO,  Function value: 46.4932,  Residual: 2.64456e-05 
+  6 TAO,  Function value: 46.4932,  Residual: 5.60214e-10 
 Tao Object: 1 MPI process
   type: snes
   SNES Object: 1 MPI process
     type: newtonls
     maximum iterations=50, maximum function evaluations=10000
     tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
-    total number of linear solver iterations=4
-    total number of function evaluations=5
+    total number of linear solver iterations=6
+    total number of function evaluations=7
     norm schedule ALWAYS
     SNESLineSearch Object: 1 MPI process
       type: bt
@@ -64,9 +66,9 @@ Tao Object: 1 MPI process
             rows=100, cols=100
               Vec Object: 1 MPI process
                 type: seq
-          total number of function evaluations=13
-          total number of gradient evaluations=5
-          total number of Hessian evaluations=4
+          total number of function evaluations=21
+          total number of gradient evaluations=7
+          total number of Hessian evaluations=6
       A_{Amat_}:
         Mat Object: (Amat_) 1 MPI process
           type: seqdense
@@ -78,32 +80,32 @@ Tao Object: 1 MPI process
           type: halfl2squared
           solution vector space: N = 20
           parameter vector space: (optional) K = 20
-          total number of function evaluations=13
-          total number of gradient evaluations=5
-          total number of Hessian evaluations=4
+          total number of function evaluations=21
+          total number of gradient evaluations=7
+          total number of Hessian evaluations=6
       f_{lasso_}:
         TaoTerm Object: (lasso_) 1 MPI process
           type: l1
           solution vector space: N = 10
           parameter vector space: (optional) K = 10
           epsilon (tao_term_l1_epsilon): 0.1
-          total number of function evaluations=13
-          total number of gradient evaluations=5
-          total number of Hessian evaluations=4
+          total number of function evaluations=21
+          total number of gradient evaluations=7
+          total number of Hessian evaluations=6
       A_{Dmat_}:
         Mat Object: (Dmat_) 1 MPI process
           type: seqdense
           rows=10, cols=20
           total: nonzeros=200, allocated nonzeros=200
           total number of mallocs used during MatSetValues calls=0
-      total number of function evaluations=13
-      total number of gradient evaluations=5
-      total number of Hessian evaluations=4
+      total number of function evaluations=21
+      total number of gradient evaluations=7
+      total number of Hessian evaluations=6
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.33274e-11
-  Objective value=19.561
-  total number of iterations=4,                          (max: 10000)
-  total number of function evaluations=13,                  (max: unlimited)
-  total number of gradient evaluations=5,                  (max: unlimited)
-  total number of Hessian evaluations=4
+  Residual in Function/Gradient:=5.60214e-10
+  Objective value=46.4932
+  total number of iterations=6,                          (max: 10000)
+  total number of function evaluations=21,                  (max: unlimited)
+  total number of gradient evaluations=7,                  (max: unlimited)
+  total number of Hessian evaluations=6
   Solution converged:    User Terminated

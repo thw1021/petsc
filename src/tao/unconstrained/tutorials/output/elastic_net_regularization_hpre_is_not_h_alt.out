@@ -36,7 +36,7 @@ Tao Object: 1 MPI process
                       type: seq
                       length=100
                 total number of function evaluations=5
-                total number of function/gradient evaluations=398
+                total number of function/gradient evaluations=397
                 total number of Hessian evaluations=15
             Map:
               Mat Object: (Amat_) 1 MPI process
@@ -52,8 +52,9 @@ Tao Object: 1 MPI process
                 solution vector space: N = 20 [VecType standard (tao_term_solution_vec_type)]
                 parameter vector space: (optional) K = 20 [VecType standard (tao_term_parameters_vec_type)]
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
+                Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): diagonal
                 total number of function evaluations=5
-                total number of function/gradient evaluations=398
+                total number of function/gradient evaluations=397
                 total number of Hessian evaluations=15
             Map: unmapped
           Summand 2:
@@ -64,9 +65,10 @@ Tao Object: 1 MPI process
                 solution vector space: N = 10 [VecType standard (tao_term_solution_vec_type)]
                 parameter vector space: (optional) K = 10 [VecType standard (tao_term_parameters_vec_type)]
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
+                Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): diagonal
                 epsilon (tao_term_l1_epsilon): 0.
                 total number of function evaluations=5
-                total number of function/gradient evaluations=398
+                total number of function/gradient evaluations=397
                 total number of Hessian evaluations=15
             Map:
               Mat Object: (Dmat_) 1 MPI process
@@ -75,7 +77,7 @@ Tao Object: 1 MPI process
                 total: nonzeros=200, allocated nonzeros=200
                 total number of mallocs used during MatSetValues calls=0
         total number of function evaluations=5
-        total number of function/gradient evaluations=398
+        total number of function/gradient evaluations=397
         total number of Hessian evaluations=15
     Map: unmapped
   TaoLineSearch Object: 1 MPI process
@@ -125,6 +127,6 @@ Tao Object: 1 MPI process
   Objective value=46.5636
   total number of iterations=15,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
-  total number of function/gradient evaluations=398,      (max: unlimited)
+  total number of function/gradient evaluations=397,      (max: unlimited)
   total number of Hessian evaluations=15
   Solver failed:    Line Search Failure
