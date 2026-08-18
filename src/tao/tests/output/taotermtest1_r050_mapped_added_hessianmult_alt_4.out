@@ -1,14 +1,14 @@
 Tao Object: (t_) 1 MPI process
   type: nls
-    Newton steps: 2
+    Newton steps: 50
     BFGS steps: 0
-    Gradient steps: 0
+    Gradient steps: 1
     nls ksp atol: 0
-    nls ksp rtol: 2
+    nls ksp rtol: 0
     nls ksp ctol: 0
     nls ksp negc: 0
     nls ksp dtol: 0
-    nls ksp iter: 0
+    nls ksp iter: 50
     nls ksp othr: 0
   Objective function:
     Scale (tao_objective_scale): 1.
@@ -28,12 +28,12 @@ Tao Object: (t_) 1 MPI process
                 parameter vector space: (none)
                 Hessian MatType (tao_term_hessian_mat_type): seqaij
                 attached to Tao [name omitted] (t_)
-                The following methods have been set: objectiveandgradient, hessian, hessianmult,
-                total number of function/gradient evaluations=8
-                total number of HessianMult evaluations=18
+                The following methods have been set: objectiveandgradient, hessian,
+                total number of function/gradient evaluations=136
             Map: unmapped
+            Mask (tao_term_sum_t_callbacks_mask): hessian
           Summand 1:
-            Scale (tao_term_sum_reg1_scale): 0.1
+            Scale (tao_term_sum_reg1_scale): 100.
             Term:
               TaoTerm Object: (reg1_) 1 MPI process
                 type: shell
@@ -42,8 +42,8 @@ Tao Object: (t_) 1 MPI process
                 default Hessian MatType (tao_term_hessian_mat_type): aij
                 Context has been set
                 The following methods have been set: objectiveandgradient, hessian, hessianmult,
-                total number of function/gradient evaluations=8
-                total number of HessianMult evaluations=18
+                total number of function/gradient evaluations=136
+                total number of HessianMult evaluations=505
             Map:
               Mat Object: (A1_) 1 MPI process
                 type: seqaij
@@ -52,9 +52,9 @@ Tao Object: (t_) 1 MPI process
                 total number of mallocs used during MatSetValues calls=0
                   not using I-node routines
         total number of function evaluations=5
-        total number of function/gradient evaluations=3
-        total number of Hessian evaluations=2
-        total number of HessianMult evaluations=18
+        total number of function/gradient evaluations=131
+        total number of Hessian evaluations=50
+        total number of HessianMult evaluations=505
     Map: unmapped
   TaoLineSearch Object: (t_) 1 MPI process
     type: more-thuente
@@ -62,7 +62,7 @@ Tao Object: (t_) 1 MPI process
     tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
     total number of function evaluations=0
     total number of gradient evaluations=0
-    total number of function/gradient evaluations=1
+    total number of function/gradient evaluations=2
     Termination reason: SUCCESS
   KSP Object: (t_tao_nls_) 1 MPI process
     type: stcg
@@ -76,13 +76,13 @@ Tao Object: (t_) 1 MPI process
     Mat Object: 1 MPI process
       type: shell
       rows=10, cols=10
-  total KSP iterations: 13
+  total KSP iterations: 500
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.91983e-11
-  Objective value=6.09479
-  total number of iterations=2,                          (max: 50)
+  Residual in Function/Gradient:=1.59988e-07
+  Objective value=8.22499
+  total number of iterations=50,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
-  total number of function/gradient evaluations=3,      (max: unlimited)
-  total number of Hessian evaluations=2
-  Solution converged:    ||g(X)|| <= gatol
+  total number of function/gradient evaluations=131,      (max: unlimited)
+  total number of Hessian evaluations=50
+  Solver failed:    Maximum Iterations
 Reference callback comparison passed
