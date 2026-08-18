@@ -2,6 +2,46 @@ const char help[] = "Demonstration of elastic net regularization (https://en.wik
 
 #include <petsctao.h>
 
+/*
+  Deterministic data, keyed on GLOBAL indices only.
+
+  MatSetRandom()/VecSetRandom() fill each rank's local portion from a per-rank stream, so the
+  problem itself would change with the number of ranks and a run at nsize 2 could not be
+  compared against a run at nsize 1.
+*/
+static PetscErrorCode FillMatDeterministic(Mat M, PetscReal shift)
+{
+  PetscInt     rstart, rend, N;
+  PetscInt    *cols;
+  PetscScalar *vals;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetOwnershipRange(M, &rstart, &rend));
+  PetscCall(MatGetSize(M, NULL, &N));
+  PetscCall(PetscMalloc2(N, &cols, N, &vals));
+  for (PetscInt j = 0; j < N; j++) cols[j] = j;
+  for (PetscInt i = rstart; i < rend; i++) {
+    for (PetscInt j = 0; j < N; j++) vals[j] = shift + PetscSinReal((PetscReal)(3 * i + 7 * j + 1));
+    PetscCall(MatSetValues(M, 1, &i, N, cols, vals, INSERT_VALUES));
+  }
+  PetscCall(PetscFree2(cols, vals));
+  PetscCall(MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode FillVecDeterministic(Vec v, PetscReal shift)
+{
+  PetscInt rstart, rend;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetOwnershipRange(v, &rstart, &rend));
+  for (PetscInt i = rstart; i < rend; i++) PetscCall(VecSetValue(v, i, shift + PetscCosReal((PetscReal)(5 * i + 2)), INSERT_VALUES));
+  PetscCall(VecAssemblyBegin(v));
+  PetscCall(VecAssemblyEnd(v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   /*
@@ -28,7 +68,6 @@ int main(int argc, char **argv)
   TaoTerm     l2_reg_term;
   TaoTerm     l1_reg_term;
   TaoTerm     full_objective;
-  PetscRandom rand;
   PetscReal   lambda_1 = 0.1;
   PetscReal   lambda_2 = 0.1;
   Tao         tao;
@@ -48,17 +87,13 @@ int main(int argc, char **argv)
 
   PetscCall(TaoCreate(comm, &tao));
 
-  PetscCall(PetscRandomCreate(comm, &rand));
-  PetscCall(PetscRandomSetInterval(rand, -1.0, 1.0));
-  PetscCall(PetscRandomSetFromOptions(rand));
-
   // create the model data, A, W and b
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
-  PetscCall(MatSetRandom(A, rand));
+  PetscCall(FillMatDeterministic(A, 0.0));
   PetscCall(MatCreateVecs(A, NULL, &b));
-  PetscCall(VecSetRandom(b, rand));
+  PetscCall(FillVecDeterministic(b, 0.0));
   PetscCall(VecDuplicate(b, &w));
-  PetscCall(VecSetRandom(w, rand));
+  PetscCall(FillVecDeterministic(w, 0.0));
   PetscCall(VecAbs(w));
   PetscCall(VecShift(w, 1.0));
   PetscCall(MatCreateDiagonal(w, &W));
@@ -66,9 +101,9 @@ int main(int argc, char **argv)
 
   // create the dictionary data, D and y
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, k, n, NULL, &D));
-  PetscCall(MatSetRandom(D, rand));
+  PetscCall(FillMatDeterministic(D, 0.5));
   PetscCall(MatCreateVecs(D, NULL, &y));
-  PetscCall(VecSetRandom(y, rand));
+  PetscCall(FillVecDeterministic(y, 0.25));
 
   // the model term,  (1/2) || Ax - b ||_W^2
   PetscCall(TaoTermCreateQuadratic(W, &data_term));
@@ -101,7 +136,7 @@ int main(int argc, char **argv)
 
   PetscCall(TaoGetTerm(tao, NULL, &full_objective, NULL, NULL));
   PetscCall(TaoTermCreateSolutionVec(full_objective, &x));
-  PetscCall(VecSetRandom(x, rand));
+  PetscCall(FillVecDeterministic(x, 0.1));
   PetscCall(TaoSetSolution(tao, x));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
@@ -146,7 +181,6 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&b));
   PetscCall(MatDestroy(&W));
   PetscCall(MatDestroy(&A));
-  PetscCall(PetscRandomDestroy(&rand));
   PetscCall(TaoDestroy(&tao));
   PetscCall(PetscFinalize());
   return 0;
