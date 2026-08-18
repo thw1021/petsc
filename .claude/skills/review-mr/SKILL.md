@@ -1,6 +1,6 @@
 ---
 name: review-mr
-description: Review code changes in a PETSc GitLab merge request and report findings to stdout. Use when the user asks to "review this MR", "review MR <number>", or "look at MR !N", and wants the review printed (not posted as comments).
+description: Review code changes in a PETSc GitLab merge request and report findings to stdout, and to ai-review.html. Use when the user asks to "review this MR", "review MR <number>", or "look at MR !N", and wants the review printed (not posted as comments).
 argument-hint: <MR_IID | empty for current branch>
 ---
 
