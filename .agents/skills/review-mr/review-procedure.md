@@ -1,11 +1,7 @@
-### 4. Read and review the diff
-- MR review: build a text diff file:
-  - Stop and report unless `glab mr diff <MR_IID> --raw > mr-<MR_IID>-raw.diff` exits 0.
-  - `awk '/^diff --git /{s=($0 ~ /\.out"?$/); if (s) {print $0 " [.out reference; body omitted]"; next}} s && /^(new file mode|deleted file mode|rename from|rename to|similarity index) /{print; next} !s' mr-<MR_IID>-raw.diff > mr-<MR_IID>-diff.txt`
-  - Capture check: stop and report unless `grep -c '^diff --git ' mr-<MR_IID>-raw.diff` and `grep -c '^diff --git ' mr-<MR_IID>-diff.txt` print the same non-zero number.
-- The diff file to review is `mr-<MR_IID>-diff.txt` (MR) or the existing `branch-review.txt` (local branch), never the `-raw.diff`.
-- Report any file the diff file shows as `Binary files ... differ` as not covered.
-- `wc -l` the diff file and review through to that last line, in parts if needed. Do **not** re-run the diff per file.
+### 3. Read and review the diff
+- Review the file named by `DIFF_FILE`.
+- Report any file the diff shows as binary (`Binary files ... differ` or `GIT binary patch`) as not covered.
+- Review through to line `LINES`, in parts if needed. Do **not** re-run the diff per file.
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
@@ -21,12 +17,12 @@ Severity weights for PETSc:
 - **Style** — important. PETSc convention violations (clang-format, naming, idioms, AGENTS.md anti-patterns) are real review blockers. Treat at par with MEDIUM.
 - **LOW** — count, do not list. End the report with `(N LOW findings suppressed; ask to show them.)` when `N > 0`. List individual LOW items only if asked.
 
-### 5. Verify each finding before reporting
+### 4. Verify each finding before reporting
 After generating the review, treat every finding at Style or above as tentative. For each one: reopen the cited code in the current working tree and confirm it matches what the finding describes; reread that code and confirm the issue is real, not a misread or speculation; and confirm it is actionable. Drop findings that fail any check; report only those that survive.
 
-### 6. Compose report
+### 5. Compose report
 - Per finding: severity, file:line, description, suggested fix. Order CRITICAL → HIGH → MEDIUM → Style. If nothing at or above Style is found, say so explicitly.
-- State any path Section 4 reported as not covered.
+- State any path Section 3 reported as not covered.
 
-### 7. Write report
+### 6. Write report
 - Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
