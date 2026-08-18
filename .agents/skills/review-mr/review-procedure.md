@@ -1,11 +1,7 @@
 ### 4. Read and review the diff
-- MR review: build a text diff file:
-  - Stop and report unless `glab mr diff <MR_IID> --raw > mr-<MR_IID>-raw.diff` exits 0.
-  - `awk '/^diff --git /{s=($0 ~ /\.out"?$/); if (s) {print $0 " [.out reference; body omitted]"; next}} s && /^(new file mode|deleted file mode|rename from|rename to|similarity index) /{print; next} !s' mr-<MR_IID>-raw.diff > mr-<MR_IID>-diff.txt`
-  - Capture check: stop and report unless `grep -c '^diff --git ' mr-<MR_IID>-raw.diff` and `grep -c '^diff --git ' mr-<MR_IID>-diff.txt` print the same non-zero number.
-- The diff file to review is `mr-<MR_IID>-diff.txt` (MR) or the existing `branch-review.txt` (local branch), never the `-raw.diff`.
-- Report any file the diff file shows as `Binary files ... differ` as not covered.
-- `wc -l` the diff file and review through to that last line, in parts if needed. Do **not** re-run the diff per file.
+- Review the file named by `DIFF_FILE`.
+- Report every `BINARY_FILE` the fetch printed as not covered.
+- Review through to line `LINES`, in parts if needed. Do **not** re-run the diff per file.
 - Act as a senior software engineer. Focus on:
   - Bugs and correctness issues
   - Performance implications
