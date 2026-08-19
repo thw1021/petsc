@@ -8,7 +8,9 @@
   #define taosethessian_                      TAOSETHESSIAN
   #define taosethessianmult_                  TAOSETHESSIANMULT
   #define taosetresidual_                     TAOSETRESIDUAL
+  #define taosetresidualroutine_              TAOSETRESIDUALROUTINE
   #define taosetjacobianresidual_             TAOSETJACOBIANRESIDUAL
+  #define taosetjacobianresidualroutine_      TAOSETJACOBIANRESIDUALROUTINE
   #define taosetjacobianroutine_              TAOSETJACOBIANROUTINE
   #define taosetjacobianstateroutine_         TAOSETJACOBIANSTATEROUTINE
   #define taosetjacobiandesignroutine_        TAOSETJACOBIANDESIGNROUTINE
@@ -29,7 +31,9 @@
   #define taosethessian_                      taosethessian
   #define taosethessianmult_                  taosethessianmult
   #define taosetresidual_                     taosetresidual
+  #define taosetresidualroutine_              taosetresidualroutine
   #define taosetjacobianresidual_             taosetjacobianresidual
+  #define taosetjacobianresidualroutine_      taosetjacobianresidualroutine
   #define taosetjacobianroutine_              taosetjacobianroutine
   #define taosetjacobianstateroutine_         taosetjacobianstateroutine
   #define taosetjacobiandesignroutine_        taosetjacobiandesignroutine
@@ -213,11 +217,21 @@ PETSC_EXTERN void taosetresidual_(Tao *tao, Vec *F, void (*func)(Tao *, Vec *, V
   if (!*ierr) *ierr = TaoSetResidual(*tao, *F, ourtaoresidualroutine, ctx);
 }
 
+PETSC_EXTERN void taosetresidualroutine_(Tao *tao, Vec *F, void (*func)(Tao *, Vec *, Vec *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
+{
+  taosetresidual_(tao, F, func, ctx, ierr);
+}
+
 PETSC_EXTERN void taosetjacobianresidual_(Tao *tao, Mat *J, Mat *Jpre, void (*func)(Tao *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
 {
   CHKFORTRANNULLFUNCTION(func);
   *ierr = PetscObjectSetFortranCallback((PetscObject)*tao, PETSC_FORTRAN_CALLBACK_CLASS, &_cb.lsjac, (PetscFortranCallbackFn *)func, ctx);
   if (!*ierr) *ierr = TaoSetJacobianResidual(*tao, *J, *Jpre, ourtaojacobianresidualroutine, ctx);
+}
+
+PETSC_EXTERN void taosetjacobianresidualroutine_(Tao *tao, Mat *J, Mat *Jpre, void (*func)(Tao *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
+{
+  taosetjacobianresidual_(tao, J, Jpre, func, ctx, ierr);
 }
 
 PETSC_EXTERN void taosetjacobianroutine_(Tao *tao, Mat *J, Mat *Jp, void (*func)(Tao *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)

@@ -34,6 +34,14 @@ PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidual()", ) static inline PetscErr
 {
   return TaoSetResidual(tao, res, func, ctx);
 }
+PETSC_DEPRECATED_FUNCTION(3, 27, 0, "TaoSetResidual()", ) static inline PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, PetscCtx), PetscCtx ctx)
+{
+  return TaoSetResidual(tao, res, func, ctx);
+}
+PETSC_DEPRECATED_FUNCTION(3, 27, 0, "TaoSetJacobianResidual()", ) static inline PetscErrorCode TaoSetJacobianResidualRoutine(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, PetscCtx), PetscCtx ctx)
+{
+  return TaoSetJacobianResidual(tao, J, Jpre, func, ctx);
+}
 PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidualWeights()", ) static inline PetscErrorCode TaoSetSeparableObjectiveWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt *rows, PetscInt *cols, PetscReal *vals)
 {
   return TaoSetResidualWeights(tao, sigma_v, n, rows, cols, vals);
