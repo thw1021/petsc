@@ -49,6 +49,15 @@ static PetscErrorCode PCSetUp_Galerkin(PC pc)
       PetscCall(KSPGetOperators(jac->ksp, NULL, &Ap));
       PetscCall((*jac->computeasub)(pc, pc->pmat, Ap, NULL, jac->computeasub_ctx));
     }
+  } else if (jac->R || jac->P) {
+    Mat Ap;
+    if (jac->R) {
+      PetscCall(MatRARt(pc->pmat, jac->R, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &Ap));
+    } else {
+      PetscCall(MatPtAP(pc->pmat, jac->P, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &Ap));
+    }
+    PetscCall(KSPSetOperators(jac->ksp, Ap, Ap));
+    PetscCall(MatDestroy(&Ap));
   }
 
   if (!jac->x) {
@@ -62,6 +71,7 @@ static PetscErrorCode PCSetUp_Galerkin(PC pc)
   }
   PetscCheck(jac->R || jac->P, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must set restriction or interpolation of PCGALERKIN with PCGalerkinSetRestriction()/Interpolation()");
   /* should check here that sizes of R/P match size of a */
+  PetscCall(KSPSetUp(jac->ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -84,6 +94,10 @@ static PetscErrorCode PCDestroy_Galerkin(PC pc)
 
   PetscFunctionBegin;
   PetscCall(PCReset_Galerkin(pc));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGalerkinSetRestriction_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGalerkinSetInterpolation_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGalerkinGetKSP_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGalerkinSetComputeSubmatrix_C", NULL));
   PetscCall(KSPDestroy(&jac->ksp));
   PetscCall(PetscFree(pc->data));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -269,19 +283,14 @@ static PetscErrorCode PCSetFromOptions_Galerkin(PC pc, PetscOptionItems PetscOpt
 {
   PC_Galerkin *jac = (PC_Galerkin *)pc->data;
   const char  *prefix;
-  PetscBool    flg;
 
   PetscFunctionBegin;
-  PetscCall(KSPGetOptionsPrefix(jac->ksp, &prefix));
-  PetscCall(PetscStrendswith(prefix, "galerkin_", &flg));
-  if (!flg) {
-    PetscCall(PCGetOptionsPrefix(pc, &prefix));
-    PetscCall(KSPSetOptionsPrefix(jac->ksp, prefix));
-    PetscCall(KSPAppendOptionsPrefix(jac->ksp, "galerkin_"));
-  }
+  PetscCall(PCGetOptionsPrefix(pc, &prefix));
+  PetscCall(KSPSetOptionsPrefix(jac->ksp, prefix));
+  PetscCall(KSPAppendOptionsPrefix(jac->ksp, "inner_"));
 
   PetscOptionsHeadBegin(PetscOptionsObject, "Galerkin options");
-  if (jac->ksp) PetscCall(KSPSetFromOptions(jac->ksp));
+  PetscCall(KSPSetFromOptions(jac->ksp));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -301,12 +310,10 @@ static PetscErrorCode PCSetFromOptions_Galerkin(PC pc, PetscOptionItems PetscOpt
 .ve
 
     Developer Notes:
-    If `KSPSetOperators()` has not been called on the inner `KSP` then `PCGALERKIN` could use `MatRARt()` or `MatPtAP()` to compute
+    If `KSPSetOperators()` has not been called on the inner `KSP` then `PCGALERKIN` will use `MatRARt()` or `MatPtAP()` to compute
     the operators automatically.
 
-    Should there be a prefix for the inner `KSP`?
-
-    There is no `KSPSetFromOptions_Galerkin()` that calls `KSPSetFromOptions()` on the inner `KSP`
+    The inner `KSP` has prefix `inner_`
 
 .seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
           `PCSHELL`, `PCKSP`, `PCGalerkinSetRestriction()`, `PCGalerkinSetInterpolation()`, `PCGalerkinGetKSP()`
