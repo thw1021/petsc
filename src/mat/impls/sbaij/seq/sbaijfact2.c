@@ -4,6 +4,7 @@
 
 #include <../src/mat/impls/sbaij/seq/sbaij.h>
 #include <../src/mat/impls/baij/seq/baij.h>
+#include <petsc/private/vecimpl.h>
 #include <petsc/private/kernels/blockinvert.h>
 
 PetscErrorCode MatSolve_SeqSBAIJ_N_inplace(Mat A, Vec bb, Vec xx)

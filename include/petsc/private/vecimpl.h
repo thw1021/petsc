@@ -118,6 +118,11 @@ static_assert(offsetof(struct _VecOps, viewnative) == sizeof(PetscErrorCodeFn *)
 static_assert(offsetof(struct _VecOps, loadnative) == sizeof(PetscErrorCodeFn *) * VECOP_LOADNATIVE, "");
 #endif
 
+struct _n_Vecs {
+  PetscInt n;
+  Vec      v;
+};
+
 /*
     The stash is used to temporarily store inserted vec values that
   belong to another processor. During the assembly phase the stashed
