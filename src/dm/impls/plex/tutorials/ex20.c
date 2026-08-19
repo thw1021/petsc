@@ -3,6 +3,8 @@ static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 #include <petscdmplex.h>
 #include <petsc/private/dmpleximpl.h>
 
+//#define ADJUST_TRANSPORT
+
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
   PetscFunctionBeginUser;
@@ -25,18 +27,32 @@ static PetscErrorCode SetupFE(DM dm)
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
   PetscCall(PetscFECreateByCell(PETSC_COMM_SELF, dim, cdim, ct, "as_", -1, &fe));
-  PetscCall(PetscObjectSetName((PetscObject)fe, "Along Strike"));
+  PetscCall(PetscObjectSetName((PetscObject)fe, "strike_dir"));
   PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
   PetscCall(DMCreateDS(dm));
   PetscCall(PetscFEDestroy(&fe));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode InitializeFrame(Vec n, Vec as, DMLabel validFrame)
+static PetscErrorCode CrossProductUnitVector(const PetscReal a[], const PetscReal b[], PetscReal result[])
+{
+  PetscReal mag;
+
+  PetscFunctionBeginUser;
+  result[0] = a[1]*b[2] - a[2]*b[1];
+  result[1] = a[2]*b[0] - a[0]*b[2];
+  result[2] = a[0]*b[1] - a[1]*b[0];
+  mag = PetscSqrtReal(result[0]*result[0] + result[1]*result[1] + result[2]*result[2]);
+  PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cross product of parallel vectors");
+  for (PetscInt i = 0; i < 3; ++i) result[i] /= mag;   // was i < 2
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode InitializeFrame(Vec n, Vec as, PetscReal refdir[], DMLabel validFrame)
 {
   DM           dm;
   PetscScalar *an, *aas;
-  PetscInt     cdim, cStart, cEnd;
+  PetscInt     cdim, cStart, cEnd, cTarget;
   PetscMPIInt  rank;
 
   PetscFunctionBeginUser;
@@ -47,6 +63,8 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, DMLabel validFrame)
   PetscCall(VecSet(as, 0.));
   PetscCall(VecGetArray(n, &an));
   PetscCall(VecGetArray(as, &aas));
+
+  cTarget = cStart;
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscScalar *nv;
     PetscScalar *asv;
@@ -58,9 +76,8 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, DMLabel validFrame)
       for (PetscInt d = 0; d < cdim; ++d) nv[d] = normal[d];
     }
     PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
-    if (!rank && (c == cStart) && asv) {
-      asv[0] = 1.;
-      for (PetscInt d = 1; d < cdim; ++d) asv[d] = 0.;
+    if (!rank && (c == cTarget) && asv && nv) {
+      PetscCall(CrossProductUnitVector(refdir, nv, asv));
       PetscCall(DMLabelSetValue(validFrame, c, 1));
     }
   }
@@ -106,7 +123,7 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
     if (source < 0) PetscCall(DMPlexPointLocalFieldRead(idm, face, 1, aif, &asvs));
     else PetscCall(DMPlexPointGlobalRead(dm, source, aas, &asvs));
     PetscCall(DMPlexPointGlobalRef(dm, target, aas, &asvt));
-    PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing along strike data");
+    PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing strike direction");
     for (PetscInt d = 0; d < cdim; ++d) asvt[d] = asvs[d];
     goto check;
   }
@@ -147,8 +164,47 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
   if (source < 0) PetscCall(DMPlexPointLocalFieldRead(idm, face, 1, aif, &asvs));
   else PetscCall(DMPlexPointGlobalRead(dm, source, aas, &asvs));
   PetscCall(DMPlexPointGlobalRef(dm, target, aas, &asvt));
-  PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing along strike data");
+  PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing strike direction");
   DMPlex_Mult3D_Internal(R, 1, asvs, asvt);
+
+#if defined(ADJUST_TRANSPORT)
+{
+  PetscReal up[3] = { 0.0, 0.0, 1.0 };
+  PetscReal horiz[3]; // horizontal strike_dir candidate
+  PetscReal s, blend, mag, dot, sign;
+
+  // horiz = up x n (unnormalized). |horiz| = sin(angle(up,n))
+  horiz[0] = up[1]*nvt[2] - up[2]*nvt[1];
+  horiz[1] = up[2]*nvt[0] - up[0]*nvt[2];
+  horiz[2] = up[0]*nvt[1] - up[1]*nvt[0];
+  s = PetscSqrtReal(PetscSqr(horiz[0]) + PetscSqr(horiz[1]) + PetscSqr(horiz[2]));
+
+  // Orient the horizontal candidate to agree with the transported vector,
+  // so we never flip sign across cells.
+  if (s > PETSC_SMALL) {
+    dot = DMPlex_DotRealD_Internal(cdim, horiz, asvt) / s;
+    sign = dot >= 0.0 ? 1.0 : -1.0;
+    for (PetscInt d = 0; d < 3; ++d) horiz[d] = sign * horiz[d] / s;
+  }
+
+  // Blend: fully horizontal when strike is well-defined (s ~ 1),
+  // fall back to the transported frame as the normal approaches vertical (s -> 0).
+  // s0 (radians) is where the crossover starts.
+  {
+    const PetscReal s0 = 0.1; // ~6 degrees from vertical
+    blend = s >= s0 ? 1.0 : s / s0; // 1 = use horizontal, 0 = use transported
+  }
+  for (PetscInt d = 0; d < 3; ++d) asvt[d] = blend * horiz[d] + (1.0 - blend) * asvt[d];
+  asvt[2] = 0.0; // Force vector to be horizontal and renormalize
+
+  // Renormalization
+  mag = PetscSqrtReal(PetscSqr(asvt[0]) + PetscSqr(asvt[1]) + PetscSqr(asvt[2]));
+  PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
+             "Degenerate along-strike at target %" PetscInt_FMT, target);
+  for (PetscInt d = 0; d < 3; ++d) asvt[d] /= mag;
+}
+#endif
+
 check:
   // Check that source along strike is normalized
   norm = DMPlex_DotD_Internal(cdim, asvs, asvs);
@@ -355,7 +411,7 @@ static PetscErrorCode PropagateFrame(Vec n, Vec as, DMLabel validFrame)
   PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &s));
   PetscCall(PetscSectionSetNumFields(s, 2));
   PetscCall(PetscSectionSetFieldName(s, 0, "normal"));
-  PetscCall(PetscSectionSetFieldName(s, 1, "along strike"));
+  PetscCall(PetscSectionSetFieldName(s, 1, "along_strike"));
   PetscCall(PetscSectionSetChart(s, fStart, fEnd));
   PetscCall(PetscSFGetGraph(pointSF, &Nr, &Nl, &leaves, NULL));
   for (PetscInt l = 0; l < Nl; ++l) {
@@ -415,6 +471,7 @@ int main(int argc, char **argv)
   DM      dm;
   DMLabel validFrame;
   Vec     n, as;
+  PetscReal refdir[3] = { 0.0, 0.0, 1.0 };
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -423,12 +480,12 @@ int main(int argc, char **argv)
   PetscCall(DMCreateLabel(dm, "Valid Frame"));
   PetscCall(DMGetLabel(dm, "Valid Frame", &validFrame));
   PetscCall(DMCreateGlobalVector(dm, &n));
-  PetscCall(PetscObjectSetName((PetscObject)n, "Normal"));
+  PetscCall(PetscObjectSetName((PetscObject)n, "normal_dir"));
   PetscCall(VecZeroEntries(n));
   PetscCall(DMCreateGlobalVector(dm, &as));
-  PetscCall(PetscObjectSetName((PetscObject)as, "Along Strike"));
+  PetscCall(PetscObjectSetName((PetscObject)as, "strike_dir"));
   PetscCall(VecZeroEntries(as));
-  PetscCall(InitializeFrame(n, as, validFrame));
+  PetscCall(InitializeFrame(n, as, refdir, validFrame));
   PetscCall(VecViewFromOptions(n, NULL, "-n_view"));
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   PetscCall(PropagateFrame(n, as, validFrame));
@@ -456,7 +513,7 @@ int main(int argc, char **argv)
     suffix: 1
     requires: triangle
     args: -cdm_dm_plex_coordinate_dim 3 \
-          -dm_coord_remap -dm_coord_map rotate -dm_coord_map_params 0,0,0,1,0,0,0.7853981
+          -dm_coord_remap -dm_coord_map rotate -dm_coord_map_params 0,0,0,1,0,0,-0.7853981
     output_file: output/empty.out
 
   test:
