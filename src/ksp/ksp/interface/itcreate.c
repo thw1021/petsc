@@ -732,14 +732,14 @@ PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
     PetscCall(KSPGetOperatorsSet(ksp, &matset_new, &pmatset_new));
     PetscCall(KSPGetOperators(ksp, matset_new ? &Amat_new : NULL, pmatset_new ? &Pmat_new : NULL));
     if (matset) {
-      PetscBool unchanged = PETSC_FALSE;
+      PetscBool unchanged;
 
       PetscCall(KSPPreSolveOperatorUnchanged_Private(Amat, Amat_ostate, matset_new, Amat_new, &unchanged));
       PetscCall(PetscObjectDereference((PetscObject)Amat));
       PetscCheck(unchanged, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's A matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
     }
     if (pmatset) {
-      PetscBool unchanged = PETSC_FALSE;
+      PetscBool unchanged;
 
       PetscCall(KSPPreSolveOperatorUnchanged_Private(Pmat, Pmat_ostate, pmatset_new, Pmat_new, &unchanged));
       PetscCall(PetscObjectDereference((PetscObject)Pmat));
