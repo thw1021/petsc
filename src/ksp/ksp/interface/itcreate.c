@@ -670,11 +670,20 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, PetscCtx ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPPreSolveOperatorUnchanged_Private(Mat mat, PetscObjectState ostate, PetscBool matset_new, Mat mat_new, PetscBool *unchanged)
+static PetscErrorCode KSPPreSolveOperatorUnchanged_Private(KSP ksp, Mat mat, PetscObjectState ostate, PetscBool is_amat, PetscBool *unchanged)
 {
+  Mat              mat_new = NULL;
+  PetscBool        matset_new;
   PetscObjectState state;
 
   PetscFunctionBegin;
+  if (is_amat) {
+    PetscCall(KSPGetOperatorsSet(ksp, &matset_new, NULL));
+    PetscCall(KSPGetOperators(ksp, matset_new ? &mat_new : NULL, NULL));
+  } else {
+    PetscCall(KSPGetOperatorsSet(ksp, NULL, &matset_new));
+    PetscCall(KSPGetOperators(ksp, NULL, matset_new ? &mat_new : NULL));
+  }
   PetscCall(PetscObjectStateGet((PetscObject)mat, &state));
   *unchanged = (PetscBool)(matset_new && mat_new == mat && state == ostate);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -700,16 +709,16 @@ static PetscErrorCode KSPPreSolveOperatorUnchanged_Private(Mat mat, PetscObjectS
   only detects changes to the `Amat`/`Pmat` objects themselves and says nothing about other changes a callback might make. `PCSetUp()`
   has already run by the time the callback runs, so callback-side changes that only affect the preconditioner setup (for example
   `PCFieldSplitSetIS()` or setting `PC` options) have no effect on this solve, unless the callback also resets the `PC`'s setup state
-  (for example via `PCSetType()`), in which case `PCSetUp()` runs again automatically inside the following `PCApply()`, before the
-  preconditioner is applied. Changes that are encountered during preconditioner application, such as setting a null space with
+  (for example via `PCSetType()` or `PCReset()`), in which case `PCSetUp()` runs again automatically inside the following `PCApply()`,
+  before the matrices are used. Changes that are encountered during preconditioner application, such as setting a null space with
   `MatSetNullSpace()`, **do** take effect.
 
 .seealso: [](ch_ksp), `KSPSolve()`, `KSP`, `KSPSetPreSolve()`, `KSPPostSolve()`, `SNESKSPSetUseEW()`
 @*/
 PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
 {
-  Mat              Amat = NULL, Pmat = NULL, Amat_new = NULL, Pmat_new = NULL;
-  PetscBool        matset, pmatset, matset_new, pmatset_new;
+  Mat              Amat = NULL, Pmat = NULL;
+  PetscBool        matset, pmatset;
   PetscObjectState Amat_ostate = 0, Pmat_ostate = 0;
 
   PetscFunctionBegin;
@@ -729,19 +738,17 @@ PetscErrorCode KSPPreSolve(KSP ksp, Vec rhs, Vec sol)
       PetscCall(PetscObjectStateGet((PetscObject)Pmat, &Pmat_ostate));
     }
     PetscCall((*ksp->presolve)(ksp, rhs, sol, ksp->prectx));
-    PetscCall(KSPGetOperatorsSet(ksp, &matset_new, &pmatset_new));
-    PetscCall(KSPGetOperators(ksp, matset_new ? &Amat_new : NULL, pmatset_new ? &Pmat_new : NULL));
     if (matset) {
       PetscBool unchanged;
 
-      PetscCall(KSPPreSolveOperatorUnchanged_Private(Amat, Amat_ostate, matset_new, Amat_new, &unchanged));
+      PetscCall(KSPPreSolveOperatorUnchanged_Private(ksp, Amat, Amat_ostate, PETSC_TRUE, &unchanged));
       PetscCall(PetscObjectDereference((PetscObject)Amat));
       PetscCheck(unchanged, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's A matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
     }
     if (pmatset) {
       PetscBool unchanged;
 
-      PetscCall(KSPPreSolveOperatorUnchanged_Private(Pmat, Pmat_ostate, pmatset_new, Pmat_new, &unchanged));
+      PetscCall(KSPPreSolveOperatorUnchanged_Private(ksp, Pmat, Pmat_ostate, PETSC_FALSE, &unchanged));
       PetscCall(PetscObjectDereference((PetscObject)Pmat));
       PetscCheck(unchanged, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A pre-solve callback set with KSPSetPreSolve() modified the KSP's preconditioner matrix; pre-solve callbacks may only modify the right-hand side and solution vectors");
     }
