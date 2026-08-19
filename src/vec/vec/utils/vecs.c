@@ -1,4 +1,4 @@
-#include <petscvec.h>
+#include <petsc/private/vecimpl.h>
 
 /*@
   VecsDestroy - Destroys a `Vecs` collection of vectors
