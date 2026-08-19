@@ -5,6 +5,7 @@
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 #include <petscdm.h>
+#include <petscdmsolveadaptor.h>
 
 /* number of nested levels of KSPSetUp/Solve(). This is used to determine if KSP_DIVERGED_ITS should be fatal. */
 static PetscInt level = 0;
@@ -322,6 +323,9 @@ PetscErrorCode KSPSetSkipPCSetFromOptions(KSP ksp, PetscBool flag)
 
   Level: developer
 
+  Options Database Keys:
+. -dm_solve_adapt (true|false) - If the `KSP` has an associated `DM`, optimize the solver hierarchy
+
   Note:
   This is called automatically by `KSPSolve()` so usually does not need to be called directly.
 
@@ -329,12 +333,13 @@ PetscErrorCode KSPSetSkipPCSetFromOptions(KSP ksp, PetscBool flag)
 @*/
 PetscErrorCode KSPSetUp(KSP ksp)
 {
+  DM             dm;
   Mat            A, B;
   Mat            mat, pmat;
   MatNullSpace   nullsp;
   PCFailedReason pcreason;
   PC             pc;
-  PetscBool      pcmpi, Aopset, Bopset;
+  PetscBool      pcmpi, Aopset, Bopset, adapt = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -455,6 +460,23 @@ PetscErrorCode KSPSetUp(KSP ksp)
     PetscCall(PetscOptionsGetBool(((PetscObject)ksp)->options, ((PetscObject)ksp)->prefix, "-ksp_test_null_space", &test, NULL));
     if (test) PetscCall(MatNullSpaceTest(nullsp, mat, NULL));
   }
+
+  PetscCall(PetscOptionsGetBool(((PetscObject)ksp)->options, ((PetscObject)ksp)->prefix, "-dm_solve_adapt", &adapt, NULL));
+  PetscCall(KSPGetDM(ksp, &dm));
+  if (adapt && dm) {
+    DMSolveAdaptor adaptor;
+    const char    *prefix;
+
+    PetscCall(DMSolveAdaptorCreate(PetscObjectComm((PetscObject)ksp), &adaptor));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)adaptor, prefix));
+    PetscCall(DMSolveAdaptorSetLinearSolver(adaptor, ksp));
+    PetscCall(DMSolveAdaptorSetFromOptions(adaptor));
+    PetscCall(DMSolveAdaptorSetUp(adaptor));
+    PetscCall(DMSolveAdaptorAdapt(adaptor));
+    PetscCall(DMSolveAdaptorDestroy(&adaptor));
+  }
+
   ksp->setupstage = KSP_SETUP_NEWRHS;
   level--;
   PetscFunctionReturn(PETSC_SUCCESS);
