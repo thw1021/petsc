@@ -208,6 +208,29 @@ NormTypeSpec: TypeAlias = NormType | None
 
 """
 
+OptionValueSpec: TypeAlias = (
+    bool
+    | int
+    | float
+    | Scalar
+    | str
+    | Sequence[bool]
+    | Sequence[int]
+    | Sequence[float]
+    | Sequence[Scalar]
+    | Sequence[str]
+    | None
+)
+"""Option value specification.
+
+    All types which are usable with `Options` database.
+
+    See Also
+    --------
+    PETSc.Options, petsc.Options
+
+"""
+
 # --- PetscObject ---
 
 PetscOptionsHandlerFunction: TypeAlias = Callable[[Object], None]
