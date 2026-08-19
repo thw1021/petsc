@@ -1,20 +1,61 @@
-  0 TAO,  Function value: 153.545,  Residual: 132.41 
-  1 TAO,  Function value: 19.5801,  Residual: 1.83082 
-  2 TAO,  Function value: 19.5516,  Residual: 0.0449057 
-  3 TAO,  Function value: 19.5515,  Residual: 0.00639275 
-  4 TAO,  Function value: 19.5515,  Residual: 0.000967751 
-  5 TAO,  Function value: 19.5515,  Residual: 0.000147493 
-  6 TAO,  Function value: 19.5515,  Residual: 2.25016e-05 
-  7 TAO,  Function value: 19.5515,  Residual: 3.43352e-06 
-  8 TAO,  Function value: 19.5515,  Residual: 5.23945e-07 
-  9 TAO,  Function value: 19.5515,  Residual: 7.99536e-08 
+  0 TAO,  Function value: 105.353,  Residual: 293.09 
+  1 TAO,  Function value: 46.6714,  Residual: 0.240717 
+  2 TAO,  Function value: 46.6665,  Residual: 0.0492892 
+  3 TAO,  Function value: 46.6414,  Residual: 0.0440511 
+  4 TAO,  Function value: 46.5761,  Residual: 0.0299249 
+  5 TAO,  Function value: 46.5458,  Residual: 0.0153167 
+  6 TAO,  Function value: 46.5308,  Residual: 0.0118932 
+  7 TAO,  Function value: 46.5233,  Residual: 0.0102678 
+  8 TAO,  Function value: 46.5188,  Residual: 0.00920245 
+  9 TAO,  Function value: 46.5038,  Residual: 0.00542823 
+ 10 TAO,  Function value: 46.5014,  Residual: 0.0034152 
+ 11 TAO,  Function value: 46.4999,  Residual: 0.0132142 
+ 12 TAO,  Function value: 46.4989,  Residual: 0.0413152 
+ 13 TAO,  Function value: 46.4987,  Residual: 0.00290676 
+ 14 TAO,  Function value: 46.498,  Residual: 0.00335251 
+ 15 TAO,  Function value: 46.4974,  Residual: 0.00297844 
+ 16 TAO,  Function value: 46.497,  Residual: 0.0161746 
+ 17 TAO,  Function value: 46.4969,  Residual: 0.00222553 
+ 18 TAO,  Function value: 46.4955,  Residual: 0.00158513 
+ 19 TAO,  Function value: 46.4953,  Residual: 0.00870053 
+ 20 TAO,  Function value: 46.4953,  Residual: 0.00127309 
+ 21 TAO,  Function value: 46.4948,  Residual: 0.00106148 
+ 22 TAO,  Function value: 46.4947,  Residual: 0.00581576 
+ 23 TAO,  Function value: 46.4947,  Residual: 0.000823342 
+ 24 TAO,  Function value: 46.4944,  Residual: 0.000791908 
+ 25 TAO,  Function value: 46.4944,  Residual: 0.00429252 
+ 26 TAO,  Function value: 46.4944,  Residual: 0.000558084 
+ 27 TAO,  Function value: 46.4942,  Residual: 0.000633068 
+ 28 TAO,  Function value: 46.4942,  Residual: 0.00336043 
+ 29 TAO,  Function value: 46.4942,  Residual: 0.000388232 
+ 30 TAO,  Function value: 46.4941,  Residual: 0.000530406 
+ 31 TAO,  Function value: 46.4941,  Residual: 0.0027343 
+ 32 TAO,  Function value: 46.4941,  Residual: 0.000274662 
+ 33 TAO,  Function value: 46.494,  Residual: 0.000458382 
+ 34 TAO,  Function value: 46.494,  Residual: 0.000188634 
+ 35 TAO,  Function value: 46.494,  Residual: 0.000238411 
+ 36 TAO,  Function value: 46.494,  Residual: 0.000402513 
+ 37 TAO,  Function value: 46.494,  Residual: 0.000133259 
+ 38 TAO,  Function value: 46.4939,  Residual: 0.000186262 
+ 39 TAO,  Function value: 46.4939,  Residual: 0.000357942 
+ 40 TAO,  Function value: 46.4939,  Residual: 9.44575e-05 
+ 41 TAO,  Function value: 46.4939,  Residual: 0.00014828 
+ 42 TAO,  Function value: 46.4939,  Residual: 0.000320609 
+ 43 TAO,  Function value: 46.4939,  Residual: 6.70731e-05 
+ 44 TAO,  Function value: 46.4939,  Residual: 0.000120142 
+ 45 TAO,  Function value: 46.4939,  Residual: 0.000288273 
+ 46 TAO,  Function value: 46.4939,  Residual: 4.76552e-05 
+ 47 TAO,  Function value: 46.4939,  Residual: 9.8935e-05 
+ 48 TAO,  Function value: 46.4939,  Residual: 0.000259665 
+ 49 TAO,  Function value: 46.4939,  Residual: 3.38458e-05 
+ 50 TAO,  Function value: 46.4939,  Residual: 8.26655e-05 
 Tao Object: 1 MPI process
   type: nls
-    Newton steps: 9
+    Newton steps: 50
     BFGS steps: 0
     Gradient steps: 0
     nls ksp atol: 0
-    nls ksp rtol: 9
+    nls ksp rtol: 50
     nls ksp ctol: 0
     nls ksp negc: 0
     nls ksp dtol: 0
@@ -44,8 +85,8 @@ Tao Object: 1 MPI process
                       type: seq
                       length=100
                 total number of function evaluations=5
-                total number of function/gradient evaluations=10
-                total number of Hessian evaluations=9
+                total number of function/gradient evaluations=94
+                total number of Hessian evaluations=50
             Map:
               Mat Object: (Amat_) 1 MPI process
                 type: seqdense
@@ -60,8 +101,8 @@ Tao Object: 1 MPI process
                 solution vector space: N = 20 [VecType standard (tao_term_solution_vec_type)]
                 parameter vector space: (optional) K = 20 [VecType standard (tao_term_parameters_vec_type)]
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
-                total number of gradient evaluations=10
-                total number of Hessian evaluations=9
+                total number of gradient evaluations=94
+                total number of Hessian evaluations=50
             Map: unmapped
             Mask (tao_term_sum_ridge_mask): objective
           Summand 2:
@@ -73,8 +114,8 @@ Tao Object: 1 MPI process
                 parameter vector space: (optional) K = 10 [VecType standard (tao_term_parameters_vec_type)]
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
                 epsilon (tao_term_l1_epsilon): 0.1
-                total number of function evaluations=15
-                total number of Hessian evaluations=9
+                total number of function evaluations=99
+                total number of Hessian evaluations=50
             Map:
               Mat Object: (Dmat_) 1 MPI process
                 type: seqdense
@@ -83,8 +124,8 @@ Tao Object: 1 MPI process
                 total number of mallocs used during MatSetValues calls=0
             Mask (tao_term_sum_lasso_mask): gradient
         total number of function evaluations=5
-        total number of function/gradient evaluations=10
-        total number of Hessian evaluations=9
+        total number of function/gradient evaluations=94
+        total number of Hessian evaluations=50
     Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
@@ -92,7 +133,7 @@ Tao Object: 1 MPI process
     tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
     total number of function evaluations=0
     total number of gradient evaluations=0
-    total number of function/gradient evaluations=1
+    total number of function/gradient evaluations=3
     Termination reason: SUCCESS
   KSP Object: (tao_nls_) 1 MPI process
     type: stcg
@@ -121,12 +162,12 @@ Tao Object: 1 MPI process
       total: nonzeros=400, allocated nonzeros=400
       total number of mallocs used during MatSetValues calls=0
         using I-node routines: found 4 nodes, limit used is 5
-  total KSP iterations: 9
+  total KSP iterations: 50
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=7.99536e-08
-  Objective value=19.5515
-  total number of iterations=9,                          (max: 50)
+  Residual in Function/Gradient:=8.26655e-05
+  Objective value=46.4939
+  total number of iterations=50,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
-  total number of function/gradient evaluations=10,      (max: unlimited)
-  total number of Hessian evaluations=9
-  Solution converged:    ||g(X)||/|f(X)| <= grtol
+  total number of function/gradient evaluations=94,      (max: unlimited)
+  total number of Hessian evaluations=50
+  Solver failed:    Maximum Iterations
