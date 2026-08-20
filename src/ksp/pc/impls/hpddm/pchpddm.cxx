@@ -61,7 +61,6 @@ static PetscErrorCode PCDestroy_HPDDM(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetSTShareSubKSP_C", nullptr));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMGetSTShareSubKSP_C", nullptr));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetDeflationMat_C", nullptr));
-  PetscCall(PetscObjectCompose((PetscObject)pc, "_PCHPDDM_Schur", nullptr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1474,8 +1473,6 @@ static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool
     if (algebraic) {
       PetscCall(PetscObjectQuery((PetscObject)sub[0], "_PCHPDDM_Embed", (PetscObject *)&is));
       PetscCall(ISDestroy(&is));
-      PetscCall(PetscObjectCompose((PetscObject)sub[0], "_PCHPDDM_Embed", nullptr));
-      PetscCall(PetscObjectCompose((PetscObject)sub[0], "_PCHPDDM_Compact", nullptr));
     }
     PetscCall(MatDestroySubMatrices(algebraic ? 2 : 1, &sub));
   }
