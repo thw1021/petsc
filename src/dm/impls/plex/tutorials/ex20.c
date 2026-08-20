@@ -5,19 +5,26 @@ static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 #include <petscdmplex.h>
 #include <petsc/private/dmpleximpl.h>
 
-//#define ADJUST_TRANSPORT
+#define ADJUST_TRANSPORT
 
 typedef struct {
   PetscBool use_up; // Transport the up direction rather than along-strike
+  PetscBool have_start; // Whether the user specified a starting point
+  PetscReal start[3]; // Coordinates of the starting point
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
+  PetscInt n = 3;
+
   PetscFunctionBeginUser;
   options->use_up = PETSC_FALSE;
+  options->have_start = PETSC_FALSE;
+  options->start[0] = options->start[1] = options->start[2] = 0.0;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-use_updir", "Transport the up direction, rather than along-strike", __FILE__, options->use_up, &options->use_up, NULL));
+  PetscCall(PetscOptionsRealArray("-start_point", "Coordinates of the starting point.", __FILE__, options->start, &n, &options->have_start));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -65,6 +72,41 @@ static PetscErrorCode CrossProductUnitVector(const PetscReal a[], const PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Find the cell whose centroid is closest to the target point, across all ranks.
+// Returns the local cell number of the winner on the owning rank, and -1 on others.
+static PetscErrorCode FindClosestCell(DM dm, PetscInt cdim, const PetscReal point[], PetscInt *cTarget)
+{
+  PetscInt    cStart, cEnd, cBest = -1;
+  PetscReal   dBest = PETSC_MAX_REAL;
+  PetscMPIInt rank, ownerRank;
+  struct {
+    PetscReal dist;
+    PetscMPIInt rank;
+  } locVal, glbVal;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscReal centroid[3], vol, d2 = 0.;
+
+    PetscCall(DMPlexComputeCellGeometryFVM(dm, c, &vol, centroid, NULL));
+    for (PetscInt i = 0; i < cdim; ++i) d2 += PetscSqr(centroid[i] - point[i]);
+    if (d2 < dBest) {
+      dBest = d2;
+      cBest = c;
+    }
+  }
+  printf("cTarget=%d, dist=%.2f\n", cBest, dBest);
+  // Determine the globally closest cell via a min-loc reduction
+  locVal.dist = dBest;
+  PetscCall(PetscMPIIntCast(rank, &locVal.rank));
+  PetscCallMPI(MPIU_Allreduce(&locVal, &glbVal, 1, MPIU_REAL_INT, MPI_MINLOC, PetscObjectComm((PetscObject)dm)));
+  ownerRank = glbVal.rank;
+  *cTarget  = (rank == ownerRank) ? cBest : -1;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame, AppCtx *ctx)
 {
   DM           dm;
@@ -82,6 +124,9 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
   PetscCall(VecGetArray(up, &aup));
 
   cTarget = cStart;
+  if (ctx->have_start) {
+      PetscCall(FindClosestCell(dm, cdim, ctx->start, &cTarget));
+  }
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscScalar *nv, *asv, *upv;
     PetscReal    normal[3], vol;
@@ -130,6 +175,57 @@ static PetscErrorCode CalculateStrike(Vec n, Vec as, Vec up)
   PetscCall(VecRestoreArray(n, &an));
   PetscCall(VecRestoreArray(as, &aas));
   PetscCall(VecRestoreArray(up, &aup));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Compute the along-strike direction of the target plane and orient it to agree
+// with the source along-strike direction.
+//
+//   strike = up x n           (the two candidates are +strike and -strike)
+//
+// We pick the candidate whose dot product with the source strike is non-negative.
+// If the target normal is parallel to up (strike undefined), we fall back to the
+// source strike direction, as requested.
+static PetscErrorCode ChooseTargetStrike(PetscInt cdim, const PetscReal up[], const PetscReal nvt[], const PetscReal asvs[], PetscReal asvt[])
+{
+  PetscReal strike[3], blend, mag, sign, dot;
+  const PetscReal mag1 = 0.26; // ~15 degrees from vertical
+  const PetscReal mag0 = 0.09; // ~5 degrees from vertical
+
+  PetscFunctionBeginUser;
+  PetscCheck(cdim == 3, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Strike selection requires coordinate dimension 3, not %" PetscInt_FMT, cdim);
+
+  // strike = up x nvt (unnormalized). |strike| = sin(angle(up, nvt))
+  strike[0] = up[1] * nvt[2] - up[2] * nvt[1];
+  strike[1] = up[2] * nvt[0] - up[0] * nvt[2];
+  strike[2] = up[0] * nvt[1] - up[1] * nvt[0];
+  mag = PetscSqrtReal(PetscSqr(strike[0]) + PetscSqr(strike[1]) + PetscSqr(strike[2]));
+
+  // Orient the horizontal candidate to agree with the transported vector,
+  // so we never flip sign across cells.
+  if (mag > PETSC_SMALL) {
+    dot = DMPlex_DotRealD_Internal(cdim, strike, asvt);
+    sign = dot >= 0.0 ? 1.0 : -1.0;
+    for (PetscInt d = 0; d < 3; ++d) strike[d] *= sign / mag;
+  }
+
+  // Blend: fully horizontal when strike is well-defined (mag ~ 1),
+  // fall back to the transported frame as the normal approaches vertical (mag -> 0).
+  // mag0 (radians) is where the crossover starts.
+  blend = mag >= mag1 ? 1.0 : (mag >= mag0) ? (mag - mag0) / (mag1 - mag0) : 0.0; // 1 = use strike (up x n), 0 = use transported
+  if (blend < 1.0) {
+      printf("blend=%.4f, mag=%.4f, normal=(%.2f, %.2f, %.2f), source=(%.2f, %.2f, %.2f), strike=(%.2f, %.2f, %.2f), transport=(%.2f, %.2f, %.2f)\n",
+          blend, mag, nvt[0], nvt[1], nvt[2], asvs[0], asvs[1], asvs[2], strike[0], strike[1], strike[2], asvt[0], asvt[1], asvt[2]);
+  }
+  for (PetscInt d = 0; d < 2; ++d) asvt[d] = blend * strike[d] + (1.0 - blend) * asvt[d];
+  asvt[2] = 0.0; // Force vector to be horizontal and renormalize
+
+  // Renormalization
+  mag = PetscSqrtReal(PetscSqr(asvt[0]) + PetscSqr(asvt[1]) + PetscSqr(asvt[2]));
+  PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
+             "Degenerate along-strike" PetscInt_FMT);
+  for (PetscInt d = 0; d < 3; ++d) asvt[d] /= mag;
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -216,39 +312,8 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
 
 #if defined(ADJUST_TRANSPORT)
 {
-  PetscReal up[3] = { 0.0, 0.0, 1.0 };
-  PetscReal horiz[3]; // horizontal strike_dir candidate
-  PetscReal s, blend, mag, dot, sign;
-
-  // horiz = up x n (unnormalized). |horiz| = sin(angle(up,n))
-  horiz[0] = up[1]*nvt[2] - up[2]*nvt[1];
-  horiz[1] = up[2]*nvt[0] - up[0]*nvt[2];
-  horiz[2] = up[0]*nvt[1] - up[1]*nvt[0];
-  s = PetscSqrtReal(PetscSqr(horiz[0]) + PetscSqr(horiz[1]) + PetscSqr(horiz[2]));
-
-  // Orient the horizontal candidate to agree with the transported vector,
-  // so we never flip sign across cells.
-  if (s > PETSC_SMALL) {
-    dot = DMPlex_DotRealD_Internal(cdim, horiz, asvt) / s;
-    sign = dot >= 0.0 ? 1.0 : -1.0;
-    for (PetscInt d = 0; d < 3; ++d) horiz[d] = sign * horiz[d] / s;
-  }
-
-  // Blend: fully horizontal when strike is well-defined (s ~ 1),
-  // fall back to the transported frame as the normal approaches vertical (s -> 0).
-  // s0 (radians) is where the crossover starts.
-  {
-    const PetscReal s0 = 0.1; // ~6 degrees from vertical
-    blend = s >= s0 ? 1.0 : s / s0; // 1 = use horizontal, 0 = use transported
-  }
-  for (PetscInt d = 0; d < 3; ++d) asvt[d] = blend * horiz[d] + (1.0 - blend) * asvt[d];
-  asvt[2] = 0.0; // Force vector to be horizontal and renormalize
-
-  // Renormalization
-  mag = PetscSqrtReal(PetscSqr(asvt[0]) + PetscSqr(asvt[1]) + PetscSqr(asvt[2]));
-  PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
-             "Degenerate along-strike at target %" PetscInt_FMT, target);
-  for (PetscInt d = 0; d < 3; ++d) asvt[d] /= mag;
+    PetscReal up[3] = { 0.0, 0.0, 1.0 };
+    PetscCall(ChooseTargetStrike(cdim, up, nvt, asvs, asvt));
 }
 #endif
 
