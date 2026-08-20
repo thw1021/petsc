@@ -28,7 +28,6 @@ static PetscErrorCode PCReset_HPDDM(PC pc)
   if (data->levels) {
     for (PetscInt i = 0; i < PETSC_PCHPDDM_MAXLEVELS && data->levels[i]; ++i) {
       PetscCall(KSPDestroy(&data->levels[i]->ksp));
-      PetscCall(PCDestroy(&data->levels[i]->pc));
       PetscCall(PetscFree(data->levels[i]));
     }
     PetscCall(PetscFree(data->levels));
@@ -452,7 +451,14 @@ static PetscErrorCode PCSetFromOptions_HPDDM(PC pc, PetscOptionItems PetscOption
     }
   }
   PetscOptionsHeadEnd();
-  while (i < PETSC_PCHPDDM_MAXLEVELS && data->levels[i]) PetscCall(PetscFree(data->levels[i++]));
+  for (; i < PETSC_PCHPDDM_MAXLEVELS && data->levels[i]; ++i) {
+    PetscCall(KSPDestroy(&data->levels[i]->ksp));
+    PetscCall(PetscFree(data->levels[i]));
+  }
+  if (data->levels[0]->ksp) { /* PCSetUp_HPDDM() may have created this KSP initially as a single-level solver before PCSetFromOptions() enabled multiple levels */
+    PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%spc_hpddm_%s_", ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "", data->N > 1 ? "levels_1" : "coarse"));
+    PetscCall(KSPSetOptionsPrefix(data->levels[0]->ksp, prefix));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1474,8 +1480,6 @@ static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool
     if (algebraic) {
       PetscCall(PetscObjectQuery((PetscObject)sub[0], "_PCHPDDM_Embed", (PetscObject *)&is));
       PetscCall(ISDestroy(&is));
-      PetscCall(PetscObjectCompose((PetscObject)sub[0], "_PCHPDDM_Embed", nullptr));
-      PetscCall(PetscObjectCompose((PetscObject)sub[0], "_PCHPDDM_Compact", nullptr));
     }
     PetscCall(MatDestroySubMatrices(algebraic ? 2 : 1, &sub));
   }
@@ -1802,7 +1806,6 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         break;
       }
       PetscCall(KSPDestroy(&data->levels[n]->ksp));
-      PetscCall(PCDestroy(&data->levels[n]->pc));
     }
     /* check if some coarser levels are being reused */
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &reused, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
@@ -2939,10 +2942,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       }
     }
     if (reused) {
-      for (n = reused; n < PETSC_PCHPDDM_MAXLEVELS && data->levels[n]; ++n) {
-        PetscCall(KSPDestroy(&data->levels[n]->ksp));
-        PetscCall(PCDestroy(&data->levels[n]->pc));
-      }
+      for (n = reused; n < PETSC_PCHPDDM_MAXLEVELS && data->levels[n]; ++n) PetscCall(KSPDestroy(&data->levels[n]->ksp));
     }
     PetscCheck(!PetscDefined(USE_DEBUG), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "%" PetscInt_FMT " levels requested, only %" PetscInt_FMT " built + %" PetscInt_FMT " reused. Options for level(s) > %" PetscInt_FMT ", including -%spc_hpddm_coarse_ will not be taken into account. It is best to tune parameters, e.g., a higher value for -%spc_hpddm_levels_%" PetscInt_FMT "_eps_threshold or a lower value for -%spc_hpddm_levels_%" PetscInt_FMT "_svd_threshold_relative, so that at least one local deflation vector will be selected. If you don't want this to error out, compile --with-debugging=0", requested,
                data->N, reused, data->N, pcpre ? pcpre : "", pcpre ? pcpre : "", data->N, pcpre ? pcpre : "", data->N);
