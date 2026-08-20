@@ -1,12 +1,15 @@
 from petsc4py import PETSc
 import unittest
 
+
 class BaseTestPC:
     KSP_TYPE = None
     PC_TYPE = None
+    COMM = PETSc.COMM_SELF
+
     def setUp(self):
         ksp = PETSc.KSP()
-        ksp.create(PETSc.COMM_SELF)
+        ksp.create(self.COMM)
         pc = ksp.getPC()
         if self.KSP_TYPE:
             ksp.setType(self.KSP_TYPE)
@@ -117,6 +120,81 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         self.assertEqual(got_nsd, PETSc.DECIDE)
         self.assertEqual(got_sub, [])
         self.assertEqual(got_local, [])
+
+
+class TestHPDDMPC(BaseTestPC, unittest.TestCase):
+    PC_TYPE = PETSc.PC.Type.HPDDM
+    COMM = PETSc.COMM_WORLD
+
+    @classmethod
+    def setUpClass(cls):
+        if not PETSc.Sys.hasExternalPackage('hpddm'):
+            raise unittest.SkipTest('HPDDM unavailable, skipping tests')
+            return None
+
+    def testGeneo(self):
+        args = ('n', 2)
+        kargs = {'b': 3}
+
+        def assemble(J, t, X, X_t, s, ovl):
+            track['cnt'] += 1
+            return
+
+        def assemble_with_args(J, t, X, X_t, s, ovl, a1, a2, b=0):
+            self.assertTrue(a1 == args[0])
+            self.assertTrue(a2 == args[1])
+            self.assertTrue(b == 3)
+            track['cnt'] += 1
+            return
+
+        # changing the order will fail the test, since we cannot
+        # currently reset the callback to None
+        assemble_func = [None, assemble, assemble_with_args]
+
+        # Local and overlap size (ovl cannot be larger then nl)
+        nl = 3
+        ovl = 1
+
+        A = PETSc.Mat().create()
+        A.setType('aij')
+        A.setSizes(([nl, None],) * 2)
+        A.assemble()
+        self.pc.setOperators(A)
+
+        rank = A.getComm().rank
+        size = A.getComm().size
+        naux = nl
+        st = nl * rank
+        if rank > 0:
+            naux += ovl
+            st -= ovl
+        if rank < size - 1:
+            naux += ovl
+        ovl = PETSc.IS().createStride(naux, st, comm=PETSc.COMM_SELF)
+        Aux = PETSc.Mat().createAIJ(naux, comm=PETSc.COMM_SELF)
+        Aux.assemble()
+        for f in assemble_func:
+            A.shift(1.0)
+            Aux.shift(1.0)
+            self.pc.setHPDDMHasNeumannMat(True)
+            if f == assemble_with_args:
+                self.pc.setHPDDMAuxiliaryMat(ovl, Aux, f, args=args, kargs=kargs)
+            elif f == assemble:
+                self.pc.setHPDDMAuxiliaryMat(ovl, Aux, f)
+            else:
+                self.pc.setHPDDMAuxiliaryMat(ovl, Aux)
+            track = {'cnt': 0}
+            # TODO: This is currently mandatory to allocate the levels!
+            self.pc.setFromOptions()
+            self.pc.setUp()
+            if f is not None:
+                self.assertEqual(track['cnt'], 1)
+            A.shift(1.0)
+            self.pc.setUp()
+            if f is not None:
+                self.assertEqual(track['cnt'], 2)
+
+        return
 
 
 if __name__ == '__main__':
