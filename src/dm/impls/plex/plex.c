@@ -5710,14 +5710,29 @@ PetscErrorCode DMPlexSetCellType(DM dm, PetscInt cell, DMPolytopeType celltype)
 {
   DM_Plex *mesh = (DM_Plex *)dm->data;
   DMLabel  label;
-  PetscInt pStart, pEnd;
+  PetscInt pStart, pEnd, oldct;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(PetscSectionGetChart(mesh->coneSection, &pStart, &pEnd));
   PetscCall(DMPlexGetCellTypeLabel(dm, &label));
-  PetscCall(DMLabelSetValue(label, cell, celltype));
-  if (!mesh->cellTypes) PetscCall(PetscMalloc1(pEnd - pStart, &mesh->cellTypes));
+  if (!mesh->cellTypes) {
+    /* Initialize the cache from the label, so that points whose type is never set through this function do not carry uninitialized values */
+    PetscInt ct;
+
+    PetscCall(PetscMalloc1(pEnd - pStart, &mesh->cellTypes));
+    for (PetscInt p = pStart; p < pEnd; ++p) {
+      PetscCall(DMLabelGetValue(label, p, &ct));
+      mesh->cellTypes[p - pStart].value_as_uint8 = (uint8_t)ct;
+    }
+  }
+  /* DMLabelSetValue() alone would not remove the point from the stratum of a previously set type, and
+     DMLabelGetValue() would keep returning that stale value, so clear the old value first */
+  oldct = (PetscInt)mesh->cellTypes[cell - pStart].value_as_uint8;
+  if (oldct != (PetscInt)celltype) {
+    if (oldct != (PetscInt)(uint8_t)-1) PetscCall(DMLabelClearValue(label, cell, oldct));
+    PetscCall(DMLabelSetValue(label, cell, celltype));
+  }
   mesh->cellTypes[cell - pStart].value_as_uint8 = (uint8_t)celltype;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
