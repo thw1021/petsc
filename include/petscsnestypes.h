@@ -1,5 +1,7 @@
 #pragma once
 
+#include <petscksptypes.h>
+
 /* SUBMANSEC = SNES */
 
 /*S
