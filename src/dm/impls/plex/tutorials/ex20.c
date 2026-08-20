@@ -1,9 +1,26 @@
+#include "petscsys.h"
+#include "petscsystypes.h"
 static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 
 #include <petscdmplex.h>
 #include <petsc/private/dmpleximpl.h>
 
 //#define ADJUST_TRANSPORT
+
+typedef struct {
+  PetscBool use_up; // Transport the up direction rather than along-strike
+} AppCtx;
+
+static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
+{
+  PetscFunctionBeginUser;
+  options->use_up = PETSC_FALSE;
+
+  PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
+  PetscCall(PetscOptionsBool("-use_updir", "Transport the up direction, rather than along-strike", __FILE__, options->use_up, &options->use_up, NULL));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
@@ -44,14 +61,14 @@ static PetscErrorCode CrossProductUnitVector(const PetscReal a[], const PetscRea
   result[2] = a[0]*b[1] - a[1]*b[0];
   mag = PetscSqrtReal(result[0]*result[0] + result[1]*result[1] + result[2]*result[2]);
   PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cross product of parallel vectors");
-  for (PetscInt i = 0; i < 3; ++i) result[i] /= mag;   // was i < 2
+  for (PetscInt i = 0; i < 3; ++i) result[i] /= mag;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode InitializeFrame(Vec n, Vec as, PetscReal refdir[], DMLabel validFrame)
+static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame, AppCtx *ctx)
 {
   DM           dm;
-  PetscScalar *an, *aas;
+  PetscScalar *an, *aas, *aup;
   PetscInt     cdim, cStart, cEnd, cTarget;
   PetscMPIInt  rank;
 
@@ -60,14 +77,13 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, PetscReal refdir[], DMLabel
   PetscCall(VecGetDM(as, &dm));
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(VecSet(as, 0.));
   PetscCall(VecGetArray(n, &an));
   PetscCall(VecGetArray(as, &aas));
+  PetscCall(VecGetArray(up, &aup));
 
   cTarget = cStart;
   for (PetscInt c = cStart; c < cEnd; ++c) {
-    PetscScalar *nv;
-    PetscScalar *asv;
+    PetscScalar *nv, *asv, *upv;
     PetscReal    normal[3], vol;
 
     PetscCall(DMPlexPointGlobalRef(dm, c, an, &nv));
@@ -76,13 +92,44 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, PetscReal refdir[], DMLabel
       for (PetscInt d = 0; d < cdim; ++d) nv[d] = normal[d];
     }
     PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
-    if (!rank && (c == cTarget) && asv && nv) {
-      PetscCall(CrossProductUnitVector(refdir, nv, asv));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
+    if (!rank && (c == cTarget) && upv && asv && nv) {
+      upv[2] = 1.;
+      PetscCall(CrossProductUnitVector(upv, nv, asv));
       PetscCall(DMLabelSetValue(validFrame, c, 1));
-    }
+    } else if (!ctx->use_up) upv[2] = 1.0;
   }
   PetscCall(VecRestoreArray(n, &an));
   PetscCall(VecRestoreArray(as, &aas));
+  PetscCall(VecRestoreArray(up, &aup));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CalculateStrike(Vec n, Vec as, Vec up)
+{
+  DM           dm;
+  PetscScalar *an, *aas, *aup;
+  PetscInt     cdim, cStart, cEnd;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetDM(as, &dm));
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  PetscCall(VecGetArray(n, &an));
+  PetscCall(VecGetArray(as, &aas));
+  PetscCall(VecGetArray(up, &aup));
+
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscScalar *nv, *asv, *upv;
+
+    PetscCall(DMPlexPointGlobalRef(dm, c, an, &nv));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
+    PetscCall(CrossProductUnitVector(upv, nv, asv));
+  }
+  PetscCall(VecRestoreArray(n, &an));
+  PetscCall(VecRestoreArray(as, &aas));
+  PetscCall(VecRestoreArray(up, &aup));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -470,11 +517,12 @@ int main(int argc, char **argv)
 {
   DM      dm;
   DMLabel validFrame;
-  Vec     n, as;
-  PetscReal refdir[3] = { 0.0, 0.0, 1.0 };
+  Vec     n, as, up;
+  AppCtx  ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &ctx));
   PetscCall(CreateMesh(PETSC_COMM_WORLD, &dm));
   PetscCall(SetupFE(dm));
   PetscCall(DMCreateLabel(dm, "Valid Frame"));
@@ -485,12 +533,23 @@ int main(int argc, char **argv)
   PetscCall(DMCreateGlobalVector(dm, &as));
   PetscCall(PetscObjectSetName((PetscObject)as, "strike_dir"));
   PetscCall(VecZeroEntries(as));
-  PetscCall(InitializeFrame(n, as, refdir, validFrame));
+  PetscCall(DMCreateGlobalVector(dm, &up));
+  PetscCall(PetscObjectSetName((PetscObject)up, "up_dir"));
+  PetscCall(VecZeroEntries(up));
+  PetscCall(InitializeFrame(n, as, up, validFrame, &ctx));
   PetscCall(VecViewFromOptions(n, NULL, "-n_view"));
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
-  PetscCall(PropagateFrame(n, as, validFrame));
+  PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
+  if (ctx.use_up) {
+    PetscCall(PropagateFrame(n, up, validFrame));
+    PetscCall(CalculateStrike(n, as, up));
+  } else {
+    PetscCall(PropagateFrame(n, as, validFrame));
+  }
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
+  PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
   PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)validFrame, (PetscObject)dm, "-valid_frame_view"));
+  PetscCall(VecDestroy(&up));
   PetscCall(VecDestroy(&as));
   PetscCall(VecDestroy(&n));
   PetscCall(DMDestroy(&dm));
