@@ -1642,6 +1642,9 @@ static PetscErrorCode MatZeroRows_MPIBAIJ(Mat A, PetscInt N, const PetscInt rows
   } else {
     PetscCall(MatZeroRows_SeqBAIJ(l->A, len, lrows, 0.0, NULL, NULL));
   }
+  /* the values of the diagonal block were changed through the implementation rather than
+     MatZeroRows(), so advance its state here as the interface would */
+  PetscCall(PetscObjectStateIncrease((PetscObject)l->A));
   PetscCall(PetscFree(lrows));
 
   /* only change matrix nonzero state if pattern was allowed to be changed */
