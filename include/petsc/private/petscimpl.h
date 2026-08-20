@@ -399,6 +399,7 @@ PETSC_EXTERN PetscErrorCode                PetscObjectGetFortranCallback(PetscOb
 PETSC_INTERN PetscErrorCode PetscCitationsInitialize(void);
 PETSC_INTERN PetscErrorCode PetscFreeMPIResources(void);
 PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions, PetscBool *);
+PETSC_INTERN PetscErrorCode PetscOptionsHelpManPage_Internal(PetscOptions, const char *[]);
 
 /* Code shared between C and Fortran */
 PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *, const char *, const char *, PetscBool, PetscInt);

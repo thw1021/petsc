@@ -90,8 +90,9 @@ struct _n_PetscOptions {
   char **aliases2; /* aliasee */
 
   /* Help */
-  PetscBool help;       /* flag whether "-help" is in the database */
-  PetscBool help_intro; /* flag whether "-help intro" is in the database */
+  PetscBool help;         /* flag whether "-help" is in the database */
+  PetscBool help_intro;   /* flag whether "-help intro" is in the database */
+  char     *help_manpage; /* comma-separated man page list given as "-help manpage,...", restricts help output to options with these man pages; NULL means show all */
 
   /* Monitors */
   PetscBool monitorFromOptions, monitorCancel;
@@ -778,9 +779,9 @@ static PetscErrorCode PetscOptionsProcessPrecedentFlags(PetscOptions options, in
   }
 
   /* Process flags */
+  /* "-help" turns on help; any value is "intro" or a comma-separated man page filter (recorded when -help is inserted below), not a boolean */
   PetscCall(PetscStrcasecmp(val[PO_HELP], "intro", &options->help_intro));
-  if (options->help_intro) options->help = PETSC_TRUE;
-  else PetscCall(PetscOptionsStringToBoolIfSet_Private(PO_HELP, val, set, &options->help));
+  if (set[PO_HELP]) options->help = PETSC_TRUE;
   PetscCall(PetscOptionsStringToBoolIfSet_Private(PO_CI_ENABLE, val, set, &unneeded));
   /* need to manage PO_CI_ENABLE option before the PetscOptionsMonitor is turned on, so its setting is not monitored */
   if (set[PO_CI_ENABLE]) PetscCall(PetscOptionsSetValue_Private(options, opt[PO_CI_ENABLE], val[PO_CI_ENABLE], &a, PETSC_OPT_COMMAND_LINE));
@@ -1193,6 +1194,8 @@ PetscErrorCode PetscOptionsClear(PetscOptions options)
   options->prefix[0]  = 0;
   options->help       = PETSC_FALSE;
   options->help_intro = PETSC_FALSE;
+  if (options->help_manpage) free(options->help_manpage);
+  options->help_manpage = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1416,6 +1419,17 @@ setvalue:
     options->help       = PETSC_TRUE;
     options->help_intro = (value && !PetscOptNameCmp(value, "intro")) ? PETSC_TRUE : PETSC_FALSE;
     options->used[n]    = PETSC_TRUE;
+    /* a value other than "intro" is a comma-separated list of man pages that restricts the help output;
+       use raw malloc()/free() like names[]/values[] since -help is processed before the tracking allocator is set up */
+    if (options->help_manpage) free(options->help_manpage);
+    options->help_manpage = NULL;
+    if (value && value[0] && !options->help_intro) {
+      size_t mlen = strlen(value);
+
+      options->help_manpage = (char *)malloc((mlen + 1) * sizeof(char));
+      PetscCheck(options->help_manpage, PETSC_COMM_SELF, PETSC_ERR_MEM, "Failed to allocate -help man page filter");
+      strcpy(options->help_manpage, value);
+    }
   }
 
   PetscCall(PetscOptionsMonitor(options, name, value ? value : "", source));
@@ -1454,7 +1468,11 @@ PetscErrorCode PetscOptionsClearValue(PetscOptions options, const char name[])
   PetscFunctionBegin;
   options = options ? options : defaultoptions;
   PetscCheck(name[0] == '-', PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Name must begin with '-': Instead %s", name);
-  if (!PetscOptNameCmp(name, "-help")) options->help = options->help_intro = PETSC_FALSE;
+  if (!PetscOptNameCmp(name, "-help")) {
+    options->help = options->help_intro = PETSC_FALSE;
+    if (options->help_manpage) free(options->help_manpage);
+    options->help_manpage = NULL;
+  }
 
   name++; /* skip starting dash */
 
@@ -1758,6 +1776,16 @@ PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions options, PetscBool
   PetscAssertPointer(set, 2);
   options = options ? options : defaultoptions;
   *set    = options->help_intro;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Returns the man page filter set with "-help manpage", or NULL when help output should not be filtered. The returned pointer is borrowed and remains valid until the option is cleared. */
+PetscErrorCode PetscOptionsHelpManPage_Internal(PetscOptions options, const char *man[])
+{
+  PetscFunctionBegin;
+  PetscAssertPointer(man, 2);
+  options = options ? options : defaultoptions;
+  *man    = options->help_manpage;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

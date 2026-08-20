@@ -1322,6 +1322,11 @@ encountered option names which are then printed **in the order of their appearan
 root rank**. Different programs may take different paths through PETSc source code, so
 they will encounter different providers, and therefore have different `-help` output.
 
+Each provider function takes a man page argument. Passing one or more man page names to
+`-help` as a comma-separated list, for example `-help KSPSetType` or
+`-help KSPSetType,SNESSetType`, restricts the output to only those options registered with
+those man pages, which is useful for finding the options relevant to a particular routine.
+
 ### PETSc has so many options for my program that it is hard to keep them straight
 
 Running the PETSc program with the option `-help` will print out many of the options. To
