@@ -1,5 +1,7 @@
 #pragma once
 
+#include <petscmattypes.h>
+
 /* MANSEC = KSP */
 /* SUBMANSEC = PC */
 
