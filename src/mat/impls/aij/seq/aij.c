@@ -3212,7 +3212,7 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqAIJ(Mat A, const PetscScalar **v
 
   PetscFunctionBegin;
   allowzeropivot = PetscNot(A->erroriffailure);
-  if (a->ibdiagvalid) {
+  if (a->ibdiag && a->ibdiagState == ((PetscObject)A)->state) {
     if (values) *values = a->ibdiag;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -3327,7 +3327,7 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqAIJ(Mat A, const PetscScalar **v
     }
     PetscCall(PetscFree3(v_work, v_pivots, IJ));
   }
-  a->ibdiagvalid = PETSC_TRUE;
+  a->ibdiagState = ((PetscObject)A)->state;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4773,7 +4773,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   b->ssor_work          = NULL;
   b->omega              = 1.0;
   b->fshift             = 0.0;
-  b->ibdiagvalid        = PETSC_FALSE;
+  b->ibdiag             = NULL;
   b->keepnonzeropattern = PETSC_FALSE;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATSEQAIJ));

@@ -1,33 +1,33 @@
-  0 KSP Residual norm 529.43
-  1 KSP Residual norm 135.942
-  2 KSP Residual norm 269.201
-  3 KSP Residual norm 142.532
-  4 KSP Residual norm 143.986
-  5 KSP Residual norm 61.5152
-  6 KSP Residual norm 45.2898
-  7 KSP Residual norm 22.6601
-  8 KSP Residual norm 29.096
-  9 KSP Residual norm 40.9984
- 10 KSP Residual norm 31.3586
- 11 KSP Residual norm 30.0529
- 12 KSP Residual norm 17.2767
- 13 KSP Residual norm 8.5664
- 14 KSP Residual norm 8.77142
- 15 KSP Residual norm 7.24158
- 16 KSP Residual norm 3.40719
- 17 KSP Residual norm 1.35954
- 18 KSP Residual norm 0.784024
- 19 KSP Residual norm 0.490711
- 20 KSP Residual norm 0.302938
- 21 KSP Residual norm 0.213342
- 22 KSP Residual norm 0.189106
- 23 KSP Residual norm 0.154914
- 24 KSP Residual norm 0.187313
- 25 KSP Residual norm 0.185263
- 26 KSP Residual norm 0.0865907
- 27 KSP Residual norm 0.0370298
- 28 KSP Residual norm 0.0115801
- 29 KSP Residual norm 0.00441017
+  0 KSP Residual norm 5.294443533134e+02
+  1 KSP Residual norm 1.362156388423e+02
+  2 KSP Residual norm 2.700598677389e+02
+  3 KSP Residual norm 1.412756578241e+02
+  4 KSP Residual norm 1.442147492472e+02
+  5 KSP Residual norm 6.095825222083e+01
+  6 KSP Residual norm 4.591389194894e+01
+  7 KSP Residual norm 2.273009811395e+01
+  8 KSP Residual norm 2.939808481919e+01
+  9 KSP Residual norm 4.170920009059e+01
+ 10 KSP Residual norm 3.186806406297e+01
+ 11 KSP Residual norm 3.019493687191e+01
+ 12 KSP Residual norm 1.703326032250e+01
+ 13 KSP Residual norm 8.716725383996e+00
+ 14 KSP Residual norm 8.717489199404e+00
+ 15 KSP Residual norm 6.941544262831e+00
+ 16 KSP Residual norm 3.430337621407e+00
+ 17 KSP Residual norm 1.386575675518e+00
+ 18 KSP Residual norm 7.691509862380e-01
+ 19 KSP Residual norm 4.872121466022e-01
+ 20 KSP Residual norm 3.024316643498e-01
+ 21 KSP Residual norm 2.109289989426e-01
+ 22 KSP Residual norm 1.912844878252e-01
+ 23 KSP Residual norm 1.544321638978e-01
+ 24 KSP Residual norm 1.853137210725e-01
+ 25 KSP Residual norm 1.879019751697e-01
+ 26 KSP Residual norm 8.500899387113e-02
+ 27 KSP Residual norm 3.720353042424e-02
+ 28 KSP Residual norm 1.130646207525e-02
+ 29 KSP Residual norm 4.466546580577e-03
   Linear solve converged due to CONVERGED_RTOL iterations 29
 KSP Object: 8 MPI processes
   type: cg
@@ -81,8 +81,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.240118, max 1.26062
-        eigenvalues estimated via cg: min 0.0570861, max 1.20059
+        eigenvalue targets used: min 0.250765, max 1.31651
+        eigenvalues estimated via cg: min 0.0641037, max 1.25382
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
           type: cg
@@ -96,8 +96,8 @@ PC Object: 8 MPI processes
       left preconditioning
       not checking for convergence
     PC Object: (mg_levels_1_) 8 MPI processes
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 2
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: 8 MPI processes
         type: mpiaij
@@ -111,8 +111,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_2_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.621977, max 3.26538
-        eigenvalues estimated via cg: min 0.0471395, max 3.10988
+        eigenvalue targets used: min 0.622618, max 3.26875
+        eigenvalues estimated via cg: min 0.0471032, max 3.11309
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_2_esteig_) 8 MPI processes
           type: cg
@@ -126,8 +126,8 @@ PC Object: 8 MPI processes
       left preconditioning
       not checking for convergence
     PC Object: (mg_levels_2_) 8 MPI processes
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 2
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: 8 MPI processes
         type: mpiaij
@@ -163,36 +163,36 @@ PC Object: 8 MPI processes
     total: nonzeros=197568, allocated nonzeros=243000
     total number of mallocs used during MatSetValues calls=0
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-  0 KSP Residual norm 0.0052943
-  1 KSP Residual norm 0.00135942
-  2 KSP Residual norm 0.00269201
-  3 KSP Residual norm 0.00142532
-  4 KSP Residual norm 0.00143986
-  5 KSP Residual norm 0.000615152
-  6 KSP Residual norm 0.000452898
-  7 KSP Residual norm 0.000226601
-  8 KSP Residual norm 0.00029096
-  9 KSP Residual norm 0.000409984
- 10 KSP Residual norm 0.000313586
- 11 KSP Residual norm 0.000300529
- 12 KSP Residual norm 0.000172767
- 13 KSP Residual norm 8.5664e-05
- 14 KSP Residual norm 8.77142e-05
- 15 KSP Residual norm 7.24158e-05
- 16 KSP Residual norm 3.40719e-05
- 17 KSP Residual norm 1.35954e-05
- 18 KSP Residual norm 7.84024e-06
- 19 KSP Residual norm 4.90711e-06
- 20 KSP Residual norm 3.02938e-06
- 21 KSP Residual norm 2.13342e-06
- 22 KSP Residual norm 1.89106e-06
- 23 KSP Residual norm 1.54914e-06
- 24 KSP Residual norm 1.87313e-06
- 25 KSP Residual norm 1.85263e-06
- 26 KSP Residual norm 8.65907e-07
- 27 KSP Residual norm 3.70298e-07
- 28 KSP Residual norm 1.15801e-07
- 29 KSP Residual norm 4.41017e-08
+  0 KSP Residual norm 5.294443533134e-03
+  1 KSP Residual norm 1.362156388423e-03
+  2 KSP Residual norm 2.700598677389e-03
+  3 KSP Residual norm 1.412756578241e-03
+  4 KSP Residual norm 1.442147492472e-03
+  5 KSP Residual norm 6.095825222083e-04
+  6 KSP Residual norm 4.591389194894e-04
+  7 KSP Residual norm 2.273009811395e-04
+  8 KSP Residual norm 2.939808481919e-04
+  9 KSP Residual norm 4.170920009059e-04
+ 10 KSP Residual norm 3.186806406297e-04
+ 11 KSP Residual norm 3.019493687191e-04
+ 12 KSP Residual norm 1.703326032251e-04
+ 13 KSP Residual norm 8.716725383998e-05
+ 14 KSP Residual norm 8.717489199405e-05
+ 15 KSP Residual norm 6.941544262831e-05
+ 16 KSP Residual norm 3.430337621407e-05
+ 17 KSP Residual norm 1.386575675518e-05
+ 18 KSP Residual norm 7.691509862380e-06
+ 19 KSP Residual norm 4.872121466022e-06
+ 20 KSP Residual norm 3.024316643498e-06
+ 21 KSP Residual norm 2.109289989425e-06
+ 22 KSP Residual norm 1.912844878250e-06
+ 23 KSP Residual norm 1.544321638977e-06
+ 24 KSP Residual norm 1.853137210724e-06
+ 25 KSP Residual norm 1.879019751696e-06
+ 26 KSP Residual norm 8.500899387112e-07
+ 27 KSP Residual norm 3.720353042424e-07
+ 28 KSP Residual norm 1.130646207525e-07
+ 29 KSP Residual norm 4.466546580578e-08
   Linear solve converged due to CONVERGED_RTOL iterations 29
 KSP Object: 8 MPI processes
   type: cg
@@ -246,8 +246,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.240118, max 1.26062
-        eigenvalues estimated via cg: min 0.0570861, max 1.20059
+        eigenvalue targets used: min 0.250765, max 1.31651
+        eigenvalues estimated via cg: min 0.0641037, max 1.25382
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
           type: cg
@@ -261,8 +261,8 @@ PC Object: 8 MPI processes
       left preconditioning
       not checking for convergence
     PC Object: (mg_levels_1_) 8 MPI processes
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 2
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: 8 MPI processes
         type: mpiaij
@@ -276,8 +276,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_2_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.621977, max 3.26538
-        eigenvalues estimated via cg: min 0.0471395, max 3.10988
+        eigenvalue targets used: min 0.622618, max 3.26875
+        eigenvalues estimated via cg: min 0.0471032, max 3.11309
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_2_esteig_) 8 MPI processes
           type: cg
@@ -291,8 +291,8 @@ PC Object: 8 MPI processes
       left preconditioning
       not checking for convergence
     PC Object: (mg_levels_2_) 8 MPI processes
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 2
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: 8 MPI processes
         type: mpiaij
@@ -328,36 +328,36 @@ PC Object: 8 MPI processes
     total: nonzeros=197568, allocated nonzeros=243000
     total number of mallocs used during MatSetValues calls=0
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-  0 KSP Residual norm 0.0052943
-  1 KSP Residual norm 0.00135942
-  2 KSP Residual norm 0.00269201
-  3 KSP Residual norm 0.00142532
-  4 KSP Residual norm 0.00143986
-  5 KSP Residual norm 0.000615152
-  6 KSP Residual norm 0.000452898
-  7 KSP Residual norm 0.000226601
-  8 KSP Residual norm 0.00029096
-  9 KSP Residual norm 0.000409984
- 10 KSP Residual norm 0.000313586
- 11 KSP Residual norm 0.000300529
- 12 KSP Residual norm 0.000172767
- 13 KSP Residual norm 8.5664e-05
- 14 KSP Residual norm 8.77142e-05
- 15 KSP Residual norm 7.24158e-05
- 16 KSP Residual norm 3.40719e-05
- 17 KSP Residual norm 1.35954e-05
- 18 KSP Residual norm 7.84024e-06
- 19 KSP Residual norm 4.90711e-06
- 20 KSP Residual norm 3.02938e-06
- 21 KSP Residual norm 2.13342e-06
- 22 KSP Residual norm 1.89106e-06
- 23 KSP Residual norm 1.54914e-06
- 24 KSP Residual norm 1.87313e-06
- 25 KSP Residual norm 1.85263e-06
- 26 KSP Residual norm 8.65907e-07
- 27 KSP Residual norm 3.70298e-07
- 28 KSP Residual norm 1.15801e-07
- 29 KSP Residual norm 4.41017e-08
+  0 KSP Residual norm 5.294443533134e-03
+  1 KSP Residual norm 1.362156388423e-03
+  2 KSP Residual norm 2.700598677389e-03
+  3 KSP Residual norm 1.412756578241e-03
+  4 KSP Residual norm 1.442147492472e-03
+  5 KSP Residual norm 6.095825222083e-04
+  6 KSP Residual norm 4.591389194894e-04
+  7 KSP Residual norm 2.273009811395e-04
+  8 KSP Residual norm 2.939808481919e-04
+  9 KSP Residual norm 4.170920009059e-04
+ 10 KSP Residual norm 3.186806406297e-04
+ 11 KSP Residual norm 3.019493687191e-04
+ 12 KSP Residual norm 1.703326032251e-04
+ 13 KSP Residual norm 8.716725383998e-05
+ 14 KSP Residual norm 8.717489199405e-05
+ 15 KSP Residual norm 6.941544262832e-05
+ 16 KSP Residual norm 3.430337621408e-05
+ 17 KSP Residual norm 1.386575675518e-05
+ 18 KSP Residual norm 7.691509862380e-06
+ 19 KSP Residual norm 4.872121466022e-06
+ 20 KSP Residual norm 3.024316643498e-06
+ 21 KSP Residual norm 2.109289989425e-06
+ 22 KSP Residual norm 1.912844878250e-06
+ 23 KSP Residual norm 1.544321638977e-06
+ 24 KSP Residual norm 1.853137210723e-06
+ 25 KSP Residual norm 1.879019751696e-06
+ 26 KSP Residual norm 8.500899387112e-07
+ 27 KSP Residual norm 3.720353042424e-07
+ 28 KSP Residual norm 1.130646207525e-07
+ 29 KSP Residual norm 4.466546580578e-08
   Linear solve converged due to CONVERGED_RTOL iterations 29
 KSP Object: 8 MPI processes
   type: cg
@@ -411,8 +411,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.240118, max 1.26062
-        eigenvalues estimated via cg: min 0.0570861, max 1.20059
+        eigenvalue targets used: min 0.250765, max 1.31651
+        eigenvalues estimated via cg: min 0.0641037, max 1.25382
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
           type: cg
@@ -426,8 +426,8 @@ PC Object: 8 MPI processes
       left preconditioning
       not checking for convergence
     PC Object: (mg_levels_1_) 8 MPI processes
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 2
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: 8 MPI processes
         type: mpiaij
@@ -441,8 +441,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_2_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.621977, max 3.26538
-        eigenvalues estimated via cg: min 0.0471395, max 3.10988
+        eigenvalue targets used: min 0.622618, max 3.26875
+        eigenvalues estimated via cg: min 0.0471032, max 3.11309
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_2_esteig_) 8 MPI processes
           type: cg
@@ -456,8 +456,8 @@ PC Object: 8 MPI processes
       left preconditioning
       not checking for convergence
     PC Object: (mg_levels_2_) 8 MPI processes
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 2
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: 8 MPI processes
         type: mpiaij
@@ -493,4 +493,4 @@ PC Object: 8 MPI processes
     total: nonzeros=197568, allocated nonzeros=243000
     total number of mallocs used during MatSetValues calls=0
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-[0]main |b-Ax|/|b|=1.165490e-04, |b|=5.391826e+00, emax=9.990809e-01
+[0]main |b-Ax|/|b|=1.177331e-04, |b|=5.391826e+00, emax=9.990717e-01
