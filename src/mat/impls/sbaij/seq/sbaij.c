@@ -713,7 +713,6 @@ static PetscErrorCode MatAssemblyEnd_SeqSBAIJ(Mat A, MatAssemblyType mode)
   A->info.mallocs += a->reallocs;
   a->reallocs         = 0;
   A->info.nz_unneeded = (PetscReal)fshift * bs2;
-  a->idiagvalid       = PETSC_FALSE;
   a->rmax             = rmax;
 
   if (A->cmap->n < 65536 && A->cmap->bs == 1) {
@@ -1116,7 +1115,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
   for (i = 0; i < is_n; i++) {
     row   = is_idx[i];
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    aa    = baij->a + baij->i[row / bs] * bs2 + (row % bs);
+    aa    = PetscSafePointerPlusOffset(baij->a, baij->i[row / bs] * bs2 + (row % bs));
     for (k = 0; k < count; k++) {
       aa[0] = zero;
       aa += bs;

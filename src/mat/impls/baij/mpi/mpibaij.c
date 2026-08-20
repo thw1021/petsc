@@ -1592,6 +1592,10 @@ static PetscErrorCode MatDiagonalScale_MPIBAIJ(Mat mat, Vec ll, Vec rr)
     PetscCall(VecScatterEnd(baij->Mvctx, rr, baij->lvec, INSERT_VALUES, SCATTER_FORWARD));
     PetscUseTypeMethod(b, diagonalscale, NULL, baij->lvec);
   }
+  /* the blocks were scaled through their type methods rather than MatDiagonalScale(), so advance
+     their states here as the interface would */
+  PetscCall(PetscObjectStateIncrease((PetscObject)a));
+  PetscCall(PetscObjectStateIncrease((PetscObject)b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1642,6 +1646,9 @@ static PetscErrorCode MatZeroRows_MPIBAIJ(Mat A, PetscInt N, const PetscInt rows
   } else {
     PetscCall(MatZeroRows_SeqBAIJ(l->A, len, lrows, 0.0, NULL, NULL));
   }
+  /* the values of the diagonal block were changed through the implementation rather than
+     MatZeroRows(), so advance its state here as the interface would */
+  PetscCall(PetscObjectStateIncrease((PetscObject)l->A));
   PetscCall(PetscFree(lrows));
 
   /* only change matrix nonzero state if pattern was allowed to be changed */
@@ -1713,7 +1720,7 @@ static PetscErrorCode MatZeroRowsColumns_MPIBAIJ(Mat A, PetscInt N, const PetscI
   for (i = 0; i < len; ++i) {
     row   = lrows[i];
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    aa    = baij->a + baij->i[row / bs] * bs2 + (row % bs);
+    aa    = PetscSafePointerPlusOffset(baij->a, baij->i[row / bs] * bs2 + (row % bs));
     for (k = 0; k < count; ++k) {
       aa[0] = 0.0;
       aa += bs;
@@ -1856,6 +1863,10 @@ static PetscErrorCode MatConjugate_MPIBAIJ(Mat mat)
   PetscFunctionBegin;
   PetscCall(MatConjugate_SeqBAIJ(a->A));
   PetscCall(MatConjugate_SeqBAIJ(a->B));
+  /* the blocks were conjugated through the implementation rather than MatConjugate(), so advance
+     their states here as the interface would */
+  PetscCall(PetscObjectStateIncrease((PetscObject)a->A));
+  PetscCall(PetscObjectStateIncrease((PetscObject)a->B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
