@@ -1,5 +1,7 @@
 #pragma once
 
+#include <petscvec.h>
+
 /* SUBMANSEC = DM */
 
 /*S
@@ -13,6 +15,82 @@
 .seealso: [](ch_dmbase), `DMType`, `DMGetType()`, `DMCompositeCreate()`, `DMDACreate()`, `DMSetType()`, `DMDA`, `DMPLEX`, `DMSWARM`, `DMNETWORK`, `DMCreate()`
 S*/
 typedef struct _p_DM *DM;
+
+/*J
+   DMType - String with the name of a PETSc `DM`. These are all the `DM` provided by PETSc.
+
+   Level: beginner
+
+   Note:
+   These can be used with `DMSetType()` or the options database key `-dm_type` to set the specific data structures and algorithms to use with a specific `DM`.
+   But more commonly one calls directly a constructor for a particular `DMType` such as `DMDACreate()`
+
+.seealso: [](ch_dmbase), `DMSetType()`, `DMCreate()`, `DM`, `DMDACreate()`
+J*/
+typedef const char *DMType;
+#define DMDA        "da"
+#define DMCOMPOSITE "composite"
+#define DMSLICED    "sliced"
+#define DMSHELL     "shell"
+#define DMPLEX      "plex"
+#define DMREDUNDANT "redundant"
+#define DMPATCH     "patch"
+#define DMMOAB      "moab"
+#define DMNETWORK   "network"
+#define DMFOREST    "forest"
+#define DMP4EST     "p4est"
+#define DMP8EST     "p8est"
+#define DMSWARM     "swarm"
+#define DMPRODUCT   "product"
+#define DMSTAG      "stag"
+
+struct _n_DMInterpolationInfo {
+  MPI_Comm   comm;
+  PetscInt   dim;    /* The spatial dimension of points */
+  PetscInt   nInput; /* The number of input points */
+  PetscReal *points; /* The input point coordinates */
+  PetscInt  *cells;  /* The cell containing each point */
+  PetscInt   n;      /* The number of local points */
+  Vec        coords; /* The point coordinates */
+  PetscInt   dof;    /* The number of components to interpolate */
+};
+/*MC
+  DMInterpolationInfo - Pointer to a structure for holding information about interpolation on a mesh
+
+  Synopsis:
+    comm     - The communicator
+    dim      - The spatial dimension of points
+    nInput   - The number of input points
+    points[] - The input point coordinates
+    cells[]  - The cell containing each point
+    n        - The number of local points
+    coords   - The point coordinates
+    dof      - The number of components to interpolate
+
+  Level: intermediate
+
+.seealso: [](ch_dmbase), `DM`, `DMInterpolationCreate()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`
+M*/
+typedef struct _n_DMInterpolationInfo *DMInterpolationInfo;
+
+/*E
+   DMCopyLabelsMode - Determines how `DMCopyLabels()` behaves when there is a `DMLabel` in the source and destination `DM`s with the same name
+
+   Values:
++  `DM_COPY_LABELS_REPLACE` - replace label in destination by label from source
+.  `DM_COPY_LABELS_KEEP`    - keep destination label
+-  `DM_COPY_LABELS_FAIL`    - generate an error
+
+   Level: advanced
+
+.seealso: [](ch_dmbase), `DMLabel`, `DM`, `DMCompareLabels()`, `DMRemoveLabel()`
+E*/
+typedef enum {
+  DM_COPY_LABELS_REPLACE,
+  DM_COPY_LABELS_KEEP,
+  DM_COPY_LABELS_FAIL
+} DMCopyLabelsMode;
+PETSC_EXTERN const char *const DMCopyLabelsModes[];
 
 /*E
   DMBoundaryType - Describes the choice for the filling of ghost cells on physical domain boundaries.
