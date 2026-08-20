@@ -1,5 +1,7 @@
 #pragma once
 
+#include <petscvec.h>
+
 /* SUBMANSEC = DM */
 
 /*S
