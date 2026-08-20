@@ -1,0 +1,10 @@
+MatInvertBlockDiagonal() after re-assembly with unchanged sparsity:
+  aij      pass 0: MatInvertBlockDiagonal()[0] = 1      (exact 1.) ok
+  aij      pass 1: MatInvertBlockDiagonal()[0] = 0.5    (exact 0.5) ok
+  baij     pass 0: MatInvertBlockDiagonal()[0] = 1      (exact 1.) ok
+  baij     pass 1: MatInvertBlockDiagonal()[0] = 0.5    (exact 0.5) ok
+KSP(preonly) + PCPBJACOBI on the same block-diagonal matrix:
+  aij      pass 0: KSPSolve() x[0] = 1      (exact 1.) ok
+  aij      pass 1: KSPSolve() x[0] = 0.5    (exact 0.5) ok
+  baij     pass 0: KSPSolve() x[0] = 1      (exact 1.) ok
+  baij     pass 1: KSPSolve() x[0] = 0.5    (exact 0.5) ok

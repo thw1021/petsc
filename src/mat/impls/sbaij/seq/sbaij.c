@@ -848,7 +848,6 @@ static PetscErrorCode MatAssemblyEnd_SeqSBAIJ(Mat A, MatAssemblyType mode)
   A->info.mallocs += a->reallocs;
   a->reallocs         = 0;
   A->info.nz_unneeded = (PetscReal)fshift * bs2;
-  a->idiagvalid       = PETSC_FALSE;
   a->rmax             = rmax;
 
   if (A->cmap->n < 65536 && A->cmap->bs == 1) {
