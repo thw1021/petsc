@@ -2,8 +2,16 @@
 
 typedef struct _n_TaoTerm_HalfL2Squared TaoTerm_HalfL2Squared;
 
+typedef struct {
+  PetscObjectId    id;
+  PetscObjectState state;
+  PetscBool        valid;
+} TaoTermHalfL2SquaredHessianState;
+
 struct _n_TaoTerm_HalfL2Squared {
-  Vec pdiff_work;
+  Vec                              pdiff_work;
+  TaoTermHalfL2SquaredHessianState H_state;
+  TaoTermHalfL2SquaredHessianState Hpre_state;
 };
 
 static PetscErrorCode TaoTermDestroy_Halfl2squared(TaoTerm term)
@@ -55,21 +63,39 @@ static PetscErrorCode TaoTermComputeGradient_Halfl2squared(TaoTerm term, Vec x, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermHalfL2SquaredSetIdentity(Mat H, TaoTermHalfL2SquaredHessianState *cached)
+{
+  PetscObjectId    id;
+  PetscObjectState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetId((PetscObject)H, &id));
+  PetscCall(MatGetState(H, &state));
+  if (cached->valid && cached->id == id && cached->state == state) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(MatZeroEntries(H));
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatShift(H, 1.0));
+  PetscCall(MatGetState(H, &cached->state));
+  cached->id    = id;
+  cached->valid = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
+  TaoTerm_HalfL2Squared *l2 = (TaoTerm_HalfL2Squared *)term->data;
+
   PetscFunctionBegin;
-  if (H) {
-    PetscCall(MatZeroEntries(H));
-    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatShift(H, 1.0));
-  }
-  if (Hpre && Hpre != H) {
-    PetscCall(MatZeroEntries(Hpre));
-    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatShift(Hpre, 1.0));
-  }
+  if (H) PetscCall(TaoTermHalfL2SquaredSetIdentity(H, &l2->H_state));
+  if (Hpre && Hpre != H) PetscCall(TaoTermHalfL2SquaredSetIdentity(Hpre, &l2->Hpre_state));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermComputeHessianMult_Halfl2squared(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCopy(v, Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -141,6 +167,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   term->ops->gradient                   = TaoTermComputeGradient_Halfl2squared;
   term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_Halfl2squared;
   term->ops->hessian                    = TaoTermComputeHessian_Halfl2squared;
+  term->ops->hessianmult                = TaoTermComputeHessianMult_Halfl2squared;
   term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_Halfl2squared;
   term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_Halfl2squared;
   PetscFunctionReturn(PETSC_SUCCESS);
