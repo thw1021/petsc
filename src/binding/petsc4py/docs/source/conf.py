@@ -206,6 +206,18 @@ def _setup_mpi4py_typing():
         setattr(mod, clsname, cls)
 
 
+def _fix_builtin_type_xrefs(app, doctree):
+    from sphinx import addnodes
+
+    for node in doctree.findall(addnodes.pending_xref):
+        if (
+            node.get('refdomain') == 'py'
+            and node.get('reftype') == 'class'
+            and node.get('reftarget') == 'type'
+        ):
+            node.attributes.pop('refspecific', None)
+
+
 def _patch_domain_python():
     from sphinx.domains.python import PythonDomain
 
@@ -362,6 +374,7 @@ _process_demos('poisson2d/poisson2d.py')
 
 
 def setup(app):
+    app.connect('doctree-read', _fix_builtin_type_xrefs)
     _setup_mpi4py_typing()
     _patch_domain_python()
     _monkey_patch_returns()
