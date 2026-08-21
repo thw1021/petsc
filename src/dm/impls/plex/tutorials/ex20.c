@@ -1,3 +1,5 @@
+#include "petscdmlabel.h"
+#include "petscsys.h"
 static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 
 #include <petscdmplex.h>
@@ -5,33 +7,39 @@ static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 
 //#define ADJUST_TRANSPORT
 
+typedef enum {
+  SINGLE_PHASE_STRIKE,
+  SINGLE_PHASE_UP,
+  TWO_PHASE,
+  NUM_STRIKE_ALGS
+} StrikeAlg;
+const char *strikeAlgs[NUM_STRIKE_ALGS + 1] = {"single_phase_strike", "single_phase_up", "two_phase", "unknown"};
+
 typedef struct {
-  PetscReal up[3];        // The up direction
-  PetscInt  freezeDir;    // Direction to freeze during transport
-  PetscBool freezeStrike; // Only allow the updir to change orthogonal to the current strike direction
-  PetscBool transportUp;  // Transport the up direction rather than along-strike
+  PetscReal up[3];     // The up direction
+  PetscInt  freezeDir; // Direction to freeze during transport
+  StrikeAlg strikeAlg; // Algorithm used to determine the strike direction
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscInt  n = 3;
+  PetscInt  n = 3, alg;
   PetscBool flg;
 
   PetscFunctionBeginUser;
-  options->up[0]        = 0.;
-  options->up[1]        = 0.;
-  options->up[2]        = 1.;
-  options->freezeDir    = -1;
-  options->freezeStrike = PETSC_FALSE;
-  options->transportUp  = PETSC_FALSE;
+  options->up[0]     = 0.;
+  options->up[1]     = 0.;
+  options->up[2]     = 1.;
+  options->freezeDir = -1;
+  options->strikeAlg = SINGLE_PHASE_STRIKE;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
-  PetscCall(PetscOptionsRealArray("-up", "The up direction", "ex44.c", options->up, &n, &flg));
+  PetscCall(PetscOptionsRealArray("-up", "The up direction", __FILE__, options->up, &n, &flg));
   PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
   PetscCheck(options->freezeDir < 3, comm, PETSC_ERR_ARG_WRONG, "Freeze direction %" PetscInt_FMT " not in [0,3)", options->freezeDir);
-  PetscCall(PetscOptionsBool("-freeze_strike", "Only allow transport perpendicular to current along-strike", __FILE__, options->freezeStrike, &options->freezeStrike, NULL));
-  PetscCall(PetscOptionsBool("-transport_up", "Transport the up direction, rather than along-strike", __FILE__, options->transportUp, &options->transportUp, NULL));
+  PetscCall(PetscOptionsEList("-strike_alg", "Algorithm to determine the strike direction", __FILE__, strikeAlgs, NUM_STRIKE_ALGS, strikeAlgs[options->strikeAlg], &alg, NULL));
+  options->strikeAlg = (StrikeAlg)alg;
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -112,7 +120,7 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
       for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
       PetscCall(CrossProductUnitVector(upv, nv, asv));
       PetscCall(DMLabelSetValue(validFrame, c, 1));
-    } else if (!ctx->transportUp) {
+    } else if (ctx->strikeAlg != SINGLE_PHASE_UP) {
       for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
     }
   }
@@ -122,7 +130,7 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CalculateStrike(Vec n, Vec as, Vec up)
+static PetscErrorCode ComputeStrike(Vec n, Vec as, Vec up)
 {
   DM           dm;
   PetscScalar *an, *aas, *aup;
@@ -143,6 +151,49 @@ static PetscErrorCode CalculateStrike(Vec n, Vec as, Vec up)
     PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
     PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
     PetscCall(CrossProductUnitVector(upv, nv, asv));
+  }
+  PetscCall(VecRestoreArray(n, &an));
+  PetscCall(VecRestoreArray(as, &aas));
+  PetscCall(VecRestoreArray(up, &aup));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Compute the strike = up x n and replace as, however
+//   Flip direction if it is too far from existing strike direction as
+//     mark computed cells as valid
+//   If up and n are too close, set to 0
+static PetscErrorCode ComputeStrikeSafe(Vec n, Vec as, Vec up, DMLabel validFrame)
+{
+  DM           dm;
+  PetscScalar *an, *aas, *aup;
+  PetscInt     cdim, cStart, cEnd;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetDM(as, &dm));
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  PetscCall(VecGetArray(n, &an));
+  PetscCall(VecGetArray(as, &aas));
+  PetscCall(VecGetArray(up, &aup));
+
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscScalar *nv, *asv, *upv, tmp[3];
+    PetscReal    cth;
+
+    PetscCall(DMPlexPointGlobalRef(dm, c, an, &nv));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
+    cth = DMPlex_DotD_Internal(cdim, nv, upv);
+    if (cth > 0.98) {
+      for (PetscInt d = 0; d < cdim; ++d) asv[d] = 0.;
+      continue;
+    }
+    PetscCall(CrossProductUnitVector(upv, nv, tmp));
+    cth = DMPlex_DotD_Internal(cdim, asv, tmp);
+    if (cth > 0.) for (PetscInt d = 0; d < cdim; ++d) asv[d] = tmp[d];
+    else if (cth < 0.) for (PetscInt d = 0; d < cdim; ++d) asv[d] = -tmp[d];
+    else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Computed strike direction orthogonal to reference strike");
+    PetscCall(DMLabelSetValue(validFrame, c, 1));
   }
   PetscCall(VecRestoreArray(n, &an));
   PetscCall(VecRestoreArray(as, &aas));
@@ -232,18 +283,6 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
   DMPlex_Mult3D_Internal(R, 1, asvs, asvt);
   if (ctx->freezeDir >= 0) {
     asvt[ctx->freezeDir] = asvs[ctx->freezeDir];
-    norm = DMPlex_DotD_Internal(cdim, asvt, asvt);
-    norm = PetscSqrtReal(norm);
-    for (PetscInt d = 0; d < cdim; ++d) asvt[d] /= norm;
-  }
-  if (ctx->freezeStrike) {
-    PetscReal delta[3], das[3];
-    PetscReal c;
-
-    for (PetscInt d = 0; d < cdim; ++d) delta[d] = asvt[d] - asvs[d];
-    c = DMPlex_DotD_Internal(cdim, delta, asvs);
-    // asvt = asvs + delta' = asvs + (delta - c asvs) = (1 - c) asvs + delta
-    for (PetscInt d = 0; d < cdim; ++d) asvt[d] = (1. - c) * asvs[d] + delta[d];
     norm = DMPlex_DotD_Internal(cdim, asvt, asvt);
     norm = PetscSqrtReal(norm);
     for (PetscInt d = 0; d < cdim; ++d) asvt[d] /= norm;
@@ -578,12 +617,23 @@ int main(int argc, char **argv)
   PetscCall(VecViewFromOptions(n, NULL, "-n_view"));
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
-  if (ctx.transportUp) {
-    PetscCall(PropagateFrame(n, up, validFrame, &ctx));
-    PetscCall(CalculateStrike(n, as, up));
-  } else {
+  switch (ctx.strikeAlg) {
+  case SINGLE_PHASE_STRIKE:
     PetscCall(PropagateFrame(n, as, validFrame, &ctx));
-    PetscCall(CalculateStrike(n, as2, up));
+    PetscCall(ComputeStrike(n, as2, up));
+    break;
+  case SINGLE_PHASE_UP:
+    PetscCall(PropagateFrame(n, up, validFrame, &ctx));
+    PetscCall(ComputeStrike(n, as, up));
+    break;
+  case TWO_PHASE:
+    PetscCall(PropagateFrame(n, as, validFrame, &ctx));
+    PetscCall(DMLabelClearStratum(validFrame, 1));
+    PetscCall(ComputeStrikeSafe(n, as, up, validFrame));
+    PetscCall(PropagateFrame(n, as, validFrame, &ctx));
+    break;
+  default:
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Unsupported algorithm: %s", strikeAlgs[ctx.strikeAlg]);
   }
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   PetscCall(VecViewFromOptions(as2, NULL, "-as2_view"));
