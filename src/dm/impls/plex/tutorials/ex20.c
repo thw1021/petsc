@@ -18,7 +18,8 @@ const char *strikeAlgs[NUM_STRIKE_ALGS + 1] = {"single_phase_strike", "single_ph
 
 typedef struct {
   PetscReal up[3];     // The up direction
-  PetscInt  initCell;  // The initial cell for propagation
+  PetscReal start[3];  // Coordinates of the starting point
+  PetscBool haveStart; // Whether the user specified a starting point
   PetscInt  freezeDir; // Direction to freeze during transport
   StrikeAlg strikeAlg; // Algorithm used to determine the strike direction
 } AppCtx;
@@ -32,12 +33,15 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->up[0]     = 0.;
   options->up[1]     = 0.;
   options->up[2]     = 1.;
-  options->initCell  = 0;
+  options->start[0]     = 0.;
+  options->start[1]     = 0.;
+  options->start[2]     = 0.;
+  options->haveStart = PETSC_FALSE;
   options->freezeDir = -1;
   options->strikeAlg = SINGLE_PHASE_STRIKE;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
-  PetscCall(PetscOptionsBoundedInt("-init_cell", "Initial cell for propagation", __FILE__, options->initCell, &options->initCell, NULL, 0));
+  PetscCall(PetscOptionsRealArray("-start_point", "Coordinates of the starting point.", __FILE__, options->start, &n, &options->haveStart));
   PetscCall(PetscOptionsRealArray("-up", "The up direction", __FILE__, options->up, &n, &flg));
   PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
@@ -91,11 +95,51 @@ static PetscErrorCode CrossProductUnitVector(const PetscReal a[], const PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Find the cell whose centroid is closest to the target point, across all ranks.
+// Returns the local cell number of the winner on the owning rank, and -1 on others.
+static PetscErrorCode FindClosestCell(DM dm, PetscInt cdim, const PetscReal point[], PetscInt *cTarget)
+{
+  PetscInt    cStart, cEnd, cBest = -1;
+  PetscReal   dBest = PETSC_MAX_REAL;
+  PetscMPIInt rank, ownerRank;
+  struct {
+    PetscReal dist;
+    int rank;
+  } locVal, glbVal;
+  #if defined(PETSC_USE_REAL_SINGLE)
+    MPI_Datatype pairtype = MPI_FLOAT_INT;
+  #else
+    MPI_Datatype pairtype = MPI_DOUBLE_INT;
+  #endif
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscReal centroid[3], vol, d2 = 0.;
+
+    PetscCall(DMPlexComputeCellGeometryFVM(dm, c, &vol, centroid, NULL));
+    for (PetscInt i = 0; i < cdim; ++i) d2 += PetscSqr(centroid[i] - point[i]);
+    if (d2 < dBest) {
+      dBest = d2;
+      cBest = c;
+    }
+  }
+  printf("cTarget=%d, dist=%.2f\n", cBest, dBest);
+  // Determine the globally closest cell via a min-loc reduction
+  locVal.dist = dBest;
+  locVal.rank = (int)rank;
+  PetscCallMPI(MPIU_Allreduce(&locVal, &glbVal, 1, pairtype, MPI_MINLOC, PetscObjectComm((PetscObject)dm)));
+  ownerRank = (PetscMPIInt)glbVal.rank;
+  *cTarget  = (rank == ownerRank) ? cBest : -1;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame, AppCtx *ctx)
 {
   DM           dm;
   PetscScalar *an, *aas, *aup;
-  PetscInt     cdim, cStart, cEnd, cTarget = ctx->initCell;
+  PetscInt     cdim, cStart, cEnd, cTarget;
   PetscMPIInt  rank;
 
   PetscFunctionBeginUser;
@@ -108,6 +152,10 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
   PetscCall(VecGetArray(as, &aas));
   PetscCall(VecGetArray(up, &aup));
 
+  cTarget = cStart;
+  if (ctx->haveStart) {
+      PetscCall(FindClosestCell(dm, cdim, ctx->start, &cTarget));
+  }
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscScalar *nv, *asv, *upv;
     PetscReal    normal[3], vol;
