@@ -81,8 +81,13 @@ static PetscErrorCode FindClosestCell(DM dm, PetscInt cdim, const PetscReal poin
   PetscMPIInt rank, ownerRank;
   struct {
     PetscReal dist;
-    PetscMPIInt rank;
+    int rank;
   } locVal, glbVal;
+  #if defined(PETSC_USE_REAL_SINGLE)
+    MPI_Datatype pairtype = MPI_FLOAT_INT;
+  #else
+    MPI_Datatype pairtype = MPI_DOUBLE_INT;
+  #endif
 
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
@@ -100,9 +105,9 @@ static PetscErrorCode FindClosestCell(DM dm, PetscInt cdim, const PetscReal poin
   printf("cTarget=%d, dist=%.2f\n", cBest, dBest);
   // Determine the globally closest cell via a min-loc reduction
   locVal.dist = dBest;
-  PetscCall(PetscMPIIntCast(rank, &locVal.rank));
-  PetscCallMPI(MPIU_Allreduce(&locVal, &glbVal, 1, MPIU_REAL_INT, MPI_MINLOC, PetscObjectComm((PetscObject)dm)));
-  ownerRank = glbVal.rank;
+  locVal.rank = (int)rank;
+  PetscCallMPI(MPIU_Allreduce(&locVal, &glbVal, 1, pairtype, MPI_MINLOC, PetscObjectComm((PetscObject)dm)));
+  ownerRank = (PetscMPIInt)glbVal.rank;
   *cTarget  = (rank == ownerRank) ? cBest : -1;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -210,14 +215,13 @@ static PetscErrorCode ChooseTargetStrike(PetscInt cdim, const PetscReal up[], co
   }
 
   // Blend: fully horizontal when strike is well-defined (mag ~ 1),
-  // fall back to the transported frame as the normal approaches vertical (mag -> 0).
-  // mag0 (radians) is where the crossover starts.
-  blend = mag >= mag1 ? 1.0 : (mag >= mag0) ? (mag - mag0) / (mag1 - mag0) : 0.0; // 1 = use strike (up x n), 0 = use transported
+  // fall back to the source (adjacent face) as the normal approaches vertical (mag -> 0).
+  // mag1 (radians) is where the crossover starts and mag0 (radians) is where the crossover ends..
+  blend = mag >= mag1 ? 1.0 : (mag >= mag0) ? (mag - mag0) / (mag1 - mag0) : 0.0; // 1 = use strike (up x n), 0 = use source
   if (blend < 1.0) {
-      printf("blend=%.4f, mag=%.4f, normal=(%.2f, %.2f, %.2f), source=(%.2f, %.2f, %.2f), strike=(%.2f, %.2f, %.2f), transport=(%.2f, %.2f, %.2f)\n",
-          blend, mag, nvt[0], nvt[1], nvt[2], asvs[0], asvs[1], asvs[2], strike[0], strike[1], strike[2], asvt[0], asvt[1], asvt[2]);
+
   }
-  for (PetscInt d = 0; d < 2; ++d) asvt[d] = blend * strike[d] + (1.0 - blend) * asvt[d];
+  for (PetscInt d = 0; d < 2; ++d) asvt[d] = blend * strike[d] + (1.0 - blend) * asvs[d];
   asvt[2] = 0.0; // Force vector to be horizontal and renormalize
 
   // Renormalization
