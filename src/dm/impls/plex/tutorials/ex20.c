@@ -42,6 +42,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
   PetscCall(PetscOptionsRealArray("-start_point", "Coordinates of the starting point.", __FILE__, options->start, &n, &options->haveStart));
+  PetscCheck(!options->haveStart || n == 3, comm, PETSC_ERR_ARG_WRONG, "Starting point must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsRealArray("-up", "The up direction", __FILE__, options->up, &n, &flg));
   PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
@@ -484,6 +485,7 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
   PetscReal          cth;
   PetscBool          updated;
   PetscInt           cStart, cEnd, cdim;
+  const PetscReal colinearTol = 0.97;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetDM(n, &dm));
@@ -548,7 +550,7 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
             cth = DMPlex_DotD_Internal(cdim, anv, aupv);
             PetscCall(VecRestoreArrayRead(n, &an));
             PetscCall(VecRestoreArrayRead(up, &aup));
-            if (cth <= 0.98) PetscCall(AnalyticCellFrame(face, p, q, validFrame, iframe, n, up, as, &updated, ctx));
+            if (cth <= colinearTol) PetscCall(AnalyticCellFrame(face, p, q, validFrame, iframe, n, up, as, &updated, ctx));
             else updated = PETSC_FALSE;
             break;
           case 2:
@@ -559,7 +561,7 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
             cth = DMPlex_DotD_Internal(cdim, anv, aupv);
             PetscCall(VecRestoreArrayRead(n, &an));
             PetscCall(VecRestoreArrayRead(up, &aup));
-            if (cth > 0.98) PetscCall(PropagateCellFrame(face, p, q, validFrame, iframe, n, as, &updated, ctx));
+            if (cth > colinearTol) PetscCall(PropagateCellFrame(face, p, q, validFrame, iframe, n, as, &updated, ctx));
             else updated = PETSC_FALSE;
             break;
           default:
