@@ -76,7 +76,8 @@ check-docs:
 	${PYTHON} -m venv petsc4py-docs-env
 	. petsc4py-docs-env/bin/activate && python -m pip install -r conf/requirements-docs.txt
 	. petsc4py-docs-env/bin/activate && CFLAGS=-O0 python -m pip install .
-	. petsc4py-docs-env/bin/activate && ${MAKE} sphinx-html SPHINXOPTS_EXTRA="--fail-on-warning -j 1"
+	. petsc4py-docs-env/bin/activate && ${MAKE} docsclean
+	. petsc4py-docs-env/bin/activate && ${MAKE} sphinx-html SPHINXOPTS_EXTRA="-W"
 
 stubgen:
 	python -m pip install .
@@ -114,28 +115,28 @@ rst2html: checkdocutils
 	${RST2HTML} ${RST2HTMLOPTS} docs/index.rst > docs/index.html
 
 SPHINXBUILD = sphinx-build
-SPHINXOPTS  = --fresh-env --write-all --show-traceback -j auto
+SPHINXOPTS  = -E -a -T -j auto
 .PHONY: sphinx sphinx-html sphinx-pdf sphinx-man sphinx-info
 sphinx: sphinx-html sphinx-pdf sphinx-man sphinx-info
 sphinx-html:
 	mkdir -p build/doctrees docs/html
-	${SPHINXBUILD} --builder html --doctree-dir build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
+	${SPHINXBUILD} -b html -d build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
 	docs/source docs/html
 	${RM} docs/html/.buildinfo
 sphinx-pdf:
 	mkdir -p build/doctrees build/latex
-	${SPHINXBUILD} --builder latex --doctree-dir build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
+	${SPHINXBUILD} -b latex -d build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
 	docs/source build/latex
 	${MAKE} -C build/latex all-pdf > /dev/null
 	mv build/latex/*.pdf docs/
 sphinx-man:
 	mkdir -p build/doctrees build/man
-	${SPHINXBUILD} --builder man --doctree-dir build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
+	${SPHINXBUILD} -b man -d build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
 	docs/source build/man
 	mv build/man/*.[137] docs/
 sphinx-info:
 	mkdir -p build/doctrees build/texinfo
-	${SPHINXBUILD} --builder texinfo --doctree-dir build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
+	${SPHINXBUILD} -b texinfo -d build/doctrees ${SPHINXOPTS} ${SPHINXOPTS_EXTRA} \
 	docs/source build/texinfo
 	${MAKE} -C build/texinfo info > /dev/null
 	mv build/texinfo/*.info docs/
@@ -153,7 +154,7 @@ docsclean:
 
 website:
 	CFLAGS=-O0 python -m pip install .
-	${MAKE} sphinx-html SPHINXOPTS_EXTRA="--fail-on-warning -j 2"
+	${MAKE} sphinx-html SPHINXOPTS_EXTRA="-W -j 2"
 	mkdir -p ${LOC}/petsc4py
 	mv docs/html/* ${LOC}/petsc4py
 
