@@ -6,9 +6,10 @@ static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 //#define ADJUST_TRANSPORT
 
 typedef struct {
-  PetscReal up[3];     // The up direction
-  PetscInt  freezeDir; // Direction to freeze during transport
-  PetscBool use_up;    // Transport the up direction rather than along-strike
+  PetscReal up[3];        // The up direction
+  PetscInt  freezeDir;    // Direction to freeze during transport
+  PetscBool freezeStrike; // Only allow the updir to change orthogonal to the current strike direction
+  PetscBool transportUp;  // Transport the up direction rather than along-strike
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -17,18 +18,20 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscBool flg;
 
   PetscFunctionBeginUser;
-  options->up[0]     = 0.;
-  options->up[1]     = 0.;
-  options->up[2]     = 1.;
-  options->freezeDir = -1;
-  options->use_up    = PETSC_FALSE;
+  options->up[0]        = 0.;
+  options->up[1]        = 0.;
+  options->up[2]        = 1.;
+  options->freezeDir    = -1;
+  options->freezeStrike = PETSC_FALSE;
+  options->transportUp  = PETSC_FALSE;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
-  PetscCall(PetscOptionsRealArray("-updir", "The up direction", "ex44.c", options->up, &n, &flg));
+  PetscCall(PetscOptionsRealArray("-up", "The up direction", "ex44.c", options->up, &n, &flg));
   PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
   PetscCheck(options->freezeDir < 3, comm, PETSC_ERR_ARG_WRONG, "Freeze direction %" PetscInt_FMT " not in [0,3)", options->freezeDir);
-  PetscCall(PetscOptionsBool("-use_updir", "Transport the up direction, rather than along-strike", __FILE__, options->use_up, &options->use_up, NULL));
+  PetscCall(PetscOptionsBool("-freeze_strike", "Only allow transport perpendicular to current along-strike", __FILE__, options->freezeStrike, &options->freezeStrike, NULL));
+  PetscCall(PetscOptionsBool("-transport_up", "Transport the up direction, rather than along-strike", __FILE__, options->transportUp, &options->transportUp, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -109,7 +112,7 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
       for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
       PetscCall(CrossProductUnitVector(upv, nv, asv));
       PetscCall(DMLabelSetValue(validFrame, c, 1));
-    } else if (!ctx->use_up) {
+    } else if (!ctx->transportUp) {
       for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
     }
   }
@@ -229,6 +232,18 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
   DMPlex_Mult3D_Internal(R, 1, asvs, asvt);
   if (ctx->freezeDir >= 0) {
     asvt[ctx->freezeDir] = asvs[ctx->freezeDir];
+    norm = DMPlex_DotD_Internal(cdim, asvt, asvt);
+    norm = PetscSqrtReal(norm);
+    for (PetscInt d = 0; d < cdim; ++d) asvt[d] /= norm;
+  }
+  if (ctx->freezeStrike) {
+    PetscReal delta[3], das[3];
+    PetscReal c;
+
+    for (PetscInt d = 0; d < cdim; ++d) delta[d] = asvt[d] - asvs[d];
+    c = DMPlex_DotD_Internal(cdim, delta, asvs);
+    // asvt = asvs + delta' = asvs + (delta - c asvs) = (1 - c) asvs + delta
+    for (PetscInt d = 0; d < cdim; ++d) asvt[d] = (1. - c) * asvs[d] + delta[d];
     norm = DMPlex_DotD_Internal(cdim, asvt, asvt);
     norm = PetscSqrtReal(norm);
     for (PetscInt d = 0; d < cdim; ++d) asvt[d] /= norm;
@@ -563,7 +578,7 @@ int main(int argc, char **argv)
   PetscCall(VecViewFromOptions(n, NULL, "-n_view"));
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
-  if (ctx.use_up) {
+  if (ctx.transportUp) {
     PetscCall(PropagateFrame(n, up, validFrame, &ctx));
     PetscCall(CalculateStrike(n, as, up));
   } else {
