@@ -45,6 +45,16 @@ class Configure(config.package.Package):
         '"all-major", and "native" (see documentation of the nvcc "--gpu-architecture" flag)'
       )
     )
+    help.addArgument(
+      'CUDA', '-with-cuda-nvml=<bool>',
+      nargs.ArgBool(
+        None, 1,
+        'Use NVML (NVIDIA Management Library) for GPU power and energy monitoring. NVML makes the '
+        'PETSc libraries depend at runtime on libnvidia-ml, which is installed by the NVIDIA driver; '
+        'use --with-cuda-nvml=0 to build CUDA-enabled PETSc libraries that also run on machines '
+        'without the driver'
+      )
+    )
     return
 
   def __str__(self):
@@ -332,6 +342,13 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     import re
 
+    if not self.argDB['with-cuda-nvml']:
+      # NVML headers and the stub library ship with the CUDA toolkit, but at runtime libnvidia-ml is
+      # provided by the NVIDIA driver. Skipping NVML allows the built libraries to run on machines
+      # without the driver, at the cost of GPU power and energy monitoring.
+      self.functions.remove('nvmlInit_v2')
+      self.includes.remove('nvml.h')
+      self.stubliblist = [[lib for lib in libs if 'nvidia-ml' not in lib] for libs in self.stubliblist]
     self.setCudaDir()
     # skip this because it does not properly set self.lib and self.include if they have already been set
     if not self.found: config.package.Package.configureLibrary(self)
@@ -426,6 +443,7 @@ class Configure(config.package.Package):
                            ' generated from "--with-cuda-arch='+self.cudaArch+'"')
 
     self.addDefine('HAVE_CUPM','1') # Have either CUDA or HIP
+    if self.argDB['with-cuda-nvml']: self.addDefine('HAVE_NVML','1')
     if not self.version_tuple:
       self.checkVersion(); # set version_tuple
     if self.version_tuple[0] > 12 or (self.version_tuple[0] == 12 and self.version_tuple[1] >= 2):
