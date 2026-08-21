@@ -1,5 +1,3 @@
-#include "petscsys.h"
-#include "petscsystypes.h"
 static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 
 #include <petscdmplex.h>
@@ -8,15 +6,28 @@ static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 //#define ADJUST_TRANSPORT
 
 typedef struct {
-  PetscBool use_up; // Transport the up direction rather than along-strike
+  PetscReal up[3];     // The up direction
+  PetscInt  freezeDir; // Direction to freeze during transport
+  PetscBool use_up;    // Transport the up direction rather than along-strike
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
+  PetscInt  n = 3;
+  PetscBool flg;
+
   PetscFunctionBeginUser;
-  options->use_up = PETSC_FALSE;
+  options->up[0]     = 0.;
+  options->up[1]     = 0.;
+  options->up[2]     = 1.;
+  options->freezeDir = -1;
+  options->use_up    = PETSC_FALSE;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
+  PetscCall(PetscOptionsRealArray("-updir", "The up direction", "ex44.c", options->up, &n, &flg));
+  PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
+  PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
+  PetscCheck(options->freezeDir < 3, comm, PETSC_ERR_ARG_WRONG, "Freeze direction %" PetscInt_FMT " not in [0,3)", options->freezeDir);
   PetscCall(PetscOptionsBool("-use_updir", "Transport the up direction, rather than along-strike", __FILE__, options->use_up, &options->use_up, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -75,6 +86,7 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)n), &rank));
   PetscCall(VecGetDM(as, &dm));
+  PetscCall(DMGetCoordinatesLocalSetUp(dm));
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(VecGetArray(n, &an));
@@ -94,10 +106,12 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
     PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
     PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
     if (!rank && (c == cTarget) && upv && asv && nv) {
-      upv[2] = 1.;
+      for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
       PetscCall(CrossProductUnitVector(upv, nv, asv));
       PetscCall(DMLabelSetValue(validFrame, c, 1));
-    } else if (!ctx->use_up) upv[2] = 1.0;
+    } else if (!ctx->use_up) {
+      for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
+    }
   }
   PetscCall(VecRestoreArray(n, &an));
   PetscCall(VecRestoreArray(as, &aas));
@@ -137,7 +151,7 @@ static PetscErrorCode CalculateStrike(Vec n, Vec as, Vec up)
 // around the dividing edge. We use this rotation to transform the source along-strike vector into the target one.
 // Negative source mean that the frame is in the interface vector
 // https://math.stackexchange.com/questions/4496301/finding-rotation-matrix-from-two-3d-vectors
-static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscInt target, DMLabel validFrame, Vec iframe, Vec n, Vec as, PetscBool *updated)
+static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscInt target, DMLabel validFrame, Vec iframe, Vec n, Vec as, PetscBool *updated, AppCtx *ctx)
 {
   DM                 dm, idm;
   const PetscScalar *nvs = NULL, *nvt = NULL, *aif = NULL, *an = NULL, *asvs = NULL, *coords;
@@ -213,6 +227,12 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
   PetscCall(DMPlexPointGlobalRef(dm, target, aas, &asvt));
   PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing strike direction");
   DMPlex_Mult3D_Internal(R, 1, asvs, asvt);
+  if (ctx->freezeDir >= 0) {
+    asvt[ctx->freezeDir] = asvs[ctx->freezeDir];
+    norm = DMPlex_DotD_Internal(cdim, asvt, asvt);
+    norm = PetscSqrtReal(norm);
+    for (PetscInt d = 0; d < cdim; ++d) asvt[d] /= norm;
+  }
 
 #if defined(ADJUST_TRANSPORT)
 {
@@ -268,7 +288,7 @@ end:
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PropagatePush(DMPlexPointQueue queue, DMLabel validFrame, Vec iframe, Vec n, Vec as, MPI_Op merge)
+static PetscErrorCode PropagatePush(DMPlexPointQueue queue, DMLabel validFrame, Vec iframe, Vec n, Vec as, MPI_Op merge, AppCtx *ctx)
 {
   DM              dm;
   PetscSF         sf, pointSF;
@@ -314,7 +334,7 @@ static PetscErrorCode PropagatePush(DMPlexPointQueue queue, DMLabel validFrame, 
       PetscCall(DMPlexGetSupport(dm, p, &supp));
       PetscCall(DMPlexGetSupportSize(dm, p, &sS));
       PetscCheck(sS == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Support size of boundary face %" PetscInt_FMT " is %" PetscInt_FMT " != 1", p, sS);
-      PetscCall(PropagateCellFrame(p, -1, supp[0], validFrame, iframe, n, as, &updated));
+      PetscCall(PropagateCellFrame(p, -1, supp[0], validFrame, iframe, n, as, &updated, ctx));
       if (updated) PetscCall(DMPlexPointQueueEnqueue(queue, supp[0]));
     }
   }
@@ -329,7 +349,7 @@ static PetscErrorCode PropagatePush(DMPlexPointQueue queue, DMLabel validFrame, 
         PetscCall(DMPlexGetSupport(dm, r, &supp));
         PetscCall(DMPlexGetSupportSize(dm, r, &sS));
         PetscCheck(sS == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Support size of boundary face %" PetscInt_FMT " is %" PetscInt_FMT " != 1", r, sS);
-        PetscCall(PropagateCellFrame(r, -1, supp[0], validFrame, iframe, n, as, &updated));
+        PetscCall(PropagateCellFrame(r, -1, supp[0], validFrame, iframe, n, as, &updated, ctx));
         if (updated) PetscCall(DMPlexPointQueueEnqueue(queue, supp[0]));
       }
     }
@@ -337,7 +357,7 @@ static PetscErrorCode PropagatePush(DMPlexPointQueue queue, DMLabel validFrame, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel validFrame, Vec n, Vec as)
+static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel validFrame, Vec n, Vec as, AppCtx *ctx)
 {
   DM                 dm, idm;
   PetscSection       s;
@@ -397,7 +417,7 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
         q = supp[0] == p ? supp[1] : supp[0];
         PetscCall(DMLabelGetValue(validFrame, q, &val));
         if (val < 0) {
-          PetscCall(PropagateCellFrame(face, p, q, validFrame, iframe, n, as, &updated));
+          PetscCall(PropagateCellFrame(face, p, q, validFrame, iframe, n, as, &updated, ctx));
           if (updated) PetscCall(DMPlexPointQueueEnqueue(queue, q));
         }
       }
@@ -430,7 +450,7 @@ static void MPIAPI VectorMerge3D_Private(void *a, void *b, int *len, MPI_Datatyp
   }
 }
 
-static PetscErrorCode PropagateFrame(Vec n, Vec as, DMLabel validFrame)
+static PetscErrorCode PropagateFrame(Vec n, Vec as, DMLabel validFrame, AppCtx *ctx)
 {
   DM               dm, idm;
   Vec              iframe;
@@ -499,9 +519,9 @@ static PetscErrorCode PropagateFrame(Vec n, Vec as, DMLabel validFrame)
   PetscCall(ISDestroy(&cellIS));
   PetscCall(DMPlexPointQueueEmptyCollective((PetscObject)dm, queue, &empty));
   while (!empty) {
-    PetscCall(PropagateLocal(iframe, queue, validFrame, n, as));
+    PetscCall(PropagateLocal(iframe, queue, validFrame, n, as, ctx));
     PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)iframe, (PetscObject)n, "-iframe_view"));
-    PetscCall(PropagatePush(queue, validFrame, iframe, n, as, reduceop));
+    PetscCall(PropagatePush(queue, validFrame, iframe, n, as, reduceop, ctx));
     PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)iframe, (PetscObject)n, "-iframe_view"));
     PetscCall(DMPlexPointQueueEmptyCollective((PetscObject)dm, queue, &empty));
   }
@@ -517,7 +537,7 @@ int main(int argc, char **argv)
 {
   DM      dm;
   DMLabel validFrame;
-  Vec     n, as, up;
+  Vec     n, as, as2, up;
   AppCtx  ctx;
 
   PetscFunctionBeginUser;
@@ -533,6 +553,9 @@ int main(int argc, char **argv)
   PetscCall(DMCreateGlobalVector(dm, &as));
   PetscCall(PetscObjectSetName((PetscObject)as, "strike_dir"));
   PetscCall(VecZeroEntries(as));
+  PetscCall(DMCreateGlobalVector(dm, &as2));
+  PetscCall(PetscObjectSetName((PetscObject)as2, "n x up"));
+  PetscCall(VecZeroEntries(as2));
   PetscCall(DMCreateGlobalVector(dm, &up));
   PetscCall(PetscObjectSetName((PetscObject)up, "up_dir"));
   PetscCall(VecZeroEntries(up));
@@ -541,16 +564,19 @@ int main(int argc, char **argv)
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
   if (ctx.use_up) {
-    PetscCall(PropagateFrame(n, up, validFrame));
+    PetscCall(PropagateFrame(n, up, validFrame, &ctx));
     PetscCall(CalculateStrike(n, as, up));
   } else {
-    PetscCall(PropagateFrame(n, as, validFrame));
+    PetscCall(PropagateFrame(n, as, validFrame, &ctx));
+    PetscCall(CalculateStrike(n, as2, up));
   }
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
+  PetscCall(VecViewFromOptions(as2, NULL, "-as2_view"));
   PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
   PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)validFrame, (PetscObject)dm, "-valid_frame_view"));
   PetscCall(VecDestroy(&up));
   PetscCall(VecDestroy(&as));
+  PetscCall(VecDestroy(&as2));
   PetscCall(VecDestroy(&n));
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
