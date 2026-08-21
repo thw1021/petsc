@@ -23,6 +23,7 @@
 - Increase the minimum required Python version for `./configure` to 3.6
 - Add `providesDocs` and `docsDirs` package attributes so that an external package's sources can be cloned and scanned to generate PETSc manual pages when the documentation is built
 - Add interface to LIBXSMM
+- Add `--with-cuda-nvml=0` to build CUDA-enabled PETSc without NVML, removing the runtime dependency on the driver-provided libnvidia-ml so the libraries also run on machines without an NVIDIA driver; GPU power and energy monitoring (`-log_view_gpu_energy`, `-log_view_gpu_energy_meter`) is then unavailable
 
 ## Sys
 
