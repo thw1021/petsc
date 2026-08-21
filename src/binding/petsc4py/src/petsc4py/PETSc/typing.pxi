@@ -64,6 +64,10 @@ cdef KSPMonitorFunction
 cdef KSPPreSolveFunction
 cdef KSPPostSolveFunction
 
+# --- PC ---
+
+cdef PCHPDDMAssembleAuxMatFunction
+
 # --- TS ---
 
 cdef TSRHSFunction
