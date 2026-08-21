@@ -1,5 +1,6 @@
 #include "petscdmlabel.h"
 #include "petscsys.h"
+#include "petscsystypes.h"
 static char help[] = "Frame transport over manifolds using DMPlex\n\n";
 
 #include <petscdmplex.h>
@@ -17,6 +18,7 @@ const char *strikeAlgs[NUM_STRIKE_ALGS + 1] = {"single_phase_strike", "single_ph
 
 typedef struct {
   PetscReal up[3];     // The up direction
+  PetscInt  initCell;  // The initial cell for propagation
   PetscInt  freezeDir; // Direction to freeze during transport
   StrikeAlg strikeAlg; // Algorithm used to determine the strike direction
 } AppCtx;
@@ -30,10 +32,12 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->up[0]     = 0.;
   options->up[1]     = 0.;
   options->up[2]     = 1.;
+  options->initCell  = 0;
   options->freezeDir = -1;
   options->strikeAlg = SINGLE_PHASE_STRIKE;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
+  PetscCall(PetscOptionsBoundedInt("-init_cell", "Initial cell for propagation", __FILE__, options->initCell, &options->initCell, NULL, 0));
   PetscCall(PetscOptionsRealArray("-up", "The up direction", __FILE__, options->up, &n, &flg));
   PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
@@ -91,7 +95,7 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
 {
   DM           dm;
   PetscScalar *an, *aas, *aup;
-  PetscInt     cdim, cStart, cEnd, cTarget;
+  PetscInt     cdim, cStart, cEnd, cTarget = ctx->initCell;
   PetscMPIInt  rank;
 
   PetscFunctionBeginUser;
@@ -104,7 +108,6 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
   PetscCall(VecGetArray(as, &aas));
   PetscCall(VecGetArray(up, &aup));
 
-  cTarget = cStart;
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscScalar *nv, *asv, *upv;
     PetscReal    normal[3], vol;
@@ -629,6 +632,24 @@ static PetscErrorCode PropagateFrame(Vec n, Vec up, Vec as, DMLabel validFrame, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TwoPhasePropagation(Vec n, Vec up, Vec as, DMLabel validFrame, AppCtx *ctx)
+{
+  DM       dm;
+  PetscInt cStart, cEnd, Nc, Nvc = 0, NvcOld = 0;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetDM(n, &dm));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  Nc = cEnd - cStart;
+  while (Nvc < Nc) {
+    PetscCall(PropagateFrame(n, up, as, validFrame, 1, ctx));
+    PetscCall(PropagateFrame(n, up, as, validFrame, 2, ctx));
+    DMLabelGetStratumSize(validFrame, 1, &Nvc);
+    PetscCheck(Nvc != NvcOld, PetscObjectComm((PetscObject)n), PETSC_ERR_ARG_WRONGSTATE, "Propagation made no progress");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   DM      dm;
@@ -669,8 +690,7 @@ int main(int argc, char **argv)
     PetscCall(ComputeStrike(n, as, up));
     break;
   case TWO_PHASE:
-    PetscCall(PropagateFrame(n, up, as, validFrame, 1, &ctx));
-    PetscCall(PropagateFrame(n, up, as, validFrame, 2, &ctx));
+    PetscCall(TwoPhasePropagation(n, up, as, validFrame, &ctx));
     break;
   default:
     SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Unsupported algorithm: %s", strikeAlgs[ctx.strikeAlg]);
