@@ -1252,12 +1252,12 @@ cdef class PC(Object):
         cdef PetscMat *ND_Pi_mat = NULL
         try:
             if RT_Pi is not None:
-                CHKERR( PetscMalloc(<size_t>dim*sizeof(PetscMat), &RT_Pi_mat) )
+                CHKERR (PetscMalloc(<size_t>dim*sizeof(PetscMat), &RT_Pi_mat))
                 assert len(RT_Pi) == idim
                 for i in range(idim):
                     RT_Pi_mat[i] = (<Mat?>RT_Pi[i]).mat
             if ND_Pi is not None:
-                CHKERR( PetscMalloc(<size_t>dim*sizeof(PetscMat), &ND_Pi_mat) )
+                CHKERR (PetscMalloc(<size_t>dim*sizeof(PetscMat), &ND_Pi_mat))
                 assert len(ND_Pi) == idim
                 for i in range(idim):
                     ND_Pi_mat[i] = (<Mat?>ND_Pi[i]).mat
