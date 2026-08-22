@@ -321,7 +321,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
      Print main application help message
   */
   PetscCall(PetscOptionsHasHelp(NULL, &hasHelp));
-  /* in "-help mansec" mode the generic, program-wide help is suppressed; only the matching options blocks are shown */
+  /* in "-help mansec" mode the list of options common to all PETSc programs, and the separator that
+     precedes it, are suppressed; the example description and the version banner are still printed */
   PetscCall(PetscOptionsHelpManSecs_Internal(NULL, &nHelpManSecs, &helpManSecs));
   if (help && hasHelp) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", help));

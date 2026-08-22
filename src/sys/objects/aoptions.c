@@ -34,10 +34,6 @@ static int ShouldPrintHelp(const PetscOptionItems opts)
 */
 PetscErrorCode PetscOptionsBegin_Private(PetscOptionItems PetscOptionsObject, MPI_Comm comm, const char prefix[], const char title[], const char mansec[])
 {
-  PetscInt           nmansec = 0, idx = 0;
-  PetscBool          match   = PETSC_FALSE;
-  const char *const *mansecs = NULL;
-
   PetscFunctionBegin;
   if (prefix) PetscAssertPointer(prefix, 3);
   PetscAssertPointer(title, 4);
@@ -53,14 +49,9 @@ PetscErrorCode PetscOptionsBegin_Private(PetscOptionItems PetscOptionsObject, MP
   PetscCall(PetscStrallocpy(prefix, &PetscOptionsObject->prefix));
   PetscCall(PetscStrallocpy(title, &PetscOptionsObject->title));
 
-  PetscCall(PetscOptionsHasHelp(PetscOptionsObject->options, &PetscOptionsObject->printhelp));
   /* "-help sec1,sec2,..." restricts the help output to the blocks whose manual section is one of those listed;
-     a block with no manual section is never selected. The comparison ignores case, as PetscEListFind() does */
-  PetscCall(PetscOptionsHelpManSecs_Internal(PetscOptionsObject->options, &nmansec, &mansecs));
-  if (nmansec && PetscOptionsObject->printhelp) {
-    if (mansec && mansec[0]) PetscCall(PetscEListFind(nmansec, mansecs, mansec, &idx, &match));
-    PetscOptionsObject->printhelp = match;
-  }
+     a block with no manual section is never selected */
+  PetscCall(PetscOptionsHelpPrintable_Internal(PetscOptionsObject->options, mansec, &PetscOptionsObject->printhelp));
   if (ShouldPrintHelp(PetscOptionsObject)) PetscCall((*PetscHelpPrintf)(comm, "----------------------------------------\n%s:\n", title));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
