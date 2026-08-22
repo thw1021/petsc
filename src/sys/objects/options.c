@@ -92,7 +92,7 @@ struct _n_PetscOptions {
   /* Help */
   PetscBool help;          /* flag whether "-help" is in the database */
   PetscBool help_intro;    /* flag whether "-help intro" is in the database */
-  int       help_nmansecs; /* number of manual sections given as "-help mansec,..."; 0 means the help output is not restricted */
+  int       help_nmansecs; /* number of manual sections given as "-help mansec,..."; 0 means the help output is not restricted; int, not PetscInt, to match PetscStrToArray() */
   char    **help_mansecs;  /* the manual sections themselves; only the options blocks in one of them are printed */
 
   /* Monitors */
@@ -758,7 +758,7 @@ static PetscErrorCode PetscOptionsProcessPrecedentFlags(PetscOptions options, in
   const char       **val;
   char             **cval;
   PetscBool         *set, unneeded;
-  PetscBool          isbool, helpval;
+  PetscBool          isbool = PETSC_FALSE, helpval = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscCalloc2(n, &cval, n, &set));
@@ -1424,7 +1424,7 @@ setvalue:
 
   /* handle -help so that it can be set from anywhere */
   if (!PetscOptNameCmp(name, "help")) {
-    PetscBool isbool, helpval;
+    PetscBool isbool = PETSC_FALSE, helpval = PETSC_FALSE;
 
     PetscCall(PetscOptionsStringToBool_Private(value, &helpval, &isbool));
     options->help       = isbool ? helpval : PETSC_TRUE;
@@ -2202,25 +2202,6 @@ PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*monitor)(const char name[
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  PetscOptionsStringToBool - Converts a string to a `PetscBool`
-
-  Not Collective
-
-  Input Parameter:
-. value - the string to convert; may be `NULL` or `""`
-
-  Output Parameter:
-. a - the resulting `PetscBool`
-
-  Level: developer
-
-  Note:
-  Recognizes (case-insensitive) `TRUE`, `YES`, `1`, `on` as `PETSC_TRUE` and `FALSE`, `NO`, `0`, `off` as `PETSC_FALSE`.
-  An empty or `NULL` string is treated as `PETSC_TRUE`. Any other input generates an error.
-
-.seealso: `PetscOptionsStringToInt()`, `PetscOptionsStringToReal()`, `PetscOptionsStringToScalar()`, `PetscOptionsGetBool()`
-@*/
 /*
    Same as PetscOptionsStringToBool() but reports in isbool whether value is one of the recognized
    logical values instead of raising an error when it is not.
@@ -2282,6 +2263,25 @@ static PetscErrorCode PetscOptionsStringToBool_Private(const char value[], Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PetscOptionsStringToBool - Converts a string to a `PetscBool`
+
+  Not Collective
+
+  Input Parameter:
+. value - the string to convert; may be `NULL` or `""`
+
+  Output Parameter:
+. a - the resulting `PetscBool`
+
+  Level: developer
+
+  Note:
+  Recognizes (case-insensitive) `TRUE`, `YES`, `1`, `on` as `PETSC_TRUE` and `FALSE`, `NO`, `0`, `off` as `PETSC_FALSE`.
+  An empty or `NULL` string is treated as `PETSC_TRUE`. Any other input generates an error.
+
+.seealso: `PetscOptionsStringToInt()`, `PetscOptionsStringToReal()`, `PetscOptionsStringToScalar()`, `PetscOptionsGetBool()`
+@*/
 PetscErrorCode PetscOptionsStringToBool(const char value[], PetscBool *a)
 {
   PetscBool isbool;

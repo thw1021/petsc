@@ -345,7 +345,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "See https://petsc.org/release/faq for problems.\n"));
     PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "See https://petsc.org/release/manualpages for help.\n"));
     if (!PetscCIEnabledPortableErrorOutput) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "Libraries linked from %s\n", PETSC_LIB_DIR));
-    /* the closing separator and program-wide options list below are dropped in "-help manpage" mode so each matching block prints its own header */
+    /* the closing separator and program-wide options list below are dropped in "-help mansec" mode so each matching block prints its own header */
     if (!nHelpManSecs) PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "----------------------------------------\n"));
   }
 
