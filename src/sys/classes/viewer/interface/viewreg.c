@@ -335,7 +335,9 @@ static PetscErrorCode PetscOptionsCreateViewers_Internal(MPI_Comm comm, PetscOpt
 
   PetscCall(PetscOptionsHasHelp(NULL, &hashelp));
   /* these options are printed outside any PetscOptionsBegin()/PetscOptionsEnd() block, so apply the
-     "-help mansec" filter here; they are documented in the manual section a PetscViewer belongs to */
+     "-help mansec" filter here; they are documented in the manual section a PetscViewer belongs to.
+     The filter is read from the same options database as hashelp above, not from options, so that the
+     two always agree */
   if (hashelp) {
     PetscInt           nmansec = 0, idx = 0;
     const char *const *mansecs = NULL;
