@@ -1302,8 +1302,11 @@ const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
     self.popLanguage()
     setattr(self.compilers, flagsArg,oldFlags)
     if not output:
-        self.log.write('For '+self.package+' unable to run preprocessor to obtain version information, skipping version check\n')
-        self.version = ''
+        if self.versionname:
+          self.log.write('For '+self.package+' unable to run preprocessor to obtain version information, skipping version check\n')
+          self.version = ''
+        else:
+          self.log.write('For '+self.package+' no version macro name is set, skipping version check\n')
         return
     # the preprocessor output might be very long, but the petscpkgver line should be at the end. Therefore, we partition it backwards
     [mid, right] = output.rpartition('petscpkgver')[1:]
