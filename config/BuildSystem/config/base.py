@@ -480,10 +480,9 @@ class Configure(script.Script):
       if error or status:
         lines = output.splitlines()
         if len(lines) >= 12:
-          shortOutput = '\n'.join(lines[:5]+['<omitted '+str(len(lines) - 10)+' lines>']+lines[-5:])
-        else:
-          shortOutput = output
-        self.logError('preprocessor', status, shortOutput+'\n', error, logErrorFlag = True)
+          lines = lines[:5]+['<omitted '+str(len(lines) - 10)+' lines>']+lines[-5:]
+        shortOutput = '\n'.join(lines)+'\n' if lines else ''
+        self.logError('preprocessor', status, shortOutput, error, logErrorFlag = True)
 
     command = self.getPreprocessorCmd()
     if self.compilerDefines: self.framework.outputHeader(self.compilerDefines)
