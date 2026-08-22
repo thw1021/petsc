@@ -79,14 +79,10 @@ except ImportError:
 
 # Cython
 
-CYTHON = '3.0.0'
+CYTHONMIN = '3'
+CYTHONMAX = '3.3'
 
-
-def cython_req():
-    return CYTHON
-
-
-def cython_chk(VERSION, verbose=True):
+def cython_chk(verbose=True):
     #
     def warn(message):
         if not verbose:
@@ -115,10 +111,11 @@ def cython_chk(VERSION, verbose=True):
     if not m:
         warn(f'Cannot parse Cython version string {CYTHON_VERSION!r}')
         return False
-    REQUIRED = Version(VERSION)
+    REQUIREDMIN = Version(CYTHONMIN)
+    REQUIREDMAX = Version(CYTHONMAX)
     PROVIDED = Version(m.groups()[0])
-    if PROVIDED < REQUIRED:
-        warn(f'You need Cython >= {VERSION} (you have version {CYTHON_VERSION})')
+    if PROVIDED < REQUIREDMIN or PROVIDED >= REQUIREDMAX:
+        warn(f'You need Cython >= {CYTHONMIN}, < {CYTHONMAX} (you have version {CYTHON_VERSION})')
         return False
     #
     if verbose:
@@ -133,7 +130,6 @@ def cython_run(
     includes=(),
     workdir=None,
     force=False,
-    VERSION='0.0',
 ):
     if target is None:
         target = os.path.splitext(source)[0] + '.c'
@@ -149,8 +145,8 @@ def cython_run(
             return
     finally:
         os.chdir(cwd)
-    require = 'Cython >= %s' % VERSION
-    if setuptools and not cython_chk(VERSION, verbose=False):
+    require = f'Cython >= {CYTHONMIN}, <{CYTHONMAX}'
+    if setuptools and not cython_chk(verbose=False):
         if sys.modules.get('Cython'):
             removed = getattr(sys.modules['Cython'], '__version__', '')
             log.info('removing Cython %s from sys.modules' % removed)
@@ -168,7 +164,7 @@ def cython_run(
                 install_setup_requires({'setup_requires': [require]})
         except Exception:
             log.info("failed to fetch build requirement '%s'" % require)
-    if not cython_chk(VERSION):
+    if not cython_chk():
         raise DistutilsError("unsatisfied build requirement '%s'" % require)
     #
     log.info("cythonizing '%s' -> '%s'", source, target)
@@ -595,7 +591,7 @@ class build_src(Command):
     def run(self):
         sources = getattr(self, 'sources', [])
         for source in sources:
-            cython_run(force=self.force, VERSION=cython_req(), **source)
+            cython_run(force=self.force, **source)
 
 
 class build_ext(_build_ext):
@@ -828,10 +824,9 @@ def setup(**attrs):
     build_src.sources = attrs.pop('cython_sources', None)
     use_setup_requires = False  # handle Cython requirement ourselves
     if setuptools and build_src.sources and use_setup_requires:
-        version = cython_req()
-        if not cython_chk(version, verbose=False):
+        if not cython_chk(verbose=False):
             reqs = attrs.setdefault('setup_requires', [])
-            reqs += ['Cython>=' + version]
+            reqs += [f'Cython >= {CYTHONMIN}, <{CYTHONMAX}']
     return _setup(**attrs)
 
 
