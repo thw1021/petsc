@@ -1251,15 +1251,15 @@ cdef class PC(Object):
         cdef PetscMat *RT_Pi_mat = NULL
         if RT_Pi is not None:
             PetscMalloc(<size_t>dim*sizeof(PetscMat), &RT_Pi_mat)
-            assert len(RT_Pi) == dim
-            for i in range(dim):
+            assert len(RT_Pi) == idim
+            for i in range(idim):
                 RT_Pi_mat[i] = (<Mat?>RT_Pi[i]).mat
         cdef PetscMat *ND_Pi_mat = NULL
         if ND_Pi is not None:
             PetscMalloc(<size_t>dim*sizeof(PetscMat), &ND_Pi_mat)
-            assert len(ND_Pi) == dim
-            for i in range(dim):
-                ND_Pi_mat[dim] = (<Mat?>ND_Pi[i]).mat
+            assert len(ND_Pi) == idim
+            for i in range(idim):
+                ND_Pi_mat[i] = (<Mat?>ND_Pi[i]).mat
         CHKERR (PCHYPRESetInterpolations(self.pc, idim, RT_full_mat, RT_Pi_mat,
                                          ND_full_mat, ND_Pi_mat))
         CHKERR (PetscFree(RT_Pi_mat))
