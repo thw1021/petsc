@@ -108,8 +108,8 @@ static PetscOptions defaultoptions = NULL; /* the options database routines quer
 /* list of options which precede others, i.e., are processed in PetscOptionsProcessPrecedentFlags() */
 /* these options can only take boolean values, the code will crash if given a non-boolean value;
    -help additionally accepts "intro", a comma-separated list of manual sections or a boolean value */
-/* -help 0/no/false turns help printing off and -help 1/yes/true is equivalent to -help */
-/* -help is unable to display the help for a manual section named 0, 1, yes, no, true, or false */
+/* -help 0/no/false/off turns help printing off and -help 1/yes/true/on is equivalent to -help */
+/* -help is unable to display the help for a manual section named 0, 1, yes, no, on, off, true, or false */
 static const char *precedentOptions[] = {"-petsc_ci", "-options_monitor", "-options_monitor_cancel", "-help", "-skip_petscrc"};
 enum PetscPrecedentOption {
   PO_CI_ENABLE,
@@ -1139,6 +1139,16 @@ PetscErrorCode PetscOptionsPrefixPop(PetscOptions options)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Releases the manual sections recorded from "-help mansec,..." and marks the help output as unrestricted. */
+static PetscErrorCode PetscOptionsHelpManSecsClear_Private(PetscOptions options)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
+  options->help_nmansecs = 0;
+  options->help_mansecs  = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   PetscOptionsClear - Removes all options form the database leaving it empty.
 
@@ -1201,9 +1211,7 @@ PetscErrorCode PetscOptionsClear(PetscOptions options)
   options->prefix[0]  = 0;
   options->help       = PETSC_FALSE;
   options->help_intro = PETSC_FALSE;
-  if (options->help_mansecs) PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
-  options->help_nmansecs = 0;
-  options->help_mansecs  = NULL;
+  PetscCall(PetscOptionsHelpManSecsClear_Private(options));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1430,12 +1438,10 @@ setvalue:
     options->help       = isbool ? helpval : PETSC_TRUE;
     options->help_intro = (!isbool && value && !PetscOptNameCmp(value, "intro")) ? PETSC_TRUE : PETSC_FALSE;
     options->used[n]    = PETSC_TRUE;
+    PetscCall(PetscOptionsHelpManSecsClear_Private(options));
     /* a value that is neither a logical value nor "intro" is a comma-separated list of manual sections that
        restricts the help output; PetscStrToArray() uses raw malloc()/free() like names[]/values[], as needed
        here since -help is processed before the tracking allocator is set up */
-    if (options->help_mansecs) PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
-    options->help_nmansecs = 0;
-    options->help_mansecs  = NULL;
     if (!isbool && value && value[0] && !options->help_intro) PetscCall(PetscStrToArray(value, ',', &options->help_nmansecs, &options->help_mansecs));
   }
 
@@ -1477,9 +1483,7 @@ PetscErrorCode PetscOptionsClearValue(PetscOptions options, const char name[])
   PetscCheck(name[0] == '-', PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Name must begin with '-': Instead %s", name);
   if (!PetscOptNameCmp(name, "-help")) {
     options->help = options->help_intro = PETSC_FALSE;
-    if (options->help_mansecs) PetscCall(PetscStrToArrayDestroy(options->help_nmansecs, options->help_mansecs));
-    options->help_nmansecs = 0;
-    options->help_mansecs  = NULL;
+    PetscCall(PetscOptionsHelpManSecsClear_Private(options));
   }
 
   name++; /* skip starting dash */
@@ -1797,6 +1801,25 @@ PetscErrorCode PetscOptionsHelpManSecs_Internal(PetscOptions options, PetscInt *
   options = options ? options : defaultoptions;
   *n      = options->help_nmansecs;
   *mansec = (const char *const *)options->help_mansecs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Returns in print whether help output documented in manual section mansec should be printed, taking both
+   "-help" and any "-help mansec,..." restriction into account. mansec may be NULL for help output that
+   belongs to no manual section, which a "-help mansec,..." restriction never selects. */
+PetscErrorCode PetscOptionsHelpPrintable_Internal(PetscOptions options, const char mansec[], PetscBool *print)
+{
+  PetscInt           nmansec = 0, idx = 0;
+  const char *const *mansecs = NULL;
+
+  PetscFunctionBegin;
+  PetscAssertPointer(print, 3);
+  PetscCall(PetscOptionsHasHelp(options, print));
+  if (!*print) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscOptionsHelpManSecs_Internal(options, &nmansec, &mansecs));
+  if (!nmansec) PetscFunctionReturn(PETSC_SUCCESS);
+  *print = PETSC_FALSE;
+  if (mansec && mansec[0]) PetscCall(PetscEListFind(nmansec, mansecs, mansec, &idx, print));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2259,6 +2282,7 @@ static PetscErrorCode PetscOptionsStringToBool_Private(const char value[], Petsc
     *a = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
+  *a      = PETSC_FALSE;
   *isbool = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

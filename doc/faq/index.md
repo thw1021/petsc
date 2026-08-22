@@ -1326,7 +1326,9 @@ Options are printed in blocks, one per `PetscOptionsBegin()` / `PetscOptionsEnd(
 block belongs to a manual section such as `KSP`, `SNES`, `Mat`, or `Sys`. Passing one or more section
 names to `-help` as a comma-separated list, for example `-help ksp` or `-help ksp,snes`, prints only
 the blocks in those sections. Matching ignores case. A block whose manual section is empty is never
-selected, so `-help mansec` prints less than plain `-help`, never more.
+selected, and neither are options registered outside such a block, such as those registered with
+`PetscBagRegisterInt()` and the other `PetscBagRegister` routines, so `-help mansec` prints less than
+plain `-help`, never more.
 
 An option belongs to exactly one manual section, which is the section of the block that registers it,
 not of the object whose behaviour it controls. In particular the viewer options an object creates, such
