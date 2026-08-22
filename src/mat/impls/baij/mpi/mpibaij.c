@@ -1582,20 +1582,16 @@ static PetscErrorCode MatDiagonalScale_MPIBAIJ(Mat mat, Vec ll, Vec rr)
   if (ll) {
     PetscCall(VecGetLocalSize(ll, &s1));
     PetscCheck(s1 == s2, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "left vector non-conforming local size");
-    PetscUseTypeMethod(b, diagonalscale, ll, NULL);
+    PetscCall(MatDiagonalScale(b, diagonalscale, ll, NULL));
   }
   /* scale  the diagonal block */
-  PetscUseTypeMethod(a, diagonalscale, ll, rr);
+  PetscCall(MatDiagonalScale(a, diagonalscale, ll, rr));
 
   if (rr) {
     /* Do a scatter end and then right scale the off-diagonal block */
     PetscCall(VecScatterEnd(baij->Mvctx, rr, baij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-    PetscUseTypeMethod(b, diagonalscale, NULL, baij->lvec);
+    PetscCall(MatDiagonalScale(b, diagonalscale, NULL, baij->lvec));
   }
-  /* the blocks were scaled through their type methods rather than MatDiagonalScale(), so advance
-     their states here as the interface would */
-  PetscCall(PetscObjectStateIncrease((PetscObject)a));
-  PetscCall(PetscObjectStateIncrease((PetscObject)b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1644,11 +1640,8 @@ static PetscErrorCode MatZeroRows_MPIBAIJ(Mat A, PetscInt N, const PetscInt rows
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   } else {
-    PetscCall(MatZeroRows_SeqBAIJ(l->A, len, lrows, 0.0, NULL, NULL));
+    PetscCall(MatZeroRows(l->A, len, lrows, 0.0, NULL, NULL));
   }
-  /* the values of the diagonal block were changed through the implementation rather than
-     MatZeroRows(), so advance its state here as the interface would */
-  PetscCall(PetscObjectStateIncrease((PetscObject)l->A));
   PetscCall(PetscFree(lrows));
 
   /* only change matrix nonzero state if pattern was allowed to be changed */
@@ -1861,12 +1854,8 @@ static PetscErrorCode MatConjugate_MPIBAIJ(Mat mat)
   Mat_MPIBAIJ *a = (Mat_MPIBAIJ *)mat->data;
 
   PetscFunctionBegin;
-  PetscCall(MatConjugate_SeqBAIJ(a->A));
-  PetscCall(MatConjugate_SeqBAIJ(a->B));
-  /* the blocks were conjugated through the implementation rather than MatConjugate(), so advance
-     their states here as the interface would */
-  PetscCall(PetscObjectStateIncrease((PetscObject)a->A));
-  PetscCall(PetscObjectStateIncrease((PetscObject)a->B));
+  PetscCall(MatConjugate(a->A));
+  PetscCall(MatConjugate(a->B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
