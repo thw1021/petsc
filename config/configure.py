@@ -6,6 +6,16 @@ import pickle
 import traceback
 
 banner_length = 93
+
+# Keep this check, and everything above it, parseable by older Python versions.
+# Batch/cross-compile reconfigure scripts and config/examples scripts import this
+# module directly, so they never reach the version check in ./configure
+if sys.version_info < (3,6):
+  print('*'*banner_length)
+  print('*'+'Python version 3.6+ is required to run ./configure'.center(banner_length-2)+'*')
+  print('*'*banner_length)
+  sys.exit(4)
+
 extraLogs     = []
 petsc_arch    = ''
 
