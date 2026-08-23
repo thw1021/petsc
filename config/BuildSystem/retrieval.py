@@ -49,6 +49,10 @@ class Retriever(logger.Logger):
         self.link_urls.append(self.removePrefix(url,'link://'))
       else:
         self.tarball_urls.extend([url])
+        if url.startswith('https://web.cels.anl.gov'):
+          local_url = url.replace('https://web.cels.anl.gov','/nfs/pub_html/gce')
+          if os.path.isfile(local_url):
+            self.tarball_urls.extend([local_url])
 
   def isDirectoryGitRepo(self, directory):
     if not hasattr(self.sourceControl, 'git'):
