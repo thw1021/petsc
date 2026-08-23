@@ -1578,16 +1578,22 @@ static PetscErrorCode MatDiagonalScale_MPIBAIJ(Mat mat, Vec ll, Vec rr)
   if (ll) {
     PetscCall(VecGetLocalSize(ll, &s1));
     PetscCheck(s1 == s2, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "left vector non-conforming local size");
-    PetscCall(MatDiagonalScale(b, diagonalscale, ll, NULL));
+    PetscUseTypeMethod(b, diagonalscale, ll, NULL);
   }
   /* scale  the diagonal block */
-  PetscCall(MatDiagonalScale(a, diagonalscale, ll, rr));
+  PetscUseTypeMethod(a, diagonalscale, ll, rr);
 
   if (rr) {
     /* Do a scatter end and then right scale the off-diagonal block */
     PetscCall(VecScatterEnd(baij->Mvctx, rr, baij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(MatDiagonalScale(b, diagonalscale, NULL, baij->lvec));
+    PetscUseTypeMethod(b, diagonalscale, NULL, baij->lvec);
   }
+  /* MatDiagonalScale() cannot be used on the blocks: they are on PETSC_COMM_SELF while ll and rr
+     are parallel, so the interface's communicator check rejects them. Advance the block states
+     here instead, as the interface would. MatDiagonalScale_MPIAIJ() does not need this because
+     MatSeqAIJRestoreArray() advances the state for it. */
+  PetscCall(PetscObjectStateIncrease((PetscObject)a));
+  PetscCall(PetscObjectStateIncrease((PetscObject)b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1636,8 +1642,12 @@ static PetscErrorCode MatZeroRows_MPIBAIJ(Mat A, PetscInt N, const PetscInt rows
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   } else {
-    PetscCall(MatZeroRows(l->A, len, lrows, 0.0, NULL, NULL));
+    PetscCall(MatZeroRows_SeqBAIJ(l->A, len, lrows, 0.0, NULL, NULL));
   }
+  /* MatZeroRows() cannot be used on the blocks: it honors -mat_view, which would print each
+     sequential block as well (see mat_tests-ex12_5). Advance the diagonal block's state here
+     instead, as the interface would; MatInvertBlockDiagonal_MPIBAIJ() caches on that state. */
+  PetscCall(PetscObjectStateIncrease((PetscObject)l->A));
   PetscCall(PetscFree(lrows));
 
   /* only change matrix nonzero state if pattern was allowed to be changed */
