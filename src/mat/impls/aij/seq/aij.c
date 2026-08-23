@@ -1237,6 +1237,7 @@ static PetscErrorCode MatReset_SeqAIJ(Mat A)
   PetscCall(ISDestroy(&a->col));
   PetscCall(PetscFree(a->diag));
   PetscCall(PetscFree(a->ibdiag));
+  a->ibdiagsize = 0;
   PetscCall(PetscFree(a->imax));
   PetscCall(PetscFree(a->ilen));
   PetscCall(PetscFree(a->ipre));
@@ -3250,11 +3251,17 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqAIJ(Mat A, const PetscScalar **v
 
   PetscFunctionBegin;
   allowzeropivot = PetscNot(A->erroriffailure);
-  if (a->ibdiagvalid) {
+  if (a->ibdiag && a->ibdiagsize == bs2 * mbs && a->ibdiagState == ((PetscObject)A)->state) {
     if (values) *values = a->ibdiag;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  if (!a->ibdiag) PetscCall(PetscMalloc1(bs2 * mbs, &a->ibdiag));
+  /* reallocate only when the length changes, so that the pointer stays valid for callers that
+     hold on to it, such as PCSetUp_PBJacobi_Host() */
+  if (!a->ibdiag || a->ibdiagsize != bs2 * mbs) {
+    PetscCall(PetscFree(a->ibdiag));
+    PetscCall(PetscMalloc1(bs2 * mbs, &a->ibdiag));
+    a->ibdiagsize = bs2 * mbs;
+  }
   diag = a->ibdiag;
   if (values) *values = a->ibdiag;
   /* factor and invert each block */
@@ -3365,7 +3372,7 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqAIJ(Mat A, const PetscScalar **v
     }
     PetscCall(PetscFree3(v_work, v_pivots, IJ));
   }
-  a->ibdiagvalid = PETSC_TRUE;
+  a->ibdiagState = ((PetscObject)A)->state;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4811,7 +4818,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   b->ssor_work          = NULL;
   b->omega              = 1.0;
   b->fshift             = 0.0;
-  b->ibdiagvalid        = PETSC_FALSE;
+  b->ibdiag             = NULL;
   b->keepnonzeropattern = PETSC_FALSE;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATSEQAIJ));
