@@ -2348,8 +2348,6 @@ PetscErrorCode MatZeroRows_SeqBAIJ(Mat A, PetscInt is_n, const PetscInt is_idx[]
     row = rows[j];
     PetscCheck(row >= 0 && row <= A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "row %" PetscInt_FMT " out of range", row);
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    /* baij->a is NULL when no values are allocated, as for the off-diagonal block of a
-       block-diagonal MATMPIBAIJ, and forming a pointer from a null pointer is undefined */
     aa = PetscSafePointerPlusOffset(baij->a, baij->i[row / bs] * bs2 + (row % bs));
     if (sizes[i] == bs && !baij->keepnonzeropattern) {
       if (diag != (PetscScalar)0.0) {

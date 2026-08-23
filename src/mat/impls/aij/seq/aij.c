@@ -3251,9 +3251,6 @@ static PetscErrorCode MatInvertBlockDiagonal_SeqAIJ(Mat A, const PetscScalar **v
 
   PetscFunctionBegin;
   allowzeropivot = PetscNot(A->erroriffailure);
-  /* the cache is current only if it exists, has the length the current block size needs, and was
-     computed at the current state; MatSetBlockSize() changes the needed length without advancing
-     the state, and MatReset_SeqAIJ() frees ibdiag[] without advancing it either */
   if (a->ibdiag && a->ibdiagsize == bs2 * mbs && a->ibdiagState == ((PetscObject)A)->state) {
     if (values) *values = a->ibdiag;
     PetscFunctionReturn(PETSC_SUCCESS);
