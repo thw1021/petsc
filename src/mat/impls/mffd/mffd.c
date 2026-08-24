@@ -209,6 +209,9 @@ static PetscErrorCode MatDestroy_MFFD(Mat mat)
   PetscCall(VecDestroy(&ctx->w));
   PetscCall(VecDestroy(&ctx->current_u));
   if (ctx->current_f_allocated) PetscCall(VecDestroy(&ctx->current_f));
+  PetscCall(VecDestroy(&ctx->leftscale));
+  PetscCall(VecDestroy(&ctx->rightscale));
+  PetscCall(VecDestroy(&ctx->rightscale_work));
   PetscTryTypeMethod(ctx, destroy);
   PetscCall(PetscHeaderDestroy(&ctx));
 
@@ -304,7 +307,7 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
 {
   MatMFFD     ctx;
   PetscScalar h;
-  Vec         w, U, F;
+  Vec         w, U, F, av;
   PetscBool   zeroa;
 
   PetscFunctionBegin;
@@ -319,6 +322,15 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
   w = ctx->w;
   U = ctx->current_u;
   F = ctx->current_f;
+
+  /* apply the right change of variables to the differencing direction before it is used for anything */
+  av = a;
+  if (ctx->rightscale) {
+    if (!ctx->rightscale_work) PetscCall(VecDuplicate(ctx->rightscale, &ctx->rightscale_work));
+    PetscCall(VecPointwiseMult(ctx->rightscale_work, ctx->rightscale, a));
+    av = ctx->rightscale_work;
+  }
+
   /*
       Compute differencing parameter
   */
@@ -326,7 +338,7 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
     PetscCall(MatMFFDSetType(mat, MATMFFD_WP));
     PetscCall(MatSetFromOptions(mat));
   }
-  PetscUseTypeMethod(ctx, compute, U, a, &h, &zeroa);
+  PetscUseTypeMethod(ctx, compute, U, av, &h, &zeroa);
   if (zeroa) {
     PetscCall(VecSet(y, 0.0));
     PetscCall(PetscLogEventEnd(MATMFFD_Mult, a, y, 0, 0));
@@ -334,7 +346,7 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
   }
 
   PetscCheck(!mat->erroriffailure || !PetscIsInfOrNanScalar(h), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Computed NaN differencing parameter h");
-  if (ctx->checkh) PetscCall((*ctx->checkh)(ctx->checkhctx, U, a, &h));
+  if (ctx->checkh) PetscCall((*ctx->checkh)(ctx->checkhctx, U, av, &h));
 
   /* keep a record of the current differencing parameter h */
   ctx->currenth = h;
@@ -348,7 +360,7 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
 #endif
 
   /* w = u + ha */
-  PetscCall(VecWAXPY(w, h, a, U));
+  PetscCall(VecWAXPY(w, h, av, U));
 
   /* compute func(U) as base for differencing; only needed first time in and not when provided by user */
   if (ctx->ncurrenth == 1 && ctx->current_f_allocated) PetscCall((*ctx->func)(ctx->funcctx, U, F));
@@ -365,6 +377,7 @@ static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
   PetscCall(VecAXPY(y, -1.0, F));
 #endif
   PetscCall(VecScale(y, 1.0 / h));
+  if (ctx->leftscale) PetscCall(VecPointwiseMult(y, y, ctx->leftscale));
   if (mat->nullsp) PetscCall(MatNullSpaceRemove(mat->nullsp, y));
 
   PetscCall(PetscLogEventEnd(MATMFFD_Mult, a, y, 0, 0));
@@ -576,6 +589,38 @@ static PetscErrorCode MatMFFDSetHHistory_MFFD(Mat J, PetscScalar history[], Pets
           `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`,
           `MatMFFDGetH()`
 M*/
+/*
+  MatDiagonalScale_MFFD - Accumulates a left/right diagonal change of variables into the differencing step,
+  y = L*(F(u + h*R*a) - F(u))/h, so that MatMult_MFFD() reproduces what MatDiagonalScale() would produce for
+  an explicit matrix. Composes multiplicatively, matching the contract of MatDiagonalScale() for ordinary
+  matrices: repeated calls compound, and a call with the reciprocal vectors exactly undoes a previous call.
+
+  This does not affect MatGetDiagonal_MFFD(), which perturbs by unit vectors directly rather than going
+  through MatMult_MFFD()'s differencing step.
+*/
+static PetscErrorCode MatDiagonalScale_MFFD(Mat mat, Vec left, Vec right)
+{
+  MatMFFD ctx;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &ctx));
+  if (right) {
+    if (!ctx->rightscale) {
+      PetscCall(VecDuplicate(right, &ctx->rightscale));
+      PetscCall(VecSet(ctx->rightscale, 1.0));
+    }
+    PetscCall(VecPointwiseMult(ctx->rightscale, ctx->rightscale, right));
+  }
+  if (left) {
+    if (!ctx->leftscale) {
+      PetscCall(VecDuplicate(left, &ctx->leftscale));
+      PetscCall(VecSet(ctx->leftscale, 1.0));
+    }
+    PetscCall(VecPointwiseMult(ctx->leftscale, ctx->leftscale, left));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
 {
   MatMFFD mfctx;
@@ -613,11 +658,13 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
 
   PetscCall(MatSetType(A, MATSHELL));
   PetscCall(MatShellSetContext(A, mfctx));
+  PetscCall(MatShellSetManageScalingShifts(A));
   PetscCall(MatShellSetOperation(A, MATOP_MULT, (PetscErrorCodeFn *)MatMult_MFFD));
   PetscCall(MatShellSetOperation(A, MATOP_DESTROY, (PetscErrorCodeFn *)MatDestroy_MFFD));
   PetscCall(MatShellSetOperation(A, MATOP_VIEW, (PetscErrorCodeFn *)MatView_MFFD));
   PetscCall(MatShellSetOperation(A, MATOP_ASSEMBLY_END, (PetscErrorCodeFn *)MatAssemblyEnd_MFFD));
   PetscCall(MatShellSetOperation(A, MATOP_SET_FROM_OPTIONS, (PetscErrorCodeFn *)MatSetFromOptions_MFFD));
+  PetscCall(MatShellSetOperation(A, MATOP_DIAGONAL_SCALE, (PetscErrorCodeFn *)MatDiagonalScale_MFFD));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetContext_C", MatShellSetContext_Immutable));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_Immutable));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetManageScalingShifts_C", MatShellSetManageScalingShifts_Immutable));

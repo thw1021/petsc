@@ -48,6 +48,9 @@ struct _p_MatMFFD {
   MatMFFDiFn     *funci;        /* Evaluates func_[i]() */
   MatMFFDiBaseFn *funcisetbase; /* Sets base for future evaluations of func_[i]() */
 
+  Vec leftscale, rightscale; /* user-provided left/right diagonal scaling, applied by MatDiagonalScale_MFFD() */
+  Vec rightscale_work;       /* scratch: holds rightscale .* a during MatMult_MFFD() */
+
   PetscCtx ctx; /* this is used by MatCreateSNESMF() to store the SNES object */
 #if PetscDefined(USE_COMPLEX)
   PetscBool usecomplex; /* use the Lyness complex number trick to compute the matrix-vector product */
