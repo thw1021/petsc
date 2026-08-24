@@ -1899,7 +1899,7 @@ static PetscErrorCode MatZeroRowsColumns_MPISBAIJ(Mat A, PetscInt N, const Petsc
   for (i = 0; i < len; ++i) {
     row   = lrows[i];
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    aa    = baij->a + baij->i[row / bs] * bs2 + (row % bs);
+    aa    = PetscSafePointerPlusOffset(baij->a, baij->i[row / bs] * bs2 + (row % bs));
     for (k = 0; k < count; ++k) {
       aa[0] = 0.0;
       aa += bs;
