@@ -913,7 +913,8 @@ PetscErrorCode DMPlexStratifyMigrationSF(DM dm, PetscSF sf, PetscSF *migrationSF
 
       PetscCall(DMPlexGetCellType(dm, p, &ct));
       pointDepths[p].index = d;
-      pointDepths[p].rank  = ct;
+      /* DM_POLYTOPE_UNKNOWN carries no dimension information, so bucket such points by depth instead */
+      pointDepths[p].rank = ct == DM_POLYTOPE_UNKNOWN ? -1 : ct;
     }
   }
   for (p = 0; p < nleaves; ++p) {
@@ -969,10 +970,15 @@ PetscErrorCode DMPlexStratifyMigrationSF(DM dm, PetscSF sf, PetscSF *migrationSF
   /* Derive a new local permutation based on stratified indices */
   PetscCall(PetscMalloc1(nleaves, &ilocal));
   for (p = 0; p < nleaves; ++p) {
-    const DMPolytopeType ct = (DMPolytopeType)remoteDepths[p].rank;
+    const PetscInt dep = remoteDepths[p].index, ct = remoteDepths[p].rank;
 
-    ilocal[p] = ctShift[ct] + ctIdx[ct];
-    ++ctIdx[ct];
+    if (ct < 0) {
+      ilocal[p] = depthShift[dep] + depthIdx[dep];
+      ++depthIdx[dep];
+    } else {
+      ilocal[p] = ctShift[ct] + ctIdx[ct];
+      ++ctIdx[ct];
+    }
   }
   PetscCall(PetscSFCreate(comm, migrationSF));
   PetscCall(PetscObjectSetName((PetscObject)*migrationSF, "Migration SF"));
