@@ -245,7 +245,7 @@ int main(int argc, char **args)
   }
   PetscCall(MatViewFromOptions(A, NULL, "-A_init_view"));
   PetscOptionsBegin(PETSC_COMM_WORLD, "", "", "");
-  PetscCall(PetscOptionsFList("-A_mat_type", "Matrix type", "MatSetType", MatList, deft, mattype, 256, &flg));
+  PetscCall(PetscOptionsFList("-A_mat_type", "Matrix type", "MatSetType", MatList, deft, mattype, sizeof(mattype), &flg));
   PetscOptionsEnd();
   if (flg) {
     Mat A2;
