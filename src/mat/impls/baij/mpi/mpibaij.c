@@ -1588,8 +1588,10 @@ static PetscErrorCode MatDiagonalScale_MPIBAIJ(Mat mat, Vec ll, Vec rr)
     PetscCall(VecScatterEnd(baij->Mvctx, rr, baij->lvec, INSERT_VALUES, SCATTER_FORWARD));
     PetscUseTypeMethod(b, diagonalscale, NULL, baij->lvec);
   }
-  /* the blocks were scaled through their type methods rather than MatDiagonalScale(), so advance
-     their states here as the interface would */
+  /* MatDiagonalScale() cannot be used on the blocks: they are on PETSC_COMM_SELF while ll and rr
+     are parallel, so the interface's communicator check rejects them. Advance the block states
+     here instead, as the interface would. MatDiagonalScale_MPIAIJ() does not need this because
+     MatSeqAIJRestoreArray() advances the state for it. */
   PetscCall(PetscObjectStateIncrease((PetscObject)a));
   PetscCall(PetscObjectStateIncrease((PetscObject)b));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1642,8 +1644,9 @@ static PetscErrorCode MatZeroRows_MPIBAIJ(Mat A, PetscInt N, const PetscInt rows
   } else {
     PetscCall(MatZeroRows_SeqBAIJ(l->A, len, lrows, 0.0, NULL, NULL));
   }
-  /* the values of the diagonal block were changed through the implementation rather than
-     MatZeroRows(), so advance its state here as the interface would */
+  /* MatZeroRows() cannot be used on the blocks: it honors -mat_view, which would print each
+     sequential block as well (see mat_tests-ex12_5). Advance the diagonal block's state here
+     instead, as the interface would; MatInvertBlockDiagonal_MPIBAIJ() caches on that state. */
   PetscCall(PetscObjectStateIncrease((PetscObject)l->A));
   PetscCall(PetscFree(lrows));
 
@@ -1856,12 +1859,8 @@ static PetscErrorCode MatConjugate_MPIBAIJ(Mat mat)
   Mat_MPIBAIJ *a = (Mat_MPIBAIJ *)mat->data;
 
   PetscFunctionBegin;
-  PetscCall(MatConjugate_SeqBAIJ(a->A));
-  PetscCall(MatConjugate_SeqBAIJ(a->B));
-  /* the blocks were conjugated through the implementation rather than MatConjugate(), so advance
-     their states here as the interface would */
-  PetscCall(PetscObjectStateIncrease((PetscObject)a->A));
-  PetscCall(PetscObjectStateIncrease((PetscObject)a->B));
+  PetscCall(MatConjugate(a->A));
+  PetscCall(MatConjugate(a->B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
