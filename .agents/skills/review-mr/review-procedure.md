@@ -36,5 +36,5 @@ Treat every finding at Style or above as tentative: reopen the cited code in the
 - The report contains the findings, the coverage, the LOW count, and what other sections explicitly say to state — nothing else: no praise, no MR summary, no design commentary. If there are no findings at or above Style, say exactly that.
 
 ### 6. Write report
-- Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
+- Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, the effort level (read from `$CLAUDE_EFFORT`), date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
 - Verify that ai-review.html was written.
