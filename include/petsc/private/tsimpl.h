@@ -310,6 +310,7 @@ struct _p_TS {
   PetscObjectParameterDeclare(PetscInt, max_steps); /* maximum time-step number to execute until (possibly with nonzero starting value) */
   PetscObjectParameterDeclare(PetscInt, run_steps); /* maximum number of time steps for TSSolve to take on each call */
   Vec       vatol, vrtol;                           /* Relative and absolute tolerance in vector form */
+  PetscBool vatol_derived;                          /* PETSC_TRUE if vatol was auto-derived by TSSetRightDiagonalScale(), rather than set explicitly by TSSetTolerances() */
   PetscReal cfltime, cfltime_local;
   PetscInt  start_step; /* step number at start of current run */
 

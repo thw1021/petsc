@@ -2876,6 +2876,155 @@ PetscErrorCode TSGetKSP(TS ts, KSP *ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  TSSetLeftDiagonalScale - Sets a left diagonal scaling for the implicit stage solves of a `TS`
+
+  Logically Collective
+
+  Input Parameters:
++ ts    - the `TS` context obtained from `TSCreate()`
+- scale - the left diagonal scale, or `NULL` to clear it
+
+  Level: advanced
+
+  Notes:
+  A thin wrapper around `TSGetSNES()` followed by `SNESSetLeftDiagonalScale()`; see that function for
+  the effect on the inner Newton correction and its restriction to `SNESNEWTONLS`/`SNESNEWTONTR`. It
+  has no role in `TSAdapt`'s error-weighted norm and is therefore inert for explicit `TS` types.
+
+  Not carried forward across `TSSetSNES()`; reapply after replacing the `SNES`.
+
+.seealso: [](ch_ts), `TS`, `TSGetLeftDiagonalScale()`, `TSSetRightDiagonalScale()`, `SNESSetLeftDiagonalScale()`,
+          `TSGetSNES()`, `TSGetKSP()`
+@*/
+PetscErrorCode TSSetLeftDiagonalScale(TS ts, Vec scale)
+{
+  SNES snes;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  if (scale) PetscValidHeaderSpecific(scale, VEC_CLASSID, 2);
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESSetLeftDiagonalScale(snes, scale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSGetLeftDiagonalScale - Gets the left diagonal scaling used for the implicit stage solves of a `TS`
+
+  Not Collective
+
+  Input Parameter:
+. ts - the `TS` context obtained from `TSCreate()`
+
+  Output Parameter:
+. scale - the left diagonal scale, or `NULL` if none is set
+
+  Level: advanced
+
+  Note:
+  The returned vector is borrowed and should not be destroyed by the caller.
+
+.seealso: [](ch_ts), `TS`, `TSSetLeftDiagonalScale()`, `TSGetRightDiagonalScale()`, `SNESGetLeftDiagonalScale()`
+@*/
+PetscErrorCode TSGetLeftDiagonalScale(TS ts, Vec *scale)
+{
+  SNES snes;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(scale, 2);
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESGetLeftDiagonalScale(snes, scale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSSetRightDiagonalScale - Sets a right diagonal change of variables for a `TS`
+
+  Logically Collective
+
+  Input Parameters:
++ ts    - the `TS` context obtained from `TSCreate()`
+- scale - the right diagonal scale, or `NULL` to clear it
+
+  Level: advanced
+
+  Notes:
+  Delegates to `TSGetSNES()` followed by `SNESSetRightDiagonalScale()`, which covers the effect on the
+  inner Newton correction and its restriction to `SNESNEWTONLS`/`SNESNEWTONTR`.
+
+  Unlike the delegation above, this also weights `TSAdapt`'s error-weighted norm
+  (`TSErrorWeightedNorm()`), regardless of whether the `TS` is implicit or explicit. Since the
+  relative-tolerance term of that norm is already unit-invariant, only the absolute tolerance needs
+  correcting for the units `scale` carries: whenever `vatol` has not been set explicitly with
+  `TSSetTolerances()`, this derives `vatol = atol*scale`, using the scalar `atol` in effect at the
+  time of this call. Call this function again after changing `atol` to refresh the derived `vatol`,
+  or call `TSSetTolerances()` with an explicit `vatol` for full control; an explicit `vatol` always
+  takes precedence over a derived one, and clearing `scale` (passing `NULL`) discards a derived
+  `vatol`.
+
+  Not carried forward across `TSSetSNES()`; reapply after replacing the `SNES`. Not supported with
+  `TSAdjoint`'s transpose solves; forward/tangent-linear sensitivity solves use plain `KSPSolve()`
+  and have not been reviewed against this scaling.
+
+.seealso: [](ch_ts), `TS`, `TSGetRightDiagonalScale()`, `TSSetLeftDiagonalScale()`, `SNESSetRightDiagonalScale()`,
+          `TSSetTolerances()`, `TSErrorWeightedNorm()`, `TSGetSNES()`, `TSGetKSP()`
+@*/
+PetscErrorCode TSSetRightDiagonalScale(TS ts, Vec scale)
+{
+  SNES snes;
+  Vec  vatol;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  if (scale) PetscValidHeaderSpecific(scale, VEC_CLASSID, 2);
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESSetRightDiagonalScale(snes, scale));
+  if (scale && (!ts->vatol || ts->vatol_derived)) {
+    PetscCall(VecDuplicate(scale, &vatol));
+    PetscCall(VecCopy(scale, vatol));
+    PetscCall(VecScale(vatol, ts->atol));
+    PetscCall(VecDestroy(&ts->vatol));
+    ts->vatol         = vatol;
+    ts->vatol_derived = PETSC_TRUE;
+  } else if (!scale && ts->vatol_derived) {
+    PetscCall(VecDestroy(&ts->vatol));
+    ts->vatol_derived = PETSC_FALSE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSGetRightDiagonalScale - Gets the right diagonal change of variables used by a `TS`
+
+  Not Collective
+
+  Input Parameter:
+. ts - the `TS` context obtained from `TSCreate()`
+
+  Output Parameter:
+. scale - the right diagonal scale, or `NULL` if none is set
+
+  Level: advanced
+
+  Note:
+  The returned vector is borrowed and should not be destroyed by the caller.
+
+.seealso: [](ch_ts), `TS`, `TSSetRightDiagonalScale()`, `TSGetLeftDiagonalScale()`, `SNESGetRightDiagonalScale()`
+@*/
+PetscErrorCode TSGetRightDiagonalScale(TS ts, Vec *scale)
+{
+  SNES snes;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(scale, 2);
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESGetRightDiagonalScale(snes, scale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* ----------- Routines to set solver parameters ---------- */
 
 /*@
@@ -5244,7 +5393,8 @@ PetscErrorCode TSSetTolerances(TS ts, PetscReal atol, Vec vatol, PetscReal rtol,
   if (vatol) {
     PetscCall(PetscObjectReference((PetscObject)vatol));
     PetscCall(VecDestroy(&ts->vatol));
-    ts->vatol = vatol;
+    ts->vatol         = vatol;
+    ts->vatol_derived = PETSC_FALSE;
   }
 
   if (rtol == (PetscReal)PETSC_DETERMINE) {

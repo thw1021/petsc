@@ -1057,6 +1057,10 @@ PETSC_EXTERN PetscErrorCode    TSRegister(const char[], PetscErrorCode (*)(TS));
 PETSC_EXTERN PetscErrorCode TSGetSNES(TS, SNES *);
 PETSC_EXTERN PetscErrorCode TSSetSNES(TS, SNES);
 PETSC_EXTERN PetscErrorCode TSGetKSP(TS, KSP *);
+PETSC_EXTERN PetscErrorCode TSSetLeftDiagonalScale(TS, Vec);
+PETSC_EXTERN PetscErrorCode TSGetLeftDiagonalScale(TS, Vec *);
+PETSC_EXTERN PetscErrorCode TSSetRightDiagonalScale(TS, Vec);
+PETSC_EXTERN PetscErrorCode TSGetRightDiagonalScale(TS, Vec *);
 PETSC_EXTERN PetscErrorCode TSIsImplicit(TS, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode TSView(TS, PetscViewer);
