@@ -351,7 +351,7 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
 
   PetscCall(KSPRegisterAll());
   PetscObjectOptionsBegin((PetscObject)ksp);
-  PetscCall(PetscOptionsFList("-ksp_type", "Krylov method", "KSPSetType", KSPList, (char *)(((PetscObject)ksp)->type_name ? ((PetscObject)ksp)->type_name : KSPGMRES), type, 256, &flg));
+  PetscCall(PetscOptionsFList("-ksp_type", "Krylov method", "KSPSetType", KSPList, (char *)(((PetscObject)ksp)->type_name ? ((PetscObject)ksp)->type_name : KSPGMRES), type, sizeof(type), &flg));
   if (flg) PetscCall(KSPSetType(ksp, type));
   /*
     Set the type if it was never set.
@@ -438,7 +438,7 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(PetscOptionsBool("-ksp_knoll", "Use preconditioner applied to b for initial guess", "KSPSetInitialGuessKnoll", ksp->guess_knoll, &ksp->guess_knoll, NULL));
   PetscCall(PetscOptionsBool("-ksp_error_if_not_converged", "Generate error if solver does not converge", "KSPSetErrorIfNotConverged", ksp->errorifnotconverged, &ksp->errorifnotconverged, &set));
   if (set) PetscCall(KSPSetErrorIfNotConverged(ksp, ksp->errorifnotconverged));
-  PetscCall(PetscOptionsFList("-ksp_guess_type", "Initial guess in Krylov method", NULL, KSPGuessList, NULL, guesstype, 256, &flg));
+  PetscCall(PetscOptionsFList("-ksp_guess_type", "Initial guess in Krylov method", NULL, KSPGuessList, NULL, guesstype, sizeof(guesstype), &flg));
   if (flg) {
     PetscCall(KSPGetGuess(ksp, &ksp->guess));
     PetscCall(KSPGuessSetType(ksp->guess, guesstype));
