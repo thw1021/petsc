@@ -62,7 +62,7 @@ static PetscErrorCode SNESTR_KSPConverged_Private(KSP ksp, PetscInt n, PetscReal
   PetscFunctionBegin;
   /* Determine norm of solution */
   PetscCall(KSPBuildSolution(ksp, NULL, &x));
-  PetscCall(VecNorm(x, neP->norm, &nrm));
+  PetscCall(SNESVecNormRightScaled_Private(snes, x, neP->norm, &nrm));
   if (nrm >= neP->delta) {
     PetscCall(PetscInfo(snes, "Ending linear iteration early due to exiting trust region, delta=%g, length=%g\n", (double)neP->delta, (double)nrm));
     *reason = KSP_CONVERGED_STEP_LENGTH;
@@ -521,7 +521,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR *)snes->data;
   Vec                       X, F, Y, G, W, GradF, YU, Yc;
   PetscInt                  maxits, lits;
-  PetscReal                 rho, fnorm, gnorm = 0.0, xnorm = 0.0, delta, ynorm;
+  PetscReal                 rho, fnorm, gnorm = 0.0, xnorm = 0.0, delta, ynorm, snorm;
   PetscReal                 fk, fkp1, deltaqm = 0.0, gTy = 0.0, yTHy = 0.0;
   PetscReal                 auk, tauk, gfnorm, gfnorm_k, ycnorm, gTBg, objmin = 0.0, beta_k = 1.0;
   PC                        pc;
@@ -574,21 +574,22 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     PetscCall(SNESComputeFunction(snes, X, F)); /* F(X) */
   } else snes->vec_func_init_set = PETSC_FALSE;
 
-  PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- || F || */
+  PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- ||F||, the unscaled norm used by the trust-region model */
   SNESCheckFunctionDomainError(snes, fnorm);
-  PetscCall(VecNorm(X, NORM_2, &xnorm)); /* xnorm <- || X || */
+  PetscCall(SNESVecNormRightScaled_Private(snes, X, NORM_2, &xnorm)); /* xnorm <- || X || */
+  PetscCall(SNESVecNormLeftScaled_Private(snes, F, NORM_2, &snorm));  /* snorm <- ||F||, the (possibly left-scaled) norm used for monitoring and convergence testing */
 
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-  snes->norm = fnorm;
+  snes->norm = snorm;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
   delta      = neP->delta0;
   neP->delta = delta;
-  PetscCall(SNESLogConvergenceHistory(snes, fnorm, 0));
+  PetscCall(SNESLogConvergenceHistory(snes, snorm, 0));
 
   /* test convergence */
   step_ok = PETSC_FALSE;
-  PetscCall(SNESConverged(snes, 0, 0.0, 0.0, fnorm));
-  PetscCall(SNESMonitor(snes, 0, fnorm));
+  PetscCall(SNESConverged(snes, 0, 0.0, 0.0, snorm));
+  PetscCall(SNESMonitor(snes, 0, snorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   if (has_objective) {
@@ -701,7 +702,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       PetscCall(VecCopy(Yc, Y));
       PetscCall(PetscInfo(snes, "CP evaluated on boundary. delta: %g, ycnorm: %g, gTBg: %g\n", (double)delta, (double)ycnorm, (double)gTBg));
     }
-    PetscCall(VecNorm(Y, neP->norm, &ynorm));
+    PetscCall(SNESVecNormRightScaled_Private(snes, Y, neP->norm, &ynorm));
 
     /* decide what to do when the update is outside of trust region */
     if (!use_cauchy && (ynorm > delta || ynorm == 0.0)) {
@@ -778,7 +779,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       else rho = neP->eta1;                           /*  no reduction in quadratic model, step must be rejected */
     }
 
-    PetscCall(VecNorm(Y, neP->norm, &ynorm));
+    PetscCall(SNESVecNormRightScaled_Private(snes, Y, neP->norm, &ynorm));
     PetscCall(PetscInfo(snes, "rho=%g, delta=%g, fk=%g, fkp1=%g, deltaqm=%g, gTy=%g, yTHy=%g, ynormk=%g, gnorm=%g\n", (double)rho, (double)delta, (double)fk, (double)fkp1, (double)deltaqm, (double)gTy, (double)yTHy, (double)ynorm, (double)gnorm));
 
     /* update the size of the trust region */
@@ -787,7 +788,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     delta = PetscMin(delta, neP->deltaM);                      /* but not greater than deltaM */
 
     /* log 2-norm of update for monitoring routines */
-    PetscCall(VecNorm(Y, NORM_2, &ynorm));
+    PetscCall(SNESVecNormRightScaled_Private(snes, Y, NORM_2, &ynorm));
 
     /* decide on new step */
     neP->delta = delta;
@@ -796,7 +797,8 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     } else {
       step_ok = PETSC_FALSE;
       /* check convergence */
-      PetscCall(SNESTR_Converged_Private(snes, xnorm, ynorm, gnorm));
+      PetscCall(SNESVecNormLeftScaled_Private(snes, G, NORM_2, &snorm)); /* snorm <- ||F||, the (possibly left-scaled) norm used for convergence testing */
+      PetscCall(SNESTR_Converged_Private(snes, xnorm, ynorm, snorm));
       if (snes->reason < 0) {
         snes->numFailures++;
         break;
@@ -814,19 +816,20 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       /* New residual and linearization point */
       PetscCall(VecCopy(G, F));
       PetscCall(VecCopy(W, X));
+      PetscCall(SNESVecNormLeftScaled_Private(snes, F, NORM_2, &snorm)); /* snorm <- ||F||, the (possibly left-scaled) norm used for monitoring and convergence testing */
 
       /* Monitor convergence */
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
       snes->iter++;
-      snes->norm  = fnorm;
+      snes->norm  = snorm;
       snes->xnorm = xnorm;
       snes->ynorm = ynorm;
       PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
       PetscCall(SNESLogConvergenceHistory(snes, snes->norm, lits));
 
       /* Test for convergence, xnorm = || X || */
-      PetscCall(VecNorm(X, NORM_2, &xnorm));
-      PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
+      PetscCall(SNESVecNormRightScaled_Private(snes, X, NORM_2, &xnorm));
+      PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, snorm));
       PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
       if (snes->reason) break;
     }
@@ -961,14 +964,16 @@ PetscErrorCode SNESSetTrustRegionTolerance(SNES snes, PetscReal tol)
 
   Note:
   Use `PETSC_DETERMINE` to use the default value for the given `SNES`.
-  Use `PETSC_CURRENT` to retain a value.
+  Use `PETSC_CURRENT` to retain a value. If a right diagonal scale has been set with
+  `SNESSetRightDiagonalScale()`, `delta_min`, `delta_max`, and `delta_0` are measured in the scaled
+  (change-of-variables) units, not the original solution units.
 
   Fortran Note:
   Use `PETSC_DETERMINE_REAL`, `PETSC_CURRENT_REAL`
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNES`, `SNESNEWTONTR`, `SNESNewtonTRGetTolerances()`
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONTR`, `SNESNewtonTRGetTolerances()`, `SNESSetRightDiagonalScale()`
 @*/
 PetscErrorCode SNESNewtonTRSetTolerances(SNES snes, PetscReal delta_min, PetscReal delta_max, PetscReal delta_0)
 {

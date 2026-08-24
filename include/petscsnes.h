@@ -80,6 +80,10 @@ PETSC_EXTERN PetscErrorCode SNESRegister(const char[], PetscErrorCode (*)(SNES))
 
 PETSC_EXTERN PetscErrorCode SNESGetKSP(SNES, KSP *);
 PETSC_EXTERN PetscErrorCode SNESSetKSP(SNES, KSP);
+PETSC_EXTERN PetscErrorCode SNESSetLeftDiagonalScale(SNES, Vec);
+PETSC_EXTERN PetscErrorCode SNESGetLeftDiagonalScale(SNES, Vec *);
+PETSC_EXTERN PetscErrorCode SNESSetRightDiagonalScale(SNES, Vec);
+PETSC_EXTERN PetscErrorCode SNESGetRightDiagonalScale(SNES, Vec *);
 PETSC_EXTERN PetscErrorCode SNESSetSolution(SNES, Vec);
 PETSC_EXTERN PetscErrorCode SNESGetSolution(SNES, Vec *);
 PETSC_EXTERN PetscErrorCode SNESGetSolutionUpdate(SNES, Vec *);

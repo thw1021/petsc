@@ -66,6 +66,8 @@ struct _p_SNES {
   Vec   scaling; /* scaling vector */
   void *scaP;    /* scaling context */
 
+  Vec leftscale, rightscale; /* user-provided left/right diagonal scaling; see SNESSetRightDiagonalScale() */
+
   PetscReal precheck_picard_angle; /* For use with SNESLineSearchPreCheckPicard */
 
   /* ------------------------Time stepping hooks-----------------------------------*/
@@ -293,6 +295,9 @@ PETSC_INTERN PetscErrorCode                                 SNESVISetVariableBou
 PETSC_INTERN PetscErrorCode                                 SNESConvergedDefault_VI(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *);
 
 PETSC_INTERN PetscErrorCode DMSNESUnsetFunctionContext_Internal(DM);
+
+PETSC_INTERN PetscErrorCode SNESVecNormRightScaled_Private(SNES, Vec, NormType, PetscReal *);
+PETSC_INTERN PetscErrorCode SNESVecNormLeftScaled_Private(SNES, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMSNESUnsetJacobianContext_Internal(DM);
 
 PETSC_EXTERN PetscLogEvent SNES_Solve;

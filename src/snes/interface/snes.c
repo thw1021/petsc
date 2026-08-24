@@ -1789,6 +1789,185 @@ PetscErrorCode SNESSetKSP(SNES snes, KSP ksp)
 }
 
 /*@
+  SNESSetLeftDiagonalScale - Sets a left diagonal scaling for `SNESSolve()`.
+
+  Logically Collective
+
+  Input Parameters:
++ snes  - the `SNES` context
+- scale - the left diagonal scale, or `NULL` to clear it
+
+  Level: advanced
+
+  Notes:
+  With left scale $L$ and optional right scale $R$, `D = R` is treated as a change of variables
+  $x = R y$ and `D_F = L` as a reweighting of the residual equations $L F(x) = 0$. Left scaling is
+  not a change of variables: it does not change what $x$ means, only which linear combination of
+  the residual equations is measured.
+
+  Only supported for `SNESNEWTONLS` and `SNESNEWTONTR`; `SNESSetUp()` and `SNESSolve()` error for
+  every other `SNESType`. `D` and `D_F` affect the Newton correction's inner `KSP` solve (both its
+  preconditioning and, when a `MATMFFD` Jacobian is used, the differencing step, see
+  `MatDiagonalScale()`) and the norms used by the line search or trust region globalization; they
+  never change the exact Newton direction itself.
+
+  The vector is referenced, not copied, and changes made to it take effect on the next
+  `SNESSetUp()`. This scaling is not carried forward across `SNESSetKSP()`; the copy pushed down to
+  the `KSP` is refreshed on the next `SNESSetUp()`. It is independent of `SNESGetNPC()`.
+
+.seealso: [](ch_snes), `SNES`, `SNESGetLeftDiagonalScale()`, `SNESSetRightDiagonalScale()`, `KSPSetLeftDiagonalScale()`,
+          `SNESGetKSP()`, `TSSetRightDiagonalScale()`, `SNESSolve()`
+@*/
+PetscErrorCode SNESSetLeftDiagonalScale(SNES snes, Vec scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  if (scale) {
+    PetscValidHeaderSpecific(scale, VEC_CLASSID, 2);
+    PetscCheckSameComm(snes, 1, scale, 2);
+    PetscCall(PetscObjectReference((PetscObject)scale));
+  }
+  PetscCall(VecDestroy(&snes->leftscale));
+  snes->leftscale = scale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESGetLeftDiagonalScale - Gets the left diagonal scaling used by `SNESSolve()`.
+
+  Not Collective
+
+  Input Parameter:
+. snes - the `SNES` context
+
+  Output Parameter:
+. scale - the left diagonal scale, or `NULL` if none is set
+
+  Level: advanced
+
+  Note:
+  The returned vector is borrowed and should not be destroyed by the caller.
+
+.seealso: [](ch_snes), `SNES`, `SNESSetLeftDiagonalScale()`, `SNESGetRightDiagonalScale()`, `SNESSolve()`
+@*/
+PetscErrorCode SNESGetLeftDiagonalScale(SNES snes, Vec *scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscAssertPointer(scale, 2);
+  *scale = snes->leftscale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESSetRightDiagonalScale - Sets a right diagonal change of variables for `SNESSolve()`.
+
+  Logically Collective
+
+  Input Parameters:
++ snes  - the `SNES` context
+- scale - the right diagonal scale, or `NULL` to clear it
+
+  Level: advanced
+
+  Notes:
+  With right scale $R$, $D = R$ is a change of variables $x = R y$. See
+  `SNESSetLeftDiagonalScale()` for the restriction to `SNESNEWTONLS`/`SNESNEWTONTR`, the effect on
+  the inner `KSP` solve and the globalization norms, and the relationship to left scaling.
+
+  The vector is referenced, not copied, and changes made to it take effect on the next
+  `SNESSetUp()`. A `TS` that owns this `SNES` may derive a default `vatol` from `scale`; see
+  `TSSetRightDiagonalScale()`.
+
+.seealso: [](ch_snes), `SNES`, `SNESGetRightDiagonalScale()`, `SNESSetLeftDiagonalScale()`, `KSPSetRightDiagonalScale()`,
+          `SNESGetKSP()`, `TSSetRightDiagonalScale()`, `SNESSolve()`
+@*/
+PetscErrorCode SNESSetRightDiagonalScale(SNES snes, Vec scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  if (scale) {
+    PetscValidHeaderSpecific(scale, VEC_CLASSID, 2);
+    PetscCheckSameComm(snes, 1, scale, 2);
+    PetscCall(PetscObjectReference((PetscObject)scale));
+  }
+  PetscCall(VecDestroy(&snes->rightscale));
+  snes->rightscale = scale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESGetRightDiagonalScale - Gets the right diagonal change of variables used by `SNESSolve()`.
+
+  Not Collective
+
+  Input Parameter:
+. snes - the `SNES` context
+
+  Output Parameter:
+. scale - the right diagonal scale, or `NULL` if none is set
+
+  Level: advanced
+
+  Note:
+  The returned vector is borrowed and should not be destroyed by the caller.
+
+.seealso: [](ch_snes), `SNES`, `SNESSetRightDiagonalScale()`, `SNESGetLeftDiagonalScale()`, `SNESSolve()`
+@*/
+PetscErrorCode SNESGetRightDiagonalScale(SNES snes, Vec *scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscAssertPointer(scale, 2);
+  *scale = snes->rightscale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Computes ||D^{-1} v|| when a right diagonal scale D is set (v is in x-space, y = D^{-1} x is in scaled space), else plain ||v||
+PetscErrorCode SNESVecNormRightScaled_Private(SNES snes, Vec v, NormType type, PetscReal *norm)
+{
+  Vec scale;
+
+  PetscFunctionBegin;
+  PetscCall(SNESGetRightDiagonalScale(snes, &scale));
+  if (scale) {
+    DM  dm;
+    Vec w;
+
+    PetscCall(SNESGetDM(snes, &dm));
+    PetscCall(DMGetGlobalVector(dm, &w));
+    PetscCall(VecPointwiseDivide(w, v, scale));
+    PetscCall(VecNorm(w, type, norm));
+    PetscCall(DMRestoreGlobalVector(dm, &w));
+  } else {
+    PetscCall(VecNorm(v, type, norm));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Computes ||D_F v|| when a left diagonal scale D_F is set, else plain ||v||
+PetscErrorCode SNESVecNormLeftScaled_Private(SNES snes, Vec v, NormType type, PetscReal *norm)
+{
+  Vec scale;
+
+  PetscFunctionBegin;
+  PetscCall(SNESGetLeftDiagonalScale(snes, &scale));
+  if (scale) {
+    DM  dm;
+    Vec w;
+
+    PetscCall(SNESGetDM(snes, &dm));
+    PetscCall(DMGetGlobalVector(dm, &w));
+    PetscCall(VecPointwiseMult(w, v, scale));
+    PetscCall(VecNorm(w, type, norm));
+    PetscCall(DMRestoreGlobalVector(dm, &w));
+  } else {
+    PetscCall(VecNorm(v, type, norm));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   SNESParametersInitialize - Sets the base defaults for parameters in `snes`, updating a parameter's current value when it matches its previously recorded default.
 
   Logically collective
@@ -3453,6 +3632,18 @@ PetscErrorCode SNESSetUp(SNES snes)
 
   if (snes->usesksp && !snes->ksp) PetscCall(SNESGetKSP(snes, &snes->ksp));
 
+  {
+    PetscBool newton;
+
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)snes, &newton, SNESNEWTONLS, SNESNEWTONTR, ""));
+    PetscCheck(newton || (!snes->leftscale && !snes->rightscale), PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNESSetLeftDiagonalScale()/SNESSetRightDiagonalScale() are only supported for SNESNEWTONLS and SNESNEWTONTR, not %s",
+               ((PetscObject)snes)->type_name);
+    if (newton && (snes->leftscale || snes->rightscale)) {
+      PetscCall(KSPSetLeftDiagonalScale(snes->ksp, snes->leftscale));
+      PetscCall(KSPSetRightDiagonalScale(snes->ksp, snes->rightscale));
+    }
+  }
+
   if (snes->linesearch) {
     PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
     PetscCall(SNESLineSearchSetFunction(snes->linesearch, SNESComputeFunction));
@@ -3654,6 +3845,8 @@ PetscErrorCode SNESDestroy(SNES *snes)
 
   PetscCall(DMDestroy(&(*snes)->dm));
   PetscCall(KSPDestroy(&(*snes)->ksp));
+  PetscCall(VecDestroy(&(*snes)->leftscale));
+  PetscCall(VecDestroy(&(*snes)->rightscale));
   PetscCall(SNESLineSearchDestroy(&(*snes)->linesearch));
 
   PetscCall(PetscFree((*snes)->kspconvctx));
