@@ -1428,7 +1428,7 @@ int main(int argc, char **argv)
     PetscBool flg;
 
     PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");
-    PetscCall(PetscOptionsFList("-dm_type", "Convert DMPlex to another format", "ex12", DMList, DMPLEX, convType, 256, &flg));
+    PetscCall(PetscOptionsFList("-dm_type", "Convert DMPlex to another format", "ex12", DMList, DMPLEX, convType, sizeof(convType), &flg));
     PetscOptionsEnd();
     if (flg) {
       DM dmConv;
