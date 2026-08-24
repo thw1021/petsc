@@ -36,6 +36,7 @@ from ai_review_fetch import DEFAULT_TIMEOUT, EXIT_FAIL, EXIT_OK, IID_RE, chdir_r
 
 SUGGESTION_RE = re.compile(r'(```suggestion[^\n]*\n)(.*?)(```)\s*$', re.DOTALL)
 OPEN_RE       = re.compile(r'(?m)^```suggestion')
+FENCE_RE      = re.compile(r'(?m)^ {0,3}`{3,}')
 
 def guard_suggestion(body):
   """Demote a suggestion block GitLab would render incorrectly to a plain code block."""
@@ -44,7 +45,7 @@ def guard_suggestion(body):
   # open block, and an inline mention never opens one.  Anchoring there leaves
   # an earlier, closed quoted block alone while still catching a ```suggestion
   # nested inside the trailing block.
-  starts = [m.start() for m in OPEN_RE.finditer(body) if body.count('```', 0, m.start()) % 2 == 0]
+  starts = [m.start() for m in OPEN_RE.finditer(body) if len(FENCE_RE.findall(body, 0, m.start())) % 2 == 0]
   if not starts: return body
   match = SUGGESTION_RE.match(body, starts[-1])
   if not match: return body
