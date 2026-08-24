@@ -87,6 +87,33 @@ class BaseTestSNES:
         self.snes.setDivergenceTolerance(PETSc.CURRENT)
         self.assertEqual(dtol, PETSc.UNLIMITED)
 
+    def testDiagonalScale(self):
+        left = PETSc.Vec().createSeq(2)
+        right = left.duplicate()
+        left.set(2)
+        right.set(0.5)
+        self.assertEqual(left.getRefCount(), 1)
+        self.assertEqual(right.getRefCount(), 1)
+        self.snes.setLeftDiagonalScale(left)
+        self.snes.setRightDiagonalScale(right)
+        self.assertEqual(left.getRefCount(), 2)
+        self.assertEqual(right.getRefCount(), 2)
+        got = self.snes.getLeftDiagonalScale()
+        self.assertEqual(got, left)
+        got.destroy()
+        got = self.snes.getRightDiagonalScale()
+        self.assertEqual(got, right)
+        got.destroy()
+        self.snes.reset()
+        self.assertEqual(self.snes.getLeftDiagonalScale(), left)
+        self.assertEqual(self.snes.getRightDiagonalScale(), right)
+        self.snes.setLeftDiagonalScale(None)
+        self.snes.setRightDiagonalScale(None)
+        self.assertIsNone(self.snes.getLeftDiagonalScale())
+        self.assertIsNone(self.snes.getRightDiagonalScale())
+        self.assertEqual(left.getRefCount(), 1)
+        self.assertEqual(right.getRefCount(), 1)
+
     def testProperties(self):
         snes = self.snes
         #
@@ -500,6 +527,13 @@ class TestSNESTR(BaseTestSNES, unittest.TestCase):
 
 class TestSNESAL(BaseTestSNES, unittest.TestCase):
     SNES_TYPE = PETSc.SNES.Type.NEWTONAL
+
+    def testDiagonalScaleWrongType(self):
+        scale = PETSc.Vec().createSeq(2)
+        scale.set(1)
+        self.snes.setRightDiagonalScale(scale)
+        with self.assertRaises(PETSc.Error):
+            self.snes.setUp()
 
 
 # --------------------------------------------------------------------

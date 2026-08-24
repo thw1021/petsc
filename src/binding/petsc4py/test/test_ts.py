@@ -80,6 +80,70 @@ class BaseTestTSNonlinear:
         self.ts = None
         PETSc.garbage_cleanup()
 
+    def testDiagonalScale(self):
+        left = PETSc.Vec().createSeq(2)
+        right = left.duplicate()
+        left.set(2)
+        right.set(0.5)
+        self.assertEqual(left.getRefCount(), 1)
+        self.assertEqual(right.getRefCount(), 1)
+        self.ts.setLeftDiagonalScale(left)
+        self.ts.setRightDiagonalScale(right)
+        self.assertEqual(left.getRefCount(), 2)
+        self.assertEqual(right.getRefCount(), 2)
+        got = self.ts.getLeftDiagonalScale()
+        self.assertEqual(got, left)
+        got.destroy()
+        got = self.ts.getRightDiagonalScale()
+        self.assertEqual(got, right)
+        got.destroy()
+        snes = self.ts.getSNES()
+        self.assertEqual(snes.getLeftDiagonalScale(), left)
+        self.assertEqual(snes.getRightDiagonalScale(), right)
+        self.ts.setLeftDiagonalScale(None)
+        self.ts.setRightDiagonalScale(None)
+        self.assertIsNone(self.ts.getLeftDiagonalScale())
+        self.assertIsNone(self.ts.getRightDiagonalScale())
+        self.assertEqual(left.getRefCount(), 1)
+        self.assertEqual(right.getRefCount(), 1)
+
+    def testDiagonalScaleVatol(self):
+        right = PETSc.Vec().createSeq(2)
+        right.setArray([1.0e8, 1.0])
+
+        self.ts.setTolerances(rtol=1e-6, atol=1e-6)
+        _, atol = self.ts.getTolerances()
+        self.ts.setRightDiagonalScale(right)
+        _, vatol = self.ts.getTolerances()
+        self.assertIsInstance(vatol, PETSc.Vec)
+        expected = right.copy()
+        expected.scale(atol)
+        self.assertEqual(list(vatol.getArray()), list(expected.getArray()))
+
+        # an explicit vatol takes precedence over, and is not clobbered by, a derived one
+        myvatol = right.duplicate()
+        myvatol.set(1.0)
+        self.ts.setTolerances(atol=myvatol)
+        _, vatol = self.ts.getTolerances()
+        self.assertEqual(vatol, myvatol)
+        self.ts.setRightDiagonalScale(right)
+        _, vatol = self.ts.getTolerances()
+        self.assertEqual(vatol, myvatol)
+        self.ts.setRightDiagonalScale(None)
+        _, vatol = self.ts.getTolerances()
+        self.assertEqual(vatol, myvatol)
+
+        # clearing the right diagonal scale discards a derived vatol
+        ts2 = PETSc.TS().create(PETSc.COMM_SELF)
+        ts2.setTolerances(rtol=1e-6, atol=1e-6)
+        ts2.setRightDiagonalScale(right)
+        _, vatol = ts2.getTolerances()
+        self.assertIsInstance(vatol, PETSc.Vec)
+        ts2.setRightDiagonalScale(None)
+        _, atol2 = ts2.getTolerances()
+        self.assertIsInstance(atol2, float)
+        ts2.destroy()
+
 
 class BaseTestTSNonlinearRHS(BaseTestTSNonlinear):
     def testSolveRHS(self, nullsol=False):

@@ -170,6 +170,10 @@ cdef extern from * nogil:
 
     PetscErrorCode TSGetKSP(PetscTS, PetscKSP*)
     PetscErrorCode TSGetSNES(PetscTS, PetscSNES*)
+    PetscErrorCode TSSetLeftDiagonalScale(PetscTS, PetscVec)
+    PetscErrorCode TSGetLeftDiagonalScale(PetscTS, PetscVec*)
+    PetscErrorCode TSSetRightDiagonalScale(PetscTS, PetscVec)
+    PetscErrorCode TSGetRightDiagonalScale(PetscTS, PetscVec*)
     PetscErrorCode TSIsImplicit(PetscTS, PetscBool*)
 
     PetscErrorCode TSGetDM(PetscTS, PetscDM*)

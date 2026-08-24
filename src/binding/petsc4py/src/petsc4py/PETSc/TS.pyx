@@ -1657,6 +1657,78 @@ cdef class TS(Object):
         CHKERR(PetscINCREF(ksp.obj))
         return ksp
 
+    def setLeftDiagonalScale(self, Vec scale=None) -> None:
+        """Set the left diagonal scaling used for the implicit stage solves.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        scale
+            Left scaling vector, or `None` to clear it.
+
+        See Also
+        --------
+        getLeftDiagonalScale, setRightDiagonalScale
+        petsc.TSSetLeftDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        if scale is not None: vec = scale.vec
+        CHKERR(TSSetLeftDiagonalScale(self.ts, vec))
+
+    def getLeftDiagonalScale(self) -> Vec | None:
+        """Return the left diagonal scaling used for the implicit stage solves.
+
+        Not collective.
+
+        See Also
+        --------
+        setLeftDiagonalScale, getRightDiagonalScale
+        petsc.TSGetLeftDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        CHKERR(TSGetLeftDiagonalScale(self.ts, &vec))
+        if vec == NULL: return None
+        return ref_Vec(vec)
+
+    def setRightDiagonalScale(self, Vec scale=None) -> None:
+        """Set the right diagonal change of variables used by the `TS`.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        scale
+            Right scaling vector, or `None` to clear it.
+
+        See Also
+        --------
+        getRightDiagonalScale, setLeftDiagonalScale
+        petsc.TSSetRightDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        if scale is not None: vec = scale.vec
+        CHKERR(TSSetRightDiagonalScale(self.ts, vec))
+
+    def getRightDiagonalScale(self) -> Vec | None:
+        """Return the right diagonal change of variables used by the `TS`.
+
+        Not collective.
+
+        See Also
+        --------
+        setRightDiagonalScale, getLeftDiagonalScale
+        petsc.TSGetRightDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        CHKERR(TSGetRightDiagonalScale(self.ts, &vec))
+        if vec == NULL: return None
+        return ref_Vec(vec)
+
     # --- discretization space ---
 
     def getDM(self) -> DM:

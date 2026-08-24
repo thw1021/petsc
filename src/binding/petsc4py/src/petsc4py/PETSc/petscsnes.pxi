@@ -107,6 +107,10 @@ cdef extern from * nogil:
 
     PetscErrorCode SNESGetKSP(PetscSNES, PetscKSP*)
     PetscErrorCode SNESSetKSP(PetscSNES, PetscKSP)
+    PetscErrorCode SNESSetLeftDiagonalScale(PetscSNES, PetscVec)
+    PetscErrorCode SNESGetLeftDiagonalScale(PetscSNES, PetscVec*)
+    PetscErrorCode SNESSetRightDiagonalScale(PetscSNES, PetscVec)
+    PetscErrorCode SNESGetRightDiagonalScale(PetscSNES, PetscVec*)
 
     PetscErrorCode SNESGetDM(PetscSNES, PetscDM*)
     PetscErrorCode SNESSetDM(PetscSNES, PetscDM)

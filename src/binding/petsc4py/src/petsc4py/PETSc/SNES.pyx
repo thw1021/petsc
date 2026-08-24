@@ -1966,6 +1966,78 @@ cdef class SNES(Object):
         CHKERR(PetscINCREF(ksp.obj))
         return ksp
 
+    def setLeftDiagonalScale(self, Vec scale=None) -> None:
+        """Set the left diagonal scaling used by `solve`.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        scale
+            Left scaling vector, or `None` to clear it.
+
+        See Also
+        --------
+        getLeftDiagonalScale, setRightDiagonalScale
+        petsc.SNESSetLeftDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        if scale is not None: vec = scale.vec
+        CHKERR(SNESSetLeftDiagonalScale(self.snes, vec))
+
+    def getLeftDiagonalScale(self) -> Vec | None:
+        """Return the left diagonal scaling used by `solve`.
+
+        Not collective.
+
+        See Also
+        --------
+        setLeftDiagonalScale, getRightDiagonalScale
+        petsc.SNESGetLeftDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        CHKERR(SNESGetLeftDiagonalScale(self.snes, &vec))
+        if vec == NULL: return None
+        return ref_Vec(vec)
+
+    def setRightDiagonalScale(self, Vec scale=None) -> None:
+        """Set the right diagonal change of variables used by `solve`.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        scale
+            Right scaling vector, or `None` to clear it.
+
+        See Also
+        --------
+        getRightDiagonalScale, setLeftDiagonalScale
+        petsc.SNESSetRightDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        if scale is not None: vec = scale.vec
+        CHKERR(SNESSetRightDiagonalScale(self.snes, vec))
+
+    def getRightDiagonalScale(self) -> Vec | None:
+        """Return the right diagonal change of variables used by `solve`.
+
+        Not collective.
+
+        See Also
+        --------
+        setRightDiagonalScale, getLeftDiagonalScale
+        petsc.SNESGetRightDiagonalScale
+
+        """
+        cdef PetscVec vec = NULL
+        CHKERR(SNESGetRightDiagonalScale(self.snes, &vec))
+        if vec == NULL: return None
+        return ref_Vec(vec)
+
     def setUseEW(self, flag: bool = True, *targs: Any, **kargs: Any) -> None:
         """Tell the solver to use the Eisenstat-Walker trick.
 
