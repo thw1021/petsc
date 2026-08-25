@@ -1,7 +1,6 @@
 #pragma once
 
 #include <petscsys.h>
-#include <petscviewertypes.h>
 /*
     Function pointer table that maps from function pointers to their string representation
 
