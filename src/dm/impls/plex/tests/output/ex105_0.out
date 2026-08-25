@@ -1,0 +1,3 @@
+FromCentroids: N=8 cells=512 permutation ok, globally curve sorted
+CellList: N=8 cells=64 plex built and checked
+Locality: reorder cuts shared points
