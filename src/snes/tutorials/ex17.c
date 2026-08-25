@@ -966,4 +966,14 @@ int main(int argc, char **argv)
       suffix: ge_q1_gdsw
       args: -snes_max_it 1 -ksp_type cg -ksp_norm_type natural -displacement_petscspace_degree 1 -snes_monitor -ksp_monitor -pc_type mg -pc_mg_adapt_interp_coarse_space gdsw -pc_mg_levels 2 -pc_mg_galerkin -mg_levels_pc_type bjacobi -mg_levels_esteig_ksp_type cg -mg_levels_sub_pc_type icc -mg_coarse_redundant_pc_type cholesky -ksp_view
 
+  testset:
+    args: -dm_plex_box_faces 1,1,1 -dm_plex_separate_marker -sol_type elas_axial_disp
+
+    test:
+      suffix: 2d_p1_axial_elas_adapt
+      requires: triangle
+      args: -displacement_petscspace_degree 1 -dm_refine 3 -dm_solve_adapt \
+              -ksp_rtol 1e-10 -ksp_error_if_not_converged -pc_type gamg -comp_sub_0_inner_pc_type lu \
+              -snes_monitor -ksp_converged_reason
+
 TEST*/
