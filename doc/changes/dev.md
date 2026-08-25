@@ -258,6 +258,7 @@
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
 - Remove `DMPlex_Surface_Grad()`, superseded by `DMPlexGeomDataAndGrads()`
 - Add `DMPlexReorderCellListByCurve()` and `DMPlexReorderCellListByCurveFromCentroids()` to sort and equidistribute a cell list along a space-filling curve before `DMPlexCreateFromCellListParallelPetsc()`; add `DMPlexCurveType` and `DMPLEXCURVEMORTON`
+- Add `DMPLEXCURVEMORTON` as an accepted ordering in `DMPlexGetOrdering()`, which orders cells along a space-filling curve without building an adjacency graph
 
 ## FE/FV
 
