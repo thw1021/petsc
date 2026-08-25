@@ -1177,7 +1177,7 @@ int main(int argc, char **args)
    output_file: output/ex59_bddc_fetidp_ml_eqlimit.out
    test:
      suffix: bddc_fetidp_ml_eqlimit_1
-     args: -physical_pc_bddc_coarse_eqs_limit 31 -mat_partitioning_type average -physical_pc_bddc_coarse_pc_bddc_graph_maxcount 1
+     args: -physical_pc_bddc_coarse_eqs_limit 31 -physical_pc_bddc_aggregator_mat_partitioning_type average -physical_pc_bddc_coarse_pc_bddc_graph_maxcount 1
    test:
      suffix: bddc_fetidp_ml_eqlimit_2
      args: -physical_pc_bddc_coarse_eqs_limit 46
