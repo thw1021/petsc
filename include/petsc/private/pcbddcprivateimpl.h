@@ -51,7 +51,7 @@ PETSC_INTERN PetscErrorCode PCBDDCSetUpLocalScatters(PC);
 PETSC_INTERN PetscErrorCode PCBDDCSetUpLocalSolvers(PC, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode PCBDDCSetUpCorrection(PC, Mat *);
 PETSC_INTERN PetscErrorCode PCBDDCSetUpCoarseSolver(PC, Mat);
-PETSC_INTERN PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC, Mat, IS, PetscInt, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC, Mat, IS, PetscInt, MatReuse, Vec *, Mat *);
 PETSC_INTERN PetscErrorCode PCBDDCComputePrimalNumbering(PC, PetscInt *, PetscInt **);
 PETSC_INTERN PetscErrorCode PCBDDCScatterCoarseDataBegin(PC, InsertMode, ScatterMode);
 PETSC_INTERN PetscErrorCode PCBDDCScatterCoarseDataEnd(PC, InsertMode, ScatterMode);

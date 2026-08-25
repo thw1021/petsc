@@ -1701,10 +1701,39 @@ PetscErrorCode PCBDDCNullSpaceCreate(MPI_Comm comm, PetscBool has_const, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCBDDCComputeLocalFluxWeights(Mat A, Mat divudotp, PetscBool transpose, IS vl2l, Vec *v)
+{
+  Mat loc_divudotp;
+  Vec p;
+
+  PetscFunctionBegin;
+  PetscCall(MatISGetLocalMat(divudotp, &loc_divudotp));
+  if (!transpose) PetscCall(MatCreateVecs(loc_divudotp, v, &p));
+  else PetscCall(MatCreateVecs(loc_divudotp, &p, v));
+  PetscCall(VecSet(p, 1.));
+  if (!transpose) PetscCall(MatMultTranspose(loc_divudotp, p, *v));
+  else PetscCall(MatMult(loc_divudotp, p, *v));
+  PetscCall(VecDestroy(&p));
+  if (vl2l) {
+    Mat        lA;
+    VecScatter sc;
+    Vec        vins;
+
+    PetscCall(MatISGetLocalMat(A, &lA));
+    PetscCall(MatCreateVecs(lA, &vins, NULL));
+    PetscCall(VecScatterCreate(*v, NULL, vins, vl2l, &sc));
+    PetscCall(VecScatterBegin(sc, *v, vins, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(sc, *v, vins, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterDestroy(&sc));
+    PetscCall(VecDestroy(v));
+    *v = vins;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode PCBDDCComputeNoNetFlux(Mat A, Mat divudotp, PetscBool transpose, IS vl2l, PCBDDCGraph graph, MatNullSpace *nnsp)
 {
-  Mat                    loc_divudotp;
-  Vec                    p, v, quad_vec;
+  Vec                    v, quad_vec;
   ISLocalToGlobalMapping map;
   PetscScalar           *array;
 
@@ -1719,35 +1748,8 @@ PetscErrorCode PCBDDCComputeNoNetFlux(Mat A, Mat divudotp, PetscBool transpose, 
   PetscCall(VecLockReadPop(quad_vec));
   PetscCall(VecSetLocalToGlobalMapping(quad_vec, map));
 
-  /* compute local quad vec */
-  PetscCall(MatISGetLocalMat(divudotp, &loc_divudotp));
-  if (!transpose) {
-    PetscCall(MatCreateVecs(loc_divudotp, &v, &p));
-  } else {
-    PetscCall(MatCreateVecs(loc_divudotp, &p, &v));
-  }
-  /* the assumption here is that the constant vector interpolates the constant on the L2 conforming space */
-  PetscCall(VecSet(p, 1.));
-  if (!transpose) {
-    PetscCall(MatMultTranspose(loc_divudotp, p, v));
-  } else {
-    PetscCall(MatMult(loc_divudotp, p, v));
-  }
-  PetscCall(VecDestroy(&p));
-  if (vl2l) {
-    Mat        lA;
-    VecScatter sc;
-    Vec        vins;
-
-    PetscCall(MatISGetLocalMat(A, &lA));
-    PetscCall(MatCreateVecs(lA, &vins, NULL));
-    PetscCall(VecScatterCreate(v, NULL, vins, vl2l, &sc));
-    PetscCall(VecScatterBegin(sc, v, vins, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecScatterEnd(sc, v, vins, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecScatterDestroy(&sc));
-    PetscCall(VecDestroy(&v));
-    v = vins;
-  }
+  /* the constant vector is assumed to interpolate the constant on the L2 conforming space */
+  PetscCall(PCBDDCComputeLocalFluxWeights(A, divudotp, transpose, vl2l, &v));
 
   /* mask summation of interface values */
   PetscInt        n, *mmask, *mask, *idxs, nmr, nr;
@@ -8247,6 +8249,7 @@ static PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_su
   }
   PetscCall(MatISGetLocalMat(*mat_n, &local_mat));
   PetscCall(MatSetType(local_mat, new_local_type));
+  PetscCall(MatSetOption(local_mat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
 
   PetscCallMPI(MPI_Waitall(n_recvs, recv_req_vals, MPI_STATUSES_IGNORE));
 
@@ -8443,13 +8446,49 @@ static PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_su
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC pc, Mat mat_is, IS partition, PetscInt nparts, MatReuse reuse, Mat *mat_new)
+static PetscErrorCode PCBDDCAggregateLocalCoarseVec(Mat mat, Vec *vec)
+{
+  ISLocalToGlobalMapping l2gmap;
+  IS                     fine_to_aggregate;
+  Vec                    vec_new;
+  const PetscInt        *idxs;
+  const PetscScalar     *array;
+  PetscScalar           *array_new;
+  PetscInt               n, n_new, n_vec;
+
+  PetscFunctionBegin;
+  if (!vec || !*vec) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscObjectQuery((PetscObject)mat, "_PCBDDC_fine_to_aggregate", (PetscObject *)&fine_to_aggregate));
+  PetscCheck(fine_to_aggregate, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing fine-to-aggregate map");
+  PetscCall(ISGetLocalSize(fine_to_aggregate, &n));
+  PetscCall(VecGetLocalSize(*vec, &n_vec));
+  PetscCheck(n_vec == n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid local vector size %" PetscInt_FMT " != %" PetscInt_FMT, n_vec, n);
+  PetscCall(MatISGetLocalToGlobalMapping(mat, &l2gmap, NULL));
+  PetscCall(ISLocalToGlobalMappingGetSize(l2gmap, &n_new));
+  PetscCall(VecCreate(PetscObjectComm((PetscObject)*vec), &vec_new));
+  PetscCall(VecSetSizes(vec_new, n_new, PETSC_DECIDE));
+  PetscCall(VecSetType(vec_new, VECSTANDARD));
+  PetscCall(VecSet(vec_new, 0.0));
+  PetscCall(ISGetIndices(fine_to_aggregate, &idxs));
+  PetscCall(VecGetArrayRead(*vec, &array));
+  PetscCall(VecGetArray(vec_new, &array_new));
+  for (PetscInt i = 0; i < n; i++) array_new[idxs[i]] += array[i];
+  PetscCall(VecRestoreArray(vec_new, &array_new));
+  PetscCall(VecRestoreArrayRead(*vec, &array));
+  PetscCall(ISRestoreIndices(fine_to_aggregate, &idxs));
+  PetscCall(VecDestroy(vec));
+  *vec = vec_new;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC pc, Mat mat_is, IS partition, PetscInt nparts, MatReuse reuse, Vec *vec, Mat *mat_new)
 {
   PC_BDDC               *pcbddc = (PC_BDDC *)pc->data;
   PCBDDCGraph            graph  = pcbddc->mat_graph;
   Mat_IS                *matis;
   Mat                    local_mat, new_local_mat;
   ISLocalToGlobalMapping l2gmap;
+  IS                     is_fine_to_aggregate;
   const PetscInt        *parts, *gidxs, *ii, *jj;
   const PetscScalar     *array;
   PetscInt              *counts, *offsets, *cursor, *order, *sorted_gidxs;
@@ -8463,8 +8502,9 @@ PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC pc, Mat mat_is, IS partition, Pe
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidHeaderSpecific(mat_is, MAT_CLASSID, 2);
   if (partition) PetscValidHeaderSpecific(partition, IS_CLASSID, 3);
-  PetscAssertPointer(mat_new, 6);
-  if (reuse == MAT_REUSE_MATRIX) PetscValidHeaderSpecific(*mat_new, MAT_CLASSID, 6);
+  if (vec && *vec) PetscValidHeaderSpecific(*vec, VEC_CLASSID, 6);
+  PetscAssertPointer(mat_new, 7);
+  if (reuse == MAT_REUSE_MATRIX) PetscValidHeaderSpecific(*mat_new, MAT_CLASSID, 7);
   PetscCheck(reuse == MAT_INITIAL_MATRIX || reuse == MAT_REUSE_MATRIX, PetscObjectComm((PetscObject)mat_is), PETSC_ERR_SUP, "Unsupported reuse mode %d", (int)reuse);
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat_is, MATIS, &ismatis));
   PetscCheck(ismatis, PetscObjectComm((PetscObject)mat_is), PETSC_ERR_ARG_WRONG, "Cannot aggregate coarse matrix of type %s", ((PetscObject)mat_is)->type_name);
@@ -8479,6 +8519,7 @@ PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC pc, Mat mat_is, IS partition, Pe
     PetscCall(MatSeqAIJGetArrayRead(local_mat, &array));
     PetscCall(MatSetValuesCOO(*mat_new, array, ADD_VALUES));
     PetscCall(MatSeqAIJRestoreArrayRead(local_mat, &array));
+    PetscCall(PCBDDCAggregateLocalCoarseVec(*mat_new, vec));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(ISGetLocalSize(partition, &n_subs));
@@ -8545,6 +8586,9 @@ PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC pc, Mat mat_is, IS partition, Pe
   PetscCall(MatSetLocalToGlobalMapping(*mat_new, l2gmap, l2gmap));
   PetscCall(ISLocalToGlobalMappingDestroy(&l2gmap));
   PetscCall(PetscFree(aggregate_gidxs));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n, fine_to_aggregate, PETSC_COPY_VALUES, &is_fine_to_aggregate));
+  PetscCall(PetscObjectCompose((PetscObject)*mat_new, "_PCBDDC_fine_to_aggregate", (PetscObject)is_fine_to_aggregate));
+  PetscCall(ISDestroy(&is_fine_to_aggregate));
 
   PetscCall(MatGetRowIJ(local_mat, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ii, &jj, &done));
   PetscCheck(done, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in MatGetRowIJ()");
@@ -8569,6 +8613,7 @@ PetscErrorCode PCBDDCAggregateLocalCoarseMat(PC pc, Mat mat_is, IS partition, Pe
   PetscCall(MatSetVariableBlockSizes(new_local_mat, nparts, block_sizes));
   PetscCall(MatISRestoreLocalMat(*mat_new, &new_local_mat));
   PetscCall(PetscFree(block_sizes));
+  PetscCall(PCBDDCAggregateLocalCoarseVec(*mat_new, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -8800,40 +8845,27 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
     PetscInt nvecs = 0;
 
     vp[0] = NULL;
-    /* XXX HDIV also */
-    if (pcbddc->benign_have_null) { /* propagate no-net-flux quadrature to coarser level */
+    if (pcbddc->compute_nonetflux) { /* propagate no-net-flux quadrature to coarser level */
+      Vec v, vB;
+
+      PetscCheck(pcbddc->divudotp, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Missing divudotp operator");
       PetscCall(VecCreate(PetscObjectComm((PetscObject)pc), &vp[0]));
       PetscCall(VecSetSizes(vp[0], pcbddc->local_primal_size, PETSC_DECIDE));
       PetscCall(VecSetType(vp[0], VECSTANDARD));
       nvecs = 1;
-
-      if (pcbddc->divudotp) {
-        Mat      B, loc_divudotp;
-        Vec      v, p;
-        IS       dummy;
-        PetscInt np;
-
-        PetscCall(MatISGetLocalMat(pcbddc->divudotp, &loc_divudotp));
-        PetscCall(MatGetSize(loc_divudotp, &np, NULL));
-        PetscCall(ISCreateStride(PETSC_COMM_SELF, np, 0, 1, &dummy));
-        PetscCall(MatCreateSubMatrix(loc_divudotp, dummy, pcis->is_B_local, MAT_INITIAL_MATRIX, &B));
-        PetscCall(MatCreateVecs(B, &v, &p));
-        PetscCall(VecSet(p, 1.));
-        PetscCall(MatMultTranspose(B, p, v));
-        PetscCall(VecDestroy(&p));
-        PetscCall(MatDestroy(&B));
-        PetscCall(VecGetArray(vp[0], &array));
-        PetscCall(VecPlaceArray(pcbddc->vec1_P, array));
-        PetscCall(MatMultTranspose(pcbddc->coarse_phi_B, v, pcbddc->vec1_P));
-        PetscCall(VecResetArray(pcbddc->vec1_P));
-        PetscCall(VecRestoreArray(vp[0], &array));
-        PetscCall(ISDestroy(&dummy));
-        PetscCall(VecDestroy(&v));
-      }
+      PetscCall(PCBDDCComputeLocalFluxWeights(pc->pmat, pcbddc->divudotp, pcbddc->divudotp_trans, pcbddc->divudotp_vl2l, &v));
+      PetscCall(VecGetSubVector(v, pcis->is_B_local, &vB));
+      PetscCall(VecGetArray(vp[0], &array));
+      PetscCall(VecPlaceArray(pcbddc->vec1_P, array));
+      PetscCall(MatMultTranspose(pcbddc->coarse_phi_B, vB, pcbddc->vec1_P));
+      PetscCall(VecResetArray(pcbddc->vec1_P));
+      PetscCall(VecRestoreArray(vp[0], &array));
+      PetscCall(VecRestoreSubVector(v, pcis->is_B_local, &vB));
+      PetscCall(VecDestroy(&v));
     }
     if (multi_element) {
       if (coarse_reuse) {
-        PetscCall(PCBDDCAggregateLocalCoarseMat(pc, t_coarse_mat_is, NULL, 0, MAT_REUSE_MATRIX, &coarse_mat));
+        PetscCall(PCBDDCAggregateLocalCoarseMat(pc, t_coarse_mat_is, NULL, 0, MAT_REUSE_MATRIX, &vp[0], &coarse_mat));
       } else {
         const char *pc_prefix = ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "";
         char       *part_prefix, aggregator_suffix[64];
@@ -8868,7 +8900,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
         PetscCall(PetscFree(part_prefix));
         PetscCall(PetscFree(local_xadj));
         PetscCall(PetscFree(local_adjncy));
-        PetscCall(PCBDDCAggregateLocalCoarseMat(pc, t_coarse_mat_is, local_partition, local_ncoarse, MAT_INITIAL_MATRIX, &coarse_mat_is));
+        PetscCall(PCBDDCAggregateLocalCoarseMat(pc, t_coarse_mat_is, local_partition, local_ncoarse, MAT_INITIAL_MATRIX, &vp[0], &coarse_mat_is));
         PetscCall(ISDestroy(&local_partition));
       }
     } else {
@@ -8880,21 +8912,20 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
       } else {
         PetscCall(PCBDDCMatISSubassemble(t_coarse_mat_is, pcbddc->coarse_subassembling, 0, restr, full_restr, PETSC_FALSE, &coarse_mat_is, nis, isarray, nvecs, vp));
       }
-      if (vp[0]) { /* vp[0] could have been placed on a different set of processes */
-        PetscScalar       *arraym;
-        const PetscScalar *arrayv;
-        PetscInt           nl;
-        PetscCall(VecGetLocalSize(vp[0], &nl));
-        PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, 1, nl, NULL, &coarsedivudotp));
-        PetscCall(MatDenseGetArray(coarsedivudotp, &arraym));
-        PetscCall(VecGetArrayRead(vp[0], &arrayv));
-        PetscCall(PetscArraycpy(arraym, arrayv, nl));
-        PetscCall(VecRestoreArrayRead(vp[0], &arrayv));
-        PetscCall(MatDenseRestoreArray(coarsedivudotp, &arraym));
-        PetscCall(VecDestroy(&vp[0]));
-      } else {
-        PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, 0, 0, 1, NULL, &coarsedivudotp));
-      }
+    }
+    if (vp[0]) { /* vp[0] could have been placed on a different set of processes */
+      PetscScalar       *arraym;
+      const PetscScalar *arrayv;
+      PetscInt           nl;
+
+      PetscCall(VecGetLocalSize(vp[0], &nl));
+      PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, 1, nl, NULL, &coarsedivudotp));
+      PetscCall(MatDenseGetArray(coarsedivudotp, &arraym));
+      PetscCall(VecGetArrayRead(vp[0], &arrayv));
+      PetscCall(PetscArraycpy(arraym, arrayv, nl));
+      PetscCall(VecRestoreArrayRead(vp[0], &arrayv));
+      PetscCall(MatDenseRestoreArray(coarsedivudotp, &arraym));
+      PetscCall(VecDestroy(&vp[0]));
     }
   } else {
     PetscBool default_sub;
@@ -9081,11 +9112,13 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
     if (isbddc) {
       PC_BDDC *pcbddc_coarse = (PC_BDDC *)pc_temp->data;
 
-      pcbddc_coarse->detect_disconnected = PETSC_TRUE;
-      pcbddc_coarse->coarse_eqs_per_proc = pcbddc->coarse_eqs_per_proc;
-      pcbddc_coarse->coarse_eqs_limit    = pcbddc->coarse_eqs_limit;
-      pcbddc_coarse->benign_saddle_point = pcbddc->benign_have_null;
-      if (pcbddc_coarse->benign_saddle_point) {
+      pcbddc_coarse->detect_disconnected        = PETSC_TRUE;
+      pcbddc_coarse->detect_disconnected_filter = (PetscBool)(pcbddc->detect_disconnected_filter || pcbddc->coarsening_ratio == 1);
+      pcbddc_coarse->coarse_eqs_per_proc        = pcbddc->coarse_eqs_per_proc;
+      pcbddc_coarse->coarse_eqs_limit           = pcbddc->coarse_eqs_limit;
+      pcbddc_coarse->benign_saddle_point        = pcbddc->benign_have_null;
+      pcbddc_coarse->use_local_adj              = pcbddc->use_local_adj;
+      if (coarsedivudotp) {
         Mat                    coarsedivudotp_is;
         ISLocalToGlobalMapping l2gmap, rl2g, cl2g;
         IS                     row, col;
@@ -9110,6 +9143,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
         PetscCall(MatCreate(PetscObjectComm((PetscObject)coarse_mat), &coarsedivudotp_is));
         PetscCall(MatSetType(coarsedivudotp_is, MATIS));
         PetscCall(MatSetSizes(coarsedivudotp_is, PETSC_DECIDE, PETSC_DECIDE, M, N));
+        PetscCall(MatISSetAllowRepeated(coarsedivudotp_is, multi_element));
         PetscCall(MatSetLocalToGlobalMapping(coarsedivudotp_is, rl2g, cl2g));
         PetscCall(ISLocalToGlobalMappingDestroy(&rl2g));
         PetscCall(ISLocalToGlobalMappingDestroy(&cl2g));
@@ -9117,6 +9151,8 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
         PetscCall(MatDestroy(&coarsedivudotp));
         PetscCall(PCBDDCSetDivergenceMat(pc_temp, coarsedivudotp_is, PETSC_FALSE, NULL));
         PetscCall(MatDestroy(&coarsedivudotp_is));
+      }
+      if (pcbddc_coarse->benign_saddle_point) {
         pcbddc_coarse->adaptive_userdefined = PETSC_TRUE;
         if (pcbddc->adaptive_threshold[0] == 0.0) pcbddc_coarse->deluxe_zerorows = PETSC_TRUE;
       }
