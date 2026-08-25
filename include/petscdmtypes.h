@@ -1,6 +1,6 @@
 #pragma once
 
-#include <petscvec.h>
+#include <petscvectypes.h>
 
 /* SUBMANSEC = DM */
 
