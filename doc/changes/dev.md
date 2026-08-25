@@ -158,6 +158,8 @@
 
 - Change `DMLabelPropagatePush()` to take a reduce operator
 - Add `DMKSPSetCreateOperators()` to let the `DM` provide a pair of application specific `Mat` objects to inner `KSP` solvers.
+- Fix `DMGetLocalToGlobalMapping()` for a local section carrying a chart permutation (see `DMReorderSectionSetDefault()`); the map is now indexed by the local section offsets. The local section must now be set up with `PetscSectionSetUp()` before the mapping is built, otherwise an error is raised
+- Fix `DMSetLocalSection()` and `DMSetGlobalSection()` to invalidate a previously built local-to-global mapping, which was computed from the old sections. `DMFOREST` with `p4est` shares its sections into its cached `DMPLEX` without going through those setters, and now invalidates the mapping there as well
 
 ## DMSwarm
 
