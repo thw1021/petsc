@@ -202,7 +202,7 @@ def cmd_branch(args):
   if code > 1: die('git merge-base --is-ancestor %s origin/release exited %d' % (forked, code))
   dest = 'origin/release' if code == 0 else 'origin/main'
 
-  _, raw, _ = run(['git', 'diff', '%s...%s' % (dest, src)], args.timeout)
+  _, raw, _ = run(['git', 'diff', '--no-ext-diff', '%s...%s' % (dest, src)], args.timeout)
   if not raw.strip(): die('%s...%s is empty; nothing to review' % (dest, src))
   _, out, _ = run(['git', 'diff', '--shortstat', '%s...%s' % (dest, src)], args.timeout)
   shortstat = out.decode('utf-8', 'replace').strip()

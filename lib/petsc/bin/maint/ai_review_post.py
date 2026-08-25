@@ -21,7 +21,8 @@ POSTED_FAILED count.  A --dry-run posts nothing, counts the findings it
 checked as DRY_RUN instead of POSTED_OK, and flags each suggestion block that
 would be demoted to a plain code block.
 
-Exit status: 0 every finding posted, 1 otherwise.
+Exit status: 0 every finding posted, or a --dry-run that reached the end, 1
+otherwise.
 """
 import os
 import re
