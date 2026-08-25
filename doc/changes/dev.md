@@ -182,6 +182,8 @@
 - Add `DM_COORD_MAP_ROTATE`
 - Add `DM_SHAPE_DIIID`
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
+- Add `DMPlexReorderCellListByCurve()` and `DMPlexReorderCellListByCurveFromCentroids()` to sort a distributed cell list along a space-filling curve before `DMPlexCreateFromCellListParallel()`; add `DMPlexCurveType` and `DMPLEXCURVEMORTON`
+- Add `DMPLEXCURVEMORTON` as an accepted ordering in `DMPlexGetOrdering()`, which orders cells along a space-filling curve without building an adjacency graph
 
 ## FE/FV
 
