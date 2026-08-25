@@ -34,7 +34,3 @@ Treat every finding at Style or above as tentative: reopen the cited code in the
 - Per finding: severity, file:line, description, its required evidence (Section 3), suggested fix. List every occurrence of a confirmed issue with file:line — never a representative example or "and similar elsewhere". Order CRITICAL → HIGH → MEDIUM → Style.
 - State the coverage: files and lines reviewed, and any path Section 3 reported as not covered. End with `(N LOW findings suppressed; ask to show them.)` when `N > 0`.
 - The report contains the findings, the coverage, the LOW count, and what other sections explicitly say to state — nothing else: no praise, no MR summary, no design commentary. If there are no findings at or above Style, say exactly that.
-
-### 6. Write report
-- Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, the effort level (read from `$CLAUDE_EFFORT`), date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
-- Verify that ai-review.html was written.

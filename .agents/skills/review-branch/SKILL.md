@@ -12,4 +12,4 @@ Run `python3 lib/petsc/bin/maint/ai_review_fetch.py branch <SRC>` (path relative
 
 It writes `branch-review.txt`, and prints `SRC`, `SRC_SHA`, `DEST`, `SHORTSTAT`, `DIFF_FILE`, `FILES`, and `LINES`. State `DEST` and `SHORTSTAT`.
 
-Then follow @../review-mr/review-procedure.md (Sections 3–5) to classify, verify, and report findings. Report to stdout only — skip Section 6; do not write `ai-review.html`.
+Then follow @../review-mr/review-procedure.md (Sections 3–5) to read the diff, classify findings, verify each one, compose report. Report to stdout only.

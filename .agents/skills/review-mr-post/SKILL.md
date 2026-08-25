@@ -10,7 +10,10 @@ Adhere to @AGENTS.md while reviewing and drafting comments.
 Follow @../review-mr/identify.md (Sections 1–2) to fetch the merge request, check for drift, and repeat its warnings.
 
 ## Review
-Follow @../review-mr/review-procedure.md (Sections 3–6) to classify and verify findings. Then continue below to filter and post.
+Follow @../review-mr/review-procedure.md (Sections 3–5) to read the diff, classify findings, verify each one, compose report. Then continue below to filter and post.
+
+## 6. Write report
+Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, the effort level (read from `$CLAUDE_EFFORT`), date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
 
 ## 7. Filter findings
 Only post findings that have a **concrete, actionable fix** (a code change the author can apply). Do NOT post:
