@@ -1108,6 +1108,10 @@ PetscErrorCode DMCreateLocalVector(DM dm, Vec *vec)
 
   This mapping can then be used by `VecSetLocalToGlobalMapping()` or `MatSetLocalToGlobalMapping()`.
 
+  If the `DM` has a local section, it must have been set up with `PetscSectionSetUp()` before the mapping is built, otherwise an error is raised.
+
+  The mapping is owned by the `DM`: do not destroy it. It is invalidated by a subsequent call to `DMSetLocalSection()` or `DMSetGlobalSection()`.
+
 .seealso: [](ch_dmbase), `DM`, `DMCreateLocalVector()`, `DMCreateGlobalVector()`, `VecSetLocalToGlobalMapping()`, `MatSetLocalToGlobalMapping()`,
           `DMCreateMatrix()`
 @*/
@@ -1127,23 +1131,30 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm, ISLocalToGlobalMapping *ltog)
       PetscInt       *ltog;
       PetscInt        pStart, pEnd, n, p, k, l;
 
+      // The loop below indexes by the local section offsets, which are uninitialized before PetscSectionSetUp()
+      PetscCheck(section->setup, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "The local section must be set up with PetscSectionSetUp() before DMGetLocalToGlobalMapping()");
       PetscCall(DMGetGlobalSection(dm, &sectionGlobal));
       PetscCall(PetscSectionGetChart(section, &pStart, &pEnd));
       PetscCall(PetscSectionGetStorageSize(section, &n));
       PetscCall(PetscMalloc1(n, &ltog)); /* We want the local+overlap size */
-      for (p = pStart, l = 0; p < pEnd; ++p) {
-        PetscInt bdof, cdof, dof, off, c, cind;
+      for (p = pStart; p < pEnd; ++p) {
+        PetscInt bdof, cdof, dof, off, loff, c, cind;
 
         /* Should probably use constrained dofs */
         PetscCall(PetscSectionGetDof(section, p, &dof));
         PetscCall(PetscSectionGetConstraintDof(section, p, &cdof));
         PetscCall(PetscSectionGetConstraintIndices(section, p, &cdofs));
         PetscCall(PetscSectionGetOffset(sectionGlobal, p, &off));
+        PetscCall(PetscSectionGetOffset(section, p, &loff));
+        /* A set-up section can still carry offsets that do not index the local storage, e.g. a field-major
+           section, whose point offsets PetscSectionSetUp() disables by setting them to -1 */
+        PetscCheck(!dof || (loff >= 0 && loff + dof <= n), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Local section offset %" PetscInt_FMT " + dof %" PetscInt_FMT " of point %" PetscInt_FMT " is outside the local storage [0, %" PetscInt_FMT ")", loff, dof, p, n);
         /* If you have dofs, and constraints, and they are unequal, we set the blocksize to 1 */
         bdof = cdof && (dof - cdof) ? 1 : dof;
         if (dof) bs = bs < 0 ? bdof : PetscGCD(bs, bdof);
 
-        for (c = 0, cind = 0; c < dof; ++c, ++l) {
+        for (c = 0, cind = 0; c < dof; ++c) {
+          l = loff + c;
           if (cind < cdof && c == cdofs[cind]) {
             ltog[l] = off < 0 ? off - c : -(off + c + 1);
             cind++;
@@ -4551,7 +4562,9 @@ PetscErrorCode DMGetLocalSection(DM dm, PetscSection *section)
   Level: intermediate
 
   Note:
-  Any existing Section will be destroyed
+  Any existing Section will be destroyed. The global section, the section `PetscSF`, and any local-to-global mapping previously obtained from the `DM` are
+  invalidated. The global section and the section `PetscSF` are rebuilt on their next access; the local-to-global mapping is rebuilt from the sections, so this
+  should not be called on a `DM` type that builds its own mapping in `DMSetUp()`, such as `DMDA` or `DMSTAG`.
 
 .seealso: [](ch_dmbase), `DM`, `PetscSection`, `DMGetLocalSection()`, `DMSetGlobalSection()`
 @*/
@@ -4577,11 +4590,12 @@ PetscErrorCode DMSetLocalSection(DM dm, PetscSection section)
       PetscCall(PetscObjectSetName(disc, name));
     }
   }
-  /* The global section and the SectionSF will be rebuilt
-     in the next call to DMGetGlobalSection() and DMGetSectionSF(). */
+  /* The global section, the SectionSF, and the local-to-global mapping will be rebuilt
+     in the next call to DMGetGlobalSection(), DMGetSectionSF(), and DMGetLocalToGlobalMapping(). */
   PetscCall(PetscSectionDestroy(&dm->globalSection));
   PetscCall(PetscSFDestroy(&dm->sectionSF));
   PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &dm->sectionSF));
+  PetscCall(ISLocalToGlobalMappingDestroy(&dm->ltogmap));
 
   /* Clear scratch vectors */
   PetscCall(DMClearGlobalVectors(dm));
@@ -4839,7 +4853,9 @@ PetscErrorCode DMGetGlobalSection(DM dm, PetscSection *section)
   Level: intermediate
 
   Note:
-  Any existing `PetscSection` will be destroyed
+  Any existing `PetscSection` will be destroyed. The section `PetscSF` and any local-to-global mapping previously obtained from the `DM` are invalidated. The
+  section `PetscSF` is rebuilt on its next access; the local-to-global mapping is rebuilt from the local section, so this should not be called on a `DM` type
+  that builds its own mapping in `DMSetUp()`, such as `DMDA` or `DMSTAG`.
 
 .seealso: [](ch_dmbase), `DM`, `DMGetGlobalSection()`, `DMSetLocalSection()`
 @*/
@@ -4852,9 +4868,10 @@ PetscErrorCode DMSetGlobalSection(DM dm, PetscSection section)
   PetscCall(PetscSectionDestroy(&dm->globalSection));
   dm->globalSection = section;
   if (PetscDefined(USE_DEBUG) && section) PetscCall(DMDefaultSectionCheckConsistency_Internal(dm, dm->localSection, section));
-  /* Clear global scratch vectors and sectionSF */
+  /* Clear global scratch vectors, sectionSF, and the local-to-global mapping, which encodes the old section's offsets */
   PetscCall(PetscSFDestroy(&dm->sectionSF));
   PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &dm->sectionSF));
+  PetscCall(ISLocalToGlobalMappingDestroy(&dm->ltogmap));
   PetscCall(DMClearGlobalVectors(dm));
   PetscCall(DMClearNamedGlobalVectors(dm));
   PetscFunctionReturn(PETSC_SUCCESS);
