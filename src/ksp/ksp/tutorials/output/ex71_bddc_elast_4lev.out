@@ -161,13 +161,13 @@ PC Object: 8 MPI processes
         Global dofs sizes: all 159 interface 123 coarse 31
         Coarsening ratios: all/coarse 5 interface/coarse 3
         Active processes : 4
-        Total subdomains : 4
+        Total subdomains : 40
         Dofs type        :	MIN	MAX	MEAN
         Interior  dofs   :	9	9	9
         Interface dofs   :	71	71	71
         Primal    dofs   :	19	19	19
         Local     dofs   :	80	80	80
-        Local     subs   :	1	1
+        Local     subs   :	10	10
       --- Interior solver (rank 0)
         KSP Object: (pc_bddc_dirichlet_l1_) 1 MPI process
           type: preonly
@@ -226,7 +226,7 @@ PC Object: 8 MPI processes
       Mat Object: (pc_bddc_coarse_) 8 MPI processes
         type: is
         rows=159, cols=159
-        total: nonzeros=20192, allocated nonzeros=20192
+        total: nonzeros=16664, allocated nonzeros=20192
         total number of mallocs used during MatSetValues calls=0
       --- Coarse solver
         KSP Object: (pc_bddc_coarse_l1_) 4 MPI processes
@@ -277,16 +277,16 @@ PC Object: 8 MPI processes
             Benign subspace trick is active: 0
             Algebraic computation of no-net-flux: 0
           ********************************** STATISTICS AT LEVEL 2 **********************************
-            Global dofs sizes: all 31 interface 19 coarse 13
-            Coarsening ratios: all/coarse 2 interface/coarse 1
+            Global dofs sizes: all 31 interface 19 coarse 16
+            Coarsening ratios: all/coarse 1 interface/coarse 1
             Active processes : 2
-            Total subdomains : 2
+            Total subdomains : 26
             Dofs type        :	MIN	MAX	MEAN
             Interior  dofs   :	6	6	6
             Interface dofs   :	19	19	19
-            Primal    dofs   :	13	13	13
+            Primal    dofs   :	16	16	16
             Local     dofs   :	25	25	25
-            Local     subs   :	1	1
+            Local     subs   :	13	13
           --- Interior solver (rank 0)
             KSP Object: (pc_bddc_dirichlet_l2_) 1 MPI process
               type: preonly
@@ -305,15 +305,15 @@ PC Object: 8 MPI processes
                       type: seqaij
                       rows=6, cols=6
                       package used to perform factorization: petsc
-                      total: nonzeros=36, allocated nonzeros=36
-                        using I-node routines: found 2 nodes, limit used is 5
+                      total: nonzeros=12, allocated nonzeros=12
+                        using I-node routines: found 4 nodes, limit used is 5
               linear system matrix, which is also used to construct the preconditioner:
               Mat Object: (pc_bddc_dirichlet_l2_) 1 MPI process
                 type: seqaij
                 rows=6, cols=6
-                total: nonzeros=36, allocated nonzeros=36
+                total: nonzeros=12, allocated nonzeros=12
                 total number of mallocs used during MatSetValues calls=0
-                  using I-node routines: found 2 nodes, limit used is 5
+                  using I-node routines: found 4 nodes, limit used is 5
           --- Correction solver (rank 0)
             KSP Object: (pc_bddc_neumann_l2_) 1 MPI process
               type: preonly
@@ -330,22 +330,22 @@ PC Object: 8 MPI processes
                   Factored matrix:
                     Mat Object: (pc_bddc_neumann_l2_) 1 MPI process
                       type: seqaij
-                      rows=13, cols=13
+                      rows=10, cols=10
                       package used to perform factorization: petsc
-                      total: nonzeros=169, allocated nonzeros=169
-                        using I-node routines: found 3 nodes, limit used is 5
+                      total: nonzeros=52, allocated nonzeros=52
+                        using I-node routines: found 5 nodes, limit used is 5
               linear system matrix, which is also used to construct the preconditioner:
               Mat Object: (pc_bddc_neumann_l2_) 1 MPI process
                 type: seqaij
-                rows=13, cols=13
-                total: nonzeros=169, allocated nonzeros=169
+                rows=10, cols=10
+                total: nonzeros=52, allocated nonzeros=52
                 total number of mallocs used during MatSetValues calls=0
-                  using I-node routines: found 3 nodes, limit used is 5
+                  using I-node routines: found 5 nodes, limit used is 5
           linear system matrix, which is also used to construct the preconditioner:
           Mat Object: (pc_bddc_coarse_l1_) 4 MPI processes
             type: is
             rows=31, cols=31
-            total: nonzeros=1106, allocated nonzeros=1106
+            total: nonzeros=326, allocated nonzeros=1106
             total number of mallocs used during MatSetValues calls=0
           --- Coarse solver
             KSP Object: (pc_bddc_coarse_l2_) 2 MPI processes
@@ -372,24 +372,24 @@ PC Object: 8 MPI processes
                       Factored matrix:
                         Mat Object: (pc_bddc_coarse_l2_redundant_) 1 MPI process
                           type: seqaij
-                          rows=13, cols=13
+                          rows=16, cols=16
                           package used to perform factorization: petsc
-                          total: nonzeros=169, allocated nonzeros=169
-                            using I-node routines: found 3 nodes, limit used is 5
+                          total: nonzeros=58, allocated nonzeros=58
+                            using I-node routines: found 11 nodes, limit used is 5
                   linear system matrix, which is also used to construct the preconditioner:
                   Mat Object: 1 MPI process
                     type: seqaij
-                    rows=13, cols=13
-                    total: nonzeros=169, allocated nonzeros=169
+                    rows=16, cols=16
+                    total: nonzeros=58, allocated nonzeros=58
                     total number of mallocs used during MatSetValues calls=0
-                      using I-node routines: found 3 nodes, limit used is 5
+                      using I-node routines: found 11 nodes, limit used is 5
               linear system matrix, which is also used to construct the preconditioner:
               Mat Object: (pc_bddc_coarse_l2_) 2 MPI processes
                 type: mpiaij
-                rows=13, cols=13
-                total: nonzeros=169, allocated nonzeros=169
+                rows=16, cols=16
+                total: nonzeros=58, allocated nonzeros=58
                 total number of mallocs used during MatSetValues calls=0
-                  using I-node (on process 0) routines: found 2 nodes, limit used is 5
+                  not using I-node (on process 0) routines
   linear system matrix, which is also used to construct the preconditioner:
   Mat Object: 8 MPI processes
     type: is
