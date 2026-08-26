@@ -2009,7 +2009,7 @@ PetscErrorCode TSGetQuadratureTS(TS ts, PetscBool *fwd, TS *quadts)
   Level: developer
 
   Note:
-  Uses finite differencing when `TS` Jacobian is not available.
+  Uses finite differencing when `TS` Jacobian is not available. Does not support `SNES` left/right diagonal scaling, since it calls `SNESComputeJacobian()` on a state vector that is never converted between physical and scaled units by a bracketing `SNESSolve()`.
 
 .seealso: `SNES`, `TS`, `SNESSetJacobian()`, `TSSetRHSJacobian()`, `TSSetIJacobian()`
 @*/
@@ -2017,8 +2017,12 @@ PetscErrorCode TSComputeSNESJacobian(TS ts, Vec x, Mat J, Mat Jpre)
 {
   SNES snes                                          = ts->snes;
   PetscErrorCode (*jac)(SNES, Vec, Mat, Mat, void *) = NULL;
+  Vec leftscale, rightscale;
 
   PetscFunctionBegin;
+  PetscCall(SNESGetLeftDiagonalScale(snes, &leftscale));
+  PetscCall(SNESGetRightDiagonalScale(snes, &rightscale));
+  PetscCheck(!leftscale && !rightscale, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TS sensitivity analysis does not support SNES left/right diagonal scaling");
   /*
     Unlike implicit methods, explicit methods do not have SNESMatFDColoring in the snes object
     because SNESSolve() has not been called yet; so querying SNESMatFDColoring does not work for
