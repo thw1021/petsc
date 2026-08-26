@@ -107,6 +107,7 @@
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
 - Deprecate `KSPMonitorResidualShort()` and `-ksp_monitor_short`, remove the `preconditioned_residual_short` monitor registry name
 - Remove `-ksp_plot_eigenvalues`, `-ksp_plot_eigenvalues_explicitly`, `-ksp_plot_eigencontours` that have been deprecated since version 3.9
+- GMRES orthogonalization routines have been promoted to the main `KSP` level, and GMRES have been dropped from the name. The new names are `KSPSetOrthogonalization()`, `KSPGetOrthogonalization()`, `KSPModifiedGramSchmidtOrthogonalization()`, `KSPClassicalGramSchmidtOrthogonalization()`, `KSPSetCGSRefinementType()`, `KSPGetCGSRefinementType()`, and similarly for the enumerate `KSP_CGS_REFINE_*` and the associated command-line options
 
 ## SNES
 

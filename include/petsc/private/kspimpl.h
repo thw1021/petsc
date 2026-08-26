@@ -202,6 +202,12 @@ struct _p_KSP {
   void *prectx_ew, *postctx_ew;
 
   PetscInt nestlevel; /* how many levels of nesting does the KSP have */
+
+  /* orthogonalization */
+  KSPOrthogonalizationFn *orthog;      /* orthogonalization function */
+  KSPCGSRefinementType    cgstype;     /* refinement in case of CGS */
+  PetscScalar            *orthogwork;  /* holds dot products computed in orthogonalization */
+  PetscInt                lorthogwork; /* length of orthogwork */
 };
 
 typedef struct { /* dummy data structure used in KSPMonitorDynamicTolerance() */
