@@ -67,6 +67,7 @@ static PetscErrorCode SNESFASCycleSetUpSmoother_Private(SNES snes, SNES smooth)
   smooth->vec_sol        = snes->vec_sol;
   smooth->vec_sol_update = snes->vec_sol_update;
   smooth->vec_func       = snes->vec_func;
+  PetscCall(SNESCheckScale_Private(snes, smooth));
 
   if (fas->eventsmoothsetup) PetscCall(PetscLogEventBegin(fas->eventsmoothsetup, smooth, 0, 0, 0));
   PetscCall(SNESSetUp(smooth));
@@ -130,6 +131,26 @@ static PetscErrorCode SNESSetUp_FAS(SNES snes)
         PetscCall(DMHasCreateInjection(next->dm, &hasCreateInjection));
         if (hasCreateInjection) PetscCall(DMCreateInjection(next->dm, snes->dm, &fas->inject));
       }
+    }
+  }
+
+  if (next) {
+    /* restrict the diagonal scaling down to the coarse level, using the same operators FAS uses to restrict X and F */
+    if (snes->rightscale && !next->rightscale) {
+      Vec rs;
+
+      PetscCall(SNESFASCreateCoarseVec(snes, &rs));
+      PetscCall(SNESFASRestrict(snes, snes->rightscale, rs));
+      PetscCall(SNESSetRightDiagonalScale(next, rs));
+      PetscCall(VecDestroy(&rs));
+    }
+    if (snes->leftscale && !next->leftscale) {
+      Vec ls;
+
+      PetscCall(SNESFASCreateCoarseVec(snes, &ls));
+      PetscCall(MatRestrict(fas->restrct, snes->leftscale, ls));
+      PetscCall(SNESSetLeftDiagonalScale(next, ls));
+      PetscCall(VecDestroy(&ls));
     }
   }
 
@@ -359,7 +380,7 @@ static PetscErrorCode SNESFASDownSmooth_Private(SNES snes, Vec B, Vec X, Vec F, 
   PetscCall(SNESFASCycleGetSmootherDown(snes, &smoothd));
   PetscCall(SNESSetInitialFunction(smoothd, F));
   if (fas->eventsmoothsolve) PetscCall(PetscLogEventBegin(fas->eventsmoothsolve, smoothd, B, X, 0));
-  PetscCall(SNESSolve(smoothd, B, X));
+  PetscCall(SNESSolve_Private(smoothd, B, X, PETSC_FALSE));
   if (fas->eventsmoothsolve) PetscCall(PetscLogEventEnd(fas->eventsmoothsolve, smoothd, B, X, 0));
   /* check convergence reason for the smoother */
   PetscCall(SNESGetConvergedReason(smoothd, &reason));
@@ -393,7 +414,7 @@ static PetscErrorCode SNESFASUpSmooth_Private(SNES snes, Vec B, Vec X, Vec F, Pe
   PetscFunctionBegin;
   PetscCall(SNESFASCycleGetSmootherUp(snes, &smoothu));
   if (fas->eventsmoothsolve) PetscCall(PetscLogEventBegin(fas->eventsmoothsolve, smoothu, 0, 0, 0));
-  PetscCall(SNESSolve(smoothu, B, X));
+  PetscCall(SNESSolve_Private(smoothu, B, X, PETSC_FALSE));
   if (fas->eventsmoothsolve) PetscCall(PetscLogEventEnd(fas->eventsmoothsolve, smoothu, 0, 0, 0));
   /* check convergence reason for the smoother */
   PetscCall(SNESGetConvergedReason(smoothu, &reason));
@@ -514,7 +535,7 @@ static PetscErrorCode SNESFASInterpolatedCoarseSolution(SNES snes, Vec X, Vec X_
     }
     if (fasc->eventinterprestrict) PetscCall(PetscLogEventEnd(fasc->eventinterprestrict, snes, 0, 0, 0));
 
-    PetscCall(SNESSolve(next, B_c, X_c));
+    PetscCall(SNESSolve_Private(next, B_c, X_c, PETSC_FALSE));
     PetscCall(SNESGetConvergedReason(next, &reason));
     if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
       snes->reason = SNES_DIVERGED_INNER;
@@ -604,7 +625,7 @@ static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new
     /* recurse to the next level */
     // So x^c_0 = R x and F^c_0 = F^c(x^c_0) - b^c = F^c(x^c_0) - (F^c(x^c_0) - R(F(x) - b)) = R(F(x) - b)
     PetscCall(SNESSetInitialFunction(next, F_c));
-    PetscCall(SNESSolve(next, B_c, X_c));
+    PetscCall(SNESSolve_Private(next, B_c, X_c, PETSC_FALSE));
     PetscCall(SNESGetConvergedReason(next, &reason));
     if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
       snes->reason = SNES_DIVERGED_INNER;
@@ -693,7 +714,7 @@ static PetscErrorCode SNESFASCycle_Additive(SNES snes, Vec X)
 
     /* recurse */
     PetscCall(SNESSetInitialFunction(next, F_c));
-    PetscCall(SNESSolve(next, B_c, X_c));
+    PetscCall(SNESSolve_Private(next, B_c, X_c, PETSC_FALSE));
 
     /* smooth on this level */
     PetscCall(SNESFASDownSmooth_Private(snes, B, X, F, &fnorm));
