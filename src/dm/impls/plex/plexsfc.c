@@ -1939,8 +1939,13 @@ PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curve
   PetscAssertPointer(migrationSF, 10);
   PetscAssertPointer(newNumCells, 11);
   PetscAssertPointer(newCells, 12);
+  PetscCheck(numCells >= 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "numCells %" PetscInt_FMT " must be non-negative", numCells);
   PetscCheck(numCorners > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "numCorners %" PetscInt_FMT " must be positive", numCorners);
   PetscCheck(spaceDim >= 1 && spaceDim <= 3, comm, PETSC_ERR_ARG_OUTOFRANGE, "spaceDim %" PetscInt_FMT " must be in [1, 3]", spaceDim);
+  // The corner buffer below holds numCorners*spaceDim reals per cell, and the star forest holds
+  // numCorners leaves per cell. Check the larger count in 64 bits before either one is formed,
+  // because the product passes 2^31 well before memory runs out.
+  PetscCheck(((PetscInt64)numCells * numCorners * spaceDim) <= (PetscInt64)PETSC_INT_MAX, comm, PETSC_ERR_SUP, "Local cell count %" PetscInt_FMT " with %" PetscInt_FMT " corners in %" PetscInt_FMT " dimensions exceeds the addressable range; call DMPlexReorderCellListByCurveFromCentroids() with centroids you compute yourself", numCells, numCorners, spaceDim);
 
   // Gather the coordinates of every corner of every local cell. Corners repeat between cells, so
   // the leaf count exceeds the number of distinct vertices; that costs a little more communication
@@ -1954,9 +1959,6 @@ PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curve
   PetscCall(PetscSFSetGraphLayout(sfVert, layout, numCells * numCorners, NULL, PETSC_OWN_POINTER, cells));
   PetscCall(PetscLayoutDestroy(&layout));
 
-  // This buffer holds every corner of every local cell, so it is numCorners*spaceDim reals per cell.
-  // Check the count in 64 bits, because the product passes 2^31 well before memory runs out.
-  PetscCheck(((PetscInt64)numCells * numCorners * spaceDim) <= (PetscInt64)PETSC_INT_MAX, comm, PETSC_ERR_SUP, "Local cell count %" PetscInt_FMT " with %" PetscInt_FMT " corners in %" PetscInt_FMT " dimensions exceeds the addressable range; call DMPlexReorderCellListByCurveFromCentroids() with centroids you compute yourself", numCells, numCorners, spaceDim);
   PetscCall(PetscMalloc2(numCells * numCorners * spaceDim, &cornercoords, numCells * spaceDim, &centroids));
   PetscCall(PetscMPIIntCast(spaceDim, &spaceDimi));
   PetscCallMPI(MPI_Type_contiguous(spaceDimi, MPIU_REAL, &coordtype));
@@ -2013,8 +2015,9 @@ PETSC_INTERN PetscErrorCode DMPlexGetCellOrderingByCurve_Internal(DM dm, DMPlexC
   // cell, so the reverse Cuthill-McKee path in DMPlexGetOrdering() already requires the cells to
   // start at point 0. State that requirement rather than produce a wrong permutation quietly.
   PetscCheck(cStart == 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Cells must start at point 0, not %" PetscInt_FMT, cStart);
+  // DMPlexGetOrdering() checks that the coordinate dimension is at most 3, which the bounding box
+  // below requires, and it checks it before it allocates.
   PetscCall(DMGetCoordinateDim(dm, &cdim));
-  PetscCheck(cdim >= 1 && cdim <= 3, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension %" PetscInt_FMT " must be in [1, 3]", cdim);
   PetscCall(PetscMalloc2(numCells * cdim, &centroids, numCells, &zcodes));
   // Average the cell's own coordinates. DMPlexComputeCellGeometryFVM() is not usable here, because
   // it needs an interpolated mesh, and DMPlexGetOrdering() accepts uninterpolated ones. Averaging

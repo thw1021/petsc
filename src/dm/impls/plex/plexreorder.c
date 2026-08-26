@@ -81,8 +81,12 @@ PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS
   PetscCall(PetscStrcmp(otype, DMPLEXCURVEMORTON, &iscurve));
   if (iscurve) {
     /* A space-filling curve orders the cells from their coordinates, so it needs no adjacency graph */
-    PetscInt cStart, cEnd;
+    PetscInt cStart, cEnd, cdim;
 
+    /* The curve interleaves at most three axes. Check that before anything is allocated, so a mesh
+       in a higher-dimensional space reports the limit instead of leaking the work arrays. */
+    PetscCall(DMGetCoordinateDim(dm, &cdim));
+    PetscCheck(cdim >= 1 && cdim <= 3, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension %" PetscInt_FMT " must be in [1, 3] for a space-filling curve", cdim);
     PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
     numCells = cEnd - cStart;
     PetscCall(PetscMalloc3(numCells, &cperm, numCells, &mask, numCells * 2, &xls));
