@@ -53,7 +53,8 @@ static PetscErrorCode SNESCompositeApply_Multiplicative(SNES snes, Vec X, Vec B,
   PetscFunctionBegin;
   PetscCheck(next, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "No composite SNESes supplied via SNESCompositeAddSNES() or -snes_composite_sneses");
   if (snes->normschedule == SNES_NORM_ALWAYS) PetscCall(SNESSetInitialFunction(next->snes, F));
-  PetscCall(SNESSolve(next->snes, B, X));
+  PetscCall(SNESCheckScale_Private(snes, next->snes));
+  PetscCall(SNESSolve_Private(next->snes, B, X, PETSC_FALSE));
   PetscCall(SNESGetConvergedReason(next->snes, &reason));
   if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
     jac->innerFailures++;
@@ -72,7 +73,8 @@ static PetscErrorCode SNESCompositeApply_Multiplicative(SNES snes, Vec X, Vec B,
     } else {
       next = next->next;
     }
-    PetscCall(SNESSolve(next->snes, B, X));
+    PetscCall(SNESCheckScale_Private(snes, next->snes));
+    PetscCall(SNESSolve_Private(next->snes, B, X, PETSC_FALSE));
     PetscCall(SNESGetConvergedReason(next->snes, &reason));
     if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
       jac->innerFailures++;
@@ -129,7 +131,8 @@ static PetscErrorCode SNESCompositeApply_Additive(SNES snes, Vec X, Vec B, Vec F
   }
   next = jac->head;
   PetscCall(VecCopy(Xorig, Y));
-  PetscCall(SNESSolve(next->snes, B, Y));
+  PetscCall(SNESCheckScale_Private(snes, next->snes));
+  PetscCall(SNESSolve_Private(next->snes, B, Y, PETSC_FALSE));
   PetscCall(SNESGetConvergedReason(next->snes, &reason));
   if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
     jac->innerFailures++;
@@ -143,7 +146,8 @@ static PetscErrorCode SNESCompositeApply_Additive(SNES snes, Vec X, Vec B, Vec F
   while (next->next) {
     next = next->next;
     PetscCall(VecCopy(Xorig, Y));
-    PetscCall(SNESSolve(next->snes, B, Y));
+    PetscCall(SNESCheckScale_Private(snes, next->snes));
+    PetscCall(SNESSolve_Private(next->snes, B, Y, PETSC_FALSE));
     PetscCall(SNESGetConvergedReason(next->snes, &reason));
     if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
       jac->innerFailures++;
@@ -206,7 +210,8 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes, Vec X, Vec B
   next = jac->head;
   i    = 0;
   PetscCall(VecCopy(X, Xes[i]));
-  PetscCall(SNESSolve(next->snes, B, Xes[i]));
+  PetscCall(SNESCheckScale_Private(snes, next->snes));
+  PetscCall(SNESSolve_Private(next->snes, B, Xes[i], PETSC_FALSE));
   PetscCall(SNESGetConvergedReason(next->snes, &reason));
   if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
     jac->innerFailures++;
@@ -219,7 +224,8 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes, Vec X, Vec B
     i++;
     next = next->next;
     PetscCall(VecCopy(X, Xes[i]));
-    PetscCall(SNESSolve(next->snes, B, Xes[i]));
+    PetscCall(SNESCheckScale_Private(snes, next->snes));
+    PetscCall(SNESSolve_Private(next->snes, B, Xes[i], PETSC_FALSE));
     PetscCall(SNESGetConvergedReason(next->snes, &reason));
     if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) {
       jac->innerFailures++;
@@ -317,6 +323,7 @@ static PetscErrorCode SNESSetUp_Composite(SNES snes)
     if (!snes->xl) PetscCall(VecDuplicate(snes->vec_sol, &snes->xl));
     if (!snes->xu) PetscCall(VecDuplicate(snes->vec_sol, &snes->xu));
     PetscUseTypeMethod(snes, computevariablebounds, snes->xl, snes->xu);
+    PetscCall(SNESVIScaleVariableBounds_Private(snes));
   }
 
   while (next) {
@@ -328,7 +335,10 @@ static PetscErrorCode SNESSetUp_Composite(SNES snes)
       if (snes->ops->computevariablebounds) {
         PetscCall(SNESVISetComputeVariableBounds(next->snes, snes->ops->computevariablebounds));
       } else {
+        /* snes->xl/xu are already scaled (above); propagate the shared vectors by reference without
+           letting next->snes's own SNESSetUp_VI() convert them a second time. */
         PetscCall(SNESVISetVariableBounds(next->snes, snes->xl, snes->xu));
+        next->snes->boundsscaled = snes->boundsscaled;
       }
     }
 
