@@ -2035,7 +2035,7 @@ PetscErrorCode VecGetArray(Vec x, PetscScalar *a[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscCall(VecSetErrorIfLocked(x, 1));
-  if (x->ops->getarray) { /* The if-else order matters! VECNEST, VECCUDA etc should have ops->getarray while VECCUDA etc are petscnative */
+  if (x->ops->getarray) { /* The if-else order matters! VECNEST, VECCUDA, etc. should have ops->getarray while VECSTANDARD, VECCUDA, etc. are petscnative */
     PetscUseTypeMethod(x, getarray, a);
   } else if (x->petscnative) { /* VECSTANDARD */
     *a = *((PetscScalar **)x->data);
@@ -2138,11 +2138,11 @@ PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar *a[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (a) PetscAssertPointer(a, 2);
-  if (x->petscnative) { /* VECSTANDARD, VECCUDA, VECKOKKOS etc */
-    /* nothing */
-  } else if (x->ops->restorearrayread) { /* VECNEST */
+  if (x->ops->restorearrayread) { // VECNEST
     PetscUseTypeMethod(x, restorearrayread, a);
-  } else { /* No one? */
+  } else if (x->petscnative) { // VECSTANDARD, VECCUDA, VECKOKKOS etc.
+    // nothing
+  } else {
     PetscObjectState state;
 
     // x->ops->restorearray may bump the object state, but since we know this is a read-restore
