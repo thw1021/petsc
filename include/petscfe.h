@@ -2,7 +2,8 @@
       Objects which encapsulate finite element spaces and operations
 */
 #pragma once
-#include <petscdm.h>
+#include <petscsys.h> // needed for MPI_Comm
+#include <petscdmtypes.h> // needed for DMPolytopeType
 #include <petscdt.h>
 #include <petscfetypes.h>
 #include <petscdstypes.h>

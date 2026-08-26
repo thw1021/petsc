@@ -225,6 +225,8 @@ static inline PetscErrorCode KSPLogResidualHistory(KSP ksp, PetscReal norm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petscdm.h> // because the next function needs to call DM functions WFT is that function inline? It means ever stinking like of KSP code needs to include petscdm!
+
 static inline PetscErrorCode KSPLogErrorHistory(KSP ksp)
 {
   DM dm;

@@ -8,6 +8,7 @@
 #include <petscdmlabel.h>
 #include <petscfetypes.h>
 #include <petscdstypes.h>
+#include <petscds.h>
 #include <petscdt.h>
 
 /* SUBMANSEC = DM */

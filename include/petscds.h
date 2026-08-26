@@ -153,6 +153,218 @@ PETSC_EXTERN PetscErrorCode PetscDSGetConstants(PetscDS, PetscInt *, const Petsc
 PETSC_EXTERN PetscErrorCode PetscDSSetConstants(PetscDS, PetscInt, PetscScalar[]);
 PETSC_EXTERN PetscErrorCode PetscDSSetIntegrationParameters(PetscDS, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscDSSetCellParameters(PetscDS, PetscReal);
+
+/*S
+  PetscPointFn - A prototype of a pointwise function that can be passed to, for example, `PetscDSSetObjective()`
+
+  Calling Sequence:
++ dim          - the coordinate dimension
+. Nf           - the number of fields
+. NfAux        - the number of auxiliary fields
+. uOff         - the offset into `u`[] and `u_t`[] for each field
+. uOff_x       - the offset into `u_x`[] for each field
+. u            - each field evaluated at the current point
+. u_t          - the time derivative of each field evaluated at the current point
+. u_x          - the gradient of each field evaluated at the current point
+. aOff         - the offset into `a`[] and `a_t`[] for each auxiliary field
+. aOff_x       - the offset into `a_x`[] for each auxiliary field
+. a            - each auxiliary field evaluated at the current point
+. a_t          - the time derivative of each auxiliary field evaluated at the current point
+. a_x          - the gradient of auxiliary each field evaluated at the current point
+. t            - current time
+. x            - coordinates of the current point
+. numConstants - number of constant parameters
+. constants    - constant parameters
+- obj          - output values at the current point
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetObjective()`, `PetscDSGetObjective()`, `PetscDSGetResidual()`, `PetscDSSetResidual()`,
+          `PetscDSGetRHSResidual()`, `PetscDSSetUpdate()`, `PetscDSGetUpdate()`, `DMPlexSetCoordinateMap()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void PetscPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar result[]);
+
+/*S
+  PetscPointJacFn - A prototype of a pointwise function that can be passed to, for example, `PetscDSSetJacobian()` for computing Jacobians
+
+  Calling Sequence:
++ dim          - the coordinate dimension
+. Nf           - the number of fields
+. NfAux        - the number of auxiliary fields
+. uOff         - the offset into `u`[] and `u_t`[] for each field
+. uOff_x       - the offset into `u_x`[] for each field
+. u            - each field evaluated at the current point
+. u_t          - the time derivative of each field evaluated at the current point
+. u_x          - the gradient of each field evaluated at the current point
+. aOff         - the offset into `a`[] and `a_t`[] for each auxiliary field
+. aOff_x       - the offset into a_`x`[] for each auxiliary field
+. a            - each auxiliary field evaluated at the current point
+. a_t          - the time derivative of each auxiliary field evaluated at the current point
+. a_x          - the gradient of auxiliary each field evaluated at the current point
+. t            - current time
+. u_tShift     - the multiplier `a` for $dF/dU_t$
+. x            - coordinates of the current point
+. numConstants - number of constant parameters
+. constants    - constant parameters
+- g            - output values at the current point
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetJacobian()`, `PetscDSGetJacobian()`, `PetscDSSetJacobianPreconditioner()`, `PetscDSGetJacobianPreconditioner()`,
+          `PetscDSSetDynamicJacobian()`, `PetscDSGetDynamicJacobian()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void PetscPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g[]);
+
+/*S
+  PetscBdPointFn - A prototype of a pointwise boundary function that can be passed to, for example, `PetscDSSetBdResidual()`
+
+  Calling Sequence:
++ dim          - the coordinate dimension
+. Nf           - the number of fields
+. NfAux        - the number of auxiliary fields
+. uOff         - the offset into `u`[] and `u_t`[] for each field
+. uOff_x       - the offset into `u_x`[] for each field
+. u            - each field evaluated at the current point
+. u_t          - the time derivative of each field evaluated at the current point
+. u_x          - the gradient of each field evaluated at the current point
+. aOff         - the offset into `a`[] and `a_t`[] for each auxiliary field
+. aOff_x       - the offset into `a_x`[] for each auxiliary field
+. a            - each auxiliary field evaluated at the current point
+. a_t          - the time derivative of each auxiliary field evaluated at the current point
+. a_x          - the gradient of auxiliary each field evaluated at the current point
+. t            - current time
+. x            - coordinates of the current point
+. n            - unit normal at the current point
+. numConstants - number of constant parameters
+. constants    - constant parameters
+- f            - output values at the current point
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetBdResidual()`, `PetscDSGetBdResidual()`, `PetscDSSetObjective()`, `PetscDSGetObjective()`, `PetscDSGetResidual()`,
+          `PetscDSGetRHSResidual()`, `PetscDSSetUpdate()`, `PetscDSGetUpdate()`, `DMPlexSetCoordinateMap()`,
+          `PetscDSSetResidual()`, `PetscPointJacFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void PetscBdPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]);
+
+/*S
+  PetscBdPointJacFn - A prototype of a pointwise boundary function that can be passed to, for example, `PetscDSSetBdJacobian()`
+
+  Calling Sequence:
++ dim          - the coordinate dimension
+. Nf           - the number of fields
+. NfAux        - the number of auxiliary fields
+. uOff         - the offset into `u`[] and `u_t`[] for each field
+. uOff_x       - the offset into `u_x`[] for each field
+. u            - each field evaluated at the current point
+. u_t          - the time derivative of each field evaluated at the current point
+. u_x          - the gradient of each field evaluated at the current point
+. aOff         - the offset into `a`[] and `a_t`[] for each auxiliary field
+. aOff_x       - the offset into `a_x`[] for each auxiliary field
+. a            - each auxiliary field evaluated at the current point
+. a_t          - the time derivative of each auxiliary field evaluated at the current point
+. a_x          - the gradient of auxiliary each field evaluated at the current point
+. t            - current time
+. u_tShift     - the multiplier `a` for $dF/dU_t$
+. x            - coordinates of the current point
+. n            - normal at the current point
+. numConstants - number of constant parameters
+. constants    - constant parameters
+- g            - output values at the current point
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetBdJacobian()`, `PetscDSGetBdJacobian()`, `PetscDSSetBdJacobianPreconditioner()`, `PetscDSGetBdJacobianPreconditioner()`,
+          `PetscDSSetBdResidual()`, `PetscDSGetBdResidual()`, `PetscDSSetObjective()`, `PetscDSGetObjective()`, `PetscDSGetResidual()`,
+          `PetscDSGetRHSResidual()`, `PetscDSSetUpdate()`, `PetscDSGetUpdate()`, `DMPlexSetCoordinateMap()`,
+          `PetscDSSetResidual()`, `PetscPointJacFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void PetscBdPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[]);
+
+/*S
+  PetscPointExactSolutionFn - A prototype of a pointwise function that computes the exact solution to a PDE. Used with, for example,
+  `PetscDSSetExactSolution()`
+
+  Calling Sequence:
++ dim - the coordinate dimension
+. t   - current time
+. x   - coordinates of the current point
+. Nc  - the number of field components
+. u   - the solution field evaluated at the current point
+- ctx - an application context, set with `PetscDSSetExactSolution()` or `PetscDSSetExactSolutionTimeDerivative()`
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetExactSolution()`, `PetscDSGetExactSolution()`, `PetscDSSetExactSolutionTimeDerivative()`, `PetscDSGetExactSolutionTimeDerivative()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscPointExactSolutionFn(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nc, PetscScalar u[], PetscCtx ctx);
+
+/*S
+  PetscRiemannFn - A prototype of a pointwise function that can be passed to, for example, `PetscDSSetRiemannSolver()`
+
+  Calling Sequence:
++ dim          - the coordinate dimension
+. Nf           - The number of fields
+. x            - The coordinates at a point on the interface
+. n            - The normal vector to the interface
+. uL           - The state vector to the left of the interface
+. uR           - The state vector to the right of the interface
+. numConstants - number of constant parameters
+. constants    - constant parameters
+. flux         - output array of flux through the interface
+- ctx          - optional application context
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetRiemannSolver()`, `PetscDSGetRiemannSolver()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void PetscRiemannFn(PetscInt dim, PetscInt Nf, const PetscReal x[], const PetscReal n[], const PetscScalar uL[], const PetscScalar uR[], PetscInt numConstants, const PetscScalar constants[], PetscScalar flux[], PetscCtx ctx);
+
+/*S
+  PetscSimplePointFn - A prototype of a simple pointwise function that can be passed to, for example, `DMPlexTransformExtrudeSetNormalFunction()`
+
+  Calling Sequence:
++ dim  - The coordinate dimension of the original mesh (usually a surface)
+. time - The current time, or 0.
+. x    - The location of the current normal, in the coordinate space of the original mesh
+. r    - The layer number of this point
+. u    - The user provides the computed normal on output
+- ctx  - An optional application context, this context may be obtained by the calling code with `DMGetApplicationContext()`
+
+  Level: beginner
+
+  Developer Note:
+  The handling of `ctx` in the use of such functions may not be ideal since the context is not provided when the function pointer is provided with, for example, `DMSwarmSetCoordinateFunction()`
+
+.seealso: `PetscPointFn`, `DMPlexTransformExtrudeSetNormalFunction()`, `DMSwarmSetCoordinateFunction()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscSimplePointFn(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], PetscCtx ctx);
+
+PETSC_EXTERN_TYPEDEF typedef PetscSimplePointFn *PetscSimplePointFunc PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscSimplePointFn*", );
+PETSC_EXTERN_TYPEDEF typedef PetscPointFn       *PetscPointFunc PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscPointFn*", );
+PETSC_EXTERN_TYPEDEF typedef PetscPointJacFn    *PetscPointJac PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscPointJacFn*", );
+PETSC_EXTERN_TYPEDEF typedef PetscBdPointFn     *PetscBdPointFunc PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscBdPointFn*", );
+PETSC_EXTERN_TYPEDEF typedef PetscBdPointJacFn  *PetscBdPointJac PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscBdPointJacFn*", );
+PETSC_EXTERN_TYPEDEF typedef PetscRiemannFn     *PetscRiemannFunc PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscRiemannFn*", );
+
+/*S
+  PetscPointBoundFn - A prototype of a pointwise function that can be passed to, for example, `PetscDSSetLowerBound()`
+
+  Calling Sequence:
++ dim - the coordinate dimension
+. t   - current time
+. x   - coordinates of the current point
+. Nc  - the number of field components
+. u   - the lower bound evaluated at the current point
+- ctx - an application context, passed in with, for example, `PetscDSSetLowerBound()`
+
+  Level: beginner
+
+.seealso: `PetscPointFn`, `PetscDSSetLowerBound()`, `PetscDSSetUpperBound()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscPointBoundFn(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nc, PetscScalar u[], PetscCtx ctx);
+
+
 PETSC_EXTERN PetscErrorCode PetscDSGetObjective(PetscDS, PetscInt, PetscPointFn **);
 PETSC_EXTERN PetscErrorCode PetscDSSetObjective(PetscDS, PetscInt, PetscPointFn *);
 PETSC_EXTERN PetscErrorCode PetscDSGetResidual(PetscDS, PetscInt, PetscPointFn **, PetscPointFn **);

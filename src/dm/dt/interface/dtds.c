@@ -1,5 +1,5 @@
 #include <petsc/private/petscdsimpl.h> /*I "petscds.h" I*/
-
+#include <petscdm.h>
 PetscClassId PETSCDS_CLASSID = 0;
 
 PetscFunctionList PetscDSList              = NULL;

@@ -2,11 +2,12 @@
       Objects which encapsulate finite element spaces
 */
 #pragma once
-#include <petscdm.h>
+#include <petscdmtypes.h>
 #include <petscdt.h>
 #include <petscfetypes.h>
 #include <petscdstypes.h>
 #include <petscspace.h>
+#include <petscmat.h>
 
 /* MANSEC = DM */
 /* SUBMANSEC = DUALSPACE */

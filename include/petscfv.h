@@ -3,7 +3,8 @@
 */
 #pragma once
 
-#include <petscdm.h>
+#include <petscsys.h> // needed for MPI_Comm
+#include <petscdmtypes.h> // needed for DMPolytopeType
 #include <petscdt.h>
 #include <petscspace.h>
 #include <petscdualspace.h>
