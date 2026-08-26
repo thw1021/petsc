@@ -106,7 +106,7 @@ static PetscErrorCode CheckGloballyCurveSorted(MPI_Comm comm, PetscInt spaceDim,
 
 // Part A: reorder a lattice of synthetic 3-D centroids. The initial distribution is strided, so
 // every rank starts with cells spread over the whole domain.
-static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N)
+static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool allOnRank0)
 {
   PetscSF     sf;
   PetscReal  *centroids, *newcentroids;
@@ -117,14 +117,17 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N)
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  // Two input distributions. The strided one gives every rank cells spread over the whole domain.
+  // The other puts every cell on rank 0, which is what reading a mesh serially and building in
+  // parallel produces, and which leaves every other rank with nothing to sample.
   for (PetscInt g = 0; g < NCells; ++g)
-    if (g % size == rank) ++numCells;
-  PetscCall(PetscMalloc2(numCells * 3, &centroids, numCells, &idx));
+    if (allOnRank0 ? rank == 0 : g % size == rank) ++numCells;
+  PetscCall(PetscMalloc2(PetscMax(1, numCells) * 3, &centroids, PetscMax(1, numCells), &idx));
   {
     PetscInt c = 0;
 
     for (PetscInt g = 0; g < NCells; ++g) {
-      if (g % size != rank) continue;
+      if (allOnRank0 ? rank != 0 : g % size != rank) continue;
       centroids[c * 3 + 0] = (PetscReal)(g % N) + 0.5;
       centroids[c * 3 + 1] = (PetscReal)((g / N) % N) + 0.5;
       centroids[c * 3 + 2] = (PetscReal)(g / (N * N)) + 0.5;
@@ -152,7 +155,16 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N)
   PetscCall(PetscSFBcastBegin(sf, MPIU_INT, idx, newidx, MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(sf, MPIU_INT, idx, newidx, MPI_REPLACE));
   PetscCall(CheckGloballyCurveSorted(comm, 3, newNumCells, newcentroids));
-  PetscCall(PetscPrintf(comm, "FromCentroids: N=%" PetscInt_FMT " cells=%" PetscInt_FMT " permutation ok, globally curve sorted\n", N, NCells));
+  // The reorder must redistribute, not merely permute in place. A rank holding every cell before
+  // the call must not hold every cell after it. Sampling a fixed number of points per rank fails
+  // this: ranks with no cells dominate the sample set and no splitter cuts the data.
+  {
+    PetscInt hi = newNumCells;
+
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
+    PetscCheck(size == 1 || hi * (PetscInt)size <= 2 * NCells, comm, PETSC_ERR_PLIB, "Reorder left %" PetscInt_FMT " cells on one rank; regular sampling bounds this by %" PetscInt_FMT, hi, 2 * NCells / (PetscInt)size);
+  }
+  PetscCall(PetscPrintf(comm, "FromCentroids: N=%" PetscInt_FMT " cells=%" PetscInt_FMT " permutation ok, globally curve sorted, balanced\n", N, NCells));
   PetscCall(PetscSFDestroy(&sf));
   PetscCall(PetscFree2(newcentroids, newidx));
   PetscCall(PetscFree2(centroids, idx));
@@ -297,9 +309,16 @@ static PetscErrorCode TestLocalityImproves(MPI_Comm comm, PetscInt N)
   PetscCheck(sharedAfter <= sharedBefore, comm, PETSC_ERR_PLIB, "Shared points grew from %" PetscInt_FMT " to %" PetscInt_FMT, sharedBefore, sharedAfter);
   // A strided input distribution shares almost every point. The reorder must cut that sharply, not
   // merely avoid making it worse, so require at least a factor of two on more than one process.
-  // Require the factor of two only when each process receives a block of several cells. A mesh with
-  // very few cells per process has no locality to gain; every cell touches the same few vertices.
-  if (size > 1 && NCells >= 4 * size) PetscCheck(2 * sharedAfter <= sharedBefore, comm, PETSC_ERR_PLIB, "Shared points only fell from %" PetscInt_FMT " to %" PetscInt_FMT ", less than a factor of two", sharedBefore, sharedAfter);
+  // How much there is to gain depends on how many cells each process receives. With fewer than a
+  // couple of cells per process every cell touches a boundary and nothing can improve, so only
+  // require that the reorder does no harm. Above that, require a modest reduction, and once each
+  // process holds a real block require a factor of two. Measured values: a 2x2 grid over 8
+  // processes gives no change, an 8x8 grid over 8 processes gives 1.68, and a 16x16 grid gives
+  // more than 4.
+  if (size > 1 && NCells >= 2 * (PetscInt)size) {
+    PetscCheck(4 * sharedAfter <= 3 * sharedBefore, comm, PETSC_ERR_PLIB, "Shared points only fell from %" PetscInt_FMT " to %" PetscInt_FMT ", less than a quarter", sharedBefore, sharedAfter);
+    if (NCells >= 32 * (PetscInt)size) PetscCheck(2 * sharedAfter <= sharedBefore, comm, PETSC_ERR_PLIB, "Shared points only fell from %" PetscInt_FMT " to %" PetscInt_FMT ", less than a factor of two", sharedBefore, sharedAfter);
+  }
   // The counts depend on the number of processes, so keep them out of the reference output.
   PetscCall(PetscPrintf(comm, "Locality: reorder cuts shared points\n"));
   PetscCall(PetscInfo(NULL, "shared points %" PetscInt_FMT " -> %" PetscInt_FMT "\n", sharedBefore, sharedAfter));
@@ -307,6 +326,83 @@ static PetscErrorCode TestLocalityImproves(MPI_Comm comm, PetscInt N)
   PetscCall(PetscFree(newcells));
   PetscCall(PetscFree(coords));
   PetscCall(PetscFree(cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Part D: degenerate geometry. A curve code alone cannot order cells that quantize to the same grid
+// point, and one distant node is enough to make the whole bulk of a mesh do that. The reorder must
+// still balance, because a rank that receives every cell is worse than no reorder at all.
+static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
+{
+  const char *names[] = {"identical centroids", "outlier stretches box", "mostly coincident"};
+  PetscMPIInt size, rank;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  for (PetscInt kind = 0; kind < 3; ++kind) {
+    PetscSF    sf;
+    PetscReal *cent;
+    PetscInt   NCells = N * N * N, numCells = 0, newNumCells, lo, hi, tot;
+
+    for (PetscInt g = 0; g < NCells; ++g)
+      if (g % size == rank) ++numCells;
+    PetscCall(PetscMalloc1(PetscMax(1, numCells) * 3, &cent));
+    {
+      PetscInt c = 0;
+
+      for (PetscInt g = 0; g < NCells; ++g) {
+        if (g % size != rank) continue;
+        if (kind == 0) { // every centroid the same point
+          cent[c * 3 + 0] = 1.5;
+          cent[c * 3 + 1] = 2.5;
+          cent[c * 3 + 2] = 3.5;
+        } else if (kind == 1) { // a tight mesh plus one very distant node
+          cent[c * 3 + 0] = (PetscReal)(g % N) * 1e-3;
+          cent[c * 3 + 1] = (PetscReal)((g / N) % N) * 1e-3;
+          cent[c * 3 + 2] = (PetscReal)(g / (N * N)) * 1e-3;
+          if (g == 0) {
+            cent[c * 3 + 0] = 1e6;
+            cent[c * 3 + 1] = 1e6;
+            cent[c * 3 + 2] = 1e6;
+          }
+        } else { // three quarters of the cells on one point
+          if (g % 4) {
+            cent[c * 3 + 0] = 5.;
+            cent[c * 3 + 1] = 5.;
+            cent[c * 3 + 2] = 5.;
+          } else {
+            cent[c * 3 + 0] = (PetscReal)(g % N);
+            cent[c * 3 + 1] = (PetscReal)((g / N) % N);
+            cent[c * 3 + 2] = (PetscReal)(g / (N * N));
+          }
+        }
+        ++c;
+      }
+    }
+    PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 3, numCells, cent, &sf, &newNumCells));
+    lo  = newNumCells;
+    hi  = newNumCells;
+    tot = newNumCells;
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &lo, 1, MPIU_INT, MPI_MIN, comm));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &tot, 1, MPIU_INT, MPI_SUM, comm));
+    PetscCheck(tot == NCells, comm, PETSC_ERR_PLIB, "%s: cell count changed from %" PetscInt_FMT " to %" PetscInt_FMT, names[kind], NCells, tot);
+    // Two independent checks.
+    //
+    // Regular sampling bounds the largest range by twice the ideal. Only `size`*`size` samples
+    // decide the splitters, so on few ranks the granularity alone permits a visible imbalance; on
+    // 3 ranks with 512 cells the 9 samples leave about a third. The factor of two is the guarantee.
+    PetscCheck(hi * (PetscInt)size <= 2 * NCells, comm, PETSC_ERR_PLIB, "%s: one rank holds %" PetscInt_FMT " cells, more than twice the ideal %" PetscInt_FMT, names[kind], hi, NCells / (PetscInt)size);
+    // Every rank must receive cells. This is the check that matters here: the curve codes are all
+    // equal or nearly so, and if the split came from the codes alone then one rank would keep every
+    // cell and the rest would get none. A ratio test cannot see that on two ranks, because one rank
+    // holding everything meets the factor of two exactly.
+    PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "%s: a rank received no cells; the curve codes do not separate these centroids, so the split must come from the cell numbering", names[kind]);
+    PetscCall(PetscSFDestroy(&sf));
+    PetscCall(PetscFree(cent));
+  }
+  PetscCall(PetscPrintf(comm, "Degenerate geometry: three cases balanced within the sampling bound\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -322,9 +418,11 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsInt("-n", "Cells per side", "ex105.c", N, &N, NULL));
   PetscOptionsEnd();
   PetscCheck(N > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "-n must be positive");
-  PetscCall(TestFromCentroids(comm, N));
+  PetscCall(TestFromCentroids(comm, N, PETSC_FALSE));
+  PetscCall(TestFromCentroids(comm, N, PETSC_TRUE));
   PetscCall(TestCellList(comm, N));
   PetscCall(TestLocalityImproves(comm, N));
+  PetscCall(TestDegenerateGeometry(comm, N));
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -346,5 +444,12 @@ int main(int argc, char **argv)
     suffix: empty_ranks
     nsize: 8
     args: -n 2
+
+  # Every cell starts on rank 0, the distribution a serial read produces. The reorder has to
+  # redistribute; sampling a fixed count per rank silently left everything on rank 0.
+  test:
+    suffix: skewed_input
+    nsize: {{2 4 8}}
+    args: -n 8
 
 TEST*/

@@ -1,3 +1,5 @@
-FromCentroids: N=16 cells=4096 permutation ok, globally curve sorted
+FromCentroids: N=16 cells=4096 permutation ok, globally curve sorted, balanced
+FromCentroids: N=16 cells=4096 permutation ok, globally curve sorted, balanced
 CellList: N=16 cells=256 plex built and checked
 Locality: reorder cuts shared points
+Degenerate geometry: three cases balanced within the sampling bound

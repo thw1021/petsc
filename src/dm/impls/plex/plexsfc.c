@@ -1571,6 +1571,18 @@ PetscErrorCode DMPlexSetIsoperiodicFaceTransform(DM dm, PetscInt n, const PetscS
 
 #define ZCODE_MAX_INDEX ((PetscInt)((1 << 21) - 1)) // ZEncode1() keeps 21 bits per index
 
+// A curve code alone does not order the cells uniquely. Quantizing to 21 bits per axis makes many
+// cells share a code whenever the bounding box is much larger than the spacing between cells, which
+// one distant node is enough to cause. Splitters taken from equal codes cannot separate the cells
+// that carry them, and every such cell lands on one rank. Pairing the code with a globally unique
+// cell number removes the ties, so the splitters always cut and the balance bound always holds.
+typedef struct {
+  ZCode      z;
+  PetscInt64 g;
+} ZKey;
+
+// The local ordering in DMPlexGetCellOrderingByCurve_Internal() only sorts one rank's cells for
+// cache locality. It never partitions, so equal codes are harmless there and a bare code suffices.
 static int ZCodeCompare(const void *a, const void *b, void *ctx)
 {
   ZCode x = *(const ZCode *)a;
@@ -1578,6 +1590,16 @@ static int ZCodeCompare(const void *a, const void *b, void *ctx)
 
   (void)ctx;
   return x < y ? -1 : (x > y ? 1 : 0);
+}
+
+static int ZKeyCompare(const void *a, const void *b, void *ctx)
+{
+  const ZKey *x = (const ZKey *)a;
+  const ZKey *y = (const ZKey *)b;
+
+  (void)ctx;
+  if (x->z != y->z) return x->z < y->z ? -1 : 1;
+  return x->g < y->g ? -1 : (x->g > y->g ? 1 : 0);
 }
 
 // Find the bounding box of the centroids. `global` reduces the box over the communicator, which the
@@ -1631,30 +1653,62 @@ static PetscErrorCode DMPlexCentroidsToZCodes(PetscInt spaceDim, PetscInt numCel
 }
 
 // Choose `size`-1 splitters that cut the global ZCode order into balanced contiguous ranges.
-// Regular sampling: every rank offers `size` evenly spaced samples of its locally sorted codes,
-// and every rank then picks the same splitters from the gathered, sorted samples. The selection
-// uses no random numbers, so all ranks agree without extra communication.
-static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, PetscInt numCells, const ZCode zcodes[], ZCode *splitters[])
+//
+// Regular sampling, with the sample count on each rank proportional to the number of cells that
+// rank holds. The proportional part is load bearing. The caller chooses the input distribution, and
+// it is often very uneven: reading a mesh on one rank and building on all of them leaves every
+// other rank empty. A fixed sample count per rank would then fill the sample set with values from
+// ranks that hold almost no data, every splitter would fall in that range, and the reorder would
+// move nothing.
+//
+// The total sample count is `size`*`size`, which is the classical choice and bounds the largest
+// resulting range by 2*`NCells`/`size`. The selection uses no random numbers, so every rank derives
+// the same splitters from the gathered samples without further communication.
+static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype keytype, PetscInt numCells, const ZKey zkeys[], ZKey *splitters[])
 {
-  ZCode      *samples, *allsamples, *split;
-  PetscMPIInt size, nsamples;
+  ZKey        *samples = NULL, *allsamples = NULL, *split;
+  PetscMPIInt *counts, *displs;
+  PetscMPIInt  size, nloci;
+  PetscInt     NCells = numCells, nloc = 0, total = 0;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCall(PetscMalloc1(size, &samples));
-  PetscCall(PetscMalloc1((PetscInt)size * size, &allsamples));
   PetscCall(PetscMalloc1(PetscMax(1, size - 1), &split));
-  for (PetscMPIInt j = 0; j < size; ++j) {
-    // A rank with no cells still has to contribute; PETSC_MAX_UINT64-like sentinels sort last and
-    // therefore do not pull any splitter down.
-    samples[j] = numCells ? zcodes[((PetscInt)j * numCells) / size] : ~(ZCode)0;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &NCells, 1, MPIU_INT, MPI_SUM, comm));
+
+  // Sample count for this rank, proportional to its share of the cells. A rank with cells always
+  // offers at least one sample; a rank with none offers none. The product is formed in 64 bits
+  // because `numCells` times `size`*`size` overflows a 32-bit `PetscInt` on large meshes.
+  if (NCells > 0 && numCells > 0) {
+    PetscInt64 want = ((PetscInt64)numCells * (PetscInt64)size * (PetscInt64)size) / (PetscInt64)NCells;
+
+    nloc = (PetscInt)PetscMin((PetscInt64)numCells, PetscMax((PetscInt64)1, want));
   }
-  nsamples = size;
-  PetscCallMPI(MPI_Allgather(samples, nsamples, MPI_UINT64_T, allsamples, nsamples, MPI_UINT64_T, comm));
-  PetscCall(PetscTimSort((PetscInt)size * size, allsamples, sizeof(ZCode), ZCodeCompare, NULL));
-  for (PetscMPIInt k = 0; k < size - 1; ++k) split[k] = allsamples[((PetscInt)k + 1) * size];
+  PetscCall(PetscMPIIntCast(nloc, &nloci));
+  PetscCall(PetscCalloc2(size, &counts, size + 1, &displs));
+  PetscCallMPI(MPI_Allgather(&nloci, 1, MPI_INT, counts, 1, MPI_INT, comm));
+  for (PetscMPIInt r = 0; r < size; ++r) displs[r + 1] = displs[r] + counts[r];
+  total = displs[size];
+
+  if (nloc) PetscCall(PetscMalloc1(nloc, &samples));
+  for (PetscInt j = 0; j < nloc; ++j) samples[j] = zkeys[(j * numCells) / nloc];
+  PetscCall(PetscMalloc1(PetscMax(1, total), &allsamples));
+  PetscCallMPI(MPI_Allgatherv(samples, nloci, keytype, allsamples, counts, displs, keytype, comm));
+
+  // With no cells anywhere there is nothing to cut; leave the splitters at the maximum so every
+  // cell would fall in the first range.
+  if (total > 0) PetscCall(PetscTimSort(total, allsamples, sizeof(ZKey), ZKeyCompare, NULL));
+  for (PetscMPIInt k = 0; k < size - 1; ++k) {
+    if (total > 0) split[k] = allsamples[(((PetscInt)k + 1) * total) / size];
+    else {
+      split[k].z = ~(ZCode)0;
+      split[k].g = PETSC_INT64_MAX;
+    }
+  }
+
   PetscCall(PetscFree(samples));
   PetscCall(PetscFree(allsamples));
+  PetscCall(PetscFree2(counts, displs));
   *splitters = split;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1692,7 +1746,9 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, PetscInt numCell
 PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCurveType curvetype, PetscInt spaceDim, PetscInt numCells, const PetscReal centroids[], PetscSF *migrationSF, PetscInt *newNumCells)
 {
   PetscBool    ismorton;
-  ZCode       *zcodes, *splitters, *recvcodes;
+  ZCode       *zcodes;
+  ZKey        *zkeys, *splitters, *recvkeys;
+  MPI_Datatype keytype;
   PetscInt    *lidx, *sendidx, *recvidx, *perm;
   PetscMPIInt *sendcounts, *recvcounts, *senddispls, *recvdispls;
   PetscMPIInt  size, rank;
@@ -1710,26 +1766,37 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  // Morton encode the centroids, then sort them locally, carrying the input index along.
-  PetscCall(PetscMalloc2(numCells, &zcodes, numCells, &lidx));
+  // One MPI datatype covers a key; both members are 8 bytes wide and only ever copied.
+  PetscCallMPI(MPI_Type_contiguous(2, MPI_UINT64_T, &keytype));
+  PetscCallMPI(MPI_Type_commit(&keytype));
+
+  // Morton encode the centroids, pair each code with a globally unique cell number, then sort
+  // locally, carrying the input index along.
+  PetscCall(PetscMalloc3(numCells, &zcodes, numCells, &zkeys, numCells, &lidx));
   {
     PetscReal lo[3], hi[3];
+    PetscInt  base = 0;
 
     PetscCall(DMPlexCentroidBoundingBox(comm, PETSC_TRUE, spaceDim, numCells, centroids, lo, hi));
     PetscCall(DMPlexCentroidsToZCodes(spaceDim, numCells, centroids, lo, hi, zcodes));
+    PetscCallMPI(MPI_Exscan(&numCells, &base, 1, MPIU_INT, MPI_SUM, comm));
+    for (PetscInt c = 0; c < numCells; ++c) {
+      zkeys[c].z = zcodes[c];
+      zkeys[c].g = (PetscInt64)base + c;
+    }
   }
   for (PetscInt c = 0; c < numCells; ++c) lidx[c] = c;
   // PetscTimSortWithArray() does not accept an empty array, and a rank may own no cells.
-  if (numCells) PetscCall(PetscTimSortWithArray(numCells, zcodes, sizeof(ZCode), lidx, sizeof(PetscInt), ZCodeCompare, NULL));
+  if (numCells) PetscCall(PetscTimSortWithArray(numCells, zkeys, sizeof(ZKey), lidx, sizeof(PetscInt), ZKeyCompare, NULL));
 
-  // Count how many of the locally sorted cells fall in each rank's ZCode range.
-  PetscCall(DMPlexZCodeSelectSplitters(comm, numCells, zcodes, &splitters));
+  // Count how many of the locally sorted cells fall in each rank's range of the curve.
+  PetscCall(DMPlexZCodeSelectSplitters(comm, keytype, numCells, zkeys, &splitters));
   PetscCall(PetscCalloc4(size, &sendcounts, size, &recvcounts, size + 1, &senddispls, size + 1, &recvdispls));
   {
     PetscMPIInt dest = 0;
 
     for (PetscInt c = 0; c < numCells; ++c) {
-      while (dest < size - 1 && zcodes[c] >= splitters[dest]) ++dest;
+      while (dest < size - 1 && ZKeyCompare(&zkeys[c], &splitters[dest], NULL) >= 0) ++dest;
       ++sendcounts[dest];
     }
   }
@@ -1743,16 +1810,16 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   // Send each cell's ZCode and its index in the caller's array. The locally sorted order already
   // groups the cells by destination, so the send buffers need no further permutation.
   PetscCall(PetscMalloc2(numCells, &sendidx, nrecv, &recvidx));
-  PetscCall(PetscMalloc1(nrecv, &recvcodes));
+  PetscCall(PetscMalloc1(nrecv, &recvkeys));
   for (PetscInt c = 0; c < numCells; ++c) sendidx[c] = lidx[c];
-  PetscCallMPI(MPI_Alltoallv(zcodes, sendcounts, senddispls, MPI_UINT64_T, recvcodes, recvcounts, recvdispls, MPI_UINT64_T, comm));
+  PetscCallMPI(MPI_Alltoallv(zkeys, sendcounts, senddispls, keytype, recvkeys, recvcounts, recvdispls, keytype, comm));
   PetscCallMPI(MPI_Alltoallv(sendidx, sendcounts, senddispls, MPIU_INT, recvidx, recvcounts, recvdispls, MPIU_INT, comm));
 
   // The received cells are grouped by source rank, not by ZCode. Sort them so that this rank owns
   // a contiguous, ascending piece of the curve.
   PetscCall(PetscMalloc1(nrecv, &perm));
   for (PetscInt i = 0; i < nrecv; ++i) perm[i] = i;
-  if (nrecv) PetscCall(PetscTimSortWithArray(nrecv, recvcodes, sizeof(ZCode), perm, sizeof(PetscInt), ZCodeCompare, NULL));
+  if (nrecv) PetscCall(PetscTimSortWithArray(nrecv, recvkeys, sizeof(ZKey), perm, sizeof(PetscInt), ZKeyCompare, NULL));
 
   PetscCall(PetscMalloc1(nrecv, &iremote));
   for (PetscInt i = 0; i < nrecv; ++i) {
@@ -1770,9 +1837,10 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   PetscCall(PetscFree(splitters));
   PetscCall(PetscFree4(sendcounts, recvcounts, senddispls, recvdispls));
   PetscCall(PetscFree2(sendidx, recvidx));
-  PetscCall(PetscFree(recvcodes));
+  PetscCall(PetscFree(recvkeys));
   PetscCall(PetscFree(perm));
-  PetscCall(PetscFree2(zcodes, lidx));
+  PetscCall(PetscFree3(zcodes, zkeys, lidx));
+  PetscCallMPI(MPI_Type_free(&keytype));
   *migrationSF = sf;
   *newNumCells = nrecv;
   PetscFunctionReturn(PETSC_SUCCESS);
