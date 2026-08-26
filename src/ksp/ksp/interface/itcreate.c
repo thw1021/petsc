@@ -837,6 +837,8 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
   ksp->numberreasonviews            = 0;
   ksp->setfromoptionscalled         = 0;
   ksp->nmax                         = PETSC_DECIDE;
+  ksp->orthog                       = KSPClassicalGramSchmidtOrthogonalization;
+  ksp->cgstype                      = KSP_CGS_REFINE_NEVER;
 
   PetscCall(KSPConvergedDefaultCreate(&ctx));
   PetscCall(KSPSetConvergenceTest(ksp, KSPConvergedDefault, ctx, KSPConvergedDefaultDestroy));
