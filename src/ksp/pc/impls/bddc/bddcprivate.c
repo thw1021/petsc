@@ -8999,11 +8999,9 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
   coarseG = NULL;
   if (pcbddc->nedcG && multilevel_allowed) {
     MPI_Comm ccomm;
-    if (coarse_mat) {
-      ccomm = PetscObjectComm((PetscObject)coarse_mat);
-    } else {
-      ccomm = MPI_COMM_NULL;
-    }
+
+    if (coarse_mat) ccomm = PetscObjectComm((PetscObject)coarse_mat);
+    else ccomm = MPI_COMM_NULL;
     PetscCall(MatMPIAIJRestrict(pcbddc->nedcG, ccomm, &coarseG));
   }
 
@@ -9855,8 +9853,19 @@ static PetscErrorCode MatMPIAIJRestrict(Mat A, MPI_Comm ccomm, Mat *B)
   IS          rows;
   PetscInt    rst, ren;
   PetscLayout rmap;
+  MPI_Comm    comm;
+  PetscMPIInt size, issamecomm = MPI_UNEQUAL;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (ccomm != MPI_COMM_NULL) PetscCallMPI(MPI_Comm_compare(comm, ccomm, &issamecomm));
+
+  if (size == 1 || issamecomm == MPI_IDENT) {
+    PetscCall(PetscObjectReference((PetscObject)A));
+    *B = A;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   rst = ren = 0;
   if (ccomm != MPI_COMM_NULL) {
     PetscCall(PetscLayoutCreate(ccomm, &rmap));
@@ -9865,7 +9874,7 @@ static PetscErrorCode MatMPIAIJRestrict(Mat A, MPI_Comm ccomm, Mat *B)
     PetscCall(PetscLayoutSetUp(rmap));
     PetscCall(PetscLayoutGetRange(rmap, &rst, &ren));
   }
-  PetscCall(ISCreateStride(PetscObjectComm((PetscObject)A), ren - rst, rst, 1, &rows));
+  PetscCall(ISCreateStride(comm, ren - rst, rst, 1, &rows));
   PetscCall(MatCreateSubMatrix(A, rows, NULL, MAT_INITIAL_MATRIX, &At));
   PetscCall(ISDestroy(&rows));
 
