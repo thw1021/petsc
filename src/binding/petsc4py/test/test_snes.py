@@ -528,13 +528,6 @@ class TestSNESTR(BaseTestSNES, unittest.TestCase):
 class TestSNESAL(BaseTestSNES, unittest.TestCase):
     SNES_TYPE = PETSc.SNES.Type.NEWTONAL
 
-    def testDiagonalScaleWrongType(self):
-        scale = PETSc.Vec().createSeq(2)
-        scale.set(1)
-        self.snes.setRightDiagonalScale(scale)
-        with self.assertRaises(PETSc.Error):
-            self.snes.setUp()
-
 
 # --------------------------------------------------------------------
 

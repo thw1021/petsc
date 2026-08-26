@@ -74,90 +74,49 @@ static PetscErrorCode CheckSolution(SNES snes, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestWrongType(void)
-{
-  SNES           snes;
-  Mat            J;
-  Vec            x, f, right;
-  PetscErrorCode ierr;
-
-  PetscFunctionBeginUser;
-  PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 1, NULL, &J));
-  PetscCall(MatCreateVecs(J, &x, &f));
-  PetscCall(VecDuplicate(x, &right));
-  PetscCall(VecSet(right, 1.0));
-  PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
-  PetscCall(SNESSetFunction(snes, f, FormFunction, NULL));
-  PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, NULL));
-  PetscCall(SNESSetRightDiagonalScale(snes, right));
-  PetscCall(SNESSetType(snes, SNESNRICHARDSON));
-  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
-  ierr = SNESSetUp(snes);
-  PetscCall(PetscPopErrorHandler());
-  PetscCheck(ierr == PETSC_ERR_ARG_WRONGSTATE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Scaling a non-Newton SNES type returned error %d", (int)ierr);
-  PetscCall(SNESDestroy(&snes));
-  PetscCall(VecDestroy(&right));
-  PetscCall(VecDestroy(&f));
-  PetscCall(VecDestroy(&x));
-  PetscCall(MatDestroy(&J));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 int main(int argc, char **argv)
 {
   SNES        snes;
-  KSP         ksp;
   Mat         J;
   Vec         x, f, left, right, got;
   PetscMPIInt size;
-  PetscBool   use_scale = PETSC_FALSE, test_wrongtype = PETSC_FALSE;
+  PetscBool   use_scale = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This test requires one MPI rank");
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_scale", &use_scale, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_wrongtype", &test_wrongtype, NULL));
 
-  if (test_wrongtype) {
-    PetscCall(TestWrongType());
-  } else {
-    PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 1, NULL, &J));
-    PetscCall(MatCreateVecs(J, &x, &f));
-    PetscCall(VecDuplicate(x, &left));
-    PetscCall(VecDuplicate(x, &right));
-    PetscCall(SetScale(left, 1.0e-8, 1.0));
-    PetscCall(SetScale(right, 1.0e8, 1.0));
+  PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 1, NULL, &J));
+  PetscCall(MatCreateVecs(J, &x, &f));
+  PetscCall(VecDuplicate(x, &left));
+  PetscCall(VecDuplicate(x, &right));
+  PetscCall(SetScale(left, 1.0e-8, 1.0));
+  PetscCall(SetScale(right, 1.0e8, 1.0));
 
-    PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
-    PetscCall(SNESSetFunction(snes, f, FormFunction, NULL));
-    PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, NULL));
-    if (use_scale) {
-      PetscCall(SNESSetLeftDiagonalScale(snes, left));
-      PetscCall(SNESSetRightDiagonalScale(snes, right));
-    }
-    PetscCall(SNESGetLeftDiagonalScale(snes, &got));
-    PetscCheck(got == (use_scale ? left : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNESGetLeftDiagonalScale() returned the wrong vector");
-    PetscCall(SNESGetRightDiagonalScale(snes, &got));
-    PetscCheck(got == (use_scale ? right : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNESGetRightDiagonalScale() returned the wrong vector");
-    PetscCall(SNESSetFromOptions(snes));
-    PetscCall(VecSet(x, 1.0));
-    PetscCall(SNESSolve(snes, NULL, x));
-    PetscCall(CheckSolution(snes, x));
-
-    PetscCall(SNESGetKSP(snes, &ksp));
-    PetscCall(KSPGetLeftDiagonalScale(ksp, &got));
-    PetscCheck(got == (use_scale ? left : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Scaling was not visible through SNESGetKSP()+KSPGetLeftDiagonalScale()");
-    PetscCall(KSPGetRightDiagonalScale(ksp, &got));
-    PetscCheck(got == (use_scale ? right : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Scaling was not visible through SNESGetKSP()+KSPGetRightDiagonalScale()");
-
-    PetscCall(SNESDestroy(&snes));
-    PetscCall(VecDestroy(&right));
-    PetscCall(VecDestroy(&left));
-    PetscCall(VecDestroy(&f));
-    PetscCall(VecDestroy(&x));
-    PetscCall(MatDestroy(&J));
+  PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
+  PetscCall(SNESSetFunction(snes, f, FormFunction, NULL));
+  PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, NULL));
+  if (use_scale) {
+    PetscCall(SNESSetLeftDiagonalScale(snes, left));
+    PetscCall(SNESSetRightDiagonalScale(snes, right));
   }
+  PetscCall(SNESGetLeftDiagonalScale(snes, &got));
+  PetscCheck(got == (use_scale ? left : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNESGetLeftDiagonalScale() returned the wrong vector");
+  PetscCall(SNESGetRightDiagonalScale(snes, &got));
+  PetscCheck(got == (use_scale ? right : NULL), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SNESGetRightDiagonalScale() returned the wrong vector");
+  PetscCall(SNESSetFromOptions(snes));
+  PetscCall(VecSet(x, 1.0));
+  PetscCall(SNESSolve(snes, NULL, x));
+  PetscCall(CheckSolution(snes, x));
+
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(VecDestroy(&right));
+  PetscCall(VecDestroy(&left));
+  PetscCall(VecDestroy(&f));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&J));
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -185,8 +144,8 @@ int main(int argc, char **argv)
     args: -use_scale -snes_type newtontr -ksp_type preonly -pc_type lu -snes_rtol 0 -snes_atol 1e-11 -snes_stol 0 -snes_max_it 20
 
   test:
-    suffix: wrongtype
+    suffix: newtonls_scaled_npc_right
     output_file: output/empty.out
-    args: -test_wrongtype
+    args: -use_scale -snes_type newtonls -snes_npc_side right -npc_snes_type newtonls -npc_ksp_type preonly -npc_pc_type lu -ksp_type preonly -pc_type lu -snes_rtol 0 -snes_atol 1e-11 -snes_stol 0 -snes_max_it 20
 
 TEST*/

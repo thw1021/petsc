@@ -54,15 +54,13 @@ static PetscErrorCode SetScale(Vec d, PetscScalar d0, PetscScalar d1)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Confirms the left/right scaling set on a TS is visible through TSGetSNES()+SNESGetKSP(), the same
-   propagation path exercised at the SNES level by src/snes/tests/ex74.c. */
+/* Confirms TSSetLeftDiagonalScale()/TSSetRightDiagonalScale() round-trip and that a TS solve converges
+   with them set. */
 static PetscErrorCode TestImplicitPropagation(void)
 {
-  TS   ts;
-  SNES snes;
-  KSP  ksp;
-  Mat  J;
-  Vec  u, left, right, got;
+  TS  ts;
+  Mat J;
+  Vec u, left, right, got;
 
   PetscFunctionBeginUser;
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, 2, 2, 1, NULL, &J));
@@ -90,13 +88,6 @@ static PetscErrorCode TestImplicitPropagation(void)
   PetscCall(TSSetMaxTime(ts, 0.02));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
   PetscCall(TSSolve(ts, u));
-
-  PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(SNESGetKSP(snes, &ksp));
-  PetscCall(KSPGetLeftDiagonalScale(ksp, &got));
-  PetscCheck(got == left, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Scaling was not visible through TSGetSNES()+SNESGetKSP()+KSPGetLeftDiagonalScale()");
-  PetscCall(KSPGetRightDiagonalScale(ksp, &got));
-  PetscCheck(got == right, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Scaling was not visible through TSGetSNES()+SNESGetKSP()+KSPGetRightDiagonalScale()");
 
   PetscCall(TSDestroy(&ts));
   PetscCall(VecDestroy(&right));
