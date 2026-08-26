@@ -405,10 +405,6 @@ PETSC_EXTERN PetscErrorCode KSPGMRESSetHapTol(KSP, PetscReal);
 PETSC_EXTERN PetscErrorCode KSPGMRESSetBreakdownTolerance(KSP, PetscReal);
 
 PETSC_EXTERN PetscErrorCode KSPGMRESSetPreAllocateVectors(KSP);
-PETSC_EXTERN PetscErrorCode KSPGMRESSetOrthogonalization(KSP, PetscErrorCode (*)(KSP, PetscInt));
-PETSC_EXTERN PetscErrorCode KSPGMRESGetOrthogonalization(KSP, PetscErrorCode (**)(KSP, PetscInt));
-PETSC_EXTERN PetscErrorCode KSPGMRESModifiedGramSchmidtOrthogonalization(KSP, PetscInt);
-PETSC_EXTERN PetscErrorCode KSPGMRESClassicalGramSchmidtOrthogonalization(KSP, PetscInt);
 
 PETSC_EXTERN PetscErrorCode KSPLGMRESSetAugDim(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPLGMRESSetConstant(KSP);
@@ -487,78 +483,120 @@ PETSC_EXTERN const char *const KSPHPDDMTypes[];
 PETSC_EXTERN PetscErrorCode KSPHPDDMSetType(KSP, KSPHPDDMType);
 PETSC_EXTERN PetscErrorCode KSPHPDDMGetType(KSP, KSPHPDDMType *);
 
+/*S
+  KSPOrthogonalizationFn - A function prototype for functions provided to `KSPSetOrthogonalization()`
+
+  Calling Sequence:
++ ksp - the `KSP` context
+. V   - array of previously orthogonalized vectors
+. n   - number of vectors
+. x   - vector to be orthogonalized (may be `NULL`)
+- h   - computed orthogonalization coefficients
+
+  Level: intermediate
+
+  Note:
+  If no `x` is given, then the vector to be orthogonalized is assumed to be located at `V[n]`.
+
+.seealso: [](ch_ksp), `KSP`, `KSPSetOrthogonalization()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPOrthogonalizationFn(KSP ksp, Vec V[], PetscInt n, Vec x, PetscScalar h[]);
+
+PETSC_EXTERN PetscErrorCode         KSPSetOrthogonalization(KSP, KSPOrthogonalizationFn *);
+PETSC_EXTERN PetscErrorCode         KSPGetOrthogonalization(KSP, KSPOrthogonalizationFn **);
+PETSC_EXTERN KSPOrthogonalizationFn KSPClassicalGramSchmidtOrthogonalization;
+PETSC_EXTERN KSPOrthogonalizationFn KSPModifiedGramSchmidtOrthogonalization;
+
 /*E
-   KSPGMRESCGSRefinementType - How the classical (unmodified) Gram-Schmidt is performed in the GMRES solvers
+   KSPCGSRefinementType - How the classical (unmodified) Gram-Schmidt is performed in the GMRES solvers
 
    Values:
-+  `KSP_GMRES_CGS_REFINE_NEVER`    - one step of classical Gram-Schmidt
-.  `KSP_GMRES_CGS_REFINE_IFNEEDED` - a second step is performed if the first step does not satisfy some criteria
--  `KSP_GMRES_CGS_REFINE_ALWAYS`   - always perform two steps
++  `KSP_CGS_REFINE_NEVER`    - one step of classical Gram-Schmidt
+.  `KSP_CGS_REFINE_IFNEEDED` - a second step is performed if the first step does not satisfy some criteria
+-  `KSP_CGS_REFINE_ALWAYS`   - always perform two steps
 
    Level: advanced
 
-.seealso: [](ch_ksp), `KSP`, `KSPGMRES`, `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESSetOrthogonalization()`,
-          `KSPGMRESGetOrthogonalization()`,
-          `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSPGMRESModifiedGramSchmidtOrthogonalization()`
+.seealso: [](ch_ksp), `KSP`, `KSPGMRES`, `KSPClassicalGramSchmidtOrthogonalization()`, `KSPSetOrthogonalization()`,
+          `KSPGetOrthogonalization()`,
+          `KSPSetCGSRefinementType()`, `KSPGetCGSRefinementType()`, `KSPModifiedGramSchmidtOrthogonalization()`
 E*/
 typedef enum {
-  KSP_GMRES_CGS_REFINE_NEVER,
-  KSP_GMRES_CGS_REFINE_IFNEEDED,
-  KSP_GMRES_CGS_REFINE_ALWAYS
-} KSPGMRESCGSRefinementType;
-PETSC_EXTERN const char *const KSPGMRESCGSRefinementTypes[];
+  KSP_CGS_REFINE_NEVER,
+  KSP_CGS_REFINE_IFNEEDED,
+  KSP_CGS_REFINE_ALWAYS
+} KSPCGSRefinementType;
+PETSC_EXTERN const char *const KSPCGSRefinementTypes[];
 
 /*MC
-   KSP_GMRES_CGS_REFINE_NEVER - Do the classical (unmodified) Gram-Schmidt process
+   KSP_CGS_REFINE_NEVER - Do the classical (unmodified) Gram-Schmidt process
 
    Level: advanced
 
    Note:
    Possibly unstable, but the fastest to compute
 
-.seealso: [](ch_ksp), `KSPGMRES`, `KSPGMRESCGSRefinementType`, `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESSetOrthogonalization()`,
-          `KSP`, `KSPGMRESGetOrthogonalization()`,
-          `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSP_GMRES_CGS_REFINE_IFNEEDED`, `KSP_GMRES_CGS_REFINE_ALWAYS`,
-          `KSPGMRESModifiedGramSchmidtOrthogonalization()`
+.seealso: [](ch_ksp), `KSPGMRES`, `KSPCGSRefinementType`, `KSPClassicalGramSchmidtOrthogonalization()`, `KSPSetOrthogonalization()`,
+          `KSP`, `KSPGetOrthogonalization()`,
+          `KSPSetCGSRefinementType()`, `KSPGetCGSRefinementType()`, `KSP_CGS_REFINE_IFNEEDED`, `KSP_CGS_REFINE_ALWAYS`,
+          `KSPModifiedGramSchmidtOrthogonalization()`
 M*/
 
 /*MC
-    KSP_GMRES_CGS_REFINE_IFNEEDED - Do the classical (unmodified) Gram-Schmidt process and one step of
+    KSP_CGS_REFINE_IFNEEDED - Do the classical (unmodified) Gram-Schmidt process and one step of
           iterative refinement if an estimate of the orthogonality of the resulting vectors indicates
           poor orthogonality.
 
    Level: advanced
 
    Note:
-   This is slower than `KSP_GMRES_CGS_REFINE_NEVER` because it requires an extra norm computation to
+   This is slower than `KSP_CGS_REFINE_NEVER` because it requires an extra norm computation to
    estimate the orthogonality but is more stable.
 
-.seealso: [](ch_ksp), `KSPGMRES`, `KSPGMRESCGSRefinementType`, `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESSetOrthogonalization()`,
-          `KSP`, `KSPGMRESGetOrthogonalization()`,
-          `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSP_GMRES_CGS_REFINE_NEVER`, `KSP_GMRES_CGS_REFINE_ALWAYS`,
-          `KSPGMRESModifiedGramSchmidtOrthogonalization()`
+.seealso: [](ch_ksp), `KSPGMRES`, `KSPCGSRefinementType`, `KSPClassicalGramSchmidtOrthogonalization()`, `KSPSetOrthogonalization()`,
+          `KSP`, `KSPGetOrthogonalization()`,
+          `KSPSetCGSRefinementType()`, `KSPGetCGSRefinementType()`, `KSP_CGS_REFINE_NEVER`, `KSP_CGS_REFINE_ALWAYS`,
+          `KSPModifiedGramSchmidtOrthogonalization()`
 M*/
 
 /*MC
-   KSP_GMRES_CGS_REFINE_ALWAYS - Do two steps of the classical (unmodified) Gram-Schmidt process.
+   KSP_CGS_REFINE_ALWAYS - Do two steps of the classical (unmodified) Gram-Schmidt process.
 
    Level: advanced
 
    Notes:
-   This is roughly twice the cost of `KSP_GMRES_CGS_REFINE_NEVER` because it performs the process twice
-   but it saves the extra norm calculation needed by `KSP_GMRES_CGS_REFINE_IFNEEDED`.
+   This is roughly twice the cost of `KSP_CGS_REFINE_NEVER` because it performs the process twice
+   but it saves the extra norm calculation needed by `KSP_CGS_REFINE_IFNEEDED`.
 
    You should only use this if you absolutely know that the iterative refinement is needed.
 
-.seealso: [](ch_ksp), `KSPGMRES`, `KSPGMRESCGSRefinementType`, `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESSetOrthogonalization()`,
-          `KSP`, `KSPGMRESGetOrthogonalization()`,
-          `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSP_GMRES_CGS_REFINE_IFNEEDED`, `KSP_GMRES_CGS_REFINE_ALWAYS`,
-          `KSPGMRESModifiedGramSchmidtOrthogonalization()`
+.seealso: [](ch_ksp), `KSPGMRES`, `KSPCGSRefinementType`, `KSPClassicalGramSchmidtOrthogonalization()`, `KSPSetOrthogonalization()`,
+          `KSP`, `KSPGetOrthogonalization()`,
+          `KSPSetCGSRefinementType()`, `KSPGetCGSRefinementType()`, `KSP_CGS_REFINE_IFNEEDED`, `KSP_CGS_REFINE_ALWAYS`,
+          `KSPModifiedGramSchmidtOrthogonalization()`
 M*/
 
-PETSC_EXTERN PetscErrorCode KSPGMRESSetCGSRefinementType(KSP, KSPGMRESCGSRefinementType);
-PETSC_EXTERN PetscErrorCode KSPGMRESGetCGSRefinementType(KSP, KSPGMRESCGSRefinementType *);
+PETSC_EXTERN PetscErrorCode KSPSetCGSRefinementType(KSP, KSPCGSRefinementType);
+PETSC_EXTERN PetscErrorCode KSPGetCGSRefinementType(KSP, KSPCGSRefinementType *);
 
+PETSC_DEPRECATED_FUNCTION(3, 26, 0, "KSPModifiedGramSchmidtOrthogonalization()", ) static inline PetscErrorCode KSPGMRESModifiedGramSchmidtOrthogonalization(KSP ksp, PetscInt it)
+{
+  return PETSC_SUCCESS;
+}
+PETSC_DEPRECATED_FUNCTION(3, 26, 0, "KSPClassicalGramSchmidtOrthogonalization()", ) static inline PetscErrorCode KSPGMRESClassicalGramSchmidtOrthogonalization(KSP ksp, PetscInt it)
+{
+  return PETSC_SUCCESS;
+}
+PETSC_DEPRECATED_FUNCTION(3, 26, 0, "KSPSetOrthogonalization()", ) static inline PetscErrorCode KSPGMRESSetOrthogonalization(KSP ksp, PetscErrorCode (*orthog)(KSP, PetscInt))
+{
+  SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Use KSPSetOrthogonalization()");
+}
+PETSC_DEPRECATED_FUNCTION(3, 26, 0, "KSPGetOrthogonalization()", ) static inline PetscErrorCode KSPGMRESGetOrthogonalization(KSP ksp, PetscErrorCode (**orthog)(KSP, PetscInt))
+{
+  (void)ksp;
+  *orthog = NULL;
+  return PETSC_SUCCESS;
+}
 PETSC_EXTERN KSPFlexibleModifyPCFn KSPFlexibleModifyPCNoChange;
 PETSC_EXTERN KSPFlexibleModifyPCFn KSPFlexibleModifyPCKSP;
 
