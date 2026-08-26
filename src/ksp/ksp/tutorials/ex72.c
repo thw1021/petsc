@@ -464,7 +464,7 @@ int main(int argc, char **args)
       suffix: 6
       requires: datafilespath double !defined(PETSC_USE_64BIT_INDICES)
       args: -f0 ${DATAFILESPATH}/matrices/fem1
-      args: -pc_factor_levels 2 -pc_factor_fill 1.73 -ksp_gmres_cgs_refinement_type refine_always
+      args: -pc_factor_levels 2 -pc_factor_fill 1.73 -ksp_orthogonalization_cgs_refinement_type refine_always
 
    testset:
       TODO: Matrix row/column sizes are not compatible with block size
@@ -473,7 +473,7 @@ int main(int argc, char **args)
       args: -f0 ${DATAFILESPATH}/matrices/medium
       args: -viewer_binary_skip_info -mat_type seqbaij
       args: -matload_block_size {{2 3 4 5 6 7 8}separate output}
-      args: -ksp_max_it 100 -ksp_gmres_cgs_refinement_type refine_always
+      args: -ksp_max_it 100 -ksp_orthogonalization_cgs_refinement_type refine_always
       args: -ksp_rtol 1.0e-15 -ksp_monitor
       test:
          suffix: a
@@ -501,14 +501,14 @@ int main(int argc, char **args)
       suffix: 8
       requires: datafilespath double !defined(PETSC_USE_64BIT_INDICES)
       args: -f0 ${DATAFILESPATH}/matrices/medium
-      args: -ksp_diagonal_scale -pc_type eisenstat -ksp_monitor -ksp_diagonal_scale_fix -ksp_gmres_cgs_refinement_type refine_always -mat_no_inode
+      args: -ksp_diagonal_scale -pc_type eisenstat -ksp_monitor -ksp_diagonal_scale_fix -ksp_orthogonalization_cgs_refinement_type refine_always -mat_no_inode
 
    testset:
       TODO: Matrix row/column sizes are not compatible with block size
       suffix: 9
       requires: datafilespath double !defined(PETSC_USE_64BIT_INDICES)
       args: -f0 ${DATAFILESPATH}/matrices/medium
-      args: -viewer_binary_skip_info -matload_block_size {{1 2 3 4 5 6 7}separate output} -ksp_max_it 100 -ksp_gmres_cgs_refinement_type refine_always -ksp_rtol 1.0e-15 -ksp_monitor
+      args: -viewer_binary_skip_info -matload_block_size {{1 2 3 4 5 6 7}separate output} -ksp_max_it 100 -ksp_orthogonalization_cgs_refinement_type refine_always -ksp_rtol 1.0e-15 -ksp_monitor
       test:
          suffix: a
          args: -mat_type seqbaij
