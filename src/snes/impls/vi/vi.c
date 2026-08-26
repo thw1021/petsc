@@ -409,6 +409,23 @@ static PetscErrorCode SNESVIDMComputeVariableBounds(SNES snes, Vec xl, Vec xu)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+   SNESVIScaleVariableBounds_Private - Converts snes->xl/xu from physical to scaled units, matching the
+   scaling already applied to snes->vec_sol. A no-op if there is no right diagonal scaling, or if the
+   bounds are already known to be in scaled units (snes->boundsscaled), which avoids converting twice
+   when a SNESCOMPOSITE outer solver shares its own already-scaled bounds with a sub-SNES.
+*/
+PetscErrorCode SNESVIScaleVariableBounds_Private(SNES snes)
+{
+  PetscFunctionBegin;
+  if (snes->rightscale && !snes->boundsscaled) {
+    PetscCall(VecPointwiseDivide(snes->xl, snes->xl, snes->rightscale));
+    PetscCall(VecPointwiseDivide(snes->xu, snes->xu, snes->rightscale));
+    snes->boundsscaled = PETSC_TRUE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // PetscClangLinter pragma disable: -fdoc-sowing-chars
 /*
   SNESSetUp_VI - Does setup common to all VI solvers -- basically makes sure bounds have been properly set up
@@ -459,6 +476,7 @@ PetscErrorCode SNESSetUp_VI(SNES snes)
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Distribution of lower bound, upper bound and the solution vector should be identical across all the processors.");
     }
   }
+  PetscCall(SNESVIScaleVariableBounds_Private(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 PetscErrorCode SNESReset_VI(SNES snes)
@@ -467,6 +485,7 @@ PetscErrorCode SNESReset_VI(SNES snes)
   PetscCall(VecDestroy(&snes->xl));
   PetscCall(VecDestroy(&snes->xu));
   snes->usersetbounds = PETSC_FALSE;
+  snes->boundsscaled  = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -551,8 +570,9 @@ PetscErrorCode SNESVISetVariableBounds_VI(SNES snes, Vec xl, Vec xu)
   PetscCall(PetscObjectReference((PetscObject)xu));
   PetscCall(VecDestroy(&snes->xl));
   PetscCall(VecDestroy(&snes->xu));
-  snes->xl = xl;
-  snes->xu = xu;
+  snes->xl           = xl;
+  snes->xu           = xu;
+  snes->boundsscaled = PETSC_FALSE;
   PetscCall(VecGetLocalSize(xl, &n));
   PetscCall(VecGetArrayRead(xl, &xxl));
   PetscCall(VecGetArrayRead(xu, &xxu));
