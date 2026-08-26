@@ -84,6 +84,11 @@
 - Change `MatGetValues()` to respect the row or column orientation set with `MatSetOption(mat, MAT_ROW_ORIENTED, ...)`. This will break current code that calls
   `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE)` and uses `MatGetValues()`
 - Add new `MatType` `MATSEQBAIJLIBXSMM` and `MATMPIBAIJLIBXSMM`
+- Add `MatCreateKAIJAB()`, `MatKAIJSetB()` and `MatKAIJGetB()` so a `MATKAIJ` matrix can represent (A x T) + (B x S) with a general second
+  operand `B` instead of the identity; `MatSOR()`, `MatGetRow()` and `MatConvert()` are not supported when `B` is not the identity
+- Add support for `MatGetDiagonalBlock()` with `MATMPIKAIJ`, which previously errored; this allows `PCPBJACOBI` to be used with a parallel `MATKAIJ`
+- Change `MatKAIJSetA()` to release a previously set `MATAIJ` matrix and to require `MATSEQAIJ` for a `MATSEQKAIJ` and `MATMPIAIJ` for a `MATMPIKAIJ`
+- Deprecate `MatKAIJGetAIJ()` and `MatKAIJSetAIJ()` in favor of `MatKAIJGetA()` and `MatKAIJSetA()`, matching the `A`/`B` naming of `MatCreateKAIJAB()` and the `B` accessors
 
 ## MatCoarsen
 
@@ -130,6 +135,12 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
+- Fix `TSIRK` for solution vectors with block size greater than one, which previously failed with a stride-scatter error
+- Add `TSSetMassMatrix()`, `TSGetMassMatrix()`, `TSSetMassMatrixContextDestroy()`, `TSComputeMassMatrix()`, `TSHasMassMatrix()`,
+  `TSSetMassMatrixConstant()` and `TSGetMassMatrixConstant()`, together with `TSMassMatrixFn` and the `DMTS`-level
+  `DMTSSetMassMatrix()`, `DMTSGetMassMatrix()` and `DMTSSetMassMatrixContextDestroy()`, letting a user supply the (possibly
+  singular) mass matrix dF/dUdot of a DAE
+- Add `TSIRK` support for DAEs with a mass matrix supplied through `TSSetMassMatrix()`
 
 ## TAO
 

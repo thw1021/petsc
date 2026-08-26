@@ -52,6 +52,7 @@ typedef struct {
   TestType  testType;
   ModelType modelType;
   PetscInt  Nf;
+  PetscBool massConstant; /* treat the mass matrix as constant (assemble once) */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -71,6 +72,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->plotIdx       = 0;
   options->plotStep      = PETSC_INT_MAX;
   options->plotting      = PETSC_FALSE;
+  options->massConstant  = PETSC_TRUE;
 
   PetscOptionsBegin(comm, "", "MHD Problem Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-debug", "The debugging level", "mhd.c", options->debug, &options->debug, NULL));
@@ -91,6 +93,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsReal("-plot_dt", "Plot frequency in time", "mhd.c", options->plotDt, &options->plotDt, NULL));
   PetscCall(PetscOptionsReal("-plot_start_time", "Time to delay start of plotting", "mhd.c", options->plotStartTime, &options->plotStartTime, NULL));
   PetscCall(PetscOptionsReal("-perturbation", "Random perturbation of initial psi scale", "mhd.c", options->perturb, &options->perturb, NULL));
+  PetscCall(PetscOptionsBool("-mass_constant", "Treat the mass matrix as constant (assemble once and reuse)", "mhd.c", options->massConstant, &options->massConstant, NULL));
   PetscCall(PetscPrintf(comm, "Test Type = %s\n", testTypes[options->testType]));
   PetscCall(PetscPrintf(comm, "Model Type = %s\n", modelTypes[options->modelType]));
   PetscCall(PetscPrintf(comm, "eta = %g\n", (double)options->eta));
@@ -528,6 +531,62 @@ static PetscErrorCode SetupProblem(PetscDS prob, DM dm, AppCtx *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* mass term for a single-component field: g0 = 1 (the FEM mass matrix entry \int phi_i phi_j) */
+static void g0_mass(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  g0[0] = 1.0;
+}
+
+/*
+  MassMatrix - assemble the (constant, singular) mass matrix M = dF/dUdot for TSIRK's DAE support.
+
+  Only the differential fields PSI and OMEGA carry a time derivative (see f0_psi_2f(), f0_psi_4f() and f0_Omega()), so M has the FEM
+  mass matrix on their diagonal blocks and is zero on the algebraic fields JZ and PHI. The DM to assemble on is obtained
+  with TSGetDM() (the fine DM, or a coarse level in a multigrid hierarchy); the matrix is assembled on a clone of it whose
+  weak form has been cleared so that only the mass Jacobian terms remain. The clone is composed with the DM it was built
+  from, so a repeated call on the same level reuses it rather than rediscretizing.
+*/
+static PetscErrorCode MassMatrix(TS ts, PetscReal t, Vec U, Mat M, void *actx)
+{
+  AppCtx       *ctx = (AppCtx *)actx;
+  DM            dm, dmc;
+  PetscDS       ds;
+  PetscWeakForm wf;
+  Vec           u;
+  IS            cellIS;
+  PetscFormKey  key;
+  PetscInt      depth;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &dm));
+  PetscCall(PetscObjectQuery((PetscObject)dm, "ex48_mass_dm", (PetscObject *)&dmc));
+  if (!dmc) {
+    PetscCall(DMClone(dm, &dmc));
+    PetscCall(DMCopyDisc(dm, dmc));
+    PetscCall(DMGetDS(dmc, &ds));
+    PetscCall(PetscDSGetWeakForm(ds, &wf));
+    PetscCall(PetscWeakFormClear(wf));
+    PetscCall(PetscDSSetJacobian(ds, PSI, PSI, g0_mass, NULL, NULL, NULL));
+    if (ctx->modelType == TWO_FILD) PetscCall(PetscDSSetJacobian(ds, OMEGA, OMEGA, g0_mass, NULL, NULL, NULL));
+    PetscCall(PetscObjectCompose((PetscObject)dm, "ex48_mass_dm", (PetscObject)dmc));
+    PetscCall(PetscObjectDereference((PetscObject)dmc)); /* dm owns it now, but dmc stays valid for use below */
+  }
+  PetscCall(MatZeroEntries(M));
+  /* g0_mass() ignores the state, but the integrator still tabulates u at the quadrature points, so hand it a defined vector */
+  PetscCall(DMGetLocalVector(dmc, &u));
+  PetscCall(VecZeroEntries(u));
+  PetscCall(DMPlexGetDepth(dmc, &depth));
+  PetscCall(DMGetStratumIS(dmc, "depth", depth, &cellIS));
+  key.label = NULL;
+  key.value = 0;
+  key.field = 0;
+  key.part  = 0;
+  PetscCall(DMPlexComputeJacobianByKey(dmc, key, cellIS, 0.0, 0.0, u, NULL, M, M, ctx));
+  PetscCall(ISDestroy(&cellIS));
+  PetscCall(DMRestoreLocalVector(dmc, &u));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode SetupDiscretization(DM dm, AppCtx *ctx)
 {
   DM             cdm;
@@ -600,6 +659,10 @@ int main(int argc, char **argv)
   PetscCall(DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, &ctx));
   PetscCall(DMTSSetIFunctionLocal(dm, DMPlexTSComputeIFunctionFEM, &ctx));
   PetscCall(DMTSSetIJacobianLocal(dm, DMPlexTSComputeIJacobianFEM, &ctx));
+  /* Provide the mass matrix so implicit integrators (e.g. TSIRK) can solve this DAE; it is constant in time,
+     so by default it is assembled once and reused (see -mass_constant) */
+  PetscCall(TSSetMassMatrix(ts, MassMatrix, &ctx));
+  PetscCall(TSSetMassMatrixConstant(ts, ctx.massConstant));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
   PetscCall(TSSetMaxTime(ts, 15.0));
   PetscCall(TSSetFromOptions(ts));
@@ -634,5 +697,25 @@ int main(int argc, char **argv)
       -snes_rtol 1.e-9 -snes_stol 1.e-9 -ts_adapt_dt_max 0.01 -ts_adapt_monitor -ts_arkimex_type 1bee \
       -ts_time_step 0.001 -ts_max_step_rejections 10 -ts_max_snes_failures unlimited -ts_max_steps 1 -ts_max_time -ts_monitor -ts_type arkimex
     filter: grep -v DM_
+
+  # TSIRK integrates this DAE using the mass matrix supplied through TSSetMassMatrix();
+  # point-block Jacobi preconditions the combined stage system via the KAIJ block diagonal.
+  # irk_constant: constant mass matrix assembled once; irk_nonconstant: re-evaluated every
+  # Jacobian (-mass_constant 0), which must give identical results since the mass matrix is constant.
+  testset:
+    suffix: irk
+    requires: triangle !complex
+    nsize: 4
+    output_file: output/ex48_irk.out
+    args: -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_plex_simplex 1 -dm_refine_hierarchy 2 \
+      -eta 0.0001 -mu 0.005 -petscpartitioner_type simple -petscspace_degree 2 \
+      -ts_type irk -ts_time_step 0.001 -ts_max_steps 2 -ts_monitor \
+      -ksp_type fgmres -pc_type pbjacobi -ksp_rtol 1e-6 -ksp_max_it 200 -snes_rtol 1.e-9 -snes_converged_reason
+    filter: grep -E "TS dt|Nonlinear solve"
+    test:
+      suffix: constant
+    test:
+      suffix: nonconstant
+      args: -mass_constant 0
 
 TEST*/
