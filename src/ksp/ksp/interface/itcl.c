@@ -313,6 +313,11 @@ PETSC_INTERN PetscErrorCode KSPCheckPCMPI(KSP);
 . -ksp_constant_null_space (true|false)                           - assume the operator (matrix) has the constant vector in its null space
 . -ksp_test_null_space (true|false)                               - tests if the null space associated with the linear system operator of the `KSP` is actually a null space of the operator
 . -ksp_knoll (true|false)                                         - compute initial guess by applying the preconditioner to the right-hand side
+. -ksp_classicalgramschmidt                                       - use classical (unmodified) Gram-Schmidt to orthogonalize against
+                                                                    the Krylov space (fast) (the default)
+. -ksp_modifiedgramschmidt                                        - use modified Gram-Schmidt in the orthogonalization (more stable, but slower)
+. -ksp_cgs_refinement_type (refine_never|refine_ifneeded|refine_always) - determine if iterative refinement is used to increase the
+                                                                    stability of the classical Gram-Schmidt  orthogonalization.
 . -ksp_use_explicittranspose (true|false)                         - transpose the system explicitly in `KSPSolveTranspose()`
 . -ksp_error_if_not_converged (true|false)                        - stop the program as soon as an error is detected in `KSPSolve()`,
                                                                     `KSP_DIVERGED_ITS` is not treated as an error on inner solves
@@ -510,6 +515,12 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
     PetscCall(MatSetNullSpace(Amat, nsp));
     PetscCall(MatNullSpaceDestroy(&nsp));
   }
+
+  PetscCall(PetscOptionsBoolGroupBegin("-ksp_classicalgramschmidt", "classical (unmodified) Gram-Schmidt (fast)", "KSPSetOrthogonalization", &flg));
+  if (flg) PetscCall(KSPSetOrthogonalization(ksp, KSPClassicalGramSchmidtOrthogonalization));
+  PetscCall(PetscOptionsBoolGroupEnd("-ksp_modifiedgramschmidt", "modified Gram-Schmidt (slow, more stable)", "KSPSetOrthogonalization", &flg));
+  if (flg) PetscCall(KSPSetOrthogonalization(ksp, KSPModifiedGramSchmidtOrthogonalization));
+  PetscCall(PetscOptionsEnum("-ksp_cgs_refinement_type", "Type of iterative refinement for classical (unmodified) Gram-Schmidt", "KSPSetCGSRefinementType", KSPCGSRefinementTypes, (PetscEnum)ksp->cgstype, (PetscEnum *)&ksp->cgstype, &flg));
 
   flg = PETSC_FALSE;
   if (ksp->pc) {
