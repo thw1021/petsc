@@ -902,7 +902,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
         }
       }
       PetscCall(ISRestoreIndices(nedfieldlocal, &idxs));
-      PetscCall(PCBDDCSetLocalAdjacencyGraph(pc, n, iia, jja, PETSC_COPY_VALUES));
+      PetscCall(PCBDDCSetLocalAdjacencyGraph(pc, n, iia, jja, PETSC_OWN_POINTER));
       if (rest) PetscCall(MatRestoreRowIJ(matis->A, 0, PETSC_TRUE, PETSC_FALSE, &i, (const PetscInt **)&iiu, (const PetscInt **)&jju, &done));
       if (free) PetscCall(PetscFree2(iiu, jju));
       PetscCall(PetscBTDestroy(&btf));
