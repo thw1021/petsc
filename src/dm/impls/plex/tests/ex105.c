@@ -161,8 +161,16 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
   {
     PetscInt hi = newNumCells;
 
+    PetscInt lo = newNumCells;
+
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &lo, 1, MPIU_INT, MPI_MIN, comm));
     PetscCheck(size == 1 || hi * (PetscInt)size <= 2 * NCells, comm, PETSC_ERR_PLIB, "Reorder left %" PetscInt_FMT " cells on one rank; regular sampling bounds this by %" PetscInt_FMT, hi, 2 * NCells / (PetscInt)size);
+    // Every rank must receive cells. The bound above cannot see the worst case on two ranks, where
+    // one rank holding everything meets it exactly. Too few samples produce exactly that: with two
+    // samples per rank a single value decides the only splitter, and if that value sits near the
+    // start of the curve then every cell goes to one rank.
+    PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "A rank received no cells; the splitters did not cut the curve");
   }
   PetscCall(PetscPrintf(comm, "FromCentroids: N=%" PetscInt_FMT " cells=%" PetscInt_FMT " permutation ok, globally curve sorted, balanced\n", N, NCells));
   PetscCall(PetscSFDestroy(&sf));
@@ -340,10 +348,10 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  for (PetscInt kind = 0; kind < 3; ++kind) {
+  for (PetscInt kind = 0; kind < 4; ++kind) {
     PetscSF    sf;
     PetscReal *cent;
-    PetscInt   NCells = N * N * N, numCells = 0, newNumCells, lo, hi, tot;
+    PetscInt   NCells = kind == 3 ? N * N * N - 1 : N * N * N, numCells = 0, newNumCells, lo, hi, tot;
 
     for (PetscInt g = 0; g < NCells; ++g)
       if (g % size == rank) ++numCells;
@@ -365,6 +373,20 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
             cent[c * 3 + 0] = 1e6;
             cent[c * 3 + 1] = 1e6;
             cent[c * 3 + 2] = 1e6;
+          }
+        } else if (kind == 3) {
+          // Every rank holds cells over the whole box, including one at the very corner. This is
+          // what a mesh file in generator order gives: each rank's own smallest curve code equals
+          // the global smallest. If too few samples are taken then that shared value becomes the
+          // only splitter and every cell lands on one rank.
+          if (c == 0) {
+            cent[c * 3 + 0] = 0.;
+            cent[c * 3 + 1] = 0.;
+            cent[c * 3 + 2] = 0.;
+          } else {
+            cent[c * 3 + 0] = (PetscReal)((g * 7919) % N);
+            cent[c * 3 + 1] = (PetscReal)((g * 6271) % N);
+            cent[c * 3 + 2] = (PetscReal)((g * 4643) % N);
           }
         } else { // three quarters of the cells on one point
           if (g % 4) {
@@ -402,7 +424,7 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
     PetscCall(PetscSFDestroy(&sf));
     PetscCall(PetscFree(cent));
   }
-  PetscCall(PetscPrintf(comm, "Degenerate geometry: three cases balanced within the sampling bound\n"));
+  PetscCall(PetscPrintf(comm, "Degenerate geometry: four cases balanced within the sampling bound\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

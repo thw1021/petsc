@@ -1677,10 +1677,20 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &NCells, 1, MPIU_INT, MPI_SUM, comm));
 
   // Sample count for this rank, proportional to its share of the cells. A rank with cells always
-  // offers at least one sample; a rank with none offers none. The product is formed in 64 bits
-  // because `numCells` times `size`*`size` overflows a 32-bit `PetscInt` on large meshes.
+  // offers at least one sample; a rank with none offers none.
+  //
+  // The target is `size` samples per rank once `size` passes the floor below, which is the classical
+  // regular-sampling choice. Below that the floor takes over. Two ranks would otherwise be asked for
+  // two samples each, and after rounding for three in total, so a single value would decide the only
+  // splitter. On a mesh whose cells reach every rank in file order the smallest sample from each rank
+  // sits near the start of the curve, that value becomes the splitter, and every cell lands on one
+  // rank. Measured on 11.4 million tetrahedra over two ranks: one rank kept 11,416,998 of them.
+  //
+  // Round to nearest rather than truncate, so equal shares ask for equal counts. The product needs
+  // 64 bits: `numCells` times the target reaches 4.2e11 on 192 ranks.
   if (NCells > 0 && numCells > 0) {
-    PetscInt64 want = ((PetscInt64)numCells * (PetscInt64)size * (PetscInt64)size) / (PetscInt64)NCells;
+    const PetscInt64 target = (PetscInt64)size * (PetscInt64)PetscMax(size, 32);
+    PetscInt64       want   = ((PetscInt64)numCells * target + (PetscInt64)NCells / 2) / (PetscInt64)NCells;
 
     nloc = (PetscInt)PetscMin((PetscInt64)numCells, PetscMax((PetscInt64)1, want));
   }
