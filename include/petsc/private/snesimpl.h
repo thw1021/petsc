@@ -67,6 +67,7 @@ struct _p_SNES {
   void *scaP;    /* scaling context */
 
   Vec leftscale, rightscale; /* user-provided left/right diagonal scaling; see SNESSetRightDiagonalScale() */
+  Vec rightscale_work;       /* scratch: holds physical x = X .* rightscale, passed to the user Function/Jacobian callback */
 
   PetscReal precheck_picard_angle; /* For use with SNESLineSearchPreCheckPicard */
 
@@ -174,6 +175,7 @@ struct _p_SNES {
   Vec       xl, xu;          /* upper and lower bounds for box constrained VI problems */
   PetscInt  ntruebounds;     /* number of non-infinite bounds set for VI box constraints */
   PetscBool usersetbounds;   /* bounds have been set via SNESVISetVariableBounds(), rather than via computevariablebounds() callback. */
+  PetscBool boundsscaled;    /* xl/xu are already expressed in the same scaled units as vec_sol; guards SNESVIScaleVariableBounds_Private() against converting twice */
 
   PetscBool alwayscomputesfinalresidual; /* Does SNESSolve_XXX always compute the value of the residual at the final
                                              * solution and put it in vec_func?  Used inside SNESSolve_FAS to determine
@@ -282,6 +284,9 @@ static inline PetscErrorCode SNESLogConvergenceHistory(SNES snes, PetscReal res,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode                                 SNESSolve_Private(SNES, Vec, Vec, PetscBool);
+PETSC_INTERN PetscErrorCode                                 SNESCheckScale_Private(SNES, SNES);
+PETSC_INTERN PetscErrorCode                                 SNESVIScaleVariableBounds_Private(SNES);
 PETSC_EXTERN PetscErrorCode                                 SNESVIProjectOntoBounds(SNES, Vec);
 PETSC_INTERN PetscErrorCode                                 SNESVICheckLocalMin_Private(SNES, Mat, Vec, Vec, PetscReal, PetscBool *);
 PETSC_INTERN PetscErrorCode                                 SNESReset_VI(SNES);
@@ -295,9 +300,6 @@ PETSC_INTERN PetscErrorCode                                 SNESVISetVariableBou
 PETSC_INTERN PetscErrorCode                                 SNESConvergedDefault_VI(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *);
 
 PETSC_INTERN PetscErrorCode DMSNESUnsetFunctionContext_Internal(DM);
-
-PETSC_INTERN PetscErrorCode SNESVecNormRightScaled_Private(SNES, Vec, NormType, PetscReal *);
-PETSC_INTERN PetscErrorCode SNESVecNormLeftScaled_Private(SNES, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMSNESUnsetJacobianContext_Internal(DM);
 
 PETSC_EXTERN PetscLogEvent SNES_Solve;

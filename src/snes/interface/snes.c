@@ -1805,17 +1805,18 @@ PetscErrorCode SNESSetKSP(SNES snes, KSP ksp)
   not a change of variables: it does not change what $x$ means, only which linear combination of
   the residual equations is measured.
 
-  Only supported for `SNESNEWTONLS` and `SNESNEWTONTR`; `SNESSetUp()` and `SNESSolve()` error for
-  every other `SNESType`. `D` and `D_F` affect the Newton correction's inner `KSP` solve (both its
-  preconditioning and, when a `MATMFFD` Jacobian is used, the differencing step, see
-  `MatDiagonalScale()`) and the norms used by the line search or trust region globalization; they
-  never change the exact Newton direction itself.
+  `SNES` applies `D` and `D_F` transparently: `SNESComputeFunction()` scales the residual by `D_F`
+  and `SNESComputeJacobian()` scales the Jacobian by `D` and `D_F` (via `MatDiagonalScale()`) before
+  the inner `KSP` solve, so `KSP` always sees an already-scaled operator and residual. As a result,
+  quantities visible from inside a `KSP` convergence test or monitor (e.g. via `KSPBuildSolution()`
+  or `KSPBuildResidual()`) are in scaled units, not physical ones. This scaling is supported for
+  every `SNESType`, except that it cannot be combined with a quasi-Newton model set via
+  `SNESNewtonTRSetQNType()`.
 
   The vector is referenced, not copied, and changes made to it take effect on the next
-  `SNESSetUp()`. This scaling is not carried forward across `SNESSetKSP()`; the copy pushed down to
-  the `KSP` is refreshed on the next `SNESSetUp()`. It is independent of `SNESGetNPC()`.
+  `SNESSetUp()`. It is independent of `SNESGetNPC()`.
 
-.seealso: [](ch_snes), `SNES`, `SNESGetLeftDiagonalScale()`, `SNESSetRightDiagonalScale()`, `KSPSetLeftDiagonalScale()`,
+.seealso: [](ch_snes), `SNES`, `SNESGetLeftDiagonalScale()`, `SNESSetRightDiagonalScale()`,
           `SNESGetKSP()`, `TSSetRightDiagonalScale()`, `SNESSolve()`
 @*/
 PetscErrorCode SNESSetLeftDiagonalScale(SNES snes, Vec scale)
@@ -1872,14 +1873,14 @@ PetscErrorCode SNESGetLeftDiagonalScale(SNES snes, Vec *scale)
 
   Notes:
   With right scale $R$, $D = R$ is a change of variables $x = R y$. See
-  `SNESSetLeftDiagonalScale()` for the restriction to `SNESNEWTONLS`/`SNESNEWTONTR`, the effect on
-  the inner `KSP` solve and the globalization norms, and the relationship to left scaling.
+  `SNESSetLeftDiagonalScale()` for how `SNES` applies this transparently to the inner `KSP` solve
+  and the relationship to left scaling.
 
   The vector is referenced, not copied, and changes made to it take effect on the next
   `SNESSetUp()`. A `TS` that owns this `SNES` may derive a default `vatol` from `scale`; see
   `TSSetRightDiagonalScale()`.
 
-.seealso: [](ch_snes), `SNES`, `SNESGetRightDiagonalScale()`, `SNESSetLeftDiagonalScale()`, `KSPSetRightDiagonalScale()`,
+.seealso: [](ch_snes), `SNES`, `SNESGetRightDiagonalScale()`, `SNESSetLeftDiagonalScale()`,
           `SNESGetKSP()`, `TSSetRightDiagonalScale()`, `SNESSolve()`
 @*/
 PetscErrorCode SNESSetRightDiagonalScale(SNES snes, Vec scale)
@@ -1920,50 +1921,6 @@ PetscErrorCode SNESGetRightDiagonalScale(SNES snes, Vec *scale)
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscAssertPointer(scale, 2);
   *scale = snes->rightscale;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-// Computes ||D^{-1} v|| when a right diagonal scale D is set (v is in x-space, y = D^{-1} x is in scaled space), else plain ||v||
-PetscErrorCode SNESVecNormRightScaled_Private(SNES snes, Vec v, NormType type, PetscReal *norm)
-{
-  Vec scale;
-
-  PetscFunctionBegin;
-  PetscCall(SNESGetRightDiagonalScale(snes, &scale));
-  if (scale) {
-    DM  dm;
-    Vec w;
-
-    PetscCall(SNESGetDM(snes, &dm));
-    PetscCall(DMGetGlobalVector(dm, &w));
-    PetscCall(VecPointwiseDivide(w, v, scale));
-    PetscCall(VecNorm(w, type, norm));
-    PetscCall(DMRestoreGlobalVector(dm, &w));
-  } else {
-    PetscCall(VecNorm(v, type, norm));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-// Computes ||D_F v|| when a left diagonal scale D_F is set, else plain ||v||
-PetscErrorCode SNESVecNormLeftScaled_Private(SNES snes, Vec v, NormType type, PetscReal *norm)
-{
-  Vec scale;
-
-  PetscFunctionBegin;
-  PetscCall(SNESGetLeftDiagonalScale(snes, &scale));
-  if (scale) {
-    DM  dm;
-    Vec w;
-
-    PetscCall(SNESGetDM(snes, &dm));
-    PetscCall(DMGetGlobalVector(dm, &w));
-    PetscCall(VecPointwiseMult(w, v, scale));
-    PetscCall(VecNorm(w, type, norm));
-    PetscCall(DMRestoreGlobalVector(dm, &w));
-  } else {
-    PetscCall(VecNorm(v, type, norm));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2726,6 +2683,7 @@ PetscErrorCode SNESComputeFunction(SNES snes, Vec x, Vec f)
 {
   DM     dm;
   DMSNES sdm;
+  Vec    xphys = x;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -2738,23 +2696,30 @@ PetscErrorCode SNESComputeFunction(SNES snes, Vec x, Vec f)
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCheck(sdm->ops->computefunction || snes->vec_rhs, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call SNESSetFunction() or SNESSetDM() before SNESComputeFunction(), likely called from SNESSolve().");
+  /* x arrives in scaled (y) units; the user's callback and any explicit-Jacobian MatMult() need the physical x = D*y */
+  if (snes->rightscale) {
+    if (!snes->rightscale_work) PetscCall(VecDuplicate(snes->rightscale, &snes->rightscale_work));
+    PetscCall(VecPointwiseMult(snes->rightscale_work, x, snes->rightscale));
+    xphys = snes->rightscale_work;
+  }
   if (sdm->ops->computefunction) {
     if (sdm->ops->computefunction != SNESObjectiveComputeFunctionDefaultFD) PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, x, f, 0));
-    PetscCall(VecLockReadPush(x));
+    PetscCall(VecLockReadPush(xphys));
     /* ensure domainerror is false prior to computefunction evaluation (may not have been reset) */
     snes->functiondomainerror = PETSC_FALSE;
     {
       void           *ctx;
       SNESFunctionFn *computefunction;
       PetscCall(DMSNESGetFunction(dm, &computefunction, &ctx));
-      PetscCallBack("SNES callback function", (*computefunction)(snes, x, f, ctx));
+      PetscCallBack("SNES callback function", (*computefunction)(snes, xphys, f, ctx));
     }
-    PetscCall(VecLockReadPop(x));
+    PetscCall(VecLockReadPop(xphys));
     if (sdm->ops->computefunction != SNESObjectiveComputeFunctionDefaultFD) PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, x, f, 0));
   } else /* if (snes->vec_rhs) */ {
-    PetscCall(MatMult(snes->jacobian, x, f));
+    PetscCall(MatMult(snes->jacobian, xphys, f));
   }
   if (snes->vec_rhs) PetscCall(VecAXPY(f, -1.0, snes->vec_rhs));
+  if (snes->leftscale) PetscCall(VecPointwiseMult(f, f, snes->leftscale));
   snes->nfuncs++;
   /*
      domainerror might not be set on all processes; so we tag vector locally with infinity and the next inner product or norm will
@@ -3205,6 +3170,7 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
   DM        dm;
   DMSNES    sdm;
   KSP       ksp;
+  Vec       Xphys = X;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -3251,16 +3217,31 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
     }
   }
 
+  /* X arrives in scaled (y) units; the user's callback needs the physical X = D*y */
+  if (snes->rightscale) {
+    if (!snes->rightscale_work) PetscCall(VecDuplicate(snes->rightscale, &snes->rightscale_work));
+    PetscCall(VecPointwiseMult(snes->rightscale_work, X, snes->rightscale));
+    Xphys = snes->rightscale_work;
+  }
   PetscCall(PetscLogEventBegin(SNES_JacobianEval, snes, X, A, B));
-  PetscCall(VecLockReadPush(X));
+  PetscCall(VecLockReadPush(Xphys));
   {
     void           *ctx;
     SNESJacobianFn *J;
     PetscCall(DMSNESGetJacobian(dm, &J, &ctx));
-    PetscCallBack("SNES callback Jacobian", (*J)(snes, X, A, B, ctx));
+    PetscCallBack("SNES callback Jacobian", (*J)(snes, Xphys, A, B, ctx));
   }
-  PetscCall(VecLockReadPop(X));
+  PetscCall(VecLockReadPop(Xphys));
   PetscCall(PetscLogEventEnd(SNES_JacobianEval, snes, X, A, B));
+
+  if (snes->leftscale || snes->rightscale) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMFFD, &flag));
+    if (!flag) PetscCall(MatDiagonalScale(A, snes->leftscale, snes->rightscale));
+    if (B != A) {
+      PetscCall(PetscObjectTypeCompare((PetscObject)B, MATMFFD, &flag));
+      if (!flag) PetscCall(MatDiagonalScale(B, snes->leftscale, snes->rightscale));
+    }
+  }
 
   /* attach latest linearization point to the matrix used to construct the preconditioner */
   PetscCall(PetscObjectCompose((PetscObject)B, "__SNES_latest_X", (PetscObject)X));
@@ -3632,18 +3613,6 @@ PetscErrorCode SNESSetUp(SNES snes)
 
   if (snes->usesksp && !snes->ksp) PetscCall(SNESGetKSP(snes, &snes->ksp));
 
-  {
-    PetscBool newton;
-
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)snes, &newton, SNESNEWTONLS, SNESNEWTONTR, ""));
-    PetscCheck(newton || (!snes->leftscale && !snes->rightscale), PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNESSetLeftDiagonalScale()/SNESSetRightDiagonalScale() are only supported for SNESNEWTONLS and SNESNEWTONTR, not %s",
-               ((PetscObject)snes)->type_name);
-    if (newton && (snes->leftscale || snes->rightscale)) {
-      PetscCall(KSPSetLeftDiagonalScale(snes->ksp, snes->leftscale));
-      PetscCall(KSPSetRightDiagonalScale(snes->ksp, snes->rightscale));
-    }
-  }
-
   if (snes->linesearch) {
     PetscCall(SNESGetLineSearch(snes, &snes->linesearch));
     PetscCall(SNESLineSearchSetFunction(snes->linesearch, SNESComputeFunction));
@@ -3715,6 +3684,17 @@ PetscErrorCode SNESSetUp(SNES snes)
   PetscTryTypeMethod(snes, setup);
 
   PetscCall(SNESSetDefaultComputeJacobian(snes));
+
+  if (snes->leftscale || snes->rightscale) {
+    PetscBool ismffd;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)snes->jacobian, MATMFFD, &ismffd));
+    if (ismffd) PetscCall(MatDiagonalScale(snes->jacobian, snes->leftscale, snes->rightscale));
+    if (snes->jacobian_pre != snes->jacobian) {
+      PetscCall(PetscObjectTypeCompare((PetscObject)snes->jacobian_pre, MATMFFD, &ismffd));
+      if (ismffd) PetscCall(MatDiagonalScale(snes->jacobian_pre, snes->leftscale, snes->rightscale));
+    }
+  }
 
   if (snes->npc && snes->npcside == PC_LEFT) {
     if (snes->functype == SNES_FUNCTION_PRECONDITIONED) {
@@ -3847,6 +3827,7 @@ PetscErrorCode SNESDestroy(SNES *snes)
   PetscCall(KSPDestroy(&(*snes)->ksp));
   PetscCall(VecDestroy(&(*snes)->leftscale));
   PetscCall(VecDestroy(&(*snes)->rightscale));
+  PetscCall(VecDestroy(&(*snes)->rightscale_work));
   PetscCall(SNESLineSearchDestroy(&(*snes)->linesearch));
 
   PetscCall(PetscFree((*snes)->kspconvctx));
@@ -5045,27 +5026,12 @@ PetscErrorCode SNESConvergedReasonViewFromOptions(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  SNESSolve - Solves a nonlinear system $F(x) = b $ associated with a `SNES` object
-
-  Collective
-
-  Input Parameters:
-+ snes - the `SNES` context
-. b    - the constant part of the equation $F(x) = b$, or `NULL` to use zero.
-- x    - the solution vector.
-
-  Level: beginner
-
-  Note:
-  The user should initialize the vector, `x`, with the initial guess
-  for the nonlinear solve prior to calling `SNESSolve()` .
-
-.seealso: [](ch_snes), `SNES`, `SNESCreate()`, `SNESDestroy()`, `SNESSetFunction()`, `SNESSetJacobian()`, `SNESSetGridSequence()`, `SNESGetSolution()`,
-          `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`,
-          `SNESLineSearchSetPostCheck()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchGetPreCheck()`
-@*/
-PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
+/*
+   SNESSolve_Private - Implements SNESSolve(). `convert` controls whether snes->vec_sol is converted
+   between physical and scaled (y) units at entry/exit; a nested solve sharing its parent's scaled
+   space (NPC, FAS) passes PETSC_FALSE since its x/b are already in that space.
+*/
+PetscErrorCode SNESSolve_Private(SNES snes, Vec b, Vec x, PetscBool convert)
 {
   PetscBool flg;
   Vec       xcreated = NULL;
@@ -5182,12 +5148,19 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
       if (snes->ops->computeinitialguess) PetscCallBack("SNES callback compute initial guess", (*snes->ops->computeinitialguess)(snes, snes->vec_sol, snes->initialguessP));
     }
 
+    /* snes->vec_sol is physical up to this point; the internal solve operates entirely in scaled (y) units */
+    if (convert && snes->rightscale) PetscCall(VecPointwiseDivide(snes->vec_sol, snes->vec_sol, snes->rightscale));
+
     if (snes->conv_hist_reset) snes->conv_hist_len = 0;
     PetscCall(SNESResetCounters(snes));
     snes->reason = SNES_CONVERGED_ITERATING;
     PetscCall(PetscLogEventBegin(SNES_Solve, snes, 0, 0, 0));
     PetscUseTypeMethod(snes, solve);
     PetscCall(PetscLogEventEnd(SNES_Solve, snes, 0, 0, 0));
+
+    /* convert snes->vec_sol back to physical units before it is used or reported outside the solve */
+    if (convert && snes->rightscale) PetscCall(VecPointwiseMult(snes->vec_sol, snes->vec_sol, snes->rightscale));
+
     PetscCheck(snes->reason, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Internal error, solver %s returned without setting converged reason", ((PetscObject)snes)->type_name);
     snes->functiondomainerror  = PETSC_FALSE; /* clear the flag if it has been set */
     snes->objectivedomainerror = PETSC_FALSE; /* clear the flag if it has been set */
@@ -5235,6 +5208,33 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
 
   PetscCall(VecDestroy(&xcreated));
   PetscCall(PetscObjectSAWsBlock((PetscObject)snes));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESSolve - Solves a nonlinear system $F(x) = b $ associated with a `SNES` object
+
+  Collective
+
+  Input Parameters:
++ snes - the `SNES` context
+. b    - the constant part of the equation $F(x) = b$, or `NULL` to use zero.
+- x    - the solution vector.
+
+  Level: beginner
+
+  Note:
+  The user should initialize the vector, `x`, with the initial guess
+  for the nonlinear solve prior to calling `SNESSolve()` .
+
+.seealso: [](ch_snes), `SNES`, `SNESCreate()`, `SNESDestroy()`, `SNESSetFunction()`, `SNESSetJacobian()`, `SNESSetGridSequence()`, `SNESGetSolution()`,
+          `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`,
+          `SNESLineSearchSetPostCheck()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchGetPreCheck()`
+@*/
+PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
+{
+  PetscFunctionBegin;
+  PetscCall(SNESSolve_Private(snes, b, x, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

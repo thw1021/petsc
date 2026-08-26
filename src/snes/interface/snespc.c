@@ -1,5 +1,21 @@
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h"  I*/
 
+/*
+   SNESCheckScale_Private - A nested SNES that shares its parent's solution/residual vectors (a
+   nonlinear preconditioner, or an FAS smoother) must use the same diagonal scaling as the parent.
+   Propagates the parent's scale to sub if sub has none configured; errors if sub was explicitly
+   given a different one.
+*/
+PetscErrorCode SNESCheckScale_Private(SNES snes, SNES sub)
+{
+  PetscFunctionBegin;
+  PetscCheck(!sub->leftscale || sub->leftscale == snes->leftscale, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "SNES must use the same left diagonal scale as its parent SNES");
+  PetscCheck(!sub->rightscale || sub->rightscale == snes->rightscale, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "SNES must use the same right diagonal scale as its parent SNES");
+  if (!sub->leftscale) PetscCall(SNESSetLeftDiagonalScale(sub, snes->leftscale));
+  if (!sub->rightscale) PetscCall(SNESSetRightDiagonalScale(sub, snes->rightscale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   SNESApplyNPC - Calls `SNESSolve()` on the preconditioner for the `SNES`
 
@@ -31,10 +47,12 @@ PetscErrorCode SNESApplyNPC(SNES snes, Vec x, Vec f, Vec y)
   PetscCheckSameComm(snes, 1, y, 4);
   PetscCall(VecValidValues_Internal(x, 2, PETSC_TRUE));
   if (snes->npc) {
+    PetscCall(SNESCheckScale_Private(snes, snes->npc));
+
     if (f) PetscCall(SNESSetInitialFunction(snes->npc, f));
     PetscCall(VecCopy(x, y));
     PetscCall(PetscLogEventBegin(SNES_NPCSolve, snes->npc, x, y, 0));
-    PetscCall(SNESSolve(snes->npc, snes->vec_rhs, y));
+    PetscCall(SNESSolve_Private(snes->npc, snes->vec_rhs, y, PETSC_FALSE));
     PetscCall(PetscLogEventEnd(SNES_NPCSolve, snes->npc, x, y, 0));
     PetscCall(VecAYPX(y, -1.0, x));
   }

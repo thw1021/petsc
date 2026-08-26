@@ -126,7 +126,7 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
 {
   PetscInt             maxits, i, lits;
   SNESLineSearchReason lsreason;
-  PetscReal            fnorm, xnorm, ynorm, snorm;
+  PetscReal            fnorm, xnorm, ynorm;
   Vec                  Y, X, F;
   SNESLineSearch       linesearch;
   SNESConvergedReason  reason;
@@ -169,17 +169,16 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
     else snes->vec_func_init_set = PETSC_FALSE;
   }
 
-  PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- ||F||, the unscaled norm used by the linear solve and line search */
+  PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- ||F||, already left-scaled since F is scaled by construction */
   SNESCheckFunctionDomainError(snes, fnorm);
-  PetscCall(SNESVecNormLeftScaled_Private(snes, F, NORM_2, &snorm)); /* snorm <- ||F||, the (possibly left-scaled) norm used for monitoring and convergence testing */
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-  snes->norm = snorm;
+  snes->norm = fnorm;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
-  PetscCall(SNESLogConvergenceHistory(snes, snorm, 0));
+  PetscCall(SNESLogConvergenceHistory(snes, fnorm, 0));
 
   /* test convergence */
-  PetscCall(SNESConverged(snes, 0, 0.0, 0.0, snorm));
-  PetscCall(SNESMonitor(snes, 0, snorm));
+  PetscCall(SNESConverged(snes, 0, 0.0, 0.0, fnorm));
+  PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* hook state vector to BFGS preconditioner */
@@ -194,9 +193,10 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
     /* apply the nonlinear preconditioner */
     if (snes->npc) {
       if (snes->npcside == PC_RIGHT) {
+        PetscCall(SNESCheckScale_Private(snes, snes->npc));
         PetscCall(SNESSetInitialFunction(snes->npc, F));
         PetscCall(PetscLogEventBegin(SNES_NPCSolve, snes->npc, X, snes->vec_rhs, 0));
-        PetscCall(SNESSolve(snes->npc, snes->vec_rhs, X));
+        PetscCall(SNESSolve_Private(snes->npc, snes->vec_rhs, X, PETSC_FALSE));
         PetscCall(PetscLogEventEnd(SNES_NPCSolve, snes->npc, X, snes->vec_rhs, 0));
         PetscCall(SNESGetConvergedReason(snes->npc, &reason));
         if (reason < 0 && reason != SNES_DIVERGED_MAX_IT && reason != SNES_DIVERGED_TR_DELTA) {
@@ -235,9 +235,8 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
     PetscCall(SNESLineSearchApply(linesearch, X, F, &fnorm, Y));
     if (snes->reason) break;
     PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &fnorm, &ynorm));
-    PetscCall(SNESVecNormRightScaled_Private(snes, X, NORM_2, &xnorm));
-    PetscCall(SNESVecNormRightScaled_Private(snes, Y, NORM_2, &ynorm));
-    PetscCall(SNESVecNormLeftScaled_Private(snes, F, NORM_2, &fnorm));
+    PetscCall(VecNorm(X, NORM_2, &xnorm));
+    PetscCall(VecNorm(Y, NORM_2, &ynorm));
     PetscCall(PetscInfo(snes, "fnorm=%18.16e, gnorm=%18.16e, ynorm=%18.16e, lsreason=%d\n", (double)gnorm, (double)fnorm, (double)ynorm, (int)lsreason));
     SNESCheckFunctionDomainError(snes, fnorm);
     PetscCall(SNESLineSearchGetReason(linesearch, &lsreason));
