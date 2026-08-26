@@ -18,25 +18,24 @@ typedef struct {
 
 /*
    KSPIDRInitShadowSpace_IDR - Fill shadow space P[0..s-1] with random
-   orthonormal vectors (modified Gram-Schmidt). Called from KSPSetUp_IDR().
+   orthonormal vectors (Gram-Schmidt). Called from KSPSetUp_IDR().
 */
 static PetscErrorCode KSPIDRInitShadowSpace_IDR(KSP ksp)
 {
-  KSP_IDR    *idr = (KSP_IDR *)ksp->data;
-  PetscScalar dot;
-  PetscInt    k, j;
+  KSP_IDR     *idr = (KSP_IDR *)ksp->data;
+  PetscScalar *dot;
+  PetscInt     k;
 
   PetscFunctionBegin;
   PetscCall(KSPIDRGetRandom(ksp, &idr->rand));
+  PetscCall(PetscMalloc1(idr->s, &dot));
   for (k = 0; k < idr->s; k++) PetscCall(VecSetRandom(idr->PP[k], idr->rand));
-  /* Modified Gram-Schmidt orthonormalization */
+  /* Gram-Schmidt orthonormalization */
   for (k = 0; k < idr->s; k++) {
+    PetscCall((*ksp->orthog)(ksp, idr->PP, k, NULL, dot));
     PetscCall(VecNormalize(idr->PP[k], NULL));
-    for (j = k + 1; j < idr->s; j++) {
-      PetscCall(VecDot(idr->PP[j], idr->PP[k], &dot));
-      PetscCall(VecAXPY(idr->PP[j], -dot, idr->PP[k]));
-    }
   }
+  PetscCall(PetscFree(dot));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
