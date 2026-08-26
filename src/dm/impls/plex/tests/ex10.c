@@ -198,6 +198,12 @@ int main(int argc, char **argv)
   test:
     suffix: morton_refined
     args: -dm_plex_simplex 0 -dm_refine 2 -num_dof 1,0,0 -order_type morton
+  # A periodic mesh with localized coordinates keeps a second, per-cell coordinate field. The
+  # centroid of a cell that crosses the periodic boundary must come from that field, so this covers
+  # the other branch of DMPlexGetCellCoordinates(). Four of the 16 cells cross the boundary.
+  test:
+    suffix: morton_periodic
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,4 -dm_plex_box_bd periodic,none -num_dof 1,0,0 -order_type morton
 
   # Two cell tests 0-3
   test:

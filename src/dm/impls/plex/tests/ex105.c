@@ -155,9 +155,9 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
   PetscCall(PetscSFBcastBegin(sf, MPIU_INT, idx, newidx, MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(sf, MPIU_INT, idx, newidx, MPI_REPLACE));
   PetscCall(CheckGloballyCurveSorted(comm, 3, newNumCells, newcentroids));
-  // The reorder must redistribute, not merely permute in place. A rank holding every cell before
-  // the call must not hold every cell after it. Sampling a fixed number of points per rank fails
-  // this: ranks with no cells dominate the sample set and no splitter cuts the data.
+  // The reorder must redistribute, not merely permute in place, and it must split the cells evenly.
+  // The second pass equidistributes from the global position of each cell, so the counts differ by
+  // at most one. The splitters alone only bound the busiest rank at twice the average.
   {
     PetscInt hi = newNumCells;
 
@@ -165,12 +165,9 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
 
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &lo, 1, MPIU_INT, MPI_MIN, comm));
-    PetscCheck(size == 1 || hi * (PetscInt)size <= 2 * NCells, comm, PETSC_ERR_PLIB, "Reorder left %" PetscInt_FMT " cells on one rank; regular sampling bounds this by %" PetscInt_FMT, hi, 2 * NCells / (PetscInt)size);
-    // Every rank must receive cells. The bound above cannot see the worst case on two ranks, where
-    // one rank holding everything meets it exactly. Too few samples produce exactly that: with two
-    // samples per rank a single value decides the only splitter, and if that value sits near the
-    // start of the curve then every cell goes to one rank.
-    PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "A rank received no cells; the splitters did not cut the curve");
+    PetscCheck(hi - lo <= 1, comm, PETSC_ERR_PLIB, "Cells per rank run from %" PetscInt_FMT " to %" PetscInt_FMT ", which is not an exact split", lo, hi);
+    // Every rank must receive cells once there are enough to go round.
+    PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "A rank received no cells");
   }
   PetscCall(PetscPrintf(comm, "FromCentroids: N=%" PetscInt_FMT " cells=%" PetscInt_FMT " permutation ok, globally curve sorted, balanced\n", N, NCells));
   PetscCall(PetscSFDestroy(&sf));
@@ -412,23 +409,13 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &tot, 1, MPIU_INT, MPI_SUM, comm));
     PetscCheck(tot == NCells, comm, PETSC_ERR_PLIB, "%s: cell count changed from %" PetscInt_FMT " to %" PetscInt_FMT, names[kind], NCells, tot);
-    // Two independent checks.
-    //
-    // Regular sampling bounds the largest range by twice the ideal. Only `size`*`size` samples
-    // decide the splitters, so on few ranks the granularity alone permits a visible imbalance; on
-    // 3 ranks with 512 cells the 9 samples leave about a third. The factor of two is the guarantee.
-    PetscCheck(hi * (PetscInt)size <= 2 * NCells, comm, PETSC_ERR_PLIB, "%s: one rank holds %" PetscInt_FMT " cells, more than twice the ideal %" PetscInt_FMT, names[kind], hi, NCells / (PetscInt)size);
-    // Every rank must receive cells. This is the check that matters here: the curve codes are all
-    // equal or nearly so, and if the split came from the codes alone then one rank would keep every
-    // cell and the rest would get none. A ratio test cannot see that on two ranks, because one rank
-    // holding everything meets the factor of two exactly.
+    // The split must be exact whatever the geometry does to the curve codes. Degenerate geometry
+    // cannot break the balance any more, because the second pass counts positions rather than
+    // codes. It can still break the order, which CheckGloballyCurveSorted() covers in Part A.
+    PetscCheck(hi - lo <= 1, comm, PETSC_ERR_PLIB, "%s: cells per rank run from %" PetscInt_FMT " to %" PetscInt_FMT ", which is not an exact split", names[kind], lo, hi);
+    // Every rank must receive cells. The curve codes here are all equal or nearly so, so a split
+    // taken from the codes alone would leave one rank with every cell and the rest with none.
     PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "%s: a rank received no cells; the curve codes do not separate these centroids, so the split must come from the cell numbering", names[kind]);
-    // Case 3 is well conditioned: distinct codes, cells everywhere, many cells per rank. The split
-    // should land close to the ideal, and a rank floor cannot see this failure because the losing
-    // rank keeps a few cells rather than none. Measured on 4095 cells: 1.03 to 1.09 with enough
-    // samples, and 1.37 to 1.97 with too few.
-    if (kind == 3 && size > 1 && NCells >= 32 * (PetscInt)size)
-      PetscCheck(4 * hi * (PetscInt)size <= 5 * NCells, comm, PETSC_ERR_PLIB, "%s: one rank holds %" PetscInt_FMT " cells against an ideal of %" PetscInt_FMT "; too few samples decide the splitters", names[kind], hi, NCells / (PetscInt)size);
     PetscCall(PetscSFDestroy(&sf));
     PetscCall(PetscFree(cent));
   }
@@ -436,23 +423,358 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Part E: the curve is selected by name. An unregistered name must be rejected, because a silent
+// fall back to a default curve would order the cells along a curve the caller did not ask for.
+static PetscErrorCode TestUnknownCurveType(MPI_Comm comm)
+{
+  const char    *bad[]       = {"hilbert", "morton ", "", NULL};
+  const PetscInt nbad        = (PetscInt)(sizeof(bad) / sizeof(bad[0]));
+  PetscReal      cent[3]     = {0.5, 0.5, 0.5};
+  PetscSF        sf          = NULL;
+  PetscInt      *newcells    = NULL;
+  PetscInt       newNumCells = -1;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  for (PetscInt i = 0; i < nbad; ++i) {
+    // Every process passes the same name, so the collective check fails on all of them together.
+    PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+    ierr = DMPlexReorderCellListByCurveFromCentroids(comm, bad[i], 3, 1, cent, &sf, &newNumCells);
+    PetscCall(PetscPopErrorHandler());
+    PetscCheck(ierr == PETSC_ERR_ARG_UNKNOWN_TYPE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurveFromCentroids() returned %d for curve \"%s\", not PETSC_ERR_ARG_UNKNOWN_TYPE", (int)ierr, bad[i] ? bad[i] : "(null)");
+    // The connectivity interface checks the name through the centroid routine, so it gathers the
+    // corner coordinates first. Pass no cells, which keeps that gather empty.
+    PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+    ierr = DMPlexReorderCellListByCurve(comm, bad[i], 0, 4, NULL, 3, 0, 0, NULL, &sf, &newNumCells, &newcells);
+    PetscCall(PetscPopErrorHandler());
+    PetscCheck(ierr == PETSC_ERR_ARG_UNKNOWN_TYPE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurve() returned %d for curve \"%s\", not PETSC_ERR_ARG_UNKNOWN_TYPE", (int)ierr, bad[i] ? bad[i] : "(null)");
+  }
+  // A rejected call must leave the output arguments alone, so the caller frees nothing.
+  PetscCheck(!sf && !newcells && newNumCells == -1, comm, PETSC_ERR_PLIB, "A rejected call wrote to its output arguments");
+  PetscCall(PetscPrintf(comm, "Unknown curve: %" PetscInt_FMT " names rejected by both interfaces\n", nbad));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Part F: one-dimensional coordinates. The Morton encoder interleaves three axes, and Parts A to D
+// use two or three of them, so a single axis exercises a path of its own. In one dimension the
+// curve is the axis itself, so the reordered cells must come out in ascending coordinate order.
+static PetscErrorCode TestOneDimensional(MPI_Comm comm, PetscInt N)
+{
+  DM          dm;
+  PetscSF     sf, sfCells;
+  PetscReal  *cent, *newcent, *coords;
+  PetscInt   *cells, *newcells, *cellsSaved = NULL;
+  PetscLayout vlayout;
+  PetscInt    numCells = 0, nnewCent, nnewList, NCells = N * N * N, NVertices = N * N * N + 1;
+  PetscInt    numVertices, vStart, vEnd, gnew, cStart, cEnd, gcells;
+  PetscMPIInt size, rank;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  // A line of segments, distributed with a stride so that every process starts with cells spread
+  // over the whole line.
+  for (PetscInt g = 0; g < NCells; ++g)
+    if (g % size == rank) ++numCells;
+  PetscCall(PetscMalloc2(PetscMax(1, numCells), &cent, PetscMax(1, numCells) * 2, &cells));
+  {
+    PetscInt c = 0;
+
+    for (PetscInt g = 0; g < NCells; ++g) {
+      if (g % size != rank) continue;
+      cent[c]          = (PetscReal)g + 0.5;
+      cells[c * 2 + 0] = g;
+      cells[c * 2 + 1] = g + 1;
+      ++c;
+    }
+  }
+
+  // The centroid interface in one dimension.
+  PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 1, numCells, cent, &sf, &nnewCent));
+  gnew = nnewCent;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gnew, 1, MPIU_INT, MPI_SUM, comm));
+  PetscCheck(gnew == NCells, comm, PETSC_ERR_PLIB, "Global cell count changed from %" PetscInt_FMT " to %" PetscInt_FMT, NCells, gnew);
+  PetscCall(CheckMigrationIsPermutation(comm, sf, numCells, nnewCent, NCells));
+  PetscCall(PetscMalloc1(PetscMax(1, nnewCent), &newcent));
+  PetscCall(PetscSFBcastBegin(sf, MPIU_REAL, cent, newcent, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_REAL, cent, newcent, MPI_REPLACE));
+  PetscCall(CheckGloballyCurveSorted(comm, 1, nnewCent, newcent));
+  // On one axis the centroids are distinct and the curve is the axis, so the order is strict.
+  for (PetscInt c = 1; c < nnewCent; ++c) PetscCheck(newcent[c - 1] < newcent[c], PETSC_COMM_SELF, PETSC_ERR_PLIB, "One-dimensional centroids not strictly ascending at %" PetscInt_FMT, c);
+
+  // The connectivity interface in one dimension. Own a contiguous slice of the vertices.
+  PetscCall(PetscLayoutCreate(comm, &vlayout));
+  PetscCall(PetscLayoutSetSize(vlayout, NVertices));
+  PetscCall(PetscLayoutSetBlockSize(vlayout, 1));
+  PetscCall(PetscLayoutSetUp(vlayout));
+  PetscCall(PetscLayoutGetRange(vlayout, &vStart, &vEnd));
+  PetscCall(PetscLayoutDestroy(&vlayout));
+  numVertices = vEnd - vStart;
+  PetscCall(PetscMalloc1(PetscMax(1, numVertices), &coords));
+  for (PetscInt v = vStart; v < vEnd; ++v) coords[v - vStart] = (PetscReal)v;
+  // Pass PETSC_DECIDE for the global vertex count, which the routine accepts and which Part B does
+  // not exercise. The layout then sums the local counts, which gives the same NVertices.
+  PetscCall(DMPlexReorderCellListByCurve(comm, DMPLEXCURVEMORTON, numCells, 2, cells, 1, numVertices, PETSC_DECIDE, coords, &sfCells, &nnewList, &newcells));
+  PetscCheck(nnewList == nnewCent, comm, PETSC_ERR_PLIB, "The two interfaces split the same cells differently, %" PetscInt_FMT " against %" PetscInt_FMT, nnewList, nnewCent);
+  PetscCall(CheckMigrationIsPermutation(comm, sfCells, numCells, nnewList, NCells));
+  // Each segment must arrive whole, and the segments must arrive in ascending order.
+  for (PetscInt c = 0; c < nnewList; ++c) {
+    PetscCheck(newcells[c * 2 + 1] == newcells[c * 2] + 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Segment %" PetscInt_FMT " has vertices %" PetscInt_FMT " and %" PetscInt_FMT ", not consecutive", c, newcells[c * 2], newcells[c * 2 + 1]);
+    PetscCheck(!c || newcells[(c - 1) * 2] < newcells[c * 2], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Segments not ascending at %" PetscInt_FMT, c);
+  }
+
+  // The reordered list must build a valid one-dimensional plex.
+  PetscCall(DMPlexCreateFromCellListParallelPetsc(comm, 1, nnewList, numVertices, NVertices, 2, PETSC_TRUE, newcells, 1, coords, NULL, &cellsSaved, &dm));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  gcells = cEnd - cStart;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gcells, 1, MPIU_INT, MPI_SUM, comm));
+  PetscCheck(gcells == NCells, comm, PETSC_ERR_PLIB, "Built plex has %" PetscInt_FMT " cells, expected %" PetscInt_FMT, gcells, NCells);
+  PetscCall(DMPlexCheck(dm));
+  PetscCall(PetscPrintf(comm, "OneDimensional: cells ascending on one axis, plex built and checked\n"));
+  PetscCall(PetscFree(cellsSaved));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscSFDestroy(&sfCells));
+  PetscCall(PetscSFDestroy(&sf));
+  PetscCall(PetscFree(newcells));
+  PetscCall(PetscFree(coords));
+  PetscCall(PetscFree(newcent));
+  PetscCall(PetscFree2(cent, cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Part G: argument validation. Every process passes the same invalid value, so each call fails
+// collectively and the error handler returns the code instead of aborting.
+static PetscErrorCode TestArgumentValidation(MPI_Comm comm)
+{
+  const PetscInt baddim[]    = {0, 4, -1};
+  const PetscInt ncorner[]   = {0, -3};
+  const PetscInt ndim        = (PetscInt)(sizeof(baddim) / sizeof(baddim[0]));
+  const PetscInt ncorn       = (PetscInt)(sizeof(ncorner) / sizeof(ncorner[0]));
+  PetscReal      cent[3]     = {0.5, 0.5, 0.5};
+  PetscSF        sf          = NULL;
+  PetscInt      *newcells    = NULL;
+  PetscInt       newNumCells = -1, nrejected = 0;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  // The centroid interface: spaceDim must be in [1, 3] and numCells must not be negative.
+  for (PetscInt i = 0; i < ndim; ++i) {
+    PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+    ierr = DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, baddim[i], 1, cent, &sf, &newNumCells);
+    PetscCall(PetscPopErrorHandler());
+    PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurveFromCentroids() returned %d for spaceDim %" PetscInt_FMT ", not PETSC_ERR_ARG_OUTOFRANGE", (int)ierr, baddim[i]);
+    ++nrejected;
+  }
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 3, -1, cent, &sf, &newNumCells);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurveFromCentroids() returned %d for a negative numCells, not PETSC_ERR_ARG_OUTOFRANGE", (int)ierr);
+  ++nrejected;
+
+  // The connectivity interface: the same two ranges, and numCorners must be positive. Each check
+  // runs before the routine allocates, so a rejected call leaks nothing.
+  for (PetscInt i = 0; i < ndim; ++i) {
+    PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+    ierr = DMPlexReorderCellListByCurve(comm, DMPLEXCURVEMORTON, 0, 4, NULL, baddim[i], 0, 0, NULL, &sf, &newNumCells, &newcells);
+    PetscCall(PetscPopErrorHandler());
+    PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurve() returned %d for spaceDim %" PetscInt_FMT ", not PETSC_ERR_ARG_OUTOFRANGE", (int)ierr, baddim[i]);
+    ++nrejected;
+  }
+  for (PetscInt i = 0; i < ncorn; ++i) {
+    PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+    ierr = DMPlexReorderCellListByCurve(comm, DMPLEXCURVEMORTON, 0, ncorner[i], NULL, 3, 0, 0, NULL, &sf, &newNumCells, &newcells);
+    PetscCall(PetscPopErrorHandler());
+    PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurve() returned %d for numCorners %" PetscInt_FMT ", not PETSC_ERR_ARG_OUTOFRANGE", (int)ierr, ncorner[i]);
+    ++nrejected;
+  }
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = DMPlexReorderCellListByCurve(comm, DMPLEXCURVEMORTON, -1, 4, NULL, 3, 0, 0, NULL, &sf, &newNumCells, &newcells);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurve() returned %d for a negative numCells, not PETSC_ERR_ARG_OUTOFRANGE", (int)ierr);
+  ++nrejected;
+
+  // The corner buffer of DMPlexReorderCellListByCurve() must fit in a PetscInt. The check runs
+  // before the routine reads the connectivity, so the array stays NULL and nothing is allocated.
+  // With 64-bit indices no reachable count passes PETSC_INT_MAX, so this case is 32-bit only.
+  if (!PetscDefined(USE_64BIT_INDICES)) {
+    PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+    ierr = DMPlexReorderCellListByCurve(comm, DMPLEXCURVEMORTON, 300000000, 4, NULL, 2, 0, 0, NULL, &sf, &newNumCells, &newcells);
+    PetscCall(PetscPopErrorHandler());
+    PetscCheck(ierr == PETSC_ERR_SUP, comm, PETSC_ERR_PLIB, "DMPlexReorderCellListByCurve() returned %d for a corner buffer of 2.4e9 reals, not PETSC_ERR_SUP", (int)ierr);
+    ++nrejected;
+  }
+
+  PetscCheck(!sf && !newcells && newNumCells == -1, comm, PETSC_ERR_PLIB, "A rejected call wrote to its output arguments");
+  // Keep the count out of the message. It differs between a 32-bit and a 64-bit index build.
+  PetscCall(PetscPrintf(comm, "Validation: every invalid argument set rejected\n"));
+  PetscCall(PetscInfo(NULL, "invalid argument sets rejected %" PetscInt_FMT "\n", nrejected));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Part H: no cells anywhere. A reader that finds no cells of the requested type hands the reorder
+// an empty list on every process. There is then no sample to take, so no splitter can come from the
+// data, and both interfaces must return an empty migration rather than fail.
+static PetscErrorCode TestNoCells(MPI_Comm comm)
+{
+  PetscSF   sf;
+  PetscInt *newcells    = NULL;
+  PetscInt  newNumCells = -1, nroots, nleaves;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 3, 0, NULL, &sf, &newNumCells));
+  PetscCall(PetscSFGetGraph(sf, &nroots, &nleaves, NULL, NULL));
+  PetscCheck(newNumCells == 0 && nroots == 0 && nleaves == 0, comm, PETSC_ERR_PLIB, "Empty input gave %" PetscInt_FMT " cells with %" PetscInt_FMT " roots and %" PetscInt_FMT " leaves", newNumCells, nroots, nleaves);
+  PetscCall(PetscSFDestroy(&sf));
+
+  newNumCells = -1;
+  PetscCall(DMPlexReorderCellListByCurve(comm, DMPLEXCURVEMORTON, 0, 4, NULL, 2, 0, PETSC_DECIDE, NULL, &sf, &newNumCells, &newcells));
+  PetscCall(PetscSFGetGraph(sf, &nroots, &nleaves, NULL, NULL));
+  PetscCheck(newNumCells == 0 && nroots == 0 && nleaves == 0, comm, PETSC_ERR_PLIB, "Empty connectivity gave %" PetscInt_FMT " cells with %" PetscInt_FMT " roots and %" PetscInt_FMT " leaves", newNumCells, nroots, nleaves);
+  PetscCall(PetscSFDestroy(&sf));
+  PetscCall(PetscFree(newcells));
+  PetscCall(PetscPrintf(comm, "NoCells: empty input gives an empty migration\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Part I: a mesh embedded in more than three dimensions. The curve interleaves three axes and the
+// bounding box holds three values, so DMPlexGetOrdering() must reject a higher-dimensional mesh
+// rather than write past that box. The check runs before the work arrays exist, so the rejected call
+// frees everything, which every test proves because the suite runs with -malloc_dump.
+static PetscErrorCode TestHighCoordinateDim(MPI_Comm comm)
+{
+  DM             dm;
+  IS             perm = NULL;
+  PetscLayout    vlayout;
+  PetscReal     *coords;
+  PetscInt      *cells, *cellsSaved = NULL;
+  PetscInt       numCells = 0, numVertices, vStart, vEnd;
+  const PetscInt N = 2, NCells = 4, NVertices = 9;
+  PetscErrorCode ierr;
+  PetscMPIInt    size, rank;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  // A 2 x 2 quadrilateral grid whose vertices carry four coordinates each.
+  for (PetscInt g = 0; g < NCells; ++g)
+    if (g % size == rank) ++numCells;
+  PetscCall(PetscMalloc1(PetscMax(1, numCells) * 4, &cells));
+  {
+    PetscInt c = 0;
+
+    for (PetscInt g = 0; g < NCells; ++g) {
+      const PetscInt i = g % N, j = g / N;
+
+      if (g % size != rank) continue;
+      cells[c * 4 + 0] = j * (N + 1) + i;
+      cells[c * 4 + 1] = j * (N + 1) + i + 1;
+      cells[c * 4 + 2] = (j + 1) * (N + 1) + i + 1;
+      cells[c * 4 + 3] = (j + 1) * (N + 1) + i;
+      ++c;
+    }
+  }
+  PetscCall(PetscLayoutCreate(comm, &vlayout));
+  PetscCall(PetscLayoutSetSize(vlayout, NVertices));
+  PetscCall(PetscLayoutSetBlockSize(vlayout, 1));
+  PetscCall(PetscLayoutSetUp(vlayout));
+  PetscCall(PetscLayoutGetRange(vlayout, &vStart, &vEnd));
+  PetscCall(PetscLayoutDestroy(&vlayout));
+  numVertices = vEnd - vStart;
+  PetscCall(PetscMalloc1(PetscMax(1, numVertices) * 4, &coords));
+  for (PetscInt v = vStart; v < vEnd; ++v) {
+    coords[(v - vStart) * 4 + 0] = (PetscReal)(v % (N + 1));
+    coords[(v - vStart) * 4 + 1] = (PetscReal)(v / (N + 1));
+    coords[(v - vStart) * 4 + 2] = 0.;
+    coords[(v - vStart) * 4 + 3] = 0.;
+  }
+  PetscCall(DMPlexCreateFromCellListParallelPetsc(comm, 2, numCells, numVertices, NVertices, 4, PETSC_TRUE, cells, 4, coords, NULL, &cellsSaved, &dm));
+
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = DMPlexGetOrdering(dm, DMPLEXCURVEMORTON, NULL, &perm);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_OUTOFRANGE, comm, PETSC_ERR_PLIB, "DMPlexGetOrdering() returned %d for a mesh in four dimensions, not PETSC_ERR_ARG_OUTOFRANGE", (int)ierr);
+  PetscCheck(!perm, comm, PETSC_ERR_PLIB, "The rejected call returned a permutation");
+  PetscCall(PetscPrintf(comm, "HighCoordinateDim: four coordinates per vertex rejected\n"));
+  PetscCall(PetscFree(cellsSaved));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFree(coords));
+  PetscCall(PetscFree(cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Part J: the sample stride passes 2^31. DMPlexZCodeSelectSplitters() forms the sample index in 64
+// bits, because a 32-bit product wraps and then reads outside the array. Reaching the wrap needs
+// size*max(size, 32)*NCells above 2^31, which is 4.3 million cells on 16 processes, 2.5 million on
+// 32, and 33 million on two. That costs either processes or memory, so this part is off by default.
+// The sample_overflow suffix turns it on. Run it by hand with, for example:
+//
+//   mpiexec -n 32 ./ex105 -n 4 -sample_overflow -overflow_cells 2500000
+static PetscErrorCode TestSampleOverflow(MPI_Comm comm, PetscInt NCells)
+{
+  PetscSF     sf;
+  PetscReal  *cent;
+  PetscInt64  stride;
+  PetscInt    numCells, newNumCells, lo, hi, tot;
+  PetscMPIInt size, rank;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  // Every cell starts on rank 0, the distribution that asks one rank for every sample. That rank
+  // then takes size*max(size, 32) samples, and the largest sample index it forms is that count minus
+  // one times the local cell count.
+  numCells = rank == 0 ? NCells : 0;
+  stride   = ((PetscInt64)size * (PetscInt64)PetscMax(size, 32) - 1) * (PetscInt64)NCells;
+  PetscCheck(stride > 2147483647, comm, PETSC_ERR_ARG_OUTOFRANGE, "The largest sample index here is %" PetscInt64_FMT ", which does not pass 2^31. Use more processes or more cells: size*max(size, 32)*cells must pass 2^31", stride);
+  PetscCall(PetscMalloc1(PetscMax(1, numCells), &cent));
+  // One axis, one cell per unit. The curve quantizes to 21 bits, so cells beyond 2^21 share a code
+  // and the global cell number separates them.
+  for (PetscInt c = 0; c < numCells; ++c) cent[c] = (PetscReal)c;
+  PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 1, numCells, cent, &sf, &newNumCells));
+  lo  = newNumCells;
+  hi  = newNumCells;
+  tot = newNumCells;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &lo, 1, MPIU_INT, MPI_MIN, comm));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &tot, 1, MPIU_INT, MPI_SUM, comm));
+  PetscCheck(tot == NCells, comm, PETSC_ERR_PLIB, "Cell count changed from %" PetscInt_FMT " to %" PetscInt_FMT, NCells, tot);
+  // A wrapped index used to read a random key, which broke the intermediate split. The exact pass
+  // hides that from the counts here, so the order check below is what still sees it.
+  PetscCheck(lo > 0, comm, PETSC_ERR_PLIB, "A rank received no cells");
+  PetscCheck(hi - lo <= 1, comm, PETSC_ERR_PLIB, "Cells per rank run from %" PetscInt_FMT " to %" PetscInt_FMT ", which is not an exact split", lo, hi);
+  PetscCall(PetscPrintf(comm, "SampleOverflow: largest sample index %" PetscInt64_FMT " above 2^31, split balanced from %" PetscInt_FMT " to %" PetscInt_FMT " cells\n", stride, lo, hi));
+  PetscCall(PetscSFDestroy(&sf));
+  PetscCall(PetscFree(cent));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
-  MPI_Comm comm;
-  PetscInt N = 4;
+  MPI_Comm  comm;
+  PetscBool overflow = PETSC_FALSE;
+  PetscInt  N = 4, overflowCells = 2500000;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
   PetscOptionsBegin(comm, "", "SFC cell-list reorder test options", "DMPLEX");
   PetscCall(PetscOptionsInt("-n", "Cells per side", "ex105.c", N, &N, NULL));
+  PetscCall(PetscOptionsBool("-sample_overflow", "Run the sample-index case, which needs many processes and millions of cells", "ex105.c", overflow, &overflow, NULL));
+  PetscCall(PetscOptionsInt("-overflow_cells", "Cells for -sample_overflow", "ex105.c", overflowCells, &overflowCells, NULL));
   PetscOptionsEnd();
   PetscCheck(N > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "-n must be positive");
+  PetscCheck(overflowCells > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "-overflow_cells must be positive");
   PetscCall(TestFromCentroids(comm, N, PETSC_FALSE));
   PetscCall(TestFromCentroids(comm, N, PETSC_TRUE));
   PetscCall(TestCellList(comm, N));
   PetscCall(TestLocalityImproves(comm, N));
   PetscCall(TestDegenerateGeometry(comm, N));
+  PetscCall(TestUnknownCurveType(comm));
+  PetscCall(TestOneDimensional(comm, N));
+  PetscCall(TestArgumentValidation(comm));
+  PetscCall(TestNoCells(comm));
+  PetscCall(TestHighCoordinateDim(comm));
+  if (overflow) PetscCall(TestSampleOverflow(comm, overflowCells));
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -489,5 +811,16 @@ int main(int argc, char **argv)
     suffix: degenerate
     nsize: {{2 4 8}}
     args: -n 6
+
+  # The sample index passes 2^31. This needs size*max(size, 32)*cells above 2^31, so it costs either
+  # processes or memory: 16 processes with 4.3 million cells takes 0.3 s and 200 MB on the loaded
+  # process, and 32 processes with 2.5 million cells takes 0.4 s and 130 MB. A 32-bit product wraps
+  # to a negative index here, which the range check in DMPlexZCodeSelectSplitters() reports. A build
+  # with 64-bit indices cannot form a 32-bit product, so it skips the test and keeps the memory.
+  test:
+    suffix: sample_overflow
+    nsize: 16
+    requires: !defined(PETSC_USE_64BIT_INDICES)
+    args: -n 4 -sample_overflow -overflow_cells 4300000
 
 TEST*/

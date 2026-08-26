@@ -1,6 +1,6 @@
-FromCentroids: N=16 cells=4096 permutation ok, globally curve sorted, balanced
-FromCentroids: N=16 cells=4096 permutation ok, globally curve sorted, balanced
-CellList: N=16 cells=256 plex built and checked
+FromCentroids: N=4 cells=64 permutation ok, globally curve sorted, balanced
+FromCentroids: N=4 cells=64 permutation ok, globally curve sorted, balanced
+CellList: N=4 cells=16 plex built and checked
 Locality: reorder cuts shared points
 Degenerate geometry: 4 cases balanced within the sampling bound
 Unknown curve: 4 names rejected by both interfaces
@@ -8,3 +8,4 @@ OneDimensional: cells ascending on one axis, plex built and checked
 Validation: every invalid argument set rejected
 NoCells: empty input gives an empty migration
 HighCoordinateDim: four coordinates per vertex rejected
+SampleOverflow: largest sample index 2197300000 above 2^31, split balanced from 268750 to 268750 cells
