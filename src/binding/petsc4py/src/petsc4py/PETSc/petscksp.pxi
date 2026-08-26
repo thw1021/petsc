@@ -223,10 +223,6 @@ cdef extern from * nogil:
     PetscErrorCode KSPGetDiagonalScale(PetscKSP, PetscBool*)
     PetscErrorCode KSPSetDiagonalScaleFix(PetscKSP, PetscBool)
     PetscErrorCode KSPGetDiagonalScaleFix(PetscKSP, PetscBool*)
-    PetscErrorCode KSPSetLeftDiagonalScale(PetscKSP, PetscVec)
-    PetscErrorCode KSPGetLeftDiagonalScale(PetscKSP, PetscVec*)
-    PetscErrorCode KSPSetRightDiagonalScale(PetscKSP, PetscVec)
-    PetscErrorCode KSPGetRightDiagonalScale(PetscKSP, PetscVec*)
 
     PetscErrorCode KSPComputeExplicitOperator(PetscKSP, PetscMat*)
     PetscErrorCode KSPComputeEigenvalues(PetscKSP, PetscInt, PetscReal[], PetscReal[], PetscInt*)

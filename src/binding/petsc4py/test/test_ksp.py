@@ -228,33 +228,6 @@ class TestKSPPREONLY(BaseTestKSP, unittest.TestCase):
     KSP_TYPE = PETSc.KSP.Type.PREONLY
     PC_TYPE = PETSc.PC.Type.LU
 
-    def testDiagonalScale(self):
-        left = PETSc.Vec().createSeq(3)
-        right = left.duplicate()
-        left.set(2)
-        right.set(0.5)
-        self.assertEqual(left.getRefCount(), 1)
-        self.assertEqual(right.getRefCount(), 1)
-        self.ksp.setLeftDiagonalScale(left)
-        self.ksp.setRightDiagonalScale(right)
-        self.assertEqual(left.getRefCount(), 2)
-        self.assertEqual(right.getRefCount(), 2)
-        got = self.ksp.getLeftDiagonalScale()
-        self.assertEqual(got, left)
-        got.destroy()
-        got = self.ksp.getRightDiagonalScale()
-        self.assertEqual(got, right)
-        got.destroy()
-        self.ksp.reset()
-        self.assertEqual(self.ksp.getLeftDiagonalScale(), left)
-        self.assertEqual(self.ksp.getRightDiagonalScale(), right)
-        self.ksp.setLeftDiagonalScale(None)
-        self.ksp.setRightDiagonalScale(None)
-        self.assertIsNone(self.ksp.getLeftDiagonalScale())
-        self.assertIsNone(self.ksp.getRightDiagonalScale())
-        self.assertEqual(left.getRefCount(), 1)
-        self.assertEqual(right.getRefCount(), 1)
-
 
 class TestKSPRICHARDSON(BaseTestKSP, unittest.TestCase):
     KSP_TYPE = PETSc.KSP.Type.RICHARDSON

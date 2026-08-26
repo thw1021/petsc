@@ -148,16 +148,7 @@ PetscErrorCode KSPView(KSP ksp, PetscViewer viewer)
       PetscCall(KSPGuessView(ksp->guess, viewer));
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
-    if (ksp->dscale) PetscCall(PetscViewerASCIIPrintf(viewer, "  diagonally scaled system (scaled by the matrix's own diagonal)\n"));
-    if (ksp->diagonal_scale) {
-      Vec left, right;
-
-      PetscCall(KSPGetLeftDiagonalScale(ksp, &left));
-      PetscCall(KSPGetRightDiagonalScale(ksp, &right));
-      if (left && right) PetscCall(PetscViewerASCIIPrintf(viewer, "  left (user-provided residual scaling) and right (user-provided change of variables) diagonally scaled system\n"));
-      else if (left) PetscCall(PetscViewerASCIIPrintf(viewer, "  left diagonally scaled system (user-provided residual scaling)\n"));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "  right diagonally scaled system (user-provided change of variables)\n"));
-    }
+    if (ksp->dscale) PetscCall(PetscViewerASCIIPrintf(viewer, "  diagonally scaled system\n"));
     if (ksp->converged == KSPConvergedSkip || ksp->normtype == KSP_NORM_NONE) PetscCall(PetscViewerASCIIPrintf(viewer, "  not checking for convergence\n"));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  using %s norm type for convergence test\n", KSPNormTypes[ksp->normtype]));
   } else if (isbinary) {
@@ -853,8 +844,6 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
   ksp->work       = NULL;
   ksp->reason     = KSP_CONVERGED_ITERATING;
   ksp->setupstage = KSP_SETUP_NEW;
-
-  ksp->diagonal_scale = NULL;
 
   PetscCall(KSPNormSupportTableReset_Private(ksp));
 
