@@ -1691,7 +1691,9 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
   total = displs[size];
 
   if (nloc) PetscCall(PetscMalloc1(nloc, &samples));
-  for (PetscInt j = 0; j < nloc; ++j) samples[j] = zkeys[(j * numCells) / nloc];
+  // Form the stride in 64 bits. `nloc` reaches `size`*`size` when one rank holds nearly every cell,
+  // so the product with `numCells` passes 2^31 for a mesh of a few million cells on 16 ranks.
+  for (PetscInt j = 0; j < nloc; ++j) samples[j] = zkeys[(PetscInt)(((PetscInt64)j * (PetscInt64)numCells) / (PetscInt64)nloc)];
   PetscCall(PetscMalloc1(PetscMax(1, total), &allsamples));
   PetscCallMPI(MPI_Allgatherv(samples, nloci, keytype, allsamples, counts, displs, keytype, comm));
 
@@ -1738,6 +1740,13 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
 
   The reorder redistributes cells across the communicator, so `newNumCells` normally differs from
   `numCells`. The total number of cells does not change.
+
+  `curvetype` and `spaceDim` must hold the same value on every process. `numCells` is local and the
+  input distribution may be arbitrary, including processes that own nothing.
+
+  The splitters come from regular sampling, which bounds the cells on the busiest process by twice
+  the average. Cells whose centroids fall on the same point of the curve are separated by a global
+  cell number, so the bound holds even for a mesh whose extent dwarfs the spacing between cells.
 
   Use `DMPlexReorderCellListByCurve()` to reorder a cell connectivity array directly.
 
@@ -1821,14 +1830,23 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   for (PetscInt i = 0; i < nrecv; ++i) perm[i] = i;
   if (nrecv) PetscCall(PetscTimSortWithArray(nrecv, recvkeys, sizeof(ZKey), perm, sizeof(PetscInt), ZKeyCompare, NULL));
 
+  // Record which rank sent each received slot once, then read it back through the permutation. A
+  // scan per cell would cost nrecv*size, and nrecv reaches the whole mesh when the cells arrive on
+  // few ranks.
   PetscCall(PetscMalloc1(nrecv, &iremote));
-  for (PetscInt i = 0; i < nrecv; ++i) {
-    const PetscInt src = perm[i];
-    PetscMPIInt    r   = 0;
+  {
+    PetscMPIInt *srcrank;
 
-    while (r < size - 1 && src >= recvdispls[r + 1]) ++r;
-    iremote[i].rank  = r;
-    iremote[i].index = recvidx[src];
+    PetscCall(PetscMalloc1(PetscMax(1, nrecv), &srcrank));
+    for (PetscMPIInt r = 0; r < size; ++r)
+      for (PetscInt j = recvdispls[r]; j < recvdispls[r + 1]; ++j) srcrank[j] = r;
+    for (PetscInt i = 0; i < nrecv; ++i) {
+      const PetscInt src = perm[i];
+
+      iremote[i].rank  = srcrank[src];
+      iremote[i].index = recvidx[src];
+    }
+    PetscCall(PetscFree(srcrank));
   }
   PetscCall(PetscSFCreate(comm, &sf));
   PetscCall(PetscObjectSetName((PetscObject)sf, "Curve Reorder Migration SF"));
@@ -1879,9 +1897,12 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   Use `migrationSF` with `PetscSFBcastBegin()` and `PetscSFBcastEnd()` to migrate per-cell data,
   such as region tags, into the new order.
 
-  This routine gathers the coordinates of every cell corner in order to compute cell centroids. If
-  the centroids are already available, call `DMPlexReorderCellListByCurveFromCentroids()` instead
-  and avoid that communication.
+  This routine gathers the coordinates of every cell corner in order to compute cell centroids. It
+  therefore holds `numCells`*`numCorners`*`spaceDim` reals at once, and it gathers a corner shared
+  by several cells once per cell. If the centroids are already available, or that buffer is too
+  large, call `DMPlexReorderCellListByCurveFromCentroids()` instead.
+
+  `curvetype`, `numCorners`, `spaceDim`, and `NVertices` must hold the same value on every process.
 
 .seealso: [](ch_unstructured), `DMPLEX`, `DMPlexReorderCellListByCurveFromCentroids()`, `DMPlexCreateFromCellListParallel()`, `PetscSF`
 @*/
@@ -1913,6 +1934,9 @@ PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curve
   PetscCall(PetscSFSetGraphLayout(sfVert, layout, numCells * numCorners, NULL, PETSC_OWN_POINTER, cells));
   PetscCall(PetscLayoutDestroy(&layout));
 
+  // This buffer holds every corner of every local cell, so it is numCorners*spaceDim reals per cell.
+  // Check the count in 64 bits, because the product passes 2^31 well before memory runs out.
+  PetscCheck(((PetscInt64)numCells * numCorners * spaceDim) <= (PetscInt64)PETSC_INT_MAX, comm, PETSC_ERR_SUP, "Local cell count %" PetscInt_FMT " with %" PetscInt_FMT " corners in %" PetscInt_FMT " dimensions exceeds the addressable range; call DMPlexReorderCellListByCurveFromCentroids() with centroids you compute yourself", numCells, numCorners, spaceDim);
   PetscCall(PetscMalloc2(numCells * numCorners * spaceDim, &cornercoords, numCells * spaceDim, &centroids));
   PetscCall(PetscMPIIntCast(spaceDim, &spaceDimi));
   PetscCallMPI(MPI_Type_contiguous(spaceDimi, MPIU_REAL, &coordtype));
@@ -1965,6 +1989,10 @@ PETSC_INTERN PetscErrorCode DMPlexGetCellOrderingByCurve_Internal(DM dm, DMPlexC
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(curvetype, DMPLEXCURVEMORTON, &ismorton));
   PetscCheck(ismorton, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DMPlexCurveType \"%s\"; only \"%s\" is registered", curvetype ? curvetype : "(null)", DMPLEXCURVEMORTON);
+  // DMPlexCreateOrderingClosure_Static() indexes the permutation by the plex point number of the
+  // cell, so the reverse Cuthill-McKee path in DMPlexGetOrdering() already requires the cells to
+  // start at point 0. State that requirement rather than produce a wrong permutation quietly.
+  PetscCheck(cStart == 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Cells must start at point 0, not %" PetscInt_FMT, cStart);
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCheck(cdim >= 1 && cdim <= 3, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension %" PetscInt_FMT " must be in [1, 3]", cdim);
   PetscCall(PetscMalloc2(numCells * cdim, &centroids, numCells, &zcodes));
