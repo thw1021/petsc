@@ -183,19 +183,6 @@ typedef enum {
 } PetscViewerVTKFieldType;
 
 /*S
-  PetscViewerVTKWriteFn - A prototype of the function argument `PetscViewerVTKAddField()` that writes to the VTK file
-
-  Calling Sequence:
-+ obj    - the `PetscObject` to write
-- viewer - the `PetscViewer` of `PetscViewerType` `PETSCVIEWERVTK` to write to
-
-  Level: advanced
-
-.seealso: `PetscViewer`, `PetscViewerType`, `PETSCVIEWERVTK`, `PetscViewerVTKAddField()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscViewerVTKWriteFn(PetscObject obj, PetscViewer viewer);
-
-/*S
    PetscViewers - Abstract collection of `PetscViewer`s. It is stored as an expandable array of viewers.
 
    Level: intermediate

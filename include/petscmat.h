@@ -6,6 +6,142 @@
 #include <petscvec.h>
 #include <petscmattypes.h>
 
+/*S
+  MatSolverFn - Function type for the factor-creation callback registered with `MatSolverTypeRegister()`, used by `MatGetFactor()` to allocate a factored matrix of a particular `MatSolverType` and `MatFactorType`
+
+  Synopsis:
+  #include <petscmat.h>
+  PetscErrorCode MatSolverFn(Mat A, MatFactorType ftype, Mat *F)
+
+  Calling Sequence:
++ A     - the matrix to be factored
+. ftype - the kind of factorization requested (e.g. `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`)
+- F     - on output, the newly created factor `Mat` of the appropriate `MatType` for the solver
+
+  Level: developer
+
+.seealso: `Mat`, `MatGetFactor()`, `MatSolverType`, `MatFactorType`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatSolverFn(Mat, MatFactorType, Mat *);
+PETSC_EXTERN_TYPEDEF typedef MatSolverFn   *MatSolverFunction;
+
+/*S
+  MatFDColoringFn - Function provided to `MatFDColoringSetFunction()` that computes the function being differenced
+
+  Level: advanced
+
+  Calling Sequence:
++ snes - either a `SNES` object if used within `SNES` otherwise an unused parameter
+. in   - the location where the Jacobian is to be computed
+. out  - the location to put the computed function value
+- fctx - the function context passed into `MatFDColoringSetFunction()`
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateMFFD()`, `MatMFFDSetFunction()`, `MatMFFDiFn`, `MatMFFDiBaseFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatFDColoringFn(void *snes, Vec x, Vec y, void *fctx);
+
+/*S
+  MatNullSpaceRemoveFn - Function provided to `MatNullSpaceSetFunction()` that removes the null space from a vector
+
+  Level: advanced
+
+  Calling Sequence:
++ nsp - the `MatNullSpace` object
+. x   - the vector from which to remove the null space
+- ctx - [optional] user-defined function context provided with `MatNullSpaceSetFunction()`
+
+.seealso: [](ch_matrices), `Mat`, `MatNullSpaceCreate()`, `MatNullSpaceSetFunction()`, `MatGetNullSpace()`, `MatSetNullSpace()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatNullSpaceRemoveFn(MatNullSpace nsp, Vec x, PetscCtx ctx);
+
+/*S
+  MatMFFDFn - Function provided to `MatMFFDSetFunction()` that computes the function being differenced
+
+  Level: advanced
+
+  Calling Sequence:
++ ctx - [optional] user-defined function context provided with `MatMFFDSetFunction()`
+. x   - input vector
+- y   - output vector
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateMFFD()`, `MatMFFDSetFunction()`, `MatMFFDiFn`, `MatMFFDiBaseFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatMFFDFn(PetscCtx ctx, Vec x, Vec y);
+
+/*S
+  MatMFFDiFn - Function provided to `MatMFFDSetFunctioni()` that computes the function being differenced at a single point
+
+  Level: advanced
+
+  Calling Sequence:
++ ctx    - [optional] user-defined function context provided with `MatMFFDSetFunction()`
+. i      - the component of the vector to compute
+. x      - input vector
+- result - the value of the function at that component (output)
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateMFFD()`, `MatMFFDSetFunction()`, `MatMFFDFn`, `MatMFFDiBaseFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatMFFDiFn(PetscCtx ctx, PetscInt i, Vec x, PetscScalar *result);
+
+/*S
+  MatMFFDiBaseFn - Function provided to `MatMFFDSetFunctioniBase()` that computes the base of the function evaluations
+  that will be used for differencing
+
+  Level: advanced
+
+  Calling Sequence:
++ ctx - [optional] user-defined function context provided with `MatMFFDSetFunction()`
+- x   - input base vector
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateMFFD()`, `MatMFFDSetFunction()`, `MatMFFDSetFunctioniBase()`, `MatMFFDFn`, `MatMFFDiFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatMFFDiBaseFn(PetscCtx ctx, Vec x);
+
+/*S
+  MatMFFDCheckhFn - Function provided to `MatMFFDSetCheckh()` that checks and possibly adjusts the value of `h` to ensure some property.
+  that will be used for differencing
+
+  Level: advanced
+
+  Calling Sequence:
++ ctx - [optional] user-defined function context provided with `MatMFFDSetCheckh()`
+. x   - input base vector
+. y   - input step vector that the product is computed with
+- h   - input tentative step, output possibly adjusted step
+
+  Note:
+  `MatMFFDCheckPositivity()` is one such function
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateMFFD()`, `MatMFFDSetCheckh()`, `MatMFFDCheckPositivity()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MatMFFDCheckhFn(PetscCtx ctx, Vec x, Vec y, PetscScalar *h);
+
+PETSC_EXTERN_TYPEDEF typedef PetscScalar(MatH2OpusKernelFn)(PetscInt, PetscReal[], PetscReal[], void *);
+PETSC_EXTERN_TYPEDEF typedef MatH2OpusKernelFn *MatH2OpusKernel;
+
+/*S
+  MatHtoolKernelFn - Function type for the user-supplied kernel callback used by `MATHTOOL` (`MatCreateHtoolFromKernel()`, `MatHtoolSetKernel()`) to evaluate the dense matrix entries on demand
+
+  Synopsis:
+  #include <petscmat.h>
+  PetscErrorCode MatHtoolKernelFn(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *J, const PetscInt *K, PetscScalar *ptr, void *ctx)
+
+  Calling Sequence:
++ sdim - the spatial dimension of the source/target geometries
+. M    - the number of target points
+. N    - the number of source points
+. J    - array of `M` target point indices into the user's target coordinate array
+. K    - array of `N` source point indices into the user's source coordinate array
+. ptr  - column-major output buffer of length `M*N` to fill with kernel values
+- ctx  - the optional application context passed at registration
+
+  Level: intermediate
+
+.seealso: `Mat`, `MATHTOOL`, `MatCreateHtoolFromKernel()`, `MatHtoolSetKernel()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode    MatHtoolKernelFn(PetscInt, PetscInt, PetscInt, const PetscInt *, const PetscInt *, PetscScalar *, void *);
+PETSC_EXTERN_TYPEDEF typedef MatHtoolKernelFn *MatHtoolKernel;
+
 /* SUBMANSEC = Mat */
 
 PETSC_EXTERN PetscErrorCode MatGetFactor(Mat, MatSolverType, MatFactorType, Mat *);

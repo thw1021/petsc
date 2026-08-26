@@ -5,6 +5,20 @@
 
 #include <petscsys.h>
 #include <petscviewertypes.h>
+
+/*S
+  PetscViewerVTKWriteFn - A prototype of the function argument `PetscViewerVTKAddField()` that writes to the VTK file
+
+  Calling Sequence:
++ obj    - the `PetscObject` to write
+- viewer - the `PetscViewer` of `PetscViewerType` `PETSCVIEWERVTK` to write to
+
+  Level: advanced
+
+.seealso: `PetscViewer`, `PetscViewerType`, `PETSCVIEWERVTK`, `PetscViewerVTKAddField()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscViewerVTKWriteFn(PetscObject obj, PetscViewer viewer);
+
 #include <petscdrawtypes.h>
 
 /* MANSEC = Sys */

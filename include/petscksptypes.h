@@ -88,99 +88,6 @@ typedef const char *KSPType;
 #define KSPHPDDM      "hpddm"
 #define KSPIDR        "idr"
 
-/*S
-  KSPMonitorRegisterFn - A function prototype for functions provided to `KSPMonitorRegister()`
-
-  Calling Sequence:
-+ ksp   - iterative solver obtained from `KSPCreate()`
-. it    - iteration number
-. rnorm - (estimated) 2-norm of (preconditioned) residual
-- ctx   - `PetscViewerAndFormat` object
-
-  Level: beginner
-
-  Note:
-  This is a `KSPMonitorFn` specialized for a context of `PetscViewerAndFormat`
-
-.seealso: [](ch_snes), `KSP`, `KSPMonitorSet()`, `KSPMonitorRegister()`, `KSPMonitorFn`, `KSPMonitorRegisterCreateFn`, `KSPMonitorRegisterDestroyFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPMonitorRegisterFn(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *ctx);
-
-/*S
-  KSPMonitorRegisterCreateFn - A function prototype for functions that do the creation when provided to `KSPMonitorRegister()`
-
-  Calling Sequence:
-+ viewer - the viewer to be used with the `KSPMonitorRegisterFn`
-. format - the format of the viewer
-. ctx    - a context for the monitor
-- result - a `PetscViewerAndFormat` object
-
-  Level: beginner
-
-.seealso: [](ch_snes), `KSPMonitorRegisterFn`, `KSP`, `KSPMonitorSet()`, `KSPMonitorRegister()`, `KSPMonitorFn`, `KSPMonitorRegisterDestroyFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPMonitorRegisterCreateFn(PetscViewer viewer, PetscViewerFormat format, PetscCtx ctx, PetscViewerAndFormat **result);
-
-/*S
-  KSPMonitorRegisterDestroyFn - A function prototype for functions that do the after use destruction when provided to `KSPMonitorRegister()`
-
-  Calling Sequence:
-. vf - a `PetscViewerAndFormat` object to be destroyed, including any context
-
-  Level: beginner
-
-.seealso: [](ch_snes), `KSPMonitorRegisterFn`, `KSP`, `KSPMonitorSet()`, `KSPMonitorRegister()`, `KSPMonitorFn`, `KSPMonitorRegisterCreateFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPMonitorRegisterDestroyFn(PetscViewerAndFormat **result);
-
-/*S
-  KSPPSolveFn - A function prototype for functions provided to `KSPSetPreSolve()` and `KSPSetPostSolve()`
-
-  Calling Sequence:
-+ ksp - the `KSP` context
-. rhs - the right-hand side vector
-. x   - the solution vector
-- ctx - optional context that was provided with `KSPSetPreSolve()` or `KSPSetPostSolve()`
-
-  Level: intermediate
-
-.seealso: [](ch_snes), `KSP`, `KSPSetPreSolve()`, `KSPSetPostSolve()`, `PCShellPSolveFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPPSolveFn(KSP ksp, Vec rhs, Vec x, PetscCtx ctx);
-
-/*S
-  KSPMonitorFn - A function prototype for functions provided to `KSPMonitorSet()`
-
-  Calling Sequence:
-+ ksp   - iterative solver obtained from `KSPCreate()`
-. it    - iteration number
-. rnorm - (estimated) 2-norm of (preconditioned) residual
-- ctx   - optional monitoring context, as provided with `KSPMonitorSet()`
-
-  Level: beginner
-
-.seealso: [](ch_snes), `KSP`, `KSPMonitorSet()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPMonitorFn(KSP ksp, PetscInt it, PetscReal rnorm, PetscCtx ctx);
-
-/*S
-  PCMGCoarseSpaceConstructorFn - A function prototype for functions registered with `PCMGRegisterCoarseSpaceConstructor()`
-
-  Calling Sequence:
-+ pc        - The `PC` object
-. l         - The multigrid level, 0 is the coarse level
-. dm        - The `DM` for this level
-. smooth    - The level smoother
-. Nc        - The size of the coarse space
-. initGuess - Basis for an initial guess for the space
-- coarseSp  - A basis for the computed coarse space
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `PCMGRegisterCoarseSpaceConstructor()`, `PCMGGetCoarseSpaceConstructor()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PCMGCoarseSpaceConstructorFn(PC pc, PetscInt l, DM dm, KSP smooth, PetscInt Nc, Mat initGuess, Mat *coarseSp);
-
 /*E
   KSPChebyshevKind - Which kind of Chebyshev polynomial to use with `KSPCHEBYSHEV`
 
@@ -221,22 +128,6 @@ typedef enum {
   KSP_FCD_TRUNC_TYPE_NOTAY
 } KSPFCDTruncationType;
 PETSC_EXTERN const char *const KSPFCDTruncationTypes[];
-
-/*S
-  KSPFlexibleModifyPCFn - A prototype of a function used to modify the preconditioner during the use of flexible `KSP` methods, such as `KSPFGMRES`
-
-  Calling Sequence:
-+ ksp       - the `KSP` context being used.
-. total_its - the total number of iterations that have occurred.
-. local_its - the number of iterations since last restart if applicable
-. res_norm  - the current residual norm
-- ctx       - optional context variable set with `KSPFlexibleSetModifyPC()`
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `KSP`, `KSPFlexibleSetModifyPC()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPFlexibleModifyPCFn(KSP ksp, PetscInt total_its, PetscInt local_its, PetscReal res_norm, PetscCtx ctx);
 
 /*E
     KSPHPDDMType - Type of Krylov method used by `KSPHPDDM`
@@ -335,19 +226,6 @@ M*/
           `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSP_GMRES_CGS_REFINE_IFNEEDED`, `KSP_GMRES_CGS_REFINE_ALWAYS`,
           `KSPGMRESModifiedGramSchmidtOrthogonalization()`
 M*/
-
-/*S
-  KSPConvergedReasonViewFn - A prototype of a function used with `KSPConvergedReasonViewSet()`
-
-  Calling Sequence:
-+ ksp - the `KSP` object whose `KSPConvergedReason` is to be viewed
-- ctx - context used by the function, set with `KSPConvergedReasonViewSet()`
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `KSP`, `KSPConvergedReasonView()`, `KSPConvergedReasonViewSet()`, `KSPConvergedReasonViewFromOptions()`, `KSPView()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPConvergedReasonViewFn(KSP ksp, PetscCtx ctx);
 
 /*E
    KSPNormType - Norm calculated by the `KSP` and passed in the Krylov convergence
@@ -620,22 +498,6 @@ M*/
 .seealso: [](ch_ksp), `KSPSolve()`, `KSPGetConvergedReason()`, `KSPConvergedReason`, `KSPSetTolerances()`
 M*/
 
-/*S
-  KSPConvergenceTestFn - A prototype of a function used with `KSPSetConvergenceTest()`
-
-  Calling Sequence:
-+ ksp    - iterative solver obtained from `KSPCreate()`
-. it     - iteration number
-. rnorm  - (estimated) 2-norm of (preconditioned) residual
-. reason - the reason why it has converged or diverged
-- ctx    - optional convergence context, as set by `KSPSetConvergenceTest()`
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `KSP`, `KSPSetConvergenceTest()`, `KSPGetConvergenceTest()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPConvergenceTestFn(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, PetscCtx ctx);
-
 /*E
    KSPCGType - Determines what type of `KSPCG` to use
 
@@ -652,21 +514,6 @@ typedef enum {
   KSP_CG_HERMITIAN = 1
 } KSPCGType;
 PETSC_EXTERN const char *const KSPCGTypes[];
-
-/*S
-  PCShellPSolveFn - A function prototype for functions provided to `PCShellSetPreSolve()` and `PCShellSetPostSolve()`
-
-  Calling Sequence:
-+ pc  - the preconditioner `PC` context
-. ksp - the `KSP` context
-. xin  - input vector
-- xout - output vector
-
-  Level: intermediate
-
-.seealso: [](ch_snes), `KSPPSolveFn`, `KSP`, `PCShellSetPreSolve()`, `PCShellSetPostSolve()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PCShellPSolveFn(PC pc, KSP ksp, Vec xim, Vec xout);
 
 /*S
    KSPGuess - Abstract PETSc object that manages all initial guess generation methods for Krylov methods.
@@ -793,66 +640,3 @@ typedef enum {
   KSP_DMACTIVE_INITIAL_GUESS = 4,
   KSP_DMACTIVE_ALL           = 1 + 2 + 4
 } KSPDMActive;
-
-/*S
-  KSPComputeRHSFn - A prototype of a `KSP` evaluation function that would be passed to `KSPSetComputeRHS()`
-
-  Calling Sequence:
-+ ksp  - `ksp` context
-. b    - output vector
-- ctx - [optional] user-defined function context
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `KSP`, `KSPSetComputeRHS()`, `SNESGetFunction()`, `KSPComputeInitialGuessFn`, `KSPComputeOperatorsFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeRHSFn(KSP ksp, Vec b, PetscCtx ctx);
-
-/*S
-  KSPComputeOperatorsFn - A prototype of a `KSP` evaluation function that would be passed to `KSPSetComputeOperators()`
-
-  Calling Sequence:
-+ ksp - `KSP` context
-. A   - the operator that defines the linear system
-. P   - an operator from which to build the preconditioner (often the same as `A`)
-- ctx - [optional] user-defined function context
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `KSP`, `KSPSetComputeRHS()`, `SNESGetFunction()`, `KSPComputeRHSFn`, `KSPComputeInitialGuessFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeOperatorsFn(KSP ksp, Mat A, Mat P, PetscCtx ctx);
-
-/*S
-  KSPCreateOperatorsFn - A prototype of a `KSP` operator creation function that would be passed to `DMKSPSetCreateOperators()`
-
-  Calling Sequence:
-+ ksp - `KSP` context
-. A   - the created operator that defines the linear system
-. P   - the created operator from which to build the preconditioner, often the same as `A`
-- ctx - [optional] user-defined function context
-
-  Level: developer
-
-  Notes:
-  The returned matrices are owned by the caller, similar to `DMCreateMatrix()`.
-
-  `A` and `P` may be the same object. In such a case, users do not need to increase the reference count of `A`. If `P` is not returned, then we assume it is the same of `A`.
-
-.seealso: [](ch_ksp), `DMKSPSetCreateOperators()`, `DMKSPGetCreateOperators()`, `KSPComputeOperatorsFn`, `KSPSetOperators()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPCreateOperatorsFn(KSP ksp, Mat *A, Mat *P, PetscCtx ctx);
-
-/*S
-  KSPComputeInitialGuessFn - A prototype of a `KSP` evaluation function that would be passed to `KSPSetComputeInitialGuess()`
-
-  Calling Sequence:
-+ ksp  - `ksp` context
-. x    - output vector
-- ctx - [optional] user-defined function context
-
-  Level: beginner
-
-.seealso: [](ch_ksp), `KSP`, `KSPSetComputeInitialGuess()`, `SNESGetFunction()`, `KSPComputeRHSFn`, `KSPComputeOperatorsFn`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeInitialGuessFn(KSP ksp, Vec x, PetscCtx ctx);

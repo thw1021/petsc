@@ -7,6 +7,25 @@
 #include <petscdmtypes.h>
 #include <petscpctypes.h>
 
+/*S
+  PCModifySubMatricesFn - A prototype of a function used to modify submatrices generated with `PCASM`, `PCBJACOBI`, etc.
+
+  Calling Sequence:
++ pc     - the `PC` preconditioner context
+. nsub   - number of index sets
+. row    - an array of index sets that contain the global row numbers
+         that comprise each local submatrix
+. col    - an array of index sets that contain the global column numbers
+         that comprise each local submatrix
+. submat - array of local submatrices
+- ctx    - optional user-defined context for private data for the user-defined func routine (may be `NULL`), provided with `PCSetModifySubMatrices()`
+
+  Level: beginner
+
+.seealso: [](ch_ksp), `PC`, `PCSetModifySubMatrices()`, `PCModifySubMatrices()`, `PCASM`, `PCBJACOBI`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PCModifySubMatricesFn(PC pc, PetscInt nsub, const IS row[], const IS col[], Mat submat[], PetscCtx ctx);
+
 /* MANSEC = KSP */
 /* SUBMANSEC = PC */
 
