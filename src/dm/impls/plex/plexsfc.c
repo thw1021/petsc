@@ -1703,7 +1703,14 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
   if (nloc) PetscCall(PetscMalloc1(nloc, &samples));
   // Form the stride in 64 bits. `nloc` reaches `size`*`size` when one rank holds nearly every cell,
   // so the product with `numCells` passes 2^31 for a mesh of a few million cells on 16 ranks.
-  for (PetscInt j = 0; j < nloc; ++j) samples[j] = zkeys[(PetscInt)(((PetscInt64)j * (PetscInt64)numCells) / (PetscInt64)nloc)];
+  for (PetscInt j = 0; j < nloc; ++j) {
+    const PetscInt64 idx = ((PetscInt64)j * (PetscInt64)numCells) / (PetscInt64)nloc;
+
+    // A 32-bit product here once wrapped and read outside the array. The mesh needed to reach that
+    // is far larger than any test runs, so the guard stays in the code.
+    PetscAssert(idx >= 0 && idx < (PetscInt64)numCells, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Sample index %" PetscInt64_FMT " outside [0, %" PetscInt_FMT ")", idx, numCells);
+    samples[j] = zkeys[(PetscInt)idx];
+  }
   PetscCall(PetscMalloc1(PetscMax(1, total), &allsamples));
   PetscCallMPI(MPI_Allgatherv(samples, nloci, keytype, allsamples, counts, displs, keytype, comm));
 

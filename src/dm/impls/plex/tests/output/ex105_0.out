@@ -2,4 +2,4 @@ FromCentroids: N=8 cells=512 permutation ok, globally curve sorted, balanced
 FromCentroids: N=8 cells=512 permutation ok, globally curve sorted, balanced
 CellList: N=8 cells=64 plex built and checked
 Locality: reorder cuts shared points
-Degenerate geometry: four cases balanced within the sampling bound
+Degenerate geometry: 4 cases balanced within the sampling bound

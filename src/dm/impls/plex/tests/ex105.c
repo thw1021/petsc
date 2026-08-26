@@ -342,16 +342,17 @@ static PetscErrorCode TestLocalityImproves(MPI_Comm comm, PetscInt N)
 // still balance, because a rank that receives every cell is worse than no reorder at all.
 static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
 {
-  const char *names[] = {"identical centroids", "outlier stretches box", "mostly coincident"};
-  PetscMPIInt size, rank;
+  const char    *names[] = {"identical centroids", "outlier stretches box", "mostly coincident", "corner on every rank"};
+  const PetscInt nkinds  = (PetscInt)(sizeof(names) / sizeof(names[0]));
+  PetscMPIInt    size, rank;
 
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  for (PetscInt kind = 0; kind < 4; ++kind) {
+  for (PetscInt kind = 0; kind < nkinds; ++kind) {
     PetscSF    sf;
     PetscReal *cent;
-    PetscInt   NCells = kind == 3 ? N * N * N - 1 : N * N * N, numCells = 0, newNumCells, lo, hi, tot;
+    PetscInt   NCells = kind == 3 ? 4095 : N * N * N, numCells = 0, newNumCells, lo, hi, tot;
 
     for (PetscInt g = 0; g < NCells; ++g)
       if (g % size == rank) ++numCells;
@@ -375,18 +376,19 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
             cent[c * 3 + 2] = 1e6;
           }
         } else if (kind == 3) {
-          // Every rank holds cells over the whole box, including one at the very corner. This is
-          // what a mesh file in generator order gives: each rank's own smallest curve code equals
-          // the global smallest. If too few samples are taken then that shared value becomes the
-          // only splitter and every cell lands on one rank.
+          // Every rank holds cells across the whole box, and its first cell sits on the corner, so
+          // every rank's own smallest curve code equals the global smallest. A mesh file in
+          // generator order looks like this. Too few samples then place a splitter on that shared
+          // smallest value, and nearly every cell lands on one rank. The cell count is deliberately
+          // indivisible so the per-rank sample counts differ after rounding.
           if (c == 0) {
             cent[c * 3 + 0] = 0.;
             cent[c * 3 + 1] = 0.;
             cent[c * 3 + 2] = 0.;
           } else {
-            cent[c * 3 + 0] = (PetscReal)((g * 7919) % N);
-            cent[c * 3 + 1] = (PetscReal)((g * 6271) % N);
-            cent[c * 3 + 2] = (PetscReal)((g * 4643) % N);
+            cent[c * 3 + 0] = (PetscReal)((g * 7919) % 64);
+            cent[c * 3 + 1] = (PetscReal)((g * 6271) % 64);
+            cent[c * 3 + 2] = (PetscReal)((g * 4643) % 64);
           }
         } else { // three quarters of the cells on one point
           if (g % 4) {
@@ -421,10 +423,16 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
     // cell and the rest would get none. A ratio test cannot see that on two ranks, because one rank
     // holding everything meets the factor of two exactly.
     PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "%s: a rank received no cells; the curve codes do not separate these centroids, so the split must come from the cell numbering", names[kind]);
+    // Case 3 is well conditioned: distinct codes, cells everywhere, many cells per rank. The split
+    // should land close to the ideal, and a rank floor cannot see this failure because the losing
+    // rank keeps a few cells rather than none. Measured on 4095 cells: 1.03 to 1.09 with enough
+    // samples, and 1.37 to 1.97 with too few.
+    if (kind == 3 && size > 1 && NCells >= 32 * (PetscInt)size)
+      PetscCheck(4 * hi * (PetscInt)size <= 5 * NCells, comm, PETSC_ERR_PLIB, "%s: one rank holds %" PetscInt_FMT " cells against an ideal of %" PetscInt_FMT "; too few samples decide the splitters", names[kind], hi, NCells / (PetscInt)size);
     PetscCall(PetscSFDestroy(&sf));
     PetscCall(PetscFree(cent));
   }
-  PetscCall(PetscPrintf(comm, "Degenerate geometry: four cases balanced within the sampling bound\n"));
+  PetscCall(PetscPrintf(comm, "Degenerate geometry: %" PetscInt_FMT " cases balanced within the sampling bound\n", nkinds));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -473,5 +481,13 @@ int main(int argc, char **argv)
     suffix: skewed_input
     nsize: {{2 4 8}}
     args: -n 8
+
+  # Degenerate geometry: coincident centroids, one distant node, and a corner cell on every rank.
+  # The last of these needs enough samples to place the splitters, which is what caught a case
+  # where one rank kept nearly every cell.
+  test:
+    suffix: degenerate
+    nsize: {{2 4 8}}
+    args: -n 6
 
 TEST*/
