@@ -677,6 +677,70 @@ PetscErrorCode PCBDDCSetLevels(PC pc, PetscInt levels)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCBDDCLoadCustomization_BDDC(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCBDDCLoadCustomization - Load user-defined customization data for `PCBDDC` from a binary file
+
+  Collective
+
+  Input Parameters:
++ pc       - the preconditioning context
+- filename - path to the binary file
+
+  Level: advanced
+
+  Note:
+  This routine is normally called before `PCSetUp()`.
+
+.seealso: [](ch_ksp), `PCBDDC`, `PCBDDCSaveCustomization()`, `PCSetUp()`
+@*/
+PetscErrorCode PCBDDCLoadCustomization(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(filename, 2);
+  PetscTryMethod(pc, "PCBDDCLoadCustomization_C", (PC, const char[]), (pc, filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCBDDCSaveCustomization_BDDC(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCBDDCSaveCustomization - Save user-defined customization data for `PCBDDC` to a binary file
+
+  Collective
+
+  Input Parameters:
++ pc       - the preconditioning context
+- filename - path to the binary file
+
+  Level: advanced
+
+  Note:
+  Call `PCSetUp()` before this routine so that global customization data has been converted to the local representation stored in the file.
+
+.seealso: [](ch_ksp), `PCBDDC`, `PCBDDCLoadCustomization()`, `PCSetUp()`
+@*/
+PetscErrorCode PCBDDCSaveCustomization(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(filename, 2);
+  PetscTryMethod(pc, "PCBDDCSaveCustomization_C", (PC, const char[]), (pc, filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCBDDCSetDirichletBoundaries_BDDC(PC pc, IS DirichletBoundaries)
 {
   PC_BDDC  *pcbddc  = (PC_BDDC *)pc->data;
@@ -2047,6 +2111,8 @@ static PetscErrorCode PCDestroy_BDDC(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevel_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetUseExactDirichlet_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevels_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCLoadCustomization_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSaveCustomization_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundaries_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundariesLocal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetNeumannBoundaries_C", NULL));
@@ -2838,6 +2904,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevel_C", PCBDDCSetLevel_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetUseExactDirichlet_C", PCBDDCSetUseExactDirichlet_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevels_C", PCBDDCSetLevels_BDDC));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCLoadCustomization_C", PCBDDCLoadCustomization_BDDC));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSaveCustomization_C", PCBDDCSaveCustomization_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundaries_C", PCBDDCSetDirichletBoundaries_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundariesLocal_C", PCBDDCSetDirichletBoundariesLocal_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetNeumannBoundaries_C", PCBDDCSetNeumannBoundaries_BDDC));

@@ -1,4 +1,6 @@
 from petsc4py import PETSc
+from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -54,6 +56,45 @@ class TestFIELDSPLITPC(BaseTestPC, unittest.TestCase):
 
 class TestMG(BaseTestPC, unittest.TestCase):
     PC_TYPE = PETSc.PC.Type.MG
+
+
+class TestBDDCPC(BaseTestPC, unittest.TestCase):
+    PC_TYPE = PETSc.PC.Type.BDDC
+
+    def get_matis(self):
+        local_mat = PETSc.Mat().createAIJ([3, 3], nnz=1, comm=PETSc.COMM_SELF)
+        for i in range(3):
+            local_mat.setValue(i, i, 2)
+        local_mat.assemble()
+        mat = PETSc.Mat().createIS([3, 3], comm=PETSc.COMM_SELF)
+        mat.setISLocalMat(local_mat)
+        local_mat.destroy()
+        mat.assemble()
+        return mat
+
+    def testLoadSaveCustomization(self):
+        mat = self.get_matis()
+        boundary = PETSc.IS().createGeneral([0], comm=PETSc.COMM_SELF)
+        self.pc.setOperators(mat)
+        self.pc.setBDDCDirichletBoundariesLocal(boundary)
+        boundary.destroy()
+        self.pc.setUp()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            saved = Path(tmpdir) / 'bddc-customization.dat'
+            resaved = Path(tmpdir) / 'bddc-customization-resaved.dat'
+            self.pc.saveBDDCCustomization(str(saved))
+
+            loaded = PETSc.PC().create(PETSc.COMM_SELF)
+            loaded.setType(PETSc.PC.Type.BDDC)
+            loaded.setOperators(mat)
+            loaded.loadBDDCCustomization(str(saved))
+            loaded.setUp()
+            loaded.saveBDDCCustomization(str(resaved))
+
+            self.assertEqual(saved.read_bytes(), resaved.read_bytes())
+            loaded.destroy()
+        mat.destroy()
 
 
 class TestASMPC(BaseTestPC, unittest.TestCase):
