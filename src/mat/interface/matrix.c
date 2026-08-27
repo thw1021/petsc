@@ -2998,23 +2998,23 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat, Vec v1, Vec v2, Vec v3)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatADot_Default(Mat mat, Vec x, Vec y, PetscScalar *val)
+static PetscErrorCode MatADot_Default(Mat mat, Vec x, Vec y, PetscScalar *val)
 {
   PetscFunctionBegin;
-  if (!mat->dot_vec) PetscCall(MatCreateVecs(mat, &mat->dot_vec, NULL));
+  if (!mat->dot_vec) PetscCall(MatCreateVecs(mat, NULL, &mat->dot_vec));
   PetscCall(MatMult(mat, x, mat->dot_vec));
   PetscCall(VecDot(mat->dot_vec, y, val));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatANorm_Default(Mat mat, Vec x, PetscReal *val)
+static PetscErrorCode MatANorm_Default(Mat mat, Vec x, PetscReal *val)
 {
   PetscScalar sval;
 
   PetscFunctionBegin;
-  PetscCall(MatADot_Default(mat, x, x, &sval));
+  PetscCall(MatADot(mat, x, x, &sval));
   PetscCheck(PetscRealPart(sval) >= 0.0, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Matrix argument is not positive definite");
-  PetscCheck(PetscAbsReal(PetscImaginaryPart(sval)) < 100 * PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Matrix argument is not Hermitian");
+  PetscCheck(PetscAbsReal(PetscImaginaryPart(sval)) <= 100 * PETSC_MACHINE_EPSILON * PetscAbsScalar(sval), PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Matrix argument is not Hermitian");
   *val = PetscSqrtReal(PetscRealPart(sval));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3070,7 +3070,8 @@ PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
   PetscCall(PetscLogEventBegin(MAT_ADot, mat, x, y, 0));
-  PetscUseTypeMethod(mat, adot, x, y, val);
+  if (!mat->ops->adot) PetscCall(MatADot_Default(mat, x, y, val));
+  else PetscUseTypeMethod(mat, adot, x, y, val);
   PetscCall(PetscLogEventEnd(MAT_ADot, mat, x, y, 0));
   PetscCall(VecLockReadPop(y));
   PetscCall(VecLockReadPop(x));
@@ -3121,7 +3122,8 @@ PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
 
   PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(MAT_ANorm, mat, x, 0, 0));
-  PetscUseTypeMethod(mat, anorm, x, val);
+  if (!mat->ops->anorm) PetscCall(MatANorm_Default(mat, x, val));
+  else PetscUseTypeMethod(mat, anorm, x, val);
   PetscCall(PetscLogEventEnd(MAT_ANorm, mat, x, 0, 0));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
