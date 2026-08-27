@@ -98,10 +98,6 @@ class Script(logger.Logger):
     return
 
   @staticmethod
-  def runShellCommand(command, log=None, cwd=None, env=None):
-    return Script.runShellCommandSeq([command], log=log, cwd=cwd, env=env)
-
-  @staticmethod
   def runShellCommandSeq(commandseq, log=None, cwd=None, env=None):
     Popen = subprocess.Popen
     PIPE  = subprocess.PIPE

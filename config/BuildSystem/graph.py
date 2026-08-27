@@ -74,17 +74,6 @@ class DirectedGraph(object):
     self.removeVertex(vertex)
     return
 
-  def printIndent(self, indent):
-    import sys
-    for i in range(indent): sys.stdout.write('  ')
-
-  def display(self):
-    print('I am a DirectedGraph with '+str(len(self.vertices))+' vertices')
-    for vertex in DirectedGraph.breadthFirstSearch(self):
-      self.printIndent(vertex.__level)
-      print('('+str(self.vertices.index(vertex))+') '+str(vertex.__class__.__module__)+' in: '+str(map(self.vertices.index, self.inEdges[vertex]))+' out: '+str(map(self.vertices.index, self.outEdges[vertex])))
-    return
-
   def getRoots(graph):
     '''Return all the sources in the graph (nodes without entering edges)'''
     return [v for v in graph.vertices if not len(graph.getEdges(v)[0])]
@@ -127,30 +116,6 @@ class DirectedGraph(object):
           pass
     return
   depthFirstSearch = staticmethod(depthFirstSearch)
-
-  def breadthFirstSearch(graph, returnFinished = 0):
-    '''This is a generator returning vertices in a breadth-first traversal
-       - If returnFinished is True, return a vertex when it finishes
-       - Otherwise, return a vertex when it is first seen'''
-    queue = DirectedGraph.getRoots(graph)[0:1]
-    if not len(queue): return
-    seen  = [queue[0]]
-    if not returnFinished:
-      queue[0].__level = 0
-      yield queue[0]
-    while len(queue):
-      vertex = queue[-1]
-      for v in graph.getEdges(vertex)[1]:
-        if not v in seen:
-          seen.append(v)
-          v.__level = vertex.__level + 1
-          queue.insert(0, v)
-          if not returnFinished:
-            yield v
-      vertex = queue.pop()
-      if returnFinished:
-        yield vertex
-    return
 
   def topologicalSort(graph, start = None, outEdges = 1):
     '''Reorder the vertices using topological sort'''
