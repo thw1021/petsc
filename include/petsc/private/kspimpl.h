@@ -74,11 +74,27 @@ typedef enum {
   KSP_SETUP_NEWRHS
 } KSPSetUpStage;
 
+struct _KSPAppOps {
+  KSP                       ksp; // the owning KSP of these operations
+  KSPCreateOperatorsFn     *createoperators;
+  KSPComputeOperatorsFn    *computeoperators;
+  KSPComputeRHSFn          *computerhs;
+  KSPComputeInitialGuessFn *computeinitialguess;
+  void                     *createoperatorsctx;
+  void                     *computeoperatorsctx;
+  void                     *computerhsctx;
+  void                     *computeinitialguessctx;
+  void (*fortran_func_pointers[4])(void); /* Store our own function pointers so they are associated with this object instead of the KSP */
+};
+typedef struct _KSPAppOps  *KSPAppOps;
+PETSC_INTERN PetscErrorCode KSPGetAppOpsWrite(KSP, KSPAppOps *);
+
 /*
    Defines the KSP data structure.
 */
 struct _p_KSP {
   PETSCHEADER(struct _KSPOps);
+  KSPAppOps   appops;
   DM          dm;
   PetscBool   dmAuto;   /* DM was created automatically by KSP */
   KSPDMActive dmActive; /* KSP should use DM for computing operators */

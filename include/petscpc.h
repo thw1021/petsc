@@ -6,6 +6,7 @@
 #include <petscmat.h>
 #include <petscdmtypes.h>
 #include <petscpctypes.h>
+#include <petscksptypes.h>
 
 /* MANSEC = KSP */
 /* SUBMANSEC = PC */
@@ -41,6 +42,7 @@ PETSC_EXTERN const char *const        PCPatchConstructTypes[];
 PETSC_EXTERN const char *const *const PCFailedReasons;
 
 PETSC_EXTERN PetscErrorCode PCCreate(MPI_Comm, PC *);
+PETSC_EXTERN PetscErrorCode PCSetKSP(PC, KSP);
 PETSC_EXTERN PetscErrorCode PCSetType(PC, PCType);
 PETSC_EXTERN PetscErrorCode PCGetType(PC, PCType *);
 PETSC_EXTERN PetscErrorCode PCSetUp(PC);

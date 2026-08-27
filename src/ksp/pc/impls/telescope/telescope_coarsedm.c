@@ -87,7 +87,7 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
   PC_Telescope_CoarseDMCtx *ctx;
   DM                        dm, dm_coarse = NULL;
   MPI_Comm                  comm;
-  PetscBool                 has_perm, has_kspcomputeoperators, using_kspcomputeoperators;
+  PetscBool                 has_kspcomputeoperators = PETSC_FALSE, using_kspcomputeoperators = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(pc, "PCTelescope: setup (CoarseDM)\n"));
@@ -106,19 +106,14 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
     if (sred->ignore_kspcomputeoperators) PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_ALL, PETSC_FALSE));
   }
 
-  /* check if there is a method to provide a permutation */
-  has_perm                  = PETSC_FALSE;
-  has_kspcomputeoperators   = PETSC_FALSE;
-  using_kspcomputeoperators = PETSC_FALSE;
-
-  /* if no permutation is provided, we must rely on KSPSetComputeOperators */
+  /*  determine computeoperatorctx, see PCTelescopeSetUseCoarseDM() for how the computeoperatorctx may have been provided */
   {
     PetscErrorCode (*dmfine_kspfunc)(KSP, Mat, Mat, void *) = NULL;
     void *dmfine_kspctx = NULL, *dmcoarse_kspctx = NULL;
     void *dmfine_appctx = NULL, *dmcoarse_appctx = NULL;
     void *dmfine_shellctx = NULL, *dmcoarse_shellctx = NULL;
 
-    PetscCall(DMKSPGetComputeOperators(dm, &dmfine_kspfunc, &dmfine_kspctx));
+    PetscCall(KSPGetComputeOperators(pc->ksp, &dmfine_kspfunc, &dmfine_kspctx));
     if (dmfine_kspfunc) has_kspcomputeoperators = PETSC_TRUE;
 
     PetscCall(DMGetApplicationContext(ctx->dm_fine, &dmfine_appctx));
@@ -161,8 +156,8 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
             if (fp_get_coarsedm_context) {
               PetscCall(PetscInfo(pc, "PCTelescope: Found composed method PCTelescopeGetCoarseDMKSPContext from coarse DM\n"));
               PetscCall(fp_get_coarsedm_context(ctx->dm_coarse, &dmcoarse_context_user));
-              ctx->dmksp_context_user = dmcoarse_context_user;
-              dmcoarse_kspctx         = dmcoarse_context_user;
+              ctx->ksp_context_user = dmcoarse_context_user;
+              dmcoarse_kspctx       = dmcoarse_context_user;
             } else {
               PetscCall(PetscInfo(pc, "PCTelescope: Failed to find composed method PCTelescopeGetCoarseDMKSPContext from coarse DM\n"));
             }
@@ -188,8 +183,8 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
     }
   }
 
-  PetscCheck(has_perm || !has_kspcomputeoperators || using_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. A method for KSPSetComputeOperators() was provided but it was requested to be ignored. Telescope setup cannot proceed");
-  PetscCheck(has_perm || has_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. No method for KSPSetComputeOperators() was provided. Telescope setup cannot proceed");
+  PetscCheck(!has_kspcomputeoperators || using_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. A method for KSPSetComputeOperators() was provided but it was requested to be ignored. Telescope setup cannot proceed");
+  PetscCheck(has_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. No method for KSPSetComputeOperators() was provided. Telescope setup cannot proceed");
 
   {
     char dmfine_method[PETSC_MAX_PATH_LEN];
@@ -353,10 +348,10 @@ PetscErrorCode PCReset_Telescope_CoarseDM(PC pc)
   ctx->dm_coarse   = NULL; /* since I did not increment the ref counter we set these to NULL */
   ctx->permutation = NULL; /* this will be fetched from the dm so no need to call destroy */
   PetscCall(VecDestroy(&ctx->xp));
-  ctx->fp_dm_field_scatter      = NULL;
-  ctx->fp_dm_state_scatter      = NULL;
-  ctx->dmksp_context_determined = NULL;
-  ctx->dmksp_context_user       = NULL;
+  ctx->fp_dm_field_scatter    = NULL;
+  ctx->fp_dm_state_scatter    = NULL;
+  ctx->ksp_context_determined = NULL;
+  ctx->ksp_context_user       = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

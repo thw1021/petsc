@@ -11,7 +11,6 @@
 PETSC_EXTERN PetscErrorCode KSPInitializePackage(void);
 PETSC_EXTERN PetscErrorCode KSPFinalizePackage(void);
 
-
 /*J
    KSPType - String with the name of a PETSc Krylov method. These are all the Krylov solvers that PETSc provides.
 
@@ -105,6 +104,8 @@ PETSC_EXTERN PetscErrorCode KSPSetReusePreconditioner(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetReusePreconditioner(KSP, PetscBool *);
 PETSC_EXTERN PetscErrorCode KSPSetSkipPCSetFromOptions(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPCheckSolve(KSP, PC, Vec);
+
+PETSC_EXTERN PetscErrorCode KSPSetAppOps(KSP, KSP);
 
 PETSC_EXTERN PetscFunctionList KSPList;
 PETSC_EXTERN PetscFunctionList KSPGuessList;
@@ -1329,7 +1330,8 @@ PETSC_EXTERN PetscErrorCode KSPSetComputeRHS(KSP, KSPComputeRHSFn *, void *);
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeOperatorsFn(KSP ksp, Mat A, Mat P, PetscCtx ctx);
 
-PETSC_EXTERN PetscErrorCode KSPSetComputeOperators(KSP, KSPComputeOperatorsFn, void *);
+PETSC_EXTERN PetscErrorCode KSPSetComputeOperators(KSP, KSPComputeOperatorsFn *, PetscCtx);
+PETSC_EXTERN PetscErrorCode KSPGetComputeOperators(KSP, KSPComputeOperatorsFn **, PetscCtxRt);
 
 /*S
   KSPCreateOperatorsFn - A prototype of a `KSP` operator creation function that would be passed to `DMKSPSetCreateOperators()`
@@ -1350,6 +1352,8 @@ PETSC_EXTERN PetscErrorCode KSPSetComputeOperators(KSP, KSPComputeOperatorsFn, v
 .seealso: [](ch_ksp), `DMKSPSetCreateOperators()`, `DMKSPGetCreateOperators()`, `KSPComputeOperatorsFn`, `KSPSetOperators()`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPCreateOperatorsFn(KSP ksp, Mat *A, Mat *P, PetscCtx ctx);
+
+PETSC_EXTERN PetscErrorCode KSPSetCreateOperators(KSP, KSPCreateOperatorsFn *, PetscCtx);
 
 /*S
   KSPComputeInitialGuessFn - A prototype of a `KSP` evaluation function that would be passed to `KSPSetComputeInitialGuess()`

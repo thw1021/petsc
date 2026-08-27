@@ -16,6 +16,7 @@
   #define kspsetcomputerhs_               KSPSETCOMPUTERHS
   #define kspsetcomputeinitialguess_      KSPSETCOMPUTEINITIALGUESS
   #define kspsetcomputeoperators_         KSPSETCOMPUTEOPERATORS
+  #define kspsetcreateoperators_          KSPSETCREATEOPERATORS
   #define dmkspsetcomputerhs_             DMKSPSETCOMPUTERHS
   #define dmkspsetcomputeinitialguess_    DMKSPSETCOMPUTEINITIALGUESS
   #define dmkspsetcomputeoperators_       DMKSPSETCOMPUTEOPERATORS
@@ -34,6 +35,7 @@
   #define kspsetcomputerhs_               kspsetcomputerhs
   #define kspsetcomputeinitialguess_      kspsetcomputeinitialguess
   #define kspsetcomputeoperators_         kspsetcomputeoperators
+  #define kspsetcreateoperators_          kspsetcreateoperators
   #define dmkspsetcomputerhs_             dmkspsetcomputerhs
   #define dmkspsetcomputeinitialguess_    dmkspsetcomputeinitialguess
   #define dmkspsetcomputeoperators_       dmkspsetcomputeoperators
@@ -132,28 +134,61 @@ PETSC_EXTERN void kspsetconvergencetest_(KSP *ksp, void (*converge)(KSP *, Petsc
   }
 }
 
+PETSC_EXTERN void kspconvergeddefaultcreate_(PetscFortranAddr *ctx, PetscErrorCode *ierr)
+{
+  *ierr = KSPConvergedDefaultCreate((void **)ctx);
+}
+
+#include <petsc/private/kspimpl.h>
+
+static PetscErrorCode ourkspcomputerhs(KSP ksp, Vec b, PetscCtx ctx)
+{
+  PetscErrorCode ierr = PETSC_SUCCESS;
+  PetscCallFortranVoidFunction((*(void (*)(KSP *, Vec *, void *, PetscErrorCode *))ksp->appops->fortran_func_pointers[0])(&ksp, &b, ctx, &ierr));
+  return ierr;
+}
+
 PETSC_EXTERN void kspsetcomputerhs_(KSP *ksp, void (*func)(KSP *, Vec *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
 {
-  DM dm;
-  *ierr = KSPGetDM(*ksp, &dm);
-  if (!*ierr) dmkspsetcomputerhs_(&dm, func, ctx, ierr);
+  (*ksp)->appops->fortran_func_pointers[0] = (PetscFortranCallbackFn *)func;
+  *ierr                                    = KSPSetComputeRHS(*ksp, ourkspcomputerhs, ctx);
+}
+
+static PetscErrorCode ourkspcomputeinitialguess(KSP ksp, Vec x, PetscCtx ctx)
+{
+  PetscErrorCode ierr = PETSC_SUCCESS;
+  PetscCallFortranVoidFunction((*(void (*)(KSP *, Vec *, void *, PetscErrorCode *))ksp->appops->fortran_func_pointers[3])(&ksp, &x, ctx, &ierr));
+  return ierr;
 }
 
 PETSC_EXTERN void kspsetcomputeinitialguess_(KSP *ksp, void (*func)(KSP *, Vec *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
 {
-  DM dm;
-  *ierr = KSPGetDM(*ksp, &dm);
-  if (!*ierr) dmkspsetcomputeinitialguess_(&dm, func, ctx, ierr);
+  (*ksp)->appops->fortran_func_pointers[3] = (PetscFortranCallbackFn *)func;
+  *ierr                                    = KSPSetComputeInitialGuess(*ksp, ourkspcomputeinitialguess, ctx);
 }
 
-PETSC_EXTERN void kspsetcomputeoperators_(KSP *ksp, void (*func)(KSP *, Vec *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
+static PetscErrorCode ourkspcomputeoperators(KSP ksp, Mat A, Mat B, PetscCtx ctx)
 {
-  DM dm;
-  *ierr = KSPGetDM(*ksp, &dm);
-  if (!*ierr) dmkspsetcomputeoperators_(&dm, func, ctx, ierr);
+  PetscErrorCode ierr = PETSC_SUCCESS;
+  PetscCallFortranVoidFunction((*(void (*)(KSP *, Mat *, Mat *, void *, PetscErrorCode *))ksp->appops->fortran_func_pointers[1])(&ksp, &A, &B, ctx, &ierr));
+  return ierr;
 }
 
-PETSC_EXTERN void kspconvergeddefaultcreate_(PetscFortranAddr *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void kspsetcomputeoperators_(KSP *ksp, void (*func)(KSP *, Mat *, Mat *, void *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
 {
-  *ierr = KSPConvergedDefaultCreate((void **)ctx);
+  (*ksp)->appops->fortran_func_pointers[1] = (PetscFortranCallbackFn *)func;
+  *ierr                                    = KSPSetComputeOperators(*ksp, ourkspcomputeoperators, ctx);
+}
+
+static PetscErrorCode ourkspcreateoperators(KSP ksp, Mat *A, Mat *B, PetscCtx ctx)
+{
+  PetscErrorCode ierr = PETSC_SUCCESS;
+  PetscCallFortranVoidFunction((*(void (*)(KSP *, Mat *, Mat *, void *, PetscErrorCode *))ksp->appops->fortran_func_pointers[2])(&ksp, A, B, ctx, &ierr));
+  return ierr;
+}
+
+PETSC_EXTERN void kspsetcreateoperators_(KSP *ksp, void (*func)(KSP *, Mat *, Mat *, PetscErrorCode *), PetscCtx ctx, PetscErrorCode *ierr)
+{
+  (*ksp)->appops->fortran_func_pointers[2] = (PetscFortranCallbackFn *)func;
+  *ierr                                    = KSPSetCreateOperators(*ksp, ourkspcreateoperators, ctx);
 }

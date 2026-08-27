@@ -366,10 +366,10 @@ PetscErrorCode KSPSetUp(KSP ksp)
       DMKSP kdm;
 
       PetscCall(DMGetDMKSP(ksp->dm, &kdm));
-      if (kdm->ops->createoperators) {
+      if (ksp->appops->createoperators) {
         A = B = NULL;
-        PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(ksp, &A, &B, kdm->createoperatorsctx));
-        PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
+        PetscCallBack("KSP callback create operators", (*ksp->appops->createoperators)(ksp, &A, &B, ksp->appops->createoperatorsctx));
+        PetscCheck(A, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from KSPSetCreateOperators() callback");
         if (!B) B = A;
         if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
         PetscCall(KSPSetOperators(ksp, A, B));
@@ -387,16 +387,16 @@ PetscErrorCode KSPSetUp(KSP ksp)
     DMKSP kdm;
     PetscCall(DMGetDMKSP(ksp->dm, &kdm));
 
-    if (kdm->ops->computeinitialguess && ksp->setupstage != KSP_SETUP_NEWRHS && (ksp->dmActive & KSP_DMACTIVE_INITIAL_GUESS)) {
+    if (ksp->appops->computeinitialguess && ksp->setupstage != KSP_SETUP_NEWRHS && (ksp->dmActive & KSP_DMACTIVE_INITIAL_GUESS)) {
       /* only computes initial guess the first time through */
-      PetscCallBack("KSP callback initial guess", (*kdm->ops->computeinitialguess)(ksp, ksp->vec_sol, kdm->initialguessctx));
+      PetscCallBack("KSP callback initial guess", (*ksp->appops->computeinitialguess)(ksp, ksp->vec_sol, ksp->appops->computeinitialguessctx));
       PetscCall(KSPSetInitialGuessNonzero(ksp, PETSC_TRUE));
     }
-    if (kdm->ops->computerhs && (ksp->dmActive & KSP_DMACTIVE_RHS)) PetscCallBack("KSP callback rhs", (*kdm->ops->computerhs)(ksp, ksp->vec_rhs, kdm->rhsctx));
+    if (ksp->appops->computerhs && (ksp->dmActive & KSP_DMACTIVE_RHS)) PetscCallBack("KSP callback rhs", (*ksp->appops->computerhs)(ksp, ksp->vec_rhs, ksp->appops->computerhsctx));
     if ((ksp->setupstage != KSP_SETUP_NEWRHS) && (ksp->dmActive & KSP_DMACTIVE_OPERATOR)) {
-      PetscCheck(kdm->ops->computeoperators, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "You called KSPSetDM() but did not use DMKSPSetComputeOperators() or KSPSetDMActive(ksp, KSP_DMACTIVE_ALL, PETSC_FALSE);");
+      PetscCheck(ksp->appops->computeoperators, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "You called KSPSetDM() but did not use DMKSPSetComputeOperators() or KSPSetDMActive(ksp, KSP_DMACTIVE_ALL, PETSC_FALSE);");
       PetscCall(KSPGetOperators(ksp, &A, &B));
-      PetscCallBack("KSP callback operators", (*kdm->ops->computeoperators)(ksp, A, B, kdm->operatorsctx));
+      PetscCallBack("KSP callback operators", (*ksp->appops->computeoperators)(ksp, A, B, ksp->appops->computeoperatorsctx));
     }
   }
 
@@ -1600,6 +1600,7 @@ PetscErrorCode KSPDestroy(KSP *ksp)
   PetscCall(KSPGuessDestroy(&(*ksp)->guess));
   PetscCall(DMDestroy(&(*ksp)->dm));
   PetscCall(PCDestroy(&(*ksp)->pc));
+  if ((*ksp)->appops->ksp == *ksp) PetscCall(PetscFree((*ksp)->appops));
   PetscCall(PetscFree((*ksp)->res_hist_alloc));
   PetscCall(PetscFree((*ksp)->err_hist_alloc));
   if ((*ksp)->convergeddestroy) PetscCall((*(*ksp)->convergeddestroy)(&(*ksp)->cnvP));
@@ -2335,6 +2336,7 @@ PetscErrorCode KSPGetPC(KSP ksp, PC *pc)
     PetscCall(PCSetKSPNestLevel(ksp->pc, ksp->nestlevel));
     PetscCall(PCSetErrorIfFailure(ksp->pc, ksp->errorifnotconverged));
     if (ksp->dm) PetscCall(PCSetDM(ksp->pc, ksp->dm));
+    PetscCall(PCSetKSP(ksp->pc, ksp));
   }
   PetscCall(KSPCheckPCMPI(ksp));
   *pc = ksp->pc;
@@ -3073,6 +3075,80 @@ PetscErrorCode KSPGetDiagonalScaleFix(KSP ksp, PetscBool *fix)
 }
 
 /*@
+  KSPGetAppOpsWrite - get write access to `KSPAppOps` for a given `KSP`
+
+  Logically Collective
+
+  Input Parameter:
+. ksp - the `KSP` to hold the operations
+
+  Output Parameter:
+. appops - the `KSPAppOps`
+
+  Level: developer
+
+.seealso: [](ch_ksp), `KSP`, `KSPSetComputeOperators()`, `KSPSetAppOps()`
+@*/
+PetscErrorCode KSPGetAppOpsWrite(KSP ksp, KSPAppOps *appops)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  if (ksp->appops->ksp != ksp) {
+    KSPAppOps oldops = ksp->appops;
+
+    PetscCall(PetscInfo(ksp, "Copying KSPAppOps due to write\n"));
+    PetscCheck(oldops->ksp->appops->ksp == oldops->ksp, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_CORRUPT, "The KSP object is corrupted");
+    PetscCall(PetscNew(&ksp->appops));
+    ksp->appops->createoperators        = oldops->createoperators;
+    ksp->appops->computeoperators       = oldops->computeoperators;
+    ksp->appops->computerhs             = oldops->computerhs;
+    ksp->appops->computeinitialguess    = oldops->computeinitialguess;
+    ksp->appops->createoperatorsctx     = oldops->createoperatorsctx;
+    ksp->appops->computeoperatorsctx    = oldops->computeoperatorsctx;
+    ksp->appops->computerhsctx          = oldops->computerhsctx;
+    ksp->appops->computeinitialguessctx = oldops->computeinitialguessctx;
+    ksp->appops->ksp                    = ksp;
+    for (PetscInt i = 0; i < 4; i++) ksp->appops->fortran_func_pointers[i] = oldops->fortran_func_pointers[i];
+  }
+  *appops = ksp->appops;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPSetAppOps - set the `KSPAppOps` from a given `KSP` to another `KSP`. The `receiver` thus uses the same functions that have/will be set
+  to `provider` with `KSPSetComputeOperators()` etc
+
+  Logically Collective
+
+  Input Parameter:
+. provider - the `KSP` that provides the `KSPAppOps`, may be `NULL` to indicate the receiver remains unchanged
+
+  Output Parameter:
+. receiver - the `KSP` to receive the `KSPAppOps`
+
+  Level: developer
+
+  Notes:
+  If the receiver already owns a `KSPAppOps` it is freed and replaced
+
+  It must be known that `provider` will not be destroyed before `receiver`. This is the case for use in `PCMG`
+
+.seealso: [](ch_ksp), `KSP`, `KSPSetComputeOperators()`, `KSPGetAppOpsWrite()`
+@*/
+PetscErrorCode KSPSetAppOps(KSP provider, KSP receiver)
+{
+  PetscFunctionBegin;
+  if (!provider) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(provider, KSP_CLASSID, 1);
+  PetscValidHeaderSpecific(receiver, KSP_CLASSID, 2);
+  PetscCheck(provider != receiver, PetscObjectComm((PetscObject)provider), PETSC_ERR_ARG_INCOMP, "The two KSP must be distinct");
+  PetscCheck(receiver->appops->ksp == receiver, PetscObjectComm((PetscObject)receiver), PETSC_ERR_SUP, "Receiver must own its AppOps");
+  if (receiver->appops->ksp == receiver) PetscCall(PetscFree(receiver->appops));
+  receiver->appops = provider->appops;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   KSPSetComputeOperators - set routine to compute the linear operators
 
   Logically Collective
@@ -3092,20 +3168,74 @@ PetscErrorCode KSPGetDiagonalScaleFix(KSP ksp, PetscBool *fix)
   To reuse the same preconditioner for the next `KSPSolve()` and not compute a new one based on the most recently computed matrix call `KSPSetReusePreconditioner()`
 
   Developer Note:
-  Perhaps this routine and `KSPSetComputeRHS()` could be combined into a new API that makes clear when new matrices are computing without requiring call this
+  Perhaps this routine and `KSPSetComputeRHS()` could be combined into a new API that makes clear when new matrices are computing without requiring calling this
   routine to indicate when the new matrix should be computed.
 
-.seealso: [](ch_ksp), `KSP`, `KSPSetOperators()`, `KSPSetComputeRHS()`, `DMKSPSetComputeOperators()`, `KSPSetComputeInitialGuess()`, `KSPComputeOperatorsFn`
+.seealso: [](ch_ksp), `KSP`, `KSPSetOperators()`, `KSPSetComputeRHS()`, `KSPComputeOperatorsFn`, `KSPSetComputeInitialGuess()`, `KSPSetCreateOperators()`,
+          `KSPGetComputeOperators()`
 @*/
 PetscErrorCode KSPSetComputeOperators(KSP ksp, KSPComputeOperatorsFn *func, PetscCtx ctx)
 {
-  DM dm;
+  KSPAppOps appops;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(KSPGetDM(ksp, &dm));
-  PetscCall(DMKSPSetComputeOperators(dm, func, ctx));
+  PetscCall(KSPGetAppOpsWrite(ksp, &appops));
+  appops->computeoperators    = func;
+  appops->computeoperatorsctx = ctx;
   if (ksp->setupstage == KSP_SETUP_NEWRHS) ksp->setupstage = KSP_SETUP_NEWMATRIX;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPGetComputeOperators - get `KSP` matrix evaluation function
+
+  Not Collective
+
+  Input Parameter:
+. ksp - the `KSP`
+
+  Output Parameters:
++ func - matrix evaluation function, for calling sequence see `KSPComputeOperatorsFn`
+- ctx  - context for matrix evaluation
+
+  Level: developer
+
+.seealso: [](ch_ksp), `DM`, `KSP`, `KSPSetComputeOperators()`,  `KSPComputeOperatorsFn`
+@*/
+PetscErrorCode KSPGetComputeOperators(KSP ksp, KSPComputeOperatorsFn **func, PetscCtxRt ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  if (func) *func = ksp->appops->computeoperators;
+  if (ctx) *(void **)ctx = ksp->appops->computeoperatorsctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPSetCreateOperators - set routine to create the linear operators
+
+  Logically Collective
+
+  Input Parameters:
++ ksp  - the `KSP` context
+. func - function to create the operators, see `KSPCreateOperatorsFn` for the calling sequence
+- ctx  - optional context
+
+  Level: beginner
+
+.seealso: [](ch_ksp), `KSP`, `KSPSetOperators()`, `KSPSetComputeRHS()`, `KSPComputeOperatorsFn`, `KSPSetComputeInitialGuess()`,
+          `KSPSetComputeOperators()`
+@*/
+PetscErrorCode KSPSetCreateOperators(KSP ksp, KSPCreateOperatorsFn *func, PetscCtx ctx)
+{
+  KSPAppOps appops;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscCall(KSPGetAppOpsWrite(ksp, &appops));
+  appops->createoperators    = func;
+  appops->createoperatorsctx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3128,12 +3258,13 @@ PetscErrorCode KSPSetComputeOperators(KSP ksp, KSPComputeOperatorsFn *func, Pets
 @*/
 PetscErrorCode KSPSetComputeRHS(KSP ksp, KSPComputeRHSFn *func, PetscCtx ctx)
 {
-  DM dm;
+  KSPAppOps appops;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(KSPGetDM(ksp, &dm));
-  PetscCall(DMKSPSetComputeRHS(dm, func, ctx));
+  PetscCall(KSPGetAppOpsWrite(ksp, &appops));
+  appops->computerhs    = func;
+  appops->computerhsctx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3158,12 +3289,13 @@ PetscErrorCode KSPSetComputeRHS(KSP ksp, KSPComputeRHSFn *func, PetscCtx ctx)
 @*/
 PetscErrorCode KSPSetComputeInitialGuess(KSP ksp, KSPComputeInitialGuessFn *func, PetscCtx ctx)
 {
-  DM dm;
+  KSPAppOps appops;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(KSPGetDM(ksp, &dm));
-  PetscCall(DMKSPSetComputeInitialGuess(dm, func, ctx));
+  PetscCall(KSPGetAppOpsWrite(ksp, &appops));
+  appops->computeinitialguess    = func;
+  appops->computeinitialguessctx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

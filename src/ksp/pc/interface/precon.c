@@ -477,6 +477,30 @@ PetscErrorCode PCCreate(MPI_Comm comm, PC *newpc)
 }
 
 /*@
+  PCSetKSP - set the `KSP` that uses the `PC`
+
+  Collective
+
+  Input Parameters:
++ pc  - the `PC` object
+- ksp - the `KSP` object
+
+  Note:
+  This is needed because the design of `KSP` and `PC` is flawed in that though the `PC` manages the life of the operators the `KSPSetUp()` uses the functions
+  passed with `KSPSetComputeOperators()` while it should really be the `PC`.
+
+.seealso: [](ch_ksp), `PC`, `PCType`, `PCSetType`, `PCSetUp()`, `PCApply()`, `PCDestroy()`, `KSP`, `KSPGetPC()`
+@*/
+PetscErrorCode PCSetKSP(PC pc, KSP ksp)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 2);
+  pc->ksp = ksp;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PCParametersInitialize - Sets the base defaults for parameters in `pc`, updating a parameter's current value when it matches its previously recorded default.
 
   Logically collective

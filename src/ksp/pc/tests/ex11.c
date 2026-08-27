@@ -70,10 +70,10 @@ int main(int argc, char **argv)
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMSetUp(dm));
 
-  PetscCall(DMKSPSetCreateOperators(dm, CreateOperators, &user));
-  PetscCall(DMKSPSetComputeOperators(dm, ComputeOperators, &user));
-
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetCreateOperators(ksp, CreateOperators, &user));
+  PetscCall(KSPSetComputeOperators(ksp, ComputeOperators, &user));
+
   PetscCall(KSPSetDM(ksp, dm));
   PetscCall(KSPSetDMActive(ksp, KSP_DMACTIVE_OPERATOR, (PetscBool)!user_finest));
   PetscCall(KSPSetType(ksp, KSPPREONLY));

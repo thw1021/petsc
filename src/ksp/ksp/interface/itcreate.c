@@ -854,7 +854,9 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
 
   PetscCall(KSPNormSupportTableReset_Private(ksp));
 
-  *inksp = ksp;
+  PetscCall(PetscNew(&ksp->appops));
+  ksp->appops->ksp = ksp;
+  *inksp           = ksp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
