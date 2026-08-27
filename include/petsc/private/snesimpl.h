@@ -216,8 +216,6 @@ struct _DMSNESOps {
    a grid refinement level. `DMGetDMSNES()` returns the `DMSNES` associated with a `DM`. `DMGetDMSNESWrite()` returns a unique
    `DMSNES` that is only associated with the current `DM`, making a copy of the shared `DMSNES` if needed (copy-on-write).
 
-   See `DMKSP` for details on why there is a needed for `DMSNES` instead of simply storing the user callbacks directly in the `DM` or the `TS`
-
    Developer Note:
    The `originaldm` inside the `DMSNES` is NOT reference counted (to prevent a reference count loop between a `DM` and a `DMSNES`).
    The `DM` on which this context was first created is cached here to implement one-way
@@ -227,7 +225,7 @@ struct _DMSNESOps {
    propagates to all the levels. If instead, they get out a specific level and set the function on that level,
    subsequent changes to the original level will no longer propagate to that level.
 
-.seealso: [](ch_snes), `SNES`, `SNESCreate()`, `DM`, `DMGetDMSNESWrite()`, `DMGetDMSNES()`,  `DMKSP`, `DMTS`, `DMSNESSetFunction()`, `DMSNESGetFunction()`,
+.seealso: [](ch_snes), `SNES`, `SNESCreate()`, `DM`, `DMGetDMSNESWrite()`, `DMGetDMSNES()`,  `DMTS`, `DMSNESSetFunction()`, `DMSNESGetFunction()`,
           `DMSNESSetFunctionContextDestroy()`, `DMSNESSetMFFunction()`, `DMSNESSetNGS()`, `DMSNESGetNGS()`, `DMSNESSetJacobian()`, `DMSNESGetJacobian()`,
           `DMSNESSetJacobianContextDestroy()`, `DMSNESSetPicard()`, `DMSNESGetPicard()`, `DMSNESSetObjective()`, `DMSNESGetObjective()`, `DMCopyDMSNES()`
 S*/

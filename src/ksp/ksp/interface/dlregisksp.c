@@ -161,7 +161,6 @@ PetscErrorCode KSPInitializePackage(void)
   KSPPackageInitialized = PETSC_TRUE;
   /* Register Classes */
   PetscCall(PetscClassIdRegister("Krylov Solver", &KSP_CLASSID));
-  PetscCall(PetscClassIdRegister("DMKSP interface", &DMKSP_CLASSID));
   PetscCall(PetscClassIdRegister("KSPGuess interface", &KSPGUESS_CLASSID));
   /* Register Constructors */
   PetscCall(KSPRegisterAll());
@@ -180,22 +179,18 @@ PetscErrorCode KSPInitializePackage(void)
   PetscCall(PetscLogEventRegister("KSPMatSolveTrans", KSP_CLASSID, &KSP_MatSolveTranspose));
   /* Process Info */
   {
-    PetscClassId classids[3];
+    PetscClassId classids[2];
 
     classids[0] = KSP_CLASSID;
-    classids[1] = DMKSP_CLASSID;
-    classids[2] = KSPGUESS_CLASSID;
+    classids[1] = KSPGUESS_CLASSID;
     PetscCall(PetscInfoProcessClass("ksp", 1, &classids[0]));
-    PetscCall(PetscInfoProcessClass("dm", 1, &classids[1]));
-    PetscCall(PetscInfoProcessClass("kspguess", 1, &classids[2]));
+    PetscCall(PetscInfoProcessClass("kspguess", 1, &classids[1]));
   }
   /* Process summary exclusions */
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("ksp", logList, ',', &pkg));
     if (pkg) PetscCall(PetscLogEventExcludeClass(KSP_CLASSID));
-    PetscCall(PetscStrInList("dm", logList, ',', &cls));
-    if (pkg || cls) PetscCall(PetscLogEventExcludeClass(DMKSP_CLASSID));
     PetscCall(PetscStrInList("kspguess", logList, ',', &cls));
     if (pkg || cls) PetscCall(PetscLogEventExcludeClass(KSPGUESS_CLASSID));
   }

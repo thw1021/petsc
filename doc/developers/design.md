@@ -7,7 +7,6 @@
 
 kernel
 objects
-callbacks
 matrices
 articles
 ```

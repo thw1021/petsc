@@ -465,21 +465,23 @@ static PetscErrorCode PCTelescopeSetUp_dmda_repart(PC pc, PC_Telescope sred, PC_
 
   /* attach repartitioned dm to child ksp */
   {
-    PetscErrorCode (*dmksp_func)(KSP, Mat, Mat, void *);
-    void *dmksp_ctx;
+    PetscErrorCode (*ksp_func)(KSP, Mat, Mat, void *) = NULL;
+    void *ksp_ctx                                     = NULL;
 
-    PetscCall(DMKSPGetComputeOperators(dm, &dmksp_func, &dmksp_ctx));
+    if (pc->ksp) PetscCall(KSPGetComputeOperators(pc->ksp, &ksp_func, &ksp_ctx));
 
     /* attach dm to ksp on sub communicator */
     if (PCTelescope_isActiveRank(sred)) {
       PetscCall(KSPSetDM(sred->ksp, ctx->dmrepart));
 
-      if (!dmksp_func || sred->ignore_kspcomputeoperators) {
+      if (!ksp_func || sred->ignore_kspcomputeoperators) {
         PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_ALL, PETSC_FALSE));
       } else {
-        /* sub ksp inherits dmksp_func and context provided by user */
-        PetscCall(KSPSetComputeOperators(sred->ksp, dmksp_func, dmksp_ctx));
-        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_ALL, PETSC_TRUE));
+        /* sub ksp inherits ksp_func and context provided by user */
+        PetscCall(KSPSetComputeOperators(sred->ksp, ksp_func, ksp_ctx));
+        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_OPERATOR, PETSC_TRUE));
+        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_INITIAL_GUESS, PETSC_FALSE));
+        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_RHS, PETSC_FALSE));
       }
     }
   }
@@ -747,14 +749,14 @@ static PetscErrorCode PCTelescopeMatCreate_dmda_dmactivefalse(PC pc, PC_Telescop
 PetscErrorCode PCTelescopeMatCreate_dmda(PC pc, PC_Telescope sred, MatReuse reuse, Mat *A)
 {
   DM dm;
-  PetscErrorCode (*dmksp_func)(KSP, Mat, Mat, void *);
-  void *dmksp_ctx;
+  PetscErrorCode (*ksp_func)(KSP, Mat, Mat, void *) = NULL;
+  void *ksp_ctx                                     = NULL;
 
   PetscFunctionBegin;
   PetscCall(PCGetDM(pc, &dm));
-  PetscCall(DMKSPGetComputeOperators(dm, &dmksp_func, &dmksp_ctx));
-  /* We assume that dmksp_func = NULL, is equivalent to dmActive = PETSC_FALSE */
-  if (dmksp_func && !sred->ignore_kspcomputeoperators) {
+  if (pc->ksp) PetscCall(KSPGetComputeOperators(pc->ksp, &ksp_func, &ksp_ctx));
+  /* We assume that ksp_func = NULL, is equivalent to dmActive = PETSC_FALSE */
+  if (ksp_func && !sred->ignore_kspcomputeoperators) {
     DM  dmrepart;
     Mat Ak;
 
