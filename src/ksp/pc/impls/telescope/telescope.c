@@ -536,6 +536,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
 
     if (PCTelescope_isActiveRank(sred)) {
       PetscCall(KSPCreate(subcomm, &sred->ksp));
+      PetscCall(KSPSetAppOps(pc->ksp, sred->ksp));
       PetscCall(KSPSetNestLevel(sred->ksp, pc->kspnestlevel));
       PetscCall(KSPSetErrorIfNotConverged(sred->ksp, pc->erroriffailure));
       PetscCall(PetscObjectIncrementTabLevel((PetscObject)sred->ksp, (PetscObject)pc, 1));
@@ -1021,7 +1022,7 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
 .ve
   The signature of the user provided field scatter method is
 .vb
-   PetscErrorCode your_field_scatter_method(DM dm_fine,Vec x_fine,ScatterMode mode,DM dm_coarse,Vec x_coarse);
+   PetscErrorCode your_field_scatter_method(DM dm_fine, Vec x_fine, ScatterMode mode, DM dm_coarse, Vec x_coarse);
 .ve
   The user must provide support for both mode `SCATTER_FORWARD` and mode `SCATTER_REVERSE`.
   `SCATTER_FORWARD` implies the direction of transfer is from the parent (fine) `DM` to the coarse `DM`.
@@ -1034,12 +1035,12 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
 .vb
    {
      DM dm_fine;
-     PetscObjectCompose((PetscObject)dm_fine,"PCTelescopeStateScatter",your_state_scatter_method);
+     PetscObjectCompose((PetscObject)dm_fine, "PCTelescopeStateScatter", your_state_scatter_method);
    }
 .ve
   The signature of the user provided state scatter method is
 .vb
-   PetscErrorCode your_state_scatter_method(DM dm_fine,ScatterMode mode,DM dm_coarse);
+   PetscErrorCode your_state_scatter_method(DM dm_fine, ScatterMode mode, DM dm_coarse);
 .ve
   `SCATTER_FORWARD` implies the direction of transfer is from the fine `DM` to the coarse `DM`.
   The user is only required to support mode = `SCATTER_FORWARD`.
@@ -1056,28 +1057,28 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
   Note that the special case of a `DMSHELL` context is queried.
 
 .vb
-   DMKSPGetComputeOperators(dm_fine,&dmfine_kspfunc,&dmfine_kspctx);
-   DMGetApplicationContext(dm_fine,&dmfine_appctx);
-   DMShellGetContext(dm_fine,&dmfine_shellctx);
+   KSPGetComputeOperators(ksp, &dmfine_kspfunc, &dmfine_kspctx);
+   DMGetApplicationContext(dm_fine, &dmfine_appctx);
+   DMShellGetContext(dm_fine, &dmfine_shellctx);
 
-   DMGetApplicationContext(dm_coarse,&dmcoarse_appctx);
-   DMShellGetContext(dm_coarse,&dmcoarse_shellctx);
+   DMGetApplicationContext(dm_coarse, &dmcoarse_appctx);
+   DMShellGetContext(dm_coarse, &dmcoarse_shellctx);
 .ve
 
   The following rules are then enforced\:
 
   1. If `dmfine_kspctx` = `NULL`, then we provide a `NULL` pointer as the context for the sub-`KSP`\:
-  `KSPSetComputeOperators`(`sub_ksp`,`dmfine_kspfunc`,`NULL`);
+  `KSPSetComputeOperators`(`sub_ksp`, `dmfine_kspfunc`, `NULL`);
 
   2. If `dmfine_kspctx` != `NULL` and `dmfine_kspctx` == `dmfine_appctx`,
 
   check that `dmcoarse_appctx` is also non-`NULL`. If this is true, then\:
-  `KSPSetComputeOperators`(`sub_ksp`,`dmfine_kspfunc`,`dmcoarse_appctx`);
+  `KSPSetComputeOperators`(`sub_ksp`, `dmfine_kspfunc`, `dmcoarse_appctx`);
 
   3. If `dmfine_kspctx` != `NULL` and `dmfine_kspctx` == `dmfine_shellctx`,
 
   check that `dmcoarse_shellctx` is also non-`NULL`. If this is true, then\:
-  `KSPSetComputeOperators`(`sub_ksp`,`dmfine_kspfunc`,`dmcoarse_shellctx`);
+  `KSPSetComputeOperators`(`sub_ksp`, `dmfine_kspfunc`, `dmcoarse_shellctx`);
 
   If neither of the above three tests passed, then `PCTELESCOPE` cannot safely determine what
   context should be provided to `KSPSetComputeOperators()` for use with the sub-`KSP`.
@@ -1087,12 +1088,12 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
 .vb
    {
      DM dm_coarse;
-     PetscObjectCompose((PetscObject)dm_coarse,"PCTelescopeGetCoarseDMKSPContext",your_coarse_context_getter);
+     PetscObjectCompose((PetscObject)dm_coarse, "PCTelescopeGetCoarseKSPContext", your_coarse_context_getter);
    }
 .ve
   The signature of the user provided method is
 .vb
-   PetscErrorCode your_coarse_context_getter(DM dm_coarse,void **your_kspcontext);
+   PetscErrorCode your_coarse_context_getter(DM dm_coarse, PetscCtxRt your_kspcontext);
 .ve
 
 .seealso: [](ch_ksp), `DM`, `PCTELESCOPE`, `PCTelescopeSetIgnoreDM()`

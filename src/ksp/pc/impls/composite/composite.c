@@ -173,6 +173,7 @@ static PetscErrorCode PCSetUp_Composite(PC pc)
   PetscCall(PCGetDM(pc, &dm));
   while (next) {
     if (!next->pc->dm) PetscCall(PCSetDM(next->pc, dm));
+    if (!next->pc->ksp) PetscCall(PCSetKSP(next->pc, pc->ksp));
     if (!next->pc->mat) PetscCall(PCSetOperators(next->pc, pc->mat, pc->pmat));
     next = next->next;
   }
@@ -260,6 +261,7 @@ static PetscErrorCode PCSetFromOptions_Composite(PC pc, PetscOptionItems PetscOp
 
   next = jac->head;
   while (next) {
+    if (!next->pc->ksp) PetscCall(PCSetKSP(next->pc, pc->ksp));
     PetscCall(PCSetFromOptions(next->pc));
     next = next->next;
   }

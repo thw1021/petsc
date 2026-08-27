@@ -5,7 +5,6 @@
 
 /* Logging support */
 PetscClassId  KSP_CLASSID;
-PetscClassId  DMKSP_CLASSID;
 PetscClassId  KSPGUESS_CLASSID;
 PetscLogEvent KSP_GMRESOrthogonalization, KSP_SetUp, KSP_Solve, KSP_SolveTranspose, KSP_MatSolve, KSP_MatSolveTranspose;
 
@@ -854,7 +853,9 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
 
   PetscCall(KSPNormSupportTableReset_Private(ksp));
 
-  *inksp = ksp;
+  PetscCall(PetscNew(&ksp->appops));
+  ksp->appops->ksp = ksp;
+  *inksp           = ksp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

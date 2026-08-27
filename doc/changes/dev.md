@@ -107,6 +107,8 @@
 - Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
 - Deprecate `KSPMonitorResidualShort()` and `-ksp_monitor_short`, remove the `preconditioned_residual_short` monitor registry name
 - Remove `-ksp_plot_eigenvalues`, `-ksp_plot_eigenvalues_explicitly`, `-ksp_plot_eigencontours` that have been deprecated since version 3.9
+- Add `KSPGetAppOpsWrite()`, `KSPSetAppOps()`, and `PCSetKSP()`. Utilize them to move the functionality of the DMKSP objects and operations to `KSP` and `PC`
+- Add `KSPGetComputeOperators()` and `KSPSetCreateOperators()`
 
 ## SNES
 
@@ -162,7 +164,10 @@
 ## DM
 
 - Change `DMLabelPropagatePush()` to take a reduce operator
-- Add `DMKSPSetCreateOperators()` to let the `DM` provide a pair of application specific `Mat` objects to inner `KSP` solvers.
+
+## DMKSP
+
+- Remove all of DMKSP
 
 ## DMSwarm
 

@@ -386,8 +386,6 @@ struct _p_TSAdapt {
    a grid refinement level. `DMGetDMTS()` returns the `DMTS` associated with a `DM`. `DMGetDMTSWrite()` returns a unique
    `DMTS` that is only associated with the current `DM`, making a copy of the shared `DMTS` if needed (copy-on-write).
 
-   See `DMKSP` for details on why there is a needed for `DMTS` instead of simply storing the user callbacks directly in the `DM` or the `TS`
-
    Developer Note:
    The original `dm` inside the `DMTS` is NOT reference counted  (to prevent a reference count loop between a `DM` and a `DMSNES`).
    The `DM` on which this context was first created is cached here to implement one-way
@@ -397,7 +395,7 @@ struct _p_TSAdapt {
           `DMTSSetRHSJacobian()`, `DMTSGetRHSJacobian()`, `DMTSSetRHSJacobianContextDestroy()`, `DMTSSetIFunction()`, `DMTSGetIFunction()`,
           `DMTSSetIFunctionContextDestroy()`, `DMTSSetIJacobian()`, `DMTSGetIJacobian()`, `DMTSSetIJacobianContextDestroy()`,
           `DMTSSetI2Function()`, `DMTSGetI2Function()`, `DMTSSetI2FunctionContextDestroy()`, `DMTSSetI2Jacobian()`,
-          `DMTSGetI2Jacobian()`, `DMTSSetI2JacobianContextDestroy()`, `DMKSP`, `DMSNES`
+          `DMTSGetI2Jacobian()`, `DMTSSetI2JacobianContextDestroy()`, `DMSNES`
 S*/
 typedef struct _p_DMTS *DMTS;
 

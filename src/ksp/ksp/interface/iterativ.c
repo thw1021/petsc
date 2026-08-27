@@ -1925,15 +1925,11 @@ PetscErrorCode KSPGetConvergedReasonString(KSP ksp, const char *strreason[])
   Level: intermediate
 
   Notes:
-  If this is used then the `KSP` will attempt to use the `DM` to create the matrix and use the routine set with
-  `DMKSPSetComputeOperators()`. Use `KSPSetDMActive`(ksp, `KSP_DMACTIVE_OPERATOR`, `PETSC_FALSE`) to instead use the matrix you've provided with
+  If this is used then the `KSP` will attempt to use the `DM` to create the matrix.
+  Use `KSPSetDMActive`(ksp, `KSP_DMACTIVE_OPERATOR`, `PETSC_FALSE`) to instead use the matrix you've provided with
   `KSPSetOperators()`.
 
-  A `DM` can only be used for solving one problem at a time because information about the problem is stored on the `DM`,
-  even when not using interfaces like `DMKSPSetComputeOperators()`.  Use `DMClone()` to get a distinct `DM` when solving
-  different problems using the same function space.
-
-.seealso: [](ch_ksp), `KSP`, `DM`, `KSPGetDM()`, `KSPSetDMActive()`, `KSPSetComputeOperators()`, `KSPSetComputeRHS()`, `KSPSetComputeInitialGuess()`, `DMKSPSetComputeOperators()`, `DMKSPSetComputeRHS()`, `DMKSPSetComputeInitialGuess()`
+.seealso: [](ch_ksp), `KSP`, `DM`, `KSPGetDM()`, `KSPSetDMActive()`, `KSPSetComputeOperators()`, `KSPSetComputeRHS()`, `KSPSetComputeInitialGuess()`
 @*/
 PetscErrorCode KSPSetDM(KSP ksp, DM dm)
 {
@@ -1941,15 +1937,7 @@ PetscErrorCode KSPSetDM(KSP ksp, DM dm)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)dm));
-  if (ksp->dm) { /* Move the DMSNES context over to the new DM unless the new DM already has one */
-    if (ksp->dm->dmksp && !dm->dmksp) {
-      DMKSP kdm;
-      PetscCall(DMCopyDMKSP(ksp->dm, dm));
-      PetscCall(DMGetDMKSP(ksp->dm, &kdm));
-      if (kdm->originaldm == ksp->dm) kdm->originaldm = dm; /* Grant write privileges to the replacement DM */
-    }
-    PetscCall(DMDestroy(&ksp->dm));
-  }
+  PetscCall(DMDestroy(&ksp->dm));
   ksp->dm       = dm;
   ksp->dmAuto   = PETSC_FALSE;
   ksp->dmActive = KSP_DMACTIVE_ALL;
@@ -1965,7 +1953,7 @@ PetscErrorCode KSPSetDM(KSP ksp, DM dm)
   Input Parameters:
 + ksp    - the `KSP`
 . active - one of `KSP_DMACTIVE_OPERATOR`, `KSP_DMACTIVE_RHS`, or `KSP_DMACTIVE_INITIAL_GUESS`
-- flg    - use the `DM`
+- flg    - if `PETSC_TRUE` add `active` to the current set values, else remove `active` from the current values set
 
   Level: intermediate
 
