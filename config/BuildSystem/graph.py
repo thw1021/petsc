@@ -74,17 +74,6 @@ class DirectedGraph(object):
     self.removeVertex(vertex)
     return
 
-  def addSubgraph(self, graph):
-    '''Add the vertices and edges of another graph into this one'''
-    map(self.addVertex, graph.vertices)
-    map(lambda v: self.addEdges(v, *graph.getEdges(v)), graph.vertices)
-    return
-
-  def removeSubgraph(self, graph):
-    '''Remove the vertices and edges of a subgraph, and all the edges connected to it'''
-    map(self.removeVertex, graph.vertices)
-    return
-
   def printIndent(self, indent):
     import sys
     for i in range(indent): sys.stdout.write('  ')
@@ -96,29 +85,10 @@ class DirectedGraph(object):
       print('('+str(self.vertices.index(vertex))+') '+str(vertex.__class__.__module__)+' in: '+str(map(self.vertices.index, self.inEdges[vertex]))+' out: '+str(map(self.vertices.index, self.outEdges[vertex])))
     return
 
-  def appendGraph(self, graph):
-    '''Join every leaf of this graph to every root of the input graph, leaving the result in this graph'''
-    leaves = DirectedGraph.getLeaves(self)
-    self.addSubgraph(graph)
-    map(lambda v: self.addEdges(v, outputs = DirectedGraph.getRoots(graph)), leaves)
-    return self
-
-  def prependGraph(self, graph):
-    '''Join every leaf of the input graph to every root of this graph, leaving the result in this graph'''
-    roots = DirectedGraph.getRoots(self)
-    self.addSubgraph(graph)
-    map(lambda v: self.addEdges(v, outputs = roots), DirectedGraph.getLeaves(graph))
-    return self
-
   def getRoots(graph):
     '''Return all the sources in the graph (nodes without entering edges)'''
     return [v for v in graph.vertices if not len(graph.getEdges(v)[0])]
   getRoots = staticmethod(getRoots)
-
-  def getLeaves(graph):
-    '''Return all the sinks in the graph (nodes without exiting edges)'''
-    return [v for v in graph.vertices if not len(graph.getEdges(v)[1])]
-  getLeaves = staticmethod(getLeaves)
 
   def depthFirstVisit(graph, vertex, seen = None, returnFinished = 0, outEdges = 1):
     '''This is a generator returning vertices in a depth-first traversal only for the subtree rooted at vertex

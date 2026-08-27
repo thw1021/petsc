@@ -29,11 +29,6 @@ tests will cause ValueError.
     '''Retrieve the flag indicating whether the item should be persistent'''
     return self.isTemporary
 
-  def setTemporary(self, isTemporary):
-    '''Set the flag indicating whether the item should be persistent'''
-    self.isTemporary = isTemporary
-    return
-
   def parseValue(arg):
     '''Return the object represented by the value portion of a string argument'''
     # Should I replace this with a lexer?
@@ -124,10 +119,6 @@ tests will cause ValueError.
     if isinstance(value, list):
       return str(list(map(str, value)))
     return str(value)
-
-  def getKey(self):
-    '''Returns the key. SHOULD MAKE THIS A PROPERTY'''
-    return self.key
 
   def setKey(self, key):
     '''Set the key. SHOULD MAKE THIS A PROPERTY'''

@@ -264,14 +264,6 @@ Arg class, which wraps the usual value.'''
     else:
       return default
 
-  def hasType(self, key):
-    '''Checks for the key locally, and if not found consults the parent. Then checks whether the type has been set'''
-    if self.dict_has_key(key):
-      return 1
-    elif not self.parent is None:
-      return self.send(key)
-    return 0
-
   def items(self):
     '''Return a list of all accessible items, as (key, value) pairs.'''
     l = dict.items(self)
