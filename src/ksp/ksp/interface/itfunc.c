@@ -363,9 +363,6 @@ PetscErrorCode KSPSetUp(KSP ksp)
     if (!ksp->vec_sol) PetscCall(DMCreateGlobalVector(ksp->dm, &ksp->vec_sol));
 
     if (!Aopset) {
-      DMKSP kdm;
-
-      PetscCall(DMGetDMKSP(ksp->dm, &kdm));
       if (ksp->appops->createoperators) {
         A = B = NULL;
         PetscCallBack("KSP callback create operators", (*ksp->appops->createoperators)(ksp, &A, &B, ksp->appops->createoperatorsctx));
@@ -384,9 +381,6 @@ PetscErrorCode KSPSetUp(KSP ksp)
   }
 
   if (ksp->dmActive) {
-    DMKSP kdm;
-    PetscCall(DMGetDMKSP(ksp->dm, &kdm));
-
     if (ksp->appops->computeinitialguess && ksp->setupstage != KSP_SETUP_NEWRHS && (ksp->dmActive & KSP_DMACTIVE_INITIAL_GUESS)) {
       /* only computes initial guess the first time through */
       PetscCallBack("KSP callback initial guess", (*ksp->appops->computeinitialguess)(ksp, ksp->vec_sol, ksp->appops->computeinitialguessctx));
@@ -394,7 +388,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
     }
     if (ksp->appops->computerhs && (ksp->dmActive & KSP_DMACTIVE_RHS)) PetscCallBack("KSP callback rhs", (*ksp->appops->computerhs)(ksp, ksp->vec_rhs, ksp->appops->computerhsctx));
     if ((ksp->setupstage != KSP_SETUP_NEWRHS) && (ksp->dmActive & KSP_DMACTIVE_OPERATOR)) {
-      PetscCheck(ksp->appops->computeoperators, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "You called KSPSetDM() but did not use DMKSPSetComputeOperators() or KSPSetDMActive(ksp, KSP_DMACTIVE_ALL, PETSC_FALSE);");
+      PetscCheck(ksp->appops->computeoperators, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_WRONGSTATE, "You called KSPSetDM() but did not use KSPSetComputeOperators() or KSPSetDMActive(ksp, KSP_DMACTIVE_ALL, PETSC_FALSE);");
       PetscCall(KSPGetOperators(ksp, &A, &B));
       PetscCallBack("KSP callback operators", (*ksp->appops->computeoperators)(ksp, A, B, ksp->appops->computeoperatorsctx));
     }
@@ -3201,7 +3195,7 @@ PetscErrorCode KSPSetComputeOperators(KSP ksp, KSPComputeOperatorsFn *func, Pets
 
   Level: developer
 
-.seealso: [](ch_ksp), `DM`, `KSP`, `KSPSetComputeOperators()`,  `KSPComputeOperatorsFn`
+.seealso: [](ch_ksp), `DM`, `KSP`, `KSPSetComputeOperators()`, `KSPComputeOperatorsFn`
 @*/
 PetscErrorCode KSPGetComputeOperators(KSP ksp, KSPComputeOperatorsFn **func, PetscCtxRt ctx)
 {
@@ -3254,7 +3248,7 @@ PetscErrorCode KSPSetCreateOperators(KSP ksp, KSPCreateOperatorsFn *func, PetscC
   Note:
   The routine you provide will be called EACH you call `KSPSolve()` to prepare the new right-hand side for that solve
 
-.seealso: [](ch_ksp), `KSP`, `KSPSolve()`, `DMKSPSetComputeRHS()`, `KSPSetComputeOperators()`, `KSPSetOperators()`, `KSPComputeRHSFn`
+.seealso: [](ch_ksp), `KSP`, `KSPSolve()`, `KSPSetComputeOperators()`, `KSPSetOperators()`, `KSPComputeRHSFn`
 @*/
 PetscErrorCode KSPSetComputeRHS(KSP ksp, KSPComputeRHSFn *func, PetscCtx ctx)
 {
@@ -3284,7 +3278,7 @@ PetscErrorCode KSPSetComputeRHS(KSP ksp, KSPComputeRHSFn *func, PetscCtx ctx)
   This should only be used in conjunction with `KSPSetComputeRHS()` and `KSPSetComputeOperators()`, otherwise
   call `KSPSetInitialGuessNonzero()` and set the initial guess values in the solution vector passed to `KSPSolve()` before calling the solver
 
-.seealso: [](ch_ksp), `KSP`, `KSPSolve()`, `KSPSetComputeRHS()`, `KSPSetComputeOperators()`, `DMKSPSetComputeInitialGuess()`, `KSPSetInitialGuessNonzero()`,
+.seealso: [](ch_ksp), `KSP`, `KSPSolve()`, `KSPSetComputeRHS()`, `KSPSetComputeOperators()`, `KSPSetInitialGuessNonzero()`,
           `KSPComputeInitialGuessFn`
 @*/
 PetscErrorCode KSPSetComputeInitialGuess(KSP ksp, KSPComputeInitialGuessFn *func, PetscCtx ctx)

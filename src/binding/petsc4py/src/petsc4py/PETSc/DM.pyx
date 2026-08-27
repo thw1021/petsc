@@ -2377,7 +2377,7 @@ cdef class DM(Object):
 
         See Also
         --------
-        setKSPComputeOperators, petsc.DMKSPSetCreateOperators
+        setKSPComputeOperators
 
         """
         if operators is not None:
@@ -2385,10 +2385,10 @@ cdef class DM(Object):
             if kargs is None: kargs = {}
             context = (operators, args, kargs)
             self.set_attr('__create_operators__', context)
-            CHKERR(DMKSPSetCreateOperators(self.dm, KSP_CreateOperators, <void*>context))
+            CHKERR(KSPSetCreateOperators(self.ksp, KSP_CreateOperators, <void*>context))
         else:
             self.set_attr('__create_operators__', None)
-            CHKERR(DMKSPSetCreateOperators(self.dm, NULL, NULL))
+            CHKERR(KSPSetCreateOperators(self.ksp, NULL, NULL))
 
     def setKSPComputeOperators(
         self, operators: KSPComputeOperatorsFunction | None,
@@ -2410,7 +2410,7 @@ cdef class DM(Object):
 
         See Also
         --------
-        setKSPCreateOperators, petsc.DMKSPSetComputeOperators
+        setKSPCreateOperators
 
         """
         if operators is not None:
@@ -2418,10 +2418,10 @@ cdef class DM(Object):
             if kargs is None: kargs = {}
             context = (operators, args, kargs)
             self.set_attr('__operators__', context)
-            CHKERR(DMKSPSetComputeOperators(self.dm, KSP_ComputeOperators, <void*>context))
+            CHKERR(KSPSetComputeOperators(self.ksp, KSP_ComputeOperators, <void*>context))
         else:
             self.set_attr('__operators__', None)
-            CHKERR(DMKSPSetComputeOperators(self.dm, NULL, NULL))
+            CHKERR(KSPSetComputeOperators(self.ksp, NULL, NULL))
 
     def createFieldDecomposition(self) -> tuple[list, list, list]:
         """Return field splitting information.

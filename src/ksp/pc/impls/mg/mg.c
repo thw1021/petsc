@@ -989,7 +989,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
       PetscCheck(n == 1 || pc->dm, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "PC lacks a DM so cannot automatically construct a multigrid hierarchy. Number of levels requested %" PetscInt_FMT, n);
       PetscCall(PetscMalloc1(n, &dms));
       dms[n - 1] = pc->dm;
-      /* Separately create them so we do not get DMKSP interference between levels */
+      /* Separately create them so we do not get interference between levels */
       for (PetscInt i = n - 2; i > -1; i--) PetscCall(DMCoarsen(dms[i + 1], MPI_COMM_NULL, &dms[i]));
       for (PetscInt i = n - 2; i > -1; i--) {
         PetscBool dmhasrestrict, dmhasinject;
