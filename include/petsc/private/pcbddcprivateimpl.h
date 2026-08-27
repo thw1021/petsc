@@ -8,7 +8,7 @@ PETSC_INTERN PetscErrorCode PCBDDCAnalyzeInterface(PC);
 PETSC_INTERN PetscErrorCode PCBDDCConstraintsSetUp(PC);
 
 /* load or dump customization */
-PETSC_EXTERN PetscErrorCode PCBDDCLoadOrViewCustomization(PC, PetscBool, const char *);
+PETSC_EXTERN PetscErrorCode PCBDDCLoadOrViewCustomization(PC, PetscBool, const char *, PetscInt);
 
 /* reset functions */
 PETSC_EXTERN PetscErrorCode PCBDDCResetTopography(PC);
