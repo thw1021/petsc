@@ -38,7 +38,7 @@ static PetscErrorCode PCApply_BDDC(PC, Vec, Vec);
 static PetscErrorCode PCSetFromOptions_BDDC(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_BDDC  *pcbddc = (PC_BDDC *)pc->data;
-  PetscInt  nt, i;
+  PetscInt  nt, i, load_version = PETSC_DECIDE;
   char      load[PETSC_MAX_PATH_LEN] = {'\0'};
   PetscBool flg;
 
@@ -46,11 +46,12 @@ static PetscErrorCode PCSetFromOptions_BDDC(PC pc, PetscOptionItems PetscOptions
   PetscOptionsHeadBegin(PetscOptionsObject, "BDDC options");
   /* Load customization from binary file (debugging) */
   PetscCall(PetscOptionsString("-pc_bddc_load", "Load customization from file (intended for debug)", "none", load, load, sizeof(load), &flg));
+  PetscCall(PetscOptionsInt("-pc_bddc_load_version", "Version of the customization file to load", "none", load_version, &load_version, NULL));
   if (flg) {
     size_t len;
 
     PetscCall(PetscStrlen(load, &len));
-    PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, len ? load : NULL));
+    PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, len ? load : NULL, load_version));
   }
   /* Verbose debugging */
   PetscCall(PetscOptionsInt("-pc_bddc_check_level", "Verbose output for PCBDDC (intended for debug)", "none", pcbddc->dbg_flag, &pcbddc->dbg_flag, NULL));
@@ -680,7 +681,7 @@ PetscErrorCode PCBDDCSetLevels(PC pc, PetscInt levels)
 static PetscErrorCode PCBDDCLoadCustomization_BDDC(PC pc, const char filename[])
 {
   PetscFunctionBegin;
-  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, filename));
+  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, filename, PETSC_DECIDE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -712,7 +713,7 @@ PetscErrorCode PCBDDCLoadCustomization(PC pc, const char filename[])
 static PetscErrorCode PCBDDCSaveCustomization_BDDC(PC pc, const char filename[])
 {
   PetscFunctionBegin;
-  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, filename));
+  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, filename, PETSC_DECIDE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1741,15 +1742,17 @@ static PetscErrorCode PCSetUp_BDDC(PC pc)
   }
 
   { /* Dump customization */
+    PetscInt  save_version = PETSC_DECIDE;
     PetscBool flg;
     char      save[PETSC_MAX_PATH_LEN] = {'\0'};
 
     PetscCall(PetscOptionsGetString(NULL, ((PetscObject)pc)->prefix, "-pc_bddc_save", save, sizeof(save), &flg));
+    PetscCall(PetscOptionsGetInt(NULL, ((PetscObject)pc)->prefix, "-pc_bddc_save_version", &save_version, NULL));
     if (flg) {
       size_t len;
 
       PetscCall(PetscStrlen(save, &len));
-      PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, len ? save : NULL));
+      PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, len ? save : NULL, save_version));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
