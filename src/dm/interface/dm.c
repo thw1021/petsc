@@ -725,7 +725,6 @@ PetscErrorCode DMDestroy(DM *dm)
     }
   }
 
-  PetscCall(PetscObjectDestroy(&(*dm)->dmksp));
   PetscCall(PetscObjectDestroy(&(*dm)->dmsnes));
   PetscCall(PetscObjectDestroy(&(*dm)->dmts));
 

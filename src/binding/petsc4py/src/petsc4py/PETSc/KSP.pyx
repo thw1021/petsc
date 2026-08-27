@@ -695,23 +695,11 @@ cdef class KSP(Object):
         Notes
         -----
         If this is used then the `KSP` will attempt to use the `DM` to
-        create the matrix and use the routine set with
-        `DM.setKSPComputeOperators`. Use
-        ``setDMActive(KSP.DMActive.OPERATOR, False)``
-        to instead use the matrix you have provided with
-        `setOperators`.
-
-        A `DM` can only be used for solving one problem at a time
-        because information about the problem is stored on the `DM`,
-        even when not using interfaces like
-        `DM.setKSPComputeOperators`. Use `DM.clone` to get a distinct
-        `DM` when solving different problems using the same function
-        space.
+        create the matrix.
 
         See Also
         --------
-        PETSc.KSP, DM, DM.setKSPComputeOperators, setOperators, DM.clone
-        petsc.KSPSetDM
+        PETSc.KSP, DM, setOperators, DM.clone
 
         """
         CHKERR(KSPSetDM(self.ksp, dm.dm))
@@ -820,6 +808,51 @@ cdef class KSP(Object):
         context = (operators, args, kargs)
         self.set_attr('__operators__', context)
         CHKERR(KSPSetComputeOperators(self.ksp, KSP_ComputeOperators, <void*>context))
+
+    def setCreateOperators(
+        self,
+        operators: KSPCreateOperatorsFunction,
+        args: tuple[Any, ...] | None = None,
+        kargs: dict[str, Any] | None = None) -> None:
+        """Set routine to create the linear operators.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        operators
+            Function which computes the operators.
+        args
+            Positional arguments for callback function ``operators``.
+        kargs
+            Keyword arguments for callback function ``operators``.
+
+        Notes
+        -----
+        The user provided function `operators` will be called
+        automatically at the very next call to `solve`. It will NOT
+        be called at future `solve` calls unless either
+        `setComputeOperators` or `setOperators` is called
+        before that `solve` is called. This allows the same system
+        to be solved several times with different right-hand side
+        functions, but is a confusing API since one might expect it to
+        be called for each `solve`.
+
+        To reuse the same preconditioner for the next `solve` and
+        not compute a new one based on the most recently computed
+        matrix call `petsc.KSPSetReusePreconditioner`.
+
+        See Also
+        --------
+        PETSc.KSP, solve, setOperators, petsc.KSPSetComputeOperators
+        petsc.KSPSetReusePreconditioner
+
+        """
+        if args  is None: args  = ()
+        if kargs is None: kargs = {}
+        context = (operators, args, kargs)
+        self.set_attr('__operators__', context)
+        CHKERR(KSPSetCreateOperators(self.ksp, KSP_CreateOperators, <void*>context))
 
     def setOperators(self, Mat A=None, Mat P=None) -> None:
         """Set matrix associated with the linear system.
