@@ -1,27 +1,27 @@
 #include "petscdmlabel.h"
 #include "petscsys.h"
 #include "petscsystypes.h"
-static char help[] = "Frame transport over manifolds using DMPlex\n\n";
+static char help[] = "Frame transport over manifolds using DMPlex.\n\n";
+
 
 #include <petscdmplex.h>
 #include <petsc/private/dmpleximpl.h>
 
-//#define ADJUST_TRANSPORT
-
 typedef enum {
-  SINGLE_PHASE_STRIKE,
-  SINGLE_PHASE_UP,
-  TWO_PHASE,
+  SINGLE_PHASE, // transport strike
+  TWO_PHASE, // up x normal (if not horiz), transport strike
+  THREE_PHASE, // seed with transport strike, up x normal (if aligned and not flat), transport strike
   NUM_STRIKE_ALGS
 } StrikeAlg;
-const char *strikeAlgs[NUM_STRIKE_ALGS + 1] = {"single_phase_strike", "single_phase_up", "two_phase", "unknown"};
+const char *strikeAlgs[NUM_STRIKE_ALGS + 1] = {"single_phase", "two_phase", "three_phase", "unknown"};
 
 typedef struct {
-  PetscReal up[3];     // The up direction
-  PetscReal start[3];  // Coordinates of the starting point
-  PetscBool haveStart; // Whether the user specified a starting point
-  PetscInt  freezeDir; // Direction to freeze during transport
-  StrikeAlg strikeAlg; // Algorithm used to determine the strike direction
+  PetscReal up[3];      // The up direction
+  PetscReal start[3];   // Coordinates of the starting point
+  PetscBool haveStart;  // Whether the user specified a starting point
+  StrikeAlg strikeAlg;  // Algorithm used to determine the strike direction
+  PetscReal horizTol;   // Tolerance for detecting horizontal surfaces (up . n > horizTol)
+  PetscReal alignedTol; // Tolerance for alignment of up x n with frame transport along-strike direction ((up x n) . as0 > alignedTol)
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -30,25 +30,26 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscBool flg;
 
   PetscFunctionBeginUser;
-  options->up[0]     = 0.;
-  options->up[1]     = 0.;
-  options->up[2]     = 1.;
-  options->start[0]     = 0.;
-  options->start[1]     = 0.;
-  options->start[2]     = 0.;
-  options->haveStart = PETSC_FALSE;
-  options->freezeDir = -1;
-  options->strikeAlg = SINGLE_PHASE_STRIKE;
+  options->up[0]      = 0.;
+  options->up[1]      = 0.;
+  options->up[2]      = 1.;
+  options->start[0]   = 0.;
+  options->start[1]   = 0.;
+  options->start[2]   = 0.;
+  options->haveStart  = PETSC_FALSE;
+  options->strikeAlg  = SINGLE_PHASE;
+  options->horizTol   = 0.97;
+  options->alignedTol = 0.85;
 
   PetscOptionsBegin(comm, "", "Frame Transport Options", "DMPLEX");
   PetscCall(PetscOptionsRealArray("-start_point", "Coordinates of the starting point.", __FILE__, options->start, &n, &options->haveStart));
   PetscCheck(!options->haveStart || n == 3, comm, PETSC_ERR_ARG_WRONG, "Starting point must be a 3-vector, not %" PetscInt_FMT, n);
   PetscCall(PetscOptionsRealArray("-up", "The up direction", __FILE__, options->up, &n, &flg));
   PetscCheck(!flg || n == 3, comm, PETSC_ERR_ARG_WRONG, "Up direction must be a 3-vector, not %" PetscInt_FMT, n);
-  PetscCall(PetscOptionsInt("-freeze_dir", "Direction to freeze", __FILE__, options->freezeDir, &options->freezeDir, NULL));
-  PetscCheck(options->freezeDir < 3, comm, PETSC_ERR_ARG_WRONG, "Freeze direction %" PetscInt_FMT " not in [0,3)", options->freezeDir);
   PetscCall(PetscOptionsEList("-strike_alg", "Algorithm to determine the strike direction", __FILE__, strikeAlgs, NUM_STRIKE_ALGS, strikeAlgs[options->strikeAlg], &alg, NULL));
   options->strikeAlg = (StrikeAlg)alg;
+  PetscCall(PetscOptionsReal("-horiz_tol", "Tolerance for detecting surface is horizontal.", __FILE__, options->horizTol, &options->horizTol, &flg));
+  PetscCall(PetscOptionsReal("-aligned_tol", "Tolerance for alignment of up x n with along-strike seed direction.", __FILE__, options->alignedTol, &options->alignedTol, &flg));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -91,6 +92,9 @@ static PetscErrorCode CrossProductUnitVector(const PetscReal a[], const PetscRea
   result[1] = a[2]*b[0] - a[0]*b[2];
   result[2] = a[0]*b[1] - a[1]*b[0];
   mag = PetscSqrtReal(result[0]*result[0] + result[1]*result[1] + result[2]*result[2]);
+  if (mag <= PETSC_SMALL) {
+      printf("a=(%.4f, %.4f, %.4f) b=(%.4f, %4.f, %.4f)\n", a[0], a[1], a[2], b[0], b[1], b[2]);
+  }
   PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cross product of parallel vectors");
   for (PetscInt i = 0; i < 3; ++i) result[i] /= mag;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -136,10 +140,10 @@ static PetscErrorCode FindClosestCell(DM dm, PetscInt cdim, const PetscReal poin
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame, AppCtx *ctx)
+static PetscErrorCode InitializeFrame(Vec n, Vec up, Vec as0, Vec as, DMLabel validFrame, AppCtx *ctx)
 {
   DM           dm;
-  PetscScalar *an, *aas, *aup;
+  PetscScalar *an, *aas0, *aas, *aup;
   PetscInt     cdim, cStart, cEnd, cTarget;
   PetscMPIInt  rank;
 
@@ -150,15 +154,16 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(VecGetArray(n, &an));
-  PetscCall(VecGetArray(as, &aas));
   PetscCall(VecGetArray(up, &aup));
+  PetscCall(VecGetArray(as0, &aas0));
+  PetscCall(VecGetArray(as, &aas));
 
   cTarget = cStart;
   if (ctx->haveStart) {
       PetscCall(FindClosestCell(dm, cdim, ctx->start, &cTarget));
   }
   for (PetscInt c = cStart; c < cEnd; ++c) {
-    PetscScalar *nv, *asv, *upv;
+    PetscScalar *nv, *upv, *as0v, *asv;
     PetscReal    normal[3], vol;
 
     PetscCall(DMPlexPointGlobalRef(dm, c, an, &nv));
@@ -166,57 +171,31 @@ static PetscErrorCode InitializeFrame(Vec n, Vec as, Vec up, DMLabel validFrame,
       PetscCall(DMPlexComputeCellGeometryFVM(dm, c, &vol, NULL, normal));
       for (PetscInt d = 0; d < cdim; ++d) nv[d] = normal[d];
     }
-    PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
     PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aas0, &as0v));
+    PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
+    for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
+
     if (!rank && (c == cTarget) && upv && asv && nv) {
-      for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
-      PetscCall(CrossProductUnitVector(upv, nv, asv));
+      PetscCall(CrossProductUnitVector(upv, nv, as0v));
+      for (PetscInt d = 0; d < cdim; ++d) asv[d] = as0v[d];
       PetscCall(DMLabelSetValue(validFrame, c, 1));
-    } else if (ctx->strikeAlg != SINGLE_PHASE_UP) {
-      for (PetscInt d = 0; d < cdim; ++d) upv[d] = ctx->up[d];
     }
   }
   PetscCall(VecRestoreArray(n, &an));
-  PetscCall(VecRestoreArray(as, &aas));
   PetscCall(VecRestoreArray(up, &aup));
+  PetscCall(VecRestoreArray(as0, &aas0));
+  PetscCall(VecRestoreArray(as, &aas));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ComputeStrike(Vec n, Vec as, Vec up)
-{
-  DM           dm;
-  PetscScalar *an, *aas, *aup;
-  PetscInt     cdim, cStart, cEnd;
-
-  PetscFunctionBeginUser;
-  PetscCall(VecGetDM(as, &dm));
-  PetscCall(DMGetCoordinateDim(dm, &cdim));
-  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(VecGetArray(n, &an));
-  PetscCall(VecGetArray(as, &aas));
-  PetscCall(VecGetArray(up, &aup));
-
-  for (PetscInt c = cStart; c < cEnd; ++c) {
-    PetscScalar *nv, *asv, *upv;
-
-    PetscCall(DMPlexPointGlobalRef(dm, c, an, &nv));
-    PetscCall(DMPlexPointGlobalRef(dm, c, aas, &asv));
-    PetscCall(DMPlexPointGlobalRef(dm, c, aup, &upv));
-    PetscCall(CrossProductUnitVector(upv, nv, asv));
-  }
-  PetscCall(VecRestoreArray(n, &an));
-  PetscCall(VecRestoreArray(as, &aas));
-  PetscCall(VecRestoreArray(up, &aup));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode AnalyticCellFrame(PetscInt face, PetscInt source, PetscInt target, DMLabel validFrame, Vec iframe, Vec n, Vec up, Vec as, PetscBool *updated, AppCtx *ctx)
+static PetscErrorCode AnalyticCellFrame(PetscInt face, PetscInt source, PetscInt target, DMLabel validFrame, Vec iframe, Vec n, Vec up, Vec as0, Vec as, PetscBool *updated, AppCtx *ctx)
 {
   DM                 dm, idm;
-  const PetscScalar *nvs = NULL, *nvt = NULL, *upvt = NULL, *aif = NULL, *an = NULL, *aup = NULL, *asvs = NULL;
+  const PetscScalar *nvs = NULL, *nvt = NULL, *upvt = NULL, *aif = NULL, *an = NULL, *aup = NULL, *asvs = NULL, *aas0 = NULL, *as0vt = NULL;
   PetscScalar       *aas = NULL, *asvt = NULL, tmp[3];
   PetscReal          norm = 0.;
-  PetscReal          cth;
+  PetscReal          cth, asdot;
   PetscInt           cdim, seen;
 
   PetscFunctionBeginUser;
@@ -229,6 +208,7 @@ static PetscErrorCode AnalyticCellFrame(PetscInt face, PetscInt source, PetscInt
   PetscCall(VecGetArrayRead(iframe, &aif));
   PetscCall(VecGetArrayRead(n, &an));
   PetscCall(VecGetArrayRead(up, &aup));
+  if (as0) PetscCall(VecGetArrayRead(as0, &aas0));
   PetscCall(VecGetArray(as, &aas));
   // Normals are normalized
   if (source < 0) PetscCall(DMPlexPointLocalFieldRead(idm, face, 0, aif, &nvs));
@@ -245,10 +225,25 @@ static PetscErrorCode AnalyticCellFrame(PetscInt face, PetscInt source, PetscInt
   PetscCall(DMPlexPointGlobalRef(dm, target, aas, &asvt));
   PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing strike direction");
   PetscCall(CrossProductUnitVector(upvt, nvt, tmp));
-  cth = DMPlex_DotD_Internal(cdim, asvs, tmp);
-  if (cth > 0.) for (PetscInt d = 0; d < cdim; ++d) asvt[d] = tmp[d];
-  else if (cth < 0.) for (PetscInt d = 0; d < cdim; ++d) asvt[d] = -tmp[d];
-  else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Computed strike direction orthogonal to source strike");
+
+  if (as0) {
+    PetscCall(DMPlexPointGlobalRead(dm, target, aas0, &as0vt));
+    asdot = DMPlex_DotD_Internal(cdim, as0vt, tmp);
+    if (fabs(asdot) >= ctx->alignedTol) {
+        if (asdot > 0.0) {
+            for (PetscInt d = 0; d < cdim; ++d) asvt[d] = tmp[d];
+        } else {
+            for (PetscInt d = 0; d < cdim; ++d) asvt[d] = -tmp[d];
+        }
+    } else {
+        goto end;
+    }
+  } else {
+      cth = DMPlex_DotD_Internal(cdim, asvs, tmp);
+      if (cth > 0.) for (PetscInt d = 0; d < cdim; ++d) asvt[d] = tmp[d];
+      else if (cth < 0.) for (PetscInt d = 0; d < cdim; ++d) asvt[d] = -tmp[d];
+      else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Computed strike direction orthogonal to source strike");
+  }
 
   // Check that source along strike is normalized
   norm = DMPlex_DotD_Internal(cdim, asvs, asvs);
@@ -346,50 +341,6 @@ static PetscErrorCode PropagateCellFrame(PetscInt face, PetscInt source, PetscIn
   PetscCall(DMPlexPointGlobalRef(dm, target, aas, &asvt));
   PetscCheck(asvs && asvt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Missing strike direction");
   DMPlex_Mult3D_Internal(R, 1, asvs, asvt);
-  if (ctx->freezeDir >= 0) {
-    asvt[ctx->freezeDir] = asvs[ctx->freezeDir];
-    norm = DMPlex_DotD_Internal(cdim, asvt, asvt);
-    norm = PetscSqrtReal(norm);
-    for (PetscInt d = 0; d < cdim; ++d) asvt[d] /= norm;
-  }
-
-#if defined(ADJUST_TRANSPORT)
-{
-  PetscReal up[3] = { 0.0, 0.0, 1.0 };
-  PetscReal horiz[3]; // horizontal strike_dir candidate
-  PetscReal s, blend, mag, dot, sign;
-
-  // horiz = up x n (unnormalized). |horiz| = sin(angle(up,n))
-  horiz[0] = up[1]*nvt[2] - up[2]*nvt[1];
-  horiz[1] = up[2]*nvt[0] - up[0]*nvt[2];
-  horiz[2] = up[0]*nvt[1] - up[1]*nvt[0];
-  s = PetscSqrtReal(PetscSqr(horiz[0]) + PetscSqr(horiz[1]) + PetscSqr(horiz[2]));
-
-  // Orient the horizontal candidate to agree with the transported vector,
-  // so we never flip sign across cells.
-  if (s > PETSC_SMALL) {
-    dot = DMPlex_DotRealD_Internal(cdim, horiz, asvt) / s;
-    sign = dot >= 0.0 ? 1.0 : -1.0;
-    for (PetscInt d = 0; d < 3; ++d) horiz[d] = sign * horiz[d] / s;
-  }
-
-  // Blend: fully horizontal when strike is well-defined (s ~ 1),
-  // fall back to the transported frame as the normal approaches vertical (s -> 0).
-  // s0 (radians) is where the crossover starts.
-  {
-    const PetscReal s0 = 0.1; // ~6 degrees from vertical
-    blend = s >= s0 ? 1.0 : s / s0; // 1 = use horizontal, 0 = use transported
-  }
-  for (PetscInt d = 0; d < 3; ++d) asvt[d] = blend * horiz[d] + (1.0 - blend) * asvt[d];
-  asvt[2] = 0.0; // Force vector to be horizontal and renormalize
-
-  // Renormalization
-  mag = PetscSqrtReal(PetscSqr(asvt[0]) + PetscSqr(asvt[1]) + PetscSqr(asvt[2]));
-  PetscCheck(mag > PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
-             "Degenerate along-strike at target %" PetscInt_FMT, target);
-  for (PetscInt d = 0; d < 3; ++d) asvt[d] /= mag;
-}
-#endif
 
 check:
   // Check that source along strike is normalized
@@ -476,16 +427,23 @@ static PetscErrorCode PropagatePush(DMPlexPointQueue queue, DMLabel validFrame, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel validFrame, Vec n, Vec up, Vec as, PetscInt phase, AppCtx *ctx)
+/* Propagate field on local process.
+ *
+ * phase 0: Transport algorithm
+ *
+ * phase 1: Up x normal.
+ *   - If as0 is null, keep same direction as source cell and apply everywhere up x normal > horizTol.
+ *   - If as0 is not null, then spply everywhere up x normal is aligned with transport: dot(up x normal, as0) > alignedTOl
+ */
+static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel validFrame, Vec n, Vec up, Vec as0, Vec as, PetscInt phase, AppCtx *ctx)
 {
   DM                 dm, idm;
   PetscSection       s;
   const PetscScalar *an, *anv = NULL, *aup, *aupv = NULL, *aasv = NULL;
-  PetscScalar       *aas;
+  const PetscScalar       *aas;
   PetscReal          cth;
   PetscBool          updated;
   PetscInt           cStart, cEnd, cdim;
-  const PetscReal colinearTol = 0.97;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetDM(n, &dm));
@@ -520,7 +478,7 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
           PetscCall(PetscSectionGetFieldOffset(s, face, 1, &offAS));
           PetscCheck(dof == cdim, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Face %" PetscInt_FMT " has %" PetscInt_FMT " != %" PetscInt_FMT " dof", face, dof, cdim);
           PetscCall(VecGetArrayRead(n, &an));
-          PetscCall(VecGetArray(as, &aas));
+          PetscCall(VecGetArrayRead(as, &aas));
           PetscCall(VecGetArray(iframe, &aif));
           PetscCall(DMPlexPointGlobalRead(dm, p, an, &anv));
           PetscCall(DMPlexPointGlobalRead(dm, p, aas, &aasv));
@@ -530,7 +488,7 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
             aif[offAS + i] = aasv[i];
           }
           PetscCall(VecRestoreArrayRead(n, &an));
-          PetscCall(VecRestoreArray(as, &aas));
+          PetscCall(VecRestoreArrayRead(as, &aas));
           PetscCall(VecRestoreArray(iframe, &aif));
           continue;
         }
@@ -540,9 +498,11 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
         if (val < 0) {
           switch (phase) {
           case 0:
+            // Propagate along-strike field using frame transport.
             PetscCall(PropagateCellFrame(face, p, q, validFrame, iframe, n, as, &updated, ctx));
             break;
           case 1:
+            // Calculate up x n
             PetscCall(VecGetArrayRead(n, &an));
             PetscCall(VecGetArrayRead(up, &aup));
             PetscCall(DMPlexPointGlobalRead(dm, q, an, &anv));
@@ -550,21 +510,11 @@ static PetscErrorCode PropagateLocal(Vec iframe, DMPlexPointQueue queue, DMLabel
             cth = DMPlex_DotD_Internal(cdim, anv, aupv);
             PetscCall(VecRestoreArrayRead(n, &an));
             PetscCall(VecRestoreArrayRead(up, &aup));
-            if (cth <= colinearTol) PetscCall(AnalyticCellFrame(face, p, q, validFrame, iframe, n, up, as, &updated, ctx));
+
+            if (cth <= ctx->horizTol) PetscCall(AnalyticCellFrame(face, p, q, validFrame, iframe, n, up, as0, as, &updated, ctx));
             else updated = PETSC_FALSE;
             break;
-          case 2:
-            PetscCall(VecGetArrayRead(n, &an));
-            PetscCall(VecGetArrayRead(up, &aup));
-            PetscCall(DMPlexPointGlobalRead(dm, q, an, &anv));
-            PetscCall(DMPlexPointGlobalRead(dm, q, aup, &aupv));
-            cth = DMPlex_DotD_Internal(cdim, anv, aupv);
-            PetscCall(VecRestoreArrayRead(n, &an));
-            PetscCall(VecRestoreArrayRead(up, &aup));
-            if (cth > colinearTol) PetscCall(PropagateCellFrame(face, p, q, validFrame, iframe, n, as, &updated, ctx));
-            else updated = PETSC_FALSE;
-            break;
-          default:
+            default:
             SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Unsupported phase: %" PetscInt_FMT, phase);
           }
           if (updated) PetscCall(DMPlexPointQueueEnqueue(queue, q));
@@ -599,7 +549,7 @@ static void MPIAPI VectorMerge3D_Private(void *a, void *b, int *len, MPI_Datatyp
   }
 }
 
-static PetscErrorCode PropagateFrame(Vec n, Vec up, Vec as, DMLabel validFrame, PetscInt phase, AppCtx *ctx)
+static PetscErrorCode PropagateFrame(Vec n, Vec up, Vec as0, Vec as, DMLabel validFrame, PetscInt phase, AppCtx *ctx)
 {
   DM               dm, idm;
   Vec              iframe;
@@ -662,13 +612,13 @@ static PetscErrorCode PropagateFrame(Vec n, Vec up, Vec as, DMLabel validFrame, 
   if (cellIS) {
     PetscCall(ISGetLocalSize(cellIS, &Nc));
     PetscCall(ISGetIndices(cellIS, &cells));
-    for (PetscInt i = 0; i < Nc; ++i) PetscCall(DMPlexPointQueueEnqueue(queue, cells[i]));
+    for (PetscInt i = 0; i < Nc; ++i) { PetscCall(DMPlexPointQueueEnqueue(queue, cells[i])); }
     PetscCall(ISRestoreIndices(cellIS, &cells));
   }
   PetscCall(ISDestroy(&cellIS));
   PetscCall(DMPlexPointQueueEmptyCollective((PetscObject)dm, queue, &empty));
   while (!empty) {
-    PetscCall(PropagateLocal(iframe, queue, validFrame, n, up, as, phase, ctx));
+    PetscCall(PropagateLocal(iframe, queue, validFrame, n, up, as0, as, phase, ctx));
     PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)iframe, (PetscObject)n, "-iframe_view"));
     PetscCall(PropagatePush(queue, validFrame, iframe, n, as, reduceop, ctx));
     PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)iframe, (PetscObject)n, "-iframe_view"));
@@ -682,7 +632,10 @@ static PetscErrorCode PropagateFrame(Vec n, Vec up, Vec as, DMLabel validFrame, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TwoPhasePropagation(Vec n, Vec up, Vec as, DMLabel validFrame, AppCtx *ctx)
+/*
+ * 1. Propagate along-strike using transport.
+ */
+static PetscErrorCode SinglePhasePropagation(Vec n, Vec up, Vec as0, Vec as, DMLabel validFrame, AppCtx *ctx)
 {
   DM       dm;
   PetscInt cStart, cEnd, Nc, Nvc = 0, NvcOld = 0;
@@ -692,8 +645,58 @@ static PetscErrorCode TwoPhasePropagation(Vec n, Vec up, Vec as, DMLabel validFr
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   Nc = cEnd - cStart;
   while (Nvc < Nc) {
-    PetscCall(PropagateFrame(n, up, as, validFrame, 1, ctx));
-    PetscCall(PropagateFrame(n, up, as, validFrame, 2, ctx));
+    PetscCall(PropagateFrame(n, up, NULL, as, validFrame, 0, ctx));
+    DMLabelGetStratumSize(validFrame, 1, &Nvc);
+    PetscCheck(Nvc != NvcOld, PetscObjectComm((PetscObject)n), PETSC_ERR_ARG_WRONGSTATE, "Propagation made no progress");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+ * 1. Set along-strike field (as) to up x n at locations where up x n is not horizontal up x n < horizTol.
+ * 2. Propagate along-strike using transport.
+ */
+static PetscErrorCode TwoPhasePropagation(Vec n, Vec up, Vec as0, Vec as, DMLabel validFrame, AppCtx *ctx)
+{
+  DM       dm;
+  PetscInt cStart, cEnd, Nc, Nvc = 0, NvcOld = 0;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetDM(n, &dm));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  Nc = cEnd - cStart;
+  while (Nvc < Nc) {
+    PetscCall(PropagateFrame(n, up, NULL, as, validFrame, 1, ctx));
+    PetscCall(PropagateFrame(n, up, NULL, as, validFrame, 0, ctx));
+    DMLabelGetStratumSize(validFrame, 1, &Nvc);
+    PetscCheck(Nvc != NvcOld, PetscObjectComm((PetscObject)n), PETSC_ERR_ARG_WRONGSTATE, "Propagation made no progress");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+ * 1. Set background along-strike field (as0) using tranport, with starting point direction set to up x n.
+ * 2. Set along-strike field (as) to up x n at locations where up x n is aligned with background along-strike field (up x n) * as0 > alignedTol and not horizontal up x n < horizTol.
+ * 3. Propagate along-strike using transport.
+ */
+static PetscErrorCode ThreePhasePropagation(Vec n, Vec up, Vec as0, Vec as, DMLabel validFrame, AppCtx *ctx)
+{
+  DM       dm;
+  DMLabel seedFrame;
+  PetscInt cStart, cEnd, Nc, Nvc = 0, NvcOld = 0;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetDM(n, &dm));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  PetscCall(DMLabelDuplicate(validFrame, &seedFrame));
+
+  PetscCall(PropagateFrame(n, up, NULL, as0, seedFrame, 0, ctx));
+  PetscCall(PropagateFrame(n, up, as0, as, validFrame, 1, ctx));
+
+  PetscCall(DMLabelDestroy(&seedFrame));
+  Nc = cEnd - cStart;
+  while (Nvc < Nc) {
+    PetscCall(PropagateFrame(n, up, as0, as, validFrame, 0, ctx));
     DMLabelGetStratumSize(validFrame, 1, &Nvc);
     PetscCheck(Nvc != NvcOld, PetscObjectComm((PetscObject)n), PETSC_ERR_ARG_WRONGSTATE, "Propagation made no progress");
   }
@@ -704,7 +707,7 @@ int main(int argc, char **argv)
 {
   DM      dm;
   DMLabel validFrame;
-  Vec     n, as, as2, up;
+  Vec     n, as, as0, up;
   AppCtx  ctx;
 
   PetscFunctionBeginUser;
@@ -714,45 +717,48 @@ int main(int argc, char **argv)
   PetscCall(SetupFE(dm));
   PetscCall(DMCreateLabel(dm, "Valid Frame"));
   PetscCall(DMGetLabel(dm, "Valid Frame", &validFrame));
+
   PetscCall(DMCreateGlobalVector(dm, &n));
   PetscCall(PetscObjectSetName((PetscObject)n, "normal_dir"));
   PetscCall(VecZeroEntries(n));
-  PetscCall(DMCreateGlobalVector(dm, &as));
-  PetscCall(PetscObjectSetName((PetscObject)as, "strike_dir"));
-  PetscCall(VecZeroEntries(as));
-  PetscCall(DMCreateGlobalVector(dm, &as2));
-  PetscCall(PetscObjectSetName((PetscObject)as2, "n x up"));
-  PetscCall(VecZeroEntries(as2));
+
   PetscCall(DMCreateGlobalVector(dm, &up));
   PetscCall(PetscObjectSetName((PetscObject)up, "up_dir"));
   PetscCall(VecZeroEntries(up));
-  PetscCall(InitializeFrame(n, as, up, validFrame, &ctx));
+
+  PetscCall(DMCreateGlobalVector(dm, &as0));
+  PetscCall(PetscObjectSetName((PetscObject)as0, "strike_seed"));
+  PetscCall(VecZeroEntries(as0));
+
+  PetscCall(DMCreateGlobalVector(dm, &as));
+  PetscCall(PetscObjectSetName((PetscObject)as, "strike_dir"));
+  PetscCall(VecZeroEntries(as));
+
+  PetscCall(InitializeFrame(n, up, as0, as, validFrame, &ctx));
   PetscCall(VecViewFromOptions(n, NULL, "-n_view"));
-  PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
+  PetscCall(VecViewFromOptions(as0, NULL, "-as0_view"));
+  PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
   switch (ctx.strikeAlg) {
-  case SINGLE_PHASE_STRIKE:
-    PetscCall(PropagateFrame(n, up, as, validFrame, 0, &ctx));
-    PetscCall(ComputeStrike(n, as2, up));
-    break;
-  case SINGLE_PHASE_UP:
-    PetscCall(PropagateFrame(n, up, up, validFrame, 0, &ctx));
-    PetscCall(ComputeStrike(n, as, up));
+  case SINGLE_PHASE:
+    PetscCall(SinglePhasePropagation(n, up, NULL, as, validFrame, &ctx));
     break;
   case TWO_PHASE:
-    PetscCall(TwoPhasePropagation(n, up, as, validFrame, &ctx));
+    PetscCall(TwoPhasePropagation(n, up, NULL, as, validFrame, &ctx));
+    break;
+  case THREE_PHASE:
+    PetscCall(ThreePhasePropagation(n, up, as0, as, validFrame, &ctx));
     break;
   default:
     SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Unsupported algorithm: %s", strikeAlgs[ctx.strikeAlg]);
   }
   PetscCall(VecViewFromOptions(as, NULL, "-as_view"));
-  PetscCall(VecViewFromOptions(as2, NULL, "-as2_view"));
-  PetscCall(VecViewFromOptions(up, NULL, "-up_view"));
+  PetscCall(VecViewFromOptions(as0, NULL, "-as0_view"));
   PetscCall(PetscObjectViewSynchronizedFromOptions((PetscObject)validFrame, (PetscObject)dm, "-valid_frame_view"));
-  PetscCall(VecDestroy(&up));
-  PetscCall(VecDestroy(&as));
-  PetscCall(VecDestroy(&as2));
   PetscCall(VecDestroy(&n));
+  PetscCall(VecDestroy(&up));
+  PetscCall(VecDestroy(&as0));
+  PetscCall(VecDestroy(&as));
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
   return 0;
