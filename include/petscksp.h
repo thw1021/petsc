@@ -75,7 +75,6 @@ typedef const char *KSPType;
 /* Logging support */
 PETSC_EXTERN PetscClassId KSP_CLASSID;
 PETSC_EXTERN PetscClassId KSPGUESS_CLASSID;
-PETSC_EXTERN PetscClassId DMKSP_CLASSID;
 
 PETSC_EXTERN PetscErrorCode KSPCreate(MPI_Comm, KSP *);
 PETSC_EXTERN PetscErrorCode KSPSetType(KSP, KSPType);
@@ -1334,7 +1333,7 @@ PETSC_EXTERN PetscErrorCode KSPSetComputeOperators(KSP, KSPComputeOperatorsFn *,
 PETSC_EXTERN PetscErrorCode KSPGetComputeOperators(KSP, KSPComputeOperatorsFn **, PetscCtxRt);
 
 /*S
-  KSPCreateOperatorsFn - A prototype of a `KSP` operator creation function that would be passed to `DMKSPSetCreateOperators()`
+  KSPCreateOperatorsFn - A prototype of a `KSP` operator creation function that would be passed to `KSPSetCreateOperators()`
 
   Calling Sequence:
 + ksp - `KSP` context
@@ -1349,7 +1348,7 @@ PETSC_EXTERN PetscErrorCode KSPGetComputeOperators(KSP, KSPComputeOperatorsFn **
 
   `A` and `P` may be the same object. In such a case, users do not need to increase the reference count of `A`. If `P` is not returned, then we assume it is the same of `A`.
 
-.seealso: [](ch_ksp), `DMKSPSetCreateOperators()`, `DMKSPGetCreateOperators()`, `KSPComputeOperatorsFn`, `KSPSetOperators()`
+.seealso: [](ch_ksp), `KSPSetCreateOperators()`, `KSPGetCreateOperators()`, `KSPComputeOperatorsFn`, `KSPSetOperators()`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPCreateOperatorsFn(KSP ksp, Mat *A, Mat *P, PetscCtx ctx);
 
@@ -1370,14 +1369,6 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPComputeInitialGuessFn(KSP ksp, Vec x, PetscCtx ctx);
 
 PETSC_EXTERN PetscErrorCode KSPSetComputeInitialGuess(KSP, KSPComputeInitialGuessFn *, void *);
-PETSC_EXTERN PetscErrorCode DMKSPSetComputeOperators(DM, KSPComputeOperatorsFn *, void *);
-PETSC_EXTERN PetscErrorCode DMKSPGetComputeOperators(DM, KSPComputeOperatorsFn **, void *);
-PETSC_EXTERN PetscErrorCode DMKSPSetCreateOperators(DM, KSPCreateOperatorsFn *, void *);
-PETSC_EXTERN PetscErrorCode DMKSPGetCreateOperators(DM, KSPCreateOperatorsFn **, void *);
-PETSC_EXTERN PetscErrorCode DMKSPSetComputeRHS(DM, KSPComputeRHSFn *, void *);
-PETSC_EXTERN PetscErrorCode DMKSPGetComputeRHS(DM, KSPComputeRHSFn **, void *);
-PETSC_EXTERN PetscErrorCode DMKSPSetComputeInitialGuess(DM, KSPComputeInitialGuessFn *, void *);
-PETSC_EXTERN PetscErrorCode DMKSPGetComputeInitialGuess(DM, KSPComputeInitialGuessFn **, void *);
 
 PETSC_EXTERN PetscErrorCode DMGlobalToLocalSolve(DM, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM, DM, PetscInt, const char *[], Vec[], ScatterMode);
@@ -1388,8 +1379,6 @@ PETSC_EXTERN PetscErrorCode DMCheckInterpolator(DM, Mat, Mat, Mat, PetscReal);
 
 PETSC_EXTERN PetscErrorCode PCBJKOKKOSSetKSP(PC, KSP);
 PETSC_EXTERN PetscErrorCode PCBJKOKKOSGetKSP(PC, KSP *);
-
-PETSC_EXTERN PetscErrorCode DMCopyDMKSP(DM, DM);
 
 #include <petscdstypes.h>
 PETSC_EXTERN PetscErrorCode DMProjectField(DM, PetscReal, Vec, PetscPointFn **, InsertMode, Vec);

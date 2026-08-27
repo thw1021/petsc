@@ -1057,7 +1057,7 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
   Note that the special case of a `DMSHELL` context is queried.
 
 .vb
-   DMKSPGetComputeOperators(dm_fine, &dmfine_kspfunc, &dmfine_kspctx);
+   KSPGetComputeOperators(dm_fine, &dmfine_kspfunc, &dmfine_kspctx);
    DMGetApplicationContext(dm_fine, &dmfine_appctx);
    DMShellGetContext(dm_fine, &dmfine_shellctx);
 
@@ -1088,7 +1088,7 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
 .vb
    {
      DM dm_coarse;
-     PetscObjectCompose((PetscObject)dm_coarse, "PCTelescopeGetCoarseDMKSPContext", your_coarse_context_getter);
+     PetscObjectCompose((PetscObject)dm_coarse, "PCTelescopeGetCoarseKSPContext", your_coarse_context_getter);
    }
 .ve
   The signature of the user provided method is

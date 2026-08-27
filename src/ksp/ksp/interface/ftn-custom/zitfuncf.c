@@ -17,9 +17,6 @@
   #define kspsetcomputeinitialguess_      KSPSETCOMPUTEINITIALGUESS
   #define kspsetcomputeoperators_         KSPSETCOMPUTEOPERATORS
   #define kspsetcreateoperators_          KSPSETCREATEOPERATORS
-  #define dmkspsetcomputerhs_             DMKSPSETCOMPUTERHS
-  #define dmkspsetcomputeinitialguess_    DMKSPSETCOMPUTEINITIALGUESS
-  #define dmkspsetcomputeoperators_       DMKSPSETCOMPUTEOPERATORS
 #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define kspmonitorset_                  kspmonitorset
   #define kspconvergeddefaultcreate_      kspconvergeddefaultcreate
