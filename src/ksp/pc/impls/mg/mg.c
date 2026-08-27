@@ -368,9 +368,7 @@ PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
   }
 
   mg->nlevels = levels;
-
   PetscCall(PetscMalloc1(levels, &mglevels));
-
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
 
   mg->stageApply = 0;
@@ -390,6 +388,7 @@ PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
     if (comms) comm = comms[i];
     if (comm != MPI_COMM_NULL) {
       PetscCall(KSPCreate(comm, &mglevels[i]->smoothd));
+      PetscCall(KSPSetAppOps(pc->ksp, mglevels[i]->smoothd));
       PetscCall(KSPSetNestLevel(mglevels[i]->smoothd, pc->kspnestlevel));
       PetscCall(KSPSetErrorIfNotConverged(mglevels[i]->smoothd, pc->erroriffailure));
       PetscCall(PetscObjectIncrementTabLevel((PetscObject)mglevels[i]->smoothd, (PetscObject)pc, levels - i));
@@ -908,6 +907,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
       char crprefix[128];
 
       PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), &mglevels[i]->cr));
+      PetscCall(KSPSetAppOps(pc->ksp, mglevels[i]->cr));
       PetscCall(KSPSetNestLevel(mglevels[i]->cr, pc->kspnestlevel));
       PetscCall(KSPSetErrorIfNotConverged(mglevels[i]->cr, PETSC_FALSE));
       PetscCall(PetscObjectIncrementTabLevel((PetscObject)mglevels[i]->cr, (PetscObject)pc, n - i));
@@ -988,7 +988,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
       PetscCheck(n == 1 || pc->dm, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "PC lacks a DM so cannot automatically construct a multigrid hierarchy. Number of levels requested %" PetscInt_FMT, n);
       PetscCall(PetscMalloc1(n, &dms));
       dms[n - 1] = pc->dm;
-      /* Separately create them so we do not get DMKSP interference between levels */
+      /* Separately create them so we do not get interference between levels */
       for (PetscInt i = n - 2; i > -1; i--) PetscCall(DMCoarsen(dms[i + 1], MPI_COMM_NULL, &dms[i]));
       for (PetscInt i = n - 2; i > -1; i--) {
         PetscBool dmhasrestrict, dmhasinject;
@@ -1079,22 +1079,19 @@ PetscErrorCode PCSetUp_MG(PC pc)
         KSP       smoothd = mglevels[i]->smoothd;
 
         PetscCall(KSPGetOperatorsSet(smoothd, NULL, &Bopset));
-        /* This is a chicken-and-egg problem when DMKSP has a create operator callback.
+        /* This is a chicken-and-egg problem when KSP has a create operator callback.
            It would be called at KSPSetUp stage, but then it is too late to handle the amat = False case */
         if (!Bopset && (smoothd->dmActive & KSP_DMACTIVE_OPERATOR) && smoothd->dm) {
-          DMKSP kdm;
-
-          PetscCall(DMGetDMKSP(smoothd->dm, &kdm));
-          if (kdm->ops->createoperators) {
+          if (smoothd->appops->createoperators) {
             Mat A;
 
             A = B = NULL;
-            PetscCallBack("KSP callback create operators", (*kdm->ops->createoperators)(smoothd, &A, &B, kdm->createoperatorsctx));
-            PetscCheck(A, PetscObjectComm((PetscObject)smoothd), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from DMKSPSetCreateOperators() callback");
+            PetscCallBack("KSP callback create operators", (*smoothd->appops->createoperators)(smoothd, &A, &B, smoothd->appops->createoperatorsctx));
+            PetscCheck(A, PetscObjectComm((PetscObject)smoothd), PETSC_ERR_ARG_WRONGSTATE, "Missing A operator from KSPSetCreateOperators() callback");
             if (!B) B = A;
             if (B == A) PetscCall(PetscObjectReference((PetscObject)B));
             PetscCall(KSPSetOperators(smoothd, B, B));
-            PetscCall(MatDestroy(&A));
+            PetscCall(MatDestroy(&A)); // discard whatever the application provided for A
             PetscCall(MatDestroy(&B));
           }
         } else {

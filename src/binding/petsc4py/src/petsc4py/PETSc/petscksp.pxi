@@ -182,6 +182,7 @@ cdef extern from * nogil:
 
     PetscErrorCode KSPSetComputeRHS(PetscKSP, PetscKSPComputeRHSFunction, void*)
     PetscErrorCode KSPSetComputeOperators(PetscKSP, PetscKSPComputeOperatorsFunction, void*)
+    PetscErrorCode KSPSetCreateOperators(PetscKSP, PetscKSPCreateOperatorsFunction, void*)
     PetscErrorCode KSPSetOperators(PetscKSP, PetscMat, PetscMat)
     PetscErrorCode KSPGetOperators(PetscKSP, PetscMat*, PetscMat*)
     PetscErrorCode KSPGetOperatorsSet(PetscKSP, PetscBool*, PetscBool*)

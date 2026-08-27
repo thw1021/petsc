@@ -58,6 +58,7 @@ struct _p_PC {
   PetscInt       presolvedone;
   PetscErrorCode (*postsetup)(PC);
   PetscInt kspnestlevel; /* how many levels of nesting does the KSP have that contains the PC */
+  KSP      ksp;          // non-reference counted access to outer KSP
 };
 
 PETSC_EXTERN PetscLogEvent PC_SetUp;
