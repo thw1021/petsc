@@ -133,7 +133,6 @@ def __register_all_classids() -> None:
     "_p_DM *"                     : "DM_CLASSID",
     "_p_DMAdaptor *"              : "DMADAPTOR_CLASSID",
     "_p_DMField *"                : "DMFIELD_CLASSID",
-    "_p_DMKSP *"                  : "DMKSP_CLASSID",
     "_p_DMLabel *"                : "DMLABEL_CLASSID",
     "_p_DMPlexTransform *"        : "DMPLEXTRANSFORM_CLASSID",
     "_p_DMSwarmCellDM *"          : "DMSWARMCELLDM_CLASSID",
