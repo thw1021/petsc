@@ -113,7 +113,6 @@ Reports information only for process 0.
      Discrete System     6              6         5572     0.
          Vec Scatter    17             17        11968     0.
        Krylov Solver    12             12       177272     0.
-     DMKSP interface     6              6         3936     0.
       Preconditioner     7              7         6968     0.
               Viewer     1              0            0     0.
 ========================================================================================================================

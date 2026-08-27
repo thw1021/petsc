@@ -74,11 +74,25 @@ typedef enum {
   KSP_SETUP_NEWRHS
 } KSPSetUpStage;
 
+struct _n_KSPAppOps {
+  KSP                       ksp; // the owning KSP of these operations
+  KSPCreateOperatorsFn     *createoperators;
+  KSPComputeOperatorsFn    *computeoperators;
+  KSPComputeRHSFn          *computerhs;
+  KSPComputeInitialGuessFn *computeinitialguess;
+  void                     *createoperatorsctx;
+  void                     *computeoperatorsctx;
+  void                     *computerhsctx;
+  void                     *computeinitialguessctx;
+  void (*fortran_func_pointers[4])(void); /* Store our own function pointers so they are associated with this object instead of the KSP */
+};
+
 /*
    Defines the KSP data structure.
 */
 struct _p_KSP {
   PETSCHEADER(struct _KSPOps);
+  KSPAppOps   appops;
   DM          dm;
   PetscBool   dmAuto;   /* DM was created automatically by KSP */
   KSPDMActive dmActive; /* KSP should use DM for computing operators */
@@ -289,66 +303,6 @@ static inline PetscErrorCode KSPSetNoisy_Private(Mat A, Vec v)
 PETSC_INTERN PetscErrorCode KSPSetUpNorms_Private(KSP, PetscBool, KSPNormType *, PCSide *);
 
 PETSC_INTERN PetscErrorCode KSPPlotEigenContours_Private(KSP, PetscInt, const PetscReal *, const PetscReal *);
-
-typedef struct _p_DMKSP  *DMKSP;
-typedef struct _DMKSPOps *DMKSPOps;
-struct _DMKSPOps {
-  KSPCreateOperatorsFn     *createoperators;
-  KSPComputeOperatorsFn    *computeoperators;
-  KSPComputeRHSFn          *computerhs;
-  KSPComputeInitialGuessFn *computeinitialguess;
-  PetscErrorCode (*destroy)(DMKSP *);
-  PetscErrorCode (*duplicate)(DMKSP, DMKSP);
-};
-
-/*S
-   DMKSP - Object held by a `DM` that contains all the callback functions and their contexts needed by a `KSP`
-
-   Level: developer
-
-   Notes:
-   Users provides callback functions and their contexts to `KSP` using, for example, `KSPSetComputeRHS()`. These values are stored
-   in a `DMKSP` that is contained in the `DM` associated with the `KSP`. If no `DM` was provided by
-   the user with `KSPSetDM()` it is automatically created by `KSPGetDM()` with `DMShellCreate()`.
-
-   Users very rarely need to worked directly with the `DMKSP` object, rather they work with the `KSP` and the `DM` they created
-
-   Multiple `DM` can share a single `DMKSP`, often each `DM` is associated with
-   a grid refinement level. `DMGetDMKSP()` returns the `DMKSP` associated with a `DM`. `DMGetDMKSPWrite()` returns a unique
-   `DMKSP` that is only associated with the current `DM`, making a copy of the shared `DMKSP` if needed (copy-on-write).
-
-   Developer Notes:
-   It is rather subtle why `DMKSP`, `DMSNES`, and `DMTS` are needed instead of simply storing the user callback functions and contexts in `DM` or `KSP`, `SNES`, or `TS`.
-   It is to support composable solvers such as geometric multigrid. We want, by default, the same callback functions and contexts for all the levels in the computation,
-   but we need to also support different callbacks and contexts on each level. The copy-on-write approach of `DMGetDMKSPWrite()` makes this possible.
-
-   The `originaldm` inside the `DMKSP` is NOT reference counted (to prevent a reference count loop between a `DM` and a `DMKSP`).
-   The `DM` on which this context was first created is cached here to implement one-way
-   copy-on-write. When `DMGetDMKSPWrite()` sees a request using a different `DM`, it makes a copy of the `TSDM`. Thus, if a user
-   only interacts directly with one level, e.g., using `TSSetIFunction()`, then coarse levels of a multilevel item
-   integrator are built, then the user changes the routine with another call to `TSSetIFunction()`, it automatically
-   propagates to all the levels. If instead, they get out a specific level and set the function on that level,
-   subsequent changes to the original level will no longer propagate to that level.
-
-.seealso: [](ch_ts), `KSP`, `KSPCreate()`, `DM`, `DMGetDMKSPWrite()`, `DMGetDMKSP()`,  `DMSNES`, `DMTS`, `DMKSPSetComputeOperators()`, `DMKSPGetComputeOperators()`,
-          `DMKSPSetComputeRHS()`, `DMKSPSetComputeInitialGuess()`
-S*/
-struct _p_DMKSP {
-  PETSCHEADER(struct _DMKSPOps);
-  void *createoperatorsctx;
-  void *operatorsctx;
-  void *rhsctx;
-  void *initialguessctx;
-  void *data;
-
-  /* See developer note for `DMKSP` above */
-  DM originaldm;
-
-  void (*fortran_func_pointers[3])(void); /* Store our own function pointers so they are associated with the DMKSP instead of the DM */
-};
-PETSC_EXTERN PetscErrorCode DMGetDMKSP(DM, DMKSP *);
-PETSC_EXTERN PetscErrorCode DMGetDMKSPWrite(DM, DMKSP *);
-PETSC_EXTERN PetscErrorCode DMCopyDMKSP(DM, DM);
 
 /*
        These allow the various Krylov methods to apply to either the linear system or its transpose.

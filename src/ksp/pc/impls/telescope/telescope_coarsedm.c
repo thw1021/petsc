@@ -34,8 +34,8 @@ typedef struct {
   Vec xp;
   PetscErrorCode (*fp_dm_field_scatter)(DM, Vec, ScatterMode, DM, Vec);
   PetscErrorCode (*fp_dm_state_scatter)(DM, ScatterMode, DM);
-  void *dmksp_context_determined;
-  void *dmksp_context_user;
+  void *ksp_context_determined;
+  void *ksp_context_user;
 } PC_Telescope_CoarseDMCtx;
 
 static PetscErrorCode PCTelescopeSetUp_scatters_CoarseDM(PC pc, PC_Telescope sred, PC_Telescope_CoarseDMCtx *ctx)
@@ -87,7 +87,7 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
   PC_Telescope_CoarseDMCtx *ctx;
   DM                        dm, dm_coarse = NULL;
   MPI_Comm                  comm;
-  PetscBool                 has_perm, has_kspcomputeoperators, using_kspcomputeoperators;
+  PetscBool                 has_kspcomputeoperators = PETSC_FALSE, using_kspcomputeoperators = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(pc, "PCTelescope: setup (CoarseDM)\n"));
@@ -106,19 +106,14 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
     if (sred->ignore_kspcomputeoperators) PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_ALL, PETSC_FALSE));
   }
 
-  /* check if there is a method to provide a permutation */
-  has_perm                  = PETSC_FALSE;
-  has_kspcomputeoperators   = PETSC_FALSE;
-  using_kspcomputeoperators = PETSC_FALSE;
-
-  /* if no permutation is provided, we must rely on KSPSetComputeOperators */
+  /*  determine computeoperatorctx, see PCTelescopeSetUseCoarseDM() for how the computeoperatorctx may have been provided */
   {
     PetscErrorCode (*dmfine_kspfunc)(KSP, Mat, Mat, void *) = NULL;
     void *dmfine_kspctx = NULL, *dmcoarse_kspctx = NULL;
     void *dmfine_appctx = NULL, *dmcoarse_appctx = NULL;
     void *dmfine_shellctx = NULL, *dmcoarse_shellctx = NULL;
 
-    PetscCall(DMKSPGetComputeOperators(dm, &dmfine_kspfunc, &dmfine_kspctx));
+    if (pc->ksp) PetscCall(KSPGetComputeOperators(pc->ksp, &dmfine_kspfunc, &dmfine_kspctx));
     if (dmfine_kspfunc) has_kspcomputeoperators = PETSC_TRUE;
 
     PetscCall(DMGetApplicationContext(ctx->dm_fine, &dmfine_appctx));
@@ -148,7 +143,7 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
             PetscCall(PetscInfo(pc, "PCTelescope: KSPSetComputeOperators using context from DMShell->Context\n"));
             PetscCheck(dmcoarse_kspctx, PETSC_COMM_SELF, PETSC_ERR_USER, "Non NULL dmfine->kspctx == dmfine.shell->ctx. NULL dmcoarse.shell->ctx found. Likely this is an error");
           }
-          ctx->dmksp_context_determined = dmcoarse_kspctx;
+          ctx->ksp_context_determined = dmcoarse_kspctx;
 
           /* look for user provided method to fetch the context */
           {
@@ -156,15 +151,15 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
             void *dmcoarse_context_user                            = NULL;
             char  dmcoarse_method[PETSC_MAX_PATH_LEN];
 
-            PetscCall(PetscSNPrintf(dmcoarse_method, sizeof(dmcoarse_method), "PCTelescopeGetCoarseDMKSPContext"));
+            PetscCall(PetscSNPrintf(dmcoarse_method, sizeof(dmcoarse_method), "PCTelescopeGetCoarseKSPContext"));
             PetscCall(PetscObjectQueryFunction((PetscObject)ctx->dm_coarse, dmcoarse_method, &fp_get_coarsedm_context));
             if (fp_get_coarsedm_context) {
-              PetscCall(PetscInfo(pc, "PCTelescope: Found composed method PCTelescopeGetCoarseDMKSPContext from coarse DM\n"));
+              PetscCall(PetscInfo(pc, "PCTelescope: Found composed method PCTelescopeGetCoarseKSPContext from coarse DM\n"));
               PetscCall(fp_get_coarsedm_context(ctx->dm_coarse, &dmcoarse_context_user));
-              ctx->dmksp_context_user = dmcoarse_context_user;
-              dmcoarse_kspctx         = dmcoarse_context_user;
+              ctx->ksp_context_user = dmcoarse_context_user;
+              dmcoarse_kspctx       = dmcoarse_context_user;
             } else {
-              PetscCall(PetscInfo(pc, "PCTelescope: Failed to find composed method PCTelescopeGetCoarseDMKSPContext from coarse DM\n"));
+              PetscCall(PetscInfo(pc, "PCTelescope: Failed to find composed method PCTelescopeGetCoarseKSPContext from coarse DM\n"));
             }
           }
 
@@ -180,16 +175,18 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc, PC_Telescope sred)
       using_kspcomputeoperators = PETSC_TRUE;
 
       if (PCTelescope_isActiveRank(sred)) {
-        /* sub ksp inherits dmksp_func and context provided by user */
+        /* sub ksp inherits ksp_func and context provided by user */
         PetscCall(KSPSetComputeOperators(sred->ksp, dmfine_kspfunc, dmcoarse_kspctx));
         /* PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)dm,(PetscObject)ctx->dmrepart)); */
-        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_ALL, PETSC_TRUE));
+        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_OPERATOR, PETSC_TRUE));
+        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_INITIAL_GUESS, PETSC_FALSE));
+        PetscCall(KSPSetDMActive(sred->ksp, KSP_DMACTIVE_RHS, PETSC_FALSE));
       }
     }
   }
 
-  PetscCheck(has_perm || !has_kspcomputeoperators || using_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. A method for KSPSetComputeOperators() was provided but it was requested to be ignored. Telescope setup cannot proceed");
-  PetscCheck(has_perm || has_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. No method for KSPSetComputeOperators() was provided. Telescope setup cannot proceed");
+  PetscCheck(!has_kspcomputeoperators || using_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. A method for KSPSetComputeOperators() was provided but it was requested to be ignored. Telescope setup cannot proceed");
+  PetscCheck(has_kspcomputeoperators, comm, PETSC_ERR_SUP, "No method to permute an operator was found on the parent DM. No method for KSPSetComputeOperators() was provided. Telescope setup cannot proceed");
 
   {
     char dmfine_method[PETSC_MAX_PATH_LEN];
@@ -353,10 +350,10 @@ PetscErrorCode PCReset_Telescope_CoarseDM(PC pc)
   ctx->dm_coarse   = NULL; /* since I did not increment the ref counter we set these to NULL */
   ctx->permutation = NULL; /* this will be fetched from the dm so no need to call destroy */
   PetscCall(VecDestroy(&ctx->xp));
-  ctx->fp_dm_field_scatter      = NULL;
-  ctx->fp_dm_state_scatter      = NULL;
-  ctx->dmksp_context_determined = NULL;
-  ctx->dmksp_context_user       = NULL;
+  ctx->fp_dm_field_scatter    = NULL;
+  ctx->fp_dm_state_scatter    = NULL;
+  ctx->ksp_context_determined = NULL;
+  ctx->ksp_context_user       = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
