@@ -2,12 +2,11 @@ from functools import reduce
 
 class DirectedGraph(object):
   '''This class is for directed graphs with vertices of arbitrary type'''
-  def __init__(self, vertices = []):
-    '''Create a graph'''
+  def __init__(self):
+    '''Create an empty graph'''
     self.vertices = []
     self.inEdges  = {}
     self.outEdges = {}
-    map(self.addVertex, vertices)
     return
 
   def __len__(self):
@@ -17,8 +16,7 @@ class DirectedGraph(object):
     return 'DirectedGraph with '+str(len(self.vertices))+' vertices and '+str(reduce(lambda k,l: k+l, [len(edgeList) for edgeList in self.inEdges.values()], 0))+' edges'
 
   def addVertex(self, vertex):
-    '''Add a vertex if it does not already exist in the vertex list
-       - Should be able to use Set in Python 2.3'''
+    '''Add a vertex if it does not already exist in the vertex list'''
     if vertex is None: return
     if not vertex in self.vertices:
       self.vertices.append(vertex)
