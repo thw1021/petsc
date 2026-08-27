@@ -1441,6 +1441,139 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
 }
 
 /*
+  mergeSmallAggs - merge aggregates too small to support the col_bs-column local QR
+
+  An aggregate with fewer than ceil(col_bs/bs) nodes gives the per-aggregate QR in
+  formProl0() only asz*bs < col_bs rows, so the trailing col_bs - asz*bs coarse basis
+  columns come out as exact zero columns of the tentative prolongator: LAPACKgeqrf() on
+  the zero-padded block returns identity reflectors for the rank-deficient trailing
+  columns, so their Q columns live entirely in the padding rows. Zero P columns make the
+  Galerkin product singular, which surfaces far downstream as a zero pivot in a level
+  smoother (e.g. PCPBJACOBI block inversion) or the coarse-grid factorization. MIS on an
+  unsquared graph (-pc_gamg_aggressive_coarsening 0, or the non-aggressive levels
+  generally) can produce such aggregates, e.g. singletons for 3D elasticity (bs=3,
+  col_bs=6).
+
+  Each too-small aggregate rooted on this rank is merged into the aggregate (also rooted
+  on this rank) holding its strongest neighbor in Amat, the level operator; the operator is
+  used because the coarsening graph is not available here (the Mat stashed in agg_lists by
+  the coarsener only carries ghost adjacency) and because a node whose graph edges were all
+  filtered out still couples through Amat. With no reachable neighbor aggregate (e.g. a
+  decoupled Dirichlet node) the aggregate is deleted, leaving its fine nodes to the smoother
+  (never adopted into an unrelated aggregate).
+*/
+static PetscErrorCode mergeSmallAggs(PC pc, Mat Amat, PetscInt bs, PetscInt col_bs, PetscInt nloc, PetscInt my0, PetscCoarsenData *agg_lists)
+{
+  const PetscInt min_nodes = (col_bs + bs - 1) / bs;
+  PetscInt       nsmall = 0, nmerged = 0, ndeleted = 0, npass = 0;
+  PetscInt      *lid_root, *aggsz;
+  PetscCDIntNd  *pos;
+
+  PetscFunctionBegin;
+  if (bs >= col_bs) PetscFunctionReturn(PETSC_SUCCESS);
+  for (PetscInt lid = 0; lid < nloc; lid++) {
+    PetscInt cnt;
+
+    PetscCall(PetscCDCountAt(agg_lists, lid, &cnt));
+    if (cnt > 0 && cnt < min_nodes) nsmall++;
+  }
+  if (!nsmall) PetscFunctionReturn(PETSC_SUCCESS);
+
+  /* map each locally-owned node to the local root of its aggregate (ghost members are skipped;
+     they follow their aggregate wherever it goes) and record aggregate sizes (ghosts included,
+     matching the QR row count asz in formProl0()) */
+  PetscCall(PetscMalloc2(nloc, &lid_root, nloc, &aggsz));
+  for (PetscInt lid = 0; lid < nloc; lid++) lid_root[lid] = -1;
+  for (PetscInt root = 0; root < nloc; root++) {
+    PetscCall(PetscCDCountAt(agg_lists, root, &aggsz[root]));
+    PetscCall(PetscCDGetHeadPos(agg_lists, root, &pos));
+    while (pos) {
+      PetscInt gid;
+
+      PetscCall(PetscCDIntNdGetID(pos, &gid));
+      PetscCall(PetscCDGetNextPos(agg_lists, root, &pos));
+      if (gid >= my0 && gid < my0 + nloc) lid_root[gid - my0] = root;
+    }
+  }
+
+  /* a merge target that started too small can still be too small after absorbing another
+     small aggregate (possible when bs < col_bs/2), so sweep until no small aggregates remain;
+     each merge empties one list, so the loop is bounded by the initial aggregate count */
+  while (nsmall > 0 && ++npass <= nloc) {
+    nsmall = 0;
+    for (PetscInt root = 0; root < nloc; root++) {
+      PetscInt  target = -1;
+      PetscReal maxw   = -1.0;
+
+      if (aggsz[root] <= 0 || aggsz[root] >= min_nodes) continue;
+      /* strongest Amat neighbor of any locally-owned member that lives in another local aggregate */
+      PetscCall(PetscCDGetHeadPos(agg_lists, root, &pos));
+      while (pos) {
+        PetscInt gid;
+
+        PetscCall(PetscCDIntNdGetID(pos, &gid));
+        PetscCall(PetscCDGetNextPos(agg_lists, root, &pos));
+        if (gid >= my0 && gid < my0 + nloc) {
+          for (PetscInt ii = 0; ii < bs; ii++) {
+            PetscInt           ncols;
+            const PetscInt    *cols;
+            const PetscScalar *vals;
+
+            PetscCall(MatGetRow(Amat, gid * bs + ii, &ncols, &cols, &vals));
+            for (PetscInt k = 0; k < ncols; k++) {
+              PetscInt  cand;
+              PetscReal w;
+
+              if (cols[k] < my0 * bs || cols[k] >= (my0 + nloc) * bs) continue;
+              cand = lid_root[cols[k] / bs - my0];
+              if (cand < 0 || cand == root || aggsz[cand] <= 0) continue;
+              w = vals ? PetscAbsScalar(vals[k]) : 1.0;
+              if (w == 0.0) continue; /* an explicit zero (e.g. an eliminated Dirichlet coupling) is structurally adjacent but numerically unrelated */
+              if (w > maxw) {
+                maxw   = w;
+                target = cand;
+              }
+            }
+            PetscCall(MatRestoreRow(Amat, gid * bs + ii, &ncols, &cols, &vals));
+          }
+        }
+      }
+      if (target >= 0) {
+        PetscCall(PetscCDGetHeadPos(agg_lists, root, &pos));
+        while (pos) {
+          PetscInt gid;
+
+          PetscCall(PetscCDIntNdGetID(pos, &gid));
+          PetscCall(PetscCDGetNextPos(agg_lists, root, &pos));
+          if (gid >= my0 && gid < my0 + nloc) lid_root[gid - my0] = target;
+        }
+        PetscCall(PetscCDMoveAppend(agg_lists, target, root));
+        aggsz[target] += aggsz[root];
+        aggsz[root] = 0;
+        nmerged++;
+        if (aggsz[target] < min_nodes) nsmall++;
+      } else { /* no neighbor aggregate rooted on this rank: drop the aggregate, its fine nodes get no coarse correction */
+        PetscCall(PetscCDGetHeadPos(agg_lists, root, &pos));
+        while (pos) {
+          PetscInt gid;
+
+          PetscCall(PetscCDIntNdGetID(pos, &gid));
+          PetscCall(PetscCDGetNextPos(agg_lists, root, &pos));
+          if (gid >= my0 && gid < my0 + nloc) lid_root[gid - my0] = -1;
+        }
+        PetscCall(PetscCDRemoveAllAt(agg_lists, root));
+        aggsz[root] = 0;
+        ndeleted++;
+      }
+    }
+  }
+  PetscCall(PetscFree2(lid_root, aggsz));
+  PetscCall(PetscInfo(pc, "%s: merged %" PetscInt_FMT " (deleted %" PetscInt_FMT ") aggregates smaller than %" PetscInt_FMT " nodes (bs=%" PetscInt_FMT ", col_bs=%" PetscInt_FMT ") to keep the tentative prolongator full rank\n",
+                      ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "(null)", nmerged, ndeleted, min_nodes, bs, col_bs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
  PCGAMGConstructProlongator_AGG
 
  Input Parameter:
@@ -1475,6 +1608,10 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
   my0  = Istart / bs;
   PetscCheck((Iend - Istart) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "(Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT ") not divisible by bs %" PetscInt_FMT, Iend, Istart, bs);
   PetscCall(PetscCDGetMat(agg_lists, &Gmat)); // get auxiliary matrix for ghost edges for size > 1
+
+  /* aggregates too small for the col_bs-column QR would create zero P columns and a singular
+     coarse operator (a solve-time zero pivot); merge them into a neighbor aggregate first */
+  PetscCall(mergeSmallAggs(pc, Amat, bs, col_bs, nloc, my0, agg_lists));
 
   /* get 'nLocalSelected' */
   for (ii = 0, nLocalSelected = 0; ii < nloc; ii++) {
@@ -2198,6 +2335,38 @@ static PetscErrorCode PCGAMGOptimizeProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
     PetscCall(PetscInfo(pc, "%s: level %" PetscInt_FMT " prolongator filter threshold %g (base %g, scale %g^%" PetscInt_FMT ")\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)pfilter, (double)pc_gamg->prolongator_filter,
                         (double)pc_gamg->prolongator_filter_scale, pc_gamg->current_level));
     PetscCall(PCGAMGKernelPreservingFilter_AGG(pc, Prol, pfilter));
+  }
+  /* a zero P column makes the Galerkin product singular, which otherwise surfaces only at solve
+     time as a cryptic zero pivot in a smoother or the coarse solve; probe with a random vector:
+     a zero column gives an exact zero entry of P^T r while a nonzero column survives up to chance
+     cancellation, which a second independent probe rules out, so the check is O(nnz) plus one
+     single-integer reduction and is run in all builds */
+  {
+    Vec         rv, cv;
+    PetscRandom rnd;
+    PetscInt    nzc = 0;
+
+    PetscCall(MatCreateVecs(Prol, &cv, &rv));
+    PetscCall(PetscRandomCreate(comm, &rnd));
+    for (PetscInt pass = 0; pass < 2; pass++) {
+      const PetscScalar *w;
+      PetscInt           n;
+
+      PetscCall(VecSetRandom(rv, rnd));
+      PetscCall(MatMultTranspose(Prol, rv, cv));
+      PetscCall(VecGetLocalSize(cv, &n));
+      PetscCall(VecGetArrayRead(cv, &w));
+      nzc = 0;
+      for (PetscInt j = 0; j < n; j++)
+        if (PetscAbsScalar(w[j]) == 0.0) nzc++;
+      PetscCall(VecRestoreArrayRead(cv, &w));
+      PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &nzc, 1, MPIU_INT, MPI_SUM, comm));
+      if (!nzc) break;
+    }
+    PetscCall(PetscRandomDestroy(&rnd));
+    PetscCall(VecDestroy(&rv));
+    PetscCall(VecDestroy(&cv));
+    PetscCheck(nzc == 0, comm, PETSC_ERR_PLIB, "Prolongator has %" PetscInt_FMT " zero columns: the coarse operator would be singular (level %" PetscInt_FMT ")", nzc, pc_gamg->current_level);
   }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
   PetscCall(MatViewFromOptions(Prol, NULL, "-pc_gamg_agg_view_prolongation"));
