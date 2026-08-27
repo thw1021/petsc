@@ -51,7 +51,7 @@ static PetscErrorCode MatMult_KSP(Mat A, Vec X, Vec Y)
   Currently, this routine uses a dense matrix format for the output operator if `mattype` is `NULL`.
   This routine is costly in general, and is recommended for use only with relatively small systems.
 
-.seealso: [](ch_ksp), `KSP`, `KSPSetOperators()`, `KSPComputeEigenvaluesExplicitly()`, `PCComputeOperator()`, `KSPSetDiagonalScale()`, `KSPSetNullSpace()`, `MatType`
+.seealso: [](ch_ksp), `KSP`, `KSPSetOperators()`, `KSPComputeEigenvaluesExplicitly()`, `PCComputeOperator()`, `KSPSetNullSpace()`, `MatType`
 @*/
 PetscErrorCode KSPComputeOperator(KSP ksp, MatType mattype, Mat *mat)
 {
