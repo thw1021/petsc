@@ -167,6 +167,34 @@ int main(int argc, char **argv)
     output_file: output/empty.out
 
   test:
+    suffix: diag_kokkos_densecuda
+    nsize: {{1 2}}
+    requires: cuda kokkos_kernels
+    args: -a_mat_type diagonal -p_mat_type densecuda -a_mat_vec_type kokkos
+    output_file: output/empty.out
+
+  test:
+    suffix: densecuda_diag_kokkos
+    nsize: {{1 2}}
+    requires: cuda kokkos_kernels
+    args: -a_mat_type densecuda -p_mat_type diagonal -p_mat_vec_type kokkos -n 10 -m 10
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_densecuda
+    nsize: {{1 2}}
+    requires: cuda
+    args: -a_mat_type diagonal -p_mat_type densecuda -a_mat_vec_type standard
+    output_file: output/empty.out
+
+  test:
+    suffix: densecuda_diag_standard
+    nsize: {{1 2}}
+    requires: cuda
+    args: -a_mat_type densecuda -p_mat_type diagonal -p_mat_vec_type standard -n 10 -m 10
+    output_file: output/empty.out
+
+  test:
     suffix: diag_diag_hip
     nsize: {{1 2}}
     requires: hip
@@ -192,6 +220,34 @@ int main(int argc, char **argv)
     nsize: {{1 2}}
     requires: hip
     args: -a_mat_type {{aijhipsparse densehip}} -p_mat_type diagonal -p_mat_vec_type hip -n 10 -m 10
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_kokkos_densehip
+    nsize: {{1 2}}
+    requires: hip kokkos_kernels
+    args: -a_mat_type diagonal -p_mat_type densehip -a_mat_vec_type kokkos
+    output_file: output/empty.out
+
+  test:
+    suffix: densehip_diag_kokkos
+    nsize: {{1 2}}
+    requires: hip kokkos_kernels
+    args: -a_mat_type densehip -p_mat_type diagonal -p_mat_vec_type kokkos -n 10 -m 10
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_densehip
+    nsize: {{1 2}}
+    requires: hip
+    args: -a_mat_type diagonal -p_mat_type densehip -a_mat_vec_type standard
+    output_file: output/empty.out
+
+  test:
+    suffix: densehip_diag_standard
+    nsize: {{1 2}}
+    requires: hip
+    args: -a_mat_type densehip -p_mat_type diagonal -p_mat_vec_type standard -n 10 -m 10
     output_file: output/empty.out
 
   test:
