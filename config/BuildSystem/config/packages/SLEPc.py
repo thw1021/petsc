@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = '965a777e6fa436f6b4b255080f70a3caf21ed973' # jose/unify-check-lapack
+    self.gitcommit              = 'dfde1fab22da8e9cd9a479d15315ed1077d0fe24' # jose/update-hpddm
     #self.gitcommit             = 'v'+self.version
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
