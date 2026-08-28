@@ -7,7 +7,8 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.__init__(self, framework)
     self.version           = '3.8.2'
     self.download          = ['https://ftp.gnu.org/gnu/bison/bison-'+self.version+'.tar.gz',
-                              'https://mirrors.kernel.org/gnu/bison/bison-'+self.version+'.tar.gz']
+                              'https://mirrors.kernel.org/gnu/bison/bison-'+self.version+'.tar.gz',
+                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/bison-'+self.version+'.tar.gz']
     self.lookforbydefault  = 1
     self.haveBison3plus    = 0
     self.publicInstall     = 0 # always install in PETSC_DIR/PETSC_ARCH (not --prefix) since this is not used by users

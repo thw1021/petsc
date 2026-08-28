@@ -7,7 +7,8 @@ class Configure(config.package.GNUPackage):
     self.version           = '2.8'
     self.versionname       = "GSL_MAJOR_VERSION.GSL_MINOR_VERSION"
     self.download          = ['https://ftp.gnu.org/gnu/gsl/gsl-'+self.version+'.tar.gz',
-                              'https://mirrors.kernel.org/gnu/gsl/gsl-'+self.version+'.tar.gz']
+                              'https://mirrors.kernel.org/gnu/gsl/gsl-'+self.version+'.tar.gz',
+                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/gsl-'+self.version+'.tar.gz']
     self.functions         = ['gsl_sf_hermite_zero']
     self.includes          = ['gsl/gsl_version.h']
     self.liblist           = [['libgsl.a','libgslcblas.a']]
