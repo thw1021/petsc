@@ -98,20 +98,6 @@ class Script(logger.Logger):
     return
 
   @staticmethod
-  def importModule(moduleName):
-    '''Import the named module, and return the module object
-       - Works properly for fully qualified names'''
-    module     = __import__(moduleName)
-    components = moduleName.split('.')
-    for comp in components[1:]:
-      module = getattr(module, comp)
-    return module
-
-  @staticmethod
-  def runShellCommand(command, log=None, cwd=None, env=None):
-    return Script.runShellCommandSeq([command], log=log, cwd=cwd, env=env)
-
-  @staticmethod
   def runShellCommandSeq(commandseq, log=None, cwd=None, env=None):
     Popen = subprocess.Popen
     PIPE  = subprocess.PIPE
@@ -364,10 +350,6 @@ class LanguageProcessor(args.ArgumentProcessor):
       self.preprocessorObject[language].versionControl  = self.versionControl
     return self.preprocessorObject[language]
 
-  def setPreprocessorObject(self, language, preprocessor):
-    self.preprocessorObject[language] = preprocessor
-    return self.getPreprocessorObject(language)
-
   def getCompilerObject(self, language):
     if not language in self.compilerObject:
       self.compilerObject[language] = self.getLanguageModule(language).Compiler(self.argDB)
@@ -377,10 +359,6 @@ class LanguageProcessor(args.ArgumentProcessor):
     if not self.versionControl is None:
       self.compilerObject[language].versionControl  = self.versionControl
     return self.compilerObject[language]
-
-  def setCompilerObject(self, language, compiler):
-    self.compilerObject[language] = compiler
-    return self.getCompilerObject(language)
 
   def getLinkerObject(self, language):
     if not language in self.linkerObject:
@@ -393,10 +371,6 @@ class LanguageProcessor(args.ArgumentProcessor):
     if not self.versionControl is None:
       self.linkerObject[language].versionControl  = self.versionControl
     return self.linkerObject[language]
-
-  def setLinkerObject(self, language, linker):
-    self.linkerObject[language] = linker
-    return self.getLinkerObject(language)
 
   def getSharedLinkerObject(self, language):
     if not language in self.sharedLinkerObject:
@@ -425,7 +399,3 @@ class LanguageProcessor(args.ArgumentProcessor):
     if not self.versionControl is None:
       self.dynamicLinkerObject[language].versionControl  = self.versionControl
     return self.dynamicLinkerObject[language]
-
-  def setDynamicLinkerObject(self, language, linker):
-    self.dynamicLinkerObject[language] = linker
-    return self.getDynamicLinkerObject(language)

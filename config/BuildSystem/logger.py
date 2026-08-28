@@ -292,12 +292,6 @@ class Logger(args.ArgumentProcessor):
           f.write(self.debugIndent)
     return
 
-  def logBack(self):
-    '''Backup the current line if we are not scrolling output'''
-    if self.out is not None and self.linewidth > 0:
-      self.out.write('\r')
-    return
-
   def logClear(self):
     '''Clear the current line if we are not scrolling output'''
     out,lw = self.out,self.linewidth

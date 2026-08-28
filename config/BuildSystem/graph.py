@@ -2,12 +2,11 @@ from functools import reduce
 
 class DirectedGraph(object):
   '''This class is for directed graphs with vertices of arbitrary type'''
-  def __init__(self, vertices = []):
-    '''Create a graph'''
+  def __init__(self):
+    '''Create an empty graph'''
     self.vertices = []
     self.inEdges  = {}
     self.outEdges = {}
-    map(self.addVertex, vertices)
     return
 
   def __len__(self):
@@ -17,8 +16,7 @@ class DirectedGraph(object):
     return 'DirectedGraph with '+str(len(self.vertices))+' vertices and '+str(reduce(lambda k,l: k+l, [len(edgeList) for edgeList in self.inEdges.values()], 0))+' edges'
 
   def addVertex(self, vertex):
-    '''Add a vertex if it does not already exist in the vertex list
-       - Should be able to use Set in Python 2.3'''
+    '''Add a vertex if it does not already exist in the vertex list'''
     if vertex is None: return
     if not vertex in self.vertices:
       self.vertices.append(vertex)
@@ -74,51 +72,10 @@ class DirectedGraph(object):
     self.removeVertex(vertex)
     return
 
-  def addSubgraph(self, graph):
-    '''Add the vertices and edges of another graph into this one'''
-    map(self.addVertex, graph.vertices)
-    map(lambda v: self.addEdges(v, *graph.getEdges(v)), graph.vertices)
-    return
-
-  def removeSubgraph(self, graph):
-    '''Remove the vertices and edges of a subgraph, and all the edges connected to it'''
-    map(self.removeVertex, graph.vertices)
-    return
-
-  def printIndent(self, indent):
-    import sys
-    for i in range(indent): sys.stdout.write('  ')
-
-  def display(self):
-    print('I am a DirectedGraph with '+str(len(self.vertices))+' vertices')
-    for vertex in DirectedGraph.breadthFirstSearch(self):
-      self.printIndent(vertex.__level)
-      print('('+str(self.vertices.index(vertex))+') '+str(vertex.__class__.__module__)+' in: '+str(map(self.vertices.index, self.inEdges[vertex]))+' out: '+str(map(self.vertices.index, self.outEdges[vertex])))
-    return
-
-  def appendGraph(self, graph):
-    '''Join every leaf of this graph to every root of the input graph, leaving the result in this graph'''
-    leaves = DirectedGraph.getLeaves(self)
-    self.addSubgraph(graph)
-    map(lambda v: self.addEdges(v, outputs = DirectedGraph.getRoots(graph)), leaves)
-    return self
-
-  def prependGraph(self, graph):
-    '''Join every leaf of the input graph to every root of this graph, leaving the result in this graph'''
-    roots = DirectedGraph.getRoots(self)
-    self.addSubgraph(graph)
-    map(lambda v: self.addEdges(v, outputs = roots), DirectedGraph.getLeaves(graph))
-    return self
-
   def getRoots(graph):
     '''Return all the sources in the graph (nodes without entering edges)'''
     return [v for v in graph.vertices if not len(graph.getEdges(v)[0])]
   getRoots = staticmethod(getRoots)
-
-  def getLeaves(graph):
-    '''Return all the sinks in the graph (nodes without exiting edges)'''
-    return [v for v in graph.vertices if not len(graph.getEdges(v)[1])]
-  getLeaves = staticmethod(getLeaves)
 
   def depthFirstVisit(graph, vertex, seen = None, returnFinished = 0, outEdges = 1):
     '''This is a generator returning vertices in a depth-first traversal only for the subtree rooted at vertex
@@ -157,30 +114,6 @@ class DirectedGraph(object):
           pass
     return
   depthFirstSearch = staticmethod(depthFirstSearch)
-
-  def breadthFirstSearch(graph, returnFinished = 0):
-    '''This is a generator returning vertices in a breadth-first traversal
-       - If returnFinished is True, return a vertex when it finishes
-       - Otherwise, return a vertex when it is first seen'''
-    queue = DirectedGraph.getRoots(graph)[0:1]
-    if not len(queue): return
-    seen  = [queue[0]]
-    if not returnFinished:
-      queue[0].__level = 0
-      yield queue[0]
-    while len(queue):
-      vertex = queue[-1]
-      for v in graph.getEdges(vertex)[1]:
-        if not v in seen:
-          seen.append(v)
-          v.__level = vertex.__level + 1
-          queue.insert(0, v)
-          if not returnFinished:
-            yield v
-      vertex = queue.pop()
-      if returnFinished:
-        yield vertex
-    return
 
   def topologicalSort(graph, start = None, outEdges = 1):
     '''Reorder the vertices using topological sort'''
