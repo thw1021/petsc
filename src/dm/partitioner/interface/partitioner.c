@@ -350,26 +350,10 @@ PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts,
   } else PetscUseTypeMethod(part, partition, nparts, numVertices, start, adjacency, vertexSection, edgeSection, targetSection, partSection, partition);
   PetscCall(PetscSectionSetUp(partSection));
   if (part->viewerGraph) {
-    PetscViewer viewer = part->viewerGraph;
-    PetscBool   isascii;
-    PetscMPIInt rank;
+    PetscBool isascii;
 
-    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
-    PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
-    if (isascii) {
-      PetscCall(PetscViewerASCIIPushSynchronized(viewer));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d]Nv: %" PetscInt_FMT "\n", rank, numVertices));
-      for (PetscInt v = 0; v < numVertices; ++v) {
-        const PetscInt s = start[v];
-        const PetscInt e = start[v + 1];
-
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d]  ", rank));
-        for (PetscInt i = s; i < e; ++i) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%" PetscInt_FMT " ", adjacency[i]));
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%" PetscInt_FMT "-%" PetscInt_FMT ")\n", s, e));
-      }
-      PetscCall(PetscViewerFlush(viewer));
-      PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-    }
+    PetscCall(PetscObjectTypeCompare((PetscObject)part->viewerGraph, PETSCVIEWERASCII, &isascii));
+    if (isascii) PetscCall(PetscIntViewCSR(numVertices, start, adjacency, part->viewerGraph));
   }
   if (part->viewer) {
     PetscCall(PetscViewerPushFormat(part->viewer, part->viewerFmt));
