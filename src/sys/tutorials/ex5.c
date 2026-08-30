@@ -135,4 +135,10 @@ int main(int argc, char **argv)
       filter: grep -E -v "(options_view)"
       localrunfiles: bag.yml
 
+   test:
+      suffix: help
+      requires: !complex
+      args: -help
+      filter: grep "pbag_bool_array <"
+
 TEST*/
