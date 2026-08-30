@@ -2338,6 +2338,49 @@ cdef class PC(Object):
         cdef PetscInt plevels = asInt(levels)
         CHKERR(PCBDDCSetLevels(self.pc, plevels))
 
+    def loadBDDCCustomization(self, filename: str) -> None:
+        """Load user-defined BDDC customization data from a binary file.
+
+        Collective.
+
+        This method is normally called before `setUp`.
+
+        Parameters
+        ----------
+        filename
+            Name of the binary file.
+
+        See Also
+        --------
+        saveBDDCCustomization, setUp, petsc.PCBDDCLoadCustomization
+
+        """
+        cdef const char *cfilename = NULL
+        filename = str2bytes(filename, &cfilename)
+        CHKERR(PCBDDCLoadCustomization(self.pc, cfilename))
+
+    def saveBDDCCustomization(self, filename: str) -> None:
+        """Save user-defined BDDC customization data to a binary file.
+
+        Collective.
+
+        Call `setUp` before this method so that global customization data has
+        been converted to the local representation stored in the file.
+
+        Parameters
+        ----------
+        filename
+            Name of the binary file.
+
+        See Also
+        --------
+        loadBDDCCustomization, setUp, petsc.PCBDDCSaveCustomization
+
+        """
+        cdef const char *cfilename = NULL
+        filename = str2bytes(filename, &cfilename)
+        CHKERR(PCBDDCSaveCustomization(self.pc, cfilename))
+
     def setBDDCDirichletBoundaries(self, IS bndr) -> None:
         """Set the `IS` defining Dirichlet boundaries for the global problem.
 
