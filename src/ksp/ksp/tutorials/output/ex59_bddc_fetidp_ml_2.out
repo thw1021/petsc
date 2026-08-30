@@ -156,14 +156,14 @@ PC Object: (physical_) 4 MPI processes
         Benign subspace trick is active: 0
         Algebraic computation of no-net-flux: 0
       ********************************** STATISTICS AT LEVEL 1 **********************************
-        Global dofs sizes: all 9 interface 5 coarse 2
-        Coarsening ratios: all/coarse 4 interface/coarse 2
+        Global dofs sizes: all 9 interface 5 coarse 3
+        Coarsening ratios: all/coarse 3 interface/coarse 1
         Active processes : 2
         Total subdomains : 2
         Dofs type        :	MIN	MAX	MEAN
         Interior  dofs   :	2	2	2
         Interface dofs   :	5	5	5
-        Primal    dofs   :	2	2	2
+        Primal    dofs   :	3	3	3
         Local     dofs   :	7	7	7
         Local     subs   :	1	1
       --- Interior solver (rank 0)
@@ -209,17 +209,17 @@ PC Object: (physical_) 4 MPI processes
               Factored matrix:
                 Mat Object: (physical_pc_bddc_neumann_l1_) 1 MPI process
                   type: seqaij
-                  rows=6, cols=6
+                  rows=5, cols=5
                   package used to perform factorization: petsc
-                  total: nonzeros=32, allocated nonzeros=32
+                  total: nonzeros=23, allocated nonzeros=23
                     using I-node routines: found 3 nodes, limit used is 5
           linear system matrix, which is also used to construct the preconditioner:
           Mat Object: (physical_pc_bddc_neumann_l1_) 1 MPI process
             type: seqaij
-            rows=6, cols=6
-            total: nonzeros=32, allocated nonzeros=32
+            rows=5, cols=5
+            total: nonzeros=23, allocated nonzeros=23
             total number of mallocs used during MatSetValues calls=0
-              using I-node routines: found 4 nodes, limit used is 5
+              using I-node routines: found 3 nodes, limit used is 5
       linear system matrix, which is also used to construct the preconditioner:
       Mat Object: (physical_pc_bddc_coarse_) 4 MPI processes
         type: is
@@ -251,24 +251,24 @@ PC Object: (physical_) 4 MPI processes
                   Factored matrix:
                     Mat Object: (physical_pc_bddc_coarse_l1_redundant_) 1 MPI process
                       type: seqaij
-                      rows=2, cols=2
+                      rows=3, cols=3
                       package used to perform factorization: petsc
-                      total: nonzeros=4, allocated nonzeros=4
+                      total: nonzeros=9, allocated nonzeros=9
                         using I-node routines: found 1 nodes, limit used is 5
               linear system matrix, which is also used to construct the preconditioner:
               Mat Object: 1 MPI process
                 type: seqaij
-                rows=2, cols=2
-                total: nonzeros=4, allocated nonzeros=4
+                rows=3, cols=3
+                total: nonzeros=9, allocated nonzeros=9
                 total number of mallocs used during MatSetValues calls=0
                   using I-node routines: found 1 nodes, limit used is 5
           linear system matrix, which is also used to construct the preconditioner:
           Mat Object: (physical_pc_bddc_coarse_l1_) 2 MPI processes
             type: mpiaij
-            rows=2, cols=2
-            total: nonzeros=4, allocated nonzeros=4
+            rows=3, cols=3
+            total: nonzeros=9, allocated nonzeros=9
             total number of mallocs used during MatSetValues calls=0
-              not using I-node (on process 0) routines
+              using I-node (on process 0) routines: found 1 nodes, limit used is 5
   linear system matrix, which is also used to construct the preconditioner:
   Mat Object: 4 MPI processes
     type: is
