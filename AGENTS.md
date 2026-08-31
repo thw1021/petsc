@@ -24,6 +24,15 @@ CodeGraph snippets are read-equivalent for understanding code, but always read f
 If the index does not exist, or no CodeGraph tool or CLI is available, skip CodeGraph and continue with the usual tools; indexing is the user's decision.
 If your tool does not load skills automatically, read `.agents/skills/codegraph/SKILL.md` directly before querying the index.
 
+## Configure, Build, Test, And Lint
+
+Use the `petsc-dev-workflow` skill before selecting or changing `PETSC_ARCH`, configuring or building PETSc, running or updating tests, running source checks, or working on petsc4py. If your tool does not load skills automatically, read `.agents/skills/petsc-dev-workflow/SKILL.md` and only the references it routes to for the current operation.
+
+- Keep using the active `PETSC_ARCH` unless the user asks for multiple configurations. If none is set, ask whether to use an available configuration or create an architecture with `--with-debugging=1` and `--with-strict-petscerrorcode`; use the user's name or generate an informative name based on the agent.
+- Use `make -jN libs` for incremental builds and follow the skill's build procedure for task-scoped completion choices.
+- Do not start `make test` without a selector or `make alltests` unless the user explicitly requests the full suite; either can run thousands of tests.
+- Before concluding C/C++ changes, run `make checkbadSource` and `make clangformat`. The formatter may also modify pre-existing developer changes; run it and report that fact without reverting those changes.
+
 ## Core Working Rules
 
 - Preserve PETSc style and naming conventions.
@@ -141,20 +150,12 @@ When in doubt, pattern-match against existing well-formatted docstrings in the s
 - Expected output normally lives in `output/<testname>.out` relative to the source file.
 - Keep tests targeted. Add or update the narrowest test that proves the behavior you changed.
 
-## Build And Test Commands
-
-- `make clangformat` - format source
-- `make checkclangformat` - verify formatting
-- `make checkbadSource` - run PETSc source-style checks
-- `make test search='<pattern>'` - run tests matching a pattern
-- `make alltests TIMEOUT=600` - run the full suite with an extended timeout
-- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` - run AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`
-
 ## Merge Request Expectations
 
 - All changes are expected to arrive through GitLab merge requests.
 - Keep diffs reviewable and focused.
 - Before concluding work, consider whether formatting, source-style checks, and at least one relevant test should be run.
+- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` runs AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`.
 - If you cannot run the appropriate verification in the current environment, say so explicitly.
 
 ## Practical Agent Guidance
