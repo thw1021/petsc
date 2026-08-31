@@ -34,6 +34,7 @@
 - Add support for running PETSc applications as MCP servers that can be accessed by LLMs
 - Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
 - Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
+- Add `PetscIntViewCSR()` to inspect CSR graph
 
 ## Event Logging
 
@@ -87,6 +88,7 @@
 - Add support for `MatSetInf()` with `MATSEQDENSE` and `MATMPIDENSE`; no `MatType` implemented it before
 - Add device SpMM support for `MATPRODUCT_AB` and `MATPRODUCT_AtB` with a `MATAIJKOKKOS` matrix and dense matrices; previously these products looped `MatMult()` over the columns of the dense matrix
 - Change `MatCreateMAIJ()` to convert its result to `MATAIJKOKKOS` when the input matrix has that type, as is already done for `MATAIJCUSPARSE`; the `MATMAIJ` kernels read the host arrays of the input matrix directly and so miss values last updated on device
+- Add `MatNullSpaceLoad()` to load a `MatNullSpace` object dump in binary with `MatNullSpaceView()`
 
 ## MatCoarsen
 
@@ -103,6 +105,7 @@
 - Add `PCMatApplyRichardson()`, `PCMatApplyRichardsonExists()`, and `PCShellSetMatApplyRichardson()`, the block analogs of `PCApplyRichardson()`, `PCApplyRichardsonExists()`, and `PCShellSetApplyRichardson()`
 - Add the missing Fortran binding for `PCShellSetMatApply()`
 - Remove `PCSetDiagonalScale()`, `PCGetDiagonalScale()`, `PCDiagonalScaleLeft()`, and `PCDiagonalScaleRight()`
+- Add `PCBDDCLoadCustomization()` and `PCBDDCSaveCustomization()` to ease debugging of `PCBDDC`
 
 ## KSP
 

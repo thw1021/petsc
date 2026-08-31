@@ -38,7 +38,7 @@ static PetscErrorCode PCApply_BDDC(PC, Vec, Vec);
 static PetscErrorCode PCSetFromOptions_BDDC(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_BDDC  *pcbddc = (PC_BDDC *)pc->data;
-  PetscInt  nt, i;
+  PetscInt  nt, i, load_version = PETSC_DECIDE;
   char      load[PETSC_MAX_PATH_LEN] = {'\0'};
   PetscBool flg;
 
@@ -46,11 +46,12 @@ static PetscErrorCode PCSetFromOptions_BDDC(PC pc, PetscOptionItems PetscOptions
   PetscOptionsHeadBegin(PetscOptionsObject, "BDDC options");
   /* Load customization from binary file (debugging) */
   PetscCall(PetscOptionsString("-pc_bddc_load", "Load customization from file (intended for debug)", "none", load, load, sizeof(load), &flg));
+  PetscCall(PetscOptionsInt("-pc_bddc_load_version", "Version of the customization file to load", "none", load_version, &load_version, NULL));
   if (flg) {
     size_t len;
 
     PetscCall(PetscStrlen(load, &len));
-    PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, len ? load : NULL));
+    PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, len ? load : NULL, load_version));
   }
   /* Verbose debugging */
   PetscCall(PetscOptionsInt("-pc_bddc_check_level", "Verbose output for PCBDDC (intended for debug)", "none", pcbddc->dbg_flag, &pcbddc->dbg_flag, NULL));
@@ -303,6 +304,7 @@ static PetscErrorCode PCBDDCSetDiscreteGradient_BDDC(PC pc, Mat G, PetscInt orde
   if `PETSC_FALSE`, the ordering should be global for the Nedelec field.
   In the latter case, it should hold gid[i] < gid[j] iff geid[i] < geid[j], with gid the global orderding for all the dofs
   and geid the one for the Nedelec field.
+  If `field` is `PETSC_DECIDE`, `global` must be `PETSC_TRUE`; the Nedelec field is inferred from the rows of `G` with more than one nonzero.
 
 .seealso: [](ch_ksp), `PCBDDC`, `PCBDDCSetDofsSplitting()`, `PCBDDCSetDofsSplittingLocal()`, `MATAIJ`, `PCBDDCSetDivergenceMat()`
 @*/
@@ -329,12 +331,10 @@ static PetscErrorCode PCBDDCSetDivergenceMat_BDDC(PC pc, Mat divudotp, PetscBool
   PetscCall(MatDestroy(&pcbddc->divudotp));
   pcbddc->divudotp          = divudotp;
   pcbddc->divudotp_trans    = trans;
-  pcbddc->compute_nonetflux = PETSC_TRUE;
-  if (vl2l) {
-    PetscCall(PetscObjectReference((PetscObject)vl2l));
-    PetscCall(ISDestroy(&pcbddc->divudotp_vl2l));
-    pcbddc->divudotp_vl2l = vl2l;
-  }
+  pcbddc->compute_nonetflux = (PetscBool)!!(divudotp);
+  PetscCall(PetscObjectReference((PetscObject)vl2l));
+  PetscCall(ISDestroy(&pcbddc->divudotp_vl2l));
+  pcbddc->divudotp_vl2l = vl2l;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -676,6 +676,70 @@ PetscErrorCode PCBDDCSetLevels(PC pc, PetscInt levels)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveInt(pc, levels, 2);
   PetscTryMethod(pc, "PCBDDCSetLevels_C", (PC, PetscInt), (pc, levels));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCBDDCLoadCustomization_BDDC(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_TRUE, filename, PETSC_DECIDE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCBDDCLoadCustomization - Load user-defined customization data for `PCBDDC` from a binary file
+
+  Collective
+
+  Input Parameters:
++ pc       - the preconditioning context
+- filename - path to the binary file
+
+  Level: advanced
+
+  Note:
+  This routine is normally called before `PCSetUp()`.
+
+.seealso: [](ch_ksp), `PCBDDC`, `PCBDDCSaveCustomization()`, `PCSetUp()`
+@*/
+PetscErrorCode PCBDDCLoadCustomization(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(filename, 2);
+  PetscTryMethod(pc, "PCBDDCLoadCustomization_C", (PC, const char[]), (pc, filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCBDDCSaveCustomization_BDDC(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, filename, PETSC_DECIDE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCBDDCSaveCustomization - Save user-defined customization data for `PCBDDC` to a binary file
+
+  Collective
+
+  Input Parameters:
++ pc       - the preconditioning context
+- filename - path to the binary file
+
+  Level: advanced
+
+  Note:
+  Call `PCSetUp()` before this routine so that global customization data has been converted to the local representation stored in the file.
+
+.seealso: [](ch_ksp), `PCBDDC`, `PCBDDCLoadCustomization()`, `PCSetUp()`
+@*/
+PetscErrorCode PCBDDCSaveCustomization(PC pc, const char filename[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(filename, 2);
+  PetscTryMethod(pc, "PCBDDCSaveCustomization_C", (PC, const char[]), (pc, filename));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1679,15 +1743,17 @@ static PetscErrorCode PCSetUp_BDDC(PC pc)
   }
 
   { /* Dump customization */
+    PetscInt  save_version = PETSC_DECIDE;
     PetscBool flg;
     char      save[PETSC_MAX_PATH_LEN] = {'\0'};
 
     PetscCall(PetscOptionsGetString(NULL, ((PetscObject)pc)->prefix, "-pc_bddc_save", save, sizeof(save), &flg));
+    PetscCall(PetscOptionsGetInt(NULL, ((PetscObject)pc)->prefix, "-pc_bddc_save_version", &save_version, NULL));
     if (flg) {
       size_t len;
 
       PetscCall(PetscStrlen(save, &len));
-      PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, len ? save : NULL));
+      PetscCall(PCBDDCLoadOrViewCustomization(pc, PETSC_FALSE, len ? save : NULL, save_version));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2049,6 +2115,8 @@ static PetscErrorCode PCDestroy_BDDC(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevel_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetUseExactDirichlet_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevels_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCLoadCustomization_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSaveCustomization_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundaries_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundariesLocal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetNeumannBoundaries_C", NULL));
@@ -2732,7 +2800,9 @@ PetscErrorCode PCBDDCCreateFETIDPOperators(PC pc, PetscBool fully_redundant, con
    (i.e. an edge or a face), a robust method based on local QR factorizations is used.
    User defined change of basis can be passed to `PCBDDC` with `PCBDDCSetChangeOfBasisMat()`
 
-   The PETSc implementation also supports multilevel `PCBDDC` {cite}`mandel2008multispace`. Coarse grids are partitioned using a `MatPartitioning` object.
+   The PETSc implementation also supports multilevel `PCBDDC` {cite}`mandel2008multispace`. Process subdomains are partitioned using a `MatPartitioning` object.
+   When a local `MATIS` matrix stores multiple elements, their local coarse contributions are first aggregated using a `PetscPartitioner` object. In this case,
+   the coarsening ratio is the number of local elements in each aggregate.
 
    Adaptive selection of primal constraints is supported for SPD systems with high-contrast in the coefficients if MUMPS or MKL_PARDISO are present.
 
@@ -2745,20 +2815,23 @@ PetscErrorCode PCBDDCCreateFETIDPOperators(PC pc, PetscBool fully_redundant, con
 .    -pc_bddc_use_change_on_faces (true|false) - use change of basis approach on faces if change of basis has been requested
 .    -pc_bddc_switch_static (true|false)       - switches from M_2 (default) to M_3 operator (see reference article [1])
 .    -pc_bddc_levels 0                         - maximum number of levels for multilevel
-.    -pc_bddc_coarsening_ratio 8               - number of subdomains which will be aggregated together at the coarser level (e.g. H/h ratio at the coarser level, significative only in the multilevel case)
+.    -pc_bddc_coarsening_ratio 8               - number of process subdomains or local elements which will be aggregated together at the coarser level (e.g. H/h ratio at the coarser level, significant only in the multilevel case)
 .    -pc_bddc_coarse_redistribute 0            - size of a subset of processors where the coarse problem will be remapped (the value is ignored if not at the coarsest level)
 .    -pc_bddc_use_deluxe_scaling (true|false)  - use deluxe scaling
 .    -pc_bddc_schur_layers \-1                 - select the economic version of deluxe scaling by specifying the number of layers (-1 corresponds to the original deluxe scaling)
 .    -pc_bddc_adaptive_threshold 0.0           - when a value different than zero is specified, adaptive selection of constraints is performed on edges and faces (requires deluxe scaling and MUMPS or MKL_PARDISO installed)
 -    -pc_bddc_check_level 0                    - set verbosity level of debugging output
 
-   Options for Dirichlet, Neumann or coarse solver can be set using the appropriate options prefix
+   Options for the Dirichlet, Neumann, coarse solver, or aggregation objects can be set using the appropriate options prefix
 .vb
       -pc_bddc_dirichlet_
       -pc_bddc_neumann_
       -pc_bddc_coarse_
+      -pc_bddc_aggregator_n_
 .ve
    e.g. -pc_bddc_dirichlet_ksp_type richardson -pc_bddc_dirichlet_pc_type gamg. `PCBDDC` uses by default `KSPPREONLY` and `PCLU`.
+   At level n the aggregator prefix is `pc_bddc_aggregator_n_`, preceded by any user prefix. Numeric-prefix fallback allows options such as
+   `-pc_bddc_aggregator_mat_partitioning_type type` and `-pc_bddc_aggregator_petscpartitioner_type type` to configure all levels.
 
    When using a multilevel approach, solvers' options at the N-th level (N > 1) can be specified using the options prefix
 .vb
@@ -2840,6 +2913,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevel_C", PCBDDCSetLevel_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetUseExactDirichlet_C", PCBDDCSetUseExactDirichlet_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetLevels_C", PCBDDCSetLevels_BDDC));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCLoadCustomization_C", PCBDDCLoadCustomization_BDDC));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSaveCustomization_C", PCBDDCSaveCustomization_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundaries_C", PCBDDCSetDirichletBoundaries_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetDirichletBoundariesLocal_C", PCBDDCSetDirichletBoundariesLocal_BDDC));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCBDDCSetNeumannBoundaries_C", PCBDDCSetNeumannBoundaries_BDDC));
