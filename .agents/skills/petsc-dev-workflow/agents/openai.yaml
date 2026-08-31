@@ -1,0 +1,4 @@
+interface:
+  display_name: "PETSc Development Workflow"
+  short_description: "Configure, build, test, and lint PETSc"
+  default_prompt: "Use $petsc-dev-workflow to configure, build, test, or lint this PETSc checkout using the appropriate PETSC_ARCH."
