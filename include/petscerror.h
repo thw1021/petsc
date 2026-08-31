@@ -1327,7 +1327,7 @@ PETSC_DEPRECATED_FUNCTION(3, 13, 0, "PetscSignalSegvCheckPointerOrMpi()", ) stat
 
    Synopsis:
     #include <petscsys.h>
-     PetscErrorCode (*PetscErrorPrintf)(const char format[], ...);
+    PetscErrorCode (*PetscErrorPrintf)(const char format[], ...);
 
     Not Collective; No Fortran Support
 
@@ -1348,15 +1348,31 @@ PETSC_DEPRECATED_FUNCTION(3, 13, 0, "PetscSignalSegvCheckPointerOrMpi()", ) stat
 .ve
    Use
 .vb
-     `PETSC_STDERR` = FILE* obtained from a file open etc. to have stderr printed to the file.
-     `PETSC_STDOUT` = FILE* obtained from a file open etc. to have stdout printed to the file.
+     PETSC_STDERR = FILE* obtained from a file open etc. to have stderr printed to the file.
+     PETSC_STDOUT = FILE* obtained from a file open etc. to have stdout printed to the file.
 .ve
+
+   You can change how error messages are printed by replacing the function pointer with your own function.
+   To use, write your own function, for example,
+.vb
+   PetscErrorCode mypetscerrorprintf(const char format[],....)
+   {
+     PetscFunctionBegin;
+     PetscFunctionReturn(PETSC_SUCCESS);
+   }
+.ve
+then do the assignment
+.vb
+  PetscErrorPrintf = mypetscerrorprintf;
+.ve
+
    Use
 .vb
       `PetscPushErrorHandler()` to provide your own error handler that determines what kind of messages to print
 .ve
 
-.seealso: `PetscFPrintf()`, `PetscSynchronizedPrintf()`, `PetscHelpPrintf()`, `PetscPrintf()`, `PetscPushErrorHandler()`, `PetscVFPrintf()`, `PetscHelpPrintf()`
+.seealso: `PetscFPrintf()`, `PetscSynchronizedPrintf()`, `PetscHelpPrintf()`, `PetscPrintf()`, `PetscPushErrorHandler()`, `PetscVFPrintf()`,
+          `PetscErrorPrintfNone()`, `PetscErrorPrintfDefault()`
 M*/
 PETSC_EXTERN PetscErrorCode (*PetscErrorPrintf)(const char[], ...) PETSC_ATTRIBUTE_FORMAT(1, 2);
 
