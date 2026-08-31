@@ -64,8 +64,8 @@ cdef extern from "<petsc4py/numpy.h>":
     enum: NPY_PETSC_BOOL
     enum: NPY_PETSC_INT
     enum: NPY_PETSC_REAL
-    enum: NPY_PETSC_SCALAR
     enum: NPY_PETSC_COMPLEX
+    enum: NPY_PETSC_SCALAR
 
 
 # --------------------------------------------------------------------
@@ -190,6 +190,12 @@ cdef inline ndarray iarray_s(object ob, PetscInt* size, PetscScalar** data):
     cdef ndarray ary = iarray(ob, NPY_PETSC_SCALAR)
     if size != NULL: size[0] = <PetscInt> PyArray_SIZE(ary)
     if data != NULL: data[0] = <PetscScalar*> PyArray_DATA(ary)
+    return ary
+
+cdef inline ndarray iarray_c(object ob, PetscInt* size, PetscComplex** data):
+    cdef ndarray ary = iarray(ob, NPY_PETSC_COMPLEX)
+    if size != NULL: size[0] = <PetscInt> PyArray_SIZE(ary)
+    if data != NULL: data[0] = <PetscComplex*> PyArray_DATA(ary)
     return ary
 
 # --------------------------------------------------------------------
