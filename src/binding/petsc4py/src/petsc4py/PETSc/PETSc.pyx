@@ -126,18 +126,25 @@ cdef inline PetscErrorCode CHKERRMPI(int ierr) except PETSC_ERR_PYTHON nogil:
 # -------------
 
 cdef extern from * nogil:
+    # booleans
     ctypedef bint      PetscBool
     const    PetscBool PETSC_TRUE
     const    PetscBool PETSC_FALSE
+    # integrals
     ctypedef long      PetscInt
+    ctypedef int       PetscInt32
     ctypedef long long PetscInt64
-    ctypedef double    PetscReal
-    ctypedef double    PetscScalar
     ctypedef ptrdiff_t PetscCount
+    # floating real/complex
+    ctypedef double    PetscReal
+    ctypedef struct    PetscComplex: pass  # Cython doesn't support ctypedef!
+    ctypedef double    PetscScalar
 
 cdef extern from "<petsc4py/pyscalar.h>":
-    object      PyPetscScalar_FromPetscScalar(PetscScalar)
-    PetscScalar PyPetscScalar_AsPetscScalar(object) except? <PetscScalar>-1.0
+    object       PyPetscComplex_FromPetscComplex(PetscComplex)
+    PetscComplex PyPetscComplex_AsPetscComplex(object) except *
+    object       PyPetscScalar_FromPetscScalar(PetscScalar)
+    PetscScalar  PyPetscScalar_AsPetscScalar(object) except? <PetscScalar>-1.0
 
 cdef extern from "<petsc4py/pybuffer.h>":
     int  PyPetscBuffer_FillInfo(Py_buffer*, void*, PetscInt, char, int, int) except -1
@@ -158,6 +165,11 @@ cdef inline object toReal(PetscReal value):
 cdef inline PetscReal asReal(object value) except? -1:
     return value
 
+cdef inline object toComplex(PetscComplex value):
+    return PyPetscComplex_FromPetscComplex(value)
+cdef inline PetscComplex asComplex(object value) except *:
+    return PyPetscComplex_AsPetscComplex(value)
+
 cdef inline object toScalar(PetscScalar value):
     return PyPetscScalar_FromPetscScalar(value)
 cdef inline PetscScalar asScalar(object value) except? <PetscScalar>-1.0:
@@ -174,8 +186,8 @@ import_array()
 
 IntType     = PyArray_TypeObjectFromType(NPY_PETSC_INT)
 RealType    = PyArray_TypeObjectFromType(NPY_PETSC_REAL)
-ScalarType  = PyArray_TypeObjectFromType(NPY_PETSC_SCALAR)
 ComplexType = PyArray_TypeObjectFromType(NPY_PETSC_COMPLEX)
+ScalarType  = PyArray_TypeObjectFromType(NPY_PETSC_SCALAR)
 
 include "dlpack.pxi"
 
