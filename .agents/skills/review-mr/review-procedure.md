@@ -28,9 +28,21 @@ Calibration:
 - LOW: error message awkward but accurate.
 
 ### 4. Verify each finding before reporting
-Treat every finding at Style or above as tentative: reopen the cited code in the current working tree and confirm the finding matches it, is real — not a misread or speculation — and is actionable. Then confirm its evidence holds — the trigger and impact justify the severity and the fix neither breaks a documented use nor adds more mechanism than the impact warrants; a cited rule says what the finding claims; quoted text really contradicts the code — and downgrade to LOW when it does not. Report only findings that survive.
+Treat every finding at Style or above as tentative. Verify it against `DIFF_FILE` and, when more
+context is needed, the file at `SRC_SHA` or `MR_HEAD_SHA`. Do not use the working tree unless it
+matches that revision and the file has no uncommitted changes. If the exact revision is unavailable
+and the diff lacks enough context, do not report the finding. Confirm that each surviving finding
+is real and actionable, its evidence supports its severity, and its fix does not break documented
+use or add more mechanism than the impact warrants. Downgrade it to LOW when those conditions fail.
 
 ### 5. Compose report
-- Per finding: severity, file:line, description, its required evidence (Section 3), suggested fix. List every occurrence of a confirmed issue with file:line — never a representative example or "and similar elsewhere". Order CRITICAL → HIGH → MEDIUM → Style.
+- Per finding: severity, file:line, description, its required evidence (Section 3), suggested fix.
+  List each occurrence in the reviewed diff with file:line; do not use a representative example or
+  "and similar elsewhere". Order CRITICAL → HIGH → MEDIUM → Style.
 - State the coverage: files and lines reviewed, and any path Section 3 reported as not covered. End with `(N LOW findings suppressed; ask to show them.)` when `N > 0`.
 - The report contains the findings, the coverage, the LOW count, and what other sections explicitly say to state — nothing else: no praise, no MR summary, no design commentary. If there are no findings at or above Style, say exactly that.
+
+### 6. Write the merge-request report
+For `review-mr` and `review-mr-post`, write the titled report to `ai-review.html`. Add a footnote
+with the Claude version and model, the effort level from `$CLAUDE_EFFORT`, the current date and
+time, `MR_IID`, `CI_PIPELINE_ID`, and `CI_JOB_ID`. Omit unavailable values.

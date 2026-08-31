@@ -16,23 +16,30 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 - `config/` - configure, build, and test harness generation
 - `doc/` - user and developer documentation
 
-## CodeGraph
-
-If `.codegraph/` exists at the repository root, use the `codegraph` skill before grep/find or reading files when you need to locate or understand PETSc C, C++, or Python code, including during development and review.
-The skill contains the PETSc-specific instructions for source navigation, runtime dispatch, and blast-radius analysis.
-CodeGraph snippets are read-equivalent for understanding code, but always read files directly before editing them.
-If the index does not exist, or no CodeGraph tool or CLI is available, skip CodeGraph and continue with the usual tools; indexing is the user's decision.
-If your tool does not load skills automatically, read `.agents/skills/codegraph/SKILL.md` directly before querying the index.
-
 ## Core Working Rules
 
 - Preserve PETSc style and naming conventions.
 - Keep edits minimal and local to the requested change.
 - Match existing patterns in the package you are modifying before introducing a new one.
 - Avoid unnecessary code duplication. Prefer reusing or extending nearby logic when it keeps behavior clear and local.
+- If `.codegraph/` exists, follow `.agents/skills/codegraph/SKILL.md` before navigating, modifying, or reviewing PETSc C, C++, or Python code.
+- When higher-level APIs depend on the same inference or selection policy, centralize that policy in one private helper that returns any provenance or strategy its callers need; do not duplicate the decision tree across those APIs.
 - Do not add speculative abstractions or broad refactors unless explicitly requested.
+- Do not add shadow state or extra validation in petsc4py to compensate for invariants that the PETSc C API cannot express or validate. Validate only requirements needed to safely marshal Python-owned data, then call the PETSc API directly.
 - If you modify source, check whether test blocks, expected output files, or documentation need corresponding updates.
+- The user selects `PETSC_ARCH`. Ask for it before configuring, building, testing, importing petsc4py, or running a PETSc executable; never infer or change it unless asked to do so.
+- Pass it to commands that perform those actions. Fixed-architecture targets such as `make docs` are exempt.
+- A documentation audit or review does not authorize `make docs`; run it only when the user explicitly requests it or approves it.
 - Never call `PetscFinalize()` inside an `if (...)` block, including early-return patterns like `if (flag) { ...; PetscFinalize(); return 0; }`. Arrange control flow so finalization happens exactly once on every normal exit path.
+
+## Documentation And Code comments
+
+- Write for peer mathematicians and software engineers. Use clear, direct, complete sentences. Follow ASD-STE100 when it does not conflict with established PETSc terminology or mathematical precision.
+- Prefer self-explanatory code. Add comments or docstrings only to explain non-obvious behavior, correctness constraints, or durable design rationale, or when PETSc documentation conventions require them. Do not narrate operations, explain obvious code, summarize edits, record implementation history, or describe removed and rejected approaches.
+- Preserve existing comments unless a change makes them inaccurate or obsolete.
+- Do not edit existing entries in `doc/changes/`. Add an entry to `doc/changes/dev.md` only when asked.
+- In Markdown, describe designs conceptually. When a code block reproduces PETSc source beyond a standalone function prototype, such as a structure, macro definition, or function body, use a narrowly anchored `literalinclude` with `:start-at:` and `:end-at:`. Keep illustrative code, pseudocode, and standalone function prototypes in fenced code blocks. In standalone function prototypes, retain parameter names that surrounding text references.
+- Do not present nonexistent, obsolete, or deprecated symbols as current API. Mention them only when historical, migration, or compatibility context requires it.
 
 ## PETSc Naming And API Conventions
 
@@ -59,21 +66,21 @@ If your tool does not load skills automatically, read `.agents/skills/codegraph/
 
 ## C Coding Style
 
-- Formatting is controlled by `.clang-format`. Use `make clangformat` when needed.
+- Formatting is controlled by `.clang-format`.
 - CI also checks source rules with `make checkbadSource`.
 - Header prototypes should not include parameter names, but function typedef declarations should.
-- The local-declaration block is one contiguous group at the top of the routine: variables grouped by type (all `PetscInt`s adjacent, all `PetscReal`s adjacent, etc.), no mixed pointer arities on a single line, no blank lines or section comments splitting the block. Initialize in the declaration when practical. Exactly one blank line separates the block from `PetscFunctionBegin`/`PetscFunctionBeginUser`.
-- PETSc example functions, including `main()`, should begin with `PetscFunctionBeginUser` after declarations.
+- The declaration block at the top of a routine or nested scope is one contiguous group: variables grouped by type (all `PetscInt`s adjacent, all `PetscReal`s adjacent, etc.), no mixed pointer arities on a single line, no blank lines or section comments splitting the block. Initialize in the declaration when practical. Exactly one blank line separates the block from the first statement, including `PetscFunctionBegin`/`PetscFunctionBeginUser` at routine scope.
+- In PETSc tutorials and tests, all functions, including `main()`, must begin with `PetscFunctionBeginUser` after declarations.
 - Functions that begin with `PetscFunctionBegin` must return with `PetscFunctionReturn(...)` or `PetscFunctionReturnVoid()`, not raw `return`.
 - For `PetscErrorCode` functions, return `PetscFunctionReturn(PETSC_SUCCESS)` on success.
 - Wrap PETSc calls with `PetscCall(...)`. For external library calls, use the appropriate PETSc wrapper such as `PetscCallExternal()` or package-specific variants.
-- Single-statement `if`/`else` blocks must omit braces.
+- Omit braces around any `if`, `else if`, or `else` branch whose body is a single statement.
 - Do not leave commented-out code or dead `#ifdef` blocks in source files.
 - Use `/* ... */` for multiline comments and `// ...` for short single-line comments.
 - Do not decorate multiline comments with leading `*` on each line.
 - Always append `()` to function names when mentioning them in comments, for example `MatAssemblyEnd_MPIAIJ()`.
 - Use correct grammar and spelling in comments and messages.
-- Follow C90-style declarations at the start of a block. The only allowed exceptions are (a) loop indices in `for (...)` initializers and (b) declarations introducing a genuinely new nested `{ ... }` scope. Do **not** sprinkle `const T x = ...;` lines between statements — even after an early-return guard. Hoist all locals to the top of the function and assign them after the guards.
+- Follow C90-style declarations at the start of their enclosing block. Prefer declaring variables used only within a genuinely new nested `{ ... }` scope at the beginning of that scope. The only other allowed exception is a loop index in a `for (...)` initializer. Do **not** sprinkle `const T x = ...;` lines between statements, including after an early-return guard.
 
 ## Error Handling And PETSc Idioms
 
@@ -121,40 +128,12 @@ Two recurring traps the linter catches:
 
 When in doubt, pattern-match against existing well-formatted docstrings in the same file. `make lint` requires the `clang` Python package; if it isn't installed, eyeball the alignment carefully before pushing.
 
-## Testing Requirements
-
-- PETSc tests are described in `/*TEST ... TEST*/` blocks at the bottom of source files.
-- If behavior changes, update the test block and expected output files under the local `output/` directory when needed.
-- Common test block keys include:
-  - `test` or `testset`
-  - `suffix`
-  - `nsize`
-  - `args`
-  - `requires`
-  - `output_file`
-  - `filter` and `filter_output`
-  - `localrunfiles`
-  - `temporaries`
-  - `timeoutfactor`
-  - `env`
-- Use `requires:` for runtime requirements such as packages, precision, `!complex`, or `datafilespath`.
-- Expected output normally lives in `output/<testname>.out` relative to the source file.
-- Keep tests targeted. Add or update the narrowest test that proves the behavior you changed.
-
-## Build And Test Commands
-
-- `make clangformat` - format source
-- `make checkclangformat` - verify formatting
-- `make checkbadSource` - run PETSc source-style checks
-- `make test search='<pattern>'` - run tests matching a pattern
-- `make alltests TIMEOUT=600` - run the full suite with an extended timeout
-- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` - run AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`
-
 ## Merge Request Expectations
 
 - All changes are expected to arrive through GitLab merge requests.
 - Keep diffs reviewable and focused.
-- Before concluding work, consider whether formatting, source-style checks, and at least one relevant test should be run.
+- For source changes, run the applicable source checks and a relevant test. Report checks that are not applicable or cannot run.
+- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` runs AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`.
 - If you cannot run the appropriate verification in the current environment, say so explicitly.
 
 ## Practical Agent Guidance
