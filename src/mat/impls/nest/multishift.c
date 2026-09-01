@@ -207,7 +207,7 @@ PetscErrorCode MatCreateNestFromMultipleShifts(Mat K, PetscInt nshift, const Pet
   set while the second is left zero. The reason is that in this case the second block represents
   the imaginary part, which is zero since `v` is real.
 
-.seealso: [](ch_matrices), `MatCreateNestFromMultipleShifts()`
+.seealso: [](ch_matrices), `MatCreateNestFromMultipleShifts()`, `MatMultiShiftCreateMat()`
 @*/
 PetscErrorCode MatCreateVecNestFromMultipleShifts(Mat A, Vec v, Vec *vout)
 {
@@ -226,5 +226,56 @@ PetscErrorCode MatCreateVecNestFromMultipleShifts(Mat A, Vec v, Vec *vout)
       PetscCall(VecNestSetSubVec(*vout, i, v));
       if (!PetscDefined(USE_COMPLEX) && mctx->cmplx[i]) i++; // complex shift, leave a zero block since b is real
     }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatCreateMatNestFromMultipleShifts - Creates a `MATNEST` with only one block-column that
+  is compatible with a matrix created with `MatCreateNestFromMultipleShifts()`.
+
+  Collective
+
+  Input Parameters:
++ A - a `Mat` created with `MatCreateNestFromMultipleShifts()`
+- B - the matrix to replicate
+
+  Output Parameter:
+. Bout - the resulting matrix
+
+  Level: intermediate
+
+  Notes:
+  The result is a `MATNEST` with only one block-column compatible with `A`, so that it
+  can, e.g., be multiplied against. It will contain `nshift` references to `B`, where `nshift`
+  is the number of block-rows.
+
+  This is intended as an alternative to `MatCreateVecNestFromMultipleShifts()` in case of solving
+  linear systems with multiple right-hand sides with `KSPMatSolve()`.
+
+  In real scalars, in the case of a complex-conjugate pair only the first block of the pair is
+  set while the second is left zero. The reason is that in this case the second block represents
+  the imaginary part, which is zero since `B` is real.
+
+.seealso: [](ch_matrices), `MatCreateNestFromMultipleShifts()`, `MatCreateVecNestFromMultipleShifts()`
+@*/
+PetscErrorCode MatCreateMatNestFromMultipleShifts(Mat A, Mat B, Mat *Bout)
+{
+  PetscInt       i;
+  Mat           *mats;
+  Mat_MultiShift mctx;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
+  PetscAssertPointer(Bout, 3);
+  MatCheckMultiShift(A, &mctx);
+
+  PetscCall(PetscCalloc1(mctx->nshift, &mats));
+  for (i = 0; i < mctx->nshift; i++) {
+    mats[i] = B;
+    if (!PetscDefined(USE_COMPLEX) && mctx->cmplx[i]) i++; // complex shift, leave a zero block since B is real
+  }
+  PetscCall(MatCreateNest(PetscObjectComm((PetscObject)A), mctx->nshift, NULL, 1, NULL, mats, Bout));
+  PetscCall(PetscFree(mats));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

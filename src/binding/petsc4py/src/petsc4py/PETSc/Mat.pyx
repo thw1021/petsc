@@ -6754,6 +6754,26 @@ cdef class Mat(Object):
         CHKERR(MatCreateVecNestFromMultipleShifts(self.mat, vvec, &vout.vec))
         return vout
 
+    def createMatNestFromMultipleShifts(self, Mat B: Mat | None = None) -> Mat:
+        """Create a `Mat.Type.NEST` for a `Mat` from `createNestFromMultipleShifts`.
+
+        Collective.
+
+        Parameters
+        ----------
+        A
+            A matrix that will be inserted in all submatrices of the result.
+
+        See Also
+        --------
+        createNestFromMultipleShifts, petsc.MatCreateMatNestFromMultipleShifts
+
+        """
+        cdef Mat Bout = Mat()
+        cdef PetscMat Bmat = B.mat if B is not None else <PetscMat>NULL
+        CHKERR(MatCreateMatNestFromMultipleShifts(self.mat, Bmat, &Bout.mat))
+        return Bout
+
     # DM
 
     def getDM(self) -> DM:
