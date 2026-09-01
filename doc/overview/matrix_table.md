@@ -105,7 +105,7 @@
      -
    * - Low-rank updates
      - ``MATLMVM``, ``MATLMVMDFP``, ``MATLMVMBFGS``, ``MATLMVMSR1``, ...
-     - ``MatCreateLMVM()``
+     - ``MatCreateLMVMBFGS()``, ``MatCreateLMVMDFP()``, ``MatCreateLMVMSR1()``, ...
      -
      -  limited-memory BFGS style matrices
    * -
