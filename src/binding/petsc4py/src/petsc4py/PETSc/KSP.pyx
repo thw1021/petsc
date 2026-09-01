@@ -168,6 +168,8 @@ class KSPType(object):
     `IDR`
         Induced Dimension Reduction method for general nonsymmetric
         linear systems
+    `EKSM`
+        Extended Krylov Subspace Method for shifted linear systems
 
     See Also
     --------
@@ -223,6 +225,7 @@ class KSPType(object):
     FETIDP     = S_(KSPFETIDP)
     HPDDM      = S_(KSPHPDDM)
     IDR        = S_(KSPIDR)
+    EKSM       = S_(KSPEKSM)
 
 
 class KSPNormType(object):
@@ -2321,6 +2324,128 @@ cdef class KSP(Object):
         CHKERR(KSPIDRGetRandom(self.ksp, &rnd.rnd))
         CHKERR(PetscINCREF(rnd.obj))
         return rnd
+
+    # --- EKSM ---
+
+    def setEKSMHapTol(self, tol: float) -> None:
+        """Set the tolerance for detecting a happy breakdown in EKSM.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        tol
+            Tolerance for determining happy breakdown.
+
+        See Also
+        --------
+        getEKSMHapTol, petsc.KSPEKSMSetHapTol
+
+        """
+        cdef PetscReal rval = asReal(tol)
+        CHKERR(KSPEKSMSetHapTol(self.ksp, rval))
+
+    def getEKSMHapTol(self) -> float:
+        """Get tolerance for detecting a happy breakdown in EKSM.
+
+        Not collective.
+
+        Returns
+        -------
+        tol: float
+            Tolerance for happy breakdown.
+
+        See Also
+        --------
+        setEKSMHapTol, petsc.KSPEKSMGetHapTol
+
+        """
+        cdef PetscReal rval = 0
+        CHKERR(KSPEKSMGetHapTol(self.ksp, &rval))
+        return toReal(rval)
+
+    def setEKSMKSPs(self, KSP ksps=None, KSP kspm=None) -> None:
+        r"""Set the `KSP` objects to be used internally by EKSM.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        ksps
+            Linear solver for :math:`K + \varsigma M`.
+        kspm
+            Linear solver for :math:`M`.
+
+        See Also
+        --------
+        getEKSMKSPs, setEKSMShift, petsc.KSPEKSMSetKSPs
+
+        """
+        cdef PetscKSP ksp_s=NULL
+        if ksps is not None: ksp_s = ksps.ksp
+        cdef PetscKSP ksp_m=NULL
+        if kspm is not None: ksp_m = kspm.ksp
+        CHKERR(KSPEKSMSetKSPs(self.ksp, ksp_s, ksp_m))
+
+    def getEKSMKSPs(self) -> tuple[KSP, KSP]:
+        r"""Return the internal `KSP` objects used by the EKSM method.
+
+        Not collective.
+
+        Returns
+        -------
+        ksps: KSP
+            Linear solver for :math:`K + \varsigma M`.
+        kspm: KSP
+            Linear solver for :math:`M`.
+
+        See Also
+        --------
+        setEKSMKSPs, setEKSMShift, petsc.KSPEKSMGetKSPs
+
+        """
+        cdef KSP ksps = KSP(), kspm = KSP()
+        CHKERR(KSPEKSMGetKSPs(self.ksp, &ksps.ksp, &kspm.ksp))
+        CHKERR(PetscINCREF(ksps.obj))
+        CHKERR(PetscINCREF(kspm.obj))
+        return (ksps, kspm)
+
+    def setEKSMShift(self, shift: Scalar) -> None:
+        r"""Set the value of the shift used internally in EKSM.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        shift
+            The value of the shift :math:`\varsigma`.
+
+        See Also
+        --------
+        getEKSMShift, petsc.KSPEKSMSetShift
+
+        """
+        cdef PetscScalar sval = asScalar(shift)
+        CHKERR(KSPEKSMSetShift(self.ksp, sval))
+
+    def getEKSMShift(self) -> Scalar:
+        r"""Get the value of the shift used internally in EKSM.
+
+        Not collective.
+
+        Returns
+        -------
+        shift: Scalar
+            The value of the shift :math:`\varsigma`.
+
+        See Also
+        --------
+        setEKSMShift, petsc.KSPEKSMGetShift
+
+        """
+        cdef PetscScalar sval = 0
+        CHKERR(KSPEKSMGetShift(self.ksp, &sval))
+        return toScalar(sval)
 
     # --- Python ---
 
