@@ -57,9 +57,9 @@ entirely or multiple executable/diff tests within a single test. At the
 core, the executable/diff test combination will look something like
 this:
 
-```sh
-mpiexec -n 1 ../ex1 1> ex1.tmp 2> ex1.err
-diff ex1.tmp output/ex1.out 1> diff-ex1.tmp 2> diff-ex1.err
+```console
+$ mpiexec -n 1 ../ex1 1> ex1.tmp 2> ex1.err
+$ diff ex1.tmp output/ex1.out 1> diff-ex1.tmp 2> diff-ex1.err
 ```
 
 In practice, we want to do various logging and counting by the test
@@ -188,12 +188,11 @@ With this background, these keywords are as follows.
     directory given by the environmental variable `DATAFILESPATH`.
     For these tests `requires: datafilespath` is
     specified. See {any}`test harness data<test_harness_data>`
-  - Packages are indicated with lower-case specification, for example,
-    `requires: superlu_dist`.
-  - Any defined variable in petscconf.h can be specified with the
-    `defined(...)` syntax, for example, `defined(PETSC_USE_INFO)`.
-  - Any definition of the form `PETSC_HAVE_FOO` can just use
-    `requires: foo` similar to how third-party packages are handled.
+  - Package and feature requirements check the corresponding `PETSC_HAVE_*` definition; for example,
+    `requires: mpi_gpu_aware` checks `PETSC_HAVE_MPI_GPU_AWARE`, and
+    `requires: superlu_dist` checks for the external package.
+  - The `defined(...)` syntax checks the exact variable from `petscconf.h`, for example,
+    `defined(PETSC_USE_INFO)`.
 
 - **timeoutfactor**: (*Optional*; *Default:* `"1"`)
 
@@ -507,17 +506,18 @@ TEST*/
 
 ## Running the tests
 
-The make rules for running tests are contained in `gmakefile.test` in the PETSc root directory. They can usually be accessed by
-simply using commands such as
+The make rules for running tests are contained in `gmakefile.test` in the PETSc root directory.
+Run tests through the root makefile with commands such as
 
 ```console
 $ make test
 ```
 
-or, for a list of test options,
+Invoke test-harness-only targets directly from `gmakefile.test`; for example, list the test options
+with
 
 ```console
-$ make help-test
+$ make -f gmakefile.test help-test
 ```
 
 ### Determining the failed jobs of a given run
@@ -542,13 +542,13 @@ Test artifacts can be downloaded from GitLab.
 To see the list of all tests that failed from the last run, you can also run this command:
 
 ```console
-$ make print-test test-fail=1
+$ make -f gmakefile.test print-test test-fail=1
 ```
 
 To print it out in a column format:
 
 ```console
-$ make print-test test-fail=1 | tr ' ' '\n' | sort
+$ make -f gmakefile.test print-test test-fail=1 | tr ' ' '\n' | sort
 ```
 
 Once you know which tests failed, the question is how to debug them.
@@ -640,7 +640,7 @@ $ runex1_basic_1.sh -p
 First recall how to find help for the options:
 
 ```console
-$ make help-test
+$ make -f gmakefile.test help-test
 Test usage:
    /usr/bin/gmake --no-print-directory test <options>
 
@@ -709,11 +709,11 @@ for the normal compile and edit, running the entire harness with search can be
 cumbersome. So first get the command:
 
 ```console
-$ make vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
+$ make -f gmakefile.test vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
 <copy command>
 <edit>
-$ make $PETSC_ARCH/tests/vec/is/sf/tests/ex1
-$ /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
+$ make -f gmakefile.test $PETSC_ARCH/tests/vec/is/sf/tests/ex1
+$ mpiexec -n 1 $PETSC_ARCH/tests/vec/is/sf/tests/ex1
 ...
 $ cd $PETSC_DIR
 $ git commit -a
@@ -733,27 +733,27 @@ The three basic and recommended arguments are:
   - Use the familiar glob syntax (like the Unix `ls` command). Example:
 
     ```console
-    $ make print-test search='vec_is*ex1*basic*1'
+    $ make -f gmakefile.test print-test search='vec_is*ex1*basic*1'
     ```
 
     Equivalently:
 
     ```console
-    $ make print-test s='vec_is*ex1*basic*1'
+    $ make -f gmakefile.test print-test s='vec_is*ex1*basic*1'
     ```
 
   - It also takes full paths. Examples:
 
     ```console
-    $ make print-test s='src/vec/is/tests/ex1.c'
+    $ make -f gmakefile.test print-test s='src/vec/is/tests/ex1.c'
     ```
 
     ```console
-    $ make print-test s='src/dm/impls/plex/tests/'
+    $ make -f gmakefile.test print-test s='src/dm/impls/plex/tests/'
     ```
 
     ```console
-    $ make print-test s='src/dm/impls/plex/tests/ex1.c'
+    $ make -f gmakefile.test print-test s='src/dm/impls/plex/tests/ex1.c'
     ```
 
 - `query` and `queryval` (or `q` and `qv`)
@@ -761,7 +761,7 @@ The three basic and recommended arguments are:
   - `query` corresponds to test harness keyword, `queryval` to the value. Example:
 
     ```console
-    $ make print-test query='suffix' queryval='basic_1'
+    $ make -f gmakefile.test print-test query='suffix' queryval='basic_1'
     ```
 
   - Invokes `config/query_tests.py` to query the tests (see
@@ -774,7 +774,7 @@ The three basic and recommended arguments are:
   - Filters results of above searches. Example:
 
     ```console
-    $ make print-test s='src/dm/impls/plex/tests/ex1.c' i='*refine_overlap_2d*'
+    $ make -f gmakefile.test print-test s='src/dm/impls/plex/tests/ex1.c' i='*refine_overlap_2d*'
     ```
 
 Searching using GNU make's native regexp functionality is kept for people who like it, but most developers will likely prefer the above methods:
@@ -803,22 +803,32 @@ Searching using GNU make's native regexp functionality is kept for people who li
 
 ### Query-based searching
 
+Queries through `gmakefile.test` search tests generated for the active `PETSC_ARCH`; tests with
+unavailable requirements are absent. To query every source definition instead, use
+
+```console
+$ ./config/query_tests.py --use-source --petsc-dir="$PETSC_DIR" requires '*GPU_AWARE*'
+```
+
+Source queries can return tests that the active configuration cannot build or run. A glob matches
+all distinct field values satisfying the pattern and returns the union of their tests.
+
 Note the use of glob style matching is also accepted in the value field:
 
 ```console
-$ make print-test query='suffix' queryval='basic_1'
+$ make -f gmakefile.test print-test query='suffix' queryval='basic_1'
 ```
 
 ```console
-$ make print-test query='requires' queryval='cuda'
+$ make -f gmakefile.test print-test query='requires' queryval='cuda'
 ```
 
 ```console
-$ make print-test query='requires' queryval='defined(PETSC_HAVE_MPI_GPU_AWARE)'
+$ make -f gmakefile.test print-test query='requires' queryval='defined(PETSC_HAVE_MPI_GPU_AWARE)'
 ```
 
 ```console
-$ make print-test query='requires' queryval='*GPU_AWARE*'
+$ make -f gmakefile.test print-test query='requires' queryval='*GPU_AWARE*'
 ```
 
 Using the `name` field is equivalent to the search above:
@@ -826,7 +836,7 @@ Using the `name` field is equivalent to the search above:
 - Example:
 
   ```console
-  $ make print-test query='name' queryval='vec_is*ex1*basic*1'
+  $ make -f gmakefile.test print-test query='name' queryval='vec_is*ex1*basic*1'
   ```
 
 - This can be combined with union/intersect queries as discussed below
@@ -852,15 +862,15 @@ Certain items are ignored:
 Examples of argument searching:
 
 ```console
-$ make print-test query='args' queryval='ksp_monitor'
+$ make -f gmakefile.test print-test query='args' queryval='ksp_monitor'
 ```
 
 ```console
-$ make print-test query='args' queryval='*monitor*'
+$ make -f gmakefile.test print-test query='args' queryval='*monitor*'
 ```
 
 ```console
-$ make print-test query='args' queryval='pc_type ml'
+$ make -f gmakefile.test print-test query='args' queryval='pc_type ml'
 ```
 
 Multiple simultaneous queries can be performed with union (`,`), and intersection
@@ -872,45 +882,45 @@ one cannot avoid (possibly multiple) shell expansions that might otherwise inter
 - All examples using `cuda` and all examples using `hip`:
 
   ```console
-  $ make print-test query='requires,requires' queryval='cuda,hip'
+  $ make -f gmakefile.test print-test query='requires,requires' queryval='cuda,hip'
   # equivalently
-  $ make print-test query='requires%AND%requires' queryval='cuda%AND%hip'
+  $ make -f gmakefile.test print-test query='requires%AND%requires' queryval='cuda%AND%hip'
   ```
 
 - Examples that require both triangle and ctetgen (intersection of tests)
 
   ```console
-  $ make print-test query='requires|requires' queryval='ctetgen,triangle'
+  $ make -f gmakefile.test print-test query='requires|requires' queryval='ctetgen,triangle'
   # equivalently
-  $ make print-test query='requires%OR%requires' queryval='ctetgen%AND%triangle'
+  $ make -f gmakefile.test print-test query='requires%OR%requires' queryval='ctetgen%AND%triangle'
   ```
 
 - Tests that require either `ctetgen` or `triangle`
 
   ```console
-  $ make print-test query='requires,requires' queryval='ctetgen,triangle'
+  $ make -f gmakefile.test print-test query='requires,requires' queryval='ctetgen,triangle'
   # equivalently
-  $ make print-test query='requires%AND%requires' queryval='ctetgen%AND%triangle'
+  $ make -f gmakefile.test print-test query='requires%AND%requires' queryval='ctetgen%AND%triangle'
   ```
 
 - Find `cuda` examples in the `dm` package.
 
   ```console
-  $ make print-test query='requires|name' queryval='cuda,dm*'
+  $ make -f gmakefile.test print-test query='requires|name' queryval='cuda,dm*'
   # equivalently
-  $ make print-test query='requires%OR%name' queryval='cuda%AND%dm*'
+  $ make -f gmakefile.test print-test query='requires%OR%name' queryval='cuda%AND%dm*'
   ```
 
 Here is a way of getting a feel for how the union and intersect operators work:
 
 ```console
-$ make print-test query='requires' queryval='ctetgen' | tr ' ' '\n' | wc -l
+$ make -f gmakefile.test print-test query='requires' queryval='ctetgen' | tr ' ' '\n' | wc -l
 170
-$ make print-test query='requires' queryval='triangle' | tr ' ' '\n' | wc -l
+$ make -f gmakefile.test print-test query='requires' queryval='triangle' | tr ' ' '\n' | wc -l
 330
-$ make print-test query='requires,requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l
+$ make -f gmakefile.test print-test query='requires,requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l
 478
-$ make print-test query='requires|requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l
+$ make -f gmakefile.test print-test query='requires|requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l
 22
 ```
 
@@ -1000,14 +1010,15 @@ desired requirements for reporting and logging.
 
 ### Testing the Parsing
 
-After inserting the language into the file, you can test the parsing by
-executing
+After adding or changing a `/*TEST ... TEST*/` block, test its parsing with
 
-A dictionary will be pretty-printed. From this dictionary printout, any
-problems in the parsing are is usually obvious. This python file is used
-by
+```console
+$ ./config/testparse.py --test_file=path/to/example.c --verbosity=1
+```
 
-in generating the test harness.
+The command prints the parsed tests. Inspect this output for missing or
+incorrect fields. `config/gmakegentest.py` uses this parser when generating
+the test harness.
 
 ## Test Output Standards: TAP
 
@@ -1056,8 +1067,8 @@ A sample shell script is given the following.
 #!/bin/sh
 . petsc_harness.sh
 
-petsc_testrun ./ex1 ex1.tmp ex1.err
-petsc_testrun 'diff ex1.tmp output/ex1.out' diff-ex1.tmp diff-ex1.err
+petsc_testrun './ex1' ex1.tmp ex1.err ex1 ''
+petsc_testrun 'diff ex1.tmp output/ex1.out' diff-ex1.tmp diff-ex1.err diff-ex1 ''
 
 petsc_testend
 ```

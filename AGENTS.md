@@ -24,6 +24,12 @@ CodeGraph snippets are read-equivalent for understanding code, but always read f
 If the index does not exist, or no CodeGraph tool or CLI is available, skip CodeGraph and continue with the usual tools; indexing is the user's decision.
 If your tool does not load skills automatically, read `.agents/skills/codegraph/SKILL.md` directly before querying the index.
 
+## Configure, Build, Test, And Lint
+
+Use the `petsc-dev-workflow` skill before selecting or changing `PETSC_ARCH`, configuring or building PETSc, running or updating tests, running source checks, or working on petsc4py. If your tool does not load skills automatically, read `.agents/skills/petsc-dev-workflow/SKILL.md` and only the references it routes to for the current operation.
+
+- A documentation audit or review does not authorize `make docs`; run it only when the user explicitly requests it or approves it after being told its scope and side effects.
+
 ## Core Working Rules
 
 - Preserve PETSc style and naming conventions.
@@ -33,6 +39,15 @@ If your tool does not load skills automatically, read `.agents/skills/codegraph/
 - Do not add speculative abstractions or broad refactors unless explicitly requested.
 - If you modify source, check whether test blocks, expected output files, or documentation need corresponding updates.
 - Never call `PetscFinalize()` inside an `if (...)` block, including early-return patterns like `if (flag) { ...; PetscFinalize(); return 0; }`. Arrange control flow so finalization happens exactly once on every normal exit path.
+
+## Documentation And Code comments
+
+- Write for peer mathematicians and software engineers. Use clear, direct, complete sentences. Follow ASD-STE100 when it does not conflict with established PETSc terminology or mathematical precision.
+- Prefer self-explanatory code. Add comments or docstrings only to explain non-obvious behavior, correctness constraints, or durable design rationale, or when PETSc documentation conventions require them. Do not narrate operations, explain obvious code, summarize edits, record implementation history, or describe removed and rejected approaches.
+- Preserve existing comments unless a change makes them inaccurate or obsolete.
+- Treat `doc/changes/` as immutable history: only add new entries to the appropriate section of `doc/changes/dev.md` when asked.
+- In Markdown, describe designs conceptually. When a code block reproduces PETSc source beyond a standalone function prototype, such as a structure, macro definition, or function body, use a narrowly anchored `literalinclude` with `:start-at:` and `:end-at:`. Keep illustrative code, pseudocode, and standalone function prototypes in fenced code blocks. In standalone function prototypes, retain parameter names that surrounding text references.
+- Do not present nonexistent, obsolete, or deprecated symbols as current API. Mention them only when historical, migration, or compatibility context requires it.
 
 ## PETSc Naming And API Conventions
 
@@ -121,40 +136,12 @@ Two recurring traps the linter catches:
 
 When in doubt, pattern-match against existing well-formatted docstrings in the same file. `make lint` requires the `clang` Python package; if it isn't installed, eyeball the alignment carefully before pushing.
 
-## Testing Requirements
-
-- PETSc tests are described in `/*TEST ... TEST*/` blocks at the bottom of source files.
-- If behavior changes, update the test block and expected output files under the local `output/` directory when needed.
-- Common test block keys include:
-  - `test` or `testset`
-  - `suffix`
-  - `nsize`
-  - `args`
-  - `requires`
-  - `output_file`
-  - `filter` and `filter_output`
-  - `localrunfiles`
-  - `temporaries`
-  - `timeoutfactor`
-  - `env`
-- Use `requires:` for runtime requirements such as packages, precision, `!complex`, or `datafilespath`.
-- Expected output normally lives in `output/<testname>.out` relative to the source file.
-- Keep tests targeted. Add or update the narrowest test that proves the behavior you changed.
-
-## Build And Test Commands
-
-- `make clangformat` - format source
-- `make checkclangformat` - verify formatting
-- `make checkbadSource` - run PETSc source-style checks
-- `make test search='<pattern>'` - run tests matching a pattern
-- `make alltests TIMEOUT=600` - run the full suite with an extended timeout
-- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` - run AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`
-
 ## Merge Request Expectations
 
 - All changes are expected to arrive through GitLab merge requests.
 - Keep diffs reviewable and focused.
 - Before concluding work, consider whether formatting, source-style checks, and at least one relevant test should be run.
+- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` runs AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`.
 - If you cannot run the appropriate verification in the current environment, say so explicitly.
 
 ## Practical Agent Guidance
