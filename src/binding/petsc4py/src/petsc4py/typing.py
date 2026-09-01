@@ -32,6 +32,8 @@ from .PETSc import (
 )
 
 __all__ = [
+    'Real',
+    'Complex',
     'Scalar',
     'ArrayBool',
     'ArrayInt',
@@ -107,7 +109,13 @@ __all__ = [
 
 # --- Sys ---
 
-Scalar = float | complex
+Real = float
+"""Real type."""
+
+Complex = complex
+"""Complex type."""
+
+Scalar = Real | Complex
 """Scalar type.
 
 Scalars can be either `float` or `complex` (but not both) depending on how
