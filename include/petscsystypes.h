@@ -1246,7 +1246,7 @@ typedef unsigned char PetscByte;
      Level: advanced
 
 .seealso: `PetscByte`, `PetscBTCreate()`, `PetscBTDestroy()`, `PetscBTMemzero()`, `PetscBTSet()`, `PetscBTClear()`, `PetscBTLookup()`,
-          `PetscBTLookupSet()`, `PetscBTLookupClear()`, `PetscBTLength()`, `PetscBTView()`
+          `PetscBTLookupSet()`, `PetscBTLookupClear()`, `PetscBTLength()`, `PetscBTView()`, `PetscByte`
 S*/
 typedef PetscByte *PetscBT;
 
