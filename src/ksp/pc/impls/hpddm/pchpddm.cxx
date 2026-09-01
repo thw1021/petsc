@@ -830,14 +830,14 @@ static inline PetscErrorCode PCHPDDMDeflateTranspose_Private(PC pc, Mat X, Mat Y
 }
 
 /*
-     PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (4) balanced, (5) no coarse correction, or (3) reversed deflated correction. In what follows, E = Z^H Pmat Z and Q = Z E^-1 Z^H, where H denotes the Hermitian transpose.
+     PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z^H Pmat Z and Q = Z E^-1 Z^H, where H denotes the Hermitian transpose.
 
 .vb
    (1) y =                  Pmat^-1              x + Q x,
    (2) y =                  Pmat^-1 (I - Amat Q) x + Q x (default),
-   (3) y =                  Pmat^-1              x + Q (I - Amat Pmat^-1) x,
-   (4) y = (I - Q^H Amat^H) Pmat^-1 (I - Amat Q) x + Q x,
-   (5) y =                  Pmat^-1              x      .
+   (3) y = (I - Q^H Amat^H) Pmat^-1 (I - Amat Q) x + Q x,
+   (4) y =                  Pmat^-1              x,
+   (5) y =                  Pmat^-1              x + Q (I - Amat Pmat^-1) x.
 .ve
 
    Input Parameters:
@@ -850,7 +850,7 @@ static inline PetscErrorCode PCHPDDMDeflateTranspose_Private(PC pc, Mat X, Mat Y
    Notes:
      The options of Pmat^-1 = pc(Pmat) are prefixed by `-pc_hpddm_levels_1_pc_`. Z is a tall-and-skinny matrix assembled by HPDDM. The number of processes on which E is aggregated is set via `-pc_hpddm_coarse_p`.
      The options of E^-1 = ksp(E) are prefixed by `-pc_hpddm_coarse_` (`KSPPREONLY` and `PCCHOLESKY` by default), unless a multilevel correction is turned on, in which case, this function is called recursively at each level except the coarsest one.
-     (1), (2), and (3) visit the "next" level (in terms of coarsening) once per application, while (4) visits it twice, so it is asymptotically twice costlier. (2) and (3) are not symmetric even if both Amat and Pmat are symmetric.
+     (1), (2), and (5) visit the "next" level (in terms of coarsening) once per application, while (3) visits it twice, so it is asymptotically twice costlier. (2) and (5) are not symmetric even if both Amat and Pmat are symmetric.
 
    Level: advanced
 
@@ -1032,14 +1032,14 @@ static PetscErrorCode PCMatApply_HPDDMShell(PC pc, Mat X, Mat Y)
 }
 
 /*
-     PCApplyTranspose_HPDDMShell - Applies the transpose of a (2) deflated, (1) additive, (4) balanced, (5) no coarse correction, or (3) reversed deflated correction. In what follows, E = Z^H Pmat Z and Q = Z E^-1 Z^H, where H and T denote the Hermitian and algebraic transposes, respectively.
+     PCApplyTranspose_HPDDMShell - Applies the transpose of a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z^H Pmat Z and Q = Z E^-1 Z^H, where H and T denote the Hermitian and algebraic transposes, respectively.
 
 .vb
    (1) y =                  Pmat^-T              x + Q^T x,
    (2) y = (I - Q^T Amat^T) Pmat^-T              x + Q^T x (default),
-   (3) y =                  Pmat^-T (I - Amat^T Q^T) x + Q^T x,
-   (4) y = (I - Q^T Amat^T) Pmat^-T (I - Amat Q) x + Q^T x,
-   (5) y =                  Pmat^-T              x        .
+   (3) y = (I - Q^T Amat^T) Pmat^-T (I - Amat Q) x + Q^T x,
+   (4) y =                  Pmat^-T              x,
+   (5) y =                  Pmat^-T (I - Amat^T Q^T) x + Q^T x.
 .ve
 
    Input Parameters:

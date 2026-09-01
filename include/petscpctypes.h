@@ -501,15 +501,15 @@ typedef enum {
     PCHPDDMCoarseCorrectionType - Type of coarse correction used by `PCType` `PCHPDDM`
 
     Values:
-+   `PC_HPDDM_COARSE_CORRECTION_DEFLATED` (default)       - fine correction applied to the residual after coarse correction
-.   `PC_HPDDM_COARSE_CORRECTION_ADDITIVE`                 - fine and coarse corrections added
-.   `PC_HPDDM_COARSE_CORRECTION_BALANCED`                 - symmetric deflated correction
-.   `PC_HPDDM_COARSE_CORRECTION_NONE`                     - no coarse correction (mostly useful for debugging)
--   `PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED`        - coarse correction applied to the residual after fine correction
++   `PC_HPDDM_COARSE_CORRECTION_DEFLATED` (default) - eq. (1) in `PCHPDDMShellApply()`
+.   `PC_HPDDM_COARSE_CORRECTION_ADDITIVE`           - eq. (2)
+.   `PC_HPDDM_COARSE_CORRECTION_BALANCED`           - eq. (3)
+.   `PC_HPDDM_COARSE_CORRECTION_NONE`               - no coarse correction (mostly useful for debugging)
+-   `PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED`  - eq. (5)
 
     Level: intermediate
 
-.seealso: [](sec_pc), `PCHPDDM`, `PC`, `PCSetType()`, `PCHPDDMSetCoarseCorrectionType()`
+.seealso: [](sec_pc), `PCHPDDM`, `PC`, `PCSetType()`, `PCHPDDMShellApply()`
 E*/
 typedef enum {
   PC_HPDDM_COARSE_CORRECTION_DEFLATED,
