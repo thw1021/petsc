@@ -442,43 +442,43 @@ TSPostEventFunction = Callable[[TS, ArrayInt, float, Vec, bool], None]
 # --- TAO ---
 
 TAOObjectiveFunction = Callable[[TAO, Vec], float]
-"""`TAO` objective function callback."""
+"""`Tao` objective function callback."""
 
 TAOGradientFunction = Callable[[TAO, Vec, Vec], None]
-"""`TAO` objective gradient callback."""
+"""`Tao` objective gradient callback."""
 
 TAOObjectiveGradientFunction = Callable[[TAO, Vec, Vec], float]
-"""`TAO` objective function and gradient callback."""
+"""`Tao` objective function and gradient callback."""
 
 TAOHessianFunction = Callable[[TAO, Vec, Mat, Mat], None]
-"""`TAO` objective Hessian callback."""
+"""`Tao` objective Hessian callback."""
 
 TAOUpdateFunction = Callable[[TAO, int], None]
-"""`TAO` update callback."""
+"""`Tao` update callback."""
 
 TAOMonitorFunction = Callable[[TAO], None]
-"""`TAO` monitor callback."""
+"""`Tao` monitor callback."""
 
 TAOConvergedFunction = Callable[[TAO], None]
-"""`TAO` convergence test callback."""
+"""`Tao` convergence test callback."""
 
 TAOJacobianFunction = Callable[[TAO, Vec, Mat, Mat], None]
-"""`TAO` Jacobian callback."""
+"""`Tao` Jacobian callback."""
 
 TAOResidualFunction = Callable[[TAO, Vec, Vec], None]
-"""`TAO` residual callback."""
+"""`Tao` residual callback."""
 
 TAOJacobianResidualFunction = Callable[[TAO, Vec, Mat, Mat], None]
-"""`TAO` Jacobian residual callback."""
+"""`Tao` Jacobian residual callback."""
 
 TAOVariableBoundsFunction = Callable[[TAO, Vec, Vec], None]
-"""`TAO` variable bounds callback."""
+"""`Tao` variable bounds callback."""
 
 TAOConstraintsFunction = Callable[[TAO, Vec, Vec], None]
-"""`TAO` constraints callback."""
+"""`Tao` constraints callback."""
 
 TAOConstraintsJacobianFunction = Callable[[TAO, Vec, Mat, Mat], None]
-"""`TAO` constraints Jacobian callback."""
+"""`Tao` constraints Jacobian callback."""
 
 TAOLSObjectiveFunction = Callable[[TAOLineSearch, Vec], float]
 """`TAOLineSearch` objective function callback."""

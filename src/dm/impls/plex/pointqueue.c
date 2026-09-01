@@ -175,6 +175,21 @@ PetscErrorCode DMPlexPointQueueBack(DMPlexPointQueue queue, PetscInt *p)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMPlexPointQueueEmpty - Returns `PETSC_TRUE` if the queue is empty
+
+  Not Collective
+
+  Input Parameter:
+. queue - the queue
+
+  Level: developer
+
+  Note:
+  Unlike most PETSc functions this does not return an error code.
+
+.seealso: `DMPLEX`, `DMPlexPointQueue`, `DMPlexPointQueueFront()`, `DMPlexPointQueueEnqueue()`, `DMPlexPointQueueEmpty()`
+@*/
 PetscBool DMPlexPointQueueEmpty(DMPlexPointQueue queue)
 {
   if (!queue->num) return PETSC_TRUE;
@@ -187,11 +202,11 @@ PetscBool DMPlexPointQueueEmpty(DMPlexPointQueue queue)
   Collective
 
   Input Parameters:
-+ obj   - a `PetscObject` whose communicator is used for the reduction
++ obj   - a `PetscObject` whose MPI communicator is used for the reduction
 - queue - the queue
 
   Output Parameter:
-. empty - `PETSC_TRUE` if the queue is empty on every rank, `PETSC_FALSE` otherwise
+. empty - `PETSC_TRUE` if the queue is empty on everyprocess in the MPI communicator, `PETSC_FALSE` otherwise
 
   Level: developer
 

@@ -152,7 +152,7 @@ cdef class Regressor(Object):
         CHKERR(PetscRegressorPredict(self.regressor, X.mat, y.vec))
 
     def getTAO(self) -> TAO:
-        """Return the underlying `TAO` object .
+        """Return the underlying `Tao` object .
 
         Not collective.
 
@@ -238,7 +238,7 @@ cdef class Regressor(Object):
         CHKERR(PetscRegressorLinearSetFitIntercept(self.regressor, fitintercept))
 
     def setLinearUseKSP(self, flag: bool) -> None:
-        """Set a flag to indicate that `KSP` instead of `TAO` solvers should be used.
+        """Set a flag to indicate that `KSP` instead of `Tao` solvers should be used.
 
         Logically collective.
 

@@ -229,7 +229,7 @@ PetscErrorCode TaoLineSearchReset(TaoLineSearch ls)
 
   Level: developer
 
-.seealso: `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchApple()`
+.seealso: `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchApply()`
 @*/
 PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 {
