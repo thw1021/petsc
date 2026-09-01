@@ -80,7 +80,7 @@
      - Row oriented storage
    * -
      - ``MATELEMENTAL``
-     - ``MatCreateElemental()``
+     - ``MatCreate()`` followed by ``MatSetType()``
      - Elemental by Jack Poulson
      - Block cyclic storage
    * -
