@@ -2604,10 +2604,10 @@ PetscErrorCode DMPlexCreateGeomFromFile(MPI_Comm comm, const char filename[], DM
   Collective
 
   Input Parameters:
-. dm      - The DM object representing the mesh with PetscContainer containing an EGADS geometry model
+. dm      - The DM object representing the mesh with `PetscContainer` containing an EGADS geometry model
 
   Output Parameter:
-. dm       - The DM object representing the mesh with PetscContainers containing the EGADS geometry model, Array-Hash Table Geometry Control Point Pair, Array-Hash Table Geometry Weights Pair and Matrix-Hash Table Surface Gradient Pair
+. dm       - The DM object representing the mesh with `PetscContainer`s containing the EGADS geometry model, Array-Hash Table Geometry Control Point Pair, Array-Hash Table Geometry Weights Pair and Matrix-Hash Table Surface Gradient Pair
 
   Level: intermediate
 
@@ -3123,23 +3123,26 @@ static PetscErrorCode DestroyHashMap(PetscCtxRt p)
   Collective
 
   Input Parameters:
-+ dm           - The DM object representing the mesh with PetscContainer containing an EGADS geometry model
-- fullGeomGrad - PetscBool flag. Determines how the Surface Area and Volume Gradients wrt to Control Points and Control Point Weights are calculated.
++ dm           - The `DM` object representing the mesh with `PetscContainer` containing an EGADS geometry model
+- fullGeomGrad - Determines how the Surface Area and Volume Gradients wrt to Control Points and Control Point Weights are calculated.
+.vb
                       PETSC_FALSE :: Surface Area Gradient wrt Control Points and Control Point Weights are calculated using the change in the local
                                      FACE changes (not the entire body). Volume Gradients are not calculated. Faster computations.
                       PETSC_TRUE  :: Surface Area Gradietn wrt to Control Points and Control Point Weights are calculated using the change observed in
                                      the entire solid body. Volume Gradients are calculated. Slower computation due to the need to generate a new solid
                                      body geometry for every Control Point and Control Point Weight change.
+.ve
 
   Output Parameter:
-. dm - The updated DM object representing the mesh with PetscContainers containing the Control Point, Control Point Weight and Gradient Data.
+. dm - The updated `DM` object representing the mesh with `PetscContainer`s containing the Control Point, Control Point Weight and Gradient Data.
 
   Level: intermediate
 
   Note:
-  Calculates the DM Point location, surface area and volume gradients wrt to Control Point and Control Point Weights using Finite Difference (small perturbation of Control Point coordinates or Control Point Weight value).
+  Calculates the `DM` Point location, surface area and volume gradients wrt to Control Point and Control Point Weights using Finite Difference
+  (small perturbation of Control Point coordinates or Control Point Weight value).
 
-.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexModifyEGADSGeomModel()`
+.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexCreateGeomFromFile()`, `DMPlexModifyEGADSGeomModel()`
 @*/
 PetscErrorCode DMPlexGeomDataAndGrads(DM dm, PetscBool fullGeomGrad) PeNS
 {
@@ -4320,7 +4323,7 @@ PetscErrorCode DMPlexGeomDataAndGrads(DM dm, PetscBool fullGeomGrad) PeNS
   Collective
 
   Input Parameters:
-+ dm          - The DM object representing the mesh with PetscContainer containing an EGADS geometry model
++ dm          - The DM object representing the mesh with `PetscContainer` containing an EGADS geometry model
 . comm        - MPI_Comm object
 . newCP       - C Array of [x, y, z] New/Updated Control Point Coordinates defining the geometry (See DMPlexGeomDataAndGrads() for format)
 . newW        - C Array of New/Updated Control Point Weights associated with the Control Points defining the new geometry (See DMPlexGemGrads() for format)
@@ -4333,14 +4336,14 @@ PetscErrorCode DMPlexGeomDataAndGrads(DM dm, PetscBool fullGeomGrad) PeNS
                                *.brep = BRep File (OpenCASCADE File)
 
   Output Parameter:
-. dm - The updated DM object representing the mesh with PetscContainers containing the updated/modified geometry
+. dm - The updated DM object representing the mesh with `PetscContainer`s containing the updated/modified geometry
 
   Level: intermediate
 
   Note:
   Functionality not available for DMPlexes with attached EGADSlite geometry files (.egadslite).
 
-.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexGeomDataAndGrads()`
+.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexCreateGeomFromFile()`, `DMPlexGeomDataAndGrads()`
 @*/
 PetscErrorCode DMPlexModifyGeomModel(DM dm, MPI_Comm comm, PetscScalar newCP[], PetscScalar newW[], PetscBool autoInflate, PetscBool saveGeom, const char *stpName) PeNS
 {
@@ -4721,11 +4724,11 @@ PetscErrorCode DMPlexModifyGeomModel(DM dm, MPI_Comm comm, PetscScalar newCP[], 
   Collective
 
   Input Parameter:
-. dm - The DM object representing the mesh with PetscContainer containing an EGADS geometry model
+. dm - The DM object representing the mesh with `PetscContainer` containing an EGADS geometry model
 
   Level: intermediate
 
-.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexGeomDataAndGrads()`
+.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexCreateGeomFromFile()`, `DMPlexGeomDataAndGrads()`
 @*/
 PetscErrorCode DMPlexGetGeomModelTUV(DM dm) PeNS
 {
@@ -4833,7 +4836,7 @@ PetscErrorCode DMPlexGetGeomModelTUV(DM dm) PeNS
   /* Clear out global coordinates */
   PetscCall(VecDestroy(&dm->coordinates[0].x));
 
-  /* Store in PetscContainters */
+  /* Store in PetscContainers */
   {
     PetscContainer t_pointObj, u_pointObj, v_pointObj;
 
@@ -4887,19 +4890,20 @@ PetscErrorCode DMPlexGetGeomModelTUV(DM dm) PeNS
 }
 
 /*@
-  DMPlexInflateToGeomModelUseTUV - Inflates the DM to the associated underlying geometry using the [t] {EDGES) and [u, v] (FACES} associated parameters. Requires a DM with an EGADS model attached and a previous call to DMPlexGetGeomModelTUV().
+  DMPlexInflateToGeomModelUseTUV - Inflates the `DM` to the associated underlying geometry using the [t] {EDGES) and [u, v] (FACES} associated parameters.
+  Requires a `DM` with an EGADS model attached and a previous call to `DMPlexGetGeomModelTUV()`.
 
   Collective
 
   Input Parameter:
-. dm - The DM object representing the mesh with PetscContainer containing an EGADS geometry model
+. dm - The `DM` object representing the mesh with a `PetscContainer` containing an EGADS geometry model
 
   Level: intermediate
 
   Note:
-  The updated DM object inflated to the associated underlying geometry. This updates the [x, y, z] coordinates of DM points associated with geometry.
+  The updated `DM` object inflated to the associated underlying geometry. This updates the [x, y, z] coordinates of `DM` points associated with geometry.
 
-.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexGeomDataAndGrads()`, `DMPlexGetGeomModelTUV()`
+.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateGeom()`, `DMPlexCreateGeomFromFile()`, `DMPlexGeomDataAndGrads()`, `DMPlexGetGeomModelTUV()`
 @*/
 PetscErrorCode DMPlexInflateToGeomModelUseTUV(DM dm) PeNS
 {
@@ -5021,21 +5025,21 @@ PetscErrorCode DMPlexInflateToGeomModelUseTUV(DM dm) PeNS
   Collective
 
   Input Parameters:
-+ dm     - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- useTUV - PetscBool indicating if the user would like to inflate the DMPlex to the underlying geometry
++ dm     - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- useTUV - `PetscBool` indicating if the user would like to inflate the `DMPLEX` to the underlying geometry
            using (t) for nodes on EDGEs and (u, v) for nodes on FACEs or using the nodes (x, y, z) coordinates
            and shortest distance routine.
             If useTUV = PETSC_TRUE, use the (t) or (u, v) parameters to inflate the DMPlex to the CAD geometry.
             If useTUV = PETSC_FALSE, use the nodes (x, y, z) coordinates and the shortest disctance routine.
 
-  Notes:
-  DM with nodal coordinates modified so that they lie on the EDGEs and FACEs of the underlying geometry.
+  Level: intermediate
 
-  (t) and (u, v) parameters for all DMPlex nodes on EDGEs and FACEs are stored in arrays within PetscContainers attached to the DM.
+  Notes:
+  `DM` with nodal coordinates modified so that they lie on the EDGEs and FACEs of the underlying geometry.
+
+  (t) and (u, v) parameters for all `DMPLEX` nodes on EDGEs and FACEs are stored in arrays within `PetscContainer`s attached to the `DM`.
   The containers have names "Point - Edge t Parameter", "Point - Face u Parameter", and "Point - Face v Parameter".
   The arrays are organized by Point 0-based ID (i.e. [v-vstart] as defined in the DMPlex.
-
-  Level: intermediate
 
 .seealso: `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
@@ -5058,17 +5062,17 @@ PetscErrorCode DMPlexInflateToGeomModel(DM dm, PetscBool useTUV) PeNS
   Collective
 
   Input Parameter:
-. dm - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
+. dm - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
 
   Output Parameters:
 + bodies    - Array of PetscGeom BODY objects referenced by the geometric model.
-- numBodies - Number of BODYs referenced by the geometric model. Also the size of **bodies array.
+- numBodies - Number of BODYs referenced by the geometric model. Also the length of `bodies`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodyShells()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelBodies(DM dm, PetscGeom **bodies, PetscInt *numBodies) PeNS
+PetscErrorCode DMPlexGetGeomModelBodies(DM dm, PetscGeom *bodies[], PetscInt *numBodies) PeNS
 {
   PetscFunctionBeginHot;
   PetscContainer modelObj;
@@ -5098,18 +5102,18 @@ PetscErrorCode DMPlexGetGeomModelBodies(DM dm, PetscGeom **bodies, PetscInt *num
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- body - PetscGeom BODY object containing the SHELL objects of interest.
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- body - `PetscGeom` BODY object containing the SHELL objects of interest.
 
   Output Parameters:
-+ shells    - Array of PetscGeom SHELL objects referenced by the PetscGeom BODY object
-- numShells - Number of SHELLs referenced by the PetscGeom BODY object. Also the size of **shells array.
++ shells    - Array of `PetscGeom` SHELL objects referenced by the `PetscGeom` BODY object
+- numShells - Number of SHELLs referenced by the PetscGeom BODY object. Also the length of `shells`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelBodyShells(DM dm, PetscGeom body, PetscGeom **shells, PetscInt *numShells) PeNS
+PetscErrorCode DMPlexGetGeomModelBodyShells(DM dm, PetscGeom body, PetscGeom *shells[], PetscInt *numShells) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5135,18 +5139,18 @@ PetscErrorCode DMPlexGetGeomModelBodyShells(DM dm, PetscGeom body, PetscGeom **s
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- body - PetscGeom BODY object containing the FACE objects of interest.
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- body - `PetscGeom` BODY object containing the FACE objects of interest.
 
   Output Parameters:
-+ faces    - Array of PetscGeom FACE objects referenced by the PetscGeom BODY object
-- numFaces - Number of FACEs referenced by the PetscGeom BODY object. Also the size of **faces array.
++ faces    - Array of `PetscGeom` FACE objects referenced by the `PetscGeom` BODY object
+- numFaces - Number of FACEs referenced by the `PetscGeom` BODY object. Also the length of `faces`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelBodyFaces(DM dm, PetscGeom body, PetscGeom **faces, PetscInt *numFaces) PeNS
+PetscErrorCode DMPlexGetGeomModelBodyFaces(DM dm, PetscGeom body, PetscGeom *faces[], PetscInt *numFaces) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5172,18 +5176,18 @@ PetscErrorCode DMPlexGetGeomModelBodyFaces(DM dm, PetscGeom body, PetscGeom **fa
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- body - PetscGeom BODY object containing the LOOP objects of interest.
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- body - `PetscGeom` BODY object containing the LOOP objects of interest.
 
   Output Parameters:
-+ loops    - Array of PetscGeom FACE objects referenced by the PetscGeom SHELL object
-- numLoops - Number of LOOPs referenced by the PetscGeom BODY object. Also the size of **loops array.
++ loops    - Array of `PetscGeom` FACE objects referenced by the `PetscGeom` SHELL object
+- numLoops - Number of LOOPs referenced by the `PetscGeom` BODY object. Also the length of `loops`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelBodyLoops(DM dm, PetscGeom body, PetscGeom **loops, PetscInt *numLoops) PeNS
+PetscErrorCode DMPlexGetGeomModelBodyLoops(DM dm, PetscGeom body, PetscGeom *loops[], PetscInt *numLoops) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5209,19 +5213,19 @@ PetscErrorCode DMPlexGetGeomModelBodyLoops(DM dm, PetscGeom body, PetscGeom **lo
   Collective
 
   Input Parameters:
-+ dm    - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-. body  - PetscGeom BODY object containing the FACE objects of interest.
-- shell - PetscGeom SHELL object with FACEs of interest.
++ dm    - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+. body  - `PetscGeom` BODY object containing the FACE objects of interest.
+- shell - `PetscGeom` SHELL object with FACEs of interest.
 
   Output Parameters:
-+ faces    - Array of PetscGeom FACE objects referenced by the PetscGeom SHELL object
-- numFaces - Number of FACEs referenced by the PetscGeom SHELL object. Also the size of **faces array.
++ faces    - Array of `PetscGeom` FACE objects referenced by the `PetscGeom` SHELL object
+- numFaces - Number of FACEs referenced by the `PetscGeom` SHELL object. Also the length of `faces`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelShellFaces(DM dm, PetscGeom body, PetscGeom shell, PetscGeom **faces, PetscInt *numFaces) PeNS
+PetscErrorCode DMPlexGetGeomModelShellFaces(DM dm, PetscGeom body, PetscGeom shell, PetscGeom *faces[], PetscInt *numFaces) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5247,19 +5251,19 @@ PetscErrorCode DMPlexGetGeomModelShellFaces(DM dm, PetscGeom body, PetscGeom she
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-. body - PetscGeom BODY object containing the LOOP objects of interest.
-- face - PetscGeom FACE object with LOOPs of interest.
++ dm   - The `DMPLEX` object with an attached PetscContainer storing a CAD Geometry object
+. body - `PetscGeom` BODY object containing the LOOP objects of interest.
+- face - `PetscGeom` FACE object with LOOPs of interest.
 
   Output Parameters:
-+ loops    - Array of PetscGeom LOOP objects referenced by the PetscGeom FACE object
-- numLoops - Number of LOOPs referenced by the PetscGeom FACE object. Also the size of **loops array.
++ loops    - Array of `PetscGeom` LOOP objects referenced by the `PetscGeom` FACE object
+- numLoops - Number of LOOPs referenced by the `PetscGeom` FACE object. Also the length of `loops`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelFaceLoops(DM dm, PetscGeom body, PetscGeom face, PetscGeom **loops, PetscInt *numLoops) PeNS
+PetscErrorCode DMPlexGetGeomModelFaceLoops(DM dm, PetscGeom body, PetscGeom face, PetscGeom *loops[], PetscInt *numLoops) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5285,19 +5289,19 @@ PetscErrorCode DMPlexGetGeomModelFaceLoops(DM dm, PetscGeom body, PetscGeom face
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-. body - PetscGeom Body object containing the EDGE objects of interest.
-- face - PetscGeom FACE object with EDGEs of interest.
++ dm   - The `DMPLEX` object with an attached PetscContainer storing a CAD Geometry object
+. body - `PetscGeom` Body object containing the EDGE objects of interest.
+- face - `PetscGeom` FACE object with EDGEs of interest.
 
   Output Parameters:
-+ edges    - Array of PetscGeom EDGE objects referenced by the PetscGeom FACE object
-- numEdges - Number of EDGEs referenced by the PetscGeom FACE object. Also the size of **edges array.
++ edges    - Array of `PetscGeom` EDGE objects referenced by the `PetscGeom` FACE object
+- numEdges - Number of EDGEs referenced by the `PetscGeom` FACE object. Also the length of `edges`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelFaceEdges(DM dm, PetscGeom body, PetscGeom face, PetscGeom **edges, PetscInt *numEdges) PeNS
+PetscErrorCode DMPlexGetGeomModelFaceEdges(DM dm, PetscGeom body, PetscGeom face, PetscGeom *edges[], PetscInt *numEdges) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5323,18 +5327,18 @@ PetscErrorCode DMPlexGetGeomModelFaceEdges(DM dm, PetscGeom body, PetscGeom face
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- body - PetscGeom body object of interest.
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- body - `PetscGeom` body object of interest.
 
   Output Parameters:
-+ edges    - Array of PetscGeom EDGE objects referenced by the PetscGeom BODY object
-- numEdges - Number of EDGEs referenced by the PetscGeom BODY object. Also the size of **edges array.
++ edges    - Array of `PetscGeom` EDGE objects referenced by the `PetscGeom` BODY object
+- numEdges - Number of EDGEs referenced by the `PetscGeom` BODY object. Also the length of `edges`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelBodyEdges(DM dm, PetscGeom body, PetscGeom **edges, PetscInt *numEdges) PeNS
+PetscErrorCode DMPlexGetGeomModelBodyEdges(DM dm, PetscGeom body, PetscGeom *edges[], PetscInt *numEdges) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5360,18 +5364,18 @@ PetscErrorCode DMPlexGetGeomModelBodyEdges(DM dm, PetscGeom body, PetscGeom **ed
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- body - PetscGeom body object of interest.
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- body - `PetscGeom` body object of interest.
 
   Output Parameters:
-+ nodes    - Array of PetscGeom NODE objects referenced by the PetscGeom BODY object
-- numNodes - Number of NODEs referenced by the PetscGeom BODY object. Also the size of **nodes array.
++ nodes    - Array of `PetscGeom` NODE objects referenced by the `PetscGeom` BODY object
+- numNodes - Number of NODEs referenced by the `PetscGeom` BODY object. Also the length of `nodes`.
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelBodyNodes(DM dm, PetscGeom body, PetscGeom **nodes, PetscInt *numNodes) PeNS
+PetscErrorCode DMPlexGetGeomModelBodyNodes(DM dm, PetscGeom body, PetscGeom *nodes[], PetscInt *numNodes) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5397,19 +5401,19 @@ PetscErrorCode DMPlexGetGeomModelBodyNodes(DM dm, PetscGeom body, PetscGeom **no
   Collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-. body - PetscGeom body object containing the EDGE object of interest.
-- edge - PetscGeom EDGE object with NODEs of interest.
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+. body - `PetscGeom` body object containing the EDGE object of interest.
+- edge - `PetscGeom` EDGE object with NODEs of interest.
 
   Output Parameters:
-+ nodes    - Array of PetscGeom NODE objects referenced by the PetscGeom EDGE object
-- numNodes - Number of Nodes referenced by the PetscGeom EDGE object. Also the size of **nodes array.
++ nodes    - Array of `PetscGeom` NODE objects referenced by the `PetscGeom` EDGE object
+- numNodes - Number of Nodes referenced by the `PetscGeom` EDGE object. Also the length of `nodes`
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomModelEdgeNodes(DM dm, PetscGeom body, PetscGeom edge, PetscGeom **nodes, PetscInt *numNodes) PeNS
+PetscErrorCode DMPlexGetGeomModelEdgeNodes(DM dm, PetscGeom body, PetscGeom edge, PetscGeom *nodes[], PetscInt *numNodes) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5435,9 +5439,9 @@ PetscErrorCode DMPlexGetGeomModelEdgeNodes(DM dm, PetscGeom body, PetscGeom edge
   Collective
 
   Input Parameters:
-+ dm      - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-. body    - PetscGeom body object containing the lower level entity the ID number is being requested.
-- topoObj - PetscGeom SHELL, FACE, LOOP, EDGE, or NODE object for which ID number is being requested.
++ dm      - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+. body    - `PetscGeom` body object containing the lower level entity the ID number is being requested.
+- topoObj - `PetscGeom` SHELL, FACE, LOOP, EDGE, or NODE object for which ID number is being requested.
 
   Output Parameter:
 . id - ID number of the entity
@@ -5476,8 +5480,8 @@ PetscErrorCode DMPlexGetGeomID(DM dm, PetscGeom body, PetscGeom topoObj, PetscIn
   Collective
 
   Input Parameters:
-+ dm       - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-. body     - PetscGeom body object containing the lower level entity the referenced by the ID.
++ dm       - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+. body     - `PetscGeom` body object containing the lower level entity the referenced by the ID.
 . geomType - Keyword SHELL, FACE, LOOP, EDGE, or NODE of the geometry type for which ID number is being requested.
 - geomID   - ID number of the geometry entity being requested.
 
@@ -5515,8 +5519,8 @@ PetscErrorCode DMPlexGetGeomObject(DM dm, PetscGeom body, PetscInt geomType, Pet
   Not collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- face - PetscGeom FACE object
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- face - `PetscGeom` FACE object
 
   Output Parameter:
 . numCntrlPnts - Number of Control Points (and Weights) defining the FACE
@@ -5564,22 +5568,22 @@ PetscErrorCode DMPlexGetGeomFaceNumOfControlPoints(DM dm, PetscGeom face, PetscI
   Not collective
 
   Input Parameters:
-+ dm   - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- body - PetscGeom BODY object
++ dm   - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
+- body - `PetscGeom` BODY object
 
   Output Parameters:
-+ volume           - Volume of the CAD Body attached to the DM Plex
++ volume           - Volume of the CAD Body attached to the `DMPLEX`
 . surfArea         - Surface Area of the CAD Body attached to the DM Plex
 . centerOfGravity  - Array with the Center of Gravity coordinates of the CAD Body attached to the DM Plex [x, y, z]
-. COGszie          - Size of centerOfGravity[] Array
+. COGsize          - Length of `centerOfGravity`
 . inertiaMatrixCOG - Array containing the Inertia about the Body's Center of Gravity [Ixx, Ixy, Ixz, Iyx, Iyy, Iyz, Izx, Izy, Izz]
-- IMCOGsize        - Size of inertiaMatrixCOG[] Array
+- IMCOGsize        - Length of `inertiaMatrixCOG` Array
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomModelBodies()`, `DMPlexGetGeomModelTUV()`, `DMPlexInflateToGeomModelUseTUV()`, `DMPlexInflateToGeomModelUseXYZ()`
 @*/
-PetscErrorCode DMPlexGetGeomBodyMassProperties(DM dm, PetscGeom body, PetscScalar *volume, PetscScalar *surfArea, PetscScalar **centerOfGravity, PetscInt *COGsize, PetscScalar **inertiaMatrixCOG, PetscInt *IMCOGsize) PeNS
+PetscErrorCode DMPlexGetGeomBodyMassProperties(DM dm, PetscGeom body, PetscScalar *volume, PetscScalar *surfArea, PetscScalar *centerOfGravity[], PetscInt *COGsize, PetscScalar *inertiaMatrixCOG[], PetscInt *IMCOGsize) PeNS
 {
   PetscFunctionBeginHot;
   #if PetscDefined(HAVE_EGADS)
@@ -5632,15 +5636,15 @@ PetscErrorCode DMPlexGetGeomBodyMassProperties(DM dm, PetscGeom body, PetscScala
 . volume           - The volume value (unused, retained for API symmetry)
 . surfArea         - The surface area value (unused, retained for API symmetry)
 . centerOfGravity  - Center-of-gravity array to free
-. COGsize          - The size of `centerOfGravity` (unused, retained for API symmetry)
+. COGsize          - The length of `centerOfGravity` (unused, retained for API symmetry)
 . inertiaMatrixCOG - Inertia-matrix-at-COG array to free
-- IMCOGsize        - The size of `inertiaMatrixCOG` (unused, retained for API symmetry)
+- IMCOGsize        - The length of `inertiaMatrixCOG` (unused, retained for API symmetry)
 
   Level: intermediate
 
 .seealso: `DMPlexGetGeomBodyMassProperties()`, `DMPlexGetGeomModelBodies()`
 @*/
-PetscErrorCode DMPlexRestoreGeomBodyMassProperties(DM dm, PetscGeom body, PetscScalar *volume, PetscScalar *surfArea, PetscScalar **centerOfGravity, PetscInt *COGsize, PetscScalar **inertiaMatrixCOG, PetscInt *IMCOGsize) PeNS
+PetscErrorCode DMPlexRestoreGeomBodyMassProperties(DM dm, PetscGeom body, PetscScalar *volume, PetscScalar *surfArea, PetscScalar *centerOfGravity[], PetscInt *COGsize, PetscScalar *inertiaMatrixCOG[], PetscInt *IMCOGsize) PeNS
 {
   PetscFunctionBegin;
   PetscCall(PetscFree2(*centerOfGravity, *inertiaMatrixCOG));
@@ -5653,8 +5657,8 @@ PetscErrorCode DMPlexRestoreGeomBodyMassProperties(DM dm, PetscGeom body, PetscS
   Not collective
 
   Input Parameters:
-+ dm      - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
-- geomObj - PetscGeom object
++ dm      - The `DMPLEX` object with an attached PetscContainer storing a CAD Geometry object
+- geomObj - `PetscGeom` object
 
   Level: intermediate
 
@@ -5686,7 +5690,7 @@ PetscErrorCode DMPlexFreeGeomObject(DM dm, PetscGeom *geomObj) PeNS
   Not collective
 
   Input Parameter:
-. dm - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
+. dm - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
 
   Output Parameters:
 + cpHashTable       - Hash Table containing the relationship between FACE ID and Control Point IDs.
@@ -5699,7 +5703,7 @@ PetscErrorCode DMPlexFreeGeomObject(DM dm, PetscGeom *geomObj) PeNS
 - wData             - Array holding the Weight for an associated Geometry Control Point.
 
   Note:
-  Must Call DMPLexGeomDataAndGrads() before calling this function.
+  Must Call `DMPlexGeomDataAndGrads()` before calling this function.
 
   Level: intermediate
 
@@ -5784,28 +5788,28 @@ PetscErrorCode DMPlexRestoreGeomCntrlPntAndWeightData(DM dm, PetscHMapI *cpHashT
   Not collective
 
   Input Parameter:
-. dm - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
+. dm - The `DMPLEX` object with an attached PetscContainer storing a CAD Geometry object
 
   Output Parameters:
 + cpSurfGradHashTable - Hash Table Relating the Control Point ID to the the Row in the cpSurfGrad Matrix
 . cpSurfGrad          - Matrix containing the Surface Gradient with respect to the Control Point Data. Data is ranged where the Row corresponds to Control Point ID and the Columns are associated with the Geometric FACE.
-. cpArraySize         - The size of arrays gradSACP and gradVolCP and is equal to 3 * total number of Control Points in the Geometry
+. cpArraySize         - The length of `gradSACP` and `gradVolCP` and is equal to 3 * total number of Control Points in the Geometry
 . gradSACP            - Array containing the Surface Area Gradient with respect to Control Point Data. Data is arranged by Control Point ID * 3 where 3 is for the coordinate dimension.
 . gradVolCP           - Array containing the Volume Gradient with respect to Control Point Data. Data is arranged by Control Point ID * 3 where 3 is for the coordinate dimension.
-. wArraySize          - The size of arrayws gradSAW and gradVolW and is equal to the total number of Control Points in the Geometry.
+. wArraySize          - The length of `gradSAW` and `gradVolW` and is equal to the total number of Control Points in the Geometry.
 . gradSAW             - Array containing the Surface Area Gradient with respect to Control Point Weight. Data is arranged by Control Point ID.
 - gradVolW            - Array containing the Volume Gradient with respect to Control Point Weight. Data is arranged by Control Point ID.
 
   Notes:
-  Must Call `DMPLexGeomDataAndGrads()` before calling this function.
+  Must Call `DMPlexGeomDataAndGrads()` before calling this function.
 
-  `gradVolCP` and `gradVolW` are only available when `DMPlexGeomDataAndGrads()` is called with fullGeomGrad = PETSC_TRUE.
+  `gradVolCP` and `gradVolW` are only available when `DMPlexGeomDataAndGrads()` is called with `fullGeomGrad` equal to `PETSC_TRUE`.
 
   Level: intermediate
 
 .seealso: `DMPlexGeomDataAndGrads()`
 @*/
-PetscErrorCode DMPlexGetGeomGradData(DM dm, PetscHMapI *cpSurfGradHashTable, Mat *cpSurfGrad, PetscInt *cpArraySize, PetscScalar **gradSACP, PetscScalar **gradVolCP, PetscInt *wArraySize, PetscScalar **gradSAW, PetscScalar **gradVolW)
+PetscErrorCode DMPlexGetGeomGradData(DM dm, PetscHMapI *cpSurfGradHashTable, Mat *cpSurfGrad, PetscInt *cpArraySize, PetscScalar *gradSACP[], PetscScalar *gradVolCP[], PetscInt *wArraySize, PetscScalar *gradSAW[], PetscScalar *gradVolW[])
 {
   PetscContainer modelObj, cpSurfGradHashTableObj, cpArraySizeObj, wArraySizeObj;
   Vec            gradSACPVec, gradVolCPVec, gradSAWVec, gradVolWVec;
@@ -5895,10 +5899,10 @@ PetscErrorCode DMPlexRestoreGeomGradData(DM dm, PetscHMapI *cpSurfGradHashTable,
   Not collective
 
   Input Parameter:
-. dm - The DMPlex object with an attached PetscContainer storing a CAD Geometry object
+. dm - The `DMPLEX` object with an attached `PetscContainer` storing a CAD Geometry object
 
   Output Parameters:
-+ numCntrlPnts            - Number of Control Points defining the Geometry attached to the DMPlex
++ numCntrlPnts            - Number of Control Points defining the Geometry attached to the `DMPLEX`
 . cntrlPntFaceMap         - Array containing the FACE ID for the Control Point. Array index corresponds to Control Point ID.
 . cntrlPntWeightFaceMap   - Array containing the FACE ID for the Control Point Weight. Array index corresponds to Control Point ID.
 . cntrlPntEdgeMap         - Array containing the EDGE ID for the Control Point. Array index corresponds to Control Point ID.
