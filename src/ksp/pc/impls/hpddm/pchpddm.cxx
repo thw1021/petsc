@@ -830,12 +830,12 @@ static inline PetscErrorCode PCHPDDMDeflateTranspose_Private(PC pc, Mat X, Mat Y
 }
 
 /*
-     PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z^H Pmat Z and Q = Z E^-1 Z^H, where H denotes the Hermitian transpose.
+     PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
 
 .vb
    (1) y =                  Pmat^-1              x + Q x,
    (2) y =                  Pmat^-1 (I - Amat Q) x + Q x (default),
-   (3) y = (I - Q^H Amat^H) Pmat^-1 (I - Amat Q) x + Q x,
+   (3) y = (I - Q^T Amat^T) Pmat^-1 (I - Amat Q) x + Q x,
    (4) y =                  Pmat^-1              x,
    (5) y =                  Pmat^-1              x + Q (I - Amat Pmat^-1) x.
 .ve
@@ -848,8 +848,8 @@ static inline PetscErrorCode PCHPDDMDeflateTranspose_Private(PC pc, Mat X, Mat Y
 .     y - output vector
 
    Notes:
-     The options of Pmat^-1 = pc(Pmat) are prefixed by `-pc_hpddm_levels_1_pc_`. Z is a tall-and-skinny matrix assembled by HPDDM. The number of processes on which E is aggregated is set via `-pc_hpddm_coarse_p`.
-     The options of E^-1 = ksp(E) are prefixed by `-pc_hpddm_coarse_` (`KSPPREONLY` and `PCCHOLESKY` by default), unless a multilevel correction is turned on, in which case, this function is called recursively at each level except the coarsest one.
+     The options of Pmat^1 = pc(Pmat) are prefixed by -pc_hpddm_levels_1_pc_. Z is a tall-and-skiny matrix assembled by HPDDM. The number of processes on which (Z Pmat Z^T) is aggregated is set via -pc_hpddm_coarse_p.
+     The options of (Z Pmat Z^T)^-1 = ksp(Z Pmat Z^T) are prefixed by -pc_hpddm_coarse_ (`KSPPREONLY` and `PCCHOLESKY` by default), unless a multilevel correction is turned on, in which case, this function is called recursively at each level except the coarsest one.
      (1), (2), and (5) visit the "next" level (in terms of coarsening) once per application, while (3) visits it twice, so it is asymptotically twice costlier. (2) and (5) are not symmetric even if both Amat and Pmat are symmetric.
 
    Level: advanced
@@ -1032,7 +1032,7 @@ static PetscErrorCode PCMatApply_HPDDMShell(PC pc, Mat X, Mat Y)
 }
 
 /*
-     PCApplyTranspose_HPDDMShell - Applies the transpose of a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z^H Pmat Z and Q = Z E^-1 Z^H, where H and T denote the Hermitian and algebraic transposes, respectively.
+     PCApplyTranspose_HPDDMShell - Applies the transpose of a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
 
 .vb
    (1) y =                  Pmat^-T              x + Q^T x,
@@ -1075,18 +1075,18 @@ static PetscErrorCode PCApplyTranspose_HPDDMShell(PC pc, Vec x, Vec y)
     PetscCall(PCApplyTranspose(ctx->pc, ctx->v[1][1], ctx->v[1][0]));
     PetscCall(VecAXPY(y, 1.0, ctx->v[1][0])); /* y = M^-T (I - A^T Q^T) x + Q^T x */
   } else {
-    PetscCall(PCHPDDMDeflate_Private<true>(pc, x, y)); /* y = Q^H x */
+    PetscCall(PCHPDDMDeflate_Private<true>(pc, x, y)); /* y = Q^T x */
     if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
       if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-        /* TODO: checking whether Q^H = Q would make it possible to skip this coarse correction */
+        /* TODO: checking whether Q^T = Q would make it possible to skip this coarse correction */
         PetscCall(PCHPDDMDeflate_Private(pc, x, ctx->v[1][1]));                /* y = Q x                     */
         PetscCall(MatMult(A, ctx->v[1][1], ctx->v[1][0]));                     /* y = A Q x                   */
         PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));              /* y = (I - A Q) x             */
         PetscCall(PCApplyTranspose(ctx->pc, ctx->v[1][1], ctx->v[1][0]));      /* y = M^-T (I - A Q) x        */
       } else PetscCall(PCApplyTranspose(ctx->pc, x, ctx->v[1][0]));            /* y = M^-T x                  */
-      PetscCall(MatMultHermitianTranspose(A, ctx->v[1][0], ctx->v[1][1]));     /* z = A^H y                   */
-      PetscCall(PCHPDDMDeflate_Private<true>(pc, ctx->v[1][1], ctx->v[1][1])); /* z = Q^H z                   */
-      PetscCall(VecAXPBYPCZ(y, -1.0, 1.0, 1.0, ctx->v[1][1], ctx->v[1][0]));   /* y = (I - Q^H A^H) y + Q^H x */
+      PetscCall(MatMultHermitianTranspose(A, ctx->v[1][0], ctx->v[1][1]));     /* z = A^T y                   */
+      PetscCall(PCHPDDMDeflate_Private<true>(pc, ctx->v[1][1], ctx->v[1][1])); /* z = Q^T z                   */
+      PetscCall(VecAXPBYPCZ(y, -1.0, 1.0, 1.0, ctx->v[1][1], ctx->v[1][0]));   /* y = (I - Q^T A^T) y + Q^T x */
     } else {
       PetscCheck(ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_ADDITIVE, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with an unknown PCHPDDMCoarseCorrectionType %d", ctx->parent->correction);
       PetscCall(PCApplyTranspose(ctx->pc, x, ctx->v[1][0]));
@@ -3300,8 +3300,8 @@ PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
    Options Database Keys:
 +   -pc_hpddm_define_subdomains (true|false) - on the finest level, calls `PCASMSetLocalSubdomains()` with the `IS` supplied in `PCHPDDMSetAuxiliaryMat()`
                                                (not relevant with an unassembled Pmat)
-.   -pc_hpddm_has_neumann (true|false)                                           - on the finest level, informs the `PC` that the local Neumann matrix is supplied in `PCHPDDMSetAuxiliaryMat()`
--   -pc_hpddm_coarse_correction (deflated|additive|balanced|none|deflated_reversed) - determines the `PCHPDDMCoarseCorrectionType` when calling `PCApply()` default is `deflated`
+.   -pc_hpddm_has_neumann (true|false)       - on the finest level, informs the `PC` that the local Neumann matrix is supplied in `PCHPDDMSetAuxiliaryMat()`
+-   -pc_hpddm_coarse_correction type         - determines the `PCHPDDMCoarseCorrectionType` when calling `PCApply()` default is `deflated`
 
    Options for subdomain solvers, subdomain eigensolvers (for computing deflation vectors), and the coarse solver can be set using the following options database prefixes.
 .vb
