@@ -139,6 +139,6 @@ int main(int argc, char **argv)
       suffix: help
       requires: !complex
       args: -help
-      filter: grep "pbag_bool_array <"
+      filter: grep -E "pbag_(int|real|bool)_array <"
 
 TEST*/
