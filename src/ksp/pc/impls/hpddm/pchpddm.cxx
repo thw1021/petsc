@@ -17,7 +17,7 @@ PetscLogEvent PC_HPDDM_Next;
 PetscLogEvent PC_HPDDM_SetUp[PETSC_PCHPDDM_MAXLEVELS];
 PetscLogEvent PC_HPDDM_Solve[PETSC_PCHPDDM_MAXLEVELS];
 
-const char *const PCHPDDMCoarseCorrectionTypes[] = {"DEFLATED", "ADDITIVE", "BALANCED", "NONE", "PCHPDDMCoarseCorrectionType", "PC_HPDDM_COARSE_CORRECTION_", nullptr};
+const char *const PCHPDDMCoarseCorrectionTypes[] = {"DEFLATED", "ADDITIVE", "BALANCED", "NONE", "DEFLATED_REVERSED", "PCHPDDMCoarseCorrectionType", "PC_HPDDM_COARSE_CORRECTION_", nullptr};
 const char *const PCHPDDMSchurPreTypes[]         = {"LEAST_SQUARES", "GENEO", "PCHPDDMSchurPreType", "PC_HPDDM_SCHUR_PRE", nullptr};
 
 static PetscErrorCode PCHPDDMInitializeLevels_Private(PC_HPDDM *data)
@@ -717,7 +717,7 @@ static PetscErrorCode PCPreSolve_HPDDM(PC pc, KSP ksp, Vec, Vec)
       }
     }
     if (flg) {
-      if (data->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED) {
+      if (data->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || data->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
         PetscCall(PetscOptionsHasName(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, "-pc_hpddm_coarse_correction", &flg));
         PetscCheck(flg, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "PCHPDDMCoarseCorrectionType %s is known to be not symmetric, but KSPType %s requires a symmetric PC, if you insist on using this configuration, use the additional option -%spc_hpddm_coarse_correction %s, or alternatively, switch to a symmetric PCHPDDMCoarseCorrectionType such as %s",
                    PCHPDDMCoarseCorrectionTypes[data->correction], ((PetscObject)ksp)->type_name, ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "", PCHPDDMCoarseCorrectionTypes[data->correction], PCHPDDMCoarseCorrectionTypes[PC_HPDDM_COARSE_CORRECTION_BALANCED]);
@@ -805,13 +805,14 @@ static inline PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type X, Type Y)
 }
 
 /*
-     PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (3) balanced, or (4) no coarse correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
+     PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
 
 .vb
    (1) y =                  Pmat^-1              x + Q x,
    (2) y =                  Pmat^-1 (I - Amat Q) x + Q x (default),
    (3) y = (I - Q^T Amat^T) Pmat^-1 (I - Amat Q) x + Q x,
-   (4) y =                  Pmat^-1              x      .
+   (4) y =                  Pmat^-1              x,
+   (5) y =                  Pmat^-1              x + Q (I - Amat Pmat^-1) x.
 .ve
 
    Input Parameters:
@@ -824,7 +825,7 @@ static inline PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type X, Type Y)
    Notes:
      The options of Pmat^1 = pc(Pmat) are prefixed by -pc_hpddm_levels_1_pc_. Z is a tall-and-skiny matrix assembled by HPDDM. The number of processes on which (Z Pmat Z^T) is aggregated is set via -pc_hpddm_coarse_p.
      The options of (Z Pmat Z^T)^-1 = ksp(Z Pmat Z^T) are prefixed by -pc_hpddm_coarse_ (`KSPPREONLY` and `PCCHOLESKY` by default), unless a multilevel correction is turned on, in which case, this function is called recursively at each level except the coarsest one.
-     (1) and (2) visit the "next" level (in terms of coarsening) once per application, while (3) visits it twice, so it is asymptotically twice costlier. (2) is not symmetric even if both Amat and Pmat are symmetric.
+     (1), (2), and (5) visit the "next" level (in terms of coarsening) once per application, while (3) visits it twice, so it is asymptotically twice costlier. (2) and (5) are not symmetric even if both Amat and Pmat are symmetric.
 
    Level: advanced
 
@@ -844,7 +845,18 @@ static PetscErrorCode PCApply_HPDDMShell(PC pc, Vec x, Vec y)
   PetscCheck(ctx->P, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with no HPDDM object");
   PetscCall(KSPGetOperators(ctx->ksp, &A, nullptr));
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCApply(ctx->pc, x, y)); /* y = M^-1 x */
-  else {
+  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
+    PetscCall(PCApply(ctx->pc, x, y)); /* y = M^-1 x */
+    if (!ctx->parent->normal || ctx != ctx->parent->levels[0]) PetscCall(MatMult(A, y, ctx->v[1][0]));
+    else {
+      /* KSPLSQR and finest level */
+      PetscCall(MatMult(A, y, ctx->parent->normal));
+      PetscCall(MatMultHermitianTranspose(A, ctx->parent->normal, ctx->v[1][0]));
+    }
+    PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));          /* z = (I - A M^-1) x       */
+    PetscCall(PCHPDDMDeflate_Private(pc, ctx->v[1][1], ctx->v[1][0])); /* z = Q (I - A M^-1) x     */
+    PetscCall(VecAXPY(y, 1.0, ctx->v[1][0]));                          /* y = M^-1 x + Q (I - A M^-1) x */
+  } else {
     PetscCall(PCHPDDMDeflate_Private(pc, x, y)); /* y = Q x */
     if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
       if (!ctx->parent->normal || ctx != ctx->parent->levels[0]) PetscCall(MatMult(A, y, ctx->v[1][0])); /* y = A Q x */
@@ -960,7 +972,16 @@ static PetscErrorCode PCMatApply_HPDDMShell(PC pc, Mat X, Mat Y)
   PetscCall(PCShellGetContext(pc, &ctx));
   PetscCheck(ctx->P, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with no HPDDM object");
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCMatApply(ctx->pc, X, Y));
-  else {
+  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
+    PetscCall(PCMatApply(ctx->pc, X, Y));
+    PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
+    PetscCall(MatProductNumeric(ctx->V[1]));
+    PetscCall(MatCopy(ctx->V[1], ctx->V[2], SAME_NONZERO_PATTERN));
+    PetscCall(MatAXPY(ctx->V[2], -1.0, X, SAME_NONZERO_PATTERN));
+    PetscCall(PCHPDDMDeflate_Private(pc, ctx->V[2], ctx->V[2]));
+    PetscCall(MatAXPY(Y, -1.0, ctx->V[2], SAME_NONZERO_PATTERN));
+    if (reset) PetscCall(MatDenseResetArray(ctx->V[1]));
+  } else {
     PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
     PetscCall(PCHPDDMDeflate_Private(pc, X, Y));
     if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
@@ -985,13 +1006,14 @@ static PetscErrorCode PCMatApply_HPDDMShell(PC pc, Mat X, Mat Y)
 }
 
 /*
-     PCApplyTranspose_HPDDMShell - Applies the transpose of a (2) deflated, (1) additive, (3) balanced, or (4) no coarse correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
+     PCApplyTranspose_HPDDMShell - Applies the transpose of a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
 
 .vb
    (1) y =                  Pmat^-T              x + Q^T x,
    (2) y = (I - Q^T Amat^T) Pmat^-T              x + Q^T x (default),
    (3) y = (I - Q^T Amat^T) Pmat^-T (I - Amat Q) x + Q^T x,
-   (4) y =                  Pmat^-T              x        .
+   (4) y =                  Pmat^-T              x,
+   (5) y =                  Pmat^-T (I - Amat^T Q^T) x + Q^T x.
 .ve
 
    Input Parameters:
@@ -1020,7 +1042,13 @@ static PetscErrorCode PCApplyTranspose_HPDDMShell(PC pc, Vec x, Vec y)
   PetscCheck(!ctx->parent->normal, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Not implemented for the normal equations");
   PetscCall(KSPGetOperators(ctx->ksp, &A, nullptr));
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCApplyTranspose(ctx->pc, x, y)); /* y = M^-T x */
-  else {
+  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
+    PetscCall(PCHPDDMDeflate_Private<true>(pc, x, y)); /* y = Q^T x */
+    PetscCall(MatMultHermitianTranspose(A, y, ctx->v[1][0]));
+    PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));
+    PetscCall(PCApplyTranspose(ctx->pc, ctx->v[1][1], ctx->v[1][0]));
+    PetscCall(VecAXPY(y, 1.0, ctx->v[1][0])); /* y = M^-T (I - A^T Q^T) x + Q^T x */
+  } else {
     PetscCall(PCHPDDMDeflate_Private<true>(pc, x, y)); /* y = Q^T x */
     if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
       if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
@@ -1065,7 +1093,17 @@ static PetscErrorCode PCMatApplyTranspose_HPDDMShell(PC pc, Mat X, Mat Y)
   PetscCall(PCShellGetContext(pc, &ctx));
   PetscCheck(ctx->P, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with no HPDDM object");
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCMatApplyTranspose(ctx->pc, X, Y));
-  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
+    PetscCall(PCHPDDMMatApply_Private<true>(ctx, Y, &reset));
+    PetscCall(PCHPDDMDeflate_Private<true>(pc, X, Y));
+    PetscCall(MatCopy(Y, ctx->V[2], SAME_NONZERO_PATTERN));
+    PetscCall(MatProductNumeric(ctx->V[1]));
+    PetscCall(MatCopy(ctx->V[1], ctx->V[2], SAME_NONZERO_PATTERN));
+    PetscCall(MatAXPY(ctx->V[2], -1.0, X, SAME_NONZERO_PATTERN));
+    PetscCall(PCMatApplyTranspose(ctx->pc, ctx->V[2], ctx->V[1]));
+    PetscCall(MatAXPY(Y, -1.0, ctx->V[1], SAME_NONZERO_PATTERN));
+    if (reset) PetscCall(MatDenseResetArray(ctx->V[1]));
+  } else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
     /* similar code as in PCMatApply_HPDDMShell() with an extra call to PCHPDDMDeflate_Private<true>() */
     PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
     PetscCall(PCHPDDMDeflate_Private(pc, X, Y));
@@ -3029,10 +3067,10 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
 
   Input Parameters:
 + pc   - preconditioner context
-- type - `PC_HPDDM_COARSE_CORRECTION_DEFLATED`, `PC_HPDDM_COARSE_CORRECTION_ADDITIVE`, `PC_HPDDM_COARSE_CORRECTION_BALANCED`, or `PC_HPDDM_COARSE_CORRECTION_NONE`
+- type - `PC_HPDDM_COARSE_CORRECTION_DEFLATED`, `PC_HPDDM_COARSE_CORRECTION_ADDITIVE`, `PC_HPDDM_COARSE_CORRECTION_BALANCED`, `PC_HPDDM_COARSE_CORRECTION_NONE`, or `PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED`
 
   Options Database Key:
-. -pc_hpddm_coarse_correction (deflated|additive|balanced|none) - type of coarse correction to apply
+. -pc_hpddm_coarse_correction (deflated|additive|balanced|none|deflated_reversed) - type of coarse correction to apply
 
   Level: intermediate
 
@@ -3054,7 +3092,7 @@ PetscErrorCode PCHPDDMSetCoarseCorrectionType(PC pc, PCHPDDMCoarseCorrectionType
 . pc - preconditioner context
 
   Output Parameter:
-. type - `PC_HPDDM_COARSE_CORRECTION_DEFLATED`, `PC_HPDDM_COARSE_CORRECTION_ADDITIVE`, `PC_HPDDM_COARSE_CORRECTION_BALANCED`, or `PC_HPDDM_COARSE_CORRECTION_NONE`
+. type - `PC_HPDDM_COARSE_CORRECTION_DEFLATED`, `PC_HPDDM_COARSE_CORRECTION_ADDITIVE`, `PC_HPDDM_COARSE_CORRECTION_BALANCED`, `PC_HPDDM_COARSE_CORRECTION_NONE`, or `PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED`
 
   Level: intermediate
 
