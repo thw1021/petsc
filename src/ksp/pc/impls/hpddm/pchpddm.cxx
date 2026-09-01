@@ -804,19 +804,6 @@ static inline PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type X, Type Y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Apply B or B^H, where B = A except at the finest KSPLSQR level, where B = A^H A. */
-template <bool transpose = false>
-static inline PetscErrorCode PCHPDDMApplyOperator_Private(PC_HPDDM_Level *ctx, Mat A, Vec x, Vec y)
-{
-  PetscFunctionBegin;
-  if (ctx->parent->normal && ctx == ctx->parent->levels[0]) {
-    PetscCall(MatMult(A, x, ctx->parent->normal));
-    PetscCall(MatMultHermitianTranspose(A, ctx->parent->normal, y));
-  } else if (transpose) PetscCall(MatMultHermitianTranspose(A, x, y));
-  else PetscCall(MatMult(A, x, y));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*
      PCApply_HPDDMShell - Applies a (2) deflated, (1) additive, (3) balanced, (4) no coarse correction, or (5) reversed deflated correction. In what follows, E = Z Pmat Z^T and Q = Z^T E^-1 Z.
 
@@ -850,38 +837,50 @@ static inline PetscErrorCode PCHPDDMApplyOperator_Private(PC_HPDDM_Level *ctx, M
 */
 static PetscErrorCode PCApply_HPDDMShell(PC pc, Vec x, Vec y)
 {
-  PC_HPDDM_Level             *ctx;
-  PCHPDDMCoarseCorrectionType correction;
-  Mat                         A;
+  PC_HPDDM_Level *ctx;
+  Mat             A;
 
   PetscFunctionBegin;
   PetscCall(PCShellGetContext(pc, &ctx));
   PetscCheck(ctx->P, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with no HPDDM object");
   PetscCall(KSPGetOperators(ctx->ksp, &A, nullptr));
-  correction = ctx->parent->correction;
-  if (correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCApply(ctx->pc, x, y)); /* y = M^-1 x */
-  else if (correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
-    /* These corrections exchange the order of M^-1 and Q around the same residual x - B y. */
-    if (correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED) PetscCall(PCHPDDMDeflate_Private(pc, x, y));             /* y = Q x */
-    else PetscCall(PCApply(ctx->pc, x, y));                                                                         /* y = M^-1 x */
-    PetscCall(PCHPDDMApplyOperator_Private(ctx, A, y, ctx->v[1][0]));                                               /* v0 = B y */
-    PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));                                                       /* v1 = x - B y */
-    if (correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED) PetscCall(PCApply(ctx->pc, ctx->v[1][1], ctx->v[1][0])); /* v0 = M^-1 v1 */
-    else PetscCall(PCHPDDMDeflate_Private(pc, ctx->v[1][1], ctx->v[1][0]));                                         /* v0 = Q v1 */
-    PetscCall(VecAXPY(y, 1.0, ctx->v[1][0]));                                                                       /* y += v0 */
-  } else if (correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-    PetscCall(PCHPDDMDeflate_Private(pc, x, y));                                       /* y = Q x */
-    PetscCall(PCHPDDMApplyOperator_Private(ctx, A, y, ctx->v[1][0]));                  /* v0 = B Q x */
-    PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));                          /* v1 = (I - B Q) x */
-    PetscCall(PCApply(ctx->pc, ctx->v[1][1], ctx->v[1][0]));                           /* v0 = M^-1 (I - B Q) x */
-    PetscCall(PCHPDDMApplyOperator_Private<true>(ctx, A, ctx->v[1][0], ctx->v[1][1])); /* v1 = B^H M^-1 (I - B Q) x */
-    PetscCall(PCHPDDMDeflate_Private<true>(pc, ctx->v[1][1], ctx->v[1][1]));           /* v1 = Q^H B^H M^-1 (I - B Q) x */
-    PetscCall(VecAXPBYPCZ(y, -1.0, 1.0, 1.0, ctx->v[1][1], ctx->v[1][0]));             /* y = (I - Q^H B^H) M^-1 (I - B Q) x + Q x */
+  if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCApply(ctx->pc, x, y)); /* y = M^-1 x */
+  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
+    PetscCall(PCApply(ctx->pc, x, y)); /* y = M^-1 x */
+    if (!ctx->parent->normal || ctx != ctx->parent->levels[0]) PetscCall(MatMult(A, y, ctx->v[1][0]));
+    else {
+      /* KSPLSQR and finest level */
+      PetscCall(MatMult(A, y, ctx->parent->normal));
+      PetscCall(MatMultHermitianTranspose(A, ctx->parent->normal, ctx->v[1][0]));
+    }
+    PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));          /* z = (I - A M^-1) x       */
+    PetscCall(PCHPDDMDeflate_Private(pc, ctx->v[1][1], ctx->v[1][0])); /* z = Q (I - A M^-1) x     */
+    PetscCall(VecAXPY(y, 1.0, ctx->v[1][0]));                          /* y = M^-1 x + Q (I - A M^-1) x */
   } else {
-    PetscCheck(correction == PC_HPDDM_COARSE_CORRECTION_ADDITIVE, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with an unknown PCHPDDMCoarseCorrectionType %d", correction);
-    PetscCall(PCHPDDMDeflate_Private(pc, x, y));
-    PetscCall(PCApply(ctx->pc, x, ctx->v[1][0]));
-    PetscCall(VecAXPY(y, 1.0, ctx->v[1][0])); /* y = M^-1 x + Q x */
+    PetscCall(PCHPDDMDeflate_Private(pc, x, y)); /* y = Q x */
+    if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+      if (!ctx->parent->normal || ctx != ctx->parent->levels[0]) PetscCall(MatMult(A, y, ctx->v[1][0])); /* y = A Q x */
+      else {
+        /* KSPLSQR and finest level */
+        PetscCall(MatMult(A, y, ctx->parent->normal));                              /* y = A Q x                 */
+        PetscCall(MatMultHermitianTranspose(A, ctx->parent->normal, ctx->v[1][0])); /* y = A^T A Q x             */
+      }
+      PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x)); /* y = (I - A Q) x                               */
+      PetscCall(PCApply(ctx->pc, ctx->v[1][1], ctx->v[1][0]));  /* y = M^-1 (I - A Q) x                          */
+      if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+        if (!ctx->parent->normal || ctx != ctx->parent->levels[0]) PetscCall(MatMultHermitianTranspose(A, ctx->v[1][0], ctx->v[1][1])); /* z = A^T y */
+        else {
+          PetscCall(MatMult(A, ctx->v[1][0], ctx->parent->normal));
+          PetscCall(MatMultHermitianTranspose(A, ctx->parent->normal, ctx->v[1][1])); /* z = A^T A y             */
+        }
+        PetscCall(PCHPDDMDeflate_Private<true>(pc, ctx->v[1][1], ctx->v[1][1])); /* z = Q^T z                    */
+        PetscCall(VecAXPBYPCZ(y, -1.0, 1.0, 1.0, ctx->v[1][1], ctx->v[1][0]));   /* y = (I - Q^T A^T) y + Q x    */
+      } else PetscCall(VecAXPY(y, 1.0, ctx->v[1][0]));                           /* y = Q M^-1 (I - A Q) x + Q x */
+    } else {
+      PetscCheck(ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_ADDITIVE, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with an unknown PCHPDDMCoarseCorrectionType %d", ctx->parent->correction);
+      PetscCall(PCApply(ctx->pc, x, ctx->v[1][0]));
+      PetscCall(VecAXPY(y, 1.0, ctx->v[1][0])); /* y = M^-1 x + Q x */
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -973,34 +972,33 @@ static PetscErrorCode PCMatApply_HPDDMShell(PC pc, Mat X, Mat Y)
   PetscCall(PCShellGetContext(pc, &ctx));
   PetscCheck(ctx->P, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with no HPDDM object");
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCMatApply(ctx->pc, X, Y));
-  else {
-    if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
-      PetscCall(PCMatApply(ctx->pc, X, Y));
-      PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
+  else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
+    PetscCall(PCMatApply(ctx->pc, X, Y));
+    PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
+    PetscCall(MatProductNumeric(ctx->V[1]));
+    PetscCall(MatCopy(ctx->V[1], ctx->V[2], SAME_NONZERO_PATTERN));
+    PetscCall(MatAXPY(ctx->V[2], -1.0, X, SAME_NONZERO_PATTERN));
+    PetscCall(PCHPDDMDeflate_Private(pc, ctx->V[2], ctx->V[2]));
+    PetscCall(MatAXPY(Y, -1.0, ctx->V[2], SAME_NONZERO_PATTERN));
+    if (reset) PetscCall(MatDenseResetArray(ctx->V[1]));
+  } else {
+    PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
+    PetscCall(PCHPDDMDeflate_Private(pc, X, Y));
+    if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
       PetscCall(MatProductNumeric(ctx->V[1]));
       PetscCall(MatCopy(ctx->V[1], ctx->V[2], SAME_NONZERO_PATTERN));
       PetscCall(MatAXPY(ctx->V[2], -1.0, X, SAME_NONZERO_PATTERN));
-      PetscCall(PCHPDDMDeflate_Private(pc, ctx->V[2], ctx->V[2]));
-      PetscCall(MatAXPY(Y, -1.0, ctx->V[2], SAME_NONZERO_PATTERN));
-    } else {
-      PetscCall(PCHPDDMMatApply_Private<false>(ctx, Y, &reset));
-      PetscCall(PCHPDDMDeflate_Private(pc, X, Y));
-      if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-        PetscCall(MatProductNumeric(ctx->V[1]));
-        PetscCall(MatCopy(ctx->V[1], ctx->V[2], SAME_NONZERO_PATTERN));
-        PetscCall(MatAXPY(ctx->V[2], -1.0, X, SAME_NONZERO_PATTERN));
-        PetscCall(PCMatApply(ctx->pc, ctx->V[2], ctx->V[1]));
-        if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-          PetscCall(MatProductNumeric(ctx->V[2]));
-          PetscCall(PCHPDDMDeflate_Private<true>(pc, ctx->V[2], ctx->V[2]));
-          PetscCall(MatAXPY(ctx->V[1], -1.0, ctx->V[2], SAME_NONZERO_PATTERN));
-        }
-        PetscCall(MatAXPY(Y, -1.0, ctx->V[1], SAME_NONZERO_PATTERN));
-      } else {
-        PetscCheck(ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_ADDITIVE, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with an unknown PCHPDDMCoarseCorrectionType %d", ctx->parent->correction);
-        PetscCall(PCMatApply(ctx->pc, X, ctx->V[1]));
-        PetscCall(MatAXPY(Y, 1.0, ctx->V[1], SAME_NONZERO_PATTERN));
+      PetscCall(PCMatApply(ctx->pc, ctx->V[2], ctx->V[1]));
+      if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+        PetscCall(MatProductNumeric(ctx->V[2]));
+        PetscCall(PCHPDDMDeflate_Private<true>(pc, ctx->V[2], ctx->V[2]));
+        PetscCall(MatAXPY(ctx->V[1], -1.0, ctx->V[2], SAME_NONZERO_PATTERN));
       }
+      PetscCall(MatAXPY(Y, -1.0, ctx->V[1], SAME_NONZERO_PATTERN));
+    } else {
+      PetscCheck(ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_ADDITIVE, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with an unknown PCHPDDMCoarseCorrectionType %d", ctx->parent->correction);
+      PetscCall(PCMatApply(ctx->pc, X, ctx->V[1]));
+      PetscCall(MatAXPY(Y, 1.0, ctx->V[1], SAME_NONZERO_PATTERN));
     }
     if (reset) PetscCall(MatDenseResetArray(ctx->V[1]));
   }
