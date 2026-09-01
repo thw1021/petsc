@@ -804,31 +804,6 @@ static inline PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type X, Type Y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PCHPDDMDeflate_Private<true>() applies Q^H; conjugation yields the algebraic transpose Q^T required by PCApplyTranspose(). */
-static inline PetscErrorCode PCHPDDMDeflateTranspose_Private(PC pc, Vec x, Vec y)
-{
-  PetscFunctionBegin;
-  if (PetscDefined(USE_COMPLEX)) {
-    PetscCall(VecCopy(x, y));
-    PetscCall(VecConjugate(y));
-    PetscCall(PCHPDDMDeflate_Private<true>(pc, y, y));
-    PetscCall(VecConjugate(y));
-  } else PetscCall(PCHPDDMDeflate_Private<true>(pc, x, y));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static inline PetscErrorCode PCHPDDMDeflateTranspose_Private(PC pc, Mat X, Mat Y)
-{
-  PetscFunctionBegin;
-  if (PetscDefined(USE_COMPLEX)) {
-    PetscCall(MatCopy(X, Y, SAME_NONZERO_PATTERN));
-    PetscCall(MatConjugate(Y));
-    PetscCall(PCHPDDMDeflate_Private<true>(pc, Y, Y));
-    PetscCall(MatConjugate(Y));
-  } else PetscCall(PCHPDDMDeflate_Private<true>(pc, X, Y));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* Apply B or B^H, where B = A except at the finest KSPLSQR level, where B = A^H A. */
 template <bool transpose = false>
 static inline PetscErrorCode PCHPDDMApplyOperator_Private(PC_HPDDM_Level *ctx, Mat A, Vec x, Vec y)
@@ -1070,8 +1045,8 @@ static PetscErrorCode PCApplyTranspose_HPDDMShell(PC pc, Vec x, Vec y)
   PetscCall(KSPGetOperators(ctx->ksp, &A, nullptr));
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCApplyTranspose(ctx->pc, x, y)); /* y = M^-T x */
   else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
-    PetscCall(PCHPDDMDeflateTranspose_Private(pc, x, y)); /* y = Q^T x */
-    PetscCall(MatMultTranspose(A, y, ctx->v[1][0]));
+    PetscCall(PCHPDDMDeflate_Private<true>(pc, x, y)); /* y = Q^T x */
+    PetscCall(MatMultHermitianTranspose(A, y, ctx->v[1][0]));
     PetscCall(VecWAXPY(ctx->v[1][1], -1.0, ctx->v[1][0], x));
     PetscCall(PCApplyTranspose(ctx->pc, ctx->v[1][1], ctx->v[1][0]));
     PetscCall(VecAXPY(y, 1.0, ctx->v[1][0])); /* y = M^-T (I - A^T Q^T) x + Q^T x */
@@ -1122,7 +1097,7 @@ static PetscErrorCode PCMatApplyTranspose_HPDDMShell(PC pc, Mat X, Mat Y)
   if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_NONE) PetscCall(PCMatApplyTranspose(ctx->pc, X, Y));
   else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED) {
     PetscCall(PCHPDDMMatApply_Private<true>(ctx, Y, &reset));
-    PetscCall(PCHPDDMDeflateTranspose_Private(pc, X, Y));
+    PetscCall(PCHPDDMDeflate_Private<true>(pc, X, Y));
     PetscCall(MatCopy(Y, ctx->V[2], SAME_NONZERO_PATTERN));
     PetscCall(MatProductNumeric(ctx->V[1]));
     PetscCall(MatCopy(ctx->V[1], ctx->V[2], SAME_NONZERO_PATTERN));
