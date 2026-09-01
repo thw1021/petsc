@@ -217,26 +217,35 @@ class PetscPyVista:
         grid = self.convertDMToPV(dm)
         name = viewer.getFileName()
         ftype = None
-        dim = dm.getDimension()
+        cdim = dm.getCoordinateDim()
         if scalars is not None:
             if scalars[2] == 1:
                 ftype = SCALAR
-            elif scalars[2] == dim:
+            elif scalars[2] == cdim:
                 ftype = VECTOR
             else:
                 raise RuntimeError(
-                    "Scalars '%s' blocksize %d did not match 1 or mesh dim %d"
-                    % (scalars[0], scalars[2], dm.getDimension())
+                    "Scalars '%s' blocksize %d did not match 1 or coordinate dim %d"
+                    % (scalars[0], scalars[2], cdim)
                 )
             if scalars[1].shape[0] / scalars[2] == grid.n_cells:
-                grid.cell_data[scalars[0]] = scalars[1]
+                dloc = 'cell'
+                if ftype == VECTOR:
+                    if cdim == 3:
+                        grid.cell_data[scalars[0]] = scalars[1].reshape(-1, scalars[2])
+                    else:
+                        vecs = np.zeros((scalars[1].shape[0] // scalars[2], 3))
+                        vecs[:, 0:2] = scalars[1].reshape(-1, scalars[2])
+                        grid.cell_data[scalars[0]] = vecs
             elif scalars[1].shape[0] / scalars[2] == grid.n_points:
-                if dim == 3:
-                    grid.point_data[scalars[0]] = scalars[1].reshape(-1, scalars[2])
-                else:
-                    vecs = np.zeros((scalars[1].shape[0] // scalars[2], 3))
-                    vecs[:, 0:2] = scalars[1].reshape(-1, scalars[2])
-                    grid.point_data[scalars[0]] = vecs
+                dloc = 'vertex'
+                if ftype == VECTOR:
+                    if cdim == 3:
+                        grid.point_data[scalars[0]] = scalars[1].reshape(-1, scalars[2])
+                    else:
+                        vecs = np.zeros((scalars[1].shape[0] // scalars[2], 3))
+                        vecs[:, 0:2] = scalars[1].reshape(-1, scalars[2])
+                        grid.point_data[scalars[0]] = vecs
             else:
                 raise RuntimeError(
                     "Scalars '%s' size %d (%d) did not match sizes for cells (%d) or vertices (%d)"
@@ -260,11 +269,17 @@ class PetscPyVista:
         if name is None:
             pl = pv.Plotter()
             if ftype == VECTOR:
-                pl.add_mesh(grid, show_edges=True)
+                pl.add_mesh(grid, show_edges=True, color='lightblue')
                 if self.glyphScale > 0.0:
-                    grid.point_data['magnitudes'] = self.glyphScale * np.linalg.norm(
-                        grid.point_data[scalars[0]], axis=1
-                    )
+                    if dloc == 'vertex':
+                        grid.point_data['magnitudes'] = (
+                            self.glyphScale
+                            * np.linalg.norm(grid.point_data[scalars[0]], axis=1)
+                        )
+                    else:
+                        grid.cell_data['magnitudes'] = self.glyphScale * np.linalg.norm(
+                            grid.cell_data[scalars[0]], axis=1
+                        )
                     pl.add_mesh(grid.glyph(orient=scalars[0], scale='magnitudes'))
                 else:
                     pl.add_mesh(grid.glyph(orient=scalars[0], scale=scalars[0]))
