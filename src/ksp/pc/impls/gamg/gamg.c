@@ -499,14 +499,15 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
 /* Computes the symbolic part of Gmat1^T * Gmat1 */
 PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
 {
-  const char *prefix;
+  const char *prefix, *pfx;
   char        addp[32];
   PC_MG      *mg      = (PC_MG *)a_pc->data;
   PC_GAMG    *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
   PetscCall(PCGetOptionsPrefix(a_pc, &prefix));
-  PetscCall(PetscInfo(a_pc, "%s: Square Graph on level %" PetscInt_FMT "\n", ((PetscObject)a_pc)->prefix, pc_gamg->current_level + 1));
+  pfx = prefix ? prefix : "";
+  PetscCall(PetscInfo(a_pc, "%s%sSquare Graph on level %" PetscInt_FMT ": high memory mark, if OOM try -%spc_gamg_aggressive_square_graph false; see \"Reducing memory usage for PCGAMG\" in the users manual\n", pfx, prefix ? ": " : "", pc_gamg->current_level + 1, pfx));
   PetscCall(MatProductCreate(Gmat1, Gmat1, NULL, Gmat2));
   PetscCall(MatSetOptionsPrefix(*Gmat2, prefix));
   PetscCall(PetscSNPrintf(addp, sizeof(addp), "pc_gamg_square_%" PetscInt_FMT "_", pc_gamg->current_level));
