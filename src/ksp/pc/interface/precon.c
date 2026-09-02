@@ -1006,8 +1006,8 @@ PetscErrorCode PCSetUp(PC pc)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscCheck(pc->mat, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Missing A matrix");
-  PetscCheck(pc->pmat, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Missing P matrix");
+  PetscCheck(pc->mat, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Missing A matrix. Use PCSetOperators()");
+  PetscCheck(pc->pmat, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Missing P matrix. Use PCSetOperators()");
 
   if (pc->setupcalled && pc->reusepreconditioner) {
     PetscCall(PetscInfo(pc, "Leaving PC with identical preconditioner since reuse preconditioner is set\n"));
@@ -1016,17 +1016,15 @@ PetscErrorCode PCSetUp(PC pc)
 
   PetscCall(PetscObjectStateGet((PetscObject)pc->pmat, &matstate));
   PetscCall(MatGetNonzeroState(pc->pmat, &matnonzerostate));
-  if (!pc->setupcalled) {
-    //PetscCall(PetscInfo(pc, "Setting up PC for first time\n"));
-    pc->flag = DIFFERENT_NONZERO_PATTERN;
-  } else if (matstate == pc->matstate) PetscFunctionReturn(PETSC_SUCCESS);
-  else {
+  if (!pc->setupcalled) pc->flag = DIFFERENT_NONZERO_PATTERN;
+  else if (matstate == pc->matstate) {
+    PetscCheck(matnonzerostate == pc->matnonzerostate, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Corrupted matnonzerostate");
+    PetscFunctionReturn(PETSC_SUCCESS);
+  } else {
+    pc->flag = SAME_NONZERO_PATTERN;
     if (matnonzerostate != pc->matnonzerostate) {
       PetscCall(PetscInfo(pc, "Setting up PC with different nonzero pattern\n"));
       pc->flag = DIFFERENT_NONZERO_PATTERN;
-    } else {
-      //PetscCall(PetscInfo(pc, "Setting up PC with same nonzero pattern\n"));
-      pc->flag = SAME_NONZERO_PATTERN;
     }
   }
   pc->matstate        = matstate;
@@ -1047,7 +1045,7 @@ PetscErrorCode PCSetUp(PC pc)
   }
   PetscCall(PetscLogEventEnd(PC_SetUp, pc, 0, 0, 0));
   if (pc->postsetup) PetscCall((*pc->postsetup)(pc));
-  if (!pc->setupcalled) pc->setupcalled = PETSC_TRUE;
+  pc->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -160,8 +160,11 @@ struct _p_KSP {
   PetscInt nwork;
   Vec     *work;
 
-  KSPSetUpStage setupstage;
-  PetscBool     setupnewmatrix; /* true if we need to call ksp->ops->setup with KSP_SETUP_NEWMATRIX */
+  /* state machine to decide whether type specific setup is needed */
+  KSPSetUpStage    setupstage;
+  PetscBool        setupnewmatrix; /* true if we need to call ksp->ops->setup with KSP_SETUP_NEWMATRIX */
+  PetscObjectId    amatid;
+  PetscObjectState amatstate;
 
   PetscInt its;      /* number of iterations so far computed in THIS linear solve*/
   PetscInt totalits; /* number of iterations used by this KSP object since it was created */
