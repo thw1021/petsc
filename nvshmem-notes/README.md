@@ -28,7 +28,7 @@ first appears.
 | [05 - NCCL and fused groups](05-nccl-fused-groups.md) | batching a whole communication stage into one kernel; the experiment that killed our favorite hypothesis |
 | [06 - CUDA graphs](06-cuda-graphs.md) | recording work once and replaying it; the hidden stream that refuses to be recorded; what "iterate until converged" means for a frozen recording |
 | [07 - Device-side NVSHMEM](07-device-side-nvshmem.md) | making the GPUs communicate with no CPU at all; signals, epochs, double buffers, and four protocol revisions |
-| [08 - Multi-node and GPUDirect](08-multinode-and-gpudirect.md) | why crossing between nodes is a different world; the kernel module whose absence blocked everything; how to diagnose a fabric |
+| [08 - Multi-node and GPUDirect](08-multinode-and-gpudirect.md) | why crossing between nodes is a different world; the kernel module whose absence blocked everything; how to diagnose a fabric; the epilogue where the module arrived and half our diagnosis turned out wrong |
 | [09 - Results and lessons](09-results-and-lessons.md) | the complete measured matrix; what was deliverable vs showcase; the general lessons |
 
 **Primary sources.** These notes are the narrative version of the working documents in

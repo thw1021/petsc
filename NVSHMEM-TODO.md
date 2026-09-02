@@ -1,5 +1,11 @@
 # Remaining TODO items, ACGN/NVSHMEM poster project
 
+**Status 2026-09-02:** multi-node is unblocked and measured (D), the research harness has a
+measured cost model, a validated schedule simulator, a closed-loop executor and measured
+operator costs (see `~/prox-latency/SESSION_SUMMARY_2026-09-02.md` and
+`~/prox-latency/experiments/RESULTS.md` Result 7). Section G below is the consolidated
+open list as of that date; A-F keep their history.
+
 Written 2026-08-15 at the end of the 2-node measurement campaign. The measurement matrix
 is COMPLETE (perf notes section 24: every buildable cell measured, every empty cell
 structurally empty). What remains is turning measurements into deliverables. Organized by
@@ -81,14 +87,36 @@ where the work happens; evidence pointers cite `NVSHMEM-PERF-NOTES.md` (PN),
     iteration, amortizes to noise at k=10. One launch runs the whole solve including
     the stopping decision -- the capability graphs cannot express.
 
-## D. Multi-node (externally blocked)
+## D. Multi-node (UNBLOCKED 2026-09-01: peermem live via DOCA-OFED 26.04)
 
-15. **File the ALCF ticket** -- draft ready in `ALCF-TICKET-PEERMEM.md` (peermem not
-    loaded, dmabuf=0; one modprobe unlocks NVSHMEM multi-node, NCCL's fast path, and
-    MPI GDR). User action.
-16. **When peermem lands**: rerun the sanity ladder (BN 13.3), re-measure NVSHMEM/NCCL
-    inter-node, fair MPI-GDR baseline, IBGDA arm, and the 4xN placement instance
-    (PN 18 observation 2).
+15. ~~File the ALCF ticket~~ DONE; resolved. `ALCF-TICKET-PEERMEM.md` now carries the
+    resolution plus five follow-up items (dead 400G port on x2000c0s5b0n0, NCCL RoCE v2
+    stall, no `memory_peers` sysfs for UCX 1.17, no GDRCopy, IBGDA driver params).
+16. **Peermem landed -- ladder rerun 2026-09-01** (BN 13.4, PN 28; raw logs
+    `nvshmem-tools/results-20260901-*`): NVSHMEM 8 PEs over 2 nodes initializes and
+    validates; PETSc suite PASS at np=8 over 2 nodes (put, get, ex19); sfbench and
+    acgnbench inter-node numbers measured for MPI vs NVSHMEM put/get; NCCL fixed on the
+    400G port (RoCE v1); MPI-GDR baseline via UCX 1.19 preload; IBGDA measured in its
+    CPU-doorbell hybrid mode. Still open from this item:
+    - **4xN placement instance** (PN 18 observation 2): `acgnbench` hard-codes 4 ranks;
+      a placement-aware 4x2 variant is new benchmark design, not a rerun. **First
+      placement result is in (PN 28.9, no new code): the role-0-alone 3+1 cut is worth
+      7-16% at 64 KB and 20-44% at 4 MB for MPI/NCCL/graph; NVSHMEM refuses unbalanced
+      placements ("same number of PEs on all nodes"), so the 4xN design must model
+      chain-hop latency + per-port volume and keep placements balanced.**
+    - **Device-side (`acgnbench-nvdev`) across nodes**: the consumer pull uses
+      `nvshmem_ptr()`, NULL for remote PEs; needs an `nvshmem_getmem`/put-based edge
+      variant to run 2+2. Now possible (IBGDA hybrid) -- the poster's "GPU reacts
+      mid-flight across the fabric" arm.
+    - True IBGDA (GPU rings doorbells) waits on the driver params (ticket follow-up 5);
+      the CPU-doorbell hybrid is measured (PN 28.6) and is slower than IBRC -- do not use.
+    - Graph-NCCL 2+2 = 122 us at 64 KB (PN 28.7), the best inter-node arm; poster panel
+      material together with the PN 28.8 matrix.
+    - **DONE 2026-09-02: measured cost catalog + schedule simulator + re-screen of the
+      3072 skeletons** live in `~/prox-latency/experiments/` (RESULTS.md Result 7; PN
+      28.10). Validated to x1.23 over 80 measured cells. Next in that line: finals-stage
+      iteration counts for the top-20, a generic executor (acgnbench taking a skeleton +
+      placement), and GPU operators (shard gradient, TV/box proxes) to measure tau_tq.
 
 ## E. TaoTerm machine
 
@@ -103,3 +131,58 @@ where the work happens; evidence pointers cite `NVSHMEM-PERF-NOTES.md` (PN),
     `ALCF-TICKET-PEERMEM.md`), benchmarks (`nvshmem-tools/`), and results files
     (`results-20260815-*.txt`), so the work survives independently of any node. Keep
     the eventual upstream MR (item 6) free of the benchmark/notes files.
+
+## G. Consolidated open list (2026-09-02)
+
+Poster (desk work):
+19. Fill the five "TO APPEAR" panels with (T_iter, TTS): single-node ladder (PN 24) plus the
+    2-node matrix (PN 28.8) and the placement result (PN 28.9); relabel the NVSHMEM axis
+    "GPU-orchestrated execution"; rewrite "Measured findings" (items A1-A3, A5 still open).
+20. Replace the compute-weight calibration question (A4) with the measured operator table
+    (PN 28.11 / opbench): pin G/P to real gradient/prox costs or present the crossover.
+21. Add the harness result to the co-design panel: reported skeleton right to within a few
+    percent under measured costs, allreduce 1.3-2x, placement/transport the residual lever;
+    state the balanced-placement constraint NVSHMEM imposes on the step-2 family.
+22. Companion note: replace Step 5's synthetic durations by the measured catalog; record the
+    finals-only ranking lesson and the need for an untouched test set.
+
+Measurements still worth taking (2 nodes suffice unless noted):
+23. DONE 2026-09-02 (PN 28.12): `acgnbench-nvdev2.cu -push` -- 104 us at 64 KB 2+2 (the
+    fastest inter-node arm), 36.5 us on one node (20% better than pull), stopping test
+    exact across the fabric, zero mismatches. Open: true IBGDA to approach ~70 us.
+24. DONE 2026-09-02: `acgnrun-nccl.c`; closed loop on 140 cells. Open residual: the model
+    ranks NCCL/graph skeletons only ~2/3 right (per-connection pipelining at 4 MB; the
+    late-gradient rank placement effect the winner's permutation exposes).
+25. Work-efficient TV prox kernel and a real tomography projector (opbench uses a naive
+    one-thread-per-row Condat and a synthetic ray matrix) -- these two numbers set the
+    measured regime and the poster's TTS panels.
+26. PARTLY DONE 2026-09-02: `gangbench.c` measured tau_grad(g=1,2,4) incl. the NVLink
+    reduce (256²: 80/56/41 us; 1024²: 1016/604/338 us); modeled (`Costs(gang=g)`); the
+    finals re-score says gang 2 = -4..13% TTS, gang 4 = -8..26%. Still open: the 8-rank
+    gang executor (leaders route) to close this loop on hardware.
+27. 4-node runs (the poster's 4x4 instance) when a 4-node allocation exists; the model and
+    executor already take arbitrary host maps.
+28. MOSTLY ANSWERED 2026-09-02 (PN 28.12): NCCL fan-out is serial (modeled); SF put at
+    16 MB is proxy-throughput bound (~25 GB/s per on-stream put); UCX_RNDV_THRESH=16k
+    closes the 32 KB hole (now default under JANUS_UCX119); NVSHMEM get_bw collapse at
+    16 MB is real (report to NVIDIA; avoid get above 8 MB); the MPI 4 MB drift is
+    run-to-run variance. Still open: the model's NCCL/graph *ranking* of skeletons
+    (~half the pairs) -- the late-gradient rank placement effect.
+29. True IBGDA once the driver parameter lands (ticket follow-up 5); do not use the hybrid.
+
+Admin:
+30. Send `ALCF-TICKET-FOLLOWUPS.md` (dead 400G port, NCCL RoCE v2, UCX 1.17 detection,
+    GDRCopy, IBGDA parameters). Items 3 and 5 change our numbers.
+
+Upstream PETSc (B6-B10 still open):
+31. MR prep: clang-format on a machine that has it, commit-message rewrite, decide the
+    `-use_nvshmem_putsig` toggle, split the campaign commit out; consider adding the
+    multi-node run of the ex22 cuda_nvshmem test to the MR notes (passes at np=8).
+32. TaoTerm: no TV/box proximal maps exist (types: callbacks, shell, sum, halfl2squared,
+    l1, quadratic); the wishlist items 1-6 remain the API consequence of the campaign.
+
+Repo hygiene:
+33. Commit the campaign in the worktree (50 files) and the harness work in prox-latency
+    (16 files); keep the upstream MR free of them.
+34. The GPUDirect-MPI arms depend on `~/opt/ucx-1.19-doca` (shared home); node-local
+    scratch must never hold anything remote ranks need.

@@ -53,3 +53,25 @@ three-step relocatable-device-code build PETSc uses for `sfnvshmem.o` (notes sec
     nvcc -ccbin g++ -arch=sm_90 -dlink x.o -L$NVSHMEM_DIR/lib -lnvshmem_device -o x_dlink.o
     mpicxx x.o x_dlink.o -o x -L$NVSHMEM_DIR/lib -lnvshmem_host -lnvshmem_device \
       -L$CUDA_HOME/lib64 -lcudart -L$CUDA_HOME/lib64/stubs -lcuda
+
+## 2026-09-01 additions: multi-node with peermem live
+
+Build notes 13.4 and perf notes 28 are the write-ups; `results-20260901-*.txt` the raw logs.
+
+| file | what it answers | section |
+| --- | --- | --- |
+| `nvshmem_smoke.cu` (fixed) | Now also a multi-node smoke: reports whether each PE's target is `P2P-mapped` or `REMOTE (IB)`. The put *source* moved to the symmetric heap -- an unregistered `cudaMalloc` source passes over NVLink but dies with `IBV_WC_LOC_PROT_ERR` over IB. | BN 13.4 |
+| `run-petsc-nvshmem-tests.sh` | `NPS="8" MPIRUN_EXTRA="--hostfile $PBS_NODEFILE --map-by ppr:4:node"` runs the suite across nodes; forwards the HCA/UCX pins with `-x`; the output filter drops IBGDA's warning lines. | BN 13.4 |
+| `sfbench-run.sh` | Same `MPIRUN_EXTRA` hook; builds into the (shared) script directory so remote ranks can see the binary. | PN 28.2 |
+| `ladder-20260901/` | The five driver scripts behind every 2026-09-01 result, in order. | PN 28 |
+| `devorder` | Now built here (`nvcc -o devorder devorder.cu`); the suite header uses it. | -- |
+
+Multi-node pins live in `../janus-env-nvshmem.sh` (`NVSHMEM_HCA_LIST`, `UCX_NET_DEVICES`,
+the NCCL RoCE v1 trio, and the `JANUS_UCX119=1` GPUDirect-MPI opt-in). Never use
+`mlx5_bond_0`: it is the 25 GbE management network.
+| `collbench.c` | Exposed per-op cost of NCCL/MPI allreduce, reduce, bcast, p2p on GPU buffers, 8 B-16 MB, under any placement. Fills the collective-curve gap of the measured catalog in `~/prox-latency/experiments/harness/machine_janus.py`. | PN 28.10 |
+| `acgnrun.c` | Generic executor for ANY skeleton of the poster's certified family (`-order p1,p2,p3 -grad o0,o1,o2,o3`, `-allreduce`), PetscSF transports, same AXPY emulation as `acgnbench.c` (matches it within 2%). Closes the loop on the re-screen in `~/prox-latency/experiments/` (`closeloop.py`). | RESULTS.md Result 7 (prox-latency) |
+| `opbench.c` + `tvprox.cu` | Operator-cost probe on one H100: synthetic ray-like sparse gradient (MATAIJCUSPARSE MatMult + MatMultTranspose), exact row-TV prox (Condat, one thread per row), column-TV via transpose, box clamp, mixing AXPYs, for images 128^2..2048^2. Turns the schedule model's compute-regime sweep into measured durations. | results-20260902-opbench.txt |
+| `acgnrun-nccl.c` | NCCL counterpart of `acgnrun.c`: any skeleton, one fused `ncclGroup` per DAG stage, single stream; `-graph_iters k` captures k iterations into a CUDA graph and times replays. Reproduces `acgnbench-nccl` (107 vs 110 us) and `acgnbench-nccl-graph` (31.9 vs 32.1 us); checksum-validated. | RESULTS.md Result 7 (prox-latency) |
+| `gangbench.c` | Cooperative (gang) gradient of one shard over g GPUs of a node: each rank owns rays/g rows of the synthetic projector, computes a full-length partial, `ncclReduce` to the leader. Reports local / reduce / total per g -- the catalog entry `gang_grad_us` in `harness/machine_janus.py`. Lesson: initialize PETSc's device before `ncclCommInitRank` or every rank binds NCCL to GPU 0. | results-20260902-gangbench.txt |
+| `acgnbench-nvdev2.cu` | `acgnbench-nvdev.cu` + `-push`: producers put block-contiguous chunks into symmetric receive lanes on every consumer (last block fences + signals); runs across nodes. 2+2: 104 us at 64 KB with the device-side stopping test exact; 1 node: 36.5 us (pull 45.6). | PN 28.12 |

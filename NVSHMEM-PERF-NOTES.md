@@ -92,7 +92,8 @@ Both solve for the same value, which is why the fixed/marginal split is trustwor
 - **Single node only.** NVSHMEM's inter-node transport is unavailable here (IBRC skipped: no
   `nvidia_peermem`), so this measures NVLink/IPC intra-node only. NVSHMEM's design advantages are
   strongest for fine-grained inter-node traffic, which is precisely what cannot be tested here.
-  **Do not generalize this result to multi-node.**
+  **Do not generalize this result to multi-node.** *(Caveat lifted 2026-09-01: section 28 has
+  the multi-node measurements; the small-message verdict turned out to be the same.)*
 - One application (`ex19`), one preconditioner, one message-size regime (AvgLen ~3.1e3 B).
 - The marginal-cost figures come from two points at fixed message size; the break-even estimate
   extrapolates well beyond the measured range.
@@ -171,7 +172,7 @@ in increasing order of ambition:
   Always `--bind-to none` (section 10.1), always sum `Begin+End` (section 10.2), and verify
   NVSHMEM engagement with the `NVSHMEM_VERSION=1` banner discriminator (section 8).
 - **Multi-node panels are out of reach on Janus** until `nvidia_peermem` is loaded (section
-  13.2); worth an ALCF ticket, with IBGDA/IBDEVX as fallbacks. Within-node scaling means
+  13.2); worth an ALCF ticket, with IBGDA/IBDEVX as fallbacks. *(Unblocked 2026-09-01: section 28.)* Within-node scaling means
   more shards per GPU, not more GPUs.
 - The TaoTerm API changes these schedules require (split-phase gradient/prox evaluation,
   gradient sinks for H/K routing, per-term streams, capture-safety, per-rank placement) are
@@ -182,7 +183,8 @@ in increasing order of ambition:
 
 First 2-node allocation (`x2002c0s9b0n0` + `x2003c0s1b0n0`, 4x H100 each, both vetted
 clean). Multi-node NVSHMEM remains impossible (all transports blocked on peermem/dmabuf;
-build notes section 13.3), so these are the GPU-aware-MPI arms only, host-staged over the
+build notes section 13.3) *-- as of this date; section 28 adds the NVSHMEM, NCCL-with-GDR and
+MPI-with-GDR arms on the same placement --* so these are the GPU-aware-MPI arms only, host-staged over the
 NIC (`UCX_TLS=sm,self,cuda_copy,cuda_ipc,rc`), ranks 0,1 on node 1 and ranks 2,3 on node 2
 (`--map-by ppr:2:node`). Same binary and protocol as section 17; best of 3, 300 iters.
 
@@ -346,6 +348,13 @@ structure (k=1 and k=10 measured within ~4%).
 
 ## 21. Two-node NCCL: works, one mandatory knob, honest numbers are poor without GDR
 
+*Correction (2026-09-01, build notes 13.4): `mlx5_bond_0` is the 25 GbE **management** bond,
+not a bond of the data ports, so every 2-node NCCL number in this section and in section 22's
+2-node column was taken over a 25 Gb/s link -- the ~2.7 GB/s ceiling below is that link's line
+rate, which is why no knob moved it. The "dead routes on the bond slaves" were NCCL's RoCE v2
+default stalling on the 400 Gb/s data port `mlx5_0`; RoCE v1 fixes it. Superseded by section
+28.4 (177 us at 64 KB, 996 us at 4 MB, with GDR).*
+
 `NCCL_IB_HCA=mlx5_bond_0` is **mandatory** on this fabric: by default NCCL enumerates the
 raw bond-slave devices (`mlx5_0`, `mlx5_1`) alongside the bond and lands on dead routes --
 **78,000+ us/iter of retransmit timeouts** instead of ~300. (Same family of fabric quirk as
@@ -398,7 +407,10 @@ NVIDIA kernel modules for dmabuf (`CU_DEVICE_ATTRIBUTE_DMA_BUF_SUPPORTED` is 0 o
 current stack). A newer NCCL cannot help -- 2.28.3 is already the newest installed, and no
 NCCL version can register GPU memory with the NIC without one of those kernel-side pieces.
 
-### Did the admin "miss" peermem? Almost certainly, and the ticket writes itself
+*(Resolved 2026-09-01: peermem loaded, and the real limiter was the 25 Gb/s management NIC --
+section 28.4.)*
+
+### Did the admin "miss" peermem? Almost certainly, and the ticket writes itself *(resolved 2026-09-01)*
 
 The module **ships with the exact driver installed on these nodes** (`modinfo
 nvidia_peermem` -> version 610.57.04, build notes 13.2); it is the standard GPUDirect RDMA
@@ -741,3 +753,469 @@ So it is specific to this SF construction rather than to GPU-aware MPI generally
 the ex19-based measurements above avoid it entirely. Worth reducing further before reporting
 upstream — note the CUDA driver here is 13.3 while the toolkit and HPC-X UCX are 12.x, which is a
 plausible contributor.
+
+## 28. Two nodes with GPUDirect: NVSHMEM across the fabric, measured (2026-09-01)
+
+Peermem went live on Janus (build notes 13.4: DOCA-OFED 26.04, real `nvidia_peermem`,
+and the fabric corrected -- `mlx5_0` is the 400 Gb/s RoCE data port, `mlx5_bond_0` is
+the 25 GbE management bond). This section holds the first multi-node NVSHMEM numbers.
+Nodes `x2000c0s5b0n0` + `x2001c0s9b0n0`, job 2507, pins as in build notes 13.4, raw logs
+`nvshmem-tools/results-20260901-2node-ladder*.txt`. Placements: "8-rank ring" = 4 ranks
+per node, rank r on GPU r%4 (ring edges 3->4 and 7->0 cross the fabric); "2+2" = ranks
+0,1 on node 1 and 2,3 on node 2, exactly the section 18 placement (8 of the DAG's 12 edges
+cross); "1 per node" = 2 ranks, GPU0 on each node.
+
+### 28.1 Transport floors (NVSHMEM perftest, 2 PEs) -- what the wire and the proxy cost
+
+| metric (8 B unless noted) | intra-node, NVLink | inter-node, IBRC + GDR | MPI inter-node, host-staged (UCX 1.17) |
+| --- | ---: | ---: | ---: |
+| device `put` latency, one-way | 2.0 us | 10.1 us | 19.4 us (ping-pong one-way) |
+| device `get` latency | 2.5 us | 10.3 us | -- |
+| `put_signal` ping-pong, round trip | 6.3 us | 25.5 us | 38.8 us (round trip) |
+| host `put_on_stream` latency | 1.9 us | 12.7 us | -- |
+| `put` bandwidth, 16 MB | 122 GB/s | 46.7 GB/s | 39.2 GB/s |
+| `get` bandwidth, 4 MB | 115 GB/s | 37.2 GB/s | -- |
+
+Three readings. (1) GDR halves the inter-node small-message floor relative to host-staged
+MPI (10 vs 19 us) and adds ~20% bandwidth (47 vs 39 GB/s; 400 Gb/s line rate is 50). (2) A
+remote put costs 5x an NVLink put and the proxy thread is that floor: the device-issued
+put and the host on-stream put both land at 10-13 us, i.e. the GPU->proxy->NIC hop, not
+the wire, dominates. (3) The `put_signal` round trip (25.5 us) is the number a
+signal-driven DAG edge pays for a request/response across the fabric; intra-node it is 6.3.
+
+Lane view of one small inter-node exchange under the mechanisms measured here (times are
+the one-way floors above; IBGDA in its CPU-doorbell hybrid, section 28.6):
+
+    MPI, host-staged (HPC-X UCX 1.17)                                ~19 us one-way
+    GPU src  |D2H copy|
+    CPU src  |        |stage, post RDMA|
+    wire     |                         |====== 400G ======>|
+    CPU dst  |                                             |recv|H2D copy|
+    GPU dst  |                                                           |data|
+
+    NVSHMEM IBRC (proxy thread), GDR                                 ~10 us one-way
+    GPU src  |kernel: enqueue put|
+    CPU proxy|                   |poll|post RDMA write (NIC reads GPU src directly)|
+    wire     |                                           |====== 400G ======>|
+    GPU dst  |                                                               |data|signal|
+
+    NVSHMEM IBGDA, hybrid: GPU writes WQEs, CPU rings the doorbell      section 28.6
+    GPU src  |kernel: write WQE in GPU memory|
+    CPU      |                               |ring doorbell|
+    wire     |                                             |====== 400G ======>|
+    GPU dst  |                                                                 |data|signal|
+
+    NVSHMEM IBGDA, true (GPU rings the doorbell) -- needs PeerMappingOverride; not available
+    GPU src  |kernel: write WQE, ring doorbell|
+    wire     |                                |====== 400G ======>|
+    GPU dst  |                                                    |data|signal|
+
+### 28.2 PetscSF across the fabric: `sfbench` ring, MPI vs NVSHMEM put vs NVSHMEM get
+
+8-rank ring (4 per node; two edges cross), best of 2, us per `PetscSFBcast`:
+
+| bytes | MPI | NVput | NVget | put/MPI | get/MPI |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 | 22.8 | 25.3 | 37.1 | 1.11 | 1.63 |
+| 1 K | 21.2 | 25.4 | 36.7 | 1.20 | 1.74 |
+| 8 K | 21.9 | 25.4 | 36.9 | 1.16 | 1.69 |
+| 16 K | 25.4 | 25.4 | 36.9 | 1.00 | 1.45 |
+| 64 K | 27.8 | 25.5 | 37.4 | 0.92 | 1.35 |
+| 256 K | 39.0 | 30.4 | 42.7 | 0.78 | 1.09 |
+| 512 K | 54.7 | 34.7 | 49.9 | **0.63** | 0.91 |
+| 1 M | 65.5 | 55.6 | 66.4 | 0.85 | 1.01 |
+| 2 M | 89.9 | 98.4 | 113.1 | 1.09 | 1.26 |
+| 4 M | 138.8 | 180.4 | 196.1 | 1.30 | 1.41 |
+| 16 M | 426.6 | 673.8 | 703.3 | 1.58 | 1.65 |
+| 32 M | 833.8 | 1335.4 | 1377.2 | 1.60 | 1.65 |
+
+1 rank per node (every edge crosses; each rank both sends and receives):
+
+| bytes | MPI | NVput | NVget | put/MPI | get/MPI |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 | 21.8 | 29.6 | 40.3 | 1.36 | 1.85 |
+| 8 K | 24.0 | 29.4 | 40.6 | 1.22 | 1.69 |
+| 64 K | 31.4 | 29.3 | 41.8 | 0.93 | 1.33 |
+| 512 K | 58.6 | 46.3 | 60.3 | 0.79 | 1.03 |
+| 4 M | 250.0 | 189.9 | 207.5 | **0.76** | 0.83 |
+| 16 M | 894.1 | 678.1 | 945.9 | 0.76 | 1.06 |
+| 32 M | 1746.2 | 1657.6 | 1870.0 | 0.95 | 1.07 |
+
+What the two tables say:
+
+1. **Small messages: NVSHMEM loses despite the better transport.** MPI sits at 21-24 us,
+   NVput at 25-29, NVget at 37-40. The transport floor is 10-13 us in NVSHMEM's favour
+   (28.1), so the gap is the PetscSF-NVSHMEM protocol (sections 14-15: ~5 stream-ordered
+   ops per exchange plus the completion wait) stacked on the proxy floor, while
+   host-staged MPI's 19 us carries no such protocol. Get costs one more fabric round trip
+   than put and shows it (+12 us).
+2. **Crossover at 16 KB; NVput wins from 32 KB to 1 MB**, best 0.63x at 512 KB (34.7 vs
+   54.7 us). This is the regime where staging costs per byte and GDR does not.
+3. **Large messages depend on who does the staging.** In the 8-rank ring MPI wins again
+   from 2 MB (1.3-1.6x); with 1 rank per node NVput wins (0.76x). MPI's 16 MB time doubles
+   between the placements (427 -> 894 us) because a rank that both sends and receives
+   pushes both directions through its own host-staging pipeline; NVput does not move
+   (674 vs 678 us) because the NIC does the work. So the 8-rank column is MPI's best case
+   (four ranks share the staging) and the 1-per-node column is its worst. NVput's 674 us
+   at 16 MB is 25 GB/s per edge, about half the 47 GB/s perftest floor; whether that is the
+   proxy chunking one large on-stream put or the put->signal->completion serialisation of
+   one exchange at a time is not established (section 16's multi-exchange pipelining is
+   the experiment that would tell).
+
+### 28.3 The ACGN DAG across the fabric: MPI vs NVSHMEM arms, 2+2 placement
+
+G=8, P=4, 300 iterations, us per iteration, two reps each; section 18's MPI numbers in
+brackets:
+
+| arm | 64 KB | 4 MB |
+| --- | ---: | ---: |
+| branch, MPI host-staged | 206, 208 [206] | 1015, 1041 [886] |
+| allreduce, MPI host-staged | 263, 265 [259] | 991, 1026 [942] |
+| branch, NVSHMEM put+signal (sfnvshmem fused) | 279, 281 | 956, 965 |
+| allreduce, NVSHMEM | 282, 286 | 920, 924 |
+| branch, NVSHMEM get | 280, 284 | 948 |
+
+1. **At 64 KB the PetscSF-NVSHMEM arm loses to MPI by 35% across the fabric**, the same
+   shape as intra-node (section 17: 1.4-1.6x). The wire favours NVSHMEM (28.1); the
+   protocol cost is now paid on each of the 8 crossing edges and it is the protocol, not
+   the transport, that the poster has to fix -- exactly the section 15 conclusion,
+   re-confirmed with the fabric in the loop.
+2. **At 4 MB NVSHMEM wins 6-10%**: 47 GB/s GDR against 39 GB/s staged, no host copies.
+3. **Splitting vs allreduce**: under MPI, branch beats allreduce by 21% at 64 KB (as in
+   section 18) and the two are within rep noise at 4 MB; under NVSHMEM, allreduce ties at
+   64 KB and wins 4% at 4 MB, as it did under NCCL (section 19). Three transports and two
+   placements now agree: splitting's advantage is a small-message, host-blocking-cost
+   effect. (The MPI 4 MB arms are 10-15% slower than on 2026-08-15; the only deliberate
+   change is the `UCX_NET_DEVICES=mlx5_0:1` pin -- in August UCX auto-selected, and the
+   other node had both 400G ports up -- not investigated.)
+
+### 28.4 NCCL across the fabric on the right NIC
+
+Sections 21-22 measured 2-node NCCL on what turned out to be the 25 GbE management bond,
+without GDR. Rerun on `mlx5_0` with `NCCL_IB_ROCE_VERSION_NUM=1 NCCL_IB_GID_INDEX=2` (build
+notes 13.4) and GDRDMA channels; 2+2 placement, 300 iterations, two reps each, us per
+iteration; the 2026-08-15 bond numbers in brackets:
+
+| msg | G,P | branch-NCCL | allreduce-NCCL | branch adv. |
+| ---: | --- | ---: | ---: | ---: |
+| 64 KB | 8,4 | 176, 177 [296] | 188, 188 [291] | 6% |
+| 512 KB | 8,4 | 272, 281 [1542] | 355, 358 [1183] | 24% |
+| 1 MB | 8,4 | 372, 373 [3005] | 375, 382 [2268] | 2% |
+| 4 MB | 8,4 | 995, 996 [11709] | 897, 903 [8802] | -10% |
+| 64 KB | 32,16 | 341, 343 [431] | 354, 354 [450] | 3% |
+| 512 KB | 32,16 | 452, 454 [1572] | 539, 561 [1257] | 19% |
+| 1 MB | 32,16 | 554, 557 [3036] | 566, 571 [2284] | 2% |
+| 4 MB | 32,16 | 1239, 1239 | 1170, 1170 | -6% |
+
+1. **NCCL is now the fastest eager inter-node arm at 64 KB**: 177 us against 206
+   (branch-MPI host-staged), 192 (branch-MPI with GDR, 28.5) and 280 (PetscSF-NVSHMEM).
+   It fuses each DAG stage into one launch and never blocks the host; that advantage
+   survives the fabric. Against its own single-node number (107 us, section 19) the
+   fabric adds ~70 us at 64 KB for 8 crossing edges.
+2. **The bond numbers were an artefact of the wrong NIC**: 11.7 ms -> 1.0 ms at 4 MB
+   (11.8x), 296 -> 177 us at 64 KB. The section 21 statement that "inter-node NCCL stages
+   at ~3 GB/s, so MPI stays the inter-node transport of record" is withdrawn: at 4 MB
+   NCCL (996 us) matches MPI (1015-1041) and NVSHMEM (956-965), and at 64 KB it leads.
+3. **Splitting vs allreduce under inter-node NCCL**: branch wins 6% at 64 KB and 19-24% at
+   512 KB, ties at 1 MB, loses 6-10% at 4 MB. Different from the single-node NCCL result
+   (allreduce matched or beat branch, section 19): with 8 of 12 edges on the wire, the
+   volume argument does bite at mid sizes, and at 4 MB the ring allreduce's pipelining
+   wins back. So the poster's phrasing stands: splitting is a transport-dependent
+   advantage, largest where per-edge cost is host-side or where volume crosses a fabric.
+
+### 28.5 GPU-aware MPI with GPUDirect (UCX 1.19 preload): the fair MPI baseline
+
+HPC-X's UCX 1.17 cannot see this peermem (build notes 13.4), so every MPI number above is
+host-staged. With the DOCA UCX 1.19 preloaded on both nodes (`JANUS_UCX119=1`), the same
+`acgnbench` binary, 2+2 placement, two reps, us per iteration; host-staged (28.3) in
+brackets:
+
+| msg | branch-MPI, GDR | allreduce-MPI, GDR |
+| ---: | ---: | ---: |
+| 64 KB | 192, 194 [206, 208] | 229, 232 [263, 265] |
+| 512 KB | 297, 297 | 333, 335 |
+| 1 MB | 397, 399 | 420, 420 |
+| 4 MB | 999, 1004 [1015, 1041] | 1015, 1044 [991, 1026] |
+
+The preload is genuinely zero-copy: the 2-node GPU ping-pong under UCX 1.19 on both
+nodes gives 10.8 us one-way at 8 B (19.4 host-staged), 38.8 GB/s at 2 MB (22.9) and
+47.5 GB/s at 16 MB (39.2) -- i.e. MPI's transport floor is now the same 10-11 us as
+NVSHMEM's proxy put (28.1). (One UCX artefact: 32 KB sits just above the rendezvous
+threshold and costs 35.6 us one-way; `UCX_RNDV_THRESH` would move it; not tuned.)
+
+GDR buys MPI 7% (branch) and 13% (allreduce) at 64 KB and nothing at 4 MB. The
+host-staged path was already pipelining bulk transfers well (39 vs 47 GB/s); what it could
+not hide was the per-message staging latency, which is what the small-message DAG pays.
+Branch still beats allreduce under GDR-MPI by 16% at 64 KB, so the section 18 result is
+not a host-staging artefact.
+
+**At 4 MB every inter-node arm converges to ~1 ms** -- MPI host-staged 1015-1041,
+MPI-GDR 999-1004, NCCL 995-996, PetscSF-NVSHMEM 956-965 -- because the 2+2 placement pushes
+6 x 4 MB out of node 1 per iteration through one 400G port with DAG dependencies limiting
+overlap: this is a placement/volume bound, not a transport one, and it is the regime the
+4xN placement-aware instance (section 18, observation 2) is meant to attack.
+
+### 28.6 IBGDA in CPU-doorbell hybrid mode: measured, and why the driver parameters matter
+
+`NVSHMEM_IB_ENABLE_IBGDA=1` initializes here only in NVSHMEM's fallback ("NIC handler will
+be CPU with host memory backend", build notes 13.4): the GPU writes the work-queue entries
+in GPU memory but a CPU thread has to ring the NIC doorbell because the GPU cannot map the
+doorbell page. Correctness is fine -- the PETSc suite is identical to the MPI path in all
+three cases at np=8 (the harness first reported MISMATCH because IBGDA's warning lines
+polluted the diff; the filter now drops them). Performance is not:
+
+| metric, inter-node | IBRC proxy (28.1) | IBGDA hybrid |
+| --- | ---: | ---: |
+| device `put` latency, 8 B | 10.1 us | 16.1 us |
+| `put_signal` ping-pong, round trip | 25.5 us | 36.6 us |
+| `sfbench` NVput, 8-rank ring, 64 B - 64 KB | 25.3 - 25.5 us | 45.6 - 47.7 us |
+| `sfbench` NVput, 8-rank ring, 16 MB | 674 us | 683 us |
+| `sfbench` NVget, 8-rank ring, 64 B | 37.1 us | 68.0 us |
+
+The hybrid adds a GPU->CPU doorbell hop on top of the proxy's own latency, so every
+small-message number gets ~1.6-1.9x worse while bandwidth is unchanged. In this mode
+IBGDA is strictly worse than IBRC and there is no reason to use it. What the true mode
+would remove is the CPU from the issue path altogether (the fourth lane in 28.1); that
+needs the `nvidia` module loaded with `PeerMappingOverride=1` / `EnableStreamMemOPs=1`
+(ticket follow-up 5). The ACGN DAG under the hybrid is in the table below.
+
+ACGN DAG, 2+2, G=8, P=4, two reps, us per iteration; IBRC-proxy numbers (28.3) in brackets:
+
+| arm | 64 KB | 4 MB |
+| --- | ---: | ---: |
+| branch, NVSHMEM put+signal | 317, 322 [279, 281] | 949, 963 [956, 965] |
+| allreduce, NVSHMEM | 320, 322 [282, 286] | 983, 987 [920, 924] |
+| branch, NVSHMEM get | 361, 365 [280, 284] | 1168, 1175 [948] |
+
+Same verdict: +15% at 64 KB, +30% for the get protocol (two doorbell hops per edge),
+neutral for bandwidth-bound puts. Closed until the driver parameters change.
+
+### 28.7 Graph-replayed NCCL across the fabric
+
+The poster's single-node headline (section 20: one CUDA-graph launch per 10 iterations,
+32 us/iter at 64 KB) rerun 2+2 on the 400G port, G=8, P=4, two reps, us per iteration:
+
+| msg | graph-NCCL, 2+2 | eager NCCL (28.4) | 1-node graph-NCCL control |
+| ---: | ---: | ---: | ---: |
+| 64 KB | 122, 122 | 177 | 32.1 (August: 32) |
+| 512 KB | 226, 227 | 272-281 | -- |
+| 4 MB | 926, 927 | 995-996 | -- |
+
+**122 us is the best inter-node number of the campaign**: 1.7x the host-staged MPI arm
+(206), 1.6x the GDR-MPI arm (192), 2.3x PetscSF-NVSHMEM (280). It removes the per-op
+launch tax the eager arm still pays (55 us of the 177), and the remaining 90 us over the
+single-node figure is the fabric: 8 crossing edges at ~10-12 us each on the critical path.
+That is the number a placement-aware 4xN instance would attack.
+
+### 28.8 The inter-node matrix, and what it says for the poster
+
+Every arm the campaign has, on the same DAG, 64 KB, G=8, P=4, us per iteration:
+
+| arm | 1 node (sections 17-27) | 2 nodes, 2+2 (this section) | fabric cost |
+| --- | ---: | ---: | ---: |
+| branch-MPI, host-staged (UCX 1.17) | 162 | 206 | +44 |
+| branch-MPI, GPUDirect (UCX 1.19) | -- | 192 | -- |
+| allreduce-MPI, host-staged | 209 | 264 | +55 |
+| branch-NCCL, eager | 107 | 177 | +70 |
+| branch-NCCL, CUDA-graph replay | 32 | 122 | +90 |
+| branch, PetscSF-NVSHMEM (fused put+signal) | 206 | 280 | +74 |
+| branch, PetscSF-NVSHMEM, IBGDA hybrid | -- | 320 | -- |
+| device-side NVSHMEM kernel (`acgnbench-nvdev`) | 41 | not yet (needs remote-edge variant) | -- |
+
+Five statements the poster can now make with measured backing:
+
+1. **The ordering of the arms survives the fabric.** Graph-NCCL < eager NCCL < MPI <
+   PetscSF-NVSHMEM on one node and on two. Nothing reshuffles when GPUDirect is real.
+2. **NVSHMEM's problem was never the transport.** Its raw inter-node put (10 us) equals
+   GDR-MPI's (10.8) and halves host-staged MPI's (19.4); yet PetscSF-NVSHMEM is the slowest
+   arm at small sizes on both node counts. The ~5 stream ops + completion wait per exchange
+   (sections 14-15) is the whole story, and it is a PETSc-side protocol cost, which is the
+   argument for the device-side route and for the TaoTerm items.
+3. **GPUDirect is worth 7-13% to MPI at 64 KB and nothing at 4 MB**; the host-staged MPI
+   numbers of section 18 were not far off a fair baseline.
+4. **Splitting vs allreduce is transport- and placement-dependent, and the poster should
+   say so**: branch wins 21% (MPI staged), 16% (MPI GDR), 6% (NCCL eager) at 64 KB, ties
+   under PetscSF-NVSHMEM, and reverses at 4 MB under NCCL and NVSHMEM.
+5. **The fabric cost is 44-90 us per iteration at 64 KB with 8 of 12 edges crossing**,
+   largest for the arms that had the least slack. Placement-aware mapping (section 18,
+   observation 2) is the next lever, and it is a scheduling result, not a transport one.
+
+Left open, in order of poster value: the placement-aware 4xN instance; the device-side
+kernel across nodes (replace the `nvshmem_ptr` pull with `nvshmem_getmem`/put edges; the
+IBGDA hybrid can carry it today, the true IBGDA mode is what would make it fast); and a
+GDR-capable HPC-X from ALCF so the MPI arms stop needing a preload.
+
+### 28.9 Placement cuts of the 4-role DAG over two nodes (2026-09-01/02, same job)
+
+The first placement-aware experiment needed no new code: the 4-rank DAG has role-pair edge
+weights (1,2)=3, (1,3)=3, (2,3)=3 and only 1 for each pair involving role 0, so the cut that
+isolates role 0 crosses 3 edges instead of 8. Five placements (rankfiles in
+`nvshmem-tools/placements/`; hostfile order is ignored under PBS and a bare `slot=N` pins
+each rank to one core, so rankfiles with `slot=0-63` are the only working mechanism), five
+transports, G=8, P=4, best of 2, us per iteration:
+
+64 KB:
+
+| placement | cross | chain crossings | MPI staged | MPI GDR | NCCL eager | NCCL graph | PetscSF-NVSHMEM |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| {0,1} / {2,3} (section 28) | 8 | 3 | 206 | 193 | 176 | 121 | 279 |
+| {1,2} / {0,3} | 8 | 4 | 224 | 208 | 205 | 142 | 278 |
+| **{1,2,3} / {0}** | **3** | 2 | **192** | **164** | **172** | **102** | refused |
+| {0,1,2} / {3} | 7 | 3 | 201 | 206 | 176 | 117 | refused |
+| {0,2,3} / {1} | 7 | 3 | 209 | 196 | 177 | 114 | refused |
+
+4 MB:
+
+| placement | cross | out/in at the busier node | MPI staged | MPI GDR | NCCL eager | NCCL graph | PetscSF-NVSHMEM |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| {0,1} / {2,3} | 8 | 6 / 2 | 1002 | 1002 | 997 | 918 | 955 |
+| {1,2} / {0,3} | 8 | 5 / 3 | 895 | 928 | 996 | 921 | 1075 |
+| **{1,2,3} / {0}** | **3** | 2 / 1 | **563** | **576** | **796** | **670** | refused |
+| {0,1,2} / {3} | 7 | 4 / 3 | 908 | 896 | 1018 | 933 | refused |
+| {0,2,3} / {1} | 7 | 3 / 4 | 855 | 940 | 997 | 909 | refused |
+
+("chain crossings" counts fabric hops on the serial dependency chain x1 -> g -> x2 -> x3 ->
+w for the rank that closes the iteration; "out/in" counts messages leaving/entering the
+node that sends most.)
+
+1. **The placement-aware cut is worth 7-16% at 64 KB and 20-44% at 4 MB**, with no change
+   to the algorithm or the transport. At 64 KB graph-NCCL goes 121 -> 102 us and GDR-MPI
+   193 -> 164; at 4 MB every MPI arm nearly halves (1002 -> 563) because the busier node's
+   outbound traffic through its one 400G port drops from 6 messages per iteration to 2.
+   This is the section 18 observation 2 lever, measured: **placement recovers half to
+   two thirds of the fabric cost** for the transports that could use it.
+2. **Same crossing count, different time: the two 2+2 cuts differ by 9-17% at 64 KB.** The
+   {1,2}/{0,3} cut puts one more fabric hop on the serial chain; the count of crossing
+   edges is the wrong objective for latency-bound sizes. At 4 MB the ordering flips for
+   MPI (895 vs 1002) because that cut balances the per-port volume (5/3 vs 6/2). Two
+   sizes, two objectives, two optimal placements -- the joint problem the poster's step 1
+   names, seen in one table.
+3. **NVSHMEM cannot run an unbalanced placement at all.** Every 3+1 and 1+3 mapping aborts
+   in `nvshmem_bootstrap` with `NVSHMEM requires the same number of PEs on all nodes`.
+   That is a hard constraint of the library, not of PETSc: the placement space available
+   to a PetscSF-NVSHMEM (or device-side NVSHMEM) design is only the balanced cuts, and the
+   best cut above is outside it. Padding with idle PEs would satisfy NVSHMEM but trips
+   PetscSF's eligibility check (an SF with an all-NULL rank falls back to MPI), so a
+   4xN benchmark that wants the NVSHMEM arms must give every node the same number of
+   role-shards -- a constraint the poster's step-2 family ("fix term-to-node placement")
+   should state.
+4. **NCCL benefits least at 4 MB** (997 -> 796, against 1002 -> 563 for MPI): with only
+   role 0's two 4 MB sends crossing, NCCL's per-connection pipelining, not the port, sets
+   its floor. Its graph version recovers more (918 -> 670).
+
+What this settles for the 4xN design: the objective must be modelled as chain latency
+(hops on the serial dependency path x per-hop cost) plus per-port volume (bytes out of the
+busiest node / port bandwidth), not as a crossing-edge count; and balanced placements are
+the only ones all transports can share.
+
+### 28.10 Collective and point-to-point exposed-cost curves, and where the numbers went (2026-09-02)
+
+`nvshmem-tools/collbench.c` (results in `results-20260902-collbench.txt`): each op issued and
+synchronised before the next, so the number is the exposed cost a dependency chain pays.
+Four ranks; "intra" = one host, "2+2" = {0,1}/{2,3}; p2p = rank 0 <-> rank 3 one-way. us:
+
+| bytes | NCCL p2p intra | NCCL p2p 2+2 | NCCL allreduce intra | NCCL allreduce 2+2 | MPI allreduce intra | MPI allreduce 2+2 | MPI-GDR allreduce 2+2 | MPI p2p 2+2 | MPI-GDR p2p 2+2 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 7.2 | 16.4 | 14.4 | 26.2 | 57.8 | 63.5 | 30.4 | 20.0 | 10.4 |
+| 4 KB | 6.8 | 16.2 | 15.8 | 29.3 | 58.7 | 103.5 | 47.3 | 22.2 | 11.4 |
+| 256 KB | 9.5 | 24.1 | 18.1 | 96.2 | 54.7 | 88.8 | 48.2 | 41.2 | 14.7 |
+| 2 MB | 20.6 | 64.6 | 32.9 | 157.1 | 67.5 | 211.1 | 159.1 | 92.7 | 54.8 |
+| 16 MB | 83.8 | 367.6 | 108.7 | 1032.7 | 129.0 | 1196.8 | 991.3 | 436.2 | 354.3 |
+
+Two readings: NCCL's small-message collectives are 4x cheaper than HPC-X MPI's on one host
+(14 vs 58 us) and 2.4x cheaper across hosts; a 16 MB allreduce across the two hosts costs
+~1 ms under every library (one 400G port per host bounds it), so at 4 MB per vector the
+DAG's ~1 ms per iteration (28.5) is that bound.
+
+**Where all of section 28 now lives:** the measured catalog, a schedule simulator that
+reproduces this section's per-iteration times to a factor 1.23 over 80 cells, and a
+re-screen of the poster's 3072 ACGN skeletons under it, are in the research harness
+`~/prox-latency/experiments/` (`harness/machine_janus.py`, `harness/schedule.py`,
+`validate_schedule.py`, `rescreen_measured.py`; findings in that directory's `RESULTS.md`,
+Result 7). Headline: the synthetic-constant winner is not top-ranked under measured costs
+(the `[late,p2,late,p2] complete` family is, by 5-35%), branch routing still beats the
+global allreduce by 1.07-2.8x, and once operators cost more than ~30 us the ranking is set
+by iteration counts, not by transport.
+
+### 28.11 Real operator costs on one H100, and what they do to the skeleton ranking (2026-09-02)
+
+`nvshmem-tools/opbench.c` + `tvprox.cu` (`results-20260902-opbench.txt`), per shard, 45 of
+180 angles, synthetic ray-like sparse projector (2n contiguous pixels per ray):
+
+| image | vector | gradient Aᵀ(Ax−b) | rowTV prox | colTV prox | box | mixing |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 128² | 128 KB | 26 us | 125 us | 136 us | 2.4 us | 4.8 us |
+| 256² | 512 KB | 74 us | 245 us | 260 us | 2.4 us | 5.2 us |
+| 512² | 2 MB | 257 us | 481 us | 507 us | 3.0 us | 6.4 us |
+| 1024² | 8 MB | 1012 us | 952 us | 1014 us | 5.1 us | 10.8 us |
+
+Against section 28's exchange costs (10-30 us per hop, ~1 ms for a 16 MB allreduce), the
+ACGN iteration at 512 KB vectors is ~0.8 ms of which ~0.1 ms is communication. Fed into the
+`~/prox-latency` schedule model (RESULTS.md Result 7): the poster's skeleton stays rank 1
+of 114 finalists in every 64 KB cell and within 1-3% of the best elsewhere; the global
+allreduce arm costs 1.3-2x; placement and transport, not the routing skeleton, are the
+remaining design freedom. The TV kernel is a naive one-thread-per-row Condat (an upper
+bound); a 10x faster prox moves the 4 MB two-host cells to gradient-routing skeletons.
+
+`nvshmem-tools/acgnrun.c` is the generic executor for any skeleton (`-order`, `-grad`);
+it matches `acgnbench` within 2% and is the instrument for closing the loop on the
+model's ranking (`results-20260902-closeloop.txt`).
+Loop closed 2026-09-02 (`results-20260902-closeloop.txt`, 80 cells, five skeletons, three
+PetscSF transports, three placements, two sizes): model error x1.09, skeleton ranking
+agreement 113/124 pairs; measured spread between skeletons 10-26% per cell.
+
+Later the same night: `acgnrun-nccl.c` (NCCL / graph counterpart of the executor;
+reproduces acgnbench-nccl 107 vs 110 us and the graph arm 31.9 vs 32.1 us) closed the loop
+on 140 cells over five transports -- PetscSF transports modeled to ~10% with 113/124 ranking
+pairs right, NCCL/graph ×1.23-1.36 with ~2/3 of pairs right (`results-20260902-closeloop.txt`).
+Gang gradients (`gangbench.c`, `results-20260902-gangbench.txt`): a shard's gradient over
+g GPUs of a node incl. the NVLink reduce: 256² 80 / 56 / 41 us, 512² 264 / 171 / 98 us,
+1024² 1016 / 604 / 338 us for g = 1 / 2 / 4. Measured fastest DAG under NCCL and graph in
+almost every cell: `box>colTV>rowTV [p3,split,late,split]` (30.7 us single-host graph vs
+the poster winner's 31.8), a near-tie in time-to-tolerance at 261 vs 225 iterations.
+
+### 28.12 The device-side kernel across the fabric (push variant), and five residuals answered (2026-09-02, 03:00-03:30)
+
+`acgnbench-nvdev2.cu` = `acgnbench-nvdev.cu` plus `-push`: a producer no longer publishes
+into its own buffer for consumers to pull through `nvshmem_ptr`; each thread block fills a
+contiguous chunk and `nvshmemx_double_put_nbi_block`s it into a symmetric receive lane on
+every consumer, the last-arriving block `nvshmem_fence`s and fires the signals, and
+consumers read their local lane. The ack chain is unchanged (its meaning becomes "my
+receive slot for it-2 is free"); the allreduce all-pull and the convergence test's
+partial-norm pull become pushes the same way. Pull mode is kept as the control.
+`results-20260902-nvdev-push.txt`, persistent kernel, G=8, P=4, best of 2, us/iteration:
+
+| arm | 1 node, 64 KB | 2+2, 64 KB | 1 node, 4 MB | 2+2, 4 MB |
+| --- | ---: | ---: | ---: | ---: |
+| pull (NVLink only) | 45.6 | -- | 738 | -- |
+| push, branch | **36.5** | **104** (85 seen once) | 740 | 1080 |
+| push, allreduce (all-push) | 35.9 | 110 | 706 | 1068 |
+| push, branch, device stopping test (k=10) | -- | 90-113, stops at exactly 210 = predicted | -- | -- |
+
+Zero element mismatches in every run. Three things this says: (1) **the device-resident
+iteration is now the fastest inter-node arm at 64 KB** (104 us vs graph-NCCL 122, eager
+NCCL 177, GDR-MPI 192, PetscSF-NVSHMEM 280), over the IBRC proxy, with the stopping
+decision taken on the GPUs across the fabric -- the capability no replayed graph has;
+(2) on one node the push is 20% faster than the pull it replaces (block-contiguous puts
+over NVLink beat strided volatile peer reads), so the single-node headline moves from 41
+to 36.5 us; (3) at 4 MB the device arm sits at the same ~1 ms port bound as every other
+arm. True IBGDA (ticket follow-up 5) is what would move the 2+2 number toward 70 us.
+
+Residuals from 28.8/28.9 that the same night answered (`results-20260902-residuals.txt`):
+
+- **NCCL fan-out is serial.** One GPU sending 1->2 remote peers in one group costs exactly
+  two p2p times at every size (28.5 vs 16.7 us at 8 B; 729 vs 367 us at 16 MB). That is the
+  4 MB under-prediction of 28.4/28.7; the harness model now serialises a GPU's NCCL sends.
+- **PetscSF's put at 16 MB is proxy-throughput bound, not serialisation bound.** With K
+  exchanges in flight (`sfbench2 -nexch`, 1 rank per node) NVSHMEM put gains 1.4x at 1 MB
+  (68 -> 49.5 us per exchange) but nothing at 16 MB (677 -> 891-1033 us per exchange): one
+  host-issued on-stream put streams at ~25 GB/s through the proxy and more of them do not
+  add up; the device-issued 32-CTA put of 28.1 is what reaches 47 GB/s.
+- **The 32 KB hole in GPUDirect MPI is the rendezvous threshold**: `UCX_RNDV_THRESH=16k`
+  turns 35.6 us one-way into 10.0 with no change at any other size (now set by
+  `JANUS_UCX119=1`).
+- **NVSHMEM `get` bandwidth really collapses at 16 MB** (37 GB/s at 4 and 8 MB, 3.8 at 16,
+  reproducible with 200 iterations; put stays at 46-47) -- a proxy-path pathology worth
+  reporting; do not use the get protocol above 8 MB.
+- **The MPI 4 MB drift is run-to-run variance, not the port pin**: pinned 912 us vs
+  unpinned 1043 us today, 1002-1041 earlier tonight, 886 in August.

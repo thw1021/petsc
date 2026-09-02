@@ -15,8 +15,8 @@ Each Janus compute node looks like this:
    |                                                                     |
    |   +----------------+        PCIe         +--------+                 |
    |   |  CPU ("host")  |======================|  NIC   |===> to other   |
-   |   |  64 cores      |                      | (2x    |     nodes      |
-   |   |  754 GB RAM    |                      |  bonded)|    (ch. 8)    |
+   |   |  64 cores      |                      | 400 Gb |     nodes      |
+   |   |  754 GB RAM    |                      |  RoCE  |    (ch. 8)     |
    |   +-------+--------+                      +--------+                 |
    |           | PCIe (control + data, ~50 GB/s)                          |
    |     +-----+------+------+------+                                    |
@@ -31,6 +31,11 @@ Each Janus compute node looks like this:
    |          per direction per pair                                     |
    +---------------------------------------------------------------------+
 ```
+
+*(The NIC box is `mlx5_0`, the 400 Gb/s RoCE data port. Each node also has a second 400G port
+that is not always cabled, and a 25 GbE management bond (`mlx5_bond_0`) that must never carry
+data. The first edition of these notes drew the NIC as "2x bonded"; chapter 8.5 tells how
+that misreading cost us a month of wrong NCCL numbers.)*
 
 Five computers: the CPU and the four GPUs. Each has its **own memory** (the CPU's RAM;
 each GPU's HBM). No one can casually read anyone else's memory; every byte that moves

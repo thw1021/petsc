@@ -28,7 +28,10 @@ int main(int argc,char**argv){
   dst=(int*)nvshmem_malloc(n*sizeof(int)); sig=(uint64_t*)nvshmem_calloc(1,sizeof(uint64_t));
   if(!dst||!sig){fprintf(stderr,"nvshmem_malloc failed\n");MPI_Abort(comm,1);}
   src_h=(int*)malloc(n*sizeof(int)); for(int i=0;i<n;i++) src_h[i]=1000*mype+i;
-  CUDA_CHK(cudaMalloc(&src_d,n*sizeof(int)));
+  /* The put SOURCE must also live on the symmetric heap (or be nvshmemx_buffer_register()ed):
+     the IB transports need an lkey for it, and an unregistered cudaMalloc source dies with
+     IBV_WC_LOC_PROT_ERR (status 4) in the proxy the first time a put crosses a node. */
+  src_d=(int*)nvshmem_malloc(n*sizeof(int)); if(!src_d){fprintf(stderr,"nvshmem_malloc src failed\n");MPI_Abort(comm,1);}
   CUDA_CHK(cudaMemcpy(src_d,src_h,n*sizeof(int),cudaMemcpyHostToDevice));
   CUDA_CHK(cudaMemset(dst,0,n*sizeof(int)));
   nvshmem_barrier_all();
@@ -38,8 +41,8 @@ int main(int argc,char**argv){
     CUDA_CHK(cudaMemcpy(got,dst,n*sizeof(int),cudaMemcpyDeviceToHost));
     for(int i=0;i<n;i++) if(got[i]!=1000*from+i){ if(errs<3) fprintf(stderr,"PE %d dst[%d]=%d want %d\n",mype,i,got[i],1000*from+i); errs++; }
     free(got); }
-  printf("PE %d: put+signal from PE %d -> %s (%d mismatches)\n",mype,(mype-1+npes)%npes,errs?"FAIL":"OK",errs);
+  printf("PE %d: put+signal from PE %d -> %s (%d mismatches); my target PE %d is %s\n",mype,(mype-1+npes)%npes,errs?"FAIL":"OK",errs,(mype+1)%npes,nvshmem_ptr(dst,(mype+1)%npes)?"P2P-mapped":"REMOTE (IB)");
   fflush(stdout);
-  nvshmem_barrier_all(); free(src_h); CUDA_CHK(cudaFree(src_d));
+  nvshmem_barrier_all(); free(src_h); nvshmem_free(src_d);
   nvshmem_free(dst); nvshmem_free(sig); nvshmem_finalize(); MPI_Finalize();
   return errs?1:0; }

@@ -1,5 +1,15 @@
 # Next steps for the ACGN/NVSHMEM poster experiments
 
+**STATUS UPDATE (2026-09-01, peermem live):** route 3 is executed. ALCF installed DOCA-OFED
+26.04 + a real `nvidia_peermem`; NVSHMEM runs across nodes (8 PEs), PETSc's SF path passes
+its suite at np=8 over 2 nodes, and the 2+2 DAG is measured for every arm (perf notes 28,
+build notes 13.4). Headlines at 64 KB: graph-NCCL 122 us, eager NCCL 177, MPI-GDR 192,
+MPI host-staged 206, PetscSF-NVSHMEM 280. Two corrections to the paragraph below: the
+"mandatory" `NCCL_IB_HCA=mlx5_bond_0` pinned NCCL to the 25 GbE management bond (the
+~3 GB/s was line rate), and NCCL needs RoCE v1 on the 400G port; MPI is no longer the
+inter-node transport of record. Still open: the 4xN placement-aware instance and the
+device-side kernel across nodes (section 3 below was the plan; 28.8 has what remains).
+
 **STATUS UPDATE (2026-08-15, 2-node job):** Routes 1 and 2a are DONE and measured
 (perf notes sections 19-22); route 3's sanity ladder is DONE (build notes 13.3, perf notes
 18, 21). Headlines: graph-replayed NCCL hits **32 us/iter at 64 KB** (5x vs branch-MPI,
@@ -183,6 +193,11 @@ Effort: ~2-4 days for the skeleton prototype.
 ---
 
 ## 3. Multi-node, if ALCF ever loads `nvidia_peermem`: worth a try?
+
+*Executed 2026-09-01 in the sequence below (build notes 13.4, perf notes 28). The prediction
+held in shape -- the PetscSF path did not beat MPI at small sizes inter-node either, because
+the cost is the protocol, not the transport -- and the fair-baseline coupling in item 2 below
+turned out to need a newer UCX than HPC-X ships (28.5).*
 
 **Yes -- it is the regime NVSHMEM was designed for, and the only place the *existing*
 PetscSF NVSHMEM path can plausibly beat MPI without new engineering.** But sequence it.

@@ -272,6 +272,7 @@ Controls checked, not assumed:
 ### Still not covered
 
 - **Multi-node.** Impossible here: IBRC is skipped for want of `nvidia_peermem`.
+  *(True until 2026-09-01; peermem is now live and multi-node is measured -- section 13.4.)*
 - **Performance.** Everything above is correctness only; no timings were taken.
 - Kokkos backend (`sf->backend = PETSCSF_BACKEND_KOKKOS`), since this arch omits Kokkos.
 
@@ -355,7 +356,7 @@ On a single NVLink-connected node, PETSc's NVSHMEM path is **not a win**: GPU-aw
 `cuda_ipc` is already near-optimal here, and NVSHMEM adds a fixed startup cost for at best a
 few percent in the solve. That is an unsurprising result -- the PetscSF NVSHMEM backend
 targets *multi-node* runs where MPI overheads dominate, which is exactly the regime this
-machine cannot test (IBRC is disabled for want of `nvidia_peermem`; see section 7).
+machine could not test until 2026-09-01 (section 13.4; measured in perf notes section 28).
 
 Nothing here should be extrapolated to multi-node. What it does establish: the
 implementation is correct, is not pathologically slow when configured properly, and its one
@@ -577,6 +578,8 @@ with message size in section 10.2 (1.5x at 64 KiB down to 1.24x at 32 MiB).
 
 ### 13.2 Lever B -- multi-node, and what currently blocks it here
 
+*Historical (2026-08). Resolved 2026-09-01: see 13.4.*
+
 NVSHMEM's design target is the regime where MPI's per-message overhead dominates, i.e.
 many neighbors across many nodes. That is untestable on this machine today, and the reason
 is specific and fixable:
@@ -612,6 +615,11 @@ block multi-node testing at a more basic level than NVSHMEM. **Verify plain mult
 works before investing in multi-node NVSHMEM.**
 
 ### 13.3 Two-node ladder, executed (2026-08-15, nodes `x2002c0s9b0n0` + `x2003c0s1b0n0`)
+
+*Historical (2026-08-15). Two corrections in 13.4: peermem is now live, and the reading of the
+NICs below as "a bonded pair" was wrong -- `mlx5_bond_0` is the 25 GbE management bond and
+`mlx5_0` the 400 Gb/s data port. The NCCL "bond-slave stall" was NCCL's RoCE v2 default on
+the data port.*
 
 The section 13.2 caution is resolved; the fabric is healthy for MPI, and the NVSHMEM
 blocker is now precisely characterized.
@@ -654,6 +662,131 @@ verification steps is in `ALCF-TICKET-PEERMEM.md` in this worktree.
 **NCCL is the one GPU-orchestrated transport that crosses nodes today** (it falls back to
 its own host-staged IB/socket path without GDR); see the NCCL sections in
 `NVSHMEM-PERF-NOTES.md`.
+
+---
+
+### 13.4 Peermem live: the ladder re-executed (2026-09-01, nodes `x2000c0s5b0n0` + `x2001c0s9b0n0`, job 2507)
+
+ALCF resolved the ticket. This section records what changed on the system, corrects a
+wrong diagnosis in 13.2/13.3, and walks the ladder rung by rung to the first multi-node
+NVSHMEM results. Raw logs: `nvshmem-tools/results-20260901-2node-ladder*.txt`.
+
+**What changed on the nodes.** DOCA-OFED 26.04 is installed (`mlnx-ofa_kernel-source`
+26.04-0.8.6, `mlx5_core` from `/lib/modules/.../extra/`, `mlx_compat` loaded, and a MOFED
+`ib_uverbs` that exports `ib_register_peer_memory_client`). `nvidia_peermem` 610.57.04 is
+loaded and is no longer the compiled-out stub of 13.3: `nm -u` on the module now lists
+`ib_register_peer_memory_client` and the `nvidia_p2p_*` symbols. The driver is still the
+proprietary flavour (`license: NVIDIA`, dmabuf still unsupported), which is fine: peermem
+is the path every stack here uses.
+
+**How each stack detects it -- this matters, because they disagree.** This OFED does
+*not* create `/sys/kernel/mm/memory_peers/` (the sysfs tree the older peer-mem API
+exposed). Grepping the binaries for their probe paths:
+
+| stack | probes | result |
+| --- | --- | --- |
+| NVSHMEM 3.4.5 (`nvshmem_transport_ibrc.so`) | `memory_peers/nv_mem`, `memory_peers/nvidia-peermem`, **`/sys/module/nvidia_peermem/version`** | detected |
+| NCCL 2.28.3 | `memory_peers/nv_mem`, `memory_peers/nv_mem_nc`, **`/sys/module/nvidia_peermem/version`** | detected (`GDRDMA` channels) |
+| UCX 1.19 (DOCA repo RPMs) | `memory_peers/nv_mem`, **`/sys/module/nvidia_peermem/version`**, `/sys/module/nv_peer_mem/version` | detected |
+| **UCX 1.17 (HPC-X 2.20, i.e. the CUDA-aware Open MPI we use)** | `memory_peers/nv_mem/version` only | **not detected**: `mlx5_0: cuda GPUDirect RDMA is disabled` |
+
+So GPU-aware MPI through HPC-X stays host-staged even now (ping-pong unchanged at
+19.4 us / 39 GB/s). The DOCA UCX 1.19 RPMs under `/soft/repos/hpe-doca-ofed-rhel9.4/`
+extract cleanly as a user (`rpm2cpio | cpio -idm`; they need only the inbox
+`libibverbs`/`libmlx5`), and a copy lives in `/home/hsuh/opt/ucx-1.19-doca`. Two traps
+in using it with HPC-X's Open MPI: (a) `LD_LIBRARY_PATH` is not enough -- the pml/common
+UCX components resolve `libucp.so.0` from `hpcx/ucx/mt/lib` ahead of it, so `LD_PRELOAD`
+of the four UCX libraries is required; (b) every rank must see the same absolute path,
+so the tree must be on shared home, not on a node-local `/tmp` (the first attempt loaded
+1.19 on one node and 1.17 on the other and produced a meaningless mixed-version number).
+`JANUS_UCX119=1` before sourcing `janus-env-nvshmem.sh` sets it up.
+
+**The fabric, corrected.** 13.3 and the 2026-08 memory described `mlx5_bond_0` as a bond
+over `mlx5_0`/`mlx5_1`. It is not. From `/sys/class/infiniband`, `lspci`, `ethtool` and
+`/proc/net/bonding`:
+
+| device | netdev | what it is | rate | NUMA / PCIe |
+| --- | --- | --- | --- | --- |
+| `mlx5_0` | `ens2f0np0` | BlueField-3 integrated ConnectX-7, RoCE | **400 Gb/s**, up on both nodes | NUMA 0, PIX to GPU1 |
+| `mlx5_1` | `ens1f0np0` | second BF3/CX7 port | 400 Gb/s on `x2001c0s9b0n0`; **link down** on `x2000c0s5b0n0` | NUMA 0, PIX to GPU0 |
+| `mlx5_bond_0` | `bond0` = `mgmt0`+`mgmt1` | ConnectX-5, active-backup **management** bond | **25 Gb/s** | NUMA 1, PIX to GPU2 |
+
+Consequences: (1) `NCCL_IB_HCA=mlx5_bond_0`, the 2026-08 "fix", put NCCL on the
+management network; its untunable ~2.7 GB/s was simply 25 Gb/s line rate. (2) UCX's
+39 GB/s was on `mlx5_0` all along (its auto-selection skipped the down port and the slow
+bond). (3) Any stack that round-robins HCAs must be pinned: NVSHMEM's default assignment
+spread PEs over `mlx5_0`, `mlx5_1`, `mlx5_bond_0` and died in `ibv_modify_qp`
+(ETIMEDOUT) on the down port. (4) The "78 ms/iter bond-slave stall" of 13.3 was never
+about bond slaves -- see the NCCL rung below.
+
+**Rung 1 -- kernel evidence.** On both nodes: `lsmod` shows `nvidia_peermem` with
+`ib_uverbs` as a user; `nm -u` on the module lists the IB symbols; `/proc/kallsyms` has
+`ib_register_peer_memory_client` in `ib_uverbs`; `nvidia-smi` shows 4 clean GPUs each.
+
+**Rung 2 -- NVSHMEM smoke, 8 PEs over 2 nodes (`nvshmem_smoke.cu`).** Three attempts,
+each teaching something:
+
+1. Default HCA selection: `Successfully initialized the transport: ibrc` on all 8 PEs
+   (first time ever here), then `ibrc.cpp:427 ibv_modify_qp failed` status 110 on the
+   PEs assigned to the down port. Fix: `NVSHMEM_HCA_LIST=mlx5_0:1`.
+2. Pinned: intra-node puts validate, the two inter-node puts die with `ibv_poll_cq
+   failed, status: 4` (`IBV_WC_LOC_PROT_ERR`) in `progress_send`. This was a **bug in the
+   smoke test**, not the system: its put *source* was a plain `cudaMalloc` buffer. P2P
+   transports read any device pointer, so it had always passed intra-node; an IB
+   transport needs an lkey for the source, and an unregistered one is a local protection
+   error. Fixed by allocating the source on the symmetric heap (`nvshmemx_buffer_register`
+   is the alternative). PETSc's `sfnvshmem.cu` was never exposed: both ends of every
+   exchange live in `PetscNvshmemMalloc`ed buffers.
+3. Fixed smoke, pinned: **all 8 PEs OK, 0 mismatches**, the two inter-node edges reported
+   as `REMOTE (IB)` by `nvshmem_ptr()`. Identical with `NVSHMEM_DISABLE_CUDA_VMM=1` and
+   even over the 25G management bond, so VMM-heap registration through peermem is fine.
+
+**Rung 3 -- NCCL.** With `NCCL_IB_HCA=mlx5_0` NCCL reports `via NET/IB/0/GDRDMA/Shared`
+on its receive channels, and takes ~78 ms per 64 KB iteration -- the 13.3 stall, now
+reproduced on the correct NIC. Knob sweep (ACGN DAG, 64 KB, 20 iterations, 2+2 ranks):
+
+| setting | us/iter |
+| --- | ---: |
+| default (RoCE v2, GID 3) | 78 181 |
+| `NCCL_IB_GID_INDEX=3` / `=1` | 78 716 / 76 921 |
+| `NCCL_IB_TC=106` (with and without GID 3) | 78 918 / 78 450 |
+| `NCCL_IB_QPS_PER_CONNECTION=1 NCCL_IB_ADAPTIVE_ROUTING=0` | 78 513 |
+| `NCCL_NET_GDR_LEVEL=0` | 78 419 |
+| `NCCL_IB_PCI_RELAXED_ORDERING=1` | 77 884 |
+| **`NCCL_IB_ROCE_VERSION_NUM=1 NCCL_IB_GID_INDEX=2`** | **205** |
+
+NCCL's RoCE v2 (UDP-encapsulated) traffic is what stalls on this fabric; RoCE v1 runs at
+full speed. UCX (`rc`) and NVSHMEM (`ibrc`) work over the same port with their own GID
+choices. Recorded as a follow-up in `ALCF-TICKET-PEERMEM.md`; the v1 pin is now the
+default in `janus-env-nvshmem.sh`. MTU is 9000 on the netdev, so it is not an MTU issue.
+
+**Rung 4 -- PETSc's own path.** `run-petsc-nvshmem-tests.sh` gained `NPS` and
+`MPIRUN_EXTRA` (and forwards the pins with `-x`, since remote ranks do not inherit the
+shell). At `NPS=8 --map-by ppr:4:node`: `sf-ex22` put protocol PASS, get protocol PASS,
+`snes-ex19` PASS -- identical output to the MPI path and the NVSHMEM banner present on
+every case. First in-tree multi-node NVSHMEM pass.
+
+**Rung 5 -- IBGDA.** `NVSHMEM_IB_ENABLE_IBGDA=1` now gets past the peermem check
+(`Successfully initialized the transport: IBGDA. It will be used for device-side APIs
+over IB`) but the GPU cannot map the NIC doorbell page: `cudaHostRegister with IoMemory
+failed with error=1` -> `ibgda_alloc_and_map_qp_uar with GPU as handler failed` -> `NIC
+handler will be CPU with host memory backend`. That is NVSHMEM's hybrid: the GPU writes
+work-queue entries into GPU memory, a CPU thread rings doorbells. The smoke passes in this
+mode. The true GPU-handler mode needs the `nvidia` module loaded with
+`NVreg_RegistryDwords="PeerMappingOverride=1;"` (and `EnableStreamMemOPs=1`);
+`/proc/driver/nvidia/params` shows neither. `NVSHMEM_IBGDA_NIC_HANDLER=cpu` is rejected
+outright ("requires GDRCopy"; `/dev/gdrdrv` is absent). Ticket follow-ups 4 and 5.
+
+**Mandatory pins for any multi-node run here** (all defaults in `janus-env-nvshmem.sh`):
+
+    export UCX_TLS=sm,self,cuda_copy,cuda_ipc,rc      # ud is broken; drop rc for 1-node timing
+    export UCX_NET_DEVICES=mlx5_0:1
+    export NVSHMEM_HCA_LIST=mlx5_0:1
+    export NCCL_IB_HCA=mlx5_0 NCCL_IB_ROCE_VERSION_NUM=1 NCCL_IB_GID_INDEX=2
+    mpirun --hostfile $PBS_NODEFILE --map-by ppr:4:node --bind-to none \
+      -x UCX_TLS -x UCX_NET_DEVICES -x LD_LIBRARY_PATH -x NVSHMEM_SYMMETRIC_SIZE -x NVSHMEM_HCA_LIST ...
+
+The measurements that follow from this ladder are in `NVSHMEM-PERF-NOTES.md` section 28.
 
 ---
 

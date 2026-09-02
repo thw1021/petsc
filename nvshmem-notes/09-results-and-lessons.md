@@ -115,3 +115,47 @@ The working documents carry the live state: `NVSHMEM-TODO.md` (all remaining ite
 list), and `../nvshmem-tools/` (every benchmark source, each small enough to read in one
 sitting — `acgnbench.c` -> `acgnbench-nccl.c` -> `acgnbench-nccl-graph.c` ->
 `acgnbench-nvdev.cu` is the ladder in code form).
+
+## 9.5 Addendum (2026-09-01): the same matrix with a real fabric
+
+When peermem arrived (chapter 8.5) every arm was rerun across two nodes in the 2+2
+placement, 64 KB, light compute:
+
+| arm | 1 node | 2 nodes | fabric cost |
+| --- | ---: | ---: | ---: |
+| branch-MPI, host-staged | 162 | 206 | +44 |
+| branch-MPI, GPUDirect (UCX 1.19 preload) | -- | 192 | -- |
+| allreduce-MPI, host-staged | 209 | 264 | +55 |
+| branch-NCCL, eager | 107 | 177 | +70 |
+| branch-NCCL, CUDA-graph replay | 32 | 122 | +90 |
+| PetscSF-NVSHMEM (fused put+signal) | 206 | 280 | +74 |
+| PetscSF-NVSHMEM over IBGDA hybrid | -- | 320 | -- |
+| device-side NVSHMEM kernel | 41 | not yet built | -- |
+
+Three lessons to add to 9.3:
+
+- **Check a device by its PCI identity and link rate, not its name.** A device called
+  `bond_0` on a node that has a `bond0` was "obviously" the data bond. It was the
+  management network, and an untunable 2.7 GB/s matched its 25 Gb/s line rate exactly. We
+  had the fingerprint and did not read it.
+- **A fix that works can still be wrong.** Pinning NCCL to the bond made the 78 ms stall
+  vanish -- by moving NCCL to a 25x slower network. The stall itself was NCCL's RoCE v2
+  default on the 400G port; the correct fix is RoCE v1 there.
+- **Lenient transports hide instrument bugs.** Our NVSHMEM smoke test had used an
+  unregistered source buffer since July; NVLink accepted it, InfiniBand did not. The first
+  cross-node failure was our test, not the machine -- worth an hour of suspicion before
+  blaming the newly installed module.
+
+One placement experiment was cheap enough to run the same night (perf notes 28.9):
+isolating the role with only light edges on the second node cut the crossing edges from 8
+to 3 and bought 7-16% at 64 KB and 20-44% at 4 MB for MPI and NCCL -- and NVSHMEM could not
+run it at all, because the library insists on the same number of PEs on every node. A
+transport that constrains the placement space is itself a co-design input.
+
+Where the trail continues from here, in order of value: a placement-aware "4xN" instance
+(chapter 2's problem with each role sharded over N GPUs, placed so that heavy edges stay
+on NVLink -- a scheduling result, not a transport one); the chapter 7 device kernel across
+nodes (its consumer pull goes through `nvshmem_ptr`, which is NULL for a remote GPU, so
+the cross-node edges need a device-issued put-with-signal instead); and the admin items
+that would give the GPU its own doorbell (true IBGDA) and every MPI user GPUDirect without
+a preload.

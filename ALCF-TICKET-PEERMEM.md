@@ -97,3 +97,13 @@ the peermem check, and dies. Either root-level fix (peermem or open modules) unb
 3. `libibumad` is not installed on the nodes, so HPC-X's bundled NCCL net plugin
    (`nccl_rdma_sharp_plugin`) fails to load out of the box (the RPM exists under
    `/soft/repos/hpe-doca-ofed-rhel9.4/`). Cosmetic today, but trivial to fix while in there.
+
+---
+
+## RESOLVED 2026-09-01 (job 2507)
+
+ALCF installed DOCA-OFED 26.04 and a real `nvidia_peermem` 610.57.04. Verified on
+`x2000c0s5b0n0` + `x2001c0s9b0n0`: NVSHMEM's IBRC transport initializes across nodes,
+inter-node put+signal validates, PETSc's SF NVSHMEM path passes its suite at 8 ranks over
+2 nodes, NCCL reports `GDRDMA` channels. The five follow-up items this exposed are a
+separate, paste-ready ticket: `ALCF-TICKET-FOLLOWUPS.md`.

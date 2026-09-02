@@ -82,9 +82,11 @@ hand-written prototype (each already foreshadowed by items 1-5):
   values are all derivable mechanically from the DAG the co-design already produces --
   this is the "construct and schedule once -> freeze" doctrine compiled to the GPU.
 - **Scope honesty**: on one NVLink node this is load/store PGAS (`nvshmem_ptr` non-NULL);
-  across nodes the same device calls need NIC transports, which on Janus are blocked on
-  `nvidia_peermem` (build notes 13.3). The execution model is portable; the fabric
-  requirement is not waivable.
+  across nodes the same device calls need NIC transports, which on Janus were blocked on
+  `nvidia_peermem` until 2026-09-01 (build notes 13.4). The execution model is portable; the
+  fabric requirement is not waivable. The device kernel has not yet been run across nodes
+  (it pulls through `nvshmem_ptr`, NULL for remote PEs); perf notes 28.8 lists it as the
+  next item.
 
 The protocol lessons from building it (arrival counters instead of grid barriers;
 leader-per-block polling because 8k spinning threads self-jam the L2; reset-safety via
