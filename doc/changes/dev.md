@@ -89,6 +89,8 @@
 - Add device SpMM support for `MATPRODUCT_AB` and `MATPRODUCT_AtB` with a `MATAIJKOKKOS` matrix and dense matrices; previously these products looped `MatMult()` over the columns of the dense matrix
 - Change `MatCreateMAIJ()` to convert its result to `MATAIJKOKKOS` when the input matrix has that type, as is already done for `MATAIJCUSPARSE`; the `MATMAIJ` kernels read the host arrays of the input matrix directly and so miss values last updated on device
 - Change `MatDiagonalScale()` for `MATSEQDENSECUDA` and `MATSEQDENSEHIP` to check the memory type of the scaling `Vec` instead of its `VecType`, so device-resident vectors such as `VECKOKKOS` are consumed directly on the GPU instead of being copied through the host
+- Add device implementations of `MatNorm()` with `NORM_1`, `NORM_FROBENIUS`, and `NORM_INFINITY` for `MATDENSECUDA` and `MATDENSEHIP`; previously all norms copied the matrix to the host
+- Change `MatNorm()` for `MATMPIDENSE` to compute `NORM_FROBENIUS` and `NORM_INFINITY` via the local matrix norm, so `MATMPIDENSECUDA` and `MATMPIDENSEHIP` no longer copy to the host for those norms, and to respect the local leading dimension, which was previously ignored in parallel for `NORM_1` and `NORM_FROBENIUS`
 
 ## MatCoarsen
 
