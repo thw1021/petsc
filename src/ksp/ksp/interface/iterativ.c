@@ -1847,6 +1847,9 @@ PetscErrorCode KSPCreateVecs(KSP ksp, PetscInt rightn, Vec *right[], PetscInt le
 PetscErrorCode KSPSetWorkVecs(KSP ksp, PetscInt nw)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(ksp, nw, 2);
+  if (nw == ksp->nwork) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(VecDestroyVecs(ksp->nwork, &ksp->work));
   ksp->nwork = nw;
   PetscCall(KSPCreateVecs(ksp, nw, &ksp->work, 0, NULL));
