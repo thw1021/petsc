@@ -6,6 +6,7 @@ SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 LINKCHECKDIR  = _build/linkcheck
+DOCS_VENV     = ../petsc-doc-env
 
 # First so that "make" without arguments is like "make help".
 help:
@@ -14,19 +15,26 @@ help:
 # The following does not work because it triggers the loading of docutils that many people may not have in Python
 #	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(SPHINXOPTS_EXTRA)
 
-.PHONY: help makefile checklinks
+.PHONY: help makefile checklinks checklinks_rule clean docs-env docs docspdf website-deploy
 
 checklinks_rule:
 	@$(SPHINXBUILD) --builder linkcheck "$(SOURCEDIR)" "$(LINKCHECKDIR)" $(SPHINXOPTS) $(SPHINXOPTS_EXTRA)
 	@echo
 	@echo "Check finished. Report is in $(LINKCHECKDIR)."
 
-checklinks:
-	cd .. ; ${RM} -rf petsc-doc-env; python3 -m venv petsc-doc-env ; source petsc-doc-env/bin/activate ; python3 -m pip install -r doc/requirements.txt ; cd doc ; make checklinks_rule; deactivate
+docs-env:
+	${RM} -r $(DOCS_VENV)
+	python3 -m venv $(DOCS_VENV)
+	. $(DOCS_VENV)/bin/activate && python -m pip install -r requirements.txt
+
+checklinks: docs-env
+	. $(DOCS_VENV)/bin/activate && $(MAKE) checklinks_rule
 
 clean:
-	-@${RM} -rf _build __pycache__
+	-@${RM} -r $(BUILDDIR)
+	-@${RM} -r manualpages/concepts manualpages/singleindex.md manualpages/help.html manualpages/manualpages.cit manualpages/htmlmap* manualpages/*/*.md
 
+# This is a directory target; making it phony would rerun the recipe when the directory already exists.
 images:
 	git clone https://gitlab.com/petsc/images.git -b main-2 --depth=1 images
 
@@ -34,12 +42,15 @@ website-deploy: images
 	$(SPHINXBUILD) --builder dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(SPHINXOPTS_EXTRA)
 
 # use this rule to build the documentation on your machine when working on PETSc documentation
-docs:
-	cd .. ; if [ ! -z ${PETSC_ARCH} ]; then export PETSC_DOC=${PETSC_ARCH}-doc; ${RM} -rf $${PETSC_DOC} ;  cp -r  doc $${PETSC_DOC}; else export PETSC_DOC=doc ; fi;  python3 -m venv petsc-doc-env ; . petsc-doc-env/bin/activate ; python3 -m pip install --quiet -r doc/requirements.txt ; cd $${PETSC_DOC} ;  make  SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 8" html  ;  deactivate
+# TODO: Read sources serially and write HTML in parallel. With the current Sphinx invocation,
+# parallel workers spend more time merging the large build environment than they save.
+docs: docs-env clean
+	. $(DOCS_VENV)/bin/activate && $(MAKE) SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 1" html
 
 # use this rule AFTER make docs to build the users manual as a PDF file
-docspdf:
-	cd .. ; if [ ! -z ${PETSC_ARCH} ]; then export PETSC_DOC=${PETSC_ARCH}-doc; ${RM} -rf $${PETSC_DOC}/_build/latex; else export PETSC_DOC=doc ; fi;  python3 -m venv petsc-doc-env ; . petsc-doc-env/bin/activate ; python3 -m pip install --quiet -r doc/requirements.txt ; cd $${PETSC_DOC} ;  make  SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 8" latexpdf  ;  deactivate
+docspdf: docs-env
+	${RM} -r _build/latex
+	. $(DOCS_VENV)/bin/activate && $(MAKE) SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 8" latexpdf
 
 # Catch-all target: route all unknown targets to Sphinx using the new "make mode" option.
 %: makefile images
