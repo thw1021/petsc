@@ -24,8 +24,12 @@ We use a [Python 3 virtual environment](https://docs.python.org/3/tutorial/venv.
 ```console
 $ cd $PETSC_DIR
 $ make docs
-$ open $PETSC_ARCH-doc/_build/html/index.html # in a browser
+$ open arch-docs/doc/_build/html/index.html # in a browser
 ```
+
+Documentation always uses `PETSC_ARCH=arch-docs`, independently of the architecture used
+to build PETSc. The source mirror, generated manual pages, images, and Python environment
+are under `arch-docs/doc`; the original files in `doc/` are not modified.
 
 (sec_local_docs_latex)=
 
@@ -41,7 +45,7 @@ if need be, to resolve LaTeX errors.
 $ cd $PETSC_DIR
 $ make docs
 $ make docspdf
-$ open $PETSC_ARCH-doc/_build/latex/manual.pdf # in a PDF viewer
+$ open arch-docs/doc/_build/latex/manual.pdf # in a PDF viewer
 ```
 
 (sphinx_guidelines)=
