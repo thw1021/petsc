@@ -515,8 +515,8 @@ Numerical computing today has multiple levels of parallelism (concurrency).
 
 Traditional CPUs support the lower two levels via, for example, Intel AVX-like instructions ({any}`sec_cpu_simd`) and Unix threads, often managed by using OpenMP pragmas ({any}`sec_cpu_openmp`),
 (or multiple processes). GPUs also support the lower two levels via kernel functions ({any}`sec_gpu_kernels`) and streams ({any}`sec_gpu_streams`).
-Distributed memory parallelism is created by combining multiple
-CPUs and/or GPUs and using MPI for communication ({any}`sec_mpi`).
+Distributed memory parallelism is created by using multiple
+CPUs (or individual CPU cores) and/or GPUs and using MPI for communication ({any}`sec_mpi`).
 
 In addition, there is also concurrency between computations (floating point operations) and data movement (from memory to caches and registers
 and via MPI between distinct memory nodes).
@@ -659,6 +659,14 @@ on the CPU. The vector classes
 are `VECCUDA`, `MATAIJCUSPARSE`, `VECKOKKOS`, `MATAIJKOKKOS`, and `VECHIP` (matrices are not yet supported by PETSc with HIP).
 
 More details on using GPUs from PETSc will follow in this document.
+
+One difficulty with mixing some CPU computation with some GPU computation is that there may be far fewer GPUs then useable and useful CPU cores. In a simple example,
+one may have eight useful CPU cores with one powerful GPU. One wishes to use 8 MPI processes for the CPU computations and the one GPU. One way to handle this is to
+utilize the GPU as eight virtual GPUs; thus each MPI process has a corresponding (virtual) GPU partner for the GPU parts of the computation. This is the model that
+PETSc supports well. Its drawback is the overhead of virtualizing the GPU and the need to have MPI parallelism within the GPU portion of the compution, which if run
+just on one GPU would not be needed. For example, consider running KSPCG on the single GPU, no MPI calls are needed, but over 8 virtual GPUs a great number of
+MPI calls are needed for reductions, in the matrix-vector product, and in the preconditioner possibly. PETSc provides `MATMPISEQAIJ` to allow the MPI processes
+to efficiently compute the matrices but giving efficient access to the entire matrix by the single GPU.
 
 (sec_gpu_streams)=
 
