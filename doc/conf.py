@@ -298,8 +298,8 @@ def build_petsc4py_docs(app):
     print("End clean petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
     print('============================================')
 
-    # petsc4py needs to be built to build petsc4py docs via introspection
-    command = ['make', '-f', 'makefile', 'libs',
+    # petsc4py needs petsc to build petsc4py docs via introspection
+    command = ['make', '-f', 'makefile', 'all',
                'PETSC_DIR=%s' % app.petsc_dir,
                'PETSC_ARCH=arch-docs']
     print('============================================')
