@@ -2210,8 +2210,8 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   PetscCall(PetscLogGpuTimeEnd());
 finalizesym:
   c->free_a = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(c->nz, sizeof(PetscInt), (void **)&c->j));
-  PetscCall(PetscShmgetAllocateArray(m + 1, sizeof(PetscInt), (void **)&c->i));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), c->nz, sizeof(PetscInt), (void **)&c->j));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), m + 1, sizeof(PetscInt), (void **)&c->i));
   c->free_ij = PETSC_TRUE;
 
   PetscInt *d_i = c->i;
@@ -3438,8 +3438,8 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
     }
 
     c->free_a = PETSC_TRUE;
-    PetscCall(PetscShmgetAllocateArray(c->nz, sizeof(PetscInt), (void **)&c->j));
-    PetscCall(PetscShmgetAllocateArray(m + 1, sizeof(PetscInt), (void **)&c->i));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), c->nz, sizeof(PetscInt), (void **)&c->j));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), m + 1, sizeof(PetscInt), (void **)&c->i));
     c->free_ij = PETSC_TRUE;
     PetscCallCUDA(cudaMemcpy(c->i, Ccsr->row_offsets->data().get(), Ccsr->row_offsets->size() * sizeof(PetscInt), cudaMemcpyDeviceToHost));
     PetscCallCUDA(cudaMemcpy(c->j, Ccsr->column_indices->data().get(), Ccsr->column_indices->size() * sizeof(PetscInt), cudaMemcpyDeviceToHost));
