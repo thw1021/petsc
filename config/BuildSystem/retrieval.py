@@ -1,8 +1,10 @@
 import logger
 
 import os
+import re
 from urllib import parse as urlparse_local
 import config.base
+from config.utilities.parseVersion import parseVersion
 import socket
 import shutil
 
@@ -150,7 +152,13 @@ Unable to download package %s from: %s
       submodopt =''
       for itm in self.gitsubmodules:
         submodopt += ' --recurse-submodules='+itm
-      config.base.Configure.executeShellCommand('%s clone %s %s %s' % (self.sourceControl.git, submodopt, url, newgitrepo), log = self.log, timeout = 120.0)
+      # blobless clone - all commits and tags are present (the pinned gitcommit is generally not a branch tip)
+      # but file contents are downloaded only for the commit that gets checked out; partial clone was
+      # experimental before git 2.22
+      gitver = re.search(r'\d+(\.\d+)*', getattr(self.sourceControl, 'gitversion', ''))
+      filteropt = '--filter=blob:none' if gitver and parseVersion(gitver.group(0)) >= parseVersion('2.22') else ''
+      if not filteropt: self.logPrint('git version %s does not support blobless clones - using a full clone' % str(getattr(self.sourceControl, 'gitversion', 'unknown')))
+      config.base.Configure.executeShellCommand('%s clone %s %s %s %s' % (self.sourceControl.git, filteropt, submodopt, url, newgitrepo), log = self.log, timeout = 120.0)
     except  RuntimeError as e:
       self.logPrint('ERROR: '+str(e))
       failureMessage = self.getDownloadFailureMessage(self.packagename, url)
