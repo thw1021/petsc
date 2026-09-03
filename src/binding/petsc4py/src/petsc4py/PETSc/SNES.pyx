@@ -2227,11 +2227,21 @@ cdef class SNES(Object):
     def getVIInactiveSet(self) -> IS:
         """Return the index set for the inactive set.
 
-        Not collective.
+        Collective.
+
+        Notes
+        -----
+        The solver must be of type `Type.VINEWTONRSLS`. When called during
+        the reduced linear solve of a Newton iteration, for instance from a
+        `KSP` monitor, the returned index set is the one the linear system is
+        solved on. Otherwise, for instance from a `SNES` monitor or after
+        `solve` has returned, the inactive set is computed from the current
+        solution and residual. Previously, an `IS` with a null handle was
+        returned in the latter case.
 
         See Also
         --------
-        petsc.SNESVIGetInactiveSet
+        setVariableBounds, petsc.SNESVIGetInactiveSet
 
         """
         cdef IS inact = IS()

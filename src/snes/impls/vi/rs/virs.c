@@ -2,28 +2,75 @@
 #include <petsc/private/dmimpl.h>
 #include <petsc/private/vecimpl.h>
 
+/*
+  SNESVIComputeInactiveSet_Private - Computes the active set of the iterate `X` with residual `F` using `SNESVIGetActiveSetIS()` and the inactive set as its
+  complement, taking into account a redundancy check provided with `SNESVISetRedundancyCheck()`. `IS_act` may be `NULL` if the active set is not needed.
+*/
+static PetscErrorCode SNESVIComputeInactiveSet_Private(SNES snes, Vec X, Vec F, IS *IS_act, IS *IS_inact)
+{
+  SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS *)snes->data;
+  IS                 isact, isredact = NULL;
+
+  PetscFunctionBegin;
+  PetscCall(SNESVIGetActiveSetIS(snes, X, F, &isact));
+  if (vi->checkredundancy) PetscCall((*vi->checkredundancy)(snes, isact, &isredact, vi->ctxP));
+  if (isredact) {
+    PetscCall(ISSort(isredact));
+    PetscCall(ISComplement(isredact, X->map->rstart, X->map->rend, IS_inact));
+    PetscCall(ISDestroy(&isredact));
+  } else PetscCall(ISComplement(isact, X->map->rstart, X->map->rend, IS_inact));
+  if (IS_act) *IS_act = isact;
+  else PetscCall(ISDestroy(&isact));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
-  SNESVIGetInactiveSet - Gets the global indices for the inactive set variables (these correspond to the degrees of freedom the linear
-  system is solved on)
+  SNESVIGetInactiveSet - Gets the global indices of the inactive set variables of a `SNESVINEWTONRSLS`, that is, of the degrees of freedom that are
+  not held at a bound and on which the reduced linear system is solved
+
+  Collective
 
   Input Parameter:
-. snes - the `SNES` context
+. snes - the `SNES` context, must be of type `SNESVINEWTONRSLS`
 
   Output Parameter:
-. inact - inactive set index set
+. inact - the inactive set index set, owned by `snes`
 
   Level: advanced
 
-  Note:
+  Notes:
+  The iterate the inactive set refers to depends on when this routine is called\:
+  - During the reduced linear solve of a Newton iteration, for example from a `KSP` monitor, it returns the inactive set the linear system is solved on,
+    which was determined from the iterate at the beginning of that Newton iteration.
+  - Otherwise, for example from a `SNES` monitor, from a convergence test, or after `SNESSolve()` has returned, the inactive set is computed from the
+    current solution and residual of `snes` with the rule of `SNESVIGetActiveSetIS()`, taking into account a redundancy check provided with
+    `SNESVISetRedundancyCheck()`. The result is cached, so repeated calls return the same `IS` without recomputing it.
+
+  In both cases the returned `IS` is owned by `snes` and destroyed at the next Newton iteration, `SNESSolve()`, or `SNESReset()`. Do not destroy it, and
+  call `PetscObjectReference()` on it if it must outlive these events.
+
+  In earlier versions of PETSc, this routine returned `NULL` in the second case above, since the inactive set was destroyed right after each reduced
+  linear solve. Additionally, it could be called with any `SNES` type and then returned an invalid pointer. It now raises an error for `SNES` types other
+  than `SNESVINEWTONRSLS`.
+
   See `SNESVINEWTONRSLS` for a concise description of the active and inactive sets
 
-.seealso: [](ch_snes), `SNES`, `SNESVINEWTONRSLS`
+.seealso: [](ch_snes), `SNES`, `SNESVINEWTONRSLS`, `SNESVIGetActiveSetIS()`, `SNESVISetRedundancyCheck()`, `SNESVISetVariableBounds()`
 @*/
 PetscErrorCode SNESVIGetInactiveSet(SNES snes, IS *inact)
 {
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS *)snes->data;
+  PetscBool          isrsls;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscAssertPointer(inact, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESVINEWTONRSLS, &isrsls));
+  PetscCheck(isrsls, PetscObjectComm((PetscObject)snes), PETSC_ERR_SUP, "Only supported for SNES type %s", SNESVINEWTONRSLS);
+  if (!vi->IS_inact) {
+    PetscCheck(snes->vec_sol && snes->vec_func && snes->xl && snes->xu, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "Must set the variable bounds and call SNESSolve() before requesting the inactive set");
+    PetscCall(SNESVIComputeInactiveSet_Private(snes, snes->vec_sol, snes->vec_func, NULL, &vi->IS_inact));
+  }
   *inact = vi->IS_inact;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -333,6 +380,9 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
   PetscCall(SNESLineSearchSetVecs(snes->linesearch, X, NULL, NULL, NULL, NULL));
   PetscCall(SNESLineSearchSetUp(snes->linesearch));
 
+  /* an inactive set cached by SNESVIGetInactiveSet() after a previous solve refers to a different solution */
+  PetscCall(ISDestroy(&vi->IS_inact));
+
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
   snes->iter = 0;
   snes->norm = 0.0;
@@ -354,8 +404,7 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   for (i = 0; i < maxits; i++) {
-    IS         IS_act;    /* _act -> active set _inact -> inactive set */
-    IS         IS_redact; /* redundant active set */
+    IS         IS_act; /* _act -> active set _inact -> inactive set */
     VecScatter scat_act, scat_inact;
     PetscInt   nis_act, nis_inact;
     Vec        Y_act, Y_inact, F_inact;
@@ -367,25 +416,9 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
     PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
     SNESCheckJacobianDomainError(snes);
 
-    /* Create active and inactive index sets */
-
-    /*original
-    PetscCall(SNESVICreateIndexSets_RS(snes,X,F,&IS_act,&vi->IS_inact));
-     */
-    PetscCall(SNESVIGetActiveSetIS(snes, X, F, &IS_act));
-
-    if (vi->checkredundancy) {
-      PetscCall((*vi->checkredundancy)(snes, IS_act, &IS_redact, vi->ctxP));
-      if (IS_redact) {
-        PetscCall(ISSort(IS_redact));
-        PetscCall(ISComplement(IS_redact, X->map->rstart, X->map->rend, &vi->IS_inact));
-        PetscCall(ISDestroy(&IS_redact));
-      } else {
-        PetscCall(ISComplement(IS_act, X->map->rstart, X->map->rend, &vi->IS_inact));
-      }
-    } else {
-      PetscCall(ISComplement(IS_act, X->map->rstart, X->map->rend, &vi->IS_inact));
-    }
+    /* Create active and inactive index sets; an inactive set cached by SNESVIGetInactiveSet() at the end of the previous iteration is recomputed */
+    PetscCall(ISDestroy(&vi->IS_inact));
+    PetscCall(SNESVIComputeInactiveSet_Private(snes, X, F, &IS_act, &vi->IS_inact));
 
     /* Create inactive set submatrix */
     PetscCall(MatCreateSubMatrix(snes->jacobian, vi->IS_inact, vi->IS_inact, MAT_INITIAL_MATRIX, &jac_inact_inact));
@@ -513,6 +546,7 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
       PetscCall(ISDestroy(&vi->IS_inact_prev));
       PetscCall(ISDuplicate(vi->IS_inact, &vi->IS_inact_prev));
     }
+    /* destroyed so that SNESVIGetInactiveSet() recomputes the inactive set at the new iterate, for example, from a SNES monitor */
     PetscCall(ISDestroy(&vi->IS_inact));
     PetscCall(MatDestroy(&jac_inact_inact));
     if (snes->jacobian != snes->jacobian_pre) PetscCall(MatDestroy(&prejac_inact_inact));
@@ -726,6 +760,7 @@ static PetscErrorCode SNESReset_VINEWTONRSLS(SNES snes)
   PetscFunctionBegin;
   PetscCall(SNESReset_VI(snes));
   PetscCall(ISDestroy(&vi->IS_inact_prev));
+  PetscCall(ISDestroy(&vi->IS_inact));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
