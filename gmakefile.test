@@ -466,7 +466,7 @@ help-nontest:
 	-@echo "   "
 	-@echo "   petsc4pytest - run the entire petsc4py test suite"
 	-@echo "   alltests - run the entire PETSc test suite"
-	-@echo "   test - use \"make help-test\" for help on running the extensive tests"
+	-@echo "   test - use \"$(MAKE) -f gmakefile.test help-test\" for help on running the extensive tests"
 	-@echo
 	-@echo "Developer rules:"
 	-@echo "   docs - build all the PETSc documentation locally as a website"

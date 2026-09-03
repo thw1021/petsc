@@ -73,6 +73,7 @@ numfig = True
 extensions = [
     'sphinx_copybutton',
     'sphinx_design',
+    'sphinx.ext.extlinks',
     'sphinxcontrib.bibtex',
     'sphinxcontrib.katex',
     'sphinxcontrib.rsvgconverter',
@@ -87,6 +88,14 @@ copybutton_prompt_text = '$ '
 bibtex_bibfiles = ['petsc.bib']
 
 myst_enable_extensions = ["fieldlist", "dollarmath", "amsmath", "deflist", "colon_fence"]
+
+release_series = '.'.join([major_version, minor_version])
+extlinks = {
+    'release-snapshot': (
+        'https://web.cels.anl.gov/projects/petsc/download/release-snapshots/%s-' + release_series + '.tar.gz',
+        '%s-' + release_series + '.tar.gz',
+    ),
+}
 
 remove_from_toctrees = ['manualpages/*/[A-Z]*','changes/2*','changes/3*']
 
@@ -289,8 +298,8 @@ def build_petsc4py_docs(app):
     print("End clean petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
     print('============================================')
 
-    # petsc4py needs to be built to build petsc4py docs via introspection
-    command = ['make', '-f', 'makefile', 'libs',
+    # petsc4py needs petsc to build petsc4py docs via introspection
+    command = ['make', '-f', 'makefile', 'all',
                'PETSC_DIR=%s' % app.petsc_dir,
                'PETSC_ARCH=arch-docs']
     print('============================================')
