@@ -368,6 +368,7 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
   Mat         Amat, Pmat;
 
   PetscFunctionBegin;
+  PetscCheck(ksp->nwork == 5, PetscObjectComm((PetscObject)ksp), PETSC_ERR_COR, "Unexpected number of work vectors %" PetscInt_FMT " != 5", ksp->nwork);
   cg            = (KSP_CG *)ksp->data;
   eigs          = ksp->calc_sings;
   stored_max_it = ksp->max_it;

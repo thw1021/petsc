@@ -239,8 +239,7 @@ int main(int argc, char **args)
     PetscCall(MatDestroy(&A));
     PetscCall(CreateOperator(resize_uneven ? n + 1 : 2 * n, nullspace, transpose, &A, &nsp));
     if (nsp && !nullspace_attach) PetscCall(MatSetNullSpace(A, NULL)); /* the second operator is built the same way, so it follows the same choice */
-    PetscCall(KSPGetPC(ksp, &pc));
-    PetscCall(PCReset(pc)); /* PCSetOperators() does not accept an operator of a different size otherwise */
+    PetscCall(KSPReset(ksp));
     PetscCall(KSPSetOperators(ksp, A, A));
     if (shell) { /* the context of the PCSHELL is the reciprocal of the diagonal of the operator, so it must be rebuilt as well */
       PetscCall(VecDestroy(&dinv));
