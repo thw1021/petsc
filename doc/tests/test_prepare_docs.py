@@ -20,6 +20,7 @@ class PrepareDocsTest(unittest.TestCase):
     self.doc.mkdir()
     (self.root / 'src').mkdir()
     (self.root / 'include').mkdir()
+    (self.root / 'config' / 'examples').mkdir(parents=True)
     self.build = self.root / 'arch-docs' / 'doc'
     self.source = self.build / 'source' / 'doc'
 
@@ -31,11 +32,13 @@ class PrepareDocsTest(unittest.TestCase):
   def test_copies_sources_without_modifying_originals(self):
     (self.doc / 'index.md').write_text('# Original\n')
     (self.root / 'include' / 'example.h').write_text('/* include */\n')
+    (self.root / 'config' / 'examples' / 'arch-example.py').write_text('# configuration example\n')
     self.prepare(['doc/index.md'])
 
     self.assertEqual((self.source / 'index.md').read_text(), '# Original\n')
     self.assertFalse((self.source / 'index.md').is_symlink())
     self.assertEqual((self.source / '..' / 'include' / 'example.h').read_text(), '/* include */\n')
+    self.assertEqual((self.source / '..' / 'config' / 'examples' / 'arch-example.py').read_text(), '# configuration example\n')
     (self.source / 'index.md').write_text('# Generated\n')
     self.assertEqual((self.doc / 'index.md').read_text(), '# Original\n')
     self.assertEqual((self.source / 'images').resolve(), self.build / 'images')
@@ -106,15 +109,50 @@ class PrepareDocsTest(unittest.TestCase):
     )
     self.assertIn(str(self.root / 'public'), result.stdout)
 
+  def test_top_level_docs_do_not_require_configuration(self):
+    repository = Path(prepare_docs.__file__).resolve().parent.parent
+    for name in ['GNUmakefile', 'petscdir.mk', 'makefile', 'gmakefile']:
+      shutil.copy2(repository / name, self.root / name)
+    (self.doc / 'makefile').write_text('.PHONY: docs docspdf\ndocs docspdf:\n\t@echo DOCS_TARGET=$@\n')
+    variables = self.root / 'lib' / 'petsc' / 'conf' / 'petscvariables'
+    variables.parent.mkdir(parents=True)
+    environment = {key: value for key, value in os.environ.items() if key not in ['MAKEFLAGS', 'MFLAGS', 'MAKELEVEL', 'PETSC_DIR', 'PETSC_ARCH']}
+    make_commands = sorted({command for name in ['make', 'gmake'] if (command := shutil.which(name))})
+    for stale_configuration in [False, True]:
+      if stale_configuration:
+        variables.write_text(
+          'PETSC_ARCH=arch-docs\n'
+          'include $(PETSC_DIR)/$(PETSC_ARCH)/lib/petsc/conf/petscvariables\n'
+        )
+      for make in make_commands:
+        for targets in [[], ['all'], ['docs'], ['docspdf'], ['docs', 'docspdf'], ['docs', 'all']]:
+          with self.subTest(make=make, stale_configuration=stale_configuration, targets=targets):
+            result = subprocess.run(
+              [make, '--no-print-directory'] + targets,
+              cwd=self.root, env=environment, capture_output=True, text=True, timeout=10,
+            )
+            if targets and 'all' not in targets:
+              self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+              for target in targets:
+                self.assertIn('DOCS_TARGET=' + target, result.stdout)
+            else:
+              self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+    self.assertFalse((self.root / 'arch-docs').exists())
+
   @unittest.skipUnless(importlib.util.find_spec('sphinx') and importlib.util.find_spec('myst_parser'), 'Sphinx and MyST required')
-  def test_sphinx_resolves_source_includes_and_generated_pages(self):
+  def test_sphinx_resolves_source_includes_downloads_and_generated_pages(self):
     (self.doc / 'conf.py').write_text("extensions = ['myst_parser']\nmaster_doc = 'index'\n")
     (self.doc / 'index.md').write_text(
       '# Documentation\n\n```{literalinclude} /../include/example.h\n```\n\n'
-      '```{toctree}\nmanualpages/Sys/PetscExample\n```\n'
+      '```{toctree}\ninstall/install\nmanualpages/Sys/PetscExample\n```\n'
+    )
+    (self.doc / 'install').mkdir()
+    (self.doc / 'install' / 'install.md').write_text(
+      '# Installation\n\n{download}`Configuration example <../../config/examples/arch-example.py>`\n'
     )
     (self.root / 'include' / 'example.h').write_text('/* PETSC_ARCH_DOC_INCLUDE */\n')
-    self.prepare(['doc/conf.py', 'doc/index.md'])
+    (self.root / 'config' / 'examples' / 'arch-example.py').write_text('# configuration example\n')
+    self.prepare(['doc/conf.py', 'doc/index.md', 'doc/install/install.md'])
     manualpage = self.source / 'manualpages' / 'Sys' / 'PetscExample.md'
     manualpage.parent.mkdir(parents=True)
     manualpage.write_text('# PetscExample\n\nGenerated manual page.\n')
@@ -126,6 +164,9 @@ class PrepareDocsTest(unittest.TestCase):
     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     self.assertIn('PETSC_ARCH_DOC_INCLUDE', (output / 'index.html').read_text())
     self.assertTrue((output / 'manualpages' / 'Sys' / 'PetscExample.html').is_file())
+    downloads = list((output / '_downloads').rglob('arch-example.py'))
+    self.assertEqual(len(downloads), 1)
+    self.assertEqual(downloads[0].read_text(), '# configuration example\n')
     self.assertFalse((self.doc / 'manualpages').exists())
 
 
