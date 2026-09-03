@@ -23,7 +23,7 @@
 #define SETERRQ8(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
 #define SETERRQ9(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
 
-/*MC
+/*M
    SETERRQ - Macro to be called when an error has been detected,
 
    Synopsis:
@@ -72,7 +72,7 @@ M*/
 PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CLASS;
 PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CODE;
 
-/*MC
+/*M
    SETERRMPI - Macro to be called when an error has been detected within an MPI callback function
 
    No Fortran Support
@@ -98,7 +98,7 @@ PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CODE;
 M*/
 #define SETERRMPI(comm, ierr, ...) return ((void)PetscError(comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ierr, PETSC_ERROR_INITIAL, __VA_ARGS__), PETSC_MPI_ERROR_CODE)
 
-/*MC
+/*M
    SETERRA - Fortran-only macro that can be called when an error has been detected from the main program
 
    Synopsis:
@@ -123,7 +123,7 @@ M*/
 .seealso: `SETERRQ()`, `SETERRABORT()`, `PetscCall()`, `CHKERRA()`, `PetscCallAbort()`, `PetscErrorCode`
 M*/
 
-/*MC
+/*M
    SETERRABORT - Macro that can be called when an error has been detected,
 
    Synopsis:
@@ -158,7 +158,7 @@ M*/
     (void)MPI_Abort(comm, ierr); \
   } while (0)
 
-/*MC
+/*M
   PetscCheck - Checks that a particular condition is true; if not true, then returns the provided error code
 
   Synopsis:
@@ -193,7 +193,7 @@ M*/
     if (PetscUnlikely(!(cond))) SETERRQ(comm, ierr, __VA_ARGS__); \
   } while (0)
 
-/*MC
+/*M
   PetscCheckReturnMPI - Checks that a particular condition is true; if not true, then returns an MPI error code.
   To check for errors in PETSc-provided MPI callbacks.
 
@@ -221,7 +221,7 @@ M*/
     if (PetscUnlikely(!(cond))) SETERRMPI(comm, ierr, __VA_ARGS__); \
   } while (0)
 
-/*MC
+/*M
   PetscCheckAbort - Check that a particular condition is true, otherwise prints error and aborts
 
   Synopsis:
@@ -251,7 +251,7 @@ M*/
     if (PetscUnlikely(!(cond))) SETERRABORT(comm, ierr, __VA_ARGS__); \
   } while (0)
 
-/*MC
+/*M
   PetscAssert - Assert that a particular condition is true
 
   Synopsis:
@@ -283,7 +283,7 @@ M*/
   #define PetscAssert(cond, ...) PetscAssume(cond)
 #endif
 
-/*MC
+/*M
   PetscAssertAbort - Assert that a particular condition is true, otherwise prints error and aborts
 
   Synopsis:
@@ -311,7 +311,7 @@ M*/
   #define PetscAssertAbort(cond, comm, ierr, ...) PetscAssume(cond)
 #endif
 
-/*MC
+/*M
   PetscCall - Calls a PETSc function and then checks the resulting error code, if it is
   non-zero it calls the error handler and returns from the current function with the error
   code.
@@ -383,7 +383,7 @@ M*/
           `CHKERRMPI()`, `PetscCallBack()`, `PetscCallAbort()`, `PetscCallVoid()`, `PetscCallNull()`
 M*/
 
-/*MC
+/*M
   PetscCallNull - Calls a PETSc function and then checks the resulting error code, if it is
   non-zero it calls the error handler and returns a `NULL`
 
@@ -403,7 +403,7 @@ M*/
           `CHKERRMPI()`, `PetscCallBack()`, `PetscCallAbort()`, `PetscCallVoid()`, `PetscCall()`
 M*/
 
-/*MC
+/*M
    PetscCallA - Fortran-only macro that should be used in the main program and subroutines that do not have `ierr` as the final return parameter, to call PETSc functions instead of using
    `PetscCall()` which should be used in other Fortran subroutines
 
@@ -427,7 +427,7 @@ M*/
 .seealso: `SETERRQ()`, `SETERRA()`, `SETERRABORT()`, `PetscCall()`, `CHKERRA()`, `PetscCallAbort()`
 M*/
 
-/*MC
+/*M
   PetscCallBack - Calls a user provided PETSc callback function and then checks the resulting error code, if it is non-zero it calls the error
   handler and returns from the current function with the error code.
 
@@ -464,7 +464,7 @@ M*/
           `PetscPushErrorHandler()`, `PetscError()`, `CHKMEMQ`, `CHKERRA()`, `CHKERRMPI()`, `PetscCall()`,  `PetscUseTypeMethod()`, `PetscTryTypeMethod()`
 M*/
 
-/*MC
+/*M
   PetscCallVoid - Like `PetscCall()` but for use in functions that return `void`
 
   Synopsis:
@@ -516,7 +516,7 @@ M*/
 .seealso: `PetscCall()`, `PetscErrorCode`, `PetscCallAbort()`, `PetscCallNull()`
 M*/
 
-/*MC
+/*M
   PetscCallReturnMPI - Calls a PETSc function and then checks the resulting error code, if it is
   non-zero it calls the error handler and returns from the current function with an MPI error code.
   To check for errors in PETSc provided MPI callbacks.
@@ -599,7 +599,7 @@ void PetscCallReturnMPI(PetscErrorCode);
     } while (0)
 #endif
 
-/*MC
+/*M
   CHKERRQ - Checks error code returned from PETSc function
 
   Synopsis:
@@ -623,7 +623,7 @@ M*/
 
 PETSC_EXTERN void PetscMPIErrorString(PetscMPIInt, size_t, char *);
 
-/*MC
+/*M
   PetscCallMPI - Checks error code returned from MPI calls, if non-zero it calls the error
   handler and then returns a `PetscErrorCode`
 
@@ -677,7 +677,7 @@ PETSC_EXTERN void PetscMPIErrorString(PetscMPIInt, size_t, char *);
           `PetscError()`, `CHKMEMQ`, `PetscCallMPINull()`
 M*/
 
-/*MC
+/*M
   PetscCallMPIReturnMPI - Checks error code returned from MPI calls, if non-zero it calls the error
   handler and then returns an MPI error code. To check for errors in PETSc-provided MPI callbacks.
 
@@ -697,7 +697,7 @@ M*/
           `PetscError()`, `CHKMEMQ`, `PetscCallMPINull()`
 M*/
 
-/*MC
+/*M
   PetscCallMPINull - Checks error code returned from MPI calls, if non-zero it calls the error
   handler and then returns a `NULL`
 
@@ -732,7 +732,7 @@ M*/
           `PetscError()`, `CHKMEMQ`, `PetscCallMPI()`
 M*/
 
-/*MC
+/*M
   PetscCallMPIAbort - Like `PetscCallMPI()` but calls `MPI_Abort()` on error
 
   Synopsis:
@@ -788,7 +788,7 @@ void PetscCallMPINull(PetscMPIInt);
   #define PetscCallMPINull(...)        PetscCallMPI_Private(PetscStackPopNoCheck(PETSC_FUNCTION_NAME), SETERRQNULL, PETSC_COMM_SELF, __VA_ARGS__)
 #endif
 
-/*MC
+/*M
   CHKERRMPI - Checks the error code returned from MPI calls, if different from `MPI_SUCCESS` it calls the error handler and then returns
 
   Synopsis:
@@ -809,7 +809,7 @@ void PetscCallMPINull(PetscMPIInt);
 M*/
 #define CHKERRMPI(...) PetscCallMPI(__VA_ARGS__)
 
-/*MC
+/*M
   PetscCallAbort - Checks error code returned from PETSc function, if non-zero it aborts immediately by calling `MPI_Abort()`
 
   Synopsis:
@@ -899,7 +899,7 @@ void PetscCallContinue(PetscErrorCode);
     } while (0)
 #endif
 
-/*MC
+/*M
   CHKERRABORT - Checks error code returned from PETSc function. If non-zero it aborts immediately.
 
   Synopsis:
@@ -922,7 +922,7 @@ M*/
 #define CHKERRABORT(comm, ...) PetscCallAbort(comm, __VA_ARGS__)
 #define CHKERRCONTINUE(...)    PetscCallContinue(__VA_ARGS__)
 
-/*MC
+/*M
    CHKERRA - Fortran-only replacement for use of `CHKERRQ()` in the main program, which aborts immediately
 
    Synopsis:
@@ -967,7 +967,7 @@ void PETSCABORTWITHERR_Private(MPI_Comm, PetscErrorCode);
     } while (0)
 #endif
 
-/*MC
+/*M
    PETSCABORT - Call `MPI_Abort()` with an informative error code
 
    Synopsis:
@@ -1015,7 +1015,7 @@ void PETSCABORT(MPI_Comm, PetscErrorCode);
 #endif
 
 #if PetscDefined(CLANGUAGE_CXX)
-  /*MC
+  /*M
   PetscCallThrow - Checks error code, if non-zero it calls the C++ error handler which throws
   an exception
 
@@ -1047,7 +1047,7 @@ M*/
       if (PetscUnlikely(ierr_petsc_call_throw_ != PETSC_SUCCESS)) PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ierr_petsc_call_throw_, PETSC_ERROR_IN_CXX, PETSC_NULLPTR); \
     } while (0)
 
-  /*MC
+  /*M
   CHKERRXX - Checks error code, if non-zero it calls the C++ error handler which throws an exception
 
   Synopsis:
@@ -1079,7 +1079,7 @@ M*/
     } \
   } while (0)
 
-/*MC
+/*M
   PetscCallCXX - Checks C++ function calls and if they throw an exception, catch it and then
   return a PETSc error code
 
@@ -1149,7 +1149,7 @@ M*/
 M*/
 #define PetscCallCXX(...) PetscCallCXX_Private(SETERRQ, PETSC_COMM_SELF, __VA_ARGS__)
 
-/*MC
+/*M
   PetscCallCXXAbort - Like `PetscCallCXX()` but calls `MPI_Abort()` instead of returning an
   error-code
 
@@ -1218,7 +1218,7 @@ M*/
 M*/
 #define PetscCallCXXAbort(comm, ...) PetscCallCXX_Private(SETERRABORT, comm, __VA_ARGS__)
 
-/*MC
+/*M
   CHKERRCXX - Checks C++ function calls and if they throw an exception, catch it and then
   return a PETSc error code
 
@@ -1240,7 +1240,7 @@ M*/
 M*/
 #define CHKERRCXX(...) PetscCallCXX(__VA_ARGS__)
 
-/*MC
+/*M
    CHKMEMQ - Checks the memory for corruption, calls error handler if any is detected
 
    Synopsis:
@@ -1322,12 +1322,12 @@ PETSC_DEPRECATED_FUNCTION(3, 13, 0, "PetscSignalSegvCheckPointerOrMpi()", ) stat
   PetscSignalSegvCheckPointerOrMpi();
 }
 
-/*MC
+/*M
     PetscErrorPrintf - Prints error messages.
 
    Synopsis:
     #include <petscsys.h>
-     PetscErrorCode (*PetscErrorPrintf)(const char format[], ...);
+    PetscErrorCode (*PetscErrorPrintf)(const char format[], ...);
 
     Not Collective; No Fortran Support
 
@@ -1348,15 +1348,30 @@ PETSC_DEPRECATED_FUNCTION(3, 13, 0, "PetscSignalSegvCheckPointerOrMpi()", ) stat
 .ve
    Use
 .vb
-     `PETSC_STDERR` = FILE* obtained from a file open etc. to have stderr printed to the file.
-     `PETSC_STDOUT` = FILE* obtained from a file open etc. to have stdout printed to the file.
+     PETSC_STDERR = FILE* obtained from a file open etc. to have stderr printed to the file.
+     PETSC_STDOUT = FILE* obtained from a file open etc. to have stdout printed to the file.
 .ve
+
+   You can change how help messages are printed by replacing the function pointer with a function that does not simply write to `stdout`.
+   To use, write your own function, for example,
+.vb
+   PetscErrorCode mypetscerrorprintf(MPI_Comm comm,const char format[],....)
+   {
+     PetscFunctionReturn(PETSC_SUCCESS);
+   }
+.ve
+then do the assignment
+.vb
+  PetscErrorPrintf = mypetscerrorprintf;
+.ve
+
    Use
 .vb
       `PetscPushErrorHandler()` to provide your own error handler that determines what kind of messages to print
 .ve
 
-.seealso: `PetscFPrintf()`, `PetscSynchronizedPrintf()`, `PetscHelpPrintf()`, `PetscPrintf()`, `PetscPushErrorHandler()`, `PetscVFPrintf()`, `PetscHelpPrintf()`
+.seealso: `PetscFPrintf()`, `PetscSynchronizedPrintf()`, `PetscHelpPrintf()`, `PetscPrintf()`, `PetscPushErrorHandler()`, `PetscVFPrintf()`,
+          `PetscErrorPrintfNone()`, `PetscErrorPrintfDefault()`
 M*/
 PETSC_EXTERN PetscErrorCode (*PetscErrorPrintf)(const char[], ...) PETSC_ATTRIBUTE_FORMAT(1, 2);
 
@@ -1490,7 +1505,7 @@ PETSC_EXTERN PetscStack petscstack;
       stack__.hotdepth = PetscMax(stack__.hotdepth - 1, 0); \
     } while (0)
 
-  /*MC
+  /*M
    PetscStackPushNoCheck - Pushes a new function name and line number onto the PETSc default stack that tracks where the running program is
    currently in the source code.
 
@@ -1529,7 +1544,7 @@ M*/
       PetscStackSAWsGrantAccess(); \
     } while (0)
 
-  /*MC
+  /*M
    PetscStackUpdateLine - in a function that has a `PetscFunctionBegin` or `PetscFunctionBeginUser` updates the stack line number to the
    current line number.
 
@@ -1559,7 +1574,7 @@ M*/
       if (petscstack.currentsize > 0 && petscstack.currentsize < PETSCSTACKSIZE && petscstack.function[petscstack.currentsize - 1] == PETSC_FUNCTION_NAME) petscstack.line[petscstack.currentsize - 1] = __LINE__; \
     } while (0)
 
-  /*MC
+  /*M
    PetscStackPushExternal - Pushes a new function name onto the PETSc default stack that tracks where the running program is
    currently in the source code. Does not include the filename or line number since this is called by the calling routine
    for non-PETSc or user functions.
@@ -1597,7 +1612,7 @@ M*/
       PetscStackPushNoCheck(funct, 0, PETSC_TRUE); \
     } while (0)
 
-  /*MC
+  /*M
    PetscStackPopNoCheck - Pops a function name from the PETSc default stack that tracks where the running program is
    currently in the source code.
 
@@ -1646,7 +1661,7 @@ M*/
       PetscStackSAWsGrantAccess(); \
     } while (0)
 
-  /*MC
+  /*M
    PetscFunctionBegin - First executable line of each PETSc function,  used for error handling. Final
    line of PETSc functions should be `PetscFunctionReturn`(PETSC_SUCCESS);
 
@@ -1677,7 +1692,7 @@ M*/
       PetscRegister__FUNCT__(); \
     } while (0)
 
-  /*MC
+  /*M
    PetscFunctionBeginHot - Substitute for `PetscFunctionBegin` to be used in functions that are called in
    performance-critical circumstances.  Use of this function allows for lighter profiling by default.
 
@@ -1705,7 +1720,7 @@ M*/
       PetscRegister__FUNCT__(); \
     } while (0)
 
-  /*MC
+  /*M
    PetscFunctionBeginUser - First executable line of user provided routines
 
    Synopsis:
@@ -1739,7 +1754,7 @@ M*/
       PetscRegister__FUNCT__(); \
     } while (0)
 
-  /*MC
+  /*M
    PetscStackPush - Pushes a new function name and line number onto the PETSc default stack that tracks where the running program is
    currently in the source code and verifies the memory is not corrupted.
 
@@ -1770,7 +1785,7 @@ M*/
       CHKMEMQ; \
     } while (0)
 
-  /*MC
+  /*M
    PetscStackPop - Pops a function name from the PETSc default stack that tracks where the running program is
    currently in the source code and verifies the memory is not corrupted.
 
@@ -1797,7 +1812,7 @@ M*/
       PetscStackPopNoCheck(PETSC_FUNCTION_NAME); \
     } while (0)
 
-  /*MC
+  /*M
    PetscFunctionReturn - Last executable line of each PETSc function used for error
    handling. Replaces `return()`.
 
@@ -1858,7 +1873,7 @@ M*/
       return __VA_ARGS__; \
     } while (0)
 
-  /*MC
+  /*M
   PetscFunctionReturnVoid - Like `PetscFunctionReturn()` but returns `void`
 
   Synopsis:
@@ -1913,7 +1928,7 @@ void PetscCallExternal(F, Args...);
 template <typename F, typename... Args>
 void PetscCallExternalAbort(F, Args...);
 #else
-/*MC
+/*M
     PetscCallExternalVoid - Calls an external library routine or user function after pushing the name of the routine on the stack.
 
    Input Parameters:
@@ -1942,7 +1957,7 @@ void PetscCallExternalAbort(F, Args...);
       PetscStackPop; \
     } while (0)
 
-  /*MC
+  /*M
     PetscCallExternal - Calls an external library routine that returns an error code after pushing the name of the routine on the stack.
 
    Input Parameters:
@@ -1971,7 +1986,7 @@ M*/
       PetscCheck(ierr_petsc_call_external_ == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
     } while (0)
 
-  /*MC
+  /*M
     PetscCallExternalAbort - Calls an external library routine that returns an error code after pushing the name of the routine on the stack. If the external library function return code indicates an error, this prints the error and aborts
 
    Input Parameters:
