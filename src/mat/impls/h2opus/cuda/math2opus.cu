@@ -1590,7 +1590,7 @@ PetscErrorCode MatH2OpusSetSamplingMat(Mat A, Mat B, PetscInt bs, PetscReal tol)
 . spacedim  - dimension of the space coordinates
 . coords    - coordinates of the points
 . cdist     - whether or not coordinates are distributed
-. kernel    - computational kernel (or `NULL`), see `MatH2OpusKernelFn()` for the calling sequence
+. kernel    - computational kernel (or `NULL`), see `MatH2OpusKernelFn` for the calling sequence
 . kernelctx - kernel context
 . eta       - admissibility condition tolerance
 . leafsize  - leaf size in cluster tree
