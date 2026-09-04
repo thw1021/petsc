@@ -52,7 +52,7 @@ PetscErrorCode PetscShmgetAddressesFinalize(void)
   PetscShmgetAllocation next = allocations, previous = NULL;
 
   while (next) {
-    PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory key %d shmid %d %s, see PCMPIServerBegin()", next->shmkey, next->shmid, strerror(errno));
+    PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory key %d shmid %d %s, see PetscShmgetAllocateArray()", next->shmkey, next->shmid, strerror(errno));
     previous = next;
     next     = next->next;
     PetscCall(PetscFree(previous));
@@ -134,7 +134,7 @@ PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **b
         }
         allocation = allocation->next;
       }
-      PetscCheck(allocation, comm, PETSC_ERR_PLIB, "Unable to locate PCMPI allocated shared address %p, see PCMPIServerBegin()", baseaddres[i]);
+      PetscCheck(allocation, comm, PETSC_ERR_PLIB, "Unable to locate PCMPI allocated shared address %p, see PetscShmgetAllocateArray()", baseaddres[i]);
     }
     PetscCall(PetscInfo(NULL, "Mapping PCMPI Server array %p\n", addres[0]));
     PetscCallMPI(MPI_Bcast(&bcastinfo, 6, MPIU_SIZE_T, 0, comm));
@@ -163,9 +163,9 @@ PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **b
         allocation->shmkey = shmkey;
         allocation->sz     = sz;
         allocation->shmid  = shmget(allocation->shmkey, allocation->sz, 0666);
-        PetscCheck(allocation->shmid != -1, PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map PCMPI shared memory key %d of size %d, see PCMPIServerBegin()", allocation->shmkey, (int)allocation->sz);
+        PetscCheck(allocation->shmid != -1, PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map PCMPI shared memory key %d of size %d, see PetscShmgetAllocateArray()", allocation->shmkey, (int)allocation->sz);
         allocation->addr = shmat(allocation->shmid, NULL, 0);
-        PetscCheck(allocation->addr, PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map PCMPI shared memory key %d, see PCMPIServerBegin()", allocation->shmkey);
+        PetscCheck(allocation->addr, PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map PCMPI shared memory key %d, see PetscShmgetAllocateArray()", allocation->shmkey);
         addres[i] = allocation->addr;
         if (previous) previous->next = allocation;
         else allocations = allocation;
@@ -183,12 +183,14 @@ PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **b
 
   Input Parameters:
 + n      - the number of addresses, each obtained originally on MPI `PetscGlobalRank` zero by `PetscShmgetAllocateArray()`
-- addres - the addresses
+- addres - the addresses, each location is zeroed
 
   Level: developer
 
   Note:
   This routine does nothing if `PETSC_HAVE_SHMGET` is not defined
+
+  `NULL` addresses are ignored
 
 .seealso: `PetscShmgetDeallocateArray()`, `PetscShmgetAllocateArray()`, `PetscShmgetMapAddresses()`
 @*/
@@ -201,24 +203,52 @@ PetscErrorCode PetscShmgetUnmapAddresses(PetscInt n, void **addres) PeNS
       PetscShmgetAllocation next = allocations, previous = NULL;
       PetscBool             found = PETSC_FALSE;
 
+      if (addres[i] == NULL) continue;
       while (next) {
         if (next->addr == addres[i]) {
-          PetscCheck(!shmdt(next->addr), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to shmdt() location %s, see PCMPIServerBegin()", strerror(errno));
+          PetscCheck(!shmdt(next->addr), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to shmdt() location %s, see PetscShmgetAllocateArray()", strerror(errno));
           if (previous) previous->next = next->next;
           else allocations = next->next;
           PetscCall(PetscFree(next));
-          found = PETSC_TRUE;
+          addres[i] = NULL;
+          found     = PETSC_TRUE;
           break;
         }
         previous = next;
         next     = next->next;
       }
-      PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to find address %p to unmap, see PCMPIServerBegin()", addres[i]);
+      PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to find address %p to unmap, see PetscShmgetAllocateArray()", addres[i]);
     }
   }
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+#if PetscDefined(HAVE_SHMGET)
+/*@
+  PCMPIActive - determines if the MPI linear solver server is running with Unix shared memory and the calling code is not nested inside a server solve,
+  that is, if `Mat` and `Vec` array memory should be allocated in shared memory with `PetscShmgetAllocateArray()`
+
+  Not Collective
+
+  Level: developer
+
+  Notes:
+  Returns `PETSC_TRUE` when `PCMPIServerActive` and `PCMPIServerUseShmget` are `PETSC_TRUE` and `PCMPIServerInSolve` is `PETSC_FALSE`.
+  `PCMPIServerInSolve` indicates that the solve is nested inside a MPI linear solver server solve and hence should not allocate the vector
+  and matrix memory in shared memory.
+
+  When `PETSC_HAVE_SHMGET` is not defined this is a macro that evaluates to `PETSC_FALSE`.
+
+  Typically used as the first argument to `PetscShmgetAllocateArray()`.
+
+.seealso: [](sec_pcmpi), `PCMPI`, `PCMPIServerBegin()`, `PetscShmgetAllocateArray()`, `PetscShmgetDeallocateArray()`, `PCMPIServerActive`, `PCMPIServerInSolve`, `PCMPIServerUseShmget`
+@*/
+PetscBool PCMPIActive(void)
+{
+  return (PetscBool)(PCMPIServerActive && PCMPIServerUseShmget && !PCMPIServerInSolve);
+}
+#endif
 
 /*@
   PetscShmgetAllocateArray - allocates shared memory that will later be made accessible by all MPI processes in the server
@@ -226,16 +256,22 @@ PetscErrorCode PetscShmgetUnmapAddresses(PetscInt n, void **addres) PeNS
   Not Collective, only called on the first MPI process
 
   Input Parameters:
-+ sz  - the number of elements in the array
-- asz - the size of an entry in the array, for example `sizeof(PetscScalar)`
++ shared - `PETSC_TRUE` to allocate the array in Unix shared memory, `PETSC_FALSE` to allocate it with `PetscMalloc()`
+. sz     - the number of elements in the array
+- asz    - the size of an entry in the array, for example `sizeof(PetscScalar)`
 
-  Output Parameters:
+  Output Parameter:
 . addr - the address of the array
 
   Level: developer
 
   Notes:
-  Uses `PetscMalloc()` if `PETSC_HAVE_SHMGET` is not defined or the MPI linear solver server is not running
+  Pass `PCMPIActive()` for `shared` to allocate in shared memory exactly when the MPI linear solver server is running with shared memory and
+  the calling code is not nested inside a server solve.
+
+  It is an error to pass `shared` as `PETSC_TRUE` if `PETSC_HAVE_SHMGET` is not defined.
+
+  The array must be freed with `PetscShmgetDeallocateArray()`, which determines how the array was allocated.
 
   Sometimes when a program crashes, shared memory IDs may remain, making it impossible to rerun the program.
   Use
@@ -283,20 +319,17 @@ PetscErrorCode PetscShmgetUnmapAddresses(PetscInt n, void **addres) PeNS
   to confirm that the shared memory limits you have requested are available.
 
   Fortran Note:
-  The calling sequence is `PetscShmgetAllocateArray[Scalar,Int](PetscInt start, PetscInt len, Petsc[Scalar,Int], pointer :: d1(:), ierr)`
+  The calling sequence is `PetscShmgetAllocateArray[Scalar,Int](PetscBool shared, PetscInt start, PetscInt len, Petsc[Scalar,Int], pointer :: d1(:), ierr)`
 
-  Developer Note:
-  More specifically this uses `PetscMalloc()` if `!PCMPIServerUseShmget` || `!PCMPIServerActive` || `PCMPIServerInSolve`
-  where `PCMPIServerInSolve` indicates that the solve is nested inside a MPI linear solver server solve and hence should
-  not allocate the vector and matrix memory in shared memory.
-
-.seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PetscShmgetDeallocateArray()`
+.seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PetscShmgetDeallocateArray()`, `PCMPIActive()`
 @*/
-PetscErrorCode PetscShmgetAllocateArray(size_t sz, size_t asz, void *addr[])
+PetscErrorCode PetscShmgetAllocateArray(PetscBool shared, size_t sz, size_t asz, void *addr[])
 {
   PetscFunctionBegin;
-  if (!PCMPIServerUseShmget || !PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscMalloc(sz * asz, addr));
-#if PetscDefined(HAVE_SHMGET)
+  if (!shared) PetscCall(PetscMalloc(sz * asz, addr));
+#if !PetscDefined(HAVE_SHMGET)
+  else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot allocate shared memory, PETSc was configured without shmget()");
+#else
   else {
     PetscShmgetAllocation allocation;
     static int            shmkeys = 10;
@@ -309,7 +342,7 @@ PetscErrorCode PetscShmgetAllocateArray(size_t sz, size_t asz, void *addr[])
     allocation->addr = shmat(allocation->shmid, NULL, 0);
     PetscCheck(allocation->addr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Unable to shmat() of shmid %d %s", allocation->shmid, strerror(errno));
   #if PETSC_SIZEOF_VOID_P == 8
-    PetscCheck((uint64_t)allocation->addr != 0xffffffffffffffff, PETSC_COMM_SELF, PETSC_ERR_LIB, "shmat() of shmid %d returned 0xffffffffffffffff %s, see PCMPIServerBegin()", allocation->shmid, strerror(errno));
+    PetscCheck((uint64_t)allocation->addr != 0xffffffffffffffff, PETSC_COMM_SELF, PETSC_ERR_LIB, "shmat() of shmid %d returned 0xffffffffffffffff %s, see PetscShmgetAllocateArray()", allocation->shmid, strerror(errno));
   #endif
 
     if (!allocations) allocations = allocation;
@@ -336,27 +369,26 @@ PetscErrorCode PetscShmgetAllocateArray(size_t sz, size_t asz, void *addr[])
   Level: developer
 
   Note:
-  Uses `PetscFree()` if `PETSC_HAVE_SHMGET` is not defined or the MPI linear solver server is not running
+  Determines whether the array was allocated in shared memory or with `PetscMalloc()` by `PetscShmgetAllocateArray()` and frees it accordingly
 
   Fortran Note:
   The calling sequence is `PetscShmgetDeallocateArray[Scalar,Int](Petsc[Scalar,Int], pointer :: d1(:), ierr)`
 
-.seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PetscShmgetAllocateArray()`
+.seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PetscShmgetAllocateArray()`, `PCMPIActive()`
 @*/
 PetscErrorCode PetscShmgetDeallocateArray(void *addr[])
 {
   PetscFunctionBegin;
   if (!*addr) PetscFunctionReturn(PETSC_SUCCESS);
-  if (!PCMPIServerUseShmget || !PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscFree(*addr));
 #if PetscDefined(HAVE_SHMGET)
-  else {
+  {
     PetscShmgetAllocation next = allocations, previous = NULL;
 
     while (next) {
       if (next->addr == *addr) {
         PetscCall(PetscInfo(NULL, "Deallocating PCMPI Server array %p shmkey %d shmid %d size %d\n", *addr, next->shmkey, next->shmid, (int)next->sz));
-        PetscCheck(!shmdt(next->addr), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to shmdt() location %s, see PCMPIServerBegin()", strerror(errno));
-        PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory addr %p key %d shmid %d %s, see PCMPIServerBegin()", *addr, next->shmkey, next->shmid, strerror(errno));
+        PetscCheck(!shmdt(next->addr), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to shmdt() location %s, see PetscShmgetAllocateArray()", strerror(errno));
+        PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory addr %p key %d shmid %d %s, see PetscShmgetAllocateArray()", *addr, next->shmkey, next->shmid, strerror(errno));
         *addr = NULL;
         if (previous) previous->next = next->next;
         else allocations = next->next;
@@ -366,9 +398,9 @@ PetscErrorCode PetscShmgetDeallocateArray(void *addr[])
       previous = next;
       next     = next->next;
     }
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to locate PCMPI allocated shared memory address %p", *addr);
   }
 #endif
+  PetscCall(PetscFree(*addr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -387,11 +419,11 @@ PetscErrorCode PetscShmgetDeallocateArray(void *addr[])
     #define petscshmgetdeallocatearrayint_    petscshmgetdeallocatearrayint
   #endif
 
-PETSC_EXTERN void petscshmgetallocatearrayscalar_(PetscInt *start, PetscInt *len, F90Array1d *a, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
+PETSC_EXTERN void petscshmgetallocatearrayscalar_(PetscBool *shared, PetscInt *start, PetscInt *len, F90Array1d *a, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
   PetscScalar *aa;
 
-  *ierr = PetscShmgetAllocateArray(*len, sizeof(PetscScalar), (void **)&aa);
+  *ierr = PetscShmgetAllocateArray(*shared, *len, sizeof(PetscScalar), (void **)&aa);
   if (*ierr) return;
   *ierr = F90Array1dCreate(aa, MPIU_SCALAR, *start, *len, a PETSC_F90_2PTR_PARAM(ptrd));
 }
@@ -407,11 +439,11 @@ PETSC_EXTERN void petscshmgetdeallocatearrayscalar_(F90Array1d *a, PetscErrorCod
   *ierr = F90Array1dDestroy(a, MPIU_SCALAR PETSC_F90_2PTR_PARAM(ptrd));
 }
 
-PETSC_EXTERN void petscshmgetallocatearrayint_(PetscInt *start, PetscInt *len, F90Array1d *a, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
+PETSC_EXTERN void petscshmgetallocatearrayint_(PetscBool *shared, PetscInt *start, PetscInt *len, F90Array1d *a, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
   PetscInt *aa;
 
-  *ierr = PetscShmgetAllocateArray(*len, sizeof(PetscInt), (void **)&aa);
+  *ierr = PetscShmgetAllocateArray(*shared, *len, sizeof(PetscInt), (void **)&aa);
   if (*ierr) return;
   *ierr = F90Array1dCreate(aa, MPIU_INT, *start, *len, a PETSC_F90_2PTR_PARAM(ptrd));
 }

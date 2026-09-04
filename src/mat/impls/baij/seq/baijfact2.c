@@ -261,9 +261,9 @@ static PetscErrorCode MatILUFactorSymbolic_SeqBAIJ_ilu0(Mat fact, Mat A, IS isro
   b = (Mat_SeqBAIJ *)fact->data;
 
   /* allocate matrix arrays for new data structure */
-  PetscCall(PetscShmgetAllocateArray(bs2 * ai[n], sizeof(PetscScalar), (void **)&b->a));
-  PetscCall(PetscShmgetAllocateArray(ai[n], sizeof(PetscInt), (void **)&b->j));
-  PetscCall(PetscShmgetAllocateArray(n + 1, sizeof(PetscInt), (void **)&b->i));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bs2 * ai[n], sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ai[n], sizeof(PetscInt), (void **)&b->j));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), n + 1, sizeof(PetscInt), (void **)&b->i));
   b->free_a          = PETSC_TRUE;
   b->free_ij         = PETSC_TRUE;
   fact->preallocated = PETSC_TRUE;
@@ -481,7 +481,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqBAIJ(Mat fact, Mat A, IS isrow, IS iscol,
 
   b          = (Mat_SeqBAIJ *)fact->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(bs2 * (bdiag[0] + 1), sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bs2 * (bdiag[0] + 1), sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
 
   b->j    = bj;

@@ -1624,9 +1624,9 @@ static PetscErrorCode MatSeqSBAIJSetPreallocation_SeqSBAIJ(Mat B, PetscInt bs, P
 
     /* allocate the matrix space */
     PetscCall(MatSeqXAIJFreeAIJ(B, &b->a, &b->j, &b->i));
-    PetscCall(PetscShmgetAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&b->a));
-    PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscInt), (void **)&b->j));
-    PetscCall(PetscShmgetAllocateArray(B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bs2 * nz, sizeof(PetscScalar), (void **)&b->a));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscInt), (void **)&b->j));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
     PetscCall(PetscArrayzero(b->a, nz * bs2));
     PetscCall(PetscArrayzero(b->j, nz));
     b->free_a  = PETSC_TRUE;
@@ -2156,7 +2156,7 @@ PetscErrorCode MatDuplicate_SeqSBAIJ(Mat A, MatDuplicateOption cpvalues, Mat *B)
   }
 
   /* allocate the matrix space */
-  PetscCall(PetscShmgetAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
   c->free_a = PETSC_TRUE;
   if (cpvalues == MAT_SHARE_NONZERO_PATTERN) {
     PetscCall(PetscArrayzero(c->a, bs2 * nz));
@@ -2168,8 +2168,8 @@ PetscErrorCode MatDuplicate_SeqSBAIJ(Mat A, MatDuplicateOption cpvalues, Mat *B)
     PetscCall(MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
     PetscCall(MatSetOption(C, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
   } else {
-    PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscInt), (void **)&c->j));
-    PetscCall(PetscShmgetAllocateArray(mbs + 1, sizeof(PetscInt), (void **)&c->i));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscInt), (void **)&c->j));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), mbs + 1, sizeof(PetscInt), (void **)&c->i));
     PetscCall(PetscArraycpy(c->i, a->i, mbs + 1));
     c->free_ij = PETSC_TRUE;
   }

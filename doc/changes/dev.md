@@ -35,6 +35,8 @@
 - Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
 - Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
 - Add `PetscIntCSRView()` to inspect CSR graph
+- Add a `PetscBool` first argument to `PetscShmgetAllocateArray()` (and the Fortran `PetscShmgetAllocateArrayScalar()` and `PetscShmgetAllocateArrayInt()`) that selects shared memory instead of `PetscMalloc()`
+- Add `PCMPIActive()` to be used in conjunction with some uses of `PetscShmgetAllocateArray()`
 
 ## Event Logging
 
