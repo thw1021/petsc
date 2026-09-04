@@ -26,7 +26,7 @@ static PetscErrorCode KSPSolve_Richardson(KSP ksp)
 
   PetscFunctionBegin;
   ksp->its = 0;
-  PetscCheck(ksp->nwork == (richardsonP->selfscale ? 4 : 2), PetscObjectComm((PetscObject)ksp), PETSC_ERR_COR, "Unexpected number of work vectors %" PetscInt_FMT " != %" PetscInt_FMT, ksp->nwork, richardsonP->selfscale ? 4 : 2);
+  PetscCheck(ksp->nwork == (richardsonP->selfscale ? 4 : 2), PetscObjectComm((PetscObject)ksp), PETSC_ERR_COR, "Unexpected number of work vectors %" PetscInt_FMT " != %d", ksp->nwork, richardsonP->selfscale ? 4 : 2);
 
   PetscCall(PCGetOperators(ksp->pc, &Amat, &Pmat));
   x = ksp->vec_sol;
