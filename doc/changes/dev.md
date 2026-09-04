@@ -35,6 +35,8 @@
 - Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
 - Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
 - Add `PetscIntCSRView()` to inspect CSR graph
+- Add a `PetscBool` first argument to `PetscShmgetAllocateArray()` (and the Fortran `PetscShmgetAllocateArrayScalar()` and `PetscShmgetAllocateArrayInt()`) that selects shared memory instead of `PetscMalloc()`
+- Add `PCMPIActive()` to be used in conjunction with some uses of `PetscShmgetAllocateArray()`
 
 ## Event Logging
 
@@ -89,6 +91,7 @@
 - Add device SpMM support for `MATPRODUCT_AB` and `MATPRODUCT_AtB` with a `MATAIJKOKKOS` matrix and dense matrices; previously these products looped `MatMult()` over the columns of the dense matrix
 - Change `MatCreateMAIJ()` to convert its result to `MATAIJKOKKOS` when the input matrix has that type, as is already done for `MATAIJCUSPARSE`; the `MATMAIJ` kernels read the host arrays of the input matrix directly and so miss values last updated on device
 - Change `MatDiagonalScale()` for `MATSEQDENSECUDA` and `MATSEQDENSEHIP` to check the memory type of the scaling `Vec` instead of its `VecType`, so device-resident vectors such as `VECKOKKOS` are consumed directly on the GPU instead of being copied through the host
+- Add `MATMPISEQAIJ`, `MatMPISeqAIJGetMat()`, and `MatMPISeqAIJSetUseShmGet()`
 
 ## MatCoarsen
 

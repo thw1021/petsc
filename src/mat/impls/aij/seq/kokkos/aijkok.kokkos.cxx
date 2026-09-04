@@ -77,9 +77,9 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A, MatAssemblyType mode)
   */
   if (!aijkok || aijkok->nonzerostate != A->nonzerostate) { /* aijkok might not exist yet or nonzero pattern has changed */
     if (aijkok && aijkok->host_aij_allocated_by_kokkos) {   /* Avoid accidentally freeing much needed a,i,j on host when deleting aijkok */
-      PetscCall(PetscShmgetAllocateArray(aijkok->nrows() + 1, sizeof(PetscInt), (void **)&aijseq->i));
-      PetscCall(PetscShmgetAllocateArray(aijkok->nnz(), sizeof(PetscInt), (void **)&aijseq->j));
-      PetscCall(PetscShmgetAllocateArray(aijkok->nnz(), sizeof(PetscInt), (void **)&aijseq->a));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), aijkok->nrows() + 1, sizeof(PetscInt), (void **)&aijseq->i));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), aijkok->nnz(), sizeof(PetscInt), (void **)&aijseq->j));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), aijkok->nnz(), sizeof(PetscScalar), (void **)&aijseq->a));
       PetscCall(PetscArraycpy(aijseq->i, aijkok->i_host_data(), aijkok->nrows() + 1));
       PetscCall(PetscArraycpy(aijseq->j, aijkok->j_host_data(), aijkok->nnz()));
       PetscCall(PetscArraycpy(aijseq->a, aijkok->a_host_data(), aijkok->nnz()));

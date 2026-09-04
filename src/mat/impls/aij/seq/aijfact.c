@@ -75,7 +75,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B, Mat A, IS isrow, IS iscol, cons
   PetscCall(ISGetIndices(isicol, &ic));
 
   /* get new row and diagonal pointers, must be allocated separately because they will be given to the Mat_SeqAIJ and freed separately */
-  PetscCall(PetscShmgetAllocateArray(n + 1, sizeof(PetscInt), (void **)&bi));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), n + 1, sizeof(PetscInt), (void **)&bi));
   PetscCall(PetscMalloc1(n + 1, &bdiag));
   bi[0] = bdiag[0] = 0;
 
@@ -142,7 +142,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B, Mat A, IS isrow, IS iscol, cons
   PetscCall(ISRestoreIndices(isicol, &ic));
 
   /*   copy free_space into bj and free free_space; set bi, bj, bdiag in new datastructure; */
-  PetscCall(PetscShmgetAllocateArray(bi[n], sizeof(PetscInt), (void **)&bj));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bi[n], sizeof(PetscInt), (void **)&bj));
   PetscCall(PetscFreeSpaceContiguous_LU(&free_space, bj, n, bi, bdiag));
   PetscCall(PetscLLDestroy(lnk, lnkbt));
   PetscCall(PetscFree2(bi_ptr, im));
@@ -151,7 +151,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B, Mat A, IS isrow, IS iscol, cons
   PetscCall(MatSeqAIJSetPreallocation_SeqAIJ(B, MAT_SKIP_ALLOCATION, NULL));
   b          = (Mat_SeqAIJ *)B->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(bdiag[0] + 1, sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bdiag[0] + 1, sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
   b->j      = bj;
   b->i      = bi;
@@ -1482,9 +1482,9 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ_ilu0(Mat fact, Mat A, IS isrow, IS is
   b = (Mat_SeqAIJ *)fact->data;
 
   /* allocate matrix arrays for new data structure */
-  PetscCall(PetscShmgetAllocateArray(ai[n], sizeof(PetscScalar), (void **)&b->a));
-  PetscCall(PetscShmgetAllocateArray(ai[n], sizeof(PetscInt), (void **)&b->j));
-  PetscCall(PetscShmgetAllocateArray(n + 1, sizeof(PetscInt), (void **)&b->i));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ai[n], sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ai[n], sizeof(PetscInt), (void **)&b->j));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), n + 1, sizeof(PetscInt), (void **)&b->i));
   if (n > 0) PetscCall(PetscArrayzero(b->a, ai[n]));
   b->free_a  = PETSC_TRUE;
   b->free_ij = PETSC_TRUE;
@@ -1571,7 +1571,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS isrow, IS iscol, 
   PetscCall(ISGetIndices(isicol, &ic));
 
   /* get new row and diagonal pointers, must be allocated separately because they will be given to the Mat_SeqAIJ and freed separately */
-  PetscCall(PetscShmgetAllocateArray(n + 1, sizeof(PetscInt), (void **)&bi));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), n + 1, sizeof(PetscInt), (void **)&bi));
   PetscCall(PetscMalloc1(n + 1, &bdiag));
   bi[0] = bdiag[0] = 0;
   PetscCall(PetscMalloc2(n, &bj_ptr, n, &bjlvl_ptr));
@@ -1650,7 +1650,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS isrow, IS iscol, 
   PetscCall(ISRestoreIndices(isrow, &r));
   PetscCall(ISRestoreIndices(isicol, &ic));
   /* copy free_space into bj and free free_space; set bi, bj, bdiag in new datastructure; */
-  PetscCall(PetscShmgetAllocateArray(bi[n], sizeof(PetscInt), (void **)&bj));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bi[n], sizeof(PetscInt), (void **)&bj));
   PetscCall(PetscFreeSpaceContiguous_LU(&free_space, bj, n, bi, bdiag));
 
   PetscCall(PetscIncompleteLLDestroy(lnk, lnkbt));
@@ -1671,7 +1671,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS isrow, IS iscol, 
   PetscCall(MatSeqAIJSetPreallocation_SeqAIJ(fact, MAT_SKIP_ALLOCATION, NULL));
   b          = (Mat_SeqAIJ *)fact->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(bdiag[0] + 1, sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), bdiag[0] + 1, sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
   b->j      = bj;
   b->i      = bi;
@@ -2070,7 +2070,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const MatFa
   PetscCall(ISIdentity(perm, &perm_identity));
   PetscCall(ISInvertPermutation(perm, PETSC_DECIDE, &iperm));
 
-  PetscCall(PetscShmgetAllocateArray(am + 1, sizeof(PetscInt), (void **)&ui));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), am + 1, sizeof(PetscInt), (void **)&ui));
   PetscCall(PetscMalloc1(am + 1, &udiag));
   ui[0] = 0;
 
@@ -2197,7 +2197,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const MatFa
     PetscCall(PetscFree(ajtmp));
 
     /* copy free_space into uj and free free_space; set ui, uj, udiag in new datastructure; */
-    PetscCall(PetscShmgetAllocateArray(ui[am] + 1, sizeof(PetscInt), (void **)&uj));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[am] + 1, sizeof(PetscInt), (void **)&uj));
     PetscCall(PetscFreeSpaceContiguous_Cholesky(&free_space, uj, am, ui, udiag)); /* store matrix factor  */
     PetscCall(PetscIncompleteLLDestroy(lnk, lnkbt));
     PetscCall(PetscFreeSpaceDestroy(free_space_lvl));
@@ -2207,7 +2207,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const MatFa
   /* put together the new matrix in MATSEQSBAIJ format */
   b          = (Mat_SeqSBAIJ *)fact->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(ui[am], sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[am], sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
   b->j      = uj;
   b->i      = ui;
@@ -2272,7 +2272,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const 
   PetscCall(ISGetIndices(perm, &rip));
 
   /* initialization */
-  PetscCall(PetscShmgetAllocateArray(am + 1, sizeof(PetscInt), (void **)&ui));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), am + 1, sizeof(PetscInt), (void **)&ui));
   PetscCall(PetscMalloc1(am + 1, &udiag));
   ui[0] = 0;
 
@@ -2363,14 +2363,14 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact, Mat A, IS perm, const 
   PetscCall(PetscFree4(ui_ptr, jl, il, cols));
 
   /* copy free_space into uj and free free_space; set ui, uj, udiag in new datastructure; */
-  PetscCall(PetscShmgetAllocateArray(ui[am], sizeof(PetscInt), (void **)&uj));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[am], sizeof(PetscInt), (void **)&uj));
   PetscCall(PetscFreeSpaceContiguous_Cholesky(&free_space, uj, am, ui, udiag)); /* store matrix factor */
   PetscCall(PetscLLDestroy(lnk, lnkbt));
 
   /* put together the new matrix in MATSEQSBAIJ format */
   b          = (Mat_SeqSBAIJ *)fact->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(ui[am], sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[am], sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
   b->j      = uj;
   b->i      = ui;

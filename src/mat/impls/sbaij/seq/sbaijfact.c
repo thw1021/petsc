@@ -66,10 +66,10 @@ static PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_MSR(Mat F, Mat A, IS pe
   }
 
   /* initialization */
-  PetscCall(PetscShmgetAllocateArray(mbs + 1, sizeof(PetscInt), (void **)&iu));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), mbs + 1, sizeof(PetscInt), (void **)&iu));
   umax = (PetscInt)(f * ai[mbs] + 1);
   umax += mbs + 1;
-  PetscCall(PetscShmgetAllocateArray(umax, sizeof(PetscInt), (void **)&ju));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), umax, sizeof(PetscInt), (void **)&ju));
   iu[0] = mbs + 1;
   juidx = mbs + 1; /* index for ju */
   /* jl linked list for pivot row -- linked list for col index */
@@ -146,7 +146,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_MSR(Mat F, Mat A, IS pe
       umax += maxadd;
 
       /* allocate a longer ju */
-      PetscCall(PetscShmgetAllocateArray(umax, sizeof(PetscInt), (void **)&jutmp));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), umax, sizeof(PetscInt), (void **)&jutmp));
       PetscCall(PetscArraycpy(jutmp, ju, iu[k]));
       PetscCall(PetscShmgetDeallocateArray((void **)&ju));
       ju = jutmp;
@@ -179,7 +179,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_MSR(Mat F, Mat A, IS pe
 
   b          = (Mat_SeqSBAIJ *)F->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray((iu[mbs] + 1) * bs2, sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), (iu[mbs] + 1) * bs2, sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
   b->j      = ju;
   b->i      = iu;
@@ -245,7 +245,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact, Mat A, IS perm, cons
   PetscCall(ISGetIndices(perm, &rip));
 
   /* initialization */
-  PetscCall(PetscShmgetAllocateArray(mbs + 1, sizeof(PetscInt), (void **)&ui));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), mbs + 1, sizeof(PetscInt), (void **)&ui));
   PetscCall(PetscMalloc1(mbs + 1, &udiag));
   ui[0] = 0;
 
@@ -331,7 +331,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact, Mat A, IS perm, cons
   PetscCall(PetscFree4(ui_ptr, il, jl, cols));
 
   /* destroy list of free space and other temporary array(s) */
-  PetscCall(PetscShmgetAllocateArray(ui[mbs], sizeof(PetscInt), (void **)&uj));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[mbs], sizeof(PetscInt), (void **)&uj));
   PetscCall(PetscFreeSpaceContiguous_Cholesky(&free_space, uj, mbs, ui, udiag)); /* store matrix factor */
   PetscCall(PetscLLDestroy(lnk, lnkbt));
 
@@ -340,7 +340,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact, Mat A, IS perm, cons
 
   b          = (Mat_SeqSBAIJ *)fact->data;
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray(ui[mbs], sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[mbs], sizeof(PetscScalar), (void **)&b->a));
   b->free_a = PETSC_TRUE;
   b->j      = uj;
   b->i      = ui;
@@ -419,7 +419,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact, Mat A, IS pe
   PetscCall(ISGetIndices(perm, &rip));
 
   /* initialization */
-  PetscCall(PetscShmgetAllocateArray(mbs + 1, sizeof(PetscInt), (void **)&ui));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), mbs + 1, sizeof(PetscInt), (void **)&ui));
   ui[0] = 0;
 
   /* jl: linked list for storing indices of the pivot rows
@@ -504,7 +504,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact, Mat A, IS pe
   PetscCall(PetscFree4(ui_ptr, il, jl, cols));
 
   /* destroy list of free space and other temporary array(s) */
-  PetscCall(PetscShmgetAllocateArray(ui[mbs] + 1, sizeof(PetscInt), (void **)&uj));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[mbs] + 1, sizeof(PetscInt), (void **)&uj));
   PetscCall(PetscFreeSpaceContiguous(&free_space, uj));
   PetscCall(PetscLLDestroy(lnk, lnkbt));
 
@@ -512,7 +512,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact, Mat A, IS pe
   PetscCall(MatSeqSBAIJSetPreallocation(fact, bs, MAT_SKIP_ALLOCATION, NULL));
 
   b = (Mat_SeqSBAIJ *)fact->data;
-  PetscCall(PetscShmgetAllocateArray(ui[mbs] + 1, sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), ui[mbs] + 1, sizeof(PetscScalar), (void **)&b->a));
   b->free_a  = PETSC_TRUE;
   b->free_ij = PETSC_TRUE;
   b->j       = uj;

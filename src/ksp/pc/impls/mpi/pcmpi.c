@@ -579,7 +579,7 @@ PetscErrorCode PCMPIServerBegin(void)
 
       if (rank == 0) {
         PCMPIServerActive = PETSC_TRUE;
-        PetscCall(PetscShmgetAllocateArray(size, sizeof(pthread_mutex_t), (void **)&locks));
+        PetscCall(PetscShmgetAllocateArray(PETSC_TRUE, size, sizeof(pthread_mutex_t), (void **)&locks));
       }
       PetscCall(PetscShmgetMapAddresses(PETSC_COMM_WORLD, 1, (const void **)&locks, (void **)&PCMPIServerLocks));
       if (rank == 0) {
