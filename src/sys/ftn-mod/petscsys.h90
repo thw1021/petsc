@@ -72,8 +72,9 @@ interface
     PetscErrorCode    :: ierr
   end subroutine
 
-  subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
+  subroutine PetscShmgetAllocateArrayScalar(shared, start, len, d1, ierr)
     use, intrinsic :: ISO_C_binding
+    PetscBool :: shared
     PetscInt :: start, len
     PetscScalar, pointer :: d1(:)
     PetscErrorCode, intent(out) :: ierr
@@ -85,8 +86,9 @@ interface
     PetscErrorCode, intent(out) :: ierr
   end subroutine
 
-  subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
+  subroutine PetscShmgetAllocateArrayInt(shared, start, len, d1, ierr)
     use, intrinsic :: ISO_C_binding
+    PetscBool :: shared
     PetscInt :: start, len
     PetscInt, pointer :: d1(:)
     PetscErrorCode, intent(out) :: ierr
