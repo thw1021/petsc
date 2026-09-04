@@ -12,6 +12,8 @@ struct _n_TaoTerm_HalfL2Squared {
   Vec                              pdiff_work;
   TaoTermHalfL2SquaredHessianState H_state;
   TaoTermHalfL2SquaredHessianState Hpre_state;
+  TaoTermHalfL2SquaredHessianState J_state;
+  TaoTermHalfL2SquaredHessianState Jpre_state;
 };
 
 static PetscErrorCode TaoTermDestroy_Halfl2squared(TaoTerm term)
@@ -63,6 +65,14 @@ static PetscErrorCode TaoTermComputeGradient_Halfl2squared(TaoTerm term, Vec x, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermComputeResidual_Halfl2squared(TaoTerm term, Vec x, Vec params, Vec r)
+{
+  PetscFunctionBegin;
+  if (params) PetscCall(VecWAXPY(r, -1.0, params, x));
+  else PetscCall(VecCopy(x, r));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermHalfL2SquaredSetIdentity(Mat H, TaoTermHalfL2SquaredHessianState *cached)
 {
   PetscObjectId    id;
@@ -79,6 +89,16 @@ static PetscErrorCode TaoTermHalfL2SquaredSetIdentity(Mat H, TaoTermHalfL2Square
   PetscCall(MatGetState(H, &cached->state));
   cached->id    = id;
   cached->valid = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermComputeJacobianResidual_Halfl2squared(TaoTerm term, Vec x, Vec params, Mat J, Mat Jpre)
+{
+  TaoTerm_HalfL2Squared *l2 = (TaoTerm_HalfL2Squared *)term->data;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermHalfL2SquaredSetIdentity(J, &l2->J_state));
+  if (Jpre && Jpre != J) PetscCall(TaoTermHalfL2SquaredSetIdentity(Jpre, &l2->Jpre_state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -140,7 +160,10 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_Halfl2squared(TaoTerm te
   The default Hessian creation mode (see `TaoTermGetCreateHessianMode()`) is `H == Hpre` and `TaoTermCreateHessianMatrices()`
   will create a `MATDIAGONAL` for the Hessian.
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermType`, `TaoTermCreateHalfL2Squared()`, `TAOTERML1`, `TAOTERMQUADRATIC`
+  This term defines the residual $r(x;p) = x-p$ and its Jacobian $J(x;p)=I$.
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermType`, `TaoTermCreateHalfL2Squared()`, `TaoTermComputeResidual()`,
+          `TaoTermComputeJacobianResidual()`, `TAOTERML1`, `TAOTERMQUADRATIC`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
 {
@@ -161,6 +184,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   term->ops->objective                  = TaoTermComputeObjective_Halfl2squared;
   term->ops->gradient                   = TaoTermComputeGradient_Halfl2squared;
   term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_Halfl2squared;
+  term->ops->residual                   = TaoTermComputeResidual_Halfl2squared;
+  term->ops->jacobianresidual           = TaoTermComputeJacobianResidual_Halfl2squared;
   term->ops->hessian                    = TaoTermComputeHessian_Halfl2squared;
   term->ops->hessianmult                = TaoTermComputeHessianMult_Halfl2squared;
   term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_Halfl2squared;

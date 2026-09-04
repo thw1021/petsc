@@ -274,6 +274,8 @@ struct _TaoTermOps {
   TaoTermGradientFn             *gradient;
   TaoTermHessianFn              *hessian;
   TaoTermHessianMultFn          *hessianmult;
+  TaoTermResidualFn             *residual;
+  TaoTermJacobianResidualFn     *jacobianresidual;
 
   PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
@@ -299,6 +301,9 @@ struct _p_TaoTerm {
   PetscBool             Hpre_is_H; // Hessian mode data
   MatType               H_mattype;
   MatType               Hpre_mattype;
+  Vec                   residual;
+  Mat                   jacobian_residual;
+  Mat                   jacobian_residual_pre;
 
   PetscInt ngrad_mffd;
   PetscInt nobj;      // actual objective callback invocations
@@ -330,6 +335,9 @@ PETSC_INTERN PetscErrorCode TaoTermCallbacksGetGradient(TaoTerm, TaoGradientFn *
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetObjectiveAndGradient(TaoTerm, TaoObjectiveAndGradientFn **, PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessian(TaoTerm, TaoHessianFn **, PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessianMult(TaoTerm, TaoHessianMultFn **, PetscCtxRt);
+
+PETSC_INTERN PetscErrorCode TaoTermSetResidual_Internal(TaoTerm, Vec, TaoTermResidualFn *);
+PETSC_INTERN PetscErrorCode TaoTermSetJacobianResidual_Internal(TaoTerm, Mat, Mat, TaoTermJacobianResidualFn *);
 
 PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *, const char *, PetscReal, TaoTerm, Mat);
 PETSC_INTERN PetscErrorCode TaoTermMappingCopyData(TaoTermMapping *, const char *, PetscReal, const TaoTermMapping *);

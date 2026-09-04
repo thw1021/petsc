@@ -150,6 +150,14 @@ static PetscErrorCode TaoTermView_Shell(TaoTerm term, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "%shessianmult", any ? ", " : " "));
       any = PETSC_TRUE;
     }
+    if (term->ops->residual) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%sresidual", any ? ", " : " "));
+      any = PETSC_TRUE;
+    }
+    if (term->ops->jacobianresidual) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%sjacobianresidual", any ? ", " : " "));
+      any = PETSC_TRUE;
+    }
     if (any == PETSC_FALSE) PetscCall(PetscViewerASCIIPrintf(viewer, " (none)"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
@@ -169,6 +177,9 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   term->ops->gradient             = NULL;
   term->ops->objectiveandgradient = NULL;
   term->ops->hessian              = NULL;
+  term->ops->hessianmult          = NULL;
+  term->ops->residual             = NULL;
+  term->ops->jacobianresidual     = NULL;
   term->ops->view                 = NULL;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetContextDestroy_C", NULL));
@@ -179,6 +190,8 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetObjectiveAndGradient_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessianMult_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetResidual_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetJacobianResidual_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetIsComputeHessianFDPossible_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", NULL));
@@ -342,6 +355,75 @@ static PetscErrorCode TaoTermShellSetHessianMult_Shell(TaoTerm term, TaoTermHess
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  TaoTermShellSetResidual - Set the residual function and storage of a `TAOTERMSHELL`
+
+  Logically Collective
+
+  Input Parameters:
++ term     - a `TaoTerm` of type `TAOTERMSHELL`
+. residual - storage for the residual vector
+- func     - a `TaoTermResidualFn` function pointer
+
+  Level: intermediate
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermComputeResidual()`, `TaoTermIsResidualDefined()`, `TaoTermShellSetJacobianResidual()`, `TaoTermResidualFn`
+@*/
+PetscErrorCode TaoTermShellSetResidual(TaoTerm term, Vec residual, TaoTermResidualFn *func)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(residual, VEC_CLASSID, 2);
+  PetscCheckSameComm(term, 1, residual, 2);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetResidual() must be called before TaoTermSetUp() or TaoSetUp()");
+  PetscTryMethod(term, "TaoTermShellSetResidual_C", (TaoTerm, Vec, TaoTermResidualFn *), (term, residual, func));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellSetResidual_Shell(TaoTerm term, Vec residual, TaoTermResidualFn *func)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoTermSetResidual_Internal(term, residual, func));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermShellSetJacobianResidual - Set the residual Jacobian function and storage of a `TAOTERMSHELL`
+
+  Logically Collective
+
+  Input Parameters:
++ term - a `TaoTerm` of type `TAOTERMSHELL`
+. J    - storage for the residual Jacobian
+. Jpre - (optional) matrix used to construct the preconditioner, often the same as `J`
+- func - a `TaoTermJacobianResidualFn` function pointer
+
+  Level: intermediate
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermComputeJacobianResidual()`, `TaoTermIsJacobianResidualDefined()`, `TaoTermShellSetResidual()`, `TaoTermJacobianResidualFn`
+@*/
+PetscErrorCode TaoTermShellSetJacobianResidual(TaoTerm term, Mat J, Mat Jpre, TaoTermJacobianResidualFn *func)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 2);
+  PetscCheckSameComm(term, 1, J, 2);
+  if (Jpre) {
+    PetscValidHeaderSpecific(Jpre, MAT_CLASSID, 3);
+    PetscCheckSameComm(term, 1, Jpre, 3);
+  }
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermShellSetJacobianResidual() must be called before TaoTermSetUp() or TaoSetUp()");
+  PetscTryMethod(term, "TaoTermShellSetJacobianResidual_C", (TaoTerm, Mat, Mat, TaoTermJacobianResidualFn *), (term, J, Jpre, func));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellSetJacobianResidual_Shell(TaoTerm term, Mat J, Mat Jpre, TaoTermJacobianResidualFn *func)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoTermSetJacobianResidual_Internal(term, J, Jpre, func));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermIsComputeHessianFDPossible_Shell(TaoTerm term, PetscBool3 *ispossible)
 {
   TaoTerm_Shell *shell = (TaoTerm_Shell *)term->data;
@@ -402,7 +484,7 @@ static PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible_Shell(TaoTerm te
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
           `TaoTermShellSetObjective()`, `TaoTermShellSetGradient()`, `TaoTermShellSetObjectiveAndGradient()`,
-          `TaoTermShellSetHessian()`
+          `TaoTermShellSetHessian()`, `TaoTermShellSetResidual()`, `TaoTermShellSetJacobianResidual()`
 @*/
 PetscErrorCode TaoTermShellSetView(TaoTerm term, PetscErrorCode (*view)(TaoTerm term, PetscViewer viewer))
 {
@@ -552,6 +634,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetObjectiveAndGradient_C", TaoTermShellSetObjectiveAndGradient_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", TaoTermShellSetHessian_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessianMult_C", TaoTermShellSetHessianMult_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetResidual_C", TaoTermShellSetResidual_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetJacobianResidual_C", TaoTermShellSetJacobianResidual_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetIsComputeHessianFDPossible_C", TaoTermShellSetIsComputeHessianFDPossible_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", TaoTermShellSetView_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", TaoTermShellSetCreateSolutionVec_Shell));

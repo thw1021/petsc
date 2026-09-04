@@ -43,6 +43,9 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
   PetscCall(MatDestroy(&(*term)->solution_factory));
   PetscCall(MatDestroy(&(*term)->parameters_factory));
   PetscCall(MatDestroy(&(*term)->parameters_factory_orig));
+  PetscCall(VecDestroy(&(*term)->residual));
+  PetscCall(MatDestroy(&(*term)->jacobian_residual));
+  PetscCall(MatDestroy(&(*term)->jacobian_residual_pre));
   PetscCall(PetscHeaderDestroy(term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -444,6 +447,114 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   _term->H_mattype    = NULL;
   _term->Hpre_mattype = NULL;
   *term               = _term;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermSetResidual_Internal(TaoTerm term, Vec r, TaoTermResidualFn *func)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectReference((PetscObject)r));
+  PetscCall(VecDestroy(&term->residual));
+  term->residual      = r;
+  term->ops->residual = func;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermComputeResidual - Compute a residual at a given point
+
+  Collective
+
+  Input Parameters:
++ term   - the `TaoTerm`
+. x      - the point at which to evaluate the residual
+- params - the parameters of the term (may be `NULL` if the term is not parametric)
+
+  Output Parameter:
+. r - the residual vector
+
+  Level: advanced
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermResidualFn`, `TaoTermShellSetResidual()`, `TaoTermComputeJacobianResidual()`
+@*/
+PetscErrorCode TaoTermComputeResidual(TaoTerm term, Vec x, Vec params, Vec r)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(r, VEC_CLASSID, 4);
+  PetscCheckSameComm(term, 1, x, 2);
+  PetscCheckSameComm(term, 1, r, 4);
+  PetscCheck(term->parameters_mode != TAOTERM_PARAMETERS_NONE || params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Parameters passed to a TaoTerm with TAOTERM_PARAMETERS_NONE");
+  PetscCheck(term->parameters_mode != TAOTERM_PARAMETERS_REQUIRED || params, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Parameters required but not provided for a TaoTerm with TAOTERM_PARAMETERS_REQUIRED");
+  PetscCheck(term->ops->residual, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have a residual function");
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+    PetscCheckSameComm(term, 1, params, 3);
+    PetscCall(VecLockReadPush(params));
+  }
+  PetscCall(VecLockReadPush(x));
+  PetscCallBack("TaoTerm callback residual", (*term->ops->residual)(term, x, params, r));
+  PetscCall(VecLockReadPop(x));
+  if (params) PetscCall(VecLockReadPop(params));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermSetJacobianResidual_Internal(TaoTerm term, Mat J, Mat Jpre, TaoTermJacobianResidualFn *func)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectReference((PetscObject)J));
+  PetscCall(PetscObjectReference((PetscObject)Jpre));
+  PetscCall(MatDestroy(&term->jacobian_residual));
+  PetscCall(MatDestroy(&term->jacobian_residual_pre));
+  term->jacobian_residual     = J;
+  term->jacobian_residual_pre = Jpre;
+  term->ops->jacobianresidual = func;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermComputeJacobianResidual - Compute a residual Jacobian at a given point
+
+  Collective
+
+  Input Parameters:
++ term   - the `TaoTerm`
+. x      - the point at which to evaluate the residual Jacobian
+- params - the parameters of the term (may be `NULL` if the term is not parametric)
+
+  Output Parameters:
++ J    - the residual Jacobian
+- Jpre - the matrix used to construct the preconditioner
+
+  Level: advanced
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermJacobianResidualFn`, `TaoTermShellSetJacobianResidual()`, `TaoTermComputeResidual()`
+@*/
+PetscErrorCode TaoTermComputeJacobianResidual(TaoTerm term, Vec x, Vec params, Mat J, Mat Jpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 4);
+  PetscCheckSameComm(term, 1, x, 2);
+  PetscCheckSameComm(term, 1, J, 4);
+  PetscCheck(term->parameters_mode != TAOTERM_PARAMETERS_NONE || params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Parameters passed to a TaoTerm with TAOTERM_PARAMETERS_NONE");
+  PetscCheck(term->parameters_mode != TAOTERM_PARAMETERS_REQUIRED || params, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Parameters required but not provided for a TaoTerm with TAOTERM_PARAMETERS_REQUIRED");
+  if (Jpre) {
+    PetscValidHeaderSpecific(Jpre, MAT_CLASSID, 5);
+    PetscCheckSameComm(term, 1, Jpre, 5);
+  }
+  PetscCheck(term->ops->jacobianresidual, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have a residual Jacobian function");
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+    PetscCheckSameComm(term, 1, params, 3);
+    PetscCall(VecLockReadPush(params));
+  }
+  PetscCall(VecLockReadPush(x));
+  PetscCallBack("TaoTerm callback residual Jacobian", (*term->ops->jacobianresidual)(term, x, params, J, Jpre));
+  PetscCall(VecLockReadPop(x));
+  if (params) PetscCall(VecLockReadPop(params));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -947,6 +1058,54 @@ PetscErrorCode TaoTermIsHessianMultDefined(TaoTerm term, PetscBool *is_defined)
   PetscAssertPointer(is_defined, 2);
   if (term->ops->ishessianmultdefined) PetscUseTypeMethod(term, ishessianmultdefined, is_defined);
   else *is_defined = (term->ops->hessianmult != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsResidualDefined - Whether a residual operation is defined for this `TaoTerm`
+
+  Not Collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_defined - whether the residual is defined
+
+  Level: developer
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeResidual()`, `TaoTermShellSetResidual()`, `TaoTermIsJacobianResidualDefined()`
+@*/
+PetscErrorCode TaoTermIsResidualDefined(TaoTerm term, PetscBool *is_defined)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_defined, 2);
+  *is_defined = term->ops->residual ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsJacobianResidualDefined - Whether a residual Jacobian operation is defined for this `TaoTerm`
+
+  Not Collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_defined - whether the residual Jacobian is defined
+
+  Level: developer
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeJacobianResidual()`, `TaoTermShellSetJacobianResidual()`, `TaoTermIsResidualDefined()`
+@*/
+PetscErrorCode TaoTermIsJacobianResidualDefined(TaoTerm term, PetscBool *is_defined)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_defined, 2);
+  *is_defined = term->ops->jacobianresidual ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

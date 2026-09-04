@@ -82,6 +82,120 @@ static PetscErrorCode TaoTermComputeHessianMult_Lifetime(TaoTerm term, Vec x, Ve
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermComputeResidual_Test(TaoTerm term, Vec x, Vec params, Vec r)
+{
+  PetscFunctionBeginUser;
+  PetscCheck(params, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Residual callback did not receive parameters");
+  PetscCall(VecWAXPY(r, -1.0, params, x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermComputeJacobianResidual_Test(TaoTerm term, Vec x, Vec params, Mat J, Mat Jpre)
+{
+  PetscFunctionBeginUser;
+  PetscCheck(params, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Residual Jacobian callback did not receive parameters");
+  PetscCall(MatZeroEntries(J));
+  PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatShift(J, 1.0));
+  if (Jpre && Jpre != J) {
+    PetscCall(MatZeroEntries(Jpre));
+    PetscCall(MatAssemblyBegin(Jpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatShift(Jpre, 1.0));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode testShellResidual(MPI_Comm comm)
+{
+  TaoTerm   term;
+  Mat       J, Jout, Jpre;
+  Vec       x, params, r, rwork;
+  PetscBool has_residual, has_jacobian;
+  PetscReal error;
+  PetscInt  n = 7;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, n, &x));
+  PetscCall(VecDuplicate(x, &params));
+  PetscCall(VecDuplicate(x, &r));
+  PetscCall(VecDuplicate(x, &rwork));
+  PetscCall(VecSet(x, 3.0));
+  PetscCall(VecSet(params, 1.0));
+  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, n, n, 1, NULL, 0, NULL, &J));
+  PetscCall(MatSetUp(J));
+  PetscCall(MatDuplicate(J, MAT_DO_NOT_COPY_VALUES, &Jpre));
+  PetscCall(TaoTermCreateShell(comm, NULL, NULL, &term));
+  PetscCall(TaoTermSetSolutionTemplate(term, x));
+  PetscCall(TaoTermSetParametersTemplate(term, params));
+  PetscCall(TaoTermSetParametersMode(term, TAOTERM_PARAMETERS_REQUIRED));
+  PetscCall(TaoTermShellSetResidual(term, r, TaoTermComputeResidual_Test));
+  PetscCall(TaoTermShellSetJacobianResidual(term, J, Jpre, TaoTermComputeJacobianResidual_Test));
+  PetscCall(TaoTermIsResidualDefined(term, &has_residual));
+  PetscCall(TaoTermIsJacobianResidualDefined(term, &has_jacobian));
+  PetscCheck(has_residual && has_jacobian, comm, PETSC_ERR_PLIB, "Shell residual capabilities were not reported as defined");
+  PetscCall(TaoTermComputeResidual(term, x, params, rwork));
+  PetscCall(VecSet(r, 2.0));
+  PetscCall(VecAXPY(rwork, -1.0, r));
+  PetscCall(VecNorm(rwork, NORM_2, &error));
+  PetscCheck(error <= PETSC_SMALL, comm, PETSC_ERR_PLIB, "Incorrect shell residual, error %g", (double)error);
+  PetscCall(MatDuplicate(J, MAT_DO_NOT_COPY_VALUES, &Jout));
+  PetscCall(TaoTermComputeJacobianResidual(term, x, params, Jout, Jout));
+  PetscCall(MatShift(Jout, -1.0));
+  PetscCall(MatNorm(Jout, NORM_FROBENIUS, &error));
+  PetscCheck(error <= PETSC_SMALL, comm, PETSC_ERR_PLIB, "Incorrect shell residual Jacobian, error %g", (double)error);
+  PetscCall(MatDestroy(&Jout));
+  PetscCall(TaoTermDestroy(&term));
+  PetscCall(MatDestroy(&Jpre));
+  PetscCall(MatDestroy(&J));
+  PetscCall(VecDestroy(&rwork));
+  PetscCall(VecDestroy(&r));
+  PetscCall(VecDestroy(&params));
+  PetscCall(VecDestroy(&x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode testHalfL2Residual(MPI_Comm comm)
+{
+  TaoTerm   term;
+  Mat       J;
+  Vec       x, params, r, expected;
+  PetscBool has_residual, has_jacobian;
+  PetscReal error;
+  PetscInt  n = 7;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecCreateMPI(comm, PETSC_DECIDE, n, &x));
+  PetscCall(VecDuplicate(x, &params));
+  PetscCall(VecDuplicate(x, &r));
+  PetscCall(VecDuplicate(x, &expected));
+  PetscCall(VecSet(x, 3.0));
+  PetscCall(VecSet(params, 1.0));
+  PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &term));
+  PetscCall(TaoTermIsResidualDefined(term, &has_residual));
+  PetscCall(TaoTermIsJacobianResidualDefined(term, &has_jacobian));
+  PetscCheck(has_residual && has_jacobian, comm, PETSC_ERR_PLIB, "TAOTERMHALFL2SQUARED residual capabilities were not reported as defined");
+  PetscCall(TaoTermComputeResidual(term, x, params, r));
+  PetscCall(VecSet(expected, 2.0));
+  PetscCall(VecAXPY(r, -1.0, expected));
+  PetscCall(VecNorm(r, NORM_2, &error));
+  PetscCheck(error <= PETSC_SMALL, comm, PETSC_ERR_PLIB, "Incorrect TAOTERMHALFL2SQUARED residual, error %g", (double)error);
+  PetscCall(MatCreateAIJ(comm, PETSC_DECIDE, PETSC_DECIDE, n, n, 1, NULL, 0, NULL, &J));
+  PetscCall(MatSetUp(J));
+  PetscCall(TaoTermComputeJacobianResidual(term, x, params, J, J));
+  PetscCall(MatShift(J, -1.0));
+  PetscCall(MatNorm(J, NORM_FROBENIUS, &error));
+  PetscCheck(error <= PETSC_SMALL, comm, PETSC_ERR_PLIB, "Incorrect TAOTERMHALFL2SQUARED residual Jacobian, error %g", (double)error);
+  PetscCall(MatDestroy(&J));
+  PetscCall(TaoTermDestroy(&term));
+  PetscCall(VecDestroy(&expected));
+  PetscCall(VecDestroy(&r));
+  PetscCall(VecDestroy(&params));
+  PetscCall(VecDestroy(&x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
 {
   PetscRandom rand;
@@ -204,6 +318,8 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(testShell(PETSC_COMM_WORLD, PETSC_TRUE));
   PetscCall(testShell(PETSC_COMM_WORLD, PETSC_FALSE));
+  PetscCall(testShellResidual(PETSC_COMM_WORLD));
+  PetscCall(testHalfL2Residual(PETSC_COMM_WORLD));
   PetscCall(testHessianShellLifetime(PETSC_COMM_WORLD));
   PetscCall(PetscFinalize());
   return 0;
