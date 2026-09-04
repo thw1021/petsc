@@ -47,6 +47,8 @@
 - Add `-help mansec` to restrict the options help output to the options blocks in the given manual section; a comma-separated list may be given, for example `-help ksp,snes`
 - Add `Viewer` and `Bag` as the manual sections of, respectively, the viewer options an object creates, such as `-ksp_monitor` and `-ksp_view`, and the options registered by `PetscBagRegisterInt()` and the other `PetscBagRegister` routines; these are listed by `-help viewer` and `-help bag`, and not by the section of the object that creates them, so `-help ksp` does not list `-ksp_monitor`
 - Deprecate `PetscVoidFunction` and `PetscVoidStarFunction` in favor of `PetscVoidFn *` and `PetscVoidFn **`
+- Add a `PetscBool` first argument to `PetscShmgetAllocateArray()` (and the Fortran `PetscShmgetAllocateArrayScalar()` and `PetscShmgetAllocateArrayInt()`) that selects shared memory instead of `PetscMalloc()`
+- Add `PCMPIActive()` to be used in conjunction with some uses of `PetscShmgetAllocateArray()`
 
 ## Event Logging
 
