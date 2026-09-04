@@ -90,6 +90,7 @@
 - Change `MatCreateMAIJ()` to convert its result to `MATAIJKOKKOS` when the input matrix has that type, as is already done for `MATAIJCUSPARSE`; the `MATMAIJ` kernels read the host arrays of the input matrix directly and so miss values last updated on device
 - Change `MatDiagonalScale()` for `MATSEQDENSECUDA` and `MATSEQDENSEHIP` to check the memory type of the scaling `Vec` instead of its `VecType`, so device-resident vectors such as `VECKOKKOS` are consumed directly on the GPU instead of being copied through the host
 - Fix `MatNorm()` for `MATMPIDENSE` to respect the leading dimension of the local matrix, which was previously ignored in parallel for `NORM_1` and `NORM_FROBENIUS` and gave wrong results, for example on matrices obtained with `MatDenseGetSubMatrix()`
+- Add device implementations of `MatNorm()` with `NORM_1`, `NORM_FROBENIUS`, and `NORM_INFINITY` for `MATDENSECUDA` and `MATDENSEHIP`; previously all norms copied the matrix to the host
 
 ## MatCoarsen
 
