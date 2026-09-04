@@ -652,8 +652,9 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermSetParametersMod
 A `TaoTerm` can be set to an empty `Tao` object or added to an existing
 `Tao` using `TaoAddTerm()`. The entire objective function of a `Tao` object can be retrieved as a single `TaoTerm` using `TaoGetTerm()`, which returns the term along with its scale, parameters, and mapping matrix (if any).
 
-Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`).
-For these solvers, one must use function callbacks only - `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, or `TaoSetHessian()`.
+`TaoAddTerm()` supports bounded solvers. Bounded Newton solvers that use Hessian matrices require
+each summand to define an assembled Hessian. `TAOBQNK` instead uses the summed objective and
+gradient to update its LMVM approximation.
 
 For example: if you have specified an objective function $f(x)$ using
 `TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,

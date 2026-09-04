@@ -3100,9 +3100,6 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
   with an outer mapping matrix remains a single summand because map composition
   is not supported.
 
-  Currently, `TaoAddTerm()` does not support `TAOBQNK`. Other bounded Newton
-  solvers require every summand to define an assembled Hessian routine.
-
   All terms must be added before `TaoSetUp()` or `TaoSolve()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`, `TaoTermSumFlatten()`

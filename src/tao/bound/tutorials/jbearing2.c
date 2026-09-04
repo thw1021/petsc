@@ -560,4 +560,37 @@ PetscErrorCode ConvergenceTest(Tao tao, PetscCtx ctx)
       suffix: 21
       args: -tao_monitor -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5 -tao_mf_hessian
       requires: !single
+
+   # TaoTermSum coverage on bounded solvers. The two `halfl2squared` summands
+   # added below have opposite scales (+1.1 and -1.1), so their contribution to
+   # objective, gradient, and Hessian cancels in IEEE arithmetic. This wraps the
+   # callback objective in a TAOTERMSUM and exercises the assembled-Hessian
+   # gating in TaoSetUp_BNK()/TaoSetUp_TRON() without altering the iterate
+   # trajectory. The detailed Tao view verifies the resulting term structure.
+   test:
+      suffix: 22_taoterm
+      args: -tao_monitor -tao_view ::ascii_info_detail -mx 8 -my 12 -tao_type bnls -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      requires: !single
+
+   test:
+      suffix: 23_taoterm
+      args: -tao_monitor -tao_view ::ascii_info_detail -mx 8 -my 12 -tao_type bntr -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      requires: !single
+
+   test:
+      suffix: 24_taoterm
+      args: -tao_monitor -tao_view ::ascii_info_detail -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      requires: !single
+
+   test:
+      suffix: 25_taoterm
+      args: -tao_monitor -tao_view ::ascii_info_detail -mx 8 -my 12 -tao_type tron -tao_gatol 1e-5 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      requires: !single
+
+   # Exercise the embedded BNCG setup, which transfers the aggregate objective
+   # to the subsolver through TaoAddTerm().
+   test:
+      suffix: 26_taoterm_bqnk_bncg
+      args: -tao_converged_reason -mx 8 -my 12 -tao_type bqnkls -tao_gatol 1e-5 -tao_bnk_max_cg_its 1 -tao_add_terms first_,second_ -first_tao_term_type halfl2squared -tao_term_sum_first_scale 1.1 -second_tao_term_type halfl2squared -tao_term_sum_second_scale -1.1
+      requires: !single
 TEST*/
