@@ -14,6 +14,9 @@
 
 ```{rubric} Sys:
 ```
+- Add a `PetscBool` first argument to `PetscShmgetAllocateArray()` (and the Fortran `PetscShmgetAllocateArrayScalar()` and `PetscShmgetAllocateArrayInt()`) that selects shared memory instead of `PetscMalloc()`
+- Add `PCMPIActive()` to be used in conjunction with some uses of `PetscShmgetAllocateArray()`
+
 
 ```{rubric} Event Logging:
 ```
@@ -101,3 +104,4 @@
 
 ```{rubric} Fortran:
 ```
+

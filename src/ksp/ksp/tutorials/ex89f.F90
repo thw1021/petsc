@@ -29,9 +29,10 @@ program main
 
   PetscCallA(VecCreateSeq(PETSC_COMM_SELF, n, rhs, ierr))
   PetscCallA(VecCreateSeq(PETSC_COMM_SELF, n, solution, ierr))
-  PetscCallA(PetscShmgetAllocateArrayInt(0_PETSC_INT_KIND, n + 1, rowptr, ierr))
-  PetscCallA(PetscShmgetAllocateArrayInt(0_PETSC_INT_KIND, nz, colind, ierr))
-  PetscCallA(PetscShmgetAllocateArrayScalar(0_PETSC_INT_KIND, nz, a, ierr))
+  ! pass PETSC_TRUE to allocate the arrays in Unix shared memory when using the MPI linear solver server with shared memory
+  PetscCallA(PetscShmgetAllocateArrayInt(PETSC_FALSE, 0_PETSC_INT_KIND, n + 1, rowptr, ierr))
+  PetscCallA(PetscShmgetAllocateArrayInt(PETSC_FALSE, 0_PETSC_INT_KIND, nz, colind, ierr))
+  PetscCallA(PetscShmgetAllocateArrayScalar(PETSC_FALSE, 0_PETSC_INT_KIND, nz, a, ierr))
 
   PetscCallA(VecGetArray(rhs, b, ierr))
   b(1:n) = 1.0
