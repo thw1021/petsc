@@ -245,6 +245,45 @@ static PetscErrorCode TaoTermSumIsDummyDestroy(PetscCtxRt ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermSumCreateDummyParameters(TaoTerm term, Vec *dummy)
+{
+  TaoTermParametersMode mode;
+  PetscBool             is_sum;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermGetParametersMode(term, &mode));
+  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
+  if (mode != TAOTERM_PARAMETERS_NONE && is_sum) {
+    PetscInt n;
+    Vec     *params;
+
+    PetscCall(TaoTermSumGetNumberTerms(term, &n));
+    PetscCall(PetscCalloc1(n, &params));
+    PetscCall(TaoTermSumParametersPack(term, params, dummy));
+    PetscCall(PetscFree(params));
+  } else {
+    VecType     vec_type = VECSTANDARD;
+    PetscLayout layout   = NULL;
+
+    if (mode != TAOTERM_PARAMETERS_NONE) {
+      PetscLayout term_layout;
+
+      PetscCall(TaoTermGetParametersVecType(term, &vec_type));
+      PetscCall(TaoTermGetParametersLayout(term, &term_layout));
+      PetscCall(PetscLayoutReference(term_layout, &layout));
+    } else {
+      PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)term), &layout));
+      PetscCall(PetscLayoutSetLocalSize(layout, 0));
+      PetscCall(PetscLayoutSetSize(layout, 0));
+    }
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)term), dummy));
+    PetscCall(VecSetLayout(*dummy, layout));
+    PetscCall(PetscLayoutDestroy(&layout));
+    PetscCall(VecSetType(*dummy, vec_type));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermSumParametersPack - Concatenate the parameters for terms into a `VECNEST` parameter vector for a `TAOTERMSUM`
 
@@ -286,29 +325,11 @@ PetscErrorCode TaoTermSumParametersPack(TaoTerm term, Vec p_arr[], Vec *params)
       p[i]        = p_arr[i];
       is_dummy[i] = PETSC_FALSE;
     } else {
-      TaoTerm               subterm;
-      Vec                   dummy_vec;
-      TaoTermParametersMode mode;
-      VecType               vec_type = VECSTANDARD;
-      PetscLayout           layout   = NULL;
+      TaoTerm subterm;
 
       PetscCall(TaoTermSumGetTerm(term, i, NULL, NULL, &subterm, NULL));
-      PetscCall(TaoTermGetParametersMode(subterm, &mode));
-      if (mode != TAOTERM_PARAMETERS_NONE) {
-        PetscCall(TaoTermGetParametersVecType(subterm, &vec_type));
-        PetscCall(TaoTermGetParametersLayout(subterm, &layout));
-        layout->refcnt++;
-      } else {
-        PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)term), &layout));
-        PetscCall(PetscLayoutSetLocalSize(layout, 0));
-        PetscCall(PetscLayoutSetSize(layout, 0));
-      }
-      PetscCall(VecCreate(PetscObjectComm((PetscObject)term), &dummy_vec));
-      PetscCall(VecSetLayout(dummy_vec, layout));
-      PetscCall(PetscLayoutDestroy(&layout));
-      PetscCall(VecSetType(dummy_vec, vec_type));
+      PetscCall(TaoTermSumCreateDummyParameters(subterm, &p[i]));
       is_dummy[i] = PETSC_TRUE;
-      p[i]        = dummy_vec;
     }
   }
   PetscCall(VecCreateNest(PetscObjectComm((PetscObject)term), n_terms, NULL, p, params));
@@ -431,6 +452,7 @@ static PetscErrorCode TaoTermDestroy_Sum(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermHessianMatrices_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetTermMask_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermMask_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumFlatten_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetLastTermObjectives_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1073,6 +1095,173 @@ static PetscErrorCode TaoTermSumAddTerm_Sum(TaoTerm term, const char prefix[], P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  TaoTermSumFlatten - Flatten nested `TAOTERMSUM` terms into a single level
+
+  Collective
+
+  Input Parameter:
+. term - a `TaoTerm` of type `TAOTERMSUM`
+
+  Level: advanced
+
+  Notes:
+  For each sub-term that is itself a `TAOTERMSUM` with no outer mapping matrix,
+  its individual terms are promoted into the parent sum with composed scales.
+  Sub-terms with a non-`NULL` outer mapping matrix remain nested because map
+  composition is not supported.
+
+  This must be called before `TaoTermSetUp()` and before packing parameters,
+  since flattening changes the number and ordering of terms.
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSUM`, `TaoTermSumAddTerm()`, `TaoAddTerm()`
+@*/
+PetscErrorCode TaoTermSumFlatten(TaoTerm term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCheck(!term->setup_called, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTermSumFlatten() must be called before TaoTermSetUp() or TaoSetUp()");
+  PetscTryMethod(term, "TaoTermSumFlatten_C", (TaoTerm), (term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSumFlatten_Sum(TaoTerm term)
+{
+  TaoTerm_Sum    *sum           = (TaoTerm_Sum *)term->data;
+  PetscInt        n_new         = 0;
+  PetscBool       needs_flatten = PETSC_FALSE;
+  TaoTermMapping *new_terms;
+  PetscReal      *new_values;
+
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    TaoTermMapping *summand = &sum->terms[i];
+    PetscBool       is_sum;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMSUM, &is_sum));
+    if (is_sum && !summand->map) {
+      PetscInt inner_n;
+
+      PetscCall(TaoTermSumGetNumberTerms(summand->term, &inner_n));
+      n_new += inner_n;
+      needs_flatten = PETSC_TRUE;
+    } else n_new++;
+  }
+  if (!needs_flatten) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(PetscCalloc1(n_new, &new_terms));
+  PetscCall(PetscCalloc1(n_new, &new_values));
+  {
+    PetscInt j = 0;
+
+    for (PetscInt i = 0; i < sum->n_terms; i++) {
+      TaoTermMapping *summand = &sum->terms[i];
+      PetscBool       is_sum;
+
+      PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMSUM, &is_sum));
+      if (is_sum && !summand->map) {
+        TaoTerm_Sum *inner_sum   = (TaoTerm_Sum *)summand->term->data;
+        PetscReal    outer_scale = summand->scale;
+
+        for (PetscInt k = 0; k < inner_sum->n_terms; k++) {
+          TaoTermMapping *inner = &inner_sum->terms[k];
+          char           *composed_prefix = NULL;
+          size_t          outer_len = 0, inner_len = 0;
+
+          if (summand->prefix) PetscCall(PetscStrlen(summand->prefix, &outer_len));
+          if (inner->prefix) PetscCall(PetscStrlen(inner->prefix, &inner_len));
+          if (outer_len || inner_len) {
+            PetscCall(PetscMalloc1(outer_len + inner_len + 1, &composed_prefix));
+            PetscCall(PetscSNPrintf(composed_prefix, outer_len + inner_len + 1, "%s%s", summand->prefix ? summand->prefix : "", inner->prefix ? inner->prefix : ""));
+          }
+          PetscCall(TaoTermMappingCopyData(&new_terms[j], composed_prefix, outer_scale * inner->scale, inner));
+          new_terms[j].mask = (TaoTermMask)(new_terms[j].mask | summand->mask);
+          PetscCall(PetscFree(composed_prefix));
+          j++;
+        }
+        PetscCall(TaoTermMappingReset(summand));
+      } else {
+        PetscCall(PetscArraycpy(&new_terms[j], summand, 1));
+        PetscCall(PetscArrayzero(summand, 1));
+        j++;
+      }
+    }
+    PetscCheck(j == n_new, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Flatten count mismatch: expected %" PetscInt_FMT ", got %" PetscInt_FMT, n_new, j);
+  }
+  PetscCall(TaoTermSumHessCacheReset(&sum->hessian_cache));
+  PetscCall(PetscFree(sum->terms));
+  PetscCall(PetscFree(sum->subterm_values));
+  sum->terms          = new_terms;
+  sum->subterm_values = new_values;
+  sum->n_terms        = n_new;
+  PetscCall(TaoTermSumFlatten_Sum(term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermSumFlattenWithParameters_Private(TaoTerm term, Vec *params)
+{
+  TaoTerm_Sum *sum           = (TaoTerm_Sum *)term->data;
+  PetscInt     old_n         = sum->n_terms;
+  Vec         *old_params    = NULL;
+  Vec         *new_params    = NULL;
+  PetscInt     new_n         = 0;
+  PetscBool    had_params    = (PetscBool)(*params != NULL);
+  PetscBool    needs_flatten = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(PetscCalloc1(old_n, &old_params));
+  if (had_params) PetscCall(TaoTermSumParametersUnpack(term, params, old_params));
+  for (PetscInt i = 0; i < old_n; i++) {
+    TaoTermMapping *summand = &sum->terms[i];
+    PetscBool       is_sum;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMSUM, &is_sum));
+    if (is_sum && !summand->map) {
+      PetscCall(TaoTermSumFlattenWithParameters_Private(summand->term, &old_params[i]));
+      needs_flatten = PETSC_TRUE;
+    }
+  }
+  if (!needs_flatten) {
+    if (had_params) PetscCall(TaoTermSumParametersPack(term, old_params, params));
+    for (PetscInt i = 0; i < old_n; i++) PetscCall(VecDestroy(&old_params[i]));
+    PetscCall(PetscFree(old_params));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  for (PetscInt i = 0; i < old_n; i++) {
+    TaoTermMapping *summand = &sum->terms[i];
+    PetscBool       is_sum;
+    PetscInt        inner_n = 1;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMSUM, &is_sum));
+    if (is_sum && !summand->map) PetscCall(TaoTermSumGetNumberTerms(summand->term, &inner_n));
+    new_n += inner_n;
+  }
+  PetscCall(PetscCalloc1(new_n, &new_params));
+  for (PetscInt i = 0, j = 0; i < old_n; i++) {
+    TaoTermMapping *summand = &sum->terms[i];
+    PetscBool       is_sum;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMSUM, &is_sum));
+    if (is_sum && !summand->map) {
+      PetscInt inner_n;
+
+      PetscCall(TaoTermSumGetNumberTerms(summand->term, &inner_n));
+      if (old_params[i]) PetscCall(TaoTermSumParametersUnpack(summand->term, &old_params[i], &new_params[j]));
+      j += inner_n;
+    } else {
+      new_params[j++] = old_params[i];
+      old_params[i]   = NULL;
+    }
+  }
+  PetscCall(TaoTermSumFlatten_Sum(term));
+  if (had_params) PetscCall(TaoTermSumParametersPack(term, new_params, params));
+  for (PetscInt i = 0; i < old_n; i++) PetscCall(VecDestroy(&old_params[i]));
+  for (PetscInt i = 0; i < new_n; i++) PetscCall(VecDestroy(&new_params[i]));
+  PetscCall(PetscFree(old_params));
+  PetscCall(PetscFree(new_params));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems PetscOptionsObject)
 {
   PetscInt    n_terms;
@@ -1526,6 +1715,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermHessianMatrices_C", TaoTermSumSetTermHessianMatrices_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetTermMask_C", TaoTermSumGetTermMask_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetTermMask_C", TaoTermSumSetTermMask_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumFlatten_C", TaoTermSumFlatten_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetLastTermObjectives_C", TaoTermSumGetLastTermObjectives_Sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

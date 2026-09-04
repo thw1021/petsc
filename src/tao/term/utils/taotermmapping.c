@@ -150,6 +150,24 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode TaoTermMappingCopyData(TaoTermMapping *dest, const char *prefix, PetscReal scale, const TaoTermMapping *src)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoTermMappingSetData(dest, prefix, scale, src->term, src->map));
+  PetscCall(PetscObjectReference((PetscObject)src->_unmapped_H));
+  dest->_unmapped_H = src->_unmapped_H;
+  PetscCall(PetscObjectReference((PetscObject)src->_unmapped_Hpre));
+  dest->_unmapped_Hpre = src->_unmapped_Hpre;
+  PetscCall(PetscObjectReference((PetscObject)src->_mapped_H));
+  dest->_mapped_H = src->_mapped_H;
+  PetscCall(PetscObjectReference((PetscObject)src->_mapped_Hpre));
+  dest->_mapped_Hpre            = src->_mapped_Hpre;
+  dest->mapped_H_state.valid    = PETSC_FALSE;
+  dest->mapped_Hpre_state.valid = PETSC_FALSE;
+  dest->mask                    = src->mask;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
 {
   PetscFunctionBegin;

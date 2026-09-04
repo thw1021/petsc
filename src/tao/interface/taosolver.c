@@ -3095,11 +3095,17 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
   size); when a mapping matrix $A$ is used, the parameter space may depend on either the row
   or column space of $A$.  See the documentation for each `TaoTermType`.
 
-  Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`)
+  If adding `term` creates a nested `TAOTERMSUM`, `Tao` flattens every nested
+  sum without an outer mapping matrix and repacks its parameters. A nested sum
+  with an outer mapping matrix remains a single summand because map composition
+  is not supported.
+
+  Currently, `TaoAddTerm()` does not support `TAOBQNK`. Other bounded Newton
+  solvers require every summand to define an assembled Hessian routine.
 
   All terms must be added before `TaoSetUp()` or `TaoSolve()`.
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`, `TaoTermSumFlatten()`
 @*/
 PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
 {
@@ -3125,8 +3131,6 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   // If user is using TaoAddTerm, before setting any terms or callbacks,
   // then tao->objective_term.term is empty callback, which we want to remove.
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
-  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
-  PetscCheck(!is_sum, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "TaoAddTerm does not support adding TAOTERMSUM");
   if (is_callback) {
     PetscBool is_obj, is_objgrad, is_grad;
 
@@ -3147,6 +3151,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     }
   }
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+  if (is_sum && !tao->num_terms) is_sum = PETSC_FALSE;
   // One TaoTerm has been set. Create TAOTERMSUM to store that, and the new one
   if (!is_sum) {
     TaoTerm     old_sum;
@@ -3208,6 +3213,8 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     for (PetscInt i = 0; i < num_terms; i++) PetscCall(VecDestroy(&vec_list[i]));
     PetscCall(PetscFree(vec_list));
   }
+  PetscCall(TaoTermSumFlattenWithParameters_Private(tao->objective_term.term, &tao->objective_parameters));
+  PetscCall(TaoTermSumGetNumberTerms(tao->objective_term.term, &tao->num_terms));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

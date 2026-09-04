@@ -332,6 +332,7 @@ PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessian(TaoTerm, TaoHessianFn **,
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessianMult(TaoTerm, TaoHessianMultFn **, PetscCtxRt);
 
 PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *, const char *, PetscReal, TaoTerm, Mat);
+PETSC_INTERN PetscErrorCode TaoTermMappingCopyData(TaoTermMapping *, const char *, PetscReal, const TaoTermMapping *);
 PETSC_INTERN PetscErrorCode TaoTermMappingGetData(TaoTermMapping *, const char **, PetscReal *, TaoTerm *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjective(TaoTermMapping *, Vec, Vec, InsertMode, PetscReal *);
@@ -356,3 +357,4 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(Ta
 PETSC_INTERN PetscErrorCode TaoTermPreprocessHessianShells(TaoTerm, Vec, Vec, Mat *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermMappingPreprocessHessianShells(TaoTermMapping *, Vec, Vec, Mat *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianShell(TaoTermMapping *, Mat *);
+PETSC_INTERN PetscErrorCode TaoTermSumFlattenWithParameters_Private(TaoTerm, Vec *);
