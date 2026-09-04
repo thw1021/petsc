@@ -30,6 +30,7 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMHALFL2SQUARED` - $\tfrac{1}{2}\|x - p\|_2^2$
 . `TAOTERML1`            - $\|x - p\|_1$
 . `TAOTERMQUADRATIC`     - a quadratic form $\tfrac{1}{2}(x - p)^T A (x - p)$
+. `TAOTERML2PROX`        - a proximal term $\tfrac{1}{2}\|x - x_k\|_2^2$ for `TAOBRGN`
 - `TAOTERMCALLBACKS`     - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
 
   Level: intermediate
@@ -43,6 +44,7 @@ typedef const char *TaoTermType;
 #define TAOTERMHALFL2SQUARED "halfl2squared"
 #define TAOTERML1            "l1"
 #define TAOTERMQUADRATIC     "quadratic"
+#define TAOTERML2PROX        "l2prox"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -308,6 +310,8 @@ PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateQuadratic(Mat, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticGetMat(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticSetMat(TaoTerm, Mat);
+
+PETSC_EXTERN PetscErrorCode TaoTermCreateL2Prox(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);

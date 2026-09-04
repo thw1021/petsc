@@ -366,3 +366,4 @@ PETSC_INTERN PetscErrorCode TaoTermPreprocessHessianShells(TaoTerm, Vec, Vec, Ma
 PETSC_INTERN PetscErrorCode TaoTermMappingPreprocessHessianShells(TaoTermMapping *, Vec, Vec, Mat *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianShell(TaoTermMapping *, Mat *);
 PETSC_INTERN PetscErrorCode TaoTermSumFlattenWithParameters_Private(TaoTerm, Vec *);
+PETSC_INTERN PetscErrorCode TaoTermL2ProxUpdate_Private(TaoTerm, Tao, PetscInt);
