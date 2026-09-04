@@ -113,9 +113,9 @@ PetscErrorCode MatViennaCLCopyFromGPU(Mat A, const ViennaCLAIJMatrix *Agpu)
       if (a->free_a) PetscCall(PetscShmgetDeallocateArray((void **)a->a));
       if (a->free_ij) PetscCall(PetscShmgetDeallocateArray((void **)a->j));
       if (a->free_ij) PetscCall(PetscShmgetDeallocateArray((void **)a->i));
-      PetscCall(PetscShmgetAllocateArray(a->nz, sizeof(PetscScalar), (void **)&a->a));
-      PetscCall(PetscShmgetAllocateArray(a->nz, sizeof(PetscInt), (void **)&a->j));
-      PetscCall(PetscShmgetAllocateArray(m + 1, sizeof(PetscInt), (void **)&a->i));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), a->nz, sizeof(PetscScalar), (void **)&a->a));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), a->nz, sizeof(PetscInt), (void **)&a->j));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), m + 1, sizeof(PetscInt), (void **)&a->i));
       a->free_a  = PETSC_TRUE;
       a->free_ij = PETSC_TRUE;
 
