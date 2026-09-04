@@ -442,7 +442,7 @@ program main
     PetscCallA(TaoSetType(ta, TAOPOUNDERS, ierr))
 
 !   Set routines for function, gradient, and hessian evaluation
-    PetscCallA(TaoSetResidualRoutine(ta, f, FormFunction, 0, ierr))
+    PetscCallA(TaoSetResidual(ta, f, FormFunction, 0, ierr))
 
 !   Optional: Set initial guess
     call FormStartingPoint(x)

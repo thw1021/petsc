@@ -15,12 +15,12 @@ PetscErrorCode TaoLMVMGetH0(PETSC_UNUSED Tao tao,PETSC_UNUSED Mat *mat) {PetscTa
 PetscErrorCode TaoLMVMGetH0KSP(PETSC_UNUSED Tao tao,PETSC_UNUSED KSP *ksp) {PetscTaoError;}
 
 PetscErrorCode TaoBRGNGetSubsolver(PETSC_UNUSED Tao tao,PETSC_UNUSED Tao *subsolver) {PetscTaoError;}
-PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscErrorCode (*func)(Tao,Vec,PetscReal*,Vec,void*),PETSC_UNUSED PetscCtx ctx) {PetscTaoError;}
-PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(PETSC_UNUSED Tao tao,PETSC_UNUSED Mat H,PETSC_UNUSED PetscErrorCode (*func)(Tao,Vec,Mat,void*),PETSC_UNUSED PetscCtx ctx) {PetscTaoError;}
-PetscErrorCode TaoBRGNSetRegularizerWeight(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal weight) {PetscTaoError;}
-PetscErrorCode TaoBRGNSetL1SmoothEpsilon(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal epsilon) {PetscTaoError;}
-PetscErrorCode TaoBRGNSetDictionaryMatrix(PETSC_UNUSED Tao tao,PETSC_UNUSED Mat D) {PetscTaoError;}
-PetscErrorCode TaoBRGNGetDampingVector(PETSC_UNUSED Tao tao,PETSC_UNUSED Vec *d) {PetscTaoError;}
+PetscErrorCode TaoBRGNAddRegularizerTerm(PETSC_UNUSED Tao tao,PETSC_UNUSED const char prefix[],PETSC_UNUSED PetscReal scale,PETSC_UNUSED TaoTerm term,PETSC_UNUSED Vec parameters,PETSC_UNUSED Mat mapping) {PetscTaoError;}
+PetscErrorCode TaoBRGNGetRegularizerTerm(PETSC_UNUSED Tao tao,PETSC_UNUSED TaoTerm *term) {PetscTaoError;}
+PetscErrorCode TaoBRGNSetUseLM(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscBool use_lm) {PetscTaoError;}
+PetscErrorCode TaoBRGNGetUseLM(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscBool *use_lm) {PetscTaoError;}
+PetscErrorCode TaoBRGNSetLMLambda(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal lambda) {PetscTaoError;}
+PetscErrorCode TaoBRGNGetLMLambda(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal *lambda) {PetscTaoError;}
 
 PetscErrorCode TaoBNCGSetType(PETSC_UNUSED Tao tao, PETSC_UNUSED TaoBNCGType type) {PetscTaoError;}
 PetscErrorCode TaoBNCGGetType(PETSC_UNUSED Tao tao, PETSC_UNUSED TaoBNCGType *type) {PetscTaoError;}

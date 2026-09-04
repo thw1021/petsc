@@ -74,8 +74,8 @@ int main(int argc, char **argv)
   PetscCall(InitializeData(&user));
   PetscCall(FormStartingPoint(x));
   PetscCall(TaoSetSolution(tao, x));
-  PetscCall(TaoSetResidualRoutine(tao, f, EvaluateFunction, (void *)&user));
-  PetscCall(TaoSetJacobianResidualRoutine(tao, J, J, EvaluateJacobian, (void *)&user));
+  PetscCall(TaoSetResidual(tao, f, EvaluateFunction, (void *)&user));
+  PetscCall(TaoSetJacobianResidual(tao, J, J, EvaluateJacobian, (void *)&user));
 
   /* Check for any TAO command line arguments */
   PetscCall(TaoSetFromOptions(tao));
@@ -616,6 +616,6 @@ PetscErrorCode InitializeData(AppCtx *user)
 
    test:
       suffix: 4
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type lm -tao_gatol 1.e-5 -tao_brgn_subsolver_tao_type bnls -tao_brgn_subsolver_tao_monitor
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_use_lm -tao_gatol 1.e-5 -tao_brgn_subsolver_tao_type bnls -tao_brgn_subsolver_tao_monitor
 
 TEST*/

@@ -74,12 +74,12 @@ static PetscErrorCode TaoPounders(AppCtx *user)
   /* Create residuals vector and set residual function */
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, user->m, &F));
   PetscCall(PetscObjectSetName((PetscObject)F, "F"));
-  PetscCall(TaoSetResidualRoutine(tao, F, EvaluateResidual, (void *)user));
+  PetscCall(TaoSetResidual(tao, F, EvaluateResidual, (void *)user));
 
   /* Create Jacobian matrix and set residual Jacobian routine */
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, user->m, user->n, user->n, NULL, &J));
   PetscCall(PetscObjectSetName((PetscObject)J, "J"));
-  PetscCall(TaoSetJacobianResidualRoutine(tao, J, J, EvaluateJacobian, (void *)user));
+  PetscCall(TaoSetJacobianResidual(tao, J, J, EvaluateJacobian, (void *)user));
 
   /* Solve the problem */
   PetscCall(TaoSetType(tao, TAOPOUNDERS));

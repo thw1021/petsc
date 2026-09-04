@@ -13,6 +13,7 @@
 */
 
 #include <petsctao.h>
+#include <petsctaoterm.h>
 
 /*
 Description:   BRGN tomography reconstruction example .
@@ -38,24 +39,28 @@ PetscErrorCode InitializeUserData(AppCtx *);
 PetscErrorCode FormStartingPoint(Vec, AppCtx *);
 PetscErrorCode EvaluateResidual(Tao, Vec, Vec, void *);
 PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, void *);
-PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao, Vec, PetscReal *, Vec, void *);
-PetscErrorCode EvaluateRegularizerHessian(Tao, Vec, Mat, void *);
-PetscErrorCode EvaluateRegularizerHessianProd(Mat, Vec, Vec);
+PetscErrorCode EvaluateRegularizerObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
+PetscErrorCode EvaluateRegularizerHessian(TaoTerm, Vec, Vec, Mat, Mat);
+PetscErrorCode EvaluateRegularizerHessianProd(TaoTerm, Vec, Vec, Vec, Vec);
 
 /*--------------------------------------------------------------------*/
 int main(int argc, char **argv)
 {
   Vec         x, res; /* solution, function res(x) = A*x-b */
-  Mat         Hreg;   /* regularizer Hessian matrix for user specified regularizer*/
-  Tao         tao;    /* Tao solver context */
+  TaoTerm     regularizer;
+  Tao         tao; /* Tao solver context */
   PetscReal   hist[100], resid[100], v1, v2;
   PetscInt    lits[100];
-  AppCtx      user;                                /* user-defined work context */
-  PetscViewer fd;                                  /* used to save result to file */
-  char        resultFile[] = "tomographyResult_x"; /* Debug: change from "tomographyResult_x" to "cs1Result_x" */
+  AppCtx      user;                                         /* user-defined work context */
+  PetscViewer fd;                                           /* used to save result to file */
+  char        resultFile[]          = "tomographyResult_x"; /* Debug: change from "tomographyResult_x" to "cs1Result_x" */
+  PetscBool   use_shell_regularizer = PETSC_TRUE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscOptionsBegin(PETSC_COMM_SELF, NULL, "Tomography options", NULL);
+  PetscCall(PetscOptionsBool("-use_shell_regularizer", "Use the shell regularizer defined by this example", NULL, use_shell_regularizer, &use_shell_regularizer, NULL));
+  PetscOptionsEnd();
 
   /* Create TAO solver and set desired solution method */
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
@@ -76,23 +81,23 @@ int main(int argc, char **argv)
   /* Sets the upper and lower bounds of x */
   PetscCall(TaoSetVariableBounds(tao, user.xlb, user.xub));
 
-  /* Bind user.D to tao->data->D */
-  PetscCall(TaoBRGNSetDictionaryMatrix(tao, user.D));
-
   /* Set the residual function and Jacobian routines for least squares. */
-  PetscCall(TaoSetResidualRoutine(tao, res, EvaluateResidual, (void *)&user));
+  PetscCall(TaoSetResidual(tao, res, EvaluateResidual, (void *)&user));
   /* Jacobian matrix fixed as user.A for Linear least square problem. */
-  PetscCall(TaoSetJacobianResidualRoutine(tao, user.A, user.A, EvaluateJacobian, (void *)&user));
+  PetscCall(TaoSetJacobianResidual(tao, user.A, user.A, EvaluateJacobian, (void *)&user));
 
-  /* User set the regularizer objective, gradient, and hessian. Set it the same as using l2prox choice, for testing purpose.  */
-  PetscCall(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(tao, EvaluateRegularizerObjectiveAndGradient, (void *)&user));
-  /* User defined regularizer Hessian setup, here is identity shell matrix */
-  PetscCall(MatCreate(PETSC_COMM_SELF, &Hreg));
-  PetscCall(MatSetSizes(Hreg, PETSC_DECIDE, PETSC_DECIDE, user.N, user.N));
-  PetscCall(MatSetType(Hreg, MATSHELL));
-  PetscCall(MatSetUp(Hreg));
-  PetscCall(MatShellSetOperation(Hreg, MATOP_MULT, (PetscErrorCodeFn *)EvaluateRegularizerHessianProd));
-  PetscCall(TaoBRGNSetRegularizerHessianRoutine(tao, Hreg, EvaluateRegularizerHessian, (void *)&user));
+  if (use_shell_regularizer) {
+    PetscCall(TaoTermCreateShell(PETSC_COMM_SELF, NULL, NULL, &regularizer));
+    PetscCall(TaoTermSetSolutionTemplate(regularizer, x));
+    PetscCall(TaoTermSetParametersMode(regularizer, TAOTERM_PARAMETERS_NONE));
+    PetscCall(TaoTermShellSetObjectiveAndGradient(regularizer, EvaluateRegularizerObjectiveAndGradient));
+    PetscCall(TaoTermShellSetHessian(regularizer, EvaluateRegularizerHessian));
+    PetscCall(TaoTermShellSetHessianMult(regularizer, EvaluateRegularizerHessianProd));
+    PetscCall(TaoTermShellSetCreateHessianMatrices(regularizer, TaoTermCreateHessianMatricesDefault));
+    PetscCall(TaoTermSetCreateHessianMode(regularizer, PETSC_TRUE, MATAIJ, NULL));
+    PetscCall(TaoBRGNAddRegularizerTerm(tao, "regularizer_", 1e-4, regularizer, NULL, NULL));
+    PetscCall(TaoTermDestroy(&regularizer));
+  }
 
   /* Check for any TAO command line arguments */
   PetscCall(TaoSetFromOptions(tao));
@@ -119,7 +124,6 @@ int main(int argc, char **argv)
   /* Free PETSc data structures */
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&res));
-  PetscCall(MatDestroy(&Hreg));
   /* Free user data structures */
   PetscCall(MatDestroy(&user.A));
   PetscCall(MatDestroy(&user.D));
@@ -154,18 +158,18 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
 }
 
 /* ------------------------------------------------------------ */
-PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao tao, Vec X, PetscReal *f_reg, Vec G_reg, void *ptr)
+PetscErrorCode EvaluateRegularizerObjectiveAndGradient(TaoTerm term, Vec X, Vec params, PetscReal *f_reg, Vec G_reg)
 {
   PetscFunctionBegin;
-  /* compute regularizer objective = 0.5*x'*x */
+  /* Compute regularizer objective = 0.5*x'*x */
   PetscCall(VecDot(X, X, f_reg));
   *f_reg *= 0.5;
-  /* compute regularizer gradient = x */
+  /* Compute regularizer gradient = x */
   PetscCall(VecCopy(X, G_reg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode EvaluateRegularizerHessianProd(Mat Hreg, Vec in, Vec out)
+PetscErrorCode EvaluateRegularizerHessianProd(TaoTerm term, Vec X, Vec params, Vec in, Vec out)
 {
   PetscFunctionBegin;
   PetscCall(VecCopy(in, out));
@@ -173,10 +177,17 @@ PetscErrorCode EvaluateRegularizerHessianProd(Mat Hreg, Vec in, Vec out)
 }
 
 /* ------------------------------------------------------------ */
-PetscErrorCode EvaluateRegularizerHessian(Tao tao, Vec X, Mat Hreg, void *ptr)
+PetscErrorCode EvaluateRegularizerHessian(TaoTerm term, Vec X, Vec params, Mat Hreg, Mat Hregpre)
 {
-  /* Hessian for regularizer objective = 0.5*x'*x is identity matrix, and is not changing*/
+  PetscInt rstart, rend;
+
   PetscFunctionBegin;
+  /* Hessian for regularizer objective = 0.5*x'*x is the identity matrix and does not change */
+  PetscCall(MatZeroEntries(Hreg));
+  PetscCall(MatGetOwnershipRange(Hreg, &rstart, &rend));
+  for (PetscInt i = rstart; i < rend; i++) PetscCall(MatSetValue(Hreg, i, i, 1.0, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(Hreg, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(Hreg, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -280,14 +291,14 @@ PetscErrorCode InitializeUserData(AppCtx *user)
       args: -path ${DATAFILESPATH}/tao/tomography
 
       test:
-         args: -tao_max_it 10 -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-8
+         args: -use_shell_regularizer false -tao_max_it 10 -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-8
 
       test:
          suffix: 2
-         args: -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type l2prox -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_monitor
+         args: -use_shell_regularizer false -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type l2prox -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_monitor
 
       test:
          suffix: 3
-         args: -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type user -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_monitor
+         args: -use_shell_regularizer false -tao_monitor -tao_max_it 1000 -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_monitor
 
 TEST*/

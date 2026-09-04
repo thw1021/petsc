@@ -153,8 +153,12 @@
 - Change the deprecated `TaoSMonitor()` and `-tao_smonitor` to use the full-precision default monitor
 - Add `TaoGetConvergedReasonString()` to retrieve a human readable string describing the `TaoConvergedReason`
 - Allow `TaoAddTerm()` on bounded solvers
+- Refactor `TAOBRGN` onto `TaoTerm` composition. Add `TaoBRGNAddRegularizerTerm()` and `TaoBRGNGetRegularizerTerm()` for additive objective regularizers and `TaoBRGNSetUseLM()` and `TaoBRGNSetLMLambda()` for independent Levenberg-Marquardt damping. Add public `TAOTERML2PROX` and remove the legacy BRGN regularizer type and callback/setter APIs. The options presets `-tao_brgn_regularization_type (l2prox|l2pure|l1dict)` remain available
 
 ## TaoTerm
+
+- Add `TaoTermSumFlatten()` to normalize nested, unmapped `TAOTERMSUM` objects into one level
+- Add parameter-aware `TaoTermResidualFn` and `TaoTermJacobianResidualFn`, their compute and shell setter APIs, and residual capability queries. `TAOTERMHALFL2SQUARED` now defines the residual $R(x;p)=x-p$ and residual Jacobian $J=I$
 
 
 ## PetscRegressor

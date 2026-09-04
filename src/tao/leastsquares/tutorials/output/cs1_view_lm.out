@@ -1,9 +1,6 @@
 Tao Object: 1 MPI process
   type: brgn
-    Regularizer weight: 2e-05
-    BRGN Regularization Type: lm
-    Downhill trust region decrease factor:: 0.2
-    Uphill trust region increase factor:: 1.5
+    Levenberg-Marquardt damping: enabled     (lambda 0.0001)
     Tao Object: (tao_brgn_subsolver_) 1 MPI process
       type: bnls
         Tao Object: (tao_brgn_subsolver_tao_bnk_cg_) 1 MPI process
@@ -43,8 +40,7 @@ Tao Object: 1 MPI process
           iter: 0
           othr: 0
       TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
-        type: unit
-          Line Search: Unit Step 1..
+        type: more-thuente
         maximum function evaluations=30
         tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
         total number of function evaluations=0
@@ -79,23 +75,23 @@ Tao Object: 1 MPI process
             Rescale convex factor: theta=0.125
         linear system matrix, which is also used to construct the preconditioner:
         Mat Object: 1 MPI process
-          type: shell
+          type: seqdense
           rows=5, cols=5
-      total KSP iterations: 6
+          total: nonzeros=25, allocated nonzeros=25
+          total number of mallocs used during MatSetValues calls=0
+      total KSP iterations: 7
       convergence tolerances: gatol=1e-06,       grtol=1e-08,       steptol=0.,       gttol=0.
-      Residual in Function/Gradient:=9.07258e-09
-      Objective value=1.28415e-16
+      Residual in Function/Gradient:=4.52408e-08
+      Objective value=3.19332e-15
       total number of iterations=2,                              (max: 10000)
       total number of function/gradient evaluations=5,          (max: unlimited)
-      total number of residual evaluations=5
       total number of Hessian evaluations=2
-      total number of Jacobian evaluations=7
       Solution converged:        ||g(X)|| <= gatol
   convergence tolerances: gatol=1e-06,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=0.
   Objective value=1.71859e-08
   total number of iterations=2,                          (max: 10000)
   total number of function/gradient evaluations=5,      (max: unlimited)
-  total number of residual evaluations=5
   total number of Hessian evaluations=2
+  total number of Jacobian evaluations=7
   Solution converged:    ||g(X)|| <= gatol

@@ -2,6 +2,7 @@
 #include <petsc/private/regressorimpl.h>
 #include <petscksp.h>
 #include <petsctao.h>
+#include <petsctaoterm.h>
 
 /* We define this header, since it serves as a "base" for all linear models. */
 #define REGRESSOR_LINEAR_HEADER \

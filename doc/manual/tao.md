@@ -986,7 +986,7 @@ PetscErrorCode EvaluateResidual(Tao, Vec, Vec, PetscCtx);
 and set with the
 
 ```
-TaoSetResidualRoutine(Tao, PetscErrorCode (*)(Tao, Vec, Vec, PetscCtx), PetscCtx);
+TaoSetResidual(Tao, Vec, PetscErrorCode (*)(Tao, Vec, Vec, PetscCtx), PetscCtx);
 ```
 
 routine. If required by the algorithm, the Jacobian of the residual,
@@ -994,13 +994,13 @@ $J = \partial r(x) / \partial x$, should be computed with a
 function of the form
 
 ```
-PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, PetscCtx;
+PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, PetscCtx);
 ```
 
 and set with the
 
 ```
-TaoSetJacobianResidualRoutine(Tao, PetscErrorCode (*)(Tao, Vec, Mat, PetscCtx), PetscCtx);
+TaoSetJacobianResidual(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, PetscCtx), PetscCtx);
 ```
 
 routine.
@@ -2647,7 +2647,7 @@ $$
 $$
 
 where $\lambda$ is the scalar weight of the regularizer. BRGN
-provides two default implementations for $\beta(x)$:
+provides the following built-in regularizers:
 
 - **L2-norm** - $\beta(x) = \frac{1}{2}||x_k||_2^2$
 - **L2-norm Proximal Point** -
@@ -2656,27 +2656,29 @@ provides two default implementations for $\beta(x)$:
   $\beta(x) = ||Dx||_1 \approx \sum_{i} \sqrt{y_i^2 + \epsilon^2}-\epsilon$
   where $y = Dx$ and $\epsilon$ is the smooth approximation
   parameter.
+Select a built-in regularizer with
+`-tao_brgn_regularization_type (l2prox|l2pure|l1dict)`. Its weight
+and L1 smoothing parameter are controlled by
+`-tao_brgn_regularizer_weight lambda` and
+`-tao_brgn_l1_smooth_epsilon epsilon`, respectively. The built-in
+`l1dict` preset uses the identity map. To use a nonidentity dictionary
+$D$, create a `TAOTERML1` in the row space of $D$ and pass $D$ as the
+mapping argument to `TaoBRGNAddRegularizerTerm()`.
 
-The regularizer weight can be controlled with either
-`TaoBRGNSetRegularizerWeight()` or `-tao_brgn_regularizer_weight`
-command line option, while the smooth approximation parameter can be set
-with either `TaoBRGNSetL1SmoothEpsilon()` or
-`-tao_brgn_l1_smooth_epsilon`. For the L1-norm term, the user can
-supply a dictionary matrix with `TaoBRGNSetDictionaryMatrix()`. If no
-dictionary is provided, the dictionary is assumed to be an identity
-matrix and the regularizer reduces to a sparse solution term.
+`TaoBRGNAddRegularizerTerm()` adds any suitable `TaoTerm`, including
+`TAOTERMSHELL`, to the regularized objective. Multiple regularizers can
+be added. Term 0 of the resulting `TAOTERMSUM` is the least-squares data
+term and later terms are regularizers; `TaoBRGNGetRegularizerTerm()`
+returns this sum. The generic option `-tao_add_terms reg2_,reg3_`
+constructs named regularizers using the corresponding
+`-reg2_tao_term_*` and `-reg3_tao_term_*` options. Their scales can be
+set with `-tao_term_sum_reg2_scale` and `-tao_term_sum_reg3_scale`.
 
-The regularization selection can be made using the command line option
-`-tao_brgn_regularization_type (l2pure|l2prox|l1dict|user)` where the `user` option allows
-the user to define a custom $\mathcal{C}2$-continuous
-regularization term. This custom term can be defined by using the
-interface functions:
-
-- `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` - Provide
-  user-call back for evaluating the function value and gradient
-  evaluation for the regularization term.
-- `TaoBRGNSetRegularizerHessianRoutine()` - Provide user call-back
-  for evaluating the Hessian of the regularization term.
+Levenberg--Marquardt damping is independent of the objective
+regularizers. Enable the Hessian contribution
+$\lambda\operatorname{diag}(J^T J)$ with `-tao_brgn_use_lm` or
+`TaoBRGNSetUseLM()`, and set $\lambda$ with `-tao_brgn_lm_lambda` or
+`TaoBRGNSetLMLambda()`.
 
 #### POUNDERS
 

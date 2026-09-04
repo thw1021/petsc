@@ -822,12 +822,12 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, 4, &x));
     PetscCall(TaoSetSolution(tao, x));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, ctx->emaxCtx.e - ctx->emaxCtx.s, &r));
-    if (fitLog) PetscCall(TaoSetResidualRoutine(tao, r, ComputeLogEmaxResidual, &ctx->emaxCtx));
-    else PetscCall(TaoSetResidualRoutine(tao, r, ComputeEmaxResidual, &ctx->emaxCtx));
+    if (fitLog) PetscCall(TaoSetResidual(tao, r, ComputeLogEmaxResidual, &ctx->emaxCtx));
+    else PetscCall(TaoSetResidual(tao, r, ComputeEmaxResidual, &ctx->emaxCtx));
     PetscCall(VecDestroy(&r));
     PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, ctx->emaxCtx.e - ctx->emaxCtx.s, 4, NULL, &J));
-    if (fitLog) PetscCall(TaoSetJacobianResidualRoutine(tao, J, J, ComputeLogEmaxJacobian, &ctx->emaxCtx));
-    else PetscCall(TaoSetJacobianResidualRoutine(tao, J, J, ComputeEmaxJacobian, &ctx->emaxCtx));
+    if (fitLog) PetscCall(TaoSetJacobianResidual(tao, J, J, ComputeLogEmaxJacobian, &ctx->emaxCtx));
+    else PetscCall(TaoSetJacobianResidual(tao, J, J, ComputeEmaxJacobian, &ctx->emaxCtx));
     PetscCall(MatDestroy(&J));
     PetscCall(TaoSetFromOptions(tao));
     PetscCall(VecGetArray(x, &a));

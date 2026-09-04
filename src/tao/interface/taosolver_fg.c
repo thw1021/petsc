@@ -289,7 +289,7 @@ PetscErrorCode TaoGetObjective(Tao tao, TaoObjectiveFn **func, PetscCtxRt ctx)
 }
 
 /*@
-  TaoSetResidualRoutine - Sets the residual evaluation routine for least-square applications
+  TaoSetResidual - Sets the residual evaluation routine for least-square applications
 
   Logically Collective
 
@@ -308,9 +308,9 @@ PetscErrorCode TaoGetObjective(Tao tao, TaoObjectiveFn **func, PetscCtxRt ctx)
 
   Level: beginner
 
-.seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetJacobianRoutine()`
+.seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetJacobianResidual()`
 @*/
-PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao tao, Vec x, Vec res, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode TaoSetResidual(Tao tao, Vec res, PetscErrorCode (*func)(Tao tao, Vec x, Vec res, PetscCtx ctx), PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -344,7 +344,7 @@ PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Ta
 
   Either `sigma_v` or `vals` should be `NULL`
 
-.seealso: [](ch_tao), `Tao`, `TaoSetResidualRoutine()`
+.seealso: [](ch_tao), `Tao`, `TaoSetResidual()`
 @*/
 PetscErrorCode TaoSetResidualWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt *rows, PetscInt *cols, PetscReal *vals)
 {
@@ -393,7 +393,7 @@ PetscErrorCode TaoSetResidualWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt 
   `TaoComputeResidual()` is typically used within the implementation of the optimization algorithm,
   so most users would not generally call this routine themselves.
 
-.seealso: [](ch_tao), `Tao`, `TaoSetResidualRoutine()`
+.seealso: [](ch_tao), `Tao`, `TaoSetResidual()`
 @*/
 PetscErrorCode TaoComputeResidual(Tao tao, Vec X, Vec F)
 {
@@ -403,7 +403,7 @@ PetscErrorCode TaoComputeResidual(Tao tao, Vec X, Vec F)
   PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCheckSameComm(tao, 1, F, 3);
-  PetscCheck(tao->ops->computeresidual, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetResidualRoutine() has not been called");
+  PetscCheck(tao->ops->computeresidual, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetResidual() has not been called");
   PetscCall(PetscLogEventBegin(TAO_ResidualEval, tao, X, NULL, NULL));
   PetscCallBack("Tao callback least-squares residual", (*tao->ops->computeresidual)(tao, X, F, tao->user_lsresP));
   PetscCall(PetscLogEventEnd(TAO_ResidualEval, tao, X, NULL, NULL));

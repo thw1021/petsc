@@ -1,531 +1,350 @@
 #include <../src/tao/leastsquares/impls/brgn/brgn.h> /*I "petsctao.h" I*/
 
-const char *const TaoBRGNRegularizationTypes[] = {"user", "l2prox", "l2pure", "l1dict", "lm", "TaoBRGNRegularizationType", "TAOBRGN_REGULARIZATION_", NULL};
+static const char *const TaoBRGNPresets[] = {"l2prox", "l2pure", "l1dict", "TaoBRGNPreset", "TAOBRGN_PRESET_", NULL};
 
-static PetscErrorCode GNHessianProd(Mat H, Vec in, Vec out)
+static PetscErrorCode TaoBRGNGetDataTerm(Tao tao, TaoTerm *term, Vec *params)
 {
-  TAO_BRGN *gn;
+  PetscBool is_sum;
 
   PetscFunctionBegin;
-  PetscCall(MatShellGetContext(H, &gn));
-  PetscCall(MatMult(gn->subsolver->ls_jac, in, gn->r_work));
-  PetscCall(MatMultTranspose(gn->subsolver->ls_jac, gn->r_work, out));
-  switch (gn->reg_type) {
-  case TAOBRGN_REGULARIZATION_USER:
-    PetscCall(MatMult(gn->Hreg, in, gn->x_work));
-    PetscCall(VecAXPY(out, gn->lambda, gn->x_work));
-    break;
-  case TAOBRGN_REGULARIZATION_L2PURE:
-    PetscCall(VecAXPY(out, gn->lambda, in));
-    break;
-  case TAOBRGN_REGULARIZATION_L2PROX:
-    PetscCall(VecAXPY(out, gn->lambda, in));
-    break;
-  case TAOBRGN_REGULARIZATION_L1DICT:
-    /* out = out + lambda*D'*(diag.*(D*in)) */
-    if (gn->D) {
-      PetscCall(MatMult(gn->D, in, gn->y)); /* y = D*in */
-    } else {
-      PetscCall(VecCopy(in, gn->y));
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+  if (is_sum) {
+    PetscReal scale;
+    Mat       map;
+
+    PetscCall(TaoTermSumGetTerm(tao->objective_term.term, 0, NULL, &scale, term, &map));
+    PetscCheck(!map, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOBRGN does not support a mapping on its data term");
+    PetscCheck(scale == 1.0, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOBRGN does not support a scale other than 1 on its data term");
+    if (params) {
+      *params = NULL;
+      if (tao->objective_parameters) PetscCall(VecNestGetTaoTermSumParameters(tao->objective_parameters, 0, params));
     }
-    PetscCall(VecPointwiseMult(gn->y_work, gn->diag, gn->y)); /* y_work = diag.*(D*in), where diag = epsilon^2 ./ sqrt(x.^2+epsilon^2).^3 */
-    if (gn->D) {
-      PetscCall(MatMultTranspose(gn->D, gn->y_work, gn->x_work)); /* x_work = D'*(diag.*(D*in)) */
-    } else {
-      PetscCall(VecCopy(gn->y_work, gn->x_work));
-    }
-    PetscCall(VecAXPY(out, gn->lambda, gn->x_work));
-    break;
-  case TAOBRGN_REGULARIZATION_LM:
-    PetscCall(VecPointwiseMult(gn->x_work, gn->damping, in));
-    PetscCall(VecAXPY(out, 1, gn->x_work));
-    break;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-static PetscErrorCode ComputeDamping(TAO_BRGN *gn)
-{
-  const PetscScalar *diag_ary;
-  PetscScalar       *damping_ary;
-  PetscInt           i, n;
-
-  PetscFunctionBegin;
-  /* update damping */
-  PetscCall(VecGetArray(gn->damping, &damping_ary));
-  PetscCall(VecGetArrayRead(gn->diag, &diag_ary));
-  PetscCall(VecGetLocalSize(gn->damping, &n));
-  for (i = 0; i < n; i++) damping_ary[i] = PetscClipInterval(diag_ary[i], PETSC_SQRT_MACHINE_EPSILON, PetscSqrtReal(PETSC_MAX_REAL));
-  PetscCall(VecScale(gn->damping, gn->lambda));
-  PetscCall(VecRestoreArray(gn->damping, &damping_ary));
-  PetscCall(VecRestoreArrayRead(gn->diag, &diag_ary));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-/*@
-  TaoBRGNGetDampingVector - Get the damping vector $\mathrm{diag}(J^T J)$ from a `TAOBRGN` with `TAOBRGN_REGULARIZATION_LM` regularization
-
-  Collective
-
-  Input Parameter:
-. tao - a `Tao` of type `TAOBRGN` with `TAOBRGN_REGULARIZATION_LM` regularization
-
-  Output Parameter:
-. d - the damping vector
-
-  Level: developer
-
-.seealso: [](ch_tao), `Tao`, `TAOBRGN`, `TaoBRGNRegularzationTypes`
-@*/
-PetscErrorCode TaoBRGNGetDampingVector(Tao tao, Vec *d)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscAssertPointer(d, 2);
-  PetscUseMethod((PetscObject)tao, "TaoBRGNGetDampingVector_C", (Tao, Vec *), (tao, d));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNGetDampingVector_BRGN(Tao tao, Vec *d)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  PetscCheck(gn->reg_type == TAOBRGN_REGULARIZATION_LM, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "Damping vector is only available if regularization type is lm.");
-  *d = gn->damping;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode GNObjectiveGradientEval(Tao tao, Vec X, PetscReal *fcn, Vec G, void *ptr)
-{
-  TAO_BRGN   *gn = (TAO_BRGN *)ptr;
-  PetscInt    K; /* dimension of D*X */
-  PetscScalar yESum;
-  PetscReal   f_reg;
-
-  PetscFunctionBegin;
-  /* compute objective *fcn*/
-  /* compute first term 0.5*||ls_res||_2^2 */
-  PetscCall(TaoComputeResidual(tao, X, tao->ls_res));
-  PetscCall(VecDot(tao->ls_res, tao->ls_res, fcn));
-  *fcn *= 0.5;
-  /* compute gradient G */
-  PetscCall(TaoComputeResidualJacobian(tao, X, tao->ls_jac, tao->ls_jac_pre));
-  PetscCall(MatMultTranspose(tao->ls_jac, tao->ls_res, G));
-  /* add the regularization contribution */
-  switch (gn->reg_type) {
-  case TAOBRGN_REGULARIZATION_USER:
-    PetscCall((*gn->regularizerobjandgrad)(tao, X, &f_reg, gn->x_work, gn->reg_obj_ctx));
-    *fcn += gn->lambda * f_reg;
-    PetscCall(VecAXPY(G, gn->lambda, gn->x_work));
-    break;
-  case TAOBRGN_REGULARIZATION_L2PURE:
-    /* compute f = f + lambda*0.5*xk'*xk */
-    PetscCall(VecDot(X, X, &f_reg));
-    *fcn += gn->lambda * 0.5 * f_reg;
-    /* compute G = G + lambda*xk */
-    PetscCall(VecAXPY(G, gn->lambda, X));
-    break;
-  case TAOBRGN_REGULARIZATION_L2PROX:
-    /* compute f = f + lambda*0.5*(xk - xkm1)'*(xk - xkm1) */
-    PetscCall(VecAXPBYPCZ(gn->x_work, 1.0, -1.0, 0.0, X, gn->x_old));
-    PetscCall(VecDot(gn->x_work, gn->x_work, &f_reg));
-    *fcn += gn->lambda * 0.5 * f_reg;
-    /* compute G = G + lambda*(xk - xkm1) */
-    PetscCall(VecAXPBYPCZ(G, gn->lambda, -gn->lambda, 1.0, X, gn->x_old));
-    break;
-  case TAOBRGN_REGULARIZATION_L1DICT:
-    /* compute f = f + lambda*sum(sqrt(y.^2+epsilon^2) - epsilon), where y = D*x*/
-    if (gn->D) {
-      PetscCall(MatMult(gn->D, X, gn->y)); /* y = D*x */
-    } else {
-      PetscCall(VecCopy(X, gn->y));
-    }
-    PetscCall(VecPointwiseMult(gn->y_work, gn->y, gn->y));
-    PetscCall(VecShift(gn->y_work, gn->epsilon * gn->epsilon));
-    PetscCall(VecSqrtAbs(gn->y_work)); /* gn->y_work = sqrt(y.^2+epsilon^2) */
-    PetscCall(VecSum(gn->y_work, &yESum));
-    PetscCall(VecGetSize(gn->y, &K));
-    *fcn += gn->lambda * (yESum - K * gn->epsilon);
-    /* compute G = G + lambda*D'*(y./sqrt(y.^2+epsilon^2)),where y = D*x */
-    PetscCall(VecPointwiseDivide(gn->y_work, gn->y, gn->y_work)); /* reuse y_work = y./sqrt(y.^2+epsilon^2) */
-    if (gn->D) {
-      PetscCall(MatMultTranspose(gn->D, gn->y_work, gn->x_work));
-    } else {
-      PetscCall(VecCopy(gn->y_work, gn->x_work));
-    }
-    PetscCall(VecAXPY(G, gn->lambda, gn->x_work));
-    break;
-  case TAOBRGN_REGULARIZATION_LM:
-    break;
-  default:
-    break;
+  } else {
+    *term = tao->objective_term.term;
+    if (params) *params = tao->objective_parameters;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GNComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+static PetscErrorCode TaoBRGNGetNumberRegularizers(Tao tao, PetscInt *nregularizers)
 {
-  TAO_BRGN    *gn = (TAO_BRGN *)ptr;
-  PetscInt     i, n, cstart, cend;
-  PetscScalar *cnorms, *diag_ary;
+  PetscBool is_sum;
 
   PetscFunctionBegin;
-  PetscCall(TaoComputeResidualJacobian(tao, X, tao->ls_jac, tao->ls_jac_pre));
-  if (gn->mat_explicit) PetscCall(MatTransposeMatMult(tao->ls_jac, tao->ls_jac, MAT_REUSE_MATRIX, PETSC_DETERMINE, &gn->H));
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+  if (is_sum) {
+    PetscInt nterms;
 
-  switch (gn->reg_type) {
-  case TAOBRGN_REGULARIZATION_USER:
-    PetscCall((*gn->regularizerhessian)(tao, X, gn->Hreg, gn->reg_hess_ctx));
-    if (gn->mat_explicit) PetscCall(MatAXPY(gn->H, 1.0, gn->Hreg, DIFFERENT_NONZERO_PATTERN));
-    break;
-  case TAOBRGN_REGULARIZATION_L2PURE:
-    if (gn->mat_explicit) PetscCall(MatShift(gn->H, gn->lambda));
-    break;
-  case TAOBRGN_REGULARIZATION_L2PROX:
-    if (gn->mat_explicit) PetscCall(MatShift(gn->H, gn->lambda));
-    break;
-  case TAOBRGN_REGULARIZATION_L1DICT:
-    /* calculate and store diagonal matrix as a vector: diag = epsilon^2 ./ sqrt(x.^2+epsilon^2).^3* --> diag = epsilon^2 ./ sqrt(y.^2+epsilon^2).^3,where y = D*x */
-    if (gn->D) {
-      PetscCall(MatMult(gn->D, X, gn->y)); /* y = D*x */
-    } else {
-      PetscCall(VecCopy(X, gn->y));
+    PetscCall(TaoTermSumGetNumberTerms(tao->objective_term.term, &nterms));
+    *nregularizers = nterms - 1;
+  } else *nregularizers = 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNAddObjectiveRegularizer(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
+{
+  PetscFunctionBegin;
+  if (!tao->term_set) {
+    TaoTerm     data_sum;
+    const char *tao_prefix;
+    Vec         data_params = tao->objective_parameters;
+
+    PetscCall(TaoTermDuplicate(tao->objective_term.term, TAOTERM_DUPLICATE_SIZEONLY, &data_sum));
+    PetscCall(TaoTermSetType(data_sum, TAOTERMSUM));
+    PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_sum, tao_prefix));
+    PetscCall(TaoTermSumSetNumberTerms(data_sum, 1));
+    PetscCall(TaoTermSumSetTerm(data_sum, 0, "data_", 1.0, tao->objective_term.term, NULL));
+    PetscCall(TaoTermMappingReset(&tao->objective_term));
+    PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, 1.0, data_sum, NULL));
+    tao->objective_parameters = NULL;
+    if (data_params) {
+      Vec subparams[1];
+
+      subparams[0] = data_params;
+      PetscCall(TaoTermSumParametersPack(data_sum, subparams, &tao->objective_parameters));
+      PetscCall(VecDestroy(&data_params));
     }
-    PetscCall(VecPointwiseMult(gn->y_work, gn->y, gn->y));
-    PetscCall(VecShift(gn->y_work, gn->epsilon * gn->epsilon));
-    PetscCall(VecCopy(gn->y_work, gn->diag));                    /* gn->diag = y.^2+epsilon^2 */
-    PetscCall(VecSqrtAbs(gn->y_work));                           /* gn->y_work = sqrt(y.^2+epsilon^2) */
-    PetscCall(VecPointwiseMult(gn->diag, gn->y_work, gn->diag)); /* gn->diag = sqrt(y.^2+epsilon^2).^3 */
-    PetscCall(VecReciprocal(gn->diag));
-    PetscCall(VecScale(gn->diag, gn->epsilon * gn->epsilon));
-    if (gn->mat_explicit) PetscCall(MatDiagonalSet(gn->H, gn->diag, ADD_VALUES));
-    break;
-  case TAOBRGN_REGULARIZATION_LM:
-    /* compute diagonal of J^T J */
-    PetscCall(MatGetSize(gn->parent->ls_jac, NULL, &n));
-    PetscCall(PetscMalloc1(n, &cnorms));
-    PetscCall(MatGetColumnNorms(gn->parent->ls_jac, NORM_2, cnorms));
-    PetscCall(MatGetOwnershipRangeColumn(gn->parent->ls_jac, &cstart, &cend));
-    PetscCall(VecGetArray(gn->diag, &diag_ary));
-    for (i = 0; i < cend - cstart; i++) diag_ary[i] = cnorms[cstart + i] * cnorms[cstart + i];
-    PetscCall(VecRestoreArray(gn->diag, &diag_ary));
-    PetscCall(PetscFree(cnorms));
-    PetscCall(ComputeDamping(gn));
-    if (gn->mat_explicit) PetscCall(MatDiagonalSet(gn->H, gn->damping, ADD_VALUES));
-    break;
-  default:
-    break;
+    PetscCall(TaoTermDestroy(&data_sum));
+    tao->num_terms = 1;
+    tao->term_set  = PETSC_TRUE;
+  }
+  PetscCall(TaoAddTerm(tao, prefix, scale, term, params, map));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNEvaluateResidual(TAO_BRGN *gn, Vec x)
+{
+  Tao       tao = gn->parent;
+  TaoTerm   term;
+  Vec       params;
+  PetscBool has_residual;
+
+  PetscFunctionBegin;
+  PetscCall(TaoBRGNGetDataTerm(tao, &term, &params));
+  PetscCall(TaoTermIsResidualDefined(term, &has_residual));
+  if (has_residual) {
+    PetscCall(TaoTermComputeResidual(term, x, params, tao->ls_res));
+    tao->nres++;
+  } else PetscCall(TaoComputeResidual(tao, x, tao->ls_res));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNEvaluateJacobianResidual(TAO_BRGN *gn, Vec x)
+{
+  Tao       tao = gn->parent;
+  TaoTerm   term;
+  Vec       params;
+  PetscBool has_jacobian;
+
+  PetscFunctionBegin;
+  PetscCall(TaoBRGNGetDataTerm(tao, &term, &params));
+  PetscCall(TaoTermIsJacobianResidualDefined(term, &has_jacobian));
+  if (has_jacobian) {
+    PetscCall(TaoTermComputeJacobianResidual(term, x, params, tao->ls_jac, tao->ls_jac_pre));
+    tao->njac++;
+  } else PetscCall(TaoComputeResidualJacobian(tao, x, tao->ls_jac, tao->ls_jac_pre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNCreateProduct(Mat J, MatReuse reuse, Mat *JtJ)
+{
+  Mat       Jassembled = NULL;
+  PetscBool needs_assembly, is_shell;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)J, MATCOMPOSITE, &needs_assembly));
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)J, MATSHELL, &is_shell));
+  needs_assembly = (PetscBool)(needs_assembly || is_shell);
+  if (needs_assembly) {
+    PetscCall(MatComputeOperator(J, MATAIJ, &Jassembled));
+    J = Jassembled;
+  }
+  PetscCall(MatTransposeMatMult(J, J, reuse, PETSC_DETERMINE, JtJ));
+  PetscCall(MatDestroy(&Jassembled));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNCacheJacobian(TAO_BRGN *gn, Vec x)
+{
+  PetscBool current = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  if (gn->hessian_x) PetscCall(VecEqual(x, gn->hessian_x, &current));
+  if (!current) {
+    PetscCall(TaoBRGNEvaluateJacobianResidual(gn, x));
+    if (!gn->hessian_x) PetscCall(VecDuplicate(x, &gn->hessian_x));
+    PetscCall(VecCopy(x, gn->hessian_x));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GNHookFunction(Tao tao, PetscInt iter, PetscCtx ctx)
+static PetscErrorCode TaoBRGNComputeHessianMult(Tao subsolver, Vec x, Vec v, Vec Hv, PetscCtx ctx)
 {
   TAO_BRGN *gn = (TAO_BRGN *)ctx;
 
   PetscFunctionBegin;
-  /* Update basic tao information from the subsolver */
-  {
-    gn->parent->objective_term.term->nobj     = tao->objective_term.term->nobj;
-    gn->parent->objective_term.term->ngrad    = tao->objective_term.term->ngrad;
-    gn->parent->objective_term.term->nobjgrad = tao->objective_term.term->nobjgrad;
-    gn->parent->objective_term.term->nhess    = tao->objective_term.term->nhess;
-  }
-  gn->parent->nres        = tao->nres;
-  gn->parent->niter       = tao->niter;
-  gn->parent->ksp_its     = tao->ksp_its;
-  gn->parent->ksp_tot_its = tao->ksp_tot_its;
-  gn->parent->fc          = tao->fc;
-  PetscCall(TaoGetConvergedReason(tao, &gn->parent->reason));
-  /* Update the solution vectors */
-  if (iter == 0) {
-    PetscCall(VecSet(gn->x_old, 0.0));
+  PetscCall(TaoBRGNCacheJacobian(gn, x));
+  PetscCall(MatMult(gn->parent->ls_jac, v, gn->r_work));
+  PetscCall(MatMultTranspose(gn->parent->ls_jac, gn->r_work, Hv));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNApplyLM(TAO_BRGN *gn, Mat H)
+{
+  Mat          J = gn->parent->ls_jac;
+  PetscInt     n, cstart, cend;
+  PetscReal   *norms;
+  PetscScalar *array;
+  PetscBool    is_diagonal;
+
+  PetscFunctionBegin;
+  if (!gn->use_lm) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscObjectTypeCompare((PetscObject)J, MATDIAGONAL, &is_diagonal));
+  if (is_diagonal) {
+    Vec diagonal;
+
+    PetscCall(MatDiagonalGetDiagonal(J, &diagonal));
+    PetscCall(VecPointwiseMult(gn->damping, diagonal, diagonal));
+    PetscCall(MatDiagonalRestoreDiagonal(J, &diagonal));
   } else {
-    PetscCall(VecCopy(tao->solution, gn->x_old));
-    PetscCall(VecCopy(tao->solution, gn->parent->solution));
+    PetscCall(MatGetSize(J, NULL, &n));
+    PetscCall(PetscMalloc1(n, &norms));
+    PetscCall(MatGetColumnNorms(J, NORM_2, norms));
+    PetscCall(MatGetOwnershipRangeColumn(J, &cstart, &cend));
+    PetscCall(VecGetArray(gn->damping, &array));
+    for (PetscInt i = 0; i < cend - cstart; i++) array[i] = norms[cstart + i] * norms[cstart + i];
+    PetscCall(VecRestoreArray(gn->damping, &array));
+    PetscCall(PetscFree(norms));
   }
-  /* Update the gradient */
-  PetscCall(VecCopy(tao->gradient, gn->parent->gradient));
+  PetscCall(VecGetArray(gn->damping, &array));
+  PetscCall(VecGetLocalSize(gn->damping, &n));
+  for (PetscInt i = 0; i < n; i++) {
+    PetscReal value = PetscRealPart(array[i]);
 
-  /* Update damping parameter for LM */
-  if (gn->reg_type == TAOBRGN_REGULARIZATION_LM) {
-    if (iter > 0) {
-      if (gn->fc_old > tao->fc) {
-        gn->lambda = gn->lambda * gn->downhill_lambda_change;
-      } else {
-        /* uphill step */
-        gn->lambda = gn->lambda * gn->uphill_lambda_change;
-      }
+    array[i] = gn->lm_lambda * PetscClipInterval(value, PETSC_SQRT_MACHINE_EPSILON, PetscSqrtReal(PETSC_MAX_REAL));
+  }
+  PetscCall(VecRestoreArray(gn->damping, &array));
+  PetscCall(MatDiagonalSet(H, gn->damping, ADD_VALUES));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNObjectiveAndGradient(Tao subsolver, Vec x, PetscReal *value, Vec g, PetscCtx ctx)
+{
+  TAO_BRGN *gn  = (TAO_BRGN *)ctx;
+  Tao       tao = gn->parent;
+  TaoTerm   term;
+  Vec       params;
+  PetscBool has_obj, has_objgrad, has_grad;
+
+  PetscFunctionBegin;
+  PetscCall(TaoBRGNGetDataTerm(tao, &term, &params));
+  PetscCall(TaoTermIsObjectiveDefined(term, &has_obj));
+  PetscCall(TaoTermIsObjectiveAndGradientDefined(term, &has_objgrad));
+  PetscCall(TaoTermIsGradientDefined(term, &has_grad));
+  if (has_objgrad || (has_obj && has_grad)) {
+    PetscCall(TaoTermComputeObjectiveAndGradient(term, x, params, value, g));
+  } else {
+    PetscScalar dot;
+
+    PetscCall(TaoBRGNEvaluateResidual(gn, x));
+    PetscCall(VecDot(tao->ls_res, tao->ls_res, &dot));
+    *value = 0.5 * PetscRealPart(dot);
+    PetscCall(TaoBRGNEvaluateJacobianResidual(gn, x));
+    if (gn->matrix_free) {
+      if (!gn->hessian_x) PetscCall(VecDuplicate(x, &gn->hessian_x));
+      PetscCall(VecCopy(x, gn->hessian_x));
     }
-    gn->fc_old = tao->fc;
+    PetscCall(MatMultTranspose(tao->ls_jac, tao->ls_res, g));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  /* Call general purpose update function */
+static PetscErrorCode TaoBRGNComputeHessian(Tao subsolver, Vec x, Mat H, Mat Hpre, PetscCtx ctx)
+{
+  TAO_BRGN *gn  = (TAO_BRGN *)ctx;
+  Tao       tao = gn->parent;
+  TaoTerm   term;
+  Vec       params;
+  PetscBool has_hessian;
+
+  PetscFunctionBegin;
+  PetscCall(TaoBRGNGetDataTerm(tao, &term, &params));
+  PetscCall(TaoTermIsHessianDefined(term, &has_hessian));
+  if (has_hessian) {
+    PetscCall(TaoTermComputeHessian(term, x, params, H, Hpre));
+    if (gn->use_lm) {
+      PetscCall(TaoBRGNEvaluateJacobianResidual(gn, x));
+      PetscCall(TaoBRGNApplyLM(gn, H));
+      if (Hpre && Hpre != H) PetscCall(TaoBRGNApplyLM(gn, Hpre));
+    }
+  } else {
+    PetscCall(TaoBRGNEvaluateJacobianResidual(gn, x));
+    PetscCall(TaoBRGNCreateProduct(tao->ls_jac, MAT_REUSE_MATRIX, &H));
+    PetscCall(TaoBRGNApplyLM(gn, H));
+    if (Hpre && Hpre != H) PetscCall(MatCopy(H, Hpre, DIFFERENT_NONZERO_PATTERN));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNUpdateRegularizer(TaoTerm term, Tao tao, PetscInt iter)
+{
+  PetscBool is_sum;
+
+  PetscFunctionBegin;
+  if (!term) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TaoTermL2ProxUpdate_Private(term, tao, iter));
+  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
+  if (is_sum) {
+    PetscInt nterms;
+
+    PetscCall(TaoTermSumGetNumberTerms(term, &nterms));
+    for (PetscInt i = 0; i < nterms; i++) {
+      TaoTerm subterm;
+
+      PetscCall(TaoTermSumGetTerm(term, i, NULL, NULL, &subterm, NULL));
+      PetscCall(TaoBRGNUpdateRegularizer(subterm, tao, iter));
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNUpdate(Tao subsolver, PetscInt iter, PetscCtx ctx)
+{
+  TAO_BRGN *gn = (TAO_BRGN *)ctx;
+  PetscInt  nregularizers;
+
+  PetscFunctionBegin;
+  gn->parent->objective_term.term->nobj     = subsolver->objective_term.term->nobj;
+  gn->parent->objective_term.term->ngrad    = subsolver->objective_term.term->ngrad;
+  gn->parent->objective_term.term->nobjgrad = subsolver->objective_term.term->nobjgrad;
+  gn->parent->objective_term.term->nhess    = subsolver->objective_term.term->nhess;
+  gn->parent->niter                         = subsolver->niter;
+  gn->parent->ksp_its                       = subsolver->ksp_its;
+  gn->parent->ksp_tot_its                   = subsolver->ksp_tot_its;
+  gn->parent->fc                            = subsolver->fc;
+  PetscCall(TaoGetConvergedReason(subsolver, &gn->parent->reason));
+  if (iter > 0) PetscCall(VecCopy(subsolver->solution, gn->parent->solution));
+  PetscCall(VecCopy(subsolver->gradient, gn->parent->gradient));
+  PetscCall(TaoBRGNGetNumberRegularizers(gn->parent, &nregularizers));
+  for (PetscInt i = 0; i < nregularizers; i++) {
+    TaoTerm regularizer;
+
+    PetscCall(TaoTermSumGetTerm(gn->parent->objective_term.term, i + 1, NULL, NULL, &regularizer, NULL));
+    PetscCall(TaoBRGNUpdateRegularizer(regularizer, subsolver, iter));
+  }
   PetscTryTypeMethod(gn->parent, update, gn->parent->niter, gn->parent->user_update);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoBRGNGetRegularizationType_BRGN(Tao tao, TaoBRGNRegularizationType *type)
+static PetscErrorCode TaoBRGNCreatePresetRegularizer(Tao tao)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+  TaoTerm   term;
+  PetscInt  n, N;
 
   PetscFunctionBegin;
-  *type = gn->reg_type;
+  PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoSetSolution() must be called before TaoSetUp()");
+  PetscCall(VecGetLocalSize(tao->solution, &n));
+  PetscCall(VecGetSize(tao->solution, &N));
+  switch (gn->preset) {
+  case TAOBRGN_PRESET_L2PROX:
+    PetscCall(TaoTermCreateL2Prox(PetscObjectComm((PetscObject)tao), n, N, &term));
+    break;
+  case TAOBRGN_PRESET_L2PURE:
+    PetscCall(TaoTermCreateHalfL2Squared(PetscObjectComm((PetscObject)tao), n, N, &term));
+    break;
+  case TAOBRGN_PRESET_L1DICT:
+    PetscCall(TaoTermCreateL1(PetscObjectComm((PetscObject)tao), n, N, gn->preset_l1_epsilon, &term));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Unknown TAOBRGN regularizer preset");
+  }
+  PetscCall(TaoBRGNAddObjectiveRegularizer(tao, "regularizer_", gn->preset_weight, term, NULL, NULL));
+  PetscCall(TaoTermDestroy(&term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoBRGNGetRegularizationType - Get the `TaoBRGNRegularizationType` of a `TAOBRGN`
-
-  Not collective
-
-  Input Parameter:
-. tao - a `Tao` of type `TAOBRGN`
-
-  Output Parameter:
-. type - the `TaoBRGNRegularizationType`
-
-  Level: advanced
-
-.seealso: [](ch_tao), `Tao`, `TAOBRGN`, `TaoBRGNRegularizationType`, `TaoBRGNSetRegularizationType()`
-@*/
-PetscErrorCode TaoBRGNGetRegularizationType(Tao tao, TaoBRGNRegularizationType *type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscAssertPointer(type, 2);
-  PetscUseMethod((PetscObject)tao, "TaoBRGNGetRegularizationType_C", (Tao, TaoBRGNRegularizationType *), (tao, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNSetRegularizationType_BRGN(Tao tao, TaoBRGNRegularizationType type)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  gn->reg_type = type;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoBRGNSetRegularizationType - Set the `TaoBRGNRegularizationType` of a `TAOBRGN`
-
-  Logically collective
-
-  Input Parameters:
-+ tao  - a `Tao` of type `TAOBRGN`
-- type - the `TaoBRGNRegularizationType`
-
-  Level: advanced
-
-.seealso: [](ch_tao), `Tao`, `TAOBRGN`, `TaoBRGNRegularizationType`, `TaoBRGNGetRegularizationType`
-@*/
-PetscErrorCode TaoBRGNSetRegularizationType(Tao tao, TaoBRGNRegularizationType type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidLogicalCollectiveEnum(tao, type, 2);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizationType_C", (Tao, TaoBRGNRegularizationType), (tao, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoSolve_BRGN(Tao tao)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  PetscCall(TaoSolve(gn->subsolver));
-  /* Update basic tao information from the subsolver */
-  /* NOTE: Due to subsolver nature of BRGN, TaoTerm cannot properly track counts */
-  tao->objective_term.term->nobj     = gn->subsolver->objective_term.term->nobj;
-  tao->objective_term.term->ngrad    = gn->subsolver->objective_term.term->ngrad;
-  tao->objective_term.term->nobjgrad = gn->subsolver->objective_term.term->nobjgrad;
-  tao->objective_term.term->nhess    = gn->subsolver->objective_term.term->nhess;
-
-  tao->nres        = gn->subsolver->nres;
-  tao->niter       = gn->subsolver->niter;
-  tao->ksp_its     = gn->subsolver->ksp_its;
-  tao->ksp_tot_its = gn->subsolver->ksp_tot_its;
-  PetscCall(TaoGetConvergedReason(gn->subsolver, &tao->reason));
-  /* Update vectors */
-  PetscCall(VecCopy(gn->subsolver->solution, tao->solution));
-  PetscCall(VecCopy(gn->subsolver->gradient, tao->gradient));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoSetFromOptions_BRGN(Tao tao, PetscOptionItems PetscOptionsObject)
-{
-  TAO_BRGN     *gn = (TAO_BRGN *)tao->data;
-  TaoLineSearch ls;
-
-  PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "least-squares problems with regularizer: ||f(x)||^2 + lambda*g(x), g(x) = ||xk-xkm1||^2 or ||Dx||_1 or user defined function.");
-  PetscCall(PetscOptionsBool("-tao_brgn_mat_explicit", "switches the Hessian construction to be an explicit matrix rather than MATSHELL", "", gn->mat_explicit, &gn->mat_explicit, NULL));
-  PetscCall(PetscOptionsReal("-tao_brgn_regularizer_weight", "regularizer weight (default 1e-4)", "", gn->lambda, &gn->lambda, NULL));
-  PetscCall(PetscOptionsReal("-tao_brgn_l1_smooth_epsilon", "L1-norm smooth approximation parameter: ||x||_1 = sum(sqrt(x.^2+epsilon^2)-epsilon) (default 1e-6)", "", gn->epsilon, &gn->epsilon, NULL));
-  PetscCall(PetscOptionsReal("-tao_brgn_lm_downhill_lambda_change", "Factor to decrease trust region by on downhill steps", "", gn->downhill_lambda_change, &gn->downhill_lambda_change, NULL));
-  PetscCall(PetscOptionsReal("-tao_brgn_lm_uphill_lambda_change", "Factor to increase trust region by on uphill steps", "", gn->uphill_lambda_change, &gn->uphill_lambda_change, NULL));
-  PetscCall(PetscOptionsEnum("-tao_brgn_regularization_type", "regularization type", "", TaoBRGNRegularizationTypes, (PetscEnum)gn->reg_type, (PetscEnum *)&gn->reg_type, NULL));
-  PetscOptionsHeadEnd();
-  /* set unit line search direction as the default when using the lm regularizer */
-  if (gn->reg_type == TAOBRGN_REGULARIZATION_LM) {
-    PetscCall(TaoGetLineSearch(gn->subsolver, &ls));
-    PetscCall(TaoLineSearchSetType(ls, TAOLINESEARCHUNIT));
-  }
-  PetscCall(TaoSetFromOptions(gn->subsolver));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoView_BRGN(Tao tao, PetscViewer viewer)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-  PetscBool isascii;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
-  if (isascii) {
-    PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Regularizer weight: %g\n", (double)gn->lambda));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "BRGN Regularization Type: %s\n", TaoBRGNRegularizationTypes[gn->reg_type]));
-    switch (gn->reg_type) {
-    case TAOBRGN_REGULARIZATION_L1DICT:
-      PetscCall(PetscViewerASCIIPrintf(viewer, "L1 smooth epsilon: %g\n", (double)gn->epsilon));
-      break;
-    case TAOBRGN_REGULARIZATION_LM:
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Downhill trust region decrease factor:: %g\n", (double)gn->downhill_lambda_change));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Uphill trust region increase factor:: %g\n", (double)gn->uphill_lambda_change));
-      break;
-    case TAOBRGN_REGULARIZATION_L2PROX:
-    case TAOBRGN_REGULARIZATION_L2PURE:
-    case TAOBRGN_REGULARIZATION_USER:
-    default:
-      break;
-    }
-    PetscCall(PetscViewerASCIIPopTab(viewer));
-  }
-  PetscCall(PetscViewerASCIIPushTab(viewer));
-  PetscCall(TaoView(gn->subsolver, viewer));
-  PetscCall(PetscViewerASCIIPopTab(viewer));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoSetUp_BRGN(Tao tao)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-  PetscBool is_bnls, is_bntr, is_bntl;
-  PetscInt  n, N, K; /* dict has size K*N*/
-
-  PetscFunctionBegin;
-  PetscCheck(tao->ls_res, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoSetResidualRoutine() must be called before setup!");
-  PetscCall(PetscObjectTypeCompare((PetscObject)gn->subsolver, TAOBNLS, &is_bnls));
-  PetscCall(PetscObjectTypeCompare((PetscObject)gn->subsolver, TAOBNTR, &is_bntr));
-  PetscCall(PetscObjectTypeCompare((PetscObject)gn->subsolver, TAOBNTL, &is_bntl));
-  PetscCheck((!is_bnls && !is_bntr && !is_bntl) || tao->ls_jac, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoSetResidualJacobianRoutine() must be called before setup!");
-  if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
-  if (!gn->x_work) PetscCall(VecDuplicate(tao->solution, &gn->x_work));
-  if (!gn->r_work) PetscCall(VecDuplicate(tao->ls_res, &gn->r_work));
-  if (!gn->x_old) PetscCall(VecDuplicate(tao->solution, &gn->x_old));
-
-  if (TAOBRGN_REGULARIZATION_L1DICT == gn->reg_type) {
-    if (!gn->y) {
-      if (gn->D) {
-        PetscCall(MatGetSize(gn->D, &K, &N)); /* Shell matrices still must have sizes defined. K = N for identity matrix, K=N-1 or N for gradient matrix */
-        PetscCall(MatCreateVecs(gn->D, NULL, &gn->y));
-      } else {
-        PetscCall(VecDuplicate(tao->solution, &gn->y)); /* If user does not setup dict matrix, use identity matrix, K=N */
-      }
-    }
-    if (!gn->y_work) PetscCall(VecDuplicate(gn->y, &gn->y_work));
-    if (!gn->diag) PetscCall(VecDuplicate(gn->y, &gn->diag));
-  }
-  if (TAOBRGN_REGULARIZATION_LM == gn->reg_type) {
-    if (!gn->diag) PetscCall(MatCreateVecs(tao->ls_jac, &gn->diag, NULL));
-    if (!gn->damping) PetscCall(MatCreateVecs(tao->ls_jac, &gn->damping, NULL));
-  }
-
-  if (!tao->setupcalled) {
-    /* Hessian setup */
-    if (gn->mat_explicit) {
-      PetscCall(TaoComputeResidualJacobian(tao, tao->solution, tao->ls_jac, tao->ls_jac_pre));
-      PetscCall(MatTransposeMatMult(tao->ls_jac, tao->ls_jac, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &gn->H));
-    } else {
-      PetscCall(VecGetLocalSize(tao->solution, &n));
-      PetscCall(VecGetSize(tao->solution, &N));
-      PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &gn->H));
-      PetscCall(MatSetSizes(gn->H, n, n, N, N));
-      PetscCall(MatSetType(gn->H, MATSHELL));
-      PetscCall(MatSetOption(gn->H, MAT_SYMMETRIC, PETSC_TRUE));
-      PetscCall(MatShellSetOperation(gn->H, MATOP_MULT, (PetscErrorCodeFn *)GNHessianProd));
-      PetscCall(MatShellSetContext(gn->H, gn));
-    }
-    PetscCall(MatSetUp(gn->H));
-    /* Subsolver setup,include initial vector and dictionary D */
-    PetscCall(TaoSetUpdate(gn->subsolver, GNHookFunction, gn));
-    PetscCall(TaoSetSolution(gn->subsolver, tao->solution));
-    if (tao->bounded) PetscCall(TaoSetVariableBounds(gn->subsolver, tao->XL, tao->XU));
-    PetscCall(TaoSetResidualRoutine(gn->subsolver, tao->ls_res, tao->ops->computeresidual, tao->user_lsresP));
-    PetscCall(TaoSetJacobianResidualRoutine(gn->subsolver, tao->ls_jac, tao->ls_jac, tao->ops->computeresidualjacobian, tao->user_lsjacP));
-    PetscCall(TaoSetObjectiveAndGradient(gn->subsolver, NULL, GNObjectiveGradientEval, gn));
-    PetscCall(TaoSetHessian(gn->subsolver, gn->H, gn->H, GNComputeHessian, gn));
-    /* Propagate some options down */
-    PetscCall(TaoSetTolerances(gn->subsolver, tao->gatol, tao->grtol, tao->gttol));
-    PetscCall(TaoSetMaximumIterations(gn->subsolver, tao->max_it));
-    PetscCall(TaoSetMaximumFunctionEvaluations(gn->subsolver, tao->max_funcs));
-    PetscCall(TaoSetUp(gn->subsolver));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoDestroy_BRGN(Tao tao)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  if (tao->setupcalled) {
-    PetscCall(VecDestroy(&tao->gradient));
-    PetscCall(VecDestroy(&gn->x_work));
-    PetscCall(VecDestroy(&gn->r_work));
-    PetscCall(VecDestroy(&gn->x_old));
-    PetscCall(VecDestroy(&gn->diag));
-    PetscCall(VecDestroy(&gn->y));
-    PetscCall(VecDestroy(&gn->y_work));
-  }
-  PetscCall(VecDestroy(&gn->damping));
-  PetscCall(VecDestroy(&gn->diag));
-  PetscCall(MatDestroy(&gn->H));
-  PetscCall(MatDestroy(&gn->D));
-  PetscCall(MatDestroy(&gn->Hreg));
-  PetscCall(TaoDestroy(&gn->subsolver));
-  gn->parent = NULL;
-  PetscCall(PetscFree(tao->data));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetRegularizationType_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizationType_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetDampingVector_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetDictionaryMatrix_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetSubsolver_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerWeight_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetL1SmoothEpsilon_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerHessianRoutine_C", NULL));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoBRGNGetSubsolver - Get the pointer to the subsolver inside a `TAOBRGN`
+  TaoBRGNGetSubsolver - Get the subsolver used by `TAOBRGN`
 
   Collective
 
-  Input Parameters:
-+ tao       - the Tao solver context
-- subsolver - the `Tao` sub-solver context
+  Input Parameter:
+. tao - the `TAOBRGN`
+
+  Output Parameter:
+. subsolver - the subsolver
 
   Level: advanced
 
-.seealso: `Tao`, `Mat`, `TAOBRGN`
+.seealso: [](ch_tao), `Tao`, `TAOBRGN`, `TaoBRGNAddRegularizerTerm()`
 @*/
 PetscErrorCode TaoBRGNGetSubsolver(Tao tao, Tao *subsolver)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(subsolver, 2);
   PetscUseMethod((PetscObject)tao, "TaoBRGNGetSubsolver_C", (Tao, Tao *), (tao, subsolver));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -540,199 +359,417 @@ static PetscErrorCode TaoBRGNGetSubsolver_BRGN(Tao tao, Tao *subsolver)
 }
 
 /*@
-  TaoBRGNSetRegularizerWeight - Set the regularizer weight for the Gauss-Newton least-squares algorithm
+  TaoBRGNAddRegularizerTerm - Add a regularizer $\alpha g(Ax;p)$ to `TAOBRGN`
 
   Collective
 
   Input Parameters:
-+ tao    - the `Tao` solver context
-- lambda - L1-norm regularizer weight
++ tao    - the `TAOBRGN`
+. prefix - options prefix for the regularizer
+. scale  - the coefficient $\alpha$
+. term   - the regularizer $g$
+. params - optional parameters $p$
+- map    - optional map $A$
 
-  Level: beginner
+  Level: advanced
 
-.seealso: `Tao`, `Mat`, `TAOBRGN`
+.seealso: [](ch_tao), [](sec_tao_term), `TAOBRGN`, `TaoBRGNGetRegularizerTerm()`, `TaoAddTerm()`
 @*/
-PetscErrorCode TaoBRGNSetRegularizerWeight(Tao tao, PetscReal lambda)
+PetscErrorCode TaoBRGNAddRegularizerTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (prefix) PetscAssertPointer(prefix, 2);
+  PetscValidLogicalCollectiveReal(tao, scale, 3);
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
+  PetscCheckSameComm(tao, 1, term, 4);
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 5);
+    PetscCheckSameComm(tao, 1, params, 5);
+  }
+  if (map) {
+    PetscValidHeaderSpecific(map, MAT_CLASSID, 6);
+    PetscCheckSameComm(tao, 1, map, 6);
+  }
+  PetscUseMethod((PetscObject)tao, "TaoBRGNAddRegularizerTerm_C", (Tao, const char[], PetscReal, TaoTerm, Vec, Mat), (tao, prefix, scale, term, params, map));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNAddRegularizerTerm_BRGN(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
+{
+  PetscFunctionBegin;
+  PetscCheck(!tao->setupcalled, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoBRGNAddRegularizerTerm() must be called before TaoSetUp() or TaoSolve()");
+  PetscCall(TaoBRGNAddObjectiveRegularizer(tao, prefix, scale, term, params, map));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoBRGNGetRegularizerTerm - Get the objective sum containing the regularizers used by `TAOBRGN`
+
+  Not Collective
+
+  Input Parameter:
+. tao - the `TAOBRGN`
+
+  Output Parameter:
+. term - the objective `TAOTERMSUM`, whose terms after index 0 are regularizers, or `NULL` if there are no regularizers
+
+  Level: advanced
+
+.seealso: [](ch_tao), [](sec_tao_term), `TAOBRGN`, `TaoBRGNAddRegularizerTerm()`, `TAOTERMSUM`
+@*/
+PetscErrorCode TaoBRGNGetRegularizerTerm(Tao tao, TaoTerm *term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(term, 2);
+  PetscUseMethod((PetscObject)tao, "TaoBRGNGetRegularizerTerm_C", (Tao, TaoTerm *), (tao, term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNGetRegularizerTerm_BRGN(Tao tao, TaoTerm *term)
+{
+  PetscInt nregularizers;
+
+  PetscFunctionBegin;
+  PetscCall(TaoBRGNGetNumberRegularizers(tao, &nregularizers));
+  *term = nregularizers ? tao->objective_term.term : NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoBRGNSetUseLM - Set whether `TAOBRGN` uses Levenberg-Marquardt damping
+
+  Logically Collective
+
+  Input Parameters:
++ tao    - the `TAOBRGN`
+- use_lm - whether to use Levenberg-Marquardt damping
+
+  Level: advanced
+
+.seealso: [](ch_tao), `TAOBRGN`, `TaoBRGNGetUseLM()`, `TaoBRGNSetLMLambda()`
+@*/
+PetscErrorCode TaoBRGNSetUseLM(Tao tao, PetscBool use_lm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(tao, use_lm, 2);
+  PetscUseMethod((PetscObject)tao, "TaoBRGNSetUseLM_C", (Tao, PetscBool), (tao, use_lm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNSetUseLM_BRGN(Tao tao, PetscBool use_lm)
+{
+  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+
+  PetscFunctionBegin;
+  gn->use_lm = use_lm;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoBRGNGetUseLM - Get whether `TAOBRGN` uses Levenberg-Marquardt damping
+
+  Not Collective
+
+  Input Parameter:
+. tao - the `TAOBRGN`
+
+  Output Parameter:
+. use_lm - whether Levenberg-Marquardt damping is enabled
+
+  Level: advanced
+
+.seealso: [](ch_tao), `TAOBRGN`, `TaoBRGNSetUseLM()`, `TaoBRGNGetLMLambda()`
+@*/
+PetscErrorCode TaoBRGNGetUseLM(Tao tao, PetscBool *use_lm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(use_lm, 2);
+  PetscUseMethod((PetscObject)tao, "TaoBRGNGetUseLM_C", (Tao, PetscBool *), (tao, use_lm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoBRGNGetUseLM_BRGN(Tao tao, PetscBool *use_lm)
+{
+  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+
+  PetscFunctionBegin;
+  *use_lm = gn->use_lm;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoBRGNSetLMLambda - Set the Levenberg-Marquardt damping coefficient
+
+  Logically Collective
+
+  Input Parameters:
++ tao    - the `TAOBRGN`
+- lambda - the nonnegative damping coefficient
+
+  Level: advanced
+
+.seealso: [](ch_tao), `TAOBRGN`, `TaoBRGNGetLMLambda()`, `TaoBRGNSetUseLM()`
+@*/
+PetscErrorCode TaoBRGNSetLMLambda(Tao tao, PetscReal lambda)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscValidLogicalCollectiveReal(tao, lambda, 2);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerWeight_C", (Tao, PetscReal), (tao, lambda));
+  PetscCheck(lambda >= 0.0, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_OUTOFRANGE, "LM lambda must be nonnegative");
+  PetscUseMethod((PetscObject)tao, "TaoBRGNSetLMLambda_C", (Tao, PetscReal), (tao, lambda));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoBRGNSetRegularizerWeight_BRGN(Tao tao, PetscReal lambda)
+static PetscErrorCode TaoBRGNSetLMLambda_BRGN(Tao tao, PetscReal lambda)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
 
   PetscFunctionBegin;
-  gn->lambda = lambda;
+  gn->lm_lambda = lambda;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoBRGNSetL1SmoothEpsilon - Set the L1-norm smooth approximation parameter for L1-regularized least-squares algorithm
+  TaoBRGNGetLMLambda - Get the Levenberg-Marquardt damping coefficient
 
-  Collective
+  Not Collective
 
-  Input Parameters:
-+ tao     - the `Tao` solver context
-- epsilon - L1-norm smooth approximation parameter
+  Input Parameter:
+. tao - the `TAOBRGN`
+
+  Output Parameter:
+. lambda - the damping coefficient
 
   Level: advanced
 
-.seealso: `Tao`, `Mat`, `TAOBRGN`
+.seealso: [](ch_tao), `TAOBRGN`, `TaoBRGNSetLMLambda()`, `TaoBRGNGetUseLM()`
 @*/
-PetscErrorCode TaoBRGNSetL1SmoothEpsilon(Tao tao, PetscReal epsilon)
+PetscErrorCode TaoBRGNGetLMLambda(Tao tao, PetscReal *lambda)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidLogicalCollectiveReal(tao, epsilon, 2);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetL1SmoothEpsilon_C", (Tao, PetscReal), (tao, epsilon));
+  PetscAssertPointer(lambda, 2);
+  PetscUseMethod((PetscObject)tao, "TaoBRGNGetLMLambda_C", (Tao, PetscReal *), (tao, lambda));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoBRGNSetL1SmoothEpsilon_BRGN(Tao tao, PetscReal epsilon)
+static PetscErrorCode TaoBRGNGetLMLambda_BRGN(Tao tao, PetscReal *lambda)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
 
   PetscFunctionBegin;
-  gn->epsilon = epsilon;
+  *lambda = gn->lm_lambda;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  TaoBRGNSetDictionaryMatrix - bind the dictionary matrix from user application context to gn->D, for compressed sensing (with least-squares problem)
-
-  Input Parameters:
-+ tao  - the `Tao` context
-- dict - the user specified dictionary matrix.  We allow to set a `NULL` dictionary, which means identity matrix by default
-
-  Level: advanced
-
-.seealso: `Tao`, `Mat`, `TAOBRGN`
-@*/
-PetscErrorCode TaoBRGNSetDictionaryMatrix(Tao tao, Mat dict)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetDictionaryMatrix_C", (Tao, Mat), (tao, dict));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNSetDictionaryMatrix_BRGN(Tao tao, Mat dict)
+static PetscErrorCode TaoSolve_BRGN(Tao tao)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
 
   PetscFunctionBegin;
-  if (dict) {
-    PetscValidHeaderSpecific(dict, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, dict, 2);
-    PetscCall(PetscObjectReference((PetscObject)dict));
+  PetscCall(TaoSolve(gn->subsolver));
+  tao->objective_term.term->nobj     = gn->subsolver->objective_term.term->nobj;
+  tao->objective_term.term->ngrad    = gn->subsolver->objective_term.term->ngrad;
+  tao->objective_term.term->nobjgrad = gn->subsolver->objective_term.term->nobjgrad;
+  tao->objective_term.term->nhess    = gn->subsolver->objective_term.term->nhess;
+  tao->niter                         = gn->subsolver->niter;
+  tao->ksp_its                       = gn->subsolver->ksp_its;
+  tao->ksp_tot_its                   = gn->subsolver->ksp_tot_its;
+  PetscCall(TaoGetConvergedReason(gn->subsolver, &tao->reason));
+  PetscCall(VecCopy(gn->subsolver->solution, tao->solution));
+  PetscCall(VecCopy(gn->subsolver->gradient, tao->gradient));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoSetFromOptions_BRGN(Tao tao, PetscOptionItems PetscOptionsObject)
+{
+  TAO_BRGN     *gn     = (TAO_BRGN *)tao->data;
+  TaoBRGNPreset preset = gn->preset;
+  PetscBool     preset_set;
+
+  PetscFunctionBegin;
+  PetscOptionsHeadBegin(PetscOptionsObject, "Bounded regularized Gauss-Newton options");
+  PetscCall(PetscOptionsEnum("-tao_brgn_regularization_type", "regularizer preset", "TaoBRGNAddRegularizerTerm", TaoBRGNPresets, (PetscEnum)preset, (PetscEnum *)&preset, &preset_set));
+  PetscCall(PetscOptionsReal("-tao_brgn_regularizer_weight", "regularizer weight", "TaoBRGNAddRegularizerTerm", gn->preset_weight, &gn->preset_weight, NULL));
+  PetscCall(PetscOptionsReal("-tao_brgn_l1_smooth_epsilon", "L1 smoothing parameter", "TaoTermL1SetEpsilon", gn->preset_l1_epsilon, &gn->preset_l1_epsilon, NULL));
+  PetscCall(PetscOptionsBool("-tao_brgn_use_lm", "use Levenberg-Marquardt damping", "TaoBRGNSetUseLM", gn->use_lm, &gn->use_lm, NULL));
+  PetscCall(PetscOptionsReal("-tao_brgn_lm_lambda", "Levenberg-Marquardt damping coefficient", "TaoBRGNSetLMLambda", gn->lm_lambda, &gn->lm_lambda, NULL));
+  PetscOptionsHeadEnd();
+  gn->preset     = preset;
+  gn->preset_set = (PetscBool)(gn->preset_set || preset_set);
+  PetscCall(TaoSetFromOptions(gn->subsolver));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoView_BRGN(Tao tao, PetscViewer viewer)
+{
+  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+  PetscBool isascii;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Levenberg-Marquardt damping: %s", gn->use_lm ? "enabled" : "disabled"));
+    if (gn->use_lm) PetscCall(PetscViewerASCIIPrintf(viewer, " (lambda %g)", (double)gn->lm_lambda));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
   }
-  PetscCall(MatDestroy(&gn->D));
-  gn->D = dict;
+  PetscCall(PetscViewerASCIIPushTab(viewer));
+  PetscCall(TaoView(gn->subsolver, viewer));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  TaoBRGNSetRegularizerObjectiveAndGradientRoutine - Sets the user-defined regularizer call-back
-  function into the algorithm.
-
-  Input Parameters:
-+ tao  - the Tao context
-. func - function pointer for the regularizer value and gradient evaluation
-- ctx  - application context for the regularizer
-
-  Level: advanced
-
-.seealso: `Tao`, `Mat`, `TAOBRGN`, `TaoObjectiveAndGradientFn`
-@*/
-PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao tao, TaoObjectiveAndGradientFn *func, PetscCtx ctx)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", (Tao, TaoObjectiveAndGradientFn *, void *), (tao, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine_BRGN(Tao tao, TaoObjectiveAndGradientFn *func, PetscCtx ctx)
+static PetscErrorCode TaoSetUp_BRGN(Tao tao)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+  TaoTerm   data_term;
+  PetscInt  nregularizers;
+  PetscBool has_residual, has_jacobian, has_obj, has_objgrad, has_grad, has_hessian, exact_objective, use_residual, is_l2, is_shell, is_composite;
 
   PetscFunctionBegin;
-  if (ctx) gn->reg_obj_ctx = ctx;
-  if (func) gn->regularizerobjandgrad = func;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+  PetscCheck(!tao->objective_term.map, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOBRGN does not support an outer mapping on its residual model");
+  PetscCheck(tao->objective_term.scale == 1.0, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOBRGN does not support an outer scale on its residual model");
+  PetscCall(TaoBRGNGetDataTerm(tao, &data_term, NULL));
+  PetscCall(TaoTermIsResidualDefined(data_term, &has_residual));
+  PetscCall(TaoTermIsJacobianResidualDefined(data_term, &has_jacobian));
+  PetscCall(TaoTermIsObjectiveDefined(data_term, &has_obj));
+  PetscCall(TaoTermIsObjectiveAndGradientDefined(data_term, &has_objgrad));
+  PetscCall(TaoTermIsGradientDefined(data_term, &has_grad));
+  PetscCall(TaoTermIsHessianDefined(data_term, &has_hessian));
+  exact_objective = (PetscBool)((has_objgrad || (has_obj && has_grad)) && has_hessian);
+  use_residual    = (PetscBool)(!exact_objective || gn->use_lm);
+  if (use_residual && (has_residual || has_jacobian)) {
+    PetscCheck(has_residual && has_jacobian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TAOBRGN residual TaoTerm must define both residual and residual Jacobian operations");
+    PetscCall(PetscObjectTypeCompare((PetscObject)data_term, TAOTERMHALFL2SQUARED, &is_l2));
+    if (is_l2 && (!data_term->residual || !data_term->jacobian_residual)) {
+      Vec residual;
+      Mat J, Jpre;
 
-/*@
-  TaoBRGNSetRegularizerHessianRoutine - Sets the user-defined regularizer call-back
-  function into the algorithm.
-
-  Input Parameters:
-+ tao  - the `Tao` context
-. Hreg - user-created matrix for the Hessian of the regularization term
-. func - function pointer for the regularizer Hessian evaluation
-- ctx  - application context for the regularizer Hessian
-
-  Calling sequence:
-+ tao  - the `Tao` context
-. u    - the location at which to compute the Hessian
-. Hreg - user-created matrix for the Hessian of the regularization term
-- ctx  - application context for the regularizer Hessian
-
-  Level: advanced
-
-.seealso: `Tao`, `Mat`, `TAOBRGN`
-@*/
-PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(Tao tao, Mat Hreg, PetscErrorCode (*func)(Tao tao, Vec u, Mat Hreg, PetscCtx ctx), PetscCtx ctx)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerHessianRoutine_C", (Tao, Mat, PetscErrorCode (*)(Tao, Vec, Mat, void *), void *), (tao, Hreg, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNSetRegularizerHessianRoutine_BRGN(Tao tao, Mat Hreg, PetscErrorCode (*func)(Tao tao, Vec u, Mat Hreg, PetscCtx ctx), PetscCtx ctx)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  if (Hreg) {
-    PetscValidHeaderSpecific(Hreg, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, Hreg, 2);
-  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "NULL Hessian detected! User must provide valid Hessian for the regularizer.");
-  if (ctx) gn->reg_hess_ctx = ctx;
-  if (func) gn->regularizerhessian = func;
-  if (Hreg) {
-    PetscCall(PetscObjectReference((PetscObject)Hreg));
-    PetscCall(MatDestroy(&gn->Hreg));
-    gn->Hreg = Hreg;
+      PetscCall(VecDuplicate(tao->solution, &residual));
+      PetscCall(TaoTermCreateHessianMatrices(data_term, &J, &Jpre));
+      PetscCall(TaoTermSetResidual_Internal(data_term, residual, data_term->ops->residual));
+      PetscCall(TaoTermSetJacobianResidual_Internal(data_term, J, Jpre, data_term->ops->jacobianresidual));
+      PetscCall(VecDestroy(&residual));
+      PetscCall(MatDestroy(&J));
+      PetscCall(MatDestroy(&Jpre));
+    }
+    PetscCheck(data_term->residual && data_term->jacobian_residual, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TAOBRGN residual TaoTerm must provide residual and residual Jacobian storage");
+    PetscCall(PetscObjectReference((PetscObject)data_term->residual));
+    PetscCall(VecDestroy(&tao->ls_res));
+    tao->ls_res = data_term->residual;
+    PetscCall(PetscObjectReference((PetscObject)data_term->jacobian_residual));
+    PetscCall(MatDestroy(&tao->ls_jac));
+    tao->ls_jac = data_term->jacobian_residual;
+    PetscCall(PetscObjectReference((PetscObject)data_term->jacobian_residual_pre));
+    PetscCall(MatDestroy(&tao->ls_jac_pre));
+    tao->ls_jac_pre = data_term->jacobian_residual_pre;
   }
+  if (use_residual) {
+    PetscCheck(tao->ls_res, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoSetResidual() or a residual-capable TaoTerm with storage must be configured before TaoSetUp()");
+    PetscCheck(tao->ls_jac, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoSetJacobianResidual() or a residual-Jacobian-capable TaoTerm with storage must be configured before TaoSetUp()");
+  }
+  if (gn->use_lm) PetscCheck(tao->ls_jac, PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "Levenberg-Marquardt damping requires residual Jacobian storage");
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)tao->ls_jac, MATSHELL, &is_shell));
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->ls_jac, MATCOMPOSITE, &is_composite));
+  gn->matrix_free = (PetscBool)(!exact_objective && !gn->use_lm && (is_shell || is_composite));
+  if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
+  PetscCall(TaoBRGNGetNumberRegularizers(tao, &nregularizers));
+  PetscCheck(!gn->preset_set || !nregularizers, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "Cannot combine -tao_brgn_regularization_type with regularizer terms added through TaoAddTerm() or TaoBRGNAddRegularizerTerm(); drop the preset option or the added regularizer terms");
+  if (!nregularizers && !gn->use_lm) {
+    PetscCall(TaoBRGNCreatePresetRegularizer(tao));
+    PetscCall(TaoBRGNGetNumberRegularizers(tao, &nregularizers));
+  }
+  if (gn->use_lm && !gn->damping) PetscCall(MatCreateVecs(tao->ls_jac, &gn->damping, NULL));
+  if (exact_objective) {
+    if (!gn->H) {
+      Mat Hpre;
+
+      PetscCall(TaoTermCreateHessianMatrices(data_term, &gn->H, &Hpre));
+      PetscCheck(Hpre == gn->H, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOBRGN exact data term must use the same matrix for its Hessian and preconditioner");
+      PetscCall(MatDestroy(&Hpre));
+    }
+    PetscCheck(gn->H, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TAOBRGN data term has an exact Hessian operation but cannot create Hessian matrix storage");
+    PetscCall(TaoBRGNComputeHessian(gn->subsolver, tao->solution, gn->H, gn->H, gn));
+  } else if (!gn->matrix_free) {
+    PetscCall(TaoBRGNEvaluateJacobianResidual(gn, tao->solution));
+    PetscCall(TaoBRGNCreateProduct(tao->ls_jac, MAT_INITIAL_MATRIX, &gn->H));
+    PetscCall(TaoBRGNApplyLM(gn, gn->H));
+  } else {
+    PetscCall(MatCreateVecs(tao->ls_jac, NULL, &gn->r_work));
+  }
+  PetscCall(TaoSetObjectiveAndGradient(gn->subsolver, NULL, TaoBRGNObjectiveAndGradient, gn));
+  PetscCall(TaoSetHessian(gn->subsolver, gn->H, gn->H, TaoBRGNComputeHessian, gn));
+  if (gn->matrix_free) PetscCall(TaoSetHessianMult(gn->subsolver, TaoBRGNComputeHessianMult, gn));
+  for (PetscInt i = 0; i < nregularizers; i++) {
+    const char *prefix;
+    TaoTerm     regularizer;
+    Vec         regularizer_params = NULL;
+    Mat         regularizer_map;
+    PetscReal   regularizer_scale;
+
+    PetscCall(TaoTermSumGetTerm(tao->objective_term.term, i + 1, &prefix, &regularizer_scale, &regularizer, &regularizer_map));
+    if (tao->objective_parameters) PetscCall(VecNestGetTaoTermSumParameters(tao->objective_parameters, i + 1, &regularizer_params));
+    PetscCall(TaoAddTerm(gn->subsolver, prefix, regularizer_scale, regularizer, regularizer_params, regularizer_map));
+  }
+  if (gn->matrix_free) PetscCall(TaoTermSetCreateHessianMode(gn->subsolver->objective_term.term, PETSC_TRUE, MATSHELL, NULL));
+  PetscCall(TaoSetUpdate(gn->subsolver, TaoBRGNUpdate, gn));
+  PetscCall(TaoSetSolution(gn->subsolver, tao->solution));
+  if (tao->bounded) PetscCall(TaoSetVariableBounds(gn->subsolver, tao->XL, tao->XU));
+  PetscCall(TaoSetTolerances(gn->subsolver, tao->gatol, tao->grtol, tao->gttol));
+  PetscCall(TaoSetMaximumIterations(gn->subsolver, tao->max_it));
+  PetscCall(TaoSetMaximumFunctionEvaluations(gn->subsolver, tao->max_funcs));
+  PetscCall(TaoSetUp(gn->subsolver));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoDestroy_BRGN(Tao tao)
+{
+  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+
+  PetscFunctionBegin;
+  PetscCall(VecDestroy(&tao->gradient));
+  PetscCall(VecDestroy(&gn->damping));
+  PetscCall(VecDestroy(&gn->hessian_x));
+  PetscCall(VecDestroy(&gn->r_work));
+  PetscCall(MatDestroy(&gn->H));
+  PetscCall(TaoDestroy(&gn->subsolver));
+  PetscCall(PetscFree(tao->data));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetSubsolver_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNAddRegularizerTerm_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetRegularizerTerm_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetUseLM_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetUseLM_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetLMLambda_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetLMLambda_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  TAOBRGN - Bounded Regularized Gauss-Newton method for solving nonlinear least-squares
-            problems with bound constraints. This algorithm is a thin wrapper around `TAOBNTL`
-            that constructs the Gauss-Newton problem with the user-provided least-squares
-            residual and Jacobian. The algorithm offers an L2-norm (`l2pure`), L2-norm proximal point (`l2prox`)
-            regularizer, and L1-norm dictionary regularizer (`l1dict`), where we approximate the
-            L1-norm $\|x\|_1$ by $\sum_i{\sqrt{x_i^2+\epsilon^2}-\epsilon}$ with a small positive number $\epsilon$.
-            Also offered is the `lm` regularizer which uses a scaled diagonal of $J^T J$.
-            With the `lm` regularizer, `TAOBRGN` is a Levenberg-Marquardt optimizer.
-            The user can also provide their own regularization function.
+  TAOBRGN - Bounded regularized Gauss-Newton method
 
   Options Database Keys:
-+ -tao_brgn_regularization_type (user|l2prox|l2pure|l1dict|lm) - regularization type, default `l2prox`
-. -tao_brgn_regularizer_weight                                 - regularizer weight (default 1e-4)
-- -tao_brgn_l1_smooth_epsilon                                  - L1-norm smooth approximation parameter: $\|x\|_1 = \sum_i{\sqrt{x_i^2+\epsilon^2}-\epsilon}$ (default 1e-6)
++ -tao_brgn_regularization_type (l2prox|l2pure|l1dict) - create a built-in regularizer (default l2prox)
+. -tao_brgn_regularizer_weight lambda                  - regularizer weight (default 1e-4)
+. -tao_brgn_l1_smooth_epsilon epsilon                 - smoothing for the built-in L1 regularizer (default 1e-6)
+. -tao_brgn_use_lm                                    - use Levenberg-Marquardt damping
+- -tao_brgn_lm_lambda lambda                          - Levenberg-Marquardt damping coefficient
 
   Level: beginner
 
-.seealso: `Tao`, `TaoBRGNGetSubsolver()`, `TaoBRGNSetRegularizerWeight()`, `TaoBRGNSetL1SmoothEpsilon()`, `TaoBRGNSetDictionaryMatrix()`,
-          `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()`, `TaoBRGNSetRegularizerHessianRoutine()`
+  Notes:
+  Term 0 of the objective is the least-squares data term. Later terms are regularizers.
+  Use `TaoAddTerm()`, `TaoBRGNAddRegularizerTerm()`, or `-tao_add_terms` to add arbitrary
+  regularizers. The `-tao_brgn_regularization_type` preset applies only when no regularizer
+  terms have been added. Levenberg-Marquardt damping is solver policy and can be enabled
+  independently of the objective regularizers.
+
+.seealso: [](ch_tao), `Tao`, `TaoBRGNAddRegularizerTerm()`, `TaoBRGNGetRegularizerTerm()`, `TaoBRGNSetUseLM()`, `TAOTERML2PROX`
 M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
 {
@@ -741,35 +778,29 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&gn));
-
   tao->ops->destroy        = TaoDestroy_BRGN;
   tao->ops->setup          = TaoSetUp_BRGN;
   tao->ops->setfromoptions = TaoSetFromOptions_BRGN;
   tao->ops->view           = TaoView_BRGN;
   tao->ops->solve          = TaoSolve_BRGN;
   tao->uses_gradient       = PETSC_TRUE;
-
-  tao->data                  = gn;
-  gn->reg_type               = TAOBRGN_REGULARIZATION_L2PROX;
-  gn->lambda                 = 1e-4;
-  gn->epsilon                = 1e-6;
-  gn->downhill_lambda_change = 1. / 5.;
-  gn->uphill_lambda_change   = 1.5;
-  gn->parent                 = tao;
-
+  tao->data                = gn;
+  gn->parent               = tao;
+  gn->preset               = TAOBRGN_PRESET_L2PROX;
+  gn->preset_weight        = 1e-4;
+  gn->preset_l1_epsilon    = 1e-6;
+  gn->lm_lambda            = 1e-4;
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &prefix));
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &gn->subsolver));
   PetscCall(TaoSetType(gn->subsolver, TAOBNLS));
   PetscCall(TaoSetOptionsPrefix(gn->subsolver, prefix));
   PetscCall(TaoAppendOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetRegularizationType_C", TaoBRGNGetRegularizationType_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizationType_C", TaoBRGNSetRegularizationType_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetDampingVector_C", TaoBRGNGetDampingVector_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetDictionaryMatrix_C", TaoBRGNSetDictionaryMatrix_BRGN));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetSubsolver_C", TaoBRGNGetSubsolver_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerWeight_C", TaoBRGNSetRegularizerWeight_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetL1SmoothEpsilon_C", TaoBRGNSetL1SmoothEpsilon_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", TaoBRGNSetRegularizerObjectiveAndGradientRoutine_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerHessianRoutine_C", TaoBRGNSetRegularizerHessianRoutine_BRGN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNAddRegularizerTerm_C", TaoBRGNAddRegularizerTerm_BRGN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetRegularizerTerm_C", TaoBRGNGetRegularizerTerm_BRGN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetUseLM_C", TaoBRGNSetUseLM_BRGN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetUseLM_C", TaoBRGNGetUseLM_BRGN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetLMLambda_C", TaoBRGNSetLMLambda_BRGN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetLMLambda_C", TaoBRGNGetLMLambda_BRGN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

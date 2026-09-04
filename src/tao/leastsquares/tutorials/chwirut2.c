@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     /* Set the function and Jacobian routines. */
     PetscCall(FormStartingPoint(x));
     PetscCall(TaoSetSolution(tao, x));
-    PetscCall(TaoSetResidualRoutine(tao, f, EvaluateFunction, (void *)&user));
+    PetscCall(TaoSetResidual(tao, f, EvaluateFunction, (void *)&user));
 
     /* Check for any TAO command line arguments */
     PetscCall(TaoSetFromOptions(tao));

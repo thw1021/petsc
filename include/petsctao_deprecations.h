@@ -30,9 +30,9 @@ PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoSetHessian()", ) static inline PetscErro
 {
   return TaoSetHessian(t, H, P, f, c);
 }
-PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidualRoutine()", ) static inline PetscErrorCode TaoSetSeparableObjectiveRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, void *), PetscCtx ctx)
+PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidual()", ) static inline PetscErrorCode TaoSetSeparableObjectiveRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, void *), PetscCtx ctx)
 {
-  return TaoSetResidualRoutine(tao, res, func, ctx);
+  return TaoSetResidual(tao, res, func, ctx);
 }
 PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidualWeights()", ) static inline PetscErrorCode TaoSetSeparableObjectiveWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt *rows, PetscInt *cols, PetscReal *vals)
 {

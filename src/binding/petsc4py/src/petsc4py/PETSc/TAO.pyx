@@ -349,14 +349,14 @@ cdef class TAO(Object):
 
         See Also
         --------
-        setJacobianResidual, petsc.TaoSetResidualRoutine
+        setJacobianResidual, petsc.TaoSetResidual
 
         """
         if args is None: args = ()
         if kargs is None: kargs = {}
         context = (residual, args, kargs)
         self.set_attr("__residual__", context)
-        CHKERR(TaoSetResidualRoutine(self.tao, R.vec, TAO_Residual, <void*>context))
+        CHKERR(TaoSetResidual(self.tao, R.vec, TAO_Residual, <void*>context))
 
     def setJacobianResidual(self, jacobian: TAOJacobianResidualFunction, Mat J=None, Mat P=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the least-squares residual Jacobian.
@@ -378,7 +378,7 @@ cdef class TAO(Object):
 
         See Also
         --------
-        setResidual, petsc.TaoSetJacobianResidualRoutine
+        setResidual, petsc.TaoSetJacobianResidual
 
         """
         cdef PetscMat Jmat = NULL
@@ -389,7 +389,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (jacobian, args, kargs)
         self.set_attr("__jacobian_residual__", context)
-        CHKERR(TaoSetJacobianResidualRoutine(self.tao, Jmat, Pmat, TAO_JacobianResidual, <void*>context))
+        CHKERR(TaoSetJacobianResidual(self.tao, Jmat, Pmat, TAO_JacobianResidual, <void*>context))
 
     def setGradient(self, gradient: TAOGradientFunction, Vec g=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the gradient evaluation callback.
@@ -1871,88 +1871,65 @@ cdef class TAO(Object):
         CHKERR(PetscINCREF(subsolver.obj))
         return subsolver
 
-    def setBRGNRegularizerObjectiveGradient(self, objgrad, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
-        """Set the callback to compute the regularizer objective and gradient.
-
-        Logically collective.
-
-        See Also
-        --------
-        petsc.TaoBRGNSetRegularizerObjectiveAndGradientRoutine
-
-        """
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (objgrad, args, kargs)
-        self.set_attr("__brgnregobjgrad__", context)
-        CHKERR(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(self.tao, TAO_BRGNRegObjGrad, <void*>context))
-
-    def setBRGNRegularizerHessian(self, hessian, Mat H=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
-        """Set the callback to compute the regularizer Hessian.
-
-        Logically collective.
-
-        See Also
-        --------
-        petsc.TaoBRGNSetRegularizerHessianRoutine
-
-        """
-        cdef PetscMat Hmat = NULL
-        if H is not None: Hmat = H.mat
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (hessian, args, kargs)
-        self.set_attr("__brgnreghessian__", context)
-        CHKERR(TaoBRGNSetRegularizerHessianRoutine(self.tao, Hmat, TAO_BRGNRegHessian, <void*>context))
-
-    def setBRGNRegularizerWeight(self, weight: float) -> None:
-        """Set the regularizer weight.
-
-        Collective.
-
-        """
-        cdef PetscReal cweight = asReal(weight)
-        CHKERR(TaoBRGNSetRegularizerWeight(self.tao, cweight))
-
-    def setBRGNSmoothL1Epsilon(self, epsilon: float) -> None:
-        """Set the smooth L1 epsilon.
+    def addBRGNRegularizerTerm(
+        self,
+        prefix: str | None,
+        scale: float,
+        TAOTerm term,
+        Vec parameters=None,
+        Mat mapping=None,
+    ) -> None:
+        """Add a regularizer term used by the BRGN solver.
 
         Collective.
 
         See Also
         --------
-        petsc.TaoBRGNSetL1SmoothEpsilon
+        getBRGNRegularizerTerm, petsc.TaoBRGNAddRegularizerTerm
 
         """
-        cdef PetscReal ceps = asReal(epsilon)
-        CHKERR(TaoBRGNSetL1SmoothEpsilon(self.tao, ceps))
+        cdef PetscReal cscale = asReal(scale)
+        cdef const char *cprefix = NULL
+        cdef PetscVec cparameters = NULL
+        cdef PetscMat cmapping = NULL
+        if prefix is not None: prefix = str2bytes(prefix, &cprefix)
+        if parameters is not None: cparameters = parameters.vec
+        if mapping is not None: cmapping = mapping.mat
+        CHKERR(TaoBRGNAddRegularizerTerm(self.tao, cprefix, cscale, term.taoterm, cparameters, cmapping))
 
-    def setBRGNDictionaryMatrix(self, Mat D) -> None:
-        """Set the dictionary matrix.
-
-        Collective.
-
-        See Also
-        --------
-        petsc.TaoBRGNSetDictionaryMatrix
-
-        """
-        CHKERR(TaoBRGNSetDictionaryMatrix(self.tao, D.mat))
-
-    def getBRGNDampingVector(self) -> Vec:
-        """Return the damping vector.
+    def getBRGNRegularizerTerm(self) -> TAOTerm | None:
+        """Return the aggregate regularizer term used by the BRGN solver.
 
         Not collective.
 
+        See Also
+        --------
+        addBRGNRegularizerTerm, petsc.TaoBRGNGetRegularizerTerm
+
         """
-        # FIXME
-        # See Also
-        # --------
-        # petsc.TaoBRGNGetDampingVector
-        cdef Vec damp = Vec()
-        CHKERR(TaoBRGNGetDampingVector(self.tao, &damp.vec))
-        CHKERR(PetscINCREF(damp.obj))
-        return damp
+        cdef PetscTAOTerm term = NULL
+        CHKERR(TaoBRGNGetRegularizerTerm(self.tao, &term))
+        return ref_TAOTerm(term) if term != NULL else None
+
+    def setBRGNUseLM(self, use_lm: bool) -> None:
+        """Set whether the BRGN solver uses Levenberg-Marquardt damping."""
+        CHKERR(TaoBRGNSetUseLM(self.tao, asBool(use_lm)))
+
+    def getBRGNUseLM(self) -> bool:
+        """Return whether the BRGN solver uses Levenberg-Marquardt damping."""
+        cdef PetscBool use_lm = PETSC_FALSE
+        CHKERR(TaoBRGNGetUseLM(self.tao, &use_lm))
+        return toBool(use_lm)
+
+    def setBRGNLMLambda(self, lm_lambda: float) -> None:
+        """Set the BRGN Levenberg-Marquardt damping coefficient."""
+        CHKERR(TaoBRGNSetLMLambda(self.tao, asReal(lm_lambda)))
+
+    def getBRGNLMLambda(self) -> float:
+        """Return the BRGN Levenberg-Marquardt damping coefficient."""
+        cdef PetscReal lm_lambda = 0
+        CHKERR(TaoBRGNGetLMLambda(self.tao, &lm_lambda))
+        return float(lm_lambda)
 
     def createPython(self, context: Any = None, comm: Comm | None = None) -> Self:
         """Create an optimization solver of Python type.
@@ -2502,6 +2479,7 @@ class TAOTermType:
     HALFL2SQUARED = S_(TAOTERMHALFL2SQUARED)
     L1            = S_(TAOTERML1)
     QUADRATIC     = S_(TAOTERMQUADRATIC)
+    L2PROX        = S_(TAOTERML2PROX)
 
 # --------------------------------------------------------------------
 

@@ -143,6 +143,8 @@ static PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     /* Note: Currently implementation creates TAO inside of implementations.
       * Thus, all the prefix jobs are done inside implementations, not in interface */
     const char *prefix;
+    TaoTerm     regularizer;
+    PetscInt    n, N;
 
     if (!regressor->tao) PetscCall(PetscRegressorGetTao(regressor, &tao));
 
@@ -150,28 +152,29 @@ static PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     /* Set up the TAO object to solve the (regularized) least squares problem (without solving for intercept, which is done separately) using TAOBRGN. */
     PetscCall(TaoSetType(tao, TAOBRGN));
     PetscCall(TaoSetSolution(tao, linear->coefficients));
-    PetscCall(TaoSetResidualRoutine(tao, linear->residual, EvaluateResidual, linear));
-    PetscCall(TaoSetJacobianResidualRoutine(tao, linear->X, linear->X, EvaluateJacobian, linear));
-    // Set the regularization type and weight for the BRGN as linear->type dictates:
-    // TODO BRGN needs to be BRGNSetRegularizationType
-    // PetscOptionsSetValue no longer works due to functioning prefix system
+    PetscCall(TaoSetResidual(tao, linear->residual, EvaluateResidual, linear));
+    PetscCall(TaoSetJacobianResidual(tao, linear->X, linear->X, EvaluateJacobian, linear));
     PetscCall(PetscRegressorGetOptionsPrefix(regressor, &prefix));
     PetscCall(TaoSetOptionsPrefix(regressor->tao, prefix));
     PetscCall(TaoAppendOptionsPrefix(tao, "regressor_linear_"));
+    PetscCall(VecGetLocalSize(linear->coefficients, &n));
+    PetscCall(VecGetSize(linear->coefficients, &N));
     switch (linear->type) {
     case REGRESSOR_LINEAR_OLS:
-      regressor->regularizer_weight = 0.0; // OLS, by definition, uses a regularizer weight of 0
+      regressor->regularizer_weight = 0.0;
+      PetscCall(TaoTermCreateHalfL2Squared(PetscObjectComm((PetscObject)regressor), n, N, &regularizer));
       break;
     case REGRESSOR_LINEAR_LASSO:
-      PetscCall(TaoBRGNSetRegularizationType(regressor->tao, TAOBRGN_REGULARIZATION_L1DICT));
+      PetscCall(TaoTermCreateL1(PetscObjectComm((PetscObject)regressor), n, N, 1e-6, &regularizer));
       break;
     case REGRESSOR_LINEAR_RIDGE:
-      PetscCall(TaoBRGNSetRegularizationType(regressor->tao, TAOBRGN_REGULARIZATION_L2PURE));
+      PetscCall(TaoTermCreateHalfL2Squared(PetscObjectComm((PetscObject)regressor), n, N, &regularizer));
       break;
     default:
-      break;
+      SETERRQ(PetscObjectComm((PetscObject)regressor), PETSC_ERR_PLIB, "Unknown linear regressor type");
     }
-    if (!linear->use_ksp) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
+    PetscCall(TaoBRGNAddRegularizerTerm(tao, "regularizer_", regressor->regularizer_weight, regularizer, NULL, NULL));
+    PetscCall(TaoTermDestroy(&regularizer));
     PetscCall(TaoSetFromOptions(tao));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

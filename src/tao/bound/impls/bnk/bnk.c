@@ -988,18 +988,21 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
 
     PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
     if (is_sum) {
-      PetscBool has_submat, has_diag, has_shift;
+      PetscBool   has_submat, has_diag, has_shift, is_shell;
       Mat         Hpre = tao->hessian_pre;
 
-      PetscCall(MatHasOperation(tao->hessian, MATOP_CREATE_SUBMATRIX, &has_submat));
-      PetscCall(MatHasOperation(tao->hessian, MATOP_GET_DIAGONAL, &has_diag));
-      PetscCall(MatHasOperation(tao->hessian, MATOP_SHIFT, &has_shift));
-      PetscCheck(has_submat, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatCreateSubMatrix()", ((PetscObject)tao)->type_name);
-      PetscCheck(has_diag, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatGetDiagonal()", ((PetscObject)tao)->type_name);
-      PetscCheck(has_shift, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatShift()", ((PetscObject)tao)->type_name);
-      if (Hpre && Hpre != tao->hessian) {
-        PetscCall(MatHasOperation(Hpre, MATOP_CREATE_SUBMATRIX, &has_submat));
-        PetscCheck(has_submat, comm, PETSC_ERR_SUP, "%s requires the Hessian preconditioning matrix to support MatCreateSubMatrix()", ((PetscObject)tao)->type_name);
+      PetscCall(PetscObjectBaseTypeCompare((PetscObject)tao->hessian, MATSHELL, &is_shell));
+      if (!is_shell) {
+        PetscCall(MatHasOperation(tao->hessian, MATOP_CREATE_SUBMATRIX, &has_submat));
+        PetscCall(MatHasOperation(tao->hessian, MATOP_GET_DIAGONAL, &has_diag));
+        PetscCall(MatHasOperation(tao->hessian, MATOP_SHIFT, &has_shift));
+        PetscCheck(has_submat, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatCreateSubMatrix()", ((PetscObject)tao)->type_name);
+        PetscCheck(has_diag, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatGetDiagonal()", ((PetscObject)tao)->type_name);
+        PetscCheck(has_shift, comm, PETSC_ERR_SUP, "%s requires the Hessian matrix to support MatShift()", ((PetscObject)tao)->type_name);
+        if (Hpre && Hpre != tao->hessian) {
+          PetscCall(MatHasOperation(Hpre, MATOP_CREATE_SUBMATRIX, &has_submat));
+          PetscCheck(has_submat, comm, PETSC_ERR_SUP, "%s requires the Hessian preconditioning matrix to support MatCreateSubMatrix()", ((PetscObject)tao)->type_name);
+        }
       }
     }
   }

@@ -10,6 +10,7 @@
 */
 
 #include <petsctao.h>
+#include <petsctaoterm.h>
 
 /*
 Description:   Compressive sensing test example 1.
@@ -56,51 +57,48 @@ PetscErrorCode FormDictionaryMatrix(Mat, AppCtx *);
 PetscErrorCode EvaluateFunction(Tao, Vec, Vec, void *);
 PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, void *);
 
-static PetscErrorCode SetTaoOptionsFromUserOptions(Tao tao, AppCtx *ctx)
+static PetscErrorCode SetTaoOptionsFromUserOptions(Tao tao, Vec x, Mat D, AppCtx *ctx)
 {
-  PetscBool isbrgn;
+  TaoTerm term;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOBRGN, &isbrgn));
-  if (isbrgn) {
-    switch (ctx->tType) {
-    case TEST_LM:
-      PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_LM));
-      break;
-    case TEST_L1DICT:
-      PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
-      PetscCall(TaoBRGNSetRegularizerWeight(tao, 0.0001));
-      PetscCall(TaoBRGNSetL1SmoothEpsilon(tao, 1.e-6));
-      break;
-    case TEST_NONE:
-    default:
-      break;
-    }
+  switch (ctx->tType) {
+  case TEST_LM:
+    PetscCall(TaoBRGNSetUseLM(tao, PETSC_TRUE));
+    PetscCall(TaoBRGNSetLMLambda(tao, 1e-4));
+    break;
+  case TEST_L1DICT:
+    PetscCall(TaoTermCreateL1(PetscObjectComm((PetscObject)tao), K, K, 1e-6, &term));
+    PetscCall(TaoBRGNAddRegularizerTerm(tao, "regularizer_", 1e-4, term, NULL, D));
+    PetscCall(TaoTermDestroy(&term));
+    break;
+  case TEST_NONE:
+  default:
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TestOutType(Tao tao, AppCtx *ctx)
 {
-  PetscBool isbrgn;
+  TaoTerm   term;
+  PetscBool matches, use_lm;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOBRGN, &isbrgn));
-  if (isbrgn) {
-    TaoBRGNRegularizationType type;
-
-    PetscCall(TaoBRGNGetRegularizationType(tao, &type));
-    switch (ctx->tType) {
-    case TEST_LM:
-      PetscCheck(type == TAOBRGN_REGULARIZATION_LM, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_NOTSAMETYPE, "BRGN Regularization type is not LM!");
-      break;
-    case TEST_L1DICT:
-      PetscCheck(type == TAOBRGN_REGULARIZATION_L1DICT, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_NOTSAMETYPE, "BRGN Regularization type is not L1DICT!");
-      break;
-    case TEST_NONE:
-    default:
-      break;
-    }
+  switch (ctx->tType) {
+  case TEST_LM:
+    PetscCall(TaoBRGNGetUseLM(tao, &use_lm));
+    PetscCheck(use_lm, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "BRGN Levenberg-Marquardt damping is not enabled");
+    break;
+  case TEST_L1DICT:
+    PetscCall(TaoBRGNGetRegularizerTerm(tao, &term));
+    PetscCall(TaoTermSumGetTerm(term, 1, NULL, NULL, &term, NULL));
+    PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERML1, &matches));
+    PetscCheck(matches, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_NOTSAMETYPE, "BRGN regularizer is not TAOTERML1");
+    break;
+  case TEST_NONE:
+  default:
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -160,16 +158,14 @@ int main(int argc, char **argv)
   /* Fill the content of matrix D from user application Context */
   PetscCall(FormDictionaryMatrix(D, &user));
 
-  /* If needed, set options via function for testing purpose */
-  PetscCall(SetTaoOptionsFromUserOptions(tao, &user));
   /* Bind x to tao->solution. */
   PetscCall(TaoSetSolution(tao, x));
-  /* Bind D to tao->data->D */
-  PetscCall(TaoBRGNSetDictionaryMatrix(tao, D));
+  /* If needed, set a regularizer through the API for testing purposes. */
+  PetscCall(SetTaoOptionsFromUserOptions(tao, x, D, &user));
 
   /* Set the function and Jacobian routines. */
-  PetscCall(TaoSetResidualRoutine(tao, f, EvaluateFunction, (void *)&user));
-  PetscCall(TaoSetJacobianResidualRoutine(tao, J, J, EvaluateJacobian, (void *)&user));
+  PetscCall(TaoSetResidual(tao, f, EvaluateFunction, (void *)&user));
+  PetscCall(TaoSetJacobianResidual(tao, J, J, EvaluateJacobian, (void *)&user));
 
   /* Check for any TAO command line arguments */
   PetscCall(TaoSetFromOptions(tao));
@@ -352,7 +348,7 @@ PetscErrorCode InitializeUserData(AppCtx *user)
    test:
       suffix: 5
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type lm -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_type bnls -tao_brgn_subsolver_tao_monitor
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_use_lm -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_type bnls -tao_brgn_subsolver_tao_monitor
 
    test:
       suffix: view_lm

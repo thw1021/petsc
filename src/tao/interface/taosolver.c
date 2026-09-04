@@ -3135,7 +3135,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, &is_objgrad));
     PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, &is_grad));
     // Empty callback term
-    if (!(is_obj || is_objgrad || is_grad)) {
+    if (!(is_obj || is_objgrad || is_grad || tao->ops->computeresidual || tao->ops->computeresidualjacobian)) {
       PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
       PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
