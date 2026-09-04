@@ -118,6 +118,10 @@ static PetscErrorCode MatDestroy_ConstantDiagonal(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_constantdiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_constantdiagonal_seqdense_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_constantdiagonal_mpidense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_constantdiagonal_seqdensecuda_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_constantdiagonal_mpidensecuda_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_constantdiagonal_seqdensehip_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_constantdiagonal_mpidensehip_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_anytype_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -882,6 +886,10 @@ PETSC_EXTERN PetscErrorCode MatCreate_ConstantDiagonal(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_constantdiagonal_C", MatProductSetFromOptions_Diagonal_ConstDiag));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_constantdiagonal_seqdense_C", MatProductSetFromOptions_ConstDiag_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_constantdiagonal_mpidense_C", MatProductSetFromOptions_ConstDiag_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_constantdiagonal_seqdensecuda_C", MatProductSetFromOptions_ConstDiag_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_constantdiagonal_mpidensecuda_C", MatProductSetFromOptions_ConstDiag_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_constantdiagonal_seqdensehip_C", MatProductSetFromOptions_ConstDiag_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_constantdiagonal_mpidensehip_C", MatProductSetFromOptions_ConstDiag_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_ConstDiag_Anytype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
