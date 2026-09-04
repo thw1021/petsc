@@ -253,7 +253,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqBAIJ(Mat B, Mat A, IS isrow, IS iscol, con
   b = (Mat_SeqBAIJ *)B->data;
 
   b->free_ij = PETSC_TRUE;
-  PetscCall(PetscShmgetAllocateArray((bdiag[0] + 1) * bs2, sizeof(PetscScalar), (void **)&b->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), (bdiag[0] + 1) * bs2, sizeof(PetscScalar), (void **)&b->a));
   b->free_a        = PETSC_TRUE;
   b->j             = bj;
   b->i             = bi;
