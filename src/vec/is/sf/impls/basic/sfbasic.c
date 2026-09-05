@@ -170,6 +170,17 @@ static PetscErrorCode PetscSFSetCommunicationOps_Basic(PetscSF sf, PetscSFLink l
     link->FinishCommunication = PetscSFLinkFinishCommunication_MPIX_Stream;
   }
 #endif
+#if defined(PETSC_HAVE_NCCL)
+  {
+    PetscBool use_nccl;
+
+    PetscCall(PetscSFLinkNcclCheck(sf, link, &use_nccl)); /* collective decision; NCCL takes precedence over stream-aware MPI */
+    if (use_nccl) {
+      link->StartCommunication  = PetscSFLinkStartCommunication_NCCL;
+      link->FinishCommunication = PetscSFLinkFinishCommunication_NCCL;
+    }
+  }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

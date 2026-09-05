@@ -399,6 +399,9 @@ DEF_DumbType(DumbInt, 1, 1) DEF_DumbType(DumbInt, 2, 1) DEF_DumbType(DumbInt, 4,
 
   PetscFunctionBegin;
   /* Destroy device-specific fields */
+#if defined(PETSC_HAVE_NCCL)
+  PetscCall(PetscSFLinkDestroy_NCCL(sf, link));
+#endif
   if (link->deviceinited) PetscCall((*link->Destroy)(sf, link));
 
   /* Destroy host related fields */

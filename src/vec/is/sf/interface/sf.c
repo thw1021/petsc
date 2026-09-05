@@ -39,7 +39,8 @@ const char *const PetscSFConcatenateRootModes[] = {"local", "shared", "global", 
 
   Options Database Key:
 + -sf_type (basic|window|neighbor)     - Use MPI persistent Isend/Irecv, or MPI-3 one-sided window, or MPI-3 neighborhood collectives for communication
-- -sf_neighbor_persistent (true|false) - Use MPI-4 persistent neighborhood collectives for communication (used along with `-sf_type neighbor`)
+. -sf_neighbor_persistent (true|false) - Use MPI-4 persistent neighborhood collectives for communication (used along with `-sf_type neighbor`)
+- -use_nccl (true|false)               - Use NCCL instead of MPI for the inter-process communication of `PETSCSFBASIC` when the root and leaf data are on CUDA devices (requires PETSc configured with NCCL)
 
   Level: intermediate
 
@@ -87,6 +88,11 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm, PetscSF *sf)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_nvshmem", &b->use_nvshmem, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_nvshmem_get", &b->use_nvshmem_get, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_nvshmem_putsig", &b->use_nvshmem_putsig, NULL));
+  #endif
+
+  #if defined(PETSC_HAVE_NCCL)
+  b->use_nccl = PETSC_FALSE; /* Default is not to try NCCL */
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_nccl", &b->use_nccl, NULL));
   #endif
 #endif
   b->vscat.from_n = -1;
@@ -138,6 +144,9 @@ PetscErrorCode PetscSFReset(PetscSF sf)
 
 #if defined(PETSC_HAVE_DEVICE)
   for (PetscInt i = 0; i < 2; i++) PetscCall(PetscSFFree(sf, PETSC_MEMTYPE_DEVICE, sf->rmine_d[i]));
+#endif
+#if defined(PETSC_HAVE_NCCL)
+  sf->checked_nccl_eligibility = PETSC_FALSE; /* The eligibility depends on the graph */
 #endif
 
   sf->setupcalled = PETSC_FALSE;

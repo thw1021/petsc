@@ -130,6 +130,11 @@ struct _p_PetscSF {
   PetscMPIInt *ranks_d;       /* Copy of the remote part of (root) ranks[] on device */
   PetscInt    *roffset_d;     /* Copy of the remote part of roffset[] on device */
 #endif
+#if defined(PETSC_HAVE_NCCL)
+  PetscBool use_nccl;                 /* TRY to use NCCL for the inter-process communication of this SF when root/leafdata are on CUDA devices */
+  PetscBool checked_nccl_eligibility; /* Have we checked whether this SF is eligible for NCCL? */
+  PetscBool nccl_eligible;            /* Result of the check: may exchanges of this SF with device data use NCCL? */
+#endif
 #if defined(PETSC_HAVE_MPIX_STREAM)
   MPIX_Stream mpi_stream;
   MPI_Comm    stream_comm; /* gpu stream aware MPI communicator */

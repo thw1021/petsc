@@ -160,11 +160,6 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf, MPI_Datatype unit, PetscMemType
       }
     }
 
-  link->FinishCommunication = PetscSFLinkFinishCommunication_Default;
-  // each SF type could customize their communication by setting function pointers in the link.
-  // Currently only BASIC and NEIGHBOR use this abstraction.
-  PetscTryTypeMethod(sf, SetCommunicationOps, link);
-
 found:
 
 #if defined(PETSC_HAVE_DEVICE)
@@ -234,6 +229,13 @@ found:
   link->leafmtype      = leafmtype;
   link->rootmtype_mpi  = rootmtype_mpi;
   link->leafmtype_mpi  = leafmtype_mpi;
+
+  /* Select the communication routines for this invocation. Each SF type could customize its communication by setting
+     function pointers in the link; currently only BASIC and NEIGHBOR use this abstraction. The selection may depend on
+     the memory types recorded above, and a cached link can be reused with different memory types, so it is made on
+     every call rather than only when the link is created */
+  link->FinishCommunication = PetscSFLinkFinishCommunication_Default;
+  PetscTryTypeMethod(sf, SetCommunicationOps, link);
 
   link->next = bas->inuse;
   bas->inuse = link;

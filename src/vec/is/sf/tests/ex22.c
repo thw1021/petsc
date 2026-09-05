@@ -77,6 +77,11 @@ int main(int argc, char *argv[])
       env: NVSHMEM_SYMMETRIC_SIZE=32M
 
     test:
+      suffix: cuda_nccl
+      requires: cuda nccl
+      args: -vec_type cuda -use_nccl
+
+    test:
       suffix: hip
       requires: hip
       args: -vec_type hip

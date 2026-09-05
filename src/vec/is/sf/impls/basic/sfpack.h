@@ -196,14 +196,18 @@ struct _n_PetscSFLink {
   PetscSFLink  next;
 
   PetscBool use_nvshmem; /* Does this link use nvshem (vs. MPI) for communication? */
-#if defined(PETSC_HAVE_NVSHMEM)
+#if defined(PETSC_HAVE_NVSHMEM) || defined(PETSC_HAVE_NCCL)
   cupmEvent_t  dataReady;        /* Events to mark readiness of root/leafdata */
   cupmEvent_t  endRemoteComm;    /* Events to mark end of local/remote communication */
   cupmStream_t remoteCommStream; /* Streams for remote (i.e., inter-rank) communication */
-
+#endif
+#if defined(PETSC_HAVE_NVSHMEM)
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
   uint64_t *rootSendSig, *rootRecvSig; /* [max{niranks-ndiranks}], signals used when rootbuf works as send/recv buf */
   uint64_t *leafSendSig, *leafRecvSig; /* [max{nranks-ndranks}], signals used when leafbuf works as send/recv buf */
+#endif
+#if defined(PETSC_HAVE_NCCL)
+  PetscBool ncclinited; /* Has the NCCL path created the stream and events above on this (MPI-style) link? */
 #endif
 };
 
@@ -261,6 +265,13 @@ PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF, PetscSFLink, MPI_Da
 #if defined(PETSC_HAVE_NVSHMEM)
 PETSC_INTERN PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF, MPI_Datatype, PetscMemType, const void *, PetscMemType, const void *, MPI_Op, PetscSFOperation, PetscSFLink *);
 PETSC_INTERN PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF, PetscMemType, const void *, PetscMemType, const void *, PetscBool *);
+#endif
+
+#if defined(PETSC_HAVE_NCCL)
+PETSC_INTERN PetscErrorCode PetscSFLinkNcclCheck(PetscSF, PetscSFLink, PetscBool *);
+PETSC_INTERN PetscErrorCode PetscSFLinkStartCommunication_NCCL(PetscSF, PetscSFLink, PetscSFDirection);
+PETSC_INTERN PetscErrorCode PetscSFLinkFinishCommunication_NCCL(PetscSF, PetscSFLink, PetscSFDirection);
+PETSC_INTERN PetscErrorCode PetscSFLinkDestroy_NCCL(PetscSF, PetscSFLink);
 #endif
 
 static inline PetscErrorCode PetscSFLinkGetMPIBuffersAndRequests(PetscSF sf, PetscSFLink link, PetscSFDirection direction, void **rootbuf, void **leafbuf, MPI_Request **rootreqs, MPI_Request **leafreqs)

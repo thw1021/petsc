@@ -186,3 +186,22 @@ Repo hygiene:
     (16 files); keep the upstream MR free of them.
 34. The GPUDirect-MPI arms depend on `~/opt/ucx-1.19-doca` (shared home); node-local
     scratch must never hold anything remote ranks need.
+
+## H. SF-NCCL backend (2026-09-04, written without a node; see `SESSION-SUMMARY-2026-09-04.md`)
+
+35. **Build and test the SF-NCCL backend**: `--with-nccl-dir=/soft/libraries/nccl`, `make all`,
+    `make clangformat`, `make test search=vec_is_sf_tests-ex22_cuda_nccl`, then ex22/ex19 at
+    np=8 over 2 nodes with `-use_nccl 1 -info :sf` (the info line is the discriminator).
+    Files: `NCCL.py`, `src/vec/is/sf/impls/basic/nccl/{sfnccl.cu,makefile}`, `sfimpl.h`,
+    `sf.c`, `sfpack.{h,c}`, `sfmpi.c`, `sfbasic.c`, `sf/tests/ex22.c`, `doc/changes/dev.md`.
+36. **Measure it**: sfbench ring (1 node, 8-rank ring), sfbench2 `-naxpy` overlap regime,
+    acgnbench/acgnrun branch+allreduce at 64 KB and 4 MB, 1 node and 2+2, against MPI, MPI-GDR
+    and NVSHMEM. Predictions in the summary section 5.
+37. **Measure the host-scalar `MPI_Allreduce` floor** (1 double, 4 ranks, 1 node and 2+2) with a
+    host-buffer arm in `collbench.c`; it is the missing number in the "NCCL for VecNorm" argument.
+38. **Upstream**: the MPIX-selection bug fix in `sfmpi.c` (SetCommunicationOps ran before the
+    link's memory types were set, so `-sf_use_stream_aware_mpi` never took effect) goes with the
+    NCCL MR or as its own small MR first. Keep it separate from the NVSHMEM MR.
+39. Open design question for the Jeff conversation: device-resident reductions + chunked
+    convergence checks + iteration capture in KSP (the shape where NCCL wins 5x), i.e. wishlist
+    item 6 seen from the KSP side.

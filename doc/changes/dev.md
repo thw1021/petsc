@@ -15,6 +15,7 @@
 ## Configure/Build
 
 - Add `providesDocs` and `docsDirs` package attributes so that an external package's sources can be cloned and scanned to generate PETSc manual pages when the documentation is built
+- Add support for NVIDIA NCCL with `--with-nccl-dir=<dir>` (requires CUDA)
 
 ## Sys
 
@@ -45,6 +46,8 @@
 
 ## VecScatter / PetscSF
 
+- Add NCCL as an inter-process transport of `PETSCSFBASIC` for root and leaf data on CUDA devices, enabled with `-use_nccl`; the communication is enqueued on the CUDA stream and never blocks the host
+- Fix `PETSCSFBASIC` to select its stream-aware MPI communication routines (`-sf_use_stream_aware_mpi`) after the memory types of the data are known, so that the selection can take effect
 
 ## PF
 
