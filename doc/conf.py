@@ -73,6 +73,7 @@ numfig = True
 extensions = [
     'sphinx_copybutton',
     'sphinx_design',
+    'sphinx.ext.extlinks',
     'sphinxcontrib.bibtex',
     'sphinxcontrib.katex',
     'sphinxcontrib.rsvgconverter',
@@ -87,6 +88,14 @@ copybutton_prompt_text = '$ '
 bibtex_bibfiles = ['petsc.bib']
 
 myst_enable_extensions = ["fieldlist", "dollarmath", "amsmath", "deflist", "colon_fence"]
+
+release_series = '.'.join([major_version, minor_version])
+extlinks = {
+    'release-snapshot': (
+        'https://web.cels.anl.gov/projects/petsc/download/release-snapshots/%s-' + release_series + '.tar.gz',
+        '%s-' + release_series + '.tar.gz',
+    ),
+}
 
 remove_from_toctrees = ['manualpages/*/[A-Z]*','changes/2*','changes/3*']
 
@@ -199,13 +208,13 @@ def builder_init_handler(app):
         ptype = 'html'
     else: ptype = 'pdf'
     print("============================================")
-    print("    Running Sphinx on PETSc " + ptype)
+    print("    Running Sphinx on PETSc " + ptype, flush=True)
     xtime = time.clock_gettime(time.CLOCK_REALTIME)
 
 
 def build_finished_handler(app, exception):
     global xtime
-    print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - xtime))
+    print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - xtime), flush=True)
     print("============================================")
     if app.builder.name.endswith('html'):
         build_manpages_c2html.main('post',app.petsc_dir,app.build_dir,app.outdir)
@@ -229,7 +238,7 @@ def _add_man_page_redirects(app, exception):
         print("    Adding man pages redirects")
         x = time.clock_gettime(time.CLOCK_REALTIME)
         add_man_page_redirects.add_man_page_redirects(app.outdir)
-        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
         print("============================================")
 
 def _fix_man_page_edit_links(app, exception):
@@ -238,7 +247,7 @@ def _fix_man_page_edit_links(app, exception):
         print("    Fixing manual page edit links")
         x = time.clock_gettime(time.CLOCK_REALTIME)
         fix_man_page_edit_links.fix_man_page_edit_links(app.outdir)
-        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
         print("============================================")
 
 #
@@ -257,7 +266,7 @@ def _fix_links(app, exception):
         print("    Fixing relative links")
         x = time.clock_gettime(time.CLOCK_REALTIME)
         make_links_relative.make_links_relative(app.outdir)
-        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
         print("============================================")
 
 
@@ -270,45 +279,51 @@ def _update_htmlmap_links(app):
     print("    Updating htmlmap")
     x = time.clock_gettime(time.CLOCK_REALTIME)
     update_htmlmap_links.update_htmlmap_links(app.builder,os.path.join('manualpages','htmlmap'))
-    print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+    print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
     print("============================================")
 
 def build_petsc4py_docs(app):
     '''Builds the petsc4py docs and puts the results into the same directory tree as the PETSc docs'''
+    petsc_arch = os.environ.get('PETSC_ARCH', 'arch-docs')
 
     # clean previously generated docs - if any
     command = ['make', 'docsclean',
                'PETSC_DIR=%s' % app.petsc_dir,
-               'PETSC_ARCH=arch-docs',
+               'PETSC_ARCH=%s' % petsc_arch,
                'LOC=%s' % app.outdir]
     print('============================================')
     print('Cleaning petsc4py docs')
-    print(command)
+    print(command, flush=True)
     x = time.clock_gettime(time.CLOCK_REALTIME)
     subprocess.run(command, cwd=os.path.join(app.petsc_dir,'src','binding','petsc4py'), check=True)
-    print("End clean petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+    print("End clean petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
     print('============================================')
 
-    # petsc4py needs to be built to build petsc4py docs via introspection
+    # petsc4py needs petsc to build petsc4py docs via introspection
+    # The Sphinx options in MAKEFLAGS can be mistaken for GNU Make options, and
+    # any inherited jobserver is unavailable through this Python subprocess.
+    make_environment = os.environ.copy()
+    make_environment.pop('MAKEFLAGS', None)
+    make_environment.pop('MFLAGS', None)
     command = ['make', '-f', 'makefile', 'libs',
                'PETSC_DIR=%s' % app.petsc_dir,
-               'PETSC_ARCH=arch-docs']
+               'PETSC_ARCH=%s' % petsc_arch]
     print('============================================')
     print('Building library to make petsc4py docs')
-    print(command)
+    print(command, flush=True)
     x = time.clock_gettime(time.CLOCK_REALTIME)
-    subprocess.run(command, cwd=app.petsc_dir, check=True)
-    print("End building library for petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+    subprocess.run(command, cwd=app.petsc_dir, env=make_environment, check=True)
+    print("End building library for petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
     print('============================================')
 
     command = ['make', 'website',
                'PETSC_DIR=%s' % app.petsc_dir,
-               'PETSC_ARCH=arch-docs',
+               'PETSC_ARCH=%s' % petsc_arch,
                'LOC=%s' % app.outdir]
     print('============================================')
     print('Building petsc4py docs')
-    print(command)
+    print(command, flush=True)
     x = time.clock_gettime(time.CLOCK_REALTIME)
     subprocess.run(command, cwd=os.path.join(app.petsc_dir,'src','binding','petsc4py'), check=True)
-    print("End petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+    print("End petsc4py docs Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x), flush=True)
     print('============================================')
