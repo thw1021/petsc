@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare the Sphinx source tree under arch-docs/doc without modifying doc/."""
+"""Prepare the Sphinx source tree under PETSC_ARCH/doc without modifying doc/."""
 
 import json
 from pathlib import Path
@@ -8,9 +8,9 @@ import subprocess
 import sys
 
 
-def main(petsc_dir):
+def main(petsc_dir, petsc_arch='arch-docs'):
   petsc_dir = Path(petsc_dir).resolve()
-  docs_dir = petsc_dir / 'arch-docs' / 'doc'
+  docs_dir = petsc_dir / petsc_arch / 'doc'
   source_root = docs_dir / 'source'
   source_root.mkdir(parents=True, exist_ok=True)
 
@@ -44,4 +44,4 @@ def main(petsc_dir):
 
 
 if __name__ == '__main__':
-  main(sys.argv[1])
+  main(*sys.argv[1:])
