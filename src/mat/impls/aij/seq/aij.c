@@ -1118,14 +1118,13 @@ PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat A, MatAssemblyType mode)
   }
   /* reset ilen and imax for each row */
   a->nonzerorowcnt = 0;
+  for (i = 0; i < m; i++) {
+    if (!A->structure_only) ailen[i] = imax[i] = ai[i + 1] - ai[i];
+    a->nonzerorowcnt += ((ai[i + 1] - ai[i]) > 0);
+  }
   if (A->structure_only) {
     PetscCall(PetscFree(a->imax));
     PetscCall(PetscFree(a->ilen));
-  } else { /* !A->structure_only */
-    for (i = 0; i < m; i++) {
-      ailen[i] = imax[i] = ai[i + 1] - ai[i];
-      a->nonzerorowcnt += ((ai[i + 1] - ai[i]) > 0);
-    }
   }
   a->nz = ai[m];
   PetscCheck(!fshift || a->nounused != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unused space detected in matrix: %" PetscInt_FMT " X %" PetscInt_FMT ", %" PetscInt_FMT " unneeded", m, A->cmap->n, fshift);
@@ -4235,12 +4234,11 @@ PetscErrorCode MatMatMultSymbolic_SeqDense_SeqAIJ(Mat A, Mat B, PetscReal fill, 
    Level: beginner
 
    Notes:
-    `MatSetValues()` may be called for this matrix type with a `NULL` argument for the numerical values,
-    in this case the values associated with the rows and columns one passes in are set to zero
-    in the matrix
+    `MatSetValues()` may be called with a `NULL` argument for the numerical values to insert zeros at the supplied row and column indices.
 
-    `MatSetOptions`(,`MAT_STRUCTURE_ONLY`,`PETSC_TRUE`) may be called for this matrix type. In this no
-    space is allocated for the nonzero entries and any entries passed with `MatSetValues()` are ignored
+    Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+    The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+    Such matrices can be used for structural operations, but not for numerical operations.
 
   Developer Note:
     It would be nice if all matrix formats supported passing `NULL` in for the numerical values
@@ -4262,7 +4260,11 @@ M*/
 
   Level: beginner
 
-   Note:
+   Notes:
+   Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+   The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+   Such matrices can be used for structural operations, but not for numerical operations.
+
    Subclasses include `MATAIJCUSPARSE`, `MATAIJPERM`, `MATAIJSELL`, `MATAIJMKL`, `MATAIJCRL`, and also automatically switches over to use inodes when
    enough exist.
 
