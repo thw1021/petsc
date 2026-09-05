@@ -19,4 +19,5 @@ typedef struct {
 
 PETSC_INTERN PetscErrorCode MatSetUpMultiply_MPISBAIJ(Mat);
 PETSC_INTERN PetscErrorCode MatDisAssemble_MPISBAIJ(Mat);
+PETSC_INTERN PetscErrorCode MatCreateGraph_MPISBAIJ(Mat, MatType, PetscBool, Mat *);
 PETSC_INTERN PetscErrorCode MatIncreaseOverlap_MPISBAIJ(Mat, PetscInt, IS[], PetscInt);
