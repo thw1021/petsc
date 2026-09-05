@@ -1484,8 +1484,7 @@ static PetscErrorCode MatGetInfo_MPISBAIJ(Mat matin, MatInfoType flag, MatInfo *
 
 static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
 {
-  Mat_MPISBAIJ *a  = (Mat_MPISBAIJ *)A->data;
-  Mat_SeqSBAIJ *aA = (Mat_SeqSBAIJ *)a->A->data;
+  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)A->data;
 
   PetscFunctionBegin;
   switch (op) {
@@ -1539,10 +1538,12 @@ static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
     break;
   case MAT_IGNORE_LOWER_TRIANGULAR:
   case MAT_ERROR_LOWER_TRIANGULAR:
-    aA->ignore_ltriangular = flg;
+    MatCheckPreallocated(A, 1);
+    ((Mat_SeqSBAIJ *)a->A->data)->ignore_ltriangular = flg;
     break;
   case MAT_GETROW_UPPERTRIANGULAR:
-    aA->getrow_utriangular = flg;
+    MatCheckPreallocated(A, 1);
+    ((Mat_SeqSBAIJ *)a->A->data)->getrow_utriangular = flg;
     break;
   default:
     break;
