@@ -45,6 +45,7 @@ typedef const char *MatType;
 #define MATAIJ                       "aij"
 #define MATSEQAIJ                    "seqaij"
 #define MATMPIAIJ                    "mpiaij"
+#define MATMPISEQAIJ                 "mpiseqaij"
 #define MATAIJCRL                    "aijcrl"
 #define MATSEQAIJCRL                 "seqaijcrl"
 #define MATMPIAIJCRL                 "mpiaijcrl"
@@ -1435,6 +1436,8 @@ PETSC_EXTERN PetscErrorCode MatMPIAdjToSeqRankZero(Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatMPIDenseSetPreallocation(Mat, PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatSeqDenseSetPreallocation(Mat, PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatMPIAIJGetSeqAIJ(Mat, Mat *, Mat *, const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode MatMPISeqAIJGetMat(Mat, Mat *);
+PETSC_EXTERN PetscErrorCode MatMPISeqAIJSetUseShmGet(Mat, PetscBool);
 PETSC_EXTERN PetscErrorCode MatMPIBAIJGetSeqBAIJ(Mat, Mat *, Mat *, const PetscInt *[]);
 PETSC_EXTERN PetscErrorCode MatMPIAdjCreateNonemptySubcommMat(Mat, Mat *);
 
