@@ -4,13 +4,13 @@
 SPHINXOPTS    = --fresh-env --write-all --show-traceback -j auto
 SPHINXBUILD   = sphinx-build
 export PETSC_DIR = $(abspath ..)
-override PETSC_ARCH = arch-docs
+override PETSC_ARCH := $(or $(strip $(PETSC_ARCH)),arch-docs)
 export PETSC_ARCH
 DOCS_DIR      = $(PETSC_DIR)/$(PETSC_ARCH)/doc
 SOURCEDIR     = $(DOCS_DIR)/source/doc
 BUILDDIR      = $(DOCS_DIR)/_build
 LINKCHECKDIR  = $(BUILDDIR)/linkcheck
-DOCS_VENV     = $(DOCS_DIR)/venv
+DOCS_VENV     = $(PETSC_DIR)/petsc-doc-env
 DOCS_IMAGES   = $(DOCS_DIR)/images
 
 # First so that "make" without arguments is like "make help".
@@ -28,15 +28,14 @@ checklinks_rule: docs-source
 	@echo "Check finished. Report is in $(LINKCHECKDIR)."
 
 docs-env:
-	${RM} -r "$(DOCS_VENV)"
-	python3 -m venv "$(DOCS_VENV)"
+	test -x "$(DOCS_VENV)/bin/python" || python3 -m venv "$(DOCS_VENV)"
 	. "$(DOCS_VENV)/bin/activate" && python -m pip install -r requirements.txt
 
 checklinks: docs-env
 	. "$(DOCS_VENV)/bin/activate" && $(MAKE) checklinks_rule
 
 docs-source: images
-	python3 -B prepare_docs.py "$(PETSC_DIR)"
+	python3 -B prepare_docs.py "$(PETSC_DIR)" "$(PETSC_ARCH)"
 
 clean:
 	${RM} -r "$(abspath $(BUILDDIR))" "$(DOCS_DIR)/source"

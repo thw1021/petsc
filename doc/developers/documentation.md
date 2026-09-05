@@ -27,9 +27,10 @@ $ make docs
 $ open arch-docs/doc/_build/html/index.html # in a browser
 ```
 
-Documentation always uses `PETSC_ARCH=arch-docs`, independently of the architecture used
-to build PETSc. The source mirror, generated manual pages, images, and Python environment
-are under `arch-docs/doc`; the original files in `doc/` are not modified.
+Documentation uses `PETSC_ARCH` when it is set and otherwise uses `arch-docs`. The source
+mirror, generated manual pages, and images are under `$PETSC_ARCH/doc`; the shared Python
+environment is retained under `$PETSC_DIR/petsc-doc-env`. The original files in `doc/` are
+not modified.
 
 (sec_local_docs_latex)=
 
