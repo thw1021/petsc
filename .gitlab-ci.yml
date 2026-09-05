@@ -1375,6 +1375,8 @@ analyze-pipeline:
   stage: stage-2
   tags:
     - gce-u24-docs
+  variables:
+    PETSC_ARCH: arch-docs
   before_script:
     - git fetch --unshallow --tags origin +release:remotes/origin/release +main:remotes/origin/main
     - printf "PATH:$PATH\n"
