@@ -118,31 +118,37 @@ static PetscErrorCode MatPreallocateWithMats_Private(Mat B, PetscInt nm, Mat X[]
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode MatCreateGraph_MPISBAIJ(Mat A, MatType newtype, PetscBool structure_only, Mat *B)
+{
+  PetscBool symm = PETSC_TRUE, isdense;
+  PetscInt  bs;
+
+  PetscFunctionBegin;
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)A), B));
+  PetscCall(MatSetSizes(*B, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
+  PetscCall(MatSetType(*B, newtype));
+  PetscCall(MatSetOption(*B, MAT_STRUCTURE_ONLY, structure_only));
+  PetscCall(MatGetBlockSize(A, &bs));
+  PetscCall(MatSetBlockSize(*B, bs));
+  PetscCall(PetscLayoutSetUp((*B)->rmap));
+  PetscCall(PetscLayoutSetUp((*B)->cmap));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)*B, &isdense, MATSEQDENSE, MATMPIDENSE, MATSEQDENSECUDA, ""));
+  if (!isdense) {
+    /* create the complete symmetric nonzero structure */
+    PetscCall(MatGetRowUpperTriangular(A));
+    PetscCall(MatPreallocateWithMats_Private(*B, 1, &A, &symm, PETSC_TRUE));
+    PetscCall(MatRestoreRowUpperTriangular(A));
+  } else PetscCall(MatSetUp(*B));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
 {
   Mat B;
 
   PetscFunctionBegin;
-  if (reuse != MAT_REUSE_MATRIX) {
-    PetscBool symm = PETSC_TRUE, isdense;
-    PetscInt  bs;
-
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
-    PetscCall(MatSetSizes(B, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
-    PetscCall(MatSetType(B, newtype));
-    PetscCall(MatGetBlockSize(A, &bs));
-    PetscCall(MatSetBlockSize(B, bs));
-    PetscCall(PetscLayoutSetUp(B->rmap));
-    PetscCall(PetscLayoutSetUp(B->cmap));
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)B, &isdense, MATSEQDENSE, MATMPIDENSE, MATSEQDENSECUDA, ""));
-    if (!isdense) {
-      PetscCall(MatGetRowUpperTriangular(A));
-      PetscCall(MatPreallocateWithMats_Private(B, 1, &A, &symm, PETSC_TRUE));
-      PetscCall(MatRestoreRowUpperTriangular(A));
-    } else {
-      PetscCall(MatSetUp(B));
-    }
-  } else {
+  if (reuse != MAT_REUSE_MATRIX) PetscCall(MatCreateGraph_MPISBAIJ(A, newtype, PETSC_FALSE, &B));
+  else {
     B = *newmat;
     PetscCall(MatZeroEntries(B));
   }
@@ -574,11 +580,8 @@ static PetscErrorCode MatSetValuesBlocked_MPISBAIJ(Mat mat, PetscInt m, const Pe
     baij->barray = barray;
   }
 
-  if (roworiented) {
-    stepval = (n - 1) * bs;
-  } else {
-    stepval = (m - 1) * bs;
-  }
+  if (roworiented) stepval = (n - 1) * bs;
+  else stepval = (m - 1) * bs;
   for (i = 0; i < m; i++) {
     if (im[i] < 0) continue;
     PetscCheck(im[i] < baij->Mbs, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Block indexed row too large %" PetscInt_FMT " max %" PetscInt_FMT, im[i], baij->Mbs - 1);
@@ -772,7 +775,7 @@ static PetscErrorCode MatAssemblyBegin_MPISBAIJ(Mat mat, MatAssemblyType mode)
   PetscCall(MatStashScatterBegin_Private(mat, &mat->stash, mat->rmap->range));
   PetscCall(MatStashScatterBegin_Private(mat, &mat->bstash, baij->rangebs));
   PetscCall(MatStashGetInfo_Private(&mat->stash, &nstash, &reallocs));
-  PetscCall(PetscInfo(mat, "Stash has %" PetscInt_FMT " entries,uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
+  PetscCall(PetscInfo(mat, "Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
   PetscCall(MatStashGetInfo_Private(&mat->stash, &nstash, &reallocs));
   PetscCall(PetscInfo(mat, "Block-Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1484,8 +1487,7 @@ static PetscErrorCode MatGetInfo_MPISBAIJ(Mat matin, MatInfoType flag, MatInfo *
 
 static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
 {
-  Mat_MPISBAIJ *a  = (Mat_MPISBAIJ *)A->data;
-  Mat_SeqSBAIJ *aA = (Mat_SeqSBAIJ *)a->A->data;
+  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)A->data;
 
   PetscFunctionBegin;
   switch (op) {
@@ -1539,10 +1541,12 @@ static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
     break;
   case MAT_IGNORE_LOWER_TRIANGULAR:
   case MAT_ERROR_LOWER_TRIANGULAR:
-    aA->ignore_ltriangular = flg;
+    MatCheckPreallocated(A, 1);
+    ((Mat_SeqSBAIJ *)a->A->data)->ignore_ltriangular = flg;
     break;
   case MAT_GETROW_UPPERTRIANGULAR:
-    aA->getrow_utriangular = flg;
+    MatCheckPreallocated(A, 1);
+    ((Mat_SeqSBAIJ *)a->A->data)->getrow_utriangular = flg;
     break;
   default:
     break;

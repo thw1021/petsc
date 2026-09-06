@@ -235,7 +235,7 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
       } \
     } \
     if (b->nonew == 1) goto b_noinsert; \
-    PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column  (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     MatSeqXAIJReallocateAIJ(B, b->mbs, bs2, nrow, brow, bcol, rmax, ba, bi, bj, rp, ap, bimax, b->nonew, MatScalar); \
     N = nrow++ - 1; \
     /* shift up all the later entries in this row */ \
@@ -889,7 +889,7 @@ static PetscErrorCode MatAssemblyBegin_MPIBAIJ(Mat mat, MatAssemblyType mode)
   PetscCall(MatStashScatterBegin_Private(mat, &mat->stash, mat->rmap->range));
   PetscCall(MatStashScatterBegin_Private(mat, &mat->bstash, baij->rangebs));
   PetscCall(MatStashGetInfo_Private(&mat->stash, &nstash, &reallocs));
-  PetscCall(PetscInfo(mat, "Stash has %" PetscInt_FMT " entries,uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
+  PetscCall(PetscInfo(mat, "Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
   PetscCall(MatStashGetInfo_Private(&mat->bstash, &nstash, &reallocs));
   PetscCall(PetscInfo(mat, "Block-Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3474,10 +3474,12 @@ PetscErrorCode MatLoad_MPIBAIJ_Binary(Mat mat, PetscViewer viewer)
       PetscCall(PetscBTMemzero(nbs, bt));
       PetscCall(PetscHSetIClear(ht));
       for (k = 0; k < bs; k++) {
-        PetscInt row = bs * i + k;
+        const PetscInt row = bs * i + k;
+
         for (j = rowidxs[row]; j < rowidxs[row + 1]; j++) {
-          PetscInt col = colidxs[j];
-          if (!sbaij || col >= row) {
+          const PetscInt col = colidxs[j];
+
+          if (!sbaij || col / bs >= rs / bs + i) {
             if (col >= cs && col < ce) {
               if (!PetscBTLookupSet(bt, (col - cs) / bs)) d_nnz[i]++;
             } else {
@@ -3554,21 +3556,21 @@ PetscErrorCode MatSetHashTableFactor_MPIBAIJ(Mat mat, PetscReal fact)
 
 /*@
   MatMPIBAIJGetSeqBAIJ - Get the on-process (diagonal block) and off-process (off-diagonal block) `MATSEQBAIJ`
-  matrices that make up an `MATMPIBAIJ` matrix, together with the local-to-global column map for the off-diagonal block.
+  matrices that make up a `MATMPIBAIJ` or `MATMPISBAIJ` matrix, together with the local-to-global column map for the off-diagonal block.
 
   Not Collective
 
   Input Parameter:
-. A - the `MATMPIBAIJ` matrix
+. A - the `MATMPIBAIJ` or `MATMPISBAIJ` matrix
 
   Output Parameters:
-+ Ad     - the diagonal block `MATSEQBAIJ`, or `NULL` if not needed
++ Ad     - the diagonal block (`MATSEQBAIJ` or `MATSEQSBAIJ`), or `NULL` if not needed
 . Ao     - the off-diagonal block `MATSEQBAIJ`, or `NULL` if not needed
 - colmap - the local-to-global column index map for `Ao`, or `NULL` if not needed
 
   Level: advanced
 
-.seealso: `Mat`, `MATMPIBAIJ`, `MATSEQBAIJ`, `MatMPIAIJGetSeqAIJ()`
+.seealso: `Mat`, `MATMPIBAIJ`, `MATMPISBAIJ`, `MATSEQBAIJ`, `MATSEQSBAIJ`, `MatMPIAIJGetSeqAIJ()`
 @*/
 PetscErrorCode MatMPIBAIJGetSeqBAIJ(Mat A, Mat *Ad, Mat *Ao, const PetscInt *colmap[])
 {
@@ -3576,8 +3578,8 @@ PetscErrorCode MatMPIBAIJGetSeqBAIJ(Mat A, Mat *Ad, Mat *Ao, const PetscInt *col
   PetscBool    flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIBAIJ, &flg));
-  PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "This function requires a MATMPIBAIJ matrix as input");
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &flg, MATMPIBAIJ, MATMPISBAIJ, ""));
+  PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "This function requires a MATMPIBAIJ or MATMPISBAIJ matrix as input");
   if (Ad) *Ad = a->A;
   if (Ao) *Ao = a->B;
   if (colmap) *colmap = a->garray;
