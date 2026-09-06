@@ -2143,6 +2143,7 @@ static PetscErrorCode MatGetSeqNonzeroStructure_MPIBAIJ(Mat A, Mat *newmat)
   PetscCall(MatCreate(PETSC_COMM_SELF, &B));
   PetscCall(MatSetSizes(B, A->rmap->N / bs, A->cmap->N / bs, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatSetType(B, MATSEQAIJ));
+  PetscCall(MatSetOption(B, MAT_STRUCTURE_ONLY, PETSC_TRUE));
   PetscCall(MatSeqAIJSetPreallocation(B, 0, lens));
   b = (Mat_SeqAIJ *)B->data;
 
