@@ -72,7 +72,7 @@ static PetscErrorCode DMPlexCreateOrderingClosure_Static(DM dm, PetscInt numPoin
 PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS *perm)
 {
   PetscInt  numCells = 0;
-  PetscInt *start = NULL, *adjacency = NULL, *cperm, *clperm = NULL, *invclperm = NULL, *mask, *xls, pStart, pEnd, c, i;
+  PetscInt *start = NULL, *adjacency = NULL, *cperm, *clperm = NULL, *invclperm = NULL, pStart, pEnd, c, i;
   PetscBool iscurve;
 
   PetscFunctionBegin;
@@ -89,17 +89,21 @@ PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS
     PetscCheck(cdim >= 1 && cdim <= 3, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension %" PetscInt_FMT " must be in [1, 3] for a space-filling curve", cdim);
     PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
     numCells = cEnd - cStart;
-    PetscCall(PetscMalloc3(numCells, &cperm, numCells, &mask, numCells * 2, &xls));
+    PetscCall(PetscMalloc1(numCells, &cperm));
     PetscCall(DMPlexGetCellOrderingByCurve_Internal(dm, otype, cStart, cEnd, cperm));
   } else {
+    PetscInt *mask, *xls;
+
     PetscCall(DMPlexCreateNeighborCSR(dm, 0, &numCells, &start, &adjacency));
-    PetscCall(PetscMalloc3(numCells, &cperm, numCells, &mask, numCells * 2, &xls));
+    PetscCall(PetscMalloc1(numCells, &cperm));
+    PetscCall(PetscMalloc2(numCells, &mask, numCells * 2, &xls));
     if (numCells) {
       /* Shift for Fortran numbering */
       for (i = 0; i < start[numCells]; ++i) ++adjacency[i];
       for (i = 0; i <= numCells; ++i) ++start[i];
       PetscCall(SPARSEPACKgenrcm(&numCells, start, adjacency, cperm, mask, xls));
     }
+    PetscCall(PetscFree2(mask, xls));
     PetscCall(PetscFree(start));
     PetscCall(PetscFree(adjacency));
     /* Shift for Fortran numbering */
@@ -144,7 +148,7 @@ PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS
   }
   /* Construct closure */
   PetscCall(DMPlexCreateOrderingClosure_Static(dm, numCells, cperm, &clperm, &invclperm));
-  PetscCall(PetscFree3(cperm, mask, xls));
+  PetscCall(PetscFree(cperm));
   PetscCall(PetscFree(clperm));
   /* Invert permutation */
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));

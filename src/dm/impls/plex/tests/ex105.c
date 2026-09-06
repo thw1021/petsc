@@ -3,18 +3,29 @@ static char help[] = "Test space-filling-curve reorder of a distributed cell lis
 #include <petscdmplex.h>
 #include <petscsf.h>
 
+static PetscErrorCode SetGlobalCellTags(MPI_Comm comm, PetscInt numCells, PetscInt tags[])
+{
+  PetscInt    off = 0;
+  PetscMPIInt rank;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Exscan(&numCells, &off, 1, MPIU_INT, MPI_SUM, comm));
+  if (!rank) off = 0;
+  for (PetscInt c = 0; c < numCells; ++c) tags[c] = off + c;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // Verify that migrationSF maps the input cells onto the output cells one-to-one. Each input cell
 // carries a globally unique tag. After migration every tag must appear exactly once.
 static PetscErrorCode CheckMigrationIsPermutation(MPI_Comm comm, PetscSF migrationSF, PetscInt numCells, PetscInt newNumCells, PetscInt NCells)
 {
   PetscInt *tags, *newtags, *hist;
-  PetscInt  off = 0;
 
   PetscFunctionBeginUser;
-  PetscCallMPI(MPI_Exscan(&numCells, &off, 1, MPIU_INT, MPI_SUM, comm));
   PetscCall(PetscMalloc2(numCells, &tags, newNumCells, &newtags));
   PetscCall(PetscCalloc1(NCells, &hist));
-  for (PetscInt c = 0; c < numCells; ++c) tags[c] = off + c;
+  PetscCall(SetGlobalCellTags(comm, numCells, tags));
   PetscCall(PetscSFBcastBegin(migrationSF, MPIU_INT, tags, newtags, MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(migrationSF, MPIU_INT, tags, newtags, MPI_REPLACE));
   for (PetscInt c = 0; c < newNumCells; ++c) {
@@ -31,31 +42,34 @@ static PetscErrorCode CheckMigrationIsPermutation(MPI_Comm comm, PetscSF migrati
 // Independent Morton encoder, so the test does not reuse the implementation it checks. It must
 // mirror the contract of DMPLEXCURVEMORTON: 21 bits per axis over the global bounding box, with
 // axis 0 in the highest of each interleaved triple.
-static PetscInt64 TestZEncode1(PetscInt t)
+static uint64_t TestZEncode1(PetscInt t)
 {
-  PetscInt64 z = (PetscInt64)t & 0x1fffff;
+  uint64_t z = (uint64_t)t & 0x1fffff;
 
-  z = (z | (z << 32)) & 0x1f00000000ffffLL;
-  z = (z | (z << 16)) & 0x1f0000ff0000ffLL;
-  z = (z | (z << 8)) & 0x100f00f00f00f00fLL;
-  z = (z | (z << 4)) & 0x10c30c30c30c30c3LL;
-  z = (z | (z << 2)) & 0x1249249249249249LL;
+  z = (z | (z << 32)) & UINT64_C(0x1f00000000ffff);
+  z = (z | (z << 16)) & UINT64_C(0x1f0000ff0000ff);
+  z = (z | (z << 8)) & UINT64_C(0x100f00f00f00f00f);
+  z = (z | (z << 4)) & UINT64_C(0x10c30c30c30c30c3);
+  z = (z | (z << 2)) & UINT64_C(0x1249249249249249);
   return z;
 }
 
-// Verify that the reordered cells form one ascending run of the curve: non-decreasing within each
-// rank, and every rank's codes at or below the next non-empty rank's codes.
-static PetscErrorCode CheckGloballyCurveSorted(MPI_Comm comm, PetscInt spaceDim, PetscInt n, const PetscReal centroids[])
+// Verify that the reordered cells form one ascending run of the curve. If tags are given, use them
+// as the tie-breaker for equal codes, matching the implementation's globally unique cell number.
+static PetscErrorCode CheckGloballyCurveSorted(MPI_Comm comm, PetscInt spaceDim, PetscInt n, const PetscReal centroids[], const PetscInt tags[])
 {
   PetscReal      lo[3], hi[3], span[3];
-  PetscInt64    *codes, prevmax;
+  PetscInt64    *codes;
   PetscInt64    *bounds;
-  PetscMPIInt    size, rank;
-  const PetscInt maxidx = (1 << 21) - 1;
+  PetscInt64     prevmax = PETSC_INT64_MIN;
+  PetscInt      *counts;
+  PetscInt      *tagbounds = NULL;
+  PetscInt       prevtag   = PETSC_INT_MIN;
+  const PetscInt maxidx    = (1 << 21) - 1;
+  PetscMPIInt    size;
 
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   for (PetscInt d = 0; d < 3; ++d) {
     lo[d] = PETSC_MAX_REAL;
     hi[d] = PETSC_MIN_REAL;
@@ -79,28 +93,43 @@ static PetscErrorCode CheckGloballyCurveSorted(MPI_Comm comm, PetscInt spaceDim,
 
       q[d] = PetscMax(0, PetscMin(maxidx, (PetscInt)(t * (PetscReal)maxidx)));
     }
-    codes[c] = (TestZEncode1(q[0]) << 2) | (TestZEncode1(q[1]) << 1) | TestZEncode1(q[2]);
+    codes[c] = (PetscInt64)((TestZEncode1(q[0]) << 2) | (TestZEncode1(q[1]) << 1) | TestZEncode1(q[2]));
   }
-  for (PetscInt c = 1; c < n; ++c) PetscCheck(codes[c - 1] <= codes[c], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Local curve codes not ascending at %" PetscInt_FMT, c);
+  for (PetscInt c = 1; c < n; ++c) PetscCheck(codes[c - 1] < codes[c] || (codes[c - 1] == codes[c] && (!tags || tags[c - 1] < tags[c])), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Local curve keys not ascending at %" PetscInt_FMT, c);
 
-  // Exchange each rank's code range. Empty ranks report a range that constrains nothing.
+  // Exchange each rank's key range. The counts identify empty ranks without reserving a sentinel
+  // value, because PETSC_INT64_MAX is itself a valid Morton code.
   PetscCall(PetscMalloc1(2 * size, &bounds));
+  PetscCall(PetscMalloc1(size, &counts));
+  PetscCallMPI(MPI_Allgather(&n, 1, MPIU_INT, counts, 1, MPIU_INT, comm));
   {
     PetscInt64 mine[2];
 
-    mine[0] = n ? codes[0] : PETSC_INT64_MAX;
-    mine[1] = n ? codes[n - 1] : PETSC_INT64_MIN;
+    mine[0] = n ? codes[0] : 0;
+    mine[1] = n ? codes[n - 1] : 0;
     PetscCallMPI(MPI_Allgather(mine, 2, MPIU_INT64, bounds, 2, MPIU_INT64, comm));
   }
-  prevmax = PETSC_INT64_MIN;
-  for (PetscMPIInt r = 0; r < size; ++r) {
-    if (bounds[2 * r] == PETSC_INT64_MAX) continue; // rank r owns no cells
-    PetscCheck(prevmax <= bounds[2 * r], comm, PETSC_ERR_PLIB, "Curve order broken across ranks before rank %d", r);
-    prevmax = bounds[2 * r + 1];
+  if (tags) {
+    PetscInt mine[2];
+
+    PetscCall(PetscMalloc1(2 * size, &tagbounds));
+    mine[0] = n ? tags[0] : 0;
+    mine[1] = n ? tags[n - 1] : 0;
+    PetscCallMPI(MPI_Allgather(mine, 2, MPIU_INT, tagbounds, 2, MPIU_INT, comm));
   }
+  for (PetscMPIInt r = 0; r < size; ++r) {
+    PetscBool ordered;
+
+    if (!counts[r]) continue;
+    ordered = prevmax < bounds[2 * r] || (prevmax == bounds[2 * r] && (!tags || prevtag < tagbounds[2 * r]));
+    PetscCheck(ordered, comm, PETSC_ERR_PLIB, "Curve order broken across ranks before rank %d", r);
+    prevmax = bounds[2 * r + 1];
+    if (tags) prevtag = tagbounds[2 * r + 1];
+  }
+  PetscCall(PetscFree(tagbounds));
+  PetscCall(PetscFree(counts));
   PetscCall(PetscFree(bounds));
   PetscCall(PetscFree(codes));
-  (void)rank;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -110,7 +139,7 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
 {
   PetscSF     sf;
   PetscReal  *centroids, *newcentroids;
-  PetscInt   *idx, *newidx;
+  PetscInt   *tags, *newtags;
   PetscInt    numCells = 0, newNumCells, NCells = N * N * N, gnew;
   PetscMPIInt size, rank;
 
@@ -122,7 +151,7 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
   // parallel produces, and which leaves every other rank with nothing to sample.
   for (PetscInt g = 0; g < NCells; ++g)
     if (allOnRank0 ? rank == 0 : g % size == rank) ++numCells;
-  PetscCall(PetscMalloc2(PetscMax(1, numCells) * 3, &centroids, PetscMax(1, numCells), &idx));
+  PetscCall(PetscMalloc2(PetscMax(1, numCells) * 3, &centroids, PetscMax(1, numCells), &tags));
   {
     PetscInt c = 0;
 
@@ -131,10 +160,10 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
       centroids[c * 3 + 0] = (PetscReal)(g % N) + 0.5;
       centroids[c * 3 + 1] = (PetscReal)((g / N) % N) + 0.5;
       centroids[c * 3 + 2] = (PetscReal)(g / (N * N)) + 0.5;
-      idx[c]               = g;
       ++c;
     }
   }
+  PetscCall(SetGlobalCellTags(comm, numCells, tags));
   PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 3, numCells, centroids, &sf, &newNumCells));
   gnew = newNumCells;
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gnew, 1, MPIU_INT, MPI_SUM, comm));
@@ -142,7 +171,7 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
   PetscCall(CheckMigrationIsPermutation(comm, sf, numCells, newNumCells, NCells));
 
   // Migrate the centroids themselves so the locality of the new distribution can be measured.
-  PetscCall(PetscMalloc2(newNumCells * 3, &newcentroids, newNumCells, &newidx));
+  PetscCall(PetscMalloc2(newNumCells * 3, &newcentroids, newNumCells, &newtags));
   {
     MPI_Datatype ctype;
 
@@ -152,16 +181,14 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
     PetscCall(PetscSFBcastEnd(sf, ctype, centroids, newcentroids, MPI_REPLACE));
     PetscCallMPI(MPI_Type_free(&ctype));
   }
-  PetscCall(PetscSFBcastBegin(sf, MPIU_INT, idx, newidx, MPI_REPLACE));
-  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, idx, newidx, MPI_REPLACE));
-  PetscCall(CheckGloballyCurveSorted(comm, 3, newNumCells, newcentroids));
+  PetscCall(PetscSFBcastBegin(sf, MPIU_INT, tags, newtags, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, tags, newtags, MPI_REPLACE));
+  PetscCall(CheckGloballyCurveSorted(comm, 3, newNumCells, newcentroids, newtags));
   // The reorder must redistribute, not merely permute in place, and it must split the cells evenly.
   // The second pass equidistributes from the global position of each cell, so the counts differ by
   // at most one. The splitters alone only bound the busiest rank at twice the average.
   {
-    PetscInt hi = newNumCells;
-
-    PetscInt lo = newNumCells;
+    PetscInt hi = newNumCells, lo = newNumCells;
 
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &lo, 1, MPIU_INT, MPI_MIN, comm));
@@ -171,8 +198,8 @@ static PetscErrorCode TestFromCentroids(MPI_Comm comm, PetscInt N, PetscBool all
   }
   PetscCall(PetscPrintf(comm, "FromCentroids: N=%" PetscInt_FMT " cells=%" PetscInt_FMT " permutation ok, globally curve sorted, balanced\n", N, NCells));
   PetscCall(PetscSFDestroy(&sf));
-  PetscCall(PetscFree2(newcentroids, newidx));
-  PetscCall(PetscFree2(centroids, idx));
+  PetscCall(PetscFree2(newcentroids, newtags));
+  PetscCall(PetscFree2(centroids, tags));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -348,12 +375,13 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   for (PetscInt kind = 0; kind < nkinds; ++kind) {
     PetscSF    sf;
-    PetscReal *cent;
+    PetscReal *cent, *newcent;
+    PetscInt  *tags, *newtags;
     PetscInt   NCells = kind == 3 ? 4095 : N * N * N, numCells = 0, newNumCells, lo, hi, tot;
 
     for (PetscInt g = 0; g < NCells; ++g)
       if (g % size == rank) ++numCells;
-    PetscCall(PetscMalloc1(PetscMax(1, numCells) * 3, &cent));
+    PetscCall(PetscMalloc2(PetscMax(1, numCells) * 3, &cent, PetscMax(1, numCells), &tags));
     {
       PetscInt c = 0;
 
@@ -401,7 +429,22 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
         ++c;
       }
     }
+    PetscCall(SetGlobalCellTags(comm, numCells, tags));
     PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 3, numCells, cent, &sf, &newNumCells));
+    PetscCall(CheckMigrationIsPermutation(comm, sf, numCells, newNumCells, NCells));
+    PetscCall(PetscMalloc2(newNumCells * 3, &newcent, newNumCells, &newtags));
+    {
+      MPI_Datatype ctype;
+
+      PetscCallMPI(MPI_Type_contiguous(3, MPIU_REAL, &ctype));
+      PetscCallMPI(MPI_Type_commit(&ctype));
+      PetscCall(PetscSFBcastBegin(sf, ctype, cent, newcent, MPI_REPLACE));
+      PetscCall(PetscSFBcastEnd(sf, ctype, cent, newcent, MPI_REPLACE));
+      PetscCallMPI(MPI_Type_free(&ctype));
+    }
+    PetscCall(PetscSFBcastBegin(sf, MPIU_INT, tags, newtags, MPI_REPLACE));
+    PetscCall(PetscSFBcastEnd(sf, MPIU_INT, tags, newtags, MPI_REPLACE));
+    PetscCall(CheckGloballyCurveSorted(comm, 3, newNumCells, newcent, newtags));
     lo  = newNumCells;
     hi  = newNumCells;
     tot = newNumCells;
@@ -409,17 +452,18 @@ static PetscErrorCode TestDegenerateGeometry(MPI_Comm comm, PetscInt N)
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &tot, 1, MPIU_INT, MPI_SUM, comm));
     PetscCheck(tot == NCells, comm, PETSC_ERR_PLIB, "%s: cell count changed from %" PetscInt_FMT " to %" PetscInt_FMT, names[kind], NCells, tot);
-    // The split must be exact whatever the geometry does to the curve codes. Degenerate geometry
-    // cannot break the balance any more, because the second pass counts positions rather than
-    // codes. It can still break the order, which CheckGloballyCurveSorted() covers in Part A.
+    // The split must be exact whatever the geometry does to the curve codes. The permutation and
+    // key-order checks above use this same degenerate input, because final balance alone cannot see
+    // a first-pass defect after the exact split.
     PetscCheck(hi - lo <= 1, comm, PETSC_ERR_PLIB, "%s: cells per rank run from %" PetscInt_FMT " to %" PetscInt_FMT ", which is not an exact split", names[kind], lo, hi);
     // Every rank must receive cells. The curve codes here are all equal or nearly so, so a split
     // taken from the codes alone would leave one rank with every cell and the rest with none.
     PetscCheck(NCells < (PetscInt)size || lo > 0, comm, PETSC_ERR_PLIB, "%s: a rank received no cells; the curve codes do not separate these centroids, so the split must come from the cell numbering", names[kind]);
     PetscCall(PetscSFDestroy(&sf));
-    PetscCall(PetscFree(cent));
+    PetscCall(PetscFree2(newcent, newtags));
+    PetscCall(PetscFree2(cent, tags));
   }
-  PetscCall(PetscPrintf(comm, "Degenerate geometry: %" PetscInt_FMT " cases balanced within the sampling bound\n", nkinds));
+  PetscCall(PetscPrintf(comm, "Degenerate geometry: %" PetscInt_FMT " cases permutation ok, globally key sorted, balanced\n", nkinds));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -498,7 +542,7 @@ static PetscErrorCode TestOneDimensional(MPI_Comm comm, PetscInt N)
   PetscCall(PetscMalloc1(PetscMax(1, nnewCent), &newcent));
   PetscCall(PetscSFBcastBegin(sf, MPIU_REAL, cent, newcent, MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(sf, MPIU_REAL, cent, newcent, MPI_REPLACE));
-  PetscCall(CheckGloballyCurveSorted(comm, 1, nnewCent, newcent));
+  PetscCall(CheckGloballyCurveSorted(comm, 1, nnewCent, newcent, NULL));
   // On one axis the centroids are distinct and the curve is the axis, so the order is strict.
   for (PetscInt c = 1; c < nnewCent; ++c) PetscCheck(newcent[c - 1] < newcent[c], PETSC_COMM_SELF, PETSC_ERR_PLIB, "One-dimensional centroids not strictly ascending at %" PetscInt_FMT, c);
 
@@ -712,8 +756,9 @@ static PetscErrorCode TestHighCoordinateDim(MPI_Comm comm)
 static PetscErrorCode TestSampleOverflow(MPI_Comm comm, PetscInt NCells)
 {
   PetscSF     sf;
-  PetscReal  *cent;
+  PetscReal  *cent, *newcent;
   PetscInt64  stride;
+  PetscInt   *tags, *newtags;
   PetscInt    numCells, newNumCells, lo, hi, tot;
   PetscMPIInt size, rank;
 
@@ -726,11 +771,19 @@ static PetscErrorCode TestSampleOverflow(MPI_Comm comm, PetscInt NCells)
   numCells = rank == 0 ? NCells : 0;
   stride   = ((PetscInt64)size * (PetscInt64)PetscMax(size, 32) - 1) * (PetscInt64)NCells;
   PetscCheck(stride > 2147483647, comm, PETSC_ERR_ARG_OUTOFRANGE, "The largest sample index here is %" PetscInt64_FMT ", which does not pass 2^31. Use more processes or more cells: size*max(size, 32)*cells must pass 2^31", stride);
-  PetscCall(PetscMalloc1(PetscMax(1, numCells), &cent));
+  PetscCall(PetscMalloc2(PetscMax(1, numCells), &cent, PetscMax(1, numCells), &tags));
   // One axis, one cell per unit. The curve quantizes to 21 bits, so cells beyond 2^21 share a code
   // and the global cell number separates them.
   for (PetscInt c = 0; c < numCells; ++c) cent[c] = (PetscReal)c;
+  PetscCall(SetGlobalCellTags(comm, numCells, tags));
   PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, DMPLEXCURVEMORTON, 1, numCells, cent, &sf, &newNumCells));
+  PetscCall(PetscMalloc2(newNumCells, &newcent, newNumCells, &newtags));
+  PetscCall(PetscSFBcastBegin(sf, MPIU_REAL, cent, newcent, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_REAL, cent, newcent, MPI_REPLACE));
+  PetscCall(PetscSFBcastBegin(sf, MPIU_INT, tags, newtags, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, tags, newtags, MPI_REPLACE));
+  for (PetscInt c = 0; c < newNumCells; ++c) PetscCheck(newtags[c] >= 0 && newtags[c] < NCells, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Migrated tag %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", newtags[c], NCells);
+  PetscCall(CheckGloballyCurveSorted(comm, 1, newNumCells, newcent, newtags));
   lo  = newNumCells;
   hi  = newNumCells;
   tot = newNumCells;
@@ -738,13 +791,14 @@ static PetscErrorCode TestSampleOverflow(MPI_Comm comm, PetscInt NCells)
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hi, 1, MPIU_INT, MPI_MAX, comm));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &tot, 1, MPIU_INT, MPI_SUM, comm));
   PetscCheck(tot == NCells, comm, PETSC_ERR_PLIB, "Cell count changed from %" PetscInt_FMT " to %" PetscInt_FMT, NCells, tot);
-  // A wrapped index used to read a random key, which broke the intermediate split. The exact pass
-  // hides that from the counts here, so the order check below is what still sees it.
+  // A wrapped index used to read outside the key array. The exact pass hides splitter quality from
+  // the counts, so also verify the complete lexicographic order above.
   PetscCheck(lo > 0, comm, PETSC_ERR_PLIB, "A rank received no cells");
   PetscCheck(hi - lo <= 1, comm, PETSC_ERR_PLIB, "Cells per rank run from %" PetscInt_FMT " to %" PetscInt_FMT ", which is not an exact split", lo, hi);
   PetscCall(PetscPrintf(comm, "SampleOverflow: largest sample index %" PetscInt64_FMT " above 2^31, split balanced from %" PetscInt_FMT " to %" PetscInt_FMT " cells\n", stride, lo, hi));
   PetscCall(PetscSFDestroy(&sf));
-  PetscCall(PetscFree(cent));
+  PetscCall(PetscFree2(newcent, newtags));
+  PetscCall(PetscFree2(cent, tags));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -797,16 +851,15 @@ int main(int argc, char **argv)
     nsize: 8
     args: -n 2
 
-  # Every cell starts on rank 0, the distribution a serial read produces. The reorder has to
-  # redistribute; sampling a fixed count per rank silently left everything on rank 0.
+  # Every cell starts on rank 0, the distribution a serial read produces. Check that the output is
+  # still a sorted, balanced permutation when the first exchange starts from one process.
   test:
     suffix: skewed_input
     nsize: {{2 4 8}}
     args: -n 8
 
   # Degenerate geometry: coincident centroids, one distant node, and a corner cell on every rank.
-  # The last of these needs enough samples to place the splitters, which is what caught a case
-  # where one rank kept nearly every cell.
+  # Apply the permutation and lexicographic key-order invariants directly to these inputs.
   test:
     suffix: degenerate
     nsize: {{2 4 8}}
