@@ -616,6 +616,7 @@ PetscErrorCode MatGetRow(Mat mat, PetscInt row, PetscInt *ncols, const PetscInt 
   PetscValidType(mat, 1);
   PetscCheck(mat->assembled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
+  PetscCheck(!mat->structure_only && vals != NULL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for matrix with MAT_STRUCTURE_ONLY");
   MatCheckPreallocated(mat, 1);
   PetscCheck(row >= mat->rmap->rstart && row < mat->rmap->rend, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Only for local rows, %" PetscInt_FMT " not in [%" PetscInt_FMT ",%" PetscInt_FMT ")", row, mat->rmap->rstart, mat->rmap->rend);
   PetscCall(PetscLogEventBegin(MAT_GetRow, mat, 0, 0, 0));
