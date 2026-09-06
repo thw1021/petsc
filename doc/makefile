@@ -54,7 +54,7 @@ website-deploy: docs-source
 # TODO: Read sources serially and write HTML in parallel. With the current Sphinx invocation,
 # parallel workers spend more time merging the large build environment than they save.
 docs: docs-env clean
-	. "$(DOCS_VENV)/bin/activate" && $(MAKE) SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 1" html
+	. "$(DOCS_VENV)/bin/activate" && $(MAKE) SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j auto" html
 
 # use this rule AFTER make docs to build the users manual as a PDF file
 docspdf: docs-env
