@@ -79,7 +79,7 @@ check-docs:
 	${PYTHON} -m venv petsc4py-docs-env
 	. petsc4py-docs-env/bin/activate && python -m pip install -r conf/requirements-docs.txt
 	. petsc4py-docs-env/bin/activate && CFLAGS=-O0 python -m pip install .
-	. petsc4py-docs-env/bin/activate && ${MAKE} sphinx-html SPHINXOPTS_EXTRA="--fail-on-warning -j 1"
+	. petsc4py-docs-env/bin/activate && ${MAKE} sphinx-html SPHINXOPTS_EXTRA="--fail-on-warning -j 2"
 
 stubgen:
 	python -m pip install .
@@ -156,7 +156,7 @@ docsclean:
 
 website:
 	CFLAGS=-O0 python -m pip install . -v --no-build-isolation
-	${MAKE} sphinx-html SPHINXOPTS_EXTRA="--fail-on-warning"
+	${MAKE} sphinx-html SPHINXOPTS_EXTRA="--fail-on-warning -j 2"
 	mkdir -p ${LOC}/petsc4py
 	mv docs/html/* ${LOC}/petsc4py
 
