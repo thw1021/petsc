@@ -1,0 +1,11 @@
+---
+# Enable the specific checks from your command line
+Checks: >
+  -*,
+  clang-diagnostic-*,
+  -clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.rand,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  clang-analyzer-deadcode.DeadStores,
+  bugprone-too-small-loop-variable,
+  readability-redundant-parentheses
