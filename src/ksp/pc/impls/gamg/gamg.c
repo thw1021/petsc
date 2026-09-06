@@ -496,35 +496,30 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Computes the symbolic part of Gmat1^T * Gmat1 */
+/* Computes the graph of Gmat1^T * Gmat1, with numerical weights when HEM needs them */
 PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
 {
-  const char *prefix;
-  char        addp[32];
-  PC_MG      *mg      = (PC_MG *)a_pc->data;
-  PC_GAMG    *pc_gamg = (PC_GAMG *)mg->innerctx;
+  const char     *prefix;
+  char            addp[32];
+  PC_MG          *mg             = (PC_MG *)a_pc->data;
+  PC_GAMG        *pc_gamg        = (PC_GAMG *)mg->innerctx;
+  const PetscBool structure_only = (PetscBool)(!pc_gamg->asm_hem_aggs || pc_gamg->use_aggs_in_asm);
 
   PetscFunctionBegin;
   PetscCall(PCGetOptionsPrefix(a_pc, &prefix));
   PetscCall(PetscInfo(a_pc, "%s%sSquare Graph on level %" PetscInt_FMT ": high memory mark, if OOM try -%spc_gamg_aggressive_square_graph false; see \"Reducing memory usage for PCGAMG\" in the users manual\n", prefix ? prefix : "", prefix ? ": " : "",
                       pc_gamg->current_level + 1, prefix ? prefix : ""));
   PetscCall(MatProductCreate(Gmat1, Gmat1, NULL, Gmat2));
+  PetscCall(MatSetOption(*Gmat2, MAT_STRUCTURE_ONLY, structure_only));
   PetscCall(MatSetOptionsPrefix(*Gmat2, prefix));
   PetscCall(PetscSNPrintf(addp, sizeof(addp), "pc_gamg_square_%" PetscInt_FMT "_", pc_gamg->current_level));
   PetscCall(MatAppendOptionsPrefix(*Gmat2, addp));
-  if ((*Gmat2)->structurally_symmetric == PETSC_BOOL3_TRUE) {
-    PetscCall(MatProductSetType(*Gmat2, MATPRODUCT_AB));
-  } else {
-    PetscCall(MatSetOption(Gmat1, MAT_FORM_EXPLICIT_TRANSPOSE, PETSC_TRUE));
-    PetscCall(MatProductSetType(*Gmat2, MATPRODUCT_AtB));
-  }
+  PetscCall(MatProductSetType(*Gmat2, structure_only && Gmat1->structurally_symmetric == PETSC_BOOL3_TRUE ? MATPRODUCT_AB : MATPRODUCT_AtB));
   PetscCall(MatProductSetFromOptions(*Gmat2));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_matmat_events[pc_gamg->current_level][0], 0, 0, 0, 0));
   PetscCall(MatProductSymbolic(*Gmat2));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[pc_gamg->current_level][0], 0, 0, 0, 0));
   PetscCall(MatProductClear(*Gmat2));
-  /* we only need the sparsity, cheat and tell PETSc the matrix has been assembled */
-  (*Gmat2)->assembled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
