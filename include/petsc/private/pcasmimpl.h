@@ -11,6 +11,7 @@ typedef struct {
   VecScatter     *lprolongation; /* mapping from non-overlapping subregion to overlapping (process) subdomain; used for restrict additive version of algorithms */
   Vec             lx, ly;        /* work vectors */
   Vec            *x, *y;         /* work vectors */
+  Vec            *scaling;       /* user-provided diagonal weights for each overlapping subdomain */
   IS              lis;           /* index set that defines each overlapping multiplicative (process) subdomain */
   IS             *is;            /* index set that defines each overlapping subdomain */
   IS             *is_local;      /* index set that defines each non-overlapping subdomain, may be NULL */

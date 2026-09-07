@@ -62,6 +62,7 @@ cdef extern from * nogil:
         PC_ASM_RESTRICT
         PC_ASM_INTERPOLATE
         PC_ASM_NONE
+        PC_ASM_WEIGHTED
 
     ctypedef enum PetscPCGASMType "PCGASMType":
         PC_GASM_BASIC
@@ -185,6 +186,8 @@ cdef extern from * nogil:
 
     PetscErrorCode PCASMSetType(PetscPC, PetscPCASMType)
     PetscErrorCode PCASMSetOverlap(PetscPC, PetscInt)
+    PetscErrorCode PCASMSetLocalScaling(PetscPC, PetscInt, PetscVec[])
+    PetscErrorCode PCASMGetLocalScaling(PetscPC, PetscInt*, PetscVec*[])
     PetscErrorCode PCASMSetLocalSubdomains(PetscPC, PetscInt, PetscIS[], PetscIS[])
     PetscErrorCode PCASMGetLocalSubdomains(PetscPC, PetscInt*, PetscIS*[], PetscIS*[])
     PetscErrorCode PCASMSetTotalSubdomains(PetscPC, PetscInt, PetscIS[], PetscIS[])
