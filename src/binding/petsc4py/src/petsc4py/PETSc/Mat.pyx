@@ -6622,17 +6622,25 @@ cdef class Mat(Object):
         def __get__(self) -> bool:
             return self.isStructurallySymmetric()
 
-    # TODO Stream
-    def __dlpack__(self, stream=-1):
-        return self.toDLPack('rw')
+    def __dlpack__(self, stream=None):
+        return self.toDLPack('rw', stream)
 
     def __dlpack_device__(self):
         (dltype, devId, _, _, _) = mat_get_dlpack_ctx(self)
         return (dltype, devId)
 
-    def toDLPack(self, mode: AccessModeSpec = 'rw') -> Any:
-        """Return a DLPack `PyCapsule` wrapping the vector data."""
-        if mode is None: mode = 'rw'
+    def toDLPack(self, mode: AccessModeSpec = 'rw', stream=None) -> Any:
+        """Return a DLPack `PyCapsule` wrapping the matrix data.
+
+        Parameters
+        ----------
+        mode
+            Access mode for the matrix.
+        stream
+            Consumer stream. `None` selects the default stream and ``-1``
+            disables synchronization.
+
+        """
         if mode is None: mode = 'rw'
         if mode not in ['rw', 'r', 'w']:
             raise ValueError("Invalid mode: expected 'rw', 'r', or 'w'")
@@ -6640,6 +6648,7 @@ cdef class Mat(Object):
         cdef int64_t ndim = 0
         (device_type, device_id, ndim, shape, strides) = mat_get_dlpack_ctx(self)
         hostmem = (device_type == kDLCPU)
+        dlpack_synchronize_for_export(device_type, device_id, stream)
 
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
@@ -6687,14 +6696,7 @@ cdef class Mat(Object):
         dl_tensor.strides = shape_strides + ndim
 
         cdef DLDataType* dtype = &dl_tensor.dtype
-        dtype.code = <uint8_t>DLDataTypeCode.kDLFloat
-        if sizeof(PetscScalar) == 8:
-            dtype.bits = <uint8_t>64
-        elif sizeof(PetscScalar) == 4:
-            dtype.bits = <uint8_t>32
-        else:
-            raise ValueError('Unsupported PetscScalar type')
-        dtype.lanes = <uint16_t>1
+        dlpack_dtype(dtype)
         dlm_tensor.manager_ctx = <void *>self.mat
         CHKERR(PetscObjectReference(<PetscObject>self.mat))
         dlm_tensor.manager_deleter = manager_deleter

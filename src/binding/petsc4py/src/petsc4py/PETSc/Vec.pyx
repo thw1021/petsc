@@ -575,28 +575,53 @@ cdef class Vec(Object):
 
         """
         cdef DLManagedTensor* ptr = NULL
-        cdef int bits = 0
         cdef PetscInt nz = 1
-        cdef int64_t ndim = 0
+        cdef int64_t ndim = 0, dim = 0, stride = 1
         cdef int64_t* shape = NULL
         cdef int64_t* strides = NULL
+        cdef PetscScalar* data = NULL
+        cdef bint c_contiguous = True, f_contiguous = True
+        cdef object tensor_size = 1
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscInt bs = 0, n = 0, N = 0
 
         if not PyCapsule_CheckExact(dltensor):
-            dltensor = dltensor.__dlpack__()
+            device = dltensor.__dlpack_device__()
+            stream = dlpack_get_current_stream(device[0], device[1])
+            dltensor = dltensor.__dlpack__(stream=stream)
 
         if PyCapsule_IsValid(dltensor, 'dltensor'):
             ptr = <DLManagedTensor*>PyCapsule_GetPointer(dltensor, 'dltensor')
-            bits = ptr.dl_tensor.dtype.bits
-            if bits != 8*sizeof(PetscScalar):
-                raise TypeError("Tensor dtype = {} does not match PETSc precision".format(ptr.dl_tensor.dtype))
+            dlpack_validate_dtype(&ptr.dl_tensor.dtype)
             ndim = ptr.dl_tensor.ndim
             shape = ptr.dl_tensor.shape
-            for s in shape[:ndim]:
-                nz = nz*s
+            if ndim < 0:
+                raise ValueError('DLPack tensor dimension must be non-negative')
+            if ndim and shape == NULL:
+                raise ValueError('DLPack tensor shape is missing')
+            for i in range(ndim):
+                dim = shape[i]
+                if dim < 0:
+                    raise ValueError('DLPack tensor shape must be non-negative')
+                tensor_size *= dim
+            nz = toInt(tensor_size)
             strides = ptr.dl_tensor.strides
+            if strides != NULL and nz:
+                stride = 1
+                for i in range(ndim - 1, -1, -1):
+                    if shape[i] > 1 and strides[i] != stride:
+                        c_contiguous = False
+                    stride *= shape[i]
+                stride = 1
+                for i in range(ndim):
+                    if shape[i] > 1 and strides[i] != stride:
+                        f_contiguous = False
+                    stride *= shape[i]
+                if not c_contiguous and not f_contiguous:
+                    raise ValueError('DLPack tensor storage must be contiguous')
+            data = <PetscScalar*>(<char*>ptr.dl_tensor.data + ptr.dl_tensor.byte_offset)
             PyCapsule_SetName(dltensor, 'used_dltensor')
+            PyCapsule_SetDestructor(dltensor, used_pycapsule_deleter)
         else:
             raise ValueError("Expect a dltensor field, pycapsule.PyCapsule can only be consumed once")
         if size is None: size = (toInt(nz), toInt(PETSC_DECIDE))
@@ -610,19 +635,19 @@ cdef class Vec(Object):
         cdef PetscDLDeviceType dltype = ptr.dl_tensor.ctx.device_type
         if dltype in [kDLCUDA, kDLCUDAManaged]:
             if comm_size(ccomm) == 1:
-                CHKERR(VecCreateSeqCUDAWithArray(ccomm, bs, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec))
+                CHKERR(VecCreateSeqCUDAWithArray(ccomm, bs, N, data, &newvec))
             else:
-                CHKERR(VecCreateMPICUDAWithArray(ccomm, bs, n, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec))
+                CHKERR(VecCreateMPICUDAWithArray(ccomm, bs, n, N, data, &newvec))
         elif dltype in [kDLCPU, kDLCUDAHost, kDLROCMHost]:
             if comm_size(ccomm) == 1:
-                CHKERR(VecCreateSeqWithArray(ccomm, bs, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec))
+                CHKERR(VecCreateSeqWithArray(ccomm, bs, N, data, &newvec))
             else:
-                CHKERR(VecCreateMPIWithArray(ccomm, bs, n, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec))
+                CHKERR(VecCreateMPIWithArray(ccomm, bs, n, N, data, &newvec))
         elif dltype == kDLROCM:
             if comm_size(ccomm) == 1:
-                CHKERR(VecCreateSeqHIPWithArray(ccomm, bs, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec))
+                CHKERR(VecCreateSeqHIPWithArray(ccomm, bs, N, data, &newvec))
             else:
-                CHKERR(VecCreateMPIHIPWithArray(ccomm, bs, n, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec))
+                CHKERR(VecCreateMPIHIPWithArray(ccomm, bs, n, N, data, &newvec))
         else:
             raise TypeError("Device type {} not supported".format(dltype))
 
@@ -634,10 +659,15 @@ cdef class Vec(Object):
         cdef object s2 = oarray_p(empty_p(<PetscInt>ndim), NULL, <void**>&strides_arr)
         for i in range(ndim):
             shape_arr[i] = shape[i]
-            strides_arr[i] = strides[i]
+        if strides != NULL:
+            for i in range(ndim):
+                strides_arr[i] = strides[i]
+        else:
+            stride = 1
+            for i in range(ndim - 1, -1, -1):
+                strides_arr[i] = stride
+                stride *= shape[i]
         self.set_attr('__dltensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
-        if ptr.manager_deleter != NULL:
-            ptr.manager_deleter(ptr) # free the manager
         return self
 
     def attachDLPackInfo(
@@ -715,15 +745,14 @@ cdef class Vec(Object):
         self.set_attr('__dltensor_ctx__', None)
         return self
 
-    # TODO Stream
-    def __dlpack__(self, stream=-1):
-        return self.toDLPack('rw')
+    def __dlpack__(self, stream=None):
+        return self.toDLPack('rw', stream)
 
     def __dlpack_device__(self):
         (dltype, devId, _, _, _) = vec_get_dlpack_ctx(self)
         return (dltype, devId)
 
-    def toDLPack(self, mode: AccessModeSpec = 'rw') -> Any:
+    def toDLPack(self, mode: AccessModeSpec = 'rw', stream=None) -> Any:
         """Return a DLPack `PyCapsule` wrapping the vector data.
 
         Collective.
@@ -732,6 +761,9 @@ cdef class Vec(Object):
         ----------
         mode
             Access mode for the vector.
+        stream
+            Consumer stream. `None` selects the default stream and ``-1``
+            disables synchronization.
 
         Returns
         -------
@@ -755,6 +787,7 @@ cdef class Vec(Object):
         cdef int64_t ndim = 0
         (device_type, device_id, ndim, shape, strides) = vec_get_dlpack_ctx(self)
         hostmem = (device_type == kDLCPU)
+        dlpack_synchronize_for_export(device_type, device_id, stream)
 
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
@@ -802,14 +835,7 @@ cdef class Vec(Object):
         dl_tensor.strides = shape_strides + ndim
 
         cdef DLDataType* dtype = &dl_tensor.dtype
-        dtype.code = <uint8_t>DLDataTypeCode.kDLFloat
-        if sizeof(PetscScalar) == 8:
-            dtype.bits = <uint8_t>64
-        elif sizeof(PetscScalar) == 4:
-            dtype.bits = <uint8_t>32
-        else:
-            raise ValueError('Unsupported PetscScalar type')
-        dtype.lanes = <uint16_t>1
+        dlpack_dtype(dtype)
         dlm_tensor.manager_ctx = <void *>self.vec
         CHKERR(PetscObjectReference(<PetscObject>self.vec))
         dlm_tensor.manager_deleter = manager_deleter
