@@ -53,8 +53,7 @@ PETSC_EXTERN void pcasmgetlocalscaling_(PC *pc, PetscInt *n, F90Array1d *scaling
   *ierr = PCASMGetLocalScaling(*pc, &nloc, &tscaling);
   if (*ierr) return;
   if (n) *n = nloc;
-  /* tscaling is NULL until PCASMSetLocalScaling() is called, leave the array unassociated then */
-  if (scaling && tscaling) *ierr = F90Array1dCreate(tscaling, MPIU_FORTRANADDR, 1, nloc, scaling PETSC_F90_2PTR_PARAM(ptrd));
+  if (scaling) *ierr = F90Array1dCreate(tscaling, MPIU_FORTRANADDR, 1, nloc, scaling PETSC_F90_2PTR_PARAM(ptrd));
 }
 
 PETSC_EXTERN void pcasmgetlocalsubdomains_(PC *pc, PetscInt *n, F90Array1d *is, F90Array1d *is_local, int *ierr PETSC_F90_2PTR_PROTO(ptrd1) PETSC_F90_2PTR_PROTO(ptrd2))
