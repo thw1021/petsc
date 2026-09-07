@@ -149,18 +149,21 @@ typedef enum {
                            region are discarded {cite}`cs99`. Default.
 .  `PC_ASM_INTERPOLATE`  - Residuals from ghost points are not used, computed values in ghost
                            region are added back in.
--  `PC_ASM_NONE`         - Residuals from ghost points are not used, computed ghost values are
+.  `PC_ASM_NONE`         - Residuals from ghost points are not used, computed ghost values are
                            discarded. Not very good.
+-  `PC_ASM_WEIGHTED`     - Full restriction and interpolation, with local corrections scaled by
+                           user-provided diagonal weights from `PCASMSetLocalScaling()`.
 
    Level: beginner
 
-.seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCGASMType`
+.seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCASMSetLocalScaling()`, `PCGASMType`
 E*/
 typedef enum {
   PC_ASM_BASIC       = 3,
   PC_ASM_RESTRICT    = 1,
   PC_ASM_INTERPOLATE = 2,
-  PC_ASM_NONE        = 0
+  PC_ASM_NONE        = 0,
+  PC_ASM_WEIGHTED    = 4
 } PCASMType;
 
 /*E
