@@ -1,9 +1,72 @@
 from petsc4py import PETSc
+import ctypes
 import unittest
+import weakref
 import numpy as np
 from math import sqrt
 
 # --------------------------------------------------------------------
+
+
+class DLPackArray:
+    missing = object()
+
+    def __init__(self, array):
+        self.array = array
+        self.stream = self.missing
+
+    def __dlpack_device__(self):
+        return self.array.__dlpack_device__()
+
+    def __dlpack__(self, *, stream=missing):
+        self.stream = stream
+        return self.array.__dlpack__()
+
+
+class _DLDevice(ctypes.Structure):
+    _fields_ = [
+        ('device_type', ctypes.c_int),
+        ('device_id', ctypes.c_int),
+    ]
+
+
+class _DLDataType(ctypes.Structure):
+    _fields_ = [
+        ('code', ctypes.c_uint8),
+        ('bits', ctypes.c_uint8),
+        ('lanes', ctypes.c_uint16),
+    ]
+
+
+class _DLTensor(ctypes.Structure):
+    _fields_ = [
+        ('data', ctypes.c_void_p),
+        ('device', _DLDevice),
+        ('ndim', ctypes.c_int),
+        ('dtype', _DLDataType),
+        ('shape', ctypes.POINTER(ctypes.c_int64)),
+        ('strides', ctypes.POINTER(ctypes.c_int64)),
+        ('byte_offset', ctypes.c_uint64),
+    ]
+
+
+class _DLManagedTensor(ctypes.Structure):
+    _fields_ = [
+        ('dl_tensor', _DLTensor),
+        ('manager_ctx', ctypes.c_void_p),
+        ('deleter', ctypes.c_void_p),
+    ]
+
+
+_pycapsule_get_pointer = ctypes.pythonapi.PyCapsule_GetPointer
+_pycapsule_get_pointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+_pycapsule_get_pointer.restype = ctypes.c_void_p
+
+
+def _get_dlpack_tensor(capsule):
+    address = _pycapsule_get_pointer(capsule, b'dltensor')
+    managed = ctypes.cast(address, ctypes.POINTER(_DLManagedTensor))
+    return managed.contents.dl_tensor
 
 
 class BaseTestVec:
@@ -157,6 +220,18 @@ class BaseTestVec:
         del arr3
         self.assertEqual(self.vec.getRefCount(), refs)
 
+    @unittest.skipUnless(hasattr(np, 'from_dlpack'), 'NumPy has no DLPack support')
+    def testDLPackDtype(self):
+        self.vec.set(1)
+        array = np.from_dlpack(self.vec)
+        self.assertEqual(array.dtype, np.dtype(PETSc.ScalarType))
+
+    def testDLPackHostStream(self):
+        capsule = self.vec.__dlpack__(stream=None)
+        del capsule
+        with self.assertRaisesRegex(RuntimeError, 'only supports stream=None'):
+            self.vec.__dlpack__(stream=-1)
+
     def testPlaceArray(self):
         self.vec.set(1)
         array = self.vec.getArray().copy()
@@ -297,6 +372,140 @@ class TestVecShared(BaseTestVec, unittest.TestCase):
 
 
 class TestVecWithArray(unittest.TestCase):
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackDtype(self):
+        array = np.zeros(5, dtype=np.int64)
+        with self.assertRaisesRegex(TypeError, 'does not match PETSc ScalarType'):
+            PETSc.Vec().createWithDLPack(array, comm=PETSc.COMM_SELF)
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackStrided(self):
+        array = np.arange(10, dtype=PETSc.ScalarType)[::2]
+        with self.assertRaisesRegex(ValueError, 'storage must be contiguous'):
+            PETSc.Vec().createWithDLPack(array, comm=PETSc.COMM_SELF)
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackNullData(self):
+        source = np.arange(5, dtype=PETSc.ScalarType)
+        capsule = source.__dlpack__()
+        tensor = _get_dlpack_tensor(capsule)
+        data = tensor.data
+        tensor.data = None
+        try:
+            with self.assertRaisesRegex(ValueError, 'tensor data is missing'):
+                PETSc.Vec().createWithDLPack(capsule, comm=PETSc.COMM_SELF)
+        finally:
+            tensor.data = data
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testDLPackNullStrides(self):
+        source = np.arange(6, dtype=PETSc.ScalarType).reshape(2, 3)
+
+        capsule = source.__dlpack__()
+        tensor = _get_dlpack_tensor(capsule)
+        strides = tensor.strides
+        tensor.strides = None
+        try:
+            vec = PETSc.Vec().createWithDLPack(capsule, comm=PETSc.COMM_SELF)
+        finally:
+            tensor.strides = strides
+        np.testing.assert_array_equal(vec.getArray(), source.ravel())
+        vec.destroy()
+
+        capsule = source.__dlpack__()
+        tensor = _get_dlpack_tensor(capsule)
+        strides = tensor.strides
+        tensor.strides = None
+        vec = PETSc.Vec().createSeq(6, comm=PETSc.COMM_SELF)
+        try:
+            vec.attachDLPackInfo(dltensor=capsule)
+        finally:
+            tensor.strides = strides
+        exported = vec.__dlpack__()
+        tensor = _get_dlpack_tensor(exported)
+        self.assertEqual(tuple(tensor.shape[i] for i in range(2)), (2, 3))
+        self.assertEqual(tuple(tensor.strides[i] for i in range(2)), (3, 1))
+        del exported
+        vec.destroy()
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testAttachDLPackInfoValidation(self):
+        vec = PETSc.Vec().createSeq(5, comm=PETSc.COMM_SELF)
+
+        source = np.arange(5, dtype=PETSc.ScalarType)
+        capsule = source.__dlpack__()
+        tensor = _get_dlpack_tensor(capsule)
+        code = tensor.dtype.code
+        tensor.dtype.code = 0
+        try:
+            with self.assertRaisesRegex(TypeError, 'does not match PETSc'):
+                vec.attachDLPackInfo(dltensor=capsule)
+        finally:
+            tensor.dtype.code = code
+
+        capsule = source.__dlpack__()
+        tensor = _get_dlpack_tensor(capsule)
+        ndim = tensor.ndim
+        tensor.ndim = -1
+        try:
+            with self.assertRaisesRegex(ValueError, 'must be non-negative'):
+                vec.attachDLPackInfo(dltensor=capsule)
+        finally:
+            tensor.ndim = ndim
+
+        capsule = source.__dlpack__()
+        tensor = _get_dlpack_tensor(capsule)
+        shape = tensor.shape
+        tensor.shape = None
+        try:
+            with self.assertRaisesRegex(ValueError, 'shape is missing'):
+                vec.attachDLPackInfo(dltensor=capsule)
+        finally:
+            tensor.shape = shape
+
+        strided = np.arange(10, dtype=PETSc.ScalarType)[::2]
+        with self.assertRaisesRegex(ValueError, 'storage must be contiguous'):
+            vec.attachDLPackInfo(dltensor=strided.__dlpack__())
+
+        short = np.arange(4, dtype=PETSc.ScalarType)
+        with self.assertRaisesRegex(ValueError, 'does not match vector local size'):
+            vec.attachDLPackInfo(dltensor=short.__dlpack__())
+        vec.destroy()
+
+    def testAttachDLPackInfoVecSize(self):
+        source = PETSc.Vec().createSeq(4, comm=PETSc.COMM_SELF)
+        target = PETSc.Vec().createSeq(5, comm=PETSc.COMM_SELF)
+        source.__dlpack_device__()
+        with self.assertRaisesRegex(ValueError, 'does not match vector local size'):
+            target.attachDLPackInfo(vec=source)
+        source.destroy()
+        target.destroy()
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackStream(self):
+        source = np.arange(5, dtype=PETSc.ScalarType)
+        source_ref = weakref.ref(source)
+        array = DLPackArray(source)
+        vec = PETSc.Vec().createWithDLPack(array, comm=PETSc.COMM_SELF)
+        self.assertIsNone(array.stream)
+        del source, array
+        self.assertIsNotNone(source_ref())
+        np.testing.assert_array_equal(vec.getArray(), np.arange(5))
+        vec.destroy()
+        self.assertIsNone(source_ref())
+
     def testCreateSeq(self):
         a = np.zeros(5, dtype=PETSc.ScalarType)
 

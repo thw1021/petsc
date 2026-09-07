@@ -213,6 +213,26 @@ class BaseTestMatDense(BaseTestMatAnyDense, unittest.TestCase):
     BSIZE = None
 
 
+class TestMatDLPack(unittest.TestCase):
+    @unittest.skipUnless(hasattr(np, 'from_dlpack'), 'NumPy has no DLPack support')
+    def testDtype(self):
+        A = PETSc.Mat().createDense((2, 3), comm=PETSc.COMM_SELF)
+        A.setUp()
+        array = np.from_dlpack(A)
+        self.assertEqual(array.dtype, np.dtype(PETSc.ScalarType))
+        del array
+        A.destroy()
+
+    def testHostStream(self):
+        A = PETSc.Mat().createDense((2, 3), comm=PETSc.COMM_SELF)
+        A.setUp()
+        capsule = A.__dlpack__(stream=None)
+        del capsule
+        with self.assertRaisesRegex(RuntimeError, 'only supports stream=None'):
+            A.__dlpack__(stream=-1)
+        A.destroy()
+
+
 # -- Seq Dense --
 
 
