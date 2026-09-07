@@ -2387,7 +2387,6 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
           vol += quadWeights[q * qNc] * fegeom.detJ[q];
         }
         fieldOffset += Nb;
-        qc += Nc;
       }
       PetscCall(DMPlexVecRestoreClosure(dm, NULL, locX, cell, NULL, &x));
       for (fc = 0; fc < numComponents; ++fc) {
