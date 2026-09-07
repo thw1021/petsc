@@ -946,9 +946,8 @@ cdef class PC(Object):
 
         Notes
         -----
-        The returned vectors are references to those held by the
-        preconditioner, not copies. They are released by `reset` and
-        `destroy`, and replaced by a further call to `setASMLocalScaling`.
+        The returned Python objects hold references to the scaling vectors,
+        not copies of their values.
 
         See Also
         --------
