@@ -96,6 +96,7 @@
 - Add device implementations of `MatNorm()` with `NORM_1`, `NORM_FROBENIUS`, and `NORM_INFINITY` for `MATDENSECUDA` and `MATDENSEHIP`; previously all norms copied the matrix to the host
 - Change `MatNorm()` for `MATMPIDENSE` to compute `NORM_FROBENIUS` and `NORM_INFINITY` via the local matrix norm, so `MATMPIDENSECUDA` and `MATMPIDENSEHIP` no longer copy to the host for those norms
 - Change `MATSELL` to honor `MatSetOption(mat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE)`; the option was previously accepted but silently ignored, so a matrix that sets it now gets a sparser nonzero structure
+- Change `MatSetValues()` for `MATMPISELL` to skip, rather than error on, a new off-diagonal location when `MatSetOption(mat, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE)` was called, matching `MATMPIAIJ`
 
 ## MatCoarsen
 
