@@ -852,7 +852,7 @@ static inline PetscErrorCode PetscOptionsSkipPrecedent(PetscOptions options, con
 PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args, const char file[]) PeNS
 {
   PetscMPIInt rank;
-  PetscBool   hasArgs     = (argc && *argc) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool   hasArgs     = (bool)(argc && *argc);
   PetscBool   skipPetscrc = PETSC_FALSE, skipPetscrcSet = PETSC_FALSE;
   char       *eoptions = NULL;
   size_t      len      = 0;
@@ -1414,7 +1414,7 @@ setvalue:
   /* handle -help so that it can be set from anywhere */
   if (!PetscOptNameCmp(name, "help")) {
     options->help       = PETSC_TRUE;
-    options->help_intro = (value && !PetscOptNameCmp(value, "intro")) ? PETSC_TRUE : PETSC_FALSE;
+    options->help_intro = (bool)(value && !PetscOptNameCmp(value, "intro"));
     options->used[n]    = PETSC_TRUE;
   }
 

@@ -2872,7 +2872,7 @@ static PetscErrorCode DMPlexComputeGeometryFVM_3D_Internal(DM dm, PetscInt dim, 
   PetscCall(DMPlexGetRawFaces_Internal(dm, ct, order, &numFaces, &faceTypes, &faceSizes, &faces));
   PetscCall(DMPlexGetCellCoordinates(dm, cell, &isDG, &coordSize, &array, &coords));
   for (f = 0; f < numFaces; ++f) {
-    PetscBool flip = isHybrid && f == 0 ? PETSC_TRUE : PETSC_FALSE; /* The first hybrid face is reversed */
+    PetscBool flip = (bool)(isHybrid && f == 0); /* The first hybrid face is reversed */
 
     // If using zero as the origin vertex for each tetrahedron, an element far from the origin will have positive and
     // negative volumes that nearly cancel, thus incurring rounding error. Here we define origin[] as the first vertex
@@ -3932,8 +3932,8 @@ PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscInt cell, PetscInt numPo
     PetscBool isSimplex, isTensor;
 
     PetscCall(DMPlexGetConeSize(dm, cell, &coneSize));
-    isSimplex = (coneSize == (dimR + 1)) ? PETSC_TRUE : PETSC_FALSE;
-    isTensor  = (coneSize == ((depth == 1) ? (1 << dimR) : (2 * dimR))) ? PETSC_TRUE : PETSC_FALSE;
+    isSimplex = (bool)(coneSize == (dimR + 1));
+    isTensor  = (bool)(coneSize == ((depth == 1) ? (1 << dimR) : (2 * dimR)));
     if (isSimplex) {
       PetscReal detJ, *v0, *J, *invJ;
 
@@ -4015,8 +4015,8 @@ PetscErrorCode DMPlexReferenceToCoordinates(DM dm, PetscInt cell, PetscInt numPo
     PetscBool isSimplex, isTensor;
 
     PetscCall(DMPlexGetConeSize(dm, cell, &coneSize));
-    isSimplex = (coneSize == (dimR + 1)) ? PETSC_TRUE : PETSC_FALSE;
-    isTensor  = (coneSize == ((depth == 1) ? (1 << dimR) : (2 * dimR))) ? PETSC_TRUE : PETSC_FALSE;
+    isSimplex = (bool)(coneSize == (dimR + 1));
+    isTensor  = (bool)(coneSize == ((depth == 1) ? (1 << dimR) : (2 * dimR)));
     if (isSimplex) {
       PetscReal detJ, *v0, *J;
 

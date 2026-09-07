@@ -2445,7 +2445,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
     }
   }
   /* Does the matrix use compressed rows (i.e., drop zero rows)? */
-  compressed = matstruct->cprowIndices ? PETSC_TRUE : PETSC_FALSE;
+  compressed = (bool)(matstruct->cprowIndices != NULL);
   try {
     PetscCall(VecHIPGetArrayRead(xx, (const PetscScalar **)&xarray));
     if (yy == zz) PetscCall(VecHIPGetArray(zz, &zarray)); /* read & write zz, so need to get up-to-date zarray on GPU */
@@ -2795,7 +2795,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat A, PetscBool flg)
     PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaijhipsparse_seqaijhipsparse_C", MatProductSetFromOptions_SeqAIJHIPSPARSE));
   }
   A->boundtocpu = flg;
-  a->inode.use  = (flg && a->inode.size_csr) ? PETSC_TRUE : PETSC_FALSE;
+  a->inode.use  = (bool)(flg && a->inode.size_csr);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3353,7 +3353,7 @@ PetscErrorCode MatSeqAIJHIPSPARSEMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
       if (A->form_explicit_transpose && B->form_explicit_transpose) { /* if A and B have the transpose, generate C transpose too */
         PetscCall(MatSeqAIJHIPSPARSEFormExplicitTranspose(A));
         PetscCall(MatSeqAIJHIPSPARSEFormExplicitTranspose(B));
-        PetscBool                      AT = Acusp->matTranspose ? PETSC_TRUE : PETSC_FALSE, BT = Bcusp->matTranspose ? PETSC_TRUE : PETSC_FALSE;
+        PetscBool                      AT = (bool)(Acusp->matTranspose != NULL), BT = (bool)(Bcusp->matTranspose != NULL);
         Mat_SeqAIJHIPSPARSEMultStruct *CmatT = new Mat_SeqAIJHIPSPARSEMultStruct;
         CsrMatrix                     *CcsrT = new CsrMatrix;
         CsrMatrix                     *AcsrT = AT ? (CsrMatrix *)Acusp->matTranspose->mat : NULL;
@@ -3461,7 +3461,7 @@ PetscErrorCode MatSeqAIJHIPSPARSEMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
       PetscCall(MatSeqAIJHIPSPARSEInvalidateTranspose(*C, PETSC_FALSE));
       if (A->form_explicit_transpose && B->form_explicit_transpose && (*C)->form_explicit_transpose) {
         PetscCheck(Ccusp->matTranspose, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing transpose Mat_SeqAIJHIPSPARSEMultStruct");
-        PetscBool  AT = Acusp->matTranspose ? PETSC_TRUE : PETSC_FALSE, BT = Bcusp->matTranspose ? PETSC_TRUE : PETSC_FALSE;
+        PetscBool  AT = (bool)(Acusp->matTranspose != NULL), BT = (bool)(Bcusp->matTranspose != NULL);
         CsrMatrix *AcsrT = AT ? (CsrMatrix *)Acusp->matTranspose->mat : NULL;
         CsrMatrix *BcsrT = BT ? (CsrMatrix *)Bcusp->matTranspose->mat : NULL;
         CsrMatrix *CcsrT = (CsrMatrix *)Ccusp->matTranspose->mat;

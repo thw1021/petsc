@@ -2352,7 +2352,7 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
   PetscInt           pStartF, pEndF, pStartC, pEndC;
   PetscBool          saveInCoarse = PETSC_FALSE;
   PetscBool          saveInFine   = PETSC_FALSE;
-  PetscBool          formCids     = (childIds != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool          formCids     = (bool)(childIds != NULL);
   PetscInt          *cids         = NULL;
 
   PetscFunctionBegin;

@@ -34,7 +34,7 @@ PetscBool PetscBeganNvshmem       = PETSC_FALSE;
 PetscBool PetscNvshmemInitialized = PETSC_FALSE;
 #endif
 
-PetscBool use_gpu_aware_mpi = PetscDefined(HAVE_MPIUNI) ? PETSC_FALSE : PETSC_TRUE;
+PetscBool use_gpu_aware_mpi = (bool)!PetscDefined(HAVE_MPIUNI);
 
 PetscBool PetscPrintFunctionList = PETSC_FALSE;
 
@@ -252,7 +252,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-checkfunctionlist", &PetscPrintFunctionList, NULL));
 
 #if !PetscDefined(HAVE_THREADSAFETY)
-  if (!(PETSC_RUNNING_ON_VALGRIND)) {
+  if (!PETSC_RUNNING_ON_VALGRIND) {
     /*
       Setup the memory management; support for tracing malloc() usage
     */
@@ -520,7 +520,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     }
     if (PetscDefined(HAVE_TAU_PERFSTUBS)) {
       char     *tau_exec_path       = getenv("TAU_EXEC_PATH");
-      PetscBool start_log_perfstubs = (tau_exec_path != NULL) ? PETSC_TRUE : PETSC_FALSE;
+      PetscBool start_log_perfstubs = (bool)(tau_exec_path != NULL);
 
       if (tau_exec_path && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected tau_exec path %s\n", tau_exec_path));
       PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_perfstubs", &start_log_perfstubs, NULL));
@@ -529,7 +529,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     if (PetscDefined(USE_LOG) && PetscDefined(HAVE_CUDA)) {
       char     *nsys_profiling_session_id = getenv("NSYS_PROFILING_SESSION_ID");
       char     *nvprof_id                 = getenv("NVPROF_ID");
-      PetscBool start_log_nvtx            = ((nsys_profiling_session_id != NULL) || (nvprof_id != NULL)) ? PETSC_TRUE : PETSC_FALSE;
+      PetscBool start_log_nvtx            = (bool)((nsys_profiling_session_id != NULL) || (nvprof_id != NULL));
 
       if (nsys_profiling_session_id && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected nsys profiling session id %s\n", nsys_profiling_session_id));
       if (nvprof_id && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected nvprof session id %s\n", nvprof_id));
@@ -539,7 +539,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     if (PetscDefined(USE_LOG) && PetscDefined(HAVE_ROCTX)) {
       char     *rocprof_roctx_trace  = getenv("ROCPROFILER_ROCTX_TRACE");
       char     *rocprof_marker_trace = getenv("ROCPROF_MARKER_API_TRACE");
-      PetscBool start_log_roctx      = ((rocprof_roctx_trace != NULL) || (rocprof_marker_trace != NULL)) ? PETSC_TRUE : PETSC_FALSE;
+      PetscBool start_log_roctx      = (bool)((rocprof_roctx_trace != NULL) || (rocprof_marker_trace != NULL));
 
       if (rocprof_roctx_trace && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected rocprofv2 profiling session\n"));
       if (rocprof_marker_trace && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected rocprofv3 profiling session\n"));

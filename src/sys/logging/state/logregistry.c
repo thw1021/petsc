@@ -24,7 +24,7 @@ static PetscErrorCode PetscLogClassArrayEqual(PetscLogClassInfo *class_info, Pet
   if (key->name) {
     PetscCall(PetscStrcmp(class_info->name, key->name, is_equal));
   } else {
-    *is_equal = (class_info->classid == key->classid) ? PETSC_TRUE : PETSC_FALSE;
+    *is_equal = (bool)(class_info->classid == key->classid);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

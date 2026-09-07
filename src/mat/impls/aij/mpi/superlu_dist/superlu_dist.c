@@ -616,7 +616,7 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "SuperLU_Dist Options", "Mat");
-  PetscCall(PetscOptionsBool("-mat_superlu_dist_equil", "Equilibrate matrix", "None", lu->options.Equil ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-mat_superlu_dist_equil", "Equilibrate matrix", "None", (bool)(lu->options.Equil != NO), &flg, &set));
   if (set && !flg) lu->options.Equil = NO;
 
   PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, &flg));
@@ -671,7 +671,7 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   }
 
   lu->options.ReplaceTinyPivot = NO;
-  PetscCall(PetscOptionsBool("-mat_superlu_dist_replacetinypivot", "Replace tiny pivots", "None", lu->options.ReplaceTinyPivot ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-mat_superlu_dist_replacetinypivot", "Replace tiny pivots", "None", (bool)(lu->options.ReplaceTinyPivot != NO), &flg, &set));
   if (set && flg) lu->options.ReplaceTinyPivot = YES;
 
   lu->options.ParSymbFact = NO;
@@ -702,18 +702,18 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   }
 
   lu->options.IterRefine = NOREFINE;
-  PetscCall(PetscOptionsBool("-mat_superlu_dist_iterrefine", "Use iterative refinement", "None", lu->options.IterRefine == NOREFINE ? PETSC_FALSE : PETSC_TRUE, &flg, &set));
+  PetscCall(PetscOptionsBool("-mat_superlu_dist_iterrefine", "Use iterative refinement", "None", (bool)(lu->options.IterRefine != NOREFINE), &flg, &set));
   if (set && flg) lu->options.IterRefine = SLU_DOUBLE;
 
   if (PetscLogPrintInfo) lu->options.PrintStat = YES;
   else lu->options.PrintStat = NO;
   PetscCall(PetscOptionsDeprecated("-mat_superlu_dist_statprint", "-mat_superlu_dist_printstat", "3.19", NULL));
-  PetscCall(PetscOptionsBool("-mat_superlu_dist_printstat", "Print factorization information", "None", lu->options.PrintStat != NO ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-mat_superlu_dist_printstat", "Print factorization information", "None", (bool)(lu->options.PrintStat != NO), &flg, &set));
   if (set) lu->options.PrintStat = flg ? YES : NO;
 
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(8, 0, 0)
   lu->options.superlu_acc_offload = 1;
-  PetscCall(PetscOptionsBool("-mat_superlu_dist_gpuoffload", "Offload factorization onto the GPUs", "None", lu->options.superlu_acc_offload ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-mat_superlu_dist_gpuoffload", "Offload factorization onto the GPUs", "None", (bool)(lu->options.superlu_acc_offload != 0), &flg, &set));
   if (set) lu->options.superlu_acc_offload = flg ? 1 : 0;
 #endif
 

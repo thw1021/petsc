@@ -471,12 +471,12 @@ static PetscErrorCode MatLUFactorSymbolic_STRUMPACK(Mat F, Mat A, IS r, IS c, co
 #endif
 
 #if defined(STRUMPACK_USE_CUDA) || defined(STRUMPACK_USE_HIP)
-  PetscCallExternalVoid("STRUMPACK_use_gpu", flg = (STRUMPACK_use_gpu(*S) == 0) ? PETSC_FALSE : PETSC_TRUE);
+  PetscCallExternalVoid("STRUMPACK_use_gpu", flg = (bool)(STRUMPACK_use_gpu(*S) != 0));
   PetscCall(PetscOptionsBool("-mat_strumpack_gpu", "Enable GPU acceleration (not supported for all compression types)", "None", flg, &flg, &set));
   if (set) PetscCall(MatSTRUMPACKSetGPU(F, flg));
 #endif
 
-  PetscCallExternalVoid("STRUMPACK_matching", flg = (STRUMPACK_matching(*S) == STRUMPACK_MATCHING_NONE) ? PETSC_FALSE : PETSC_TRUE);
+  PetscCallExternalVoid("STRUMPACK_matching", flg = (bool)(STRUMPACK_matching(*S) != STRUMPACK_MATCHING_NONE));
   PetscCall(PetscOptionsBool("-mat_strumpack_colperm", "Find a col perm to get nonzero diagonal", "None", flg, &flg, &set));
   if (set) PetscCallExternalVoid("STRUMPACK_set_matching", STRUMPACK_set_matching(*S, flg ? STRUMPACK_MATCHING_MAX_DIAGONAL_PRODUCT_SCALING : STRUMPACK_MATCHING_NONE));
 
@@ -498,7 +498,7 @@ static PetscErrorCode MatLUFactorSymbolic_STRUMPACK(Mat F, Mat A, IS r, IS c, co
   PetscCall(PetscOptionsInt("-mat_strumpack_geometric_width", "Width of the separator (for instance a 1D 3-point wide stencil needs a 1 point wide separator, a 1D 5-point stencil needs a 2 point wide separator), for geometric nested dissection ordering", "None", 1, &w, &set));
   if (set) PetscCallExternalVoid("STRUMPACK_set_separator_width", STRUMPACK_set_separator_width(*S, (int)w));
 
-  PetscCallExternalVoid("STRUMPACK_use_METIS_NodeNDP", flg = (STRUMPACK_use_METIS_NodeNDP(*S) == 0) ? PETSC_FALSE : PETSC_TRUE);
+  PetscCallExternalVoid("STRUMPACK_use_METIS_NodeNDP", flg = (bool)(STRUMPACK_use_METIS_NodeNDP(*S) != 0));
   PetscCall(PetscOptionsBool("-mat_strumpack_metis_nodeNDP", "Use METIS_NodeNDP instead of METIS_NodeND, for a more balanced tree", "None", flg, &flg, &set));
   if (set) {
     if (flg) PetscCallExternalVoid("STRUMPACK_enable_METIS_NodeNDP", STRUMPACK_enable_METIS_NodeNDP(*S));

@@ -243,7 +243,7 @@ PetscErrorCode DMGetCoordinatesLocalizedLocal(DM dm, PetscBool *areLocalized)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(areLocalized, 2);
-  *areLocalized = dm->coordinates[1].dim < 0 ? PETSC_FALSE : PETSC_TRUE;
+  *areLocalized = (bool)(dm->coordinates[1].dim >= 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -519,7 +519,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   PetscInt        N_cb;   /* The number of batches */
   const PetscInt  field = key.field;
   PetscInt        numFlops, f0Flops = 0, f1Flops = 0;
-  PetscBool       useAux      = probAux ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool       useAux      = (bool)(probAux != NULL);
   PetscBool       useField    = PETSC_FALSE;
   PetscBool       useFieldDer = PETSC_TRUE;
   PetscBool       useF0       = PETSC_TRUE;

@@ -122,7 +122,7 @@ static PetscBool LoewnerGE(const PetscScalar A[3][3], const PetscScalar B[3][3],
   PetscCallLAPACKInfo("LAPACKsyev", LAPACKsyev_("N", "L", &n, C, &lda, w, work, &lwork, &info));
 
   /* Smallest eigenvalue >= -tol? */
-  return (w[0] >= -tol) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(w[0] >= -tol);
 }
 
 int main(int argc, char **argv)

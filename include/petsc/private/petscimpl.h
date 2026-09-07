@@ -406,7 +406,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *, const char *, c
 #if PetscDefined(HAVE_SETJMP_H)
 PETSC_EXTERN PetscBool PetscCheckPointer(const void *, PetscDataType);
 #else
-  #define PetscCheckPointer(ptr, data_type) (ptr ? PETSC_TRUE : PETSC_FALSE)
+  #define PetscCheckPointer(ptr, data_type) ((bool)(ptr != NULL))
 #endif
 
 #if PetscDefined(CLANG_STATIC_ANALYZER)

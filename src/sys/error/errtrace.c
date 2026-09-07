@@ -146,13 +146,13 @@ PetscErrorCode PetscTraceBackErrorHandler(MPI_Comm comm, int line, const char *f
       PetscMPIInt size = 1;
 
       if (comm != MPI_COMM_NULL) MPI_Comm_size(comm, &size);
-      petscabortmpifinalize = (size == PetscGlobalSize) ? PETSC_TRUE : PETSC_FALSE;
+      petscabortmpifinalize = (bool)(size == PetscGlobalSize);
     }
   }
 
   if (rank == 0 && (!PetscCIEnabledPortableErrorOutput || PetscGlobalRank == 0) && (p != PETSC_ERROR_REPEAT || !petsc_traceback_error_silent)) {
     static int cnt    = 1;
-    PetscBool  python = (n == PETSC_ERR_PYTHON && cnt == 1) ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool  python = (bool)(n == PETSC_ERR_PYTHON && cnt == 1);
 
     if (p == PETSC_ERROR_INITIAL || python) {
       PetscErrorPrintfHilight();

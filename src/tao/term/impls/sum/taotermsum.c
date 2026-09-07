@@ -377,7 +377,7 @@ static PetscErrorCode TaoTermView_Sum_ASCII_INFO(TaoTerm term, PetscViewer viewe
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPrintf(viewer, "Sum of %" PetscInt_FMT " terms:%s", sum->n_terms, sum->n_terms > 0 ? " " : ""));
   PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-  for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(term, viewer, NULL, i, (i == 0) ? PETSC_TRUE : PETSC_FALSE, PETSC_TRUE, "f", "A", "x", "p"));
+  for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(term, viewer, NULL, i, (bool)(i == 0), PETSC_TRUE, "f", "A", "x", "p"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
   for (PetscInt i = 0; i < sum->n_terms; i++) {
@@ -458,10 +458,7 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPrintf(viewer, "%sgradient", preceding ? ", " : ""));
           preceding = PETSC_TRUE;
         }
-        if (TaoTermHessianMasked(mask)) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, "%shessian", preceding ? ", " : ""));
-          preceding = PETSC_TRUE;
-        }
+        if (TaoTermHessianMasked(mask)) PetscCall(PetscViewerASCIIPrintf(viewer, "%shessian", preceding ? ", " : ""));
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
         PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
       }
@@ -713,7 +710,7 @@ static PetscErrorCode TaoTermSumSetTermHessianMatrices_Sum(TaoTerm term, PetscIn
     MatType   H_type, Hpre_type;
     PetscBool Hpre_is_H;
 
-    Hpre_is_H = (mapped_H == mapped_Hpre) ? PETSC_TRUE : PETSC_FALSE;
+    Hpre_is_H = (bool)(mapped_H == mapped_Hpre);
 
     if (mapped_H) PetscCall(MatGetType(mapped_H, &H_type));
     else H_type = NULL;
@@ -1232,8 +1229,8 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
     }
     PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
 
-    sub_Hpre_is_H = (summand->_mapped_H == summand->_mapped_Hpre) ? PETSC_TRUE : PETSC_FALSE;
-    Hpre_is_H     = (Hpre_is_H && sub_Hpre_is_H) ? PETSC_TRUE : PETSC_FALSE;
+    sub_Hpre_is_H = (bool)(summand->_mapped_H == summand->_mapped_Hpre);
+    Hpre_is_H     = (bool)(Hpre_is_H && sub_Hpre_is_H);
   }
 
   term->Hpre_is_H = Hpre_is_H;

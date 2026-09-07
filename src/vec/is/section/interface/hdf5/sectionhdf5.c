@@ -15,7 +15,7 @@ static PetscErrorCode PetscSectionView_HDF5_SingleField(PetscSection s, PetscVie
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)s, &comm));
   PetscCall(PetscSectionGetChart(s, &pStart, &pEnd));
-  hasConstraints = (s->bc) ? PETSC_TRUE : PETSC_FALSE;
+  hasConstraints = (bool)(s->bc != NULL);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &hasConstraints, 1, MPI_C_BOOL, MPI_LOR, comm));
   for (p = pStart, n = 0, m = 0; p < pEnd; ++p) {
     PetscCall(PetscSectionGetDof(s, p, &dof));

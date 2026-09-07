@@ -712,18 +712,18 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf, MPI_Datatype unit, PetscMem
   if (sfop == PETSCSF_BCAST) { /* Move data from rootbuf to leafbuf */
     if (sf->use_nvshmem_get) {
       rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* send buffer has to be stand-alone (can't be rootdata) */
-      leafdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE] && op == MPI_REPLACE) ? PETSC_TRUE : PETSC_FALSE;
+      leafdirect[PETSCSF_REMOTE] = (bool)(PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE] && op == MPI_REPLACE);
     } else {
-      rootdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE;
+      rootdirect[PETSCSF_REMOTE] = (bool)(PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE]);
       leafdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* Our put-protocol always needs a nvshmem alloc'ed recv buffer */
     }
   } else if (sfop == PETSCSF_REDUCE) { /* Move data from leafbuf to rootbuf */
     if (sf->use_nvshmem_get) {
-      rootdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE] && op == MPI_REPLACE) ? PETSC_TRUE : PETSC_FALSE;
+      rootdirect[PETSCSF_REMOTE] = (bool)(PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE] && op == MPI_REPLACE);
       leafdirect[PETSCSF_REMOTE] = PETSC_FALSE;
     } else {
       rootdirect[PETSCSF_REMOTE] = PETSC_FALSE;
-      leafdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE;
+      leafdirect[PETSCSF_REMOTE] = (bool)(PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE]);
     }
   } else {                                    /* PETSCSF_FETCH */
     rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* FETCH always need a separate rootbuf */

@@ -2715,7 +2715,7 @@ PetscErrorCode DMHasBasisTransform(DM dm, PetscBool *flg)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
   PetscCall(DMGetBasisTransformVec_Internal(dm, &tv));
-  *flg = tv ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(tv != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3962,7 +3962,7 @@ PetscErrorCode DMHasVariableBounds(DM dm, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
-  *flg = (dm->ops->computevariablebounds) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(dm->ops->computevariablebounds != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4015,7 +4015,7 @@ PetscErrorCode DMHasColoring(DM dm, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
-  *flg = (dm->ops->getcoloring) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(dm->ops->getcoloring != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4039,7 +4039,7 @@ PetscErrorCode DMHasCreateRestriction(DM dm, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
-  *flg = (dm->ops->createrestriction) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(dm->ops->createrestriction != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4064,7 +4064,7 @@ PetscErrorCode DMHasCreateInjection(DM dm, PetscBool *flg)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
   if (dm->ops->hascreateinjection) PetscUseTypeMethod(dm, hascreateinjection, flg);
-  else *flg = (dm->ops->createinjection) ? PETSC_TRUE : PETSC_FALSE;
+  else *flg = (bool)(dm->ops->createinjection != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -6399,7 +6399,7 @@ PetscErrorCode DMUseTensorOrder(DM dm, PetscBool tensor)
 
       PetscCall(PetscFEGetBasisSpace((PetscFE)obj, &sp));
       PetscCall(PetscSpacePolynomialGetTensor(sp, &tensor));
-      reorder = reorder && tensor ? PETSC_TRUE : PETSC_FALSE;
+      reorder = (bool)(reorder && tensor);
     } else reorder = PETSC_FALSE;
   }
   if (tensor) {
@@ -6721,7 +6721,7 @@ PetscErrorCode DMGetOutputDM(DM dm, DM *odm)
   PetscCall(PetscSectionHasConstraints(section, &hasConstraints));
   PetscCall(PetscSectionGetPermutation(section, &perm));
   PetscCall(DMPlexGetIsoperiodicFaceSF(dm, &num_face_sfs, NULL));
-  newDM = hasConstraints || perm || (num_face_sfs > 0) ? PETSC_TRUE : PETSC_FALSE;
+  newDM = (bool)(hasConstraints || perm || (num_face_sfs > 0));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &newDM, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)dm)));
   if (!newDM) {
     *odm = dm;
@@ -6730,7 +6730,7 @@ PetscErrorCode DMGetOutputDM(DM dm, DM *odm)
   if (!dm->dmBC) {
     PetscSection newSection, gsection;
     PetscSF      sf, sfNatural;
-    PetscBool    usePerm = dm->ignorePermOutput ? PETSC_FALSE : PETSC_TRUE;
+    PetscBool    usePerm = (bool)!dm->ignorePermOutput;
 
     PetscCall(DMClone(dm, &dm->dmBC));
     PetscCall(DMCopyDisc(dm, dm->dmBC));
@@ -7952,7 +7952,7 @@ PetscErrorCode DMUniversalLabelCreate(DM dm, DMUniversalLabel *universal)
     PetscCall(DMGetLabelName(dm, l, &name));
     PetscCall(PetscStrncmp(name, "depth", 6, &isdepth));
     PetscCall(PetscStrncmp(name, "celltype", 9, &iscelltype));
-    active[l] = !(isdepth || iscelltype) ? PETSC_TRUE : PETSC_FALSE;
+    active[l] = (bool)!(isdepth || iscelltype);
     if (active[l]) ++ul->Nl;
   }
   PetscCall(PetscCalloc5(ul->Nl, &ul->names, ul->Nl, &ul->indices, ul->Nl + 1, &ul->offsets, ul->Nl + 1, &ul->bits, ul->Nl, &ul->masks));
@@ -9392,7 +9392,7 @@ PetscErrorCode DMComputeError(DM dm, Vec sol, PetscReal errors[], Vec *errorVec)
     PetscCall(DMGetDimension(edm, &dim));
     PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
     PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-    simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+    simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
     PetscCall(DMGetNumFields(dm, &Nf));
     for (f = 0; f < Nf; ++f) {
       PetscFE         fe, efe;
@@ -9674,7 +9674,7 @@ PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sour
       break;
     }
   }
-  *found = o == nO ? PETSC_FALSE : PETSC_TRUE;
+  *found = (bool)(o != nO);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -9759,7 +9759,7 @@ PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscIn
       break;
     }
   }
-  *found = o == nO ? PETSC_FALSE : PETSC_TRUE;
+  *found = (bool)(o != nO);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

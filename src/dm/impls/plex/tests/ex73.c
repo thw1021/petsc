@@ -142,7 +142,7 @@ static PetscErrorCode CreateDiscretization(DM dm, AppCtx *user)
       PetscCall(PetscSpaceTensorGetSubspace(subsp, 1, &ysp));
       PetscCall(PetscSpaceGetDegree(xsp, &xdeg, NULL));
       PetscCall(PetscSpaceGetDegree(ysp, &ydeg, NULL));
-      isTrimmed = xdeg != ydeg ? PETSC_TRUE : PETSC_FALSE;
+      isTrimmed = (bool)(xdeg != ydeg);
     }
   }
   user->degree = minDeg;

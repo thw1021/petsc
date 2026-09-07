@@ -1397,7 +1397,7 @@ static PetscErrorCode GmshCreateFE(MPI_Comm comm, const char prefix[], PetscBool
   PetscSpace      P;
   PetscDualSpace  Q;
   PetscQuadrature q, fq;
-  PetscBool       isTensor = isSimplex ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool       isTensor = !isSimplex;
   PetscBool       endpoint = PETSC_TRUE;
   char            name[32];
 
@@ -1713,9 +1713,9 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
       GmshElement *elemB = PetscSafePointerPlusOffset(elemA, mesh->numCells - 1);
       int          ptA   = elemA ? GmshCellMap[elemA->cellType].polytope : -1;
       int          ptB   = elemB ? GmshCellMap[elemB->cellType].polytope : -1;
-      isSimplex          = (ptA == GMSH_QUA || ptA == GMSH_HEX) ? PETSC_FALSE : PETSC_TRUE;
-      isHybrid           = (ptA == ptB) ? PETSC_FALSE : PETSC_TRUE;
-      hasTetra           = (ptA == GMSH_TET) ? PETSC_TRUE : PETSC_FALSE;
+      isSimplex          = (bool)(ptA != GMSH_QUA && ptA != GMSH_HEX);
+      isHybrid           = (bool)(ptA != ptB);
+      hasTetra           = (bool)(ptA == GMSH_TET);
     }
   }
 
@@ -1735,13 +1735,13 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
 
     dim       = buf[0];
     order     = buf[1];
-    periodic  = buf[2] ? PETSC_TRUE : PETSC_FALSE;
-    isSimplex = buf[3] ? PETSC_TRUE : PETSC_FALSE;
-    isHybrid  = buf[4] ? PETSC_TRUE : PETSC_FALSE;
-    hasTetra  = buf[5] ? PETSC_TRUE : PETSC_FALSE;
+    periodic  = (bool)(buf[2] != 0);
+    isSimplex = (bool)(buf[3] != 0);
+    isHybrid  = (bool)(buf[4] != 0);
+    hasTetra  = (bool)(buf[5] != 0);
   }
 
-  if (!highOrderSet) highOrder = (order > 1) ? PETSC_TRUE : PETSC_FALSE;
+  if (!highOrderSet) highOrder = (bool)(order > 1);
   PetscCheck(!highOrder || !isHybrid, comm, PETSC_ERR_SUP, "No support for discretization on hybrid meshes yet");
 
   /* We do not want this label automatically computed, instead we fill it here */
@@ -1797,7 +1797,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
 
           for (t = 0; t < Nt; ++t) {
             const PetscInt  tag     = elem->tags[t];
-            const PetscBool generic = usegeneric && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
+            const PetscBool generic = (bool)(usegeneric && (!t || multipleTags));
 
             if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &cellSets, "Cell Sets", cell, tag));
             for (r = 0; r < Nr; ++r) {
@@ -1827,7 +1827,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
         PetscCheck(pdepth == dim - 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Plex facet %" PetscInt_FMT " for Gmsh element %" PetscInt_FMT " had depth %" PetscInt_FMT " != %" PetscInt_FMT, join[0], elem->id, pdepth, dim - 1);
         for (PetscInt t = 0; t < Nt; ++t) {
           const PetscInt  tag     = elem->tags[t];
-          const PetscBool generic = usegeneric && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
+          const PetscBool generic = (bool)(usegeneric && (!t || multipleTags));
 
           if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", join[0], tag));
           for (PetscInt r = 0; r < Nr; ++r) {
@@ -1854,7 +1854,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
         PetscCheck(joinSize == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Could not determine Plex edge for Gmsh element %" PetscInt_FMT " (Plex cell %" PetscInt_FMT ")", elem->id, e);
         for (t = 0; t < Nt; ++t) {
           const PetscInt  tag     = elem->tags[t];
-          const PetscBool generic = usegeneric && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
+          const PetscBool generic = (bool)(usegeneric && (!t || multipleTags));
 
           if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &edgeSets, "Edge Sets", join[0], tag));
           for (r = 0; r < Nr; ++r) {
@@ -1891,7 +1891,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
         if (vv < 0) continue;
         for (PetscInt t = 0; t < GMSH_MAX_TAGS; ++t) {
           const PetscInt  tag     = tags[t];
-          const PetscBool generic = usegeneric && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
+          const PetscBool generic = (bool)(usegeneric && (!t || multipleTags));
 
           if (tag == -1) continue;
           if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &vertSets, "Vertex Sets", vStart + vv, tag));
@@ -1910,11 +1910,11 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
     };
     PetscBool flag[n];
 
-    flag[0] = cellSets ? PETSC_TRUE : PETSC_FALSE;
-    flag[1] = faceSets ? PETSC_TRUE : PETSC_FALSE;
-    flag[2] = edgeSets ? PETSC_TRUE : PETSC_FALSE;
-    flag[3] = vertSets ? PETSC_TRUE : PETSC_FALSE;
-    flag[4] = marker ? PETSC_TRUE : PETSC_FALSE;
+    flag[0] = (bool)(cellSets != NULL);
+    flag[1] = (bool)(faceSets != NULL);
+    flag[2] = (bool)(edgeSets != NULL);
+    flag[3] = (bool)(vertSets != NULL);
+    flag[4] = (bool)(marker != NULL);
     PetscCallMPI(MPI_Bcast(flag, n, MPI_C_BOOL, 0, comm));
     if (flag[0]) PetscCall(DMCreateLabel(*dm, "Cell Sets"));
     if (flag[1]) PetscCall(DMCreateLabel(*dm, "Face Sets"));
@@ -1965,7 +1965,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   PetscCall(DMGetCoordinateDM(*dm, &cdm));
   if (highOrder) {
     PetscFE         fe;
-    PetscBool       continuity = periodic ? PETSC_FALSE : PETSC_TRUE;
+    PetscBool       continuity = (bool)!periodic;
     PetscDTNodeType nodeType   = PETSCDTNODES_EQUISPACED;
 
     PetscCall(GmshCreateFE(comm, NULL, isSimplex, continuity, nodeType, dim, coordDim, order, &fe));
@@ -2168,7 +2168,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   if (highOrder && project) {
     PetscFE         fe;
     const char      prefix[]   = "dm_plex_gmsh_project_";
-    PetscBool       continuity = periodic ? PETSC_FALSE : PETSC_TRUE;
+    PetscBool       continuity = (bool)!periodic;
     PetscDTNodeType nodeType   = PETSCDTNODES_GAUSSJACOBI;
 
     PetscCall(GmshCreateFE(comm, prefix, isSimplex, continuity, nodeType, dim, coordDim, order, &fe));

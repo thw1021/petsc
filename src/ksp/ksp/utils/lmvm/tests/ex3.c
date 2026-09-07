@@ -98,11 +98,11 @@ int main(int argc, char **argv)
         if (init == TEST_INIT_NONE && size == TEST_SIZE_NONE) continue;
         if (size == TEST_SIZE_NONE && call_setup) continue;
 
-        PetscCall(CreateMatWithTestSizes(comm, MATLMVMBFGS, n, N, size, call_setup ? PETSC_TRUE : PETSC_FALSE, &B));
+        PetscCall(CreateMatWithTestSizes(comm, MATLMVMBFGS, n, N, size, (bool)(call_setup != 0), &B));
 
         switch (init) {
         case TEST_INIT_NONE:
-          PetscCall(TestUsability(B, pattern, rand, call_setup ? PETSC_TRUE : PETSC_FALSE));
+          PetscCall(TestUsability(B, pattern, rand, (bool)(call_setup != 0)));
           break;
         case TEST_INIT_VECS: {
           Vec x, f;
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
             for (TestSizeType j0_size = TEST_SIZE_LOCAL; j0_size < TEST_SIZE_COUNT; j0_size++) {
               Mat J0;
 
-              PetscCall(CreateMatWithTestSizes(comm, MATDENSE, n, N, j0_size, j0_call_setup ? PETSC_TRUE : PETSC_FALSE, &J0));
+              PetscCall(CreateMatWithTestSizes(comm, MATDENSE, n, N, j0_size, (bool)(j0_call_setup != 0), &J0));
               PetscCall(MatLMVMSetJ0(B, J0));
               PetscCall(MatZeroEntries(J0));
               PetscCall(MatShift(J0, 1.0));
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
               PC  J0pc;
               Mat J0;
 
-              PetscCall(CreateMatWithTestSizes(comm, MATCONSTANTDIAGONAL, n, N, j0_size, j0_call_setup ? PETSC_TRUE : PETSC_FALSE, &J0));
+              PetscCall(CreateMatWithTestSizes(comm, MATCONSTANTDIAGONAL, n, N, j0_size, (bool)(j0_call_setup != 0), &J0));
               PetscCall(PCCreate(comm, &J0pc));
               PetscCall(PCSetType(J0pc, PCMAT));
               PetscCall(PCMatSetApplyOperation(J0pc, MATOP_SOLVE));
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
               PC  J0pc;
               Mat J0;
 
-              PetscCall(CreateMatWithTestSizes(comm, MATCONSTANTDIAGONAL, n, N, j0_size, j0_call_setup ? PETSC_TRUE : PETSC_FALSE, &J0));
+              PetscCall(CreateMatWithTestSizes(comm, MATCONSTANTDIAGONAL, n, N, j0_size, (bool)(j0_call_setup != 0), &J0));
               PetscCall(KSPCreate(comm, &J0ksp));
               PetscCall(KSPSetOperators(J0ksp, J0, J0));
               PetscCall(KSPGetPC(J0ksp, &J0pc));

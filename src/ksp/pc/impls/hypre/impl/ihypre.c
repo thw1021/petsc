@@ -885,7 +885,7 @@ static PetscErrorCode PCView_HYPRE_ILU(PC pc, PetscViewer viewer)
 static PetscErrorCode PCSetFromOptions_HYPRE_Euclid(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  PetscBool flag, eu_bj = jac->eu_bj ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool flag, eu_bj = (bool)(jac->eu_bj != 0);
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE Euclid Options");

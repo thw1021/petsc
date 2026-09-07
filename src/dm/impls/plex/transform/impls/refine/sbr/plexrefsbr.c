@@ -157,7 +157,7 @@ static PetscErrorCode SBREdgePrecedes_Private(DMPlexTransform tr, PetscInt eA, P
   PetscCall(SBRGetEdgeLen_Private(tr, eA, &lenA));
   PetscCall(SBRGetEdgeLen_Private(tr, eB, &lenB));
   if (lenA != lenB) {
-    *precedes = lenA > lenB ? PETSC_TRUE : PETSC_FALSE;
+    *precedes = (bool)(lenA > lenB);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(SBRGetEdgeMid_Private(tr, eA, midA));
@@ -165,7 +165,7 @@ static PetscErrorCode SBREdgePrecedes_Private(DMPlexTransform tr, PetscInt eA, P
   *precedes = PETSC_FALSE;
   for (PetscInt d = 0; d < 3; ++d) {
     if (midA[d] != midB[d]) {
-      *precedes = midA[d] > midB[d] ? PETSC_TRUE : PETSC_FALSE;
+      *precedes = (bool)(midA[d] > midB[d]);
       break;
     }
   }
@@ -1148,7 +1148,7 @@ static PetscErrorCode DMPlexTransformSBRValidate_Private(DMPlexTransform tr)
     for (PetscInt i = 0; i < 6; ++i) prio[perm[i]] = i;
     for (PetscInt mask = 1; mask < 64; ++mask) {
       PetscInt  ord[6], na = 0, code = 0;
-      PetscBool stable = (mask & (1 << perm[0])) ? PETSC_TRUE : PETSC_FALSE;
+      PetscBool stable = (bool)((mask & (1 << perm[0])) != 0);
 
       /* The set is conforming when the longest edge overall and of each affected face is marked */
       for (PetscInt f = 0; f < 4 && stable; ++f) {

@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 
   for (k = 0; k < 5; ++k) { /* 5 iterations of VecAssembly */
     PetscReal norm  = 0.0;
-    PetscBool flag  = (k == 2) ? PETSC_FALSE : PETSC_TRUE;
+    PetscBool flag  = (bool)(k != 2);
     PetscInt  shift = (k < 2) ? 0 : (k == 2) ? 1 : 0; /* Used to change patterns */
 
     /* If saveCommunicationPattern, let's see what should happen in the 5 iterations:

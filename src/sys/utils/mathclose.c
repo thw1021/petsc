@@ -28,5 +28,5 @@ PetscBool PetscIsCloseAtTol(PetscReal a, PetscReal b, PetscReal rtol, PetscReal 
   atol = PetscAbsReal(atol);
   /* The regular check for difference within tolerances */
   diff = PetscAbsReal(b - a);
-  return ((diff <= PetscAbsReal(rtol * b)) || (diff <= PetscAbsReal(rtol * a)) || (diff <= atol)) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)((diff <= PetscAbsReal(rtol * b)) || (diff <= PetscAbsReal(rtol * a)) || (diff <= atol));
 }

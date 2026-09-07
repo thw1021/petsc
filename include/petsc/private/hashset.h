@@ -135,7 +135,7 @@ M*/
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscAssertPointer(ht, 1)); \
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscAssertPointer(has, 3)); \
     iter = kh_get(HashT, ht, key); \
-    *has = (iter != kh_end(ht)) ? PETSC_TRUE : PETSC_FALSE; \
+    *has = (bool)(iter != kh_end(ht)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
 \
@@ -171,7 +171,7 @@ M*/
     iter = kh_put(HashT, ht, key, &ret); \
     (void)iter; \
     PetscHashAssert(ret >= 0); \
-    *missing = ret ? PETSC_TRUE : PETSC_FALSE; \
+    *missing = (bool)(ret != 0); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
 \

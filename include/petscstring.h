@@ -167,9 +167,9 @@ static inline void PetscStrcmpNoError(const char a[], const char b[], PetscBool 
     *flg = PETSC_FALSE;
   } else {
 #if PetscHasBuiltin(__builtin_strcmp)
-    *flg = __builtin_strcmp(a, b) ? PETSC_FALSE : PETSC_TRUE;
+    *flg = (bool)(__builtin_strcmp(a, b) == 0);
 #else
-    *flg = strcmp(a, b) ? PETSC_FALSE : PETSC_TRUE;
+    *flg = (bool)(strcmp(a, b) == 0);
 #endif
   }
 }
@@ -332,9 +332,9 @@ static inline PetscErrorCode PetscStrncmp(const char a[], const char b[], size_t
     PetscAssertPointer_Private(b, 2);
   }
 #if PetscHasBuiltin(__builtin_strncmp)
-  *t = __builtin_strncmp(a, b, n) ? PETSC_FALSE : PETSC_TRUE;
+  *t = (bool)(__builtin_strncmp(a, b, n) == 0);
 #else
-  *t = strncmp(a, b, n) ? PETSC_FALSE : PETSC_TRUE;
+  *t = (bool)(strncmp(a, b, n) == 0);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -441,9 +441,9 @@ static inline PetscErrorCode PetscStrgrt(const char a[], const char b[], PetscBo
     *t = PETSC_FALSE;
   } else {
 #if PetscHasBuiltin(__builtin_strcmp)
-    *t = __builtin_strcmp(a, b) > 0 ? PETSC_TRUE : PETSC_FALSE;
+    *t = (bool)(__builtin_strcmp(a, b) > 0);
 #else
-    *t = strcmp(a, b) > 0 ? PETSC_TRUE : PETSC_FALSE;
+    *t = (bool)(strcmp(a, b) > 0);
 #endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -543,9 +543,9 @@ static inline PetscErrorCode PetscStrendswith(const char a[], const char b[], Pe
   PetscCall(PetscStrlen(b, &nb));
   if (na >= nb) {
 #if PetscHasBuiltin(__builtin_memcmp)
-    *flg = __builtin_memcmp(b, a + (na - nb), nb) == 0 ? PETSC_TRUE : PETSC_FALSE;
+    *flg = (bool)(__builtin_memcmp(b, a + (na - nb), nb) == 0);
 #else
-    *flg = memcmp(b, a + (na - nb), nb) == 0 ? PETSC_TRUE : PETSC_FALSE;
+    *flg = (bool)(memcmp(b, a + (na - nb), nb) == 0);
 #endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);

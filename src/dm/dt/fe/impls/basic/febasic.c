@@ -285,7 +285,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS ds, PetscInt field,
     PetscCall(PetscDSGetComponentOffsets(dsAux, &aOff));
     PetscCall(PetscDSGetComponentDerivativeOffsets(dsAux, &aOff_x));
     PetscCall(PetscDSGetEvaluationArrays(dsAux, &a, NULL, &a_x));
-    auxOnBd = dimAux < dim ? PETSC_TRUE : PETSC_FALSE;
+    auxOnBd = (bool)(dimAux < dim);
     if (auxOnBd) PetscCall(PetscDSGetTabulation(dsAux, &TfAux));
     else PetscCall(PetscDSGetFaceTabulation(dsAux, &TfAux));
     PetscCheck(Tf[0]->Np == TfAux[0]->Np, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of tabulation points %" PetscInt_FMT " != %" PetscInt_FMT " number of auxiliary tabulation points", Tf[0]->Np, TfAux[0]->Np);
@@ -532,7 +532,7 @@ PetscErrorCode PetscFEIntegrateBdResidual_Basic(PetscDS ds, PetscWeakForm wf, Pe
     PetscCall(PetscDSGetComponentOffsets(dsAux, &aOff));
     PetscCall(PetscDSGetComponentDerivativeOffsets(dsAux, &aOff_x));
     PetscCall(PetscDSGetEvaluationArrays(dsAux, &a, NULL, &a_x));
-    auxOnBd = dimAux < dim ? PETSC_TRUE : PETSC_FALSE;
+    auxOnBd = (bool)(dimAux < dim);
     if (auxOnBd) PetscCall(PetscDSGetTabulation(dsAux, &TfAux));
     else PetscCall(PetscDSGetFaceTabulation(dsAux, &TfAux));
     PetscCheck(Tf[0]->Np == TfAux[0]->Np, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of tabulation points %" PetscInt_FMT " != %" PetscInt_FMT " number of auxiliary tabulation points", Tf[0]->Np, TfAux[0]->Np);
@@ -653,7 +653,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, Pet
     PetscCall(PetscDSGetComponentOffsets(dsAux, &aOff));
     PetscCall(PetscDSGetComponentDerivativeOffsets(dsAux, &aOff_x));
     PetscCall(PetscDSGetEvaluationArrays(dsAux, &a, NULL, &a_x));
-    auxOnBd = dimAux == dim ? PETSC_TRUE : PETSC_FALSE;
+    auxOnBd = (bool)(dimAux == dim);
     if (auxOnBd) PetscCall(PetscDSGetTabulation(dsAux, &TfAux));
     else PetscCall(PetscDSGetFaceTabulation(dsAux, &TfAux));
     PetscCheck(Tf[0]->Np == TfAux[0]->Np, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of tabulation points %" PetscInt_FMT " != %" PetscInt_FMT " number of auxiliary tabulation points", Tf[0]->Np, TfAux[0]->Np);
@@ -1120,7 +1120,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, Pet
     PetscCall(PetscDSGetComponentOffsets(dsAux, &aOff));
     PetscCall(PetscDSGetComponentDerivativeOffsets(dsAux, &aOff_x));
     PetscCall(PetscDSGetEvaluationArrays(dsAux, &a, NULL, &a_x));
-    auxOnBd = dimAux == dim ? PETSC_TRUE : PETSC_FALSE;
+    auxOnBd = (bool)(dimAux == dim);
     if (auxOnBd) PetscCall(PetscDSGetTabulation(dsAux, &TAux));
     else PetscCall(PetscDSGetFaceTabulation(dsAux, &TAux));
     PetscCheck(T[0]->Np == TAux[0]->Np, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of tabulation points %" PetscInt_FMT " != %" PetscInt_FMT " number of auxiliary tabulation points", T[0]->Np, TAux[0]->Np);

@@ -96,7 +96,7 @@ static PetscErrorCode spbas_allocate_data(spbas_matrix *result)
   PetscInt  nnz   = result->nnz;
   PetscInt  nrows = result->nrows;
   PetscInt  r_nnz;
-  PetscBool do_values  = (result->values) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool do_values  = (bool)(result->values != NULL);
   PetscBool block_data = result->block_data;
 
   PetscFunctionBegin;
@@ -383,7 +383,7 @@ PetscErrorCode spbas_matrix_to_crs(spbas_matrix matrix_A, MatScalar **val_out, P
   MatScalar   *val;
   PetscScalar *val_A;
   PetscInt     col_idx_type = matrix_A.col_idx_type;
-  PetscBool    do_values    = matrix_A.values ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool    do_values    = (bool)(matrix_A.values != NULL);
 
   PetscFunctionBegin;
   PetscCall(PetscMalloc1(nrows + 1, &irow));
@@ -449,7 +449,7 @@ PetscErrorCode spbas_transpose(spbas_matrix in_matrix, spbas_matrix *result)
   result->block_data   = PETSC_TRUE;
 
   /* Allocate sparseness pattern */
-  PetscCall(spbas_allocate_pattern(result, in_matrix.values ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(spbas_allocate_pattern(result, (bool)(in_matrix.values != NULL)));
 
   /*  Count the number of nonzeros in each row */
   for (i = 0; i < nrows; i++) result->row_nnz[i] = 0;
@@ -630,7 +630,7 @@ static PetscErrorCode spbas_apply_reordering_rows(spbas_matrix *matrix_A, const 
   PetscInt      nrows = matrix_A->nrows;
   PetscInt     *row_nnz;
   PetscInt    **icols;
-  PetscBool     do_values = matrix_A->values ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool     do_values = (bool)(matrix_A->values != NULL);
   PetscScalar **vals      = NULL;
 
   PetscFunctionBegin;
@@ -668,7 +668,7 @@ static PetscErrorCode spbas_apply_reordering_cols(spbas_matrix *matrix_A, const 
   PetscInt     nrows = matrix_A->nrows;
   PetscInt     row_nnz;
   PetscInt    *icols;
-  PetscBool    do_values = matrix_A->values ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool    do_values = (bool)(matrix_A->values != NULL);
   PetscScalar *vals      = NULL;
 
   PetscFunctionBegin;
@@ -794,7 +794,7 @@ PetscErrorCode spbas_power(spbas_matrix in_matrix, PetscInt power, spbas_matrix 
   retval.block_data   = PETSC_FALSE;
 
   /* Allocate sparseness pattern */
-  PetscCall(spbas_allocate_pattern(&retval, in_matrix.values ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(spbas_allocate_pattern(&retval, (bool)(in_matrix.values != NULL)));
 
   /* Allocate marker array: note sure the max needed so use the max of the two */
   PetscCall(PetscCalloc1(PetscMax(ncols, nrows), &iwork));

@@ -452,7 +452,7 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *root
       PetscBool match;
 
       if (!link->persistent) continue;
-      match = (link->flavor == w->flavor && link->rootdata == rootdata && link->leafdata == leafdata) ? PETSC_TRUE : PETSC_FALSE;
+      match = (bool)(link->flavor == w->flavor && link->rootdata == rootdata && link->leafdata == leafdata);
       if (PetscDefined(USE_DEBUG)) {
         PetscInt all_matches[2];
 
@@ -754,7 +754,7 @@ static PetscErrorCode PetscSFSetUp_Window(PetscSF sf)
     if (w->flavor == PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscCall(PetscSFWindowCreateDynamicSF(sf, &dynsf_full));
 
     PetscCall(PetscSFGetGraph(sf, &nroots, &nleaves, NULL, NULL));
-    has_empty = (nroots == 0 && nleaves == 0) ? PETSC_TRUE : PETSC_FALSE;
+    has_empty = (bool)(nroots == 0 && nleaves == 0);
     nranks    = sf->nranks;
     PetscCall(PetscMalloc1(nranks, &w->wcommranks));
     w->is_empty = has_empty;

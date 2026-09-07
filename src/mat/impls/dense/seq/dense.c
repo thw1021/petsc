@@ -167,7 +167,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqDense(Mat A, MatType newtype, M
     PetscCall(MatSeqDenseSetPreallocation(B, NULL));
     b = (Mat_SeqDense *)B->data;
   } else {
-    b = (Mat_SeqDense *)((*newmat)->data);
+    b = (Mat_SeqDense *)(*newmat)->data;
     for (i = 0; i < n; i++) PetscCall(PetscArrayzero(b->v + i * b->lda, m));
   }
   PetscCall(MatSeqAIJGetArrayRead(A, &av));
@@ -3405,7 +3405,7 @@ PetscErrorCode MatDenseSetLDA_SeqDense(Mat B, PetscInt lda)
   PetscBool     data;
 
   PetscFunctionBegin;
-  data = (B->rmap->n > 0 && B->cmap->n > 0) ? (b->v ? PETSC_TRUE : PETSC_FALSE) : PETSC_FALSE;
+  data = (bool)(B->rmap->n > 0 && B->cmap->n > 0 && b->v != NULL);
   PetscCheck(b->user_alloc || !data || b->lda == lda, PETSC_COMM_SELF, PETSC_ERR_ORDER, "LDA cannot be changed after allocation of internal storage");
   PetscCheck(lda >= B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "LDA %" PetscInt_FMT " must be at least matrix dimension %" PetscInt_FMT, lda, B->rmap->n);
   PetscCall(PetscBLASIntCast(lda, &b->lda));

@@ -335,7 +335,7 @@ static PetscErrorCode GLVisCreateFE(PetscFE femIn, char name[32], PetscFE *fem, 
     isSimplex = PETSC_TRUE;
     break;
   }
-  isTensor = isSimplex ? PETSC_FALSE : PETSC_TRUE;
+  isTensor = !isSimplex;
   if (isSimplex) deg = PetscMin(deg, 3); /* Permutation not coded for degree higher than 3 */
   /* Create space */
   PetscCall(PetscSpaceCreate(comm, &P));

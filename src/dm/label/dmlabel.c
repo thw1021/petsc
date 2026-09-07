@@ -893,7 +893,7 @@ PetscErrorCode DMLabelHasValue(DMLabel label, PetscInt value, PetscBool *contain
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
   PetscAssertPointer(contains, 3);
   PetscCall(DMLabelLookupStratum(label, value, &v));
-  *contains = v < 0 ? PETSC_FALSE : PETSC_TRUE;
+  *contains = (bool)(v >= 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -926,7 +926,7 @@ PetscErrorCode DMLabelHasPoint(DMLabel label, PetscInt point, PetscBool *contain
   /* DMLabelGetBounds() calls DMLabelCreateIndex() only if needed */
   PetscCall(DMLabelGetBounds(label, &pStart, &pEnd));
   PetscCall(DMLabelMakeAllValid_Private(label));
-  *contains = point >= pStart && point < pEnd && (PetscBTLookup(label->bt, point - label->pStart) ? PETSC_TRUE : PETSC_FALSE);
+  *contains = (bool)(point >= pStart && point < pEnd && PetscBTLookup(label->bt, point - label->pStart) != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1455,7 +1455,7 @@ PetscErrorCode DMLabelHasStratum(DMLabel label, PetscInt value, PetscBool *exist
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
   PetscAssertPointer(exists, 3);
   PetscCall(DMLabelLookupStratum(label, value, &v));
-  *exists = v < 0 ? PETSC_FALSE : PETSC_TRUE;
+  *exists = (bool)(v >= 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

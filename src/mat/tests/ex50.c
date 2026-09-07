@@ -22,7 +22,7 @@ static PetscErrorCode CheckValuesAIJ(Mat A)
   PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQSBAIJ, &seqsbaij));
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPISBAIJ, &mpisbaij));
-  sbaij = (seqsbaij || mpisbaij) ? PETSC_TRUE : PETSC_FALSE;
+  sbaij = (bool)(seqsbaij || mpisbaij);
   for (i = rstart; i < rend; i++) {
     for (j = (sbaij ? i : 0); j < N; j++) {
       PetscCall(MatGetValue(A, i, j, &val));

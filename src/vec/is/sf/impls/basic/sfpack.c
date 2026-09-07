@@ -529,8 +529,8 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf, PetscSFLink link, MPI_Datatype 
   PetscCall(MPIPetsc_Type_compare(unit, MPIU_2INT, &is2PetscInt));
   /* TODO: should we also handle Fortran MPI_2REAL? */
   PetscCallMPI(MPIPetsc_Type_get_envelope(unit, &ni, &na, &nc, &nd, &combiner));
-  link->isbuiltin = (combiner == MPI_COMBINER_NAMED) ? PETSC_TRUE : PETSC_FALSE; /* unit is MPI builtin */
-  link->bs        = 1;                                                           /* default */
+  link->isbuiltin = (bool)(combiner == MPI_COMBINER_NAMED); /* unit is MPI builtin */
+  link->bs        = 1;                                      /* default */
 
   if (is2Int) {
     PackInit_PairType_int_int_1_1(link);
@@ -1342,7 +1342,7 @@ PetscErrorCode PetscSFSetUpPackFields(PetscSF sf)
 
   /* Check dups in indices so that CUDA unpacking kernels can use cheaper regular instructions instead of atomics when they know there are no data race chances */
   if (PetscDefined(HAVE_DEVICE)) {
-    PetscBool ismulti = (sf->multi == sf) ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool ismulti = (bool)(sf->multi == sf);
     if (!sf->leafcontig[0] && !ismulti) PetscCall(PetscCheckDupsInt(sf->leafbuflen[0], sf->rmine, &sf->leafdups[0]));
     if (!sf->leafcontig[1] && !ismulti) PetscCall(PetscCheckDupsInt(sf->leafbuflen[1], sf->rmine + sf->roffset[sf->ndranks], &sf->leafdups[1]));
     if (!bas->rootcontig[0] && !ismulti) PetscCall(PetscCheckDupsInt(bas->rootbuflen[0], bas->irootloc, &bas->rootdups[0]));

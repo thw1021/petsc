@@ -586,7 +586,6 @@ PetscErrorCode DMSwarmPreallocateMassMatrix(DM dmc, DM dmf, Mat mass, PetscInt *
 @*/
 PetscErrorCode DMSwarmFillMassMatrix(DM dmc, DM dmf, Mat mass, PetscInt rStart, PetscInt maxC, PetscBool useDeltaFunction, PetscInt Nfc, const PetscInt bs[], PetscReal *coordVals[], PetscCtx ctx)
 {
-  const char  *name = "Mass Matrix";
   PetscDS      ds;
   PetscSection fsection, globalFSection;
   PetscInt     dim, cStart, cEnd, Nf, totDim, totNc = 0, *rowIDXs;
@@ -664,7 +663,7 @@ PetscErrorCode DMSwarmFillMassMatrix(DM dmc, DM dmf, Mat mass, PetscInt rStart, 
       for (PetscInt j = 0; j < numCIndices; ++j)
         // TODO Need field offset on particle here
         for (PetscInt c = 0; c < Nc; ++c) rowIDXs[j * Nc + c] = cindices[j] * totNc + c + rStart;
-      if (0) PetscCall(DMPrintCellMatrix(cell, name, numCIndices * Nc, numFIndices, elemMat));
+      if (0) PetscCall(DMPrintCellMatrix(cell, PETSC_FUNCTION_NAME, numCIndices * Nc, numFIndices, elemMat));
       PetscCall(MatSetValues(mass, numCIndices * Nc, rowIDXs, numFIndices, findices, elemMat, ADD_VALUES));
       PetscCall(DMSwarmSortRestorePointsPerCell(dmc, cell, &numCIndices, &cindices));
       PetscCall(DMPlexRestoreClosureIndices(dmf, fsection, globalFSection, cell, PETSC_FALSE, &numFIndices, &findices, NULL, NULL));
@@ -771,7 +770,6 @@ static PetscErrorCode DMCreateMassMatrix_Swarm(DM dmCoarse, DM dmFine, Mat *mass
 
 static PetscErrorCode DMSwarmComputeMassMatrixSquare_Private(DM dmc, DM dmf, Mat mass, PetscBool useDeltaFunction, PetscCtx ctx)
 {
-  const char   *name = "Mass Matrix Square";
   MPI_Comm      comm;
   DMSwarmCellDM celldm;
   PetscDS       prob;
@@ -927,7 +925,7 @@ static PetscErrorCode DMSwarmComputeMassMatrixSquare_Private(DM dmc, DM dmf, Mat
       }
       PetscCall(PetscTabulationDestroy(&Tcoarse));
       for (PetscInt p = 0; p < numCIndices; ++p) rowIDXs[p] = cindices[p] + rStart;
-      if (0) PetscCall(DMPrintCellMatrix(cell, name, 1, numCIndices, elemMat));
+      if (0) PetscCall(DMPrintCellMatrix(cell, PETSC_FUNCTION_NAME, 1, numCIndices, elemMat));
       /* Block diagonal */
       if (numCIndices) {
         PetscBLASInt blasn, blask;
@@ -1024,7 +1022,6 @@ PetscErrorCode DMSwarmCreateMassMatrixSquare(DM dmCoarse, DM dmFine, Mat *mass)
 */
 static PetscErrorCode DMSwarmComputeGradientMatrix_Private(DM sw, DM dm, Mat derv, PetscBool useDeltaFunction, PetscCtx ctx)
 {
-  const char   *name = "Derivative Matrix";
   MPI_Comm      comm;
   DMSwarmCellDM celldm;
   PetscDS       ds;
@@ -1129,7 +1126,7 @@ static PetscErrorCode DMSwarmComputeGradientMatrix_Private(DM sw, DM dm, Mat der
       }
       for (PetscInt j = 0; j < Npc; ++j)
         for (PetscInt d = 0; d < cdim; ++d) rowIDXs[j * cdim + d] = pind[j] * cdim + d + rStart;
-      if (0) PetscCall(DMPrintCellMatrix(cell, name, Npc * cdim, numFIndices, elemMat));
+      if (0) PetscCall(DMPrintCellMatrix(cell, PETSC_FUNCTION_NAME, Npc * cdim, numFIndices, elemMat));
       PetscCall(MatSetValues(derv, Npc * cdim, rowIDXs, numFIndices, findices, elemMat, ADD_VALUES));
       PetscCall(DMSwarmSortRestorePointsPerCell(sw, cell, &Npc, &pind));
       PetscCall(DMPlexRestoreClosureIndices(dm, fsection, globalFSection, cell, PETSC_FALSE, &numFIndices, &findices, NULL, NULL));
@@ -2320,7 +2317,7 @@ PetscErrorCode DMSwarmSetPointCoordinatesRandom(DM dm, PetscInt Npc)
   PetscCall(DMGetDimension(cdm, &dim));
   PetscCall(DMPlexGetHeightStratum(cdm, 0, &cStart, &cEnd));
   PetscCall(DMPlexGetCellType(cdm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
 
   PetscCall(PetscMalloc5(dim, &centroid, dim, &xi0, dim, &v0, dim * dim, &J, dim * dim, &invJ));
   for (d = 0; d < dim; ++d) xi0[d] = -1.0;

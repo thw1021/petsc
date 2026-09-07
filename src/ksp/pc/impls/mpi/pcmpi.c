@@ -285,10 +285,10 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(MatMPIAIJSetPreallocationCSR(A, ia, ja, a));
   PetscCall(MatSetBlockSize(A, matproperties[2]));
 
-  if (matproperties[3]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[3] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[4]) PetscCall(MatSetOption(A, MAT_HERMITIAN, matproperties[4] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[5]) PetscCall(MatSetOption(A, MAT_SPD, matproperties[5] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[6]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, matproperties[6] == 1 ? PETSC_TRUE : PETSC_FALSE));
+  if (matproperties[3]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, (bool)(matproperties[3] == 1)));
+  if (matproperties[4]) PetscCall(MatSetOption(A, MAT_HERMITIAN, (bool)(matproperties[4] == 1)));
+  if (matproperties[5]) PetscCall(MatSetOption(A, MAT_SPD, (bool)(matproperties[5] == 1)));
+  if (matproperties[6]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, (bool)(matproperties[6] == 1)));
 
   if (!PCMPIServerUseShmget) PetscCall(PetscFree3(ia, ja, a));
   PetscCall(KSPSetOperators(ksp, A, A));
@@ -372,10 +372,10 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
   if (!PCMPIServerUseShmget) PetscCall(PetscFree(a));
   PetscCallMPI(MPI_Bcast(matproperties, 4, MPIU_INT, 0, comm));
   /* if any of these properties was previously set and is now not set this will result in incorrect properties in A since there is no way to unset a property */
-  if (matproperties[0]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[0] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[1]) PetscCall(MatSetOption(A, MAT_HERMITIAN, matproperties[1] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[2]) PetscCall(MatSetOption(A, MAT_SPD, matproperties[2] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[3]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, matproperties[3] == 1 ? PETSC_TRUE : PETSC_FALSE));
+  if (matproperties[0]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, (bool)(matproperties[0] == 1)));
+  if (matproperties[1]) PetscCall(MatSetOption(A, MAT_HERMITIAN, (bool)(matproperties[1] == 1)));
+  if (matproperties[2]) PetscCall(MatSetOption(A, MAT_SPD, (bool)(matproperties[2] == 1)));
+  if (matproperties[3]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, (bool)(matproperties[3] == 1)));
   PetscCall(PetscLogEventEnd(EventServerDist, NULL, NULL, NULL, NULL));
   PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);

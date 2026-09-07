@@ -1204,7 +1204,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 #endif
 
 #if defined(__VALGRIND_H)
-  PETSC_RUNNING_ON_VALGRIND = RUNNING_ON_VALGRIND ? PETSC_TRUE : PETSC_FALSE;
+  PETSC_RUNNING_ON_VALGRIND = (bool)(RUNNING_ON_VALGRIND != 0);
   #if PetscDefined(USING_DARWIN) && PetscDefined(BLASLAPACK_SDOT_RETURNS_DOUBLE)
   if (PETSC_RUNNING_ON_VALGRIND) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "WARNING: Running valgrind with the macOS native BLAS and LAPACK can fail. If it fails, try configuring with --download-fblaslapack or --download-f2cblaslapack"));
   #endif
@@ -1662,7 +1662,7 @@ PetscErrorCode PetscFinalize(void)
       PetscCall(PetscOptionsGetString(NULL, NULL, "-objects_dump", string, sizeof(string), NULL));
       PetscCallMPI(MPI_Comm_dup(PETSC_COMM_WORLD, &local_comm));
       PetscCall(PetscSequentialPhaseBegin_Private(local_comm, 1));
-      PetscCall(PetscObjectsDump(stdout, (string[0] == 'a') ? PETSC_TRUE : PETSC_FALSE));
+      PetscCall(PetscObjectsDump(stdout, (bool)(string[0] == 'a')));
       PetscCall(PetscSequentialPhaseEnd_Private(local_comm, 1));
       PetscCallMPI(MPI_Comm_free(&local_comm));
     }
@@ -1692,7 +1692,7 @@ PetscErrorCode PetscFinalize(void)
   PetscCall(PetscInfoDestroy());
 
 #if !PetscDefined(HAVE_THREADSAFETY)
-  if (!(PETSC_RUNNING_ON_VALGRIND)) {
+  if (!PETSC_RUNNING_ON_VALGRIND) {
     char  fname[PETSC_MAX_PATH_LEN];
     char  sname[PETSC_MAX_PATH_LEN];
     FILE *fd;

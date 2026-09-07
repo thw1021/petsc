@@ -1625,8 +1625,8 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
 
   PetscFunctionBegin;
-  A->offloadmask                    = PETSC_OFFLOAD_KOKKOS;                                             // We do not really use this flag
-  A->boundtocpu                     = PetscDefined(HAVE_KOKKOS_WITHOUT_GPU) ? PETSC_TRUE : PETSC_FALSE; // MATAIJKOKKOS has yet to support CPU binding. But in this case, we deem it is bound to CPU.
+  A->offloadmask                    = PETSC_OFFLOAD_KOKKOS;                        // We do not really use this flag
+  A->boundtocpu                     = (bool)PetscDefined(HAVE_KOKKOS_WITHOUT_GPU); // MATAIJKOKKOS has yet to support CPU binding. But in this case, we deem it is bound to CPU.
   A->ops->assemblyend               = MatAssemblyEnd_SeqAIJKokkos;
   A->ops->destroy                   = MatDestroy_SeqAIJKokkos;
   A->ops->duplicate                 = MatDuplicate_SeqAIJKokkos;
@@ -1872,8 +1872,8 @@ PetscErrorCode MatCreateSeqAIJKokkos(MPI_Comm comm, PetscInt m, PetscInt n, Pets
 static PetscErrorCode MatSeqAIJKokkosSolveCheck(Mat A)
 {
   Mat_SeqAIJKokkosTriFactors *factors   = (Mat_SeqAIJKokkosTriFactors *)A->spptr;
-  const PetscBool             has_lower = factors->iL_d.extent(0) ? PETSC_TRUE : PETSC_FALSE; // false with Choleksy
-  const PetscBool             has_upper = factors->iU_d.extent(0) ? PETSC_TRUE : PETSC_FALSE; // true with LU and Choleksy
+  const PetscBool             has_lower = (bool)(factors->iL_d.extent(0) != 0); // false with Choleksy
+  const PetscBool             has_upper = (bool)(factors->iU_d.extent(0) != 0); // true with LU and Choleksy
 
   PetscFunctionBegin;
   if (!factors->sptrsv_symbolic_completed) { // If sptrsv_symbolic was not called yet
@@ -1888,8 +1888,8 @@ static PetscErrorCode MatSeqAIJKokkosTransposeSolveCheck(Mat A)
 {
   const PetscInt              n         = A->rmap->n;
   Mat_SeqAIJKokkosTriFactors *factors   = (Mat_SeqAIJKokkosTriFactors *)A->spptr;
-  const PetscBool             has_lower = factors->iL_d.extent(0) ? PETSC_TRUE : PETSC_FALSE; // false with Choleksy
-  const PetscBool             has_upper = factors->iU_d.extent(0) ? PETSC_TRUE : PETSC_FALSE; // true with LU or Choleksy
+  const PetscBool             has_lower = (bool)(factors->iL_d.extent(0) != 0); // false with Choleksy
+  const PetscBool             has_upper = (bool)(factors->iU_d.extent(0) != 0); // true with LU or Choleksy
 
   PetscFunctionBegin;
   if (!factors->transpose_updated) {
@@ -1983,7 +1983,7 @@ static PetscErrorCode MatSolve_SeqAIJKokkos_Cholesky(Mat A, Vec bb, Vec xx)
   ConstPetscScalarKokkosView  b;
   PetscScalarKokkosView       x;
   PetscIntKokkosView         &rowperm  = factors->rowperm;
-  PetscBool                   identity = rowperm.extent(0) ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool                   identity = (bool)(rowperm.extent(0) == 0);
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
@@ -2037,8 +2037,8 @@ static PetscErrorCode MatSolve_SeqAIJKokkos_LU(Mat A, Vec bb, Vec xx)
   PetscScalarKokkosView       x;
   PetscIntKokkosView         &rowperm      = factors->rowperm;
   PetscIntKokkosView         &colperm      = factors->colperm;
-  PetscBool                   row_identity = rowperm.extent(0) ? PETSC_FALSE : PETSC_TRUE;
-  PetscBool                   col_identity = colperm.extent(0) ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool                   row_identity = (bool)(rowperm.extent(0) == 0);
+  PetscBool                   col_identity = (bool)(colperm.extent(0) == 0);
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
@@ -2088,8 +2088,8 @@ static PetscErrorCode MatSolveTranspose_SeqAIJKokkos_LU(Mat A, Vec bb, Vec xx)
   PetscScalarKokkosView       x;
   PetscIntKokkosView         &rowperm      = factors->rowperm;
   PetscIntKokkosView         &colperm      = factors->colperm;
-  PetscBool                   row_identity = rowperm.extent(0) ? PETSC_FALSE : PETSC_TRUE;
-  PetscBool                   col_identity = colperm.extent(0) ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool                   row_identity = (bool)(rowperm.extent(0) == 0);
+  PetscBool                   col_identity = (bool)(colperm.extent(0) == 0);
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());

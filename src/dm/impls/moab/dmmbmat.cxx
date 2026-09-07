@@ -29,7 +29,7 @@ PETSC_INTERN PetscErrorCode DMCreateMatrix_Moab(DM dm, Mat *J)
   PetscCall(PetscCalloc2(nlsiz, &nnz, nlsiz, &onz));
 
   /* compute the nonzero pattern based on MOAB connectivity data for local elements */
-  PetscCall(DMMoab_Compute_NNZ_From_Connectivity(dm, &innz, nnz, &ionz, onz, tmp ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(DMMoab_Compute_NNZ_From_Connectivity(dm, &innz, nnz, &ionz, onz, (bool)(tmp != NULL)));
 
   /* create the Matrix and set its type as specified by user */
   PetscCall(MatCreate(((PetscObject)dm)->comm, &A));
@@ -74,7 +74,7 @@ PETSC_INTERN PetscErrorCode DMMoab_Compute_NNZ_From_Connectivity(DM dm, PetscInt
   bs           = dmmoab->bs;
   nloc         = dmmoab->nloc;
   nfields      = dmmoab->numFields;
-  isinterlaced = (isbaij || bs == nfields ? PETSC_TRUE : PETSC_FALSE);
+  isinterlaced = (bool)(isbaij || bs == nfields);
   nlsiz        = (isinterlaced ? nloc : nloc * nfields);
 
   /* loop over the locally owned vertices and figure out the NNZ pattern using connectivity information */

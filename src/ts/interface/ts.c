@@ -420,7 +420,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(TSAdaptSetFromOptions(ts->adapt, PetscOptionsObject));
 
   /* TS trajectory must be set after TS, since it may use some TS options above */
-  tflg = ts->trajectory ? PETSC_TRUE : PETSC_FALSE;
+  tflg = (bool)(ts->trajectory != NULL);
   PetscCall(PetscOptionsBool("-ts_save_trajectory", "Save the solution at each timestep", "TSSetSaveTrajectory", tflg, &tflg, NULL));
   if (tflg) PetscCall(TSSetSaveTrajectory(ts));
 
@@ -1764,7 +1764,7 @@ PetscErrorCode TSHasTransientVariable(TS ts, PetscBool *has)
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(DMGetDMTS(dm, &dmts));
-  *has = dmts->ops->transientvar ? PETSC_TRUE : PETSC_FALSE;
+  *has = (bool)(dmts->ops->transientvar != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

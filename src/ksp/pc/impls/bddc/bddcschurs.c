@@ -2102,7 +2102,7 @@ PetscErrorCode PCBDDCSubSchursInit(PCBDDCSubSchurs sub_schurs, const char *prefi
   PetscCall(PetscStrncpy(sub_schurs->mat_solver_type, MATSOLVERPETSC, sizeof(sub_schurs->mat_solver_type)));
 #endif
   sub_schurs->mat_factor_type = MAT_FACTOR_NONE;
-  sub_schurs->is_hermitian    = PetscDefined(USE_COMPLEX) ? PETSC_FALSE : PETSC_TRUE; /* Hermitian Cholesky is not supported by PETSc and external packages */
+  sub_schurs->is_hermitian    = (bool)!PetscDefined(USE_COMPLEX); /* Hermitian Cholesky is not supported by PETSc and external packages */
   sub_schurs->is_posdef       = PETSC_TRUE;
   sub_schurs->is_symmetric    = PETSC_TRUE;
   sub_schurs->debug           = PETSC_FALSE;

@@ -213,7 +213,7 @@ static PetscErrorCode PetscViewerGLVisGetNewWindow_Private(PetscViewer viewer, P
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIISocketOpen(PETSC_COMM_SELF, socket->name, socket->port, &window));
   /* if we could not establish a connection, we disable the socket viewer on all MPI ranks */
-  dis = !viewer ? PETSC_TRUE : PETSC_FALSE;
+  dis = (bool)(viewer == NULL);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &dis, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)viewer)));
   if (dis) {
     socket->status = PETSCVIEWERGLVIS_DISABLED;
@@ -613,7 +613,7 @@ PetscErrorCode PetscViewerGLVisOpen(MPI_Comm comm, PetscViewerGLVisType type, co
   PetscCall(PetscViewerCreate(comm, viewer));
   PetscCall(PetscViewerSetType(*viewer, PETSCVIEWERGLVIS));
 
-  socket       = (PetscViewerGLVis)((*viewer)->data);
+  socket       = (PetscViewerGLVis)(*viewer)->data;
   socket->type = type;
   if (type == PETSC_VIEWER_GLVIS_DUMP || name) {
     PetscCall(PetscFree(socket->name));

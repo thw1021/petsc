@@ -390,7 +390,7 @@ static inline PetscErrorCode PetscDTEnumPerm(PetscInt n, PetscInt k, PetscInt *p
     perm[i + s] = swap;
     odd ^= (!!s);
   }
-  if (isOdd) *isOdd = odd ? PETSC_TRUE : PETSC_FALSE;
+  if (isOdd) *isOdd = (bool)(odd != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -442,7 +442,7 @@ static inline PetscErrorCode PetscDTPermIndex(PetscInt n, const PetscInt *perm, 
     odd ^= (!!diff);
   }
   *k = idx;
-  if (isOdd) *isOdd = odd ? PETSC_TRUE : PETSC_FALSE;
+  if (isOdd) *isOdd = (bool)(odd != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -577,7 +577,7 @@ static inline PetscErrorCode PetscDTEnumSplit(PetscInt n, PetscInt k, PetscInt j
     }
   }
   for (; i < n; i++) subcomp[m++] = i;
-  if (isOdd) *isOdd = odd ? PETSC_TRUE : PETSC_FALSE;
+  if (isOdd) *isOdd = (bool)(odd != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

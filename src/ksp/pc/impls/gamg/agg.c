@@ -892,7 +892,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
 
   if (ishem || pc_gamg_agg->use_low_mem_filter) {
-    PetscCall(MatCreateGraph(Amat, pc_gamg_agg->graph_symmetrize, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, pc_gamg_agg->crs->strength_index_size, pc_gamg_agg->crs->strength_index, a_Gmat));
+    PetscCall(MatCreateGraph(Amat, pc_gamg_agg->graph_symmetrize, (bool)(vfilter >= 0 || ishem), vfilter, pc_gamg_agg->crs->strength_index_size, pc_gamg_agg->crs->strength_index, a_Gmat));
   } else {
     // make scalar graph, symmetrize if not known to be symmetric, scale, but do not filter (expensive)
     PetscCall(MatCreateGraph(Amat, pc_gamg_agg->graph_symmetrize, PETSC_TRUE, -1, pc_gamg_agg->crs->strength_index_size, pc_gamg_agg->crs->strength_index, a_Gmat));

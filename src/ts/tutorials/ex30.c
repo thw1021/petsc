@@ -2136,7 +2136,7 @@ static PetscErrorCode PreStage(TS ts, PetscReal stagetime)
   /* in case we need to call SNESSetFunctionDomainError */
   PetscCall(TSGetSNES(ts, &ctx->snes));
 
-  resample = ctx->split ? PETSC_TRUE : PETSC_FALSE;
+  resample = ctx->split;
   for (PetscInt i = 0; i < ctx->source_ctx->n; i++) {
     if (ctx->source_ctx->k[i] != 0.0) {
       resample = PETSC_TRUE;

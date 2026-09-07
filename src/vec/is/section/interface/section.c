@@ -2943,7 +2943,7 @@ PetscErrorCode PetscSectionHasConstraints(PetscSection s, PetscBool *hasConstrai
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscAssertPointer(hasConstraints, 2);
-  *hasConstraints = s->bc ? PETSC_TRUE : PETSC_FALSE;
+  *hasConstraints = (bool)(s->bc != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

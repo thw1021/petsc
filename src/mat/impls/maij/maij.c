@@ -192,7 +192,7 @@ enum {
 // keyword into account for these...
 PETSC_FORCE_INLINE static inline PetscErrorCode MatMult_MatMultAdd_SeqMAIJ_Template(Mat A, Vec xx, Vec yy, Vec zz, int N)
 {
-  const PetscBool    mult_add   = yy == NULL ? PETSC_FALSE : PETSC_TRUE;
+  const PetscBool    mult_add   = (bool)(yy != NULL);
   const Mat_SeqMAIJ *b          = (Mat_SeqMAIJ *)A->data;
   const Mat          baij       = b->AIJ;
   const Mat_SeqAIJ  *a          = (Mat_SeqAIJ *)baij->data;
@@ -253,7 +253,7 @@ PETSC_FORCE_INLINE static inline PetscErrorCode MatMult_MatMultAdd_SeqMAIJ_Templ
 
 PETSC_FORCE_INLINE static inline PetscErrorCode MatMultTranspose_MatMultTransposeAdd_SeqMAIJ_Template(Mat A, Vec xx, Vec yy, Vec zz, int N)
 {
-  const PetscBool    mult_add = yy == NULL ? PETSC_FALSE : PETSC_TRUE;
+  const PetscBool    mult_add = (bool)(yy != NULL);
   const Mat_SeqMAIJ *b        = (Mat_SeqMAIJ *)A->data;
   const Mat          baij     = b->AIJ;
   const Mat_SeqAIJ  *a        = (Mat_SeqAIJ *)baij->data;
@@ -1027,7 +1027,7 @@ PetscErrorCode MatCreateMAIJ(Mat A, PetscInt dof, Mat *maij)
   Mat       B;
   PetscBool flg;
   /* hack to prevent conversion to AIJ format for device types when used inside a parallel MAIJ */
-  PetscBool convert = dof < 0 ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool convert = (bool)(dof >= 0);
 
   PetscFunctionBegin;
   dof = PetscAbs(dof);

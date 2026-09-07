@@ -199,10 +199,10 @@ static PetscErrorCode MatLMVMCheckArgumentLayout(PetscLayout b, PetscLayout a)
     PetscCheck(b->n == a->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "argument layout (local size %" PetscInt_FMT ") is incompatible with MatLMVM layout (local size %" PetscInt_FMT ")", a->n, b->n);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  a_is_specified = (a->n >= 0) || (a->N >= 0) ? PETSC_TRUE : PETSC_FALSE;
+  a_is_specified = (bool)((a->n >= 0) || (a->N >= 0));
   PetscValidLogicalCollectiveLayout(a, a_is_specified);
   PetscCheck(a_is_specified, a->comm, PETSC_ERR_ARG_WRONGSTATE, "argument layout has n == PETSC_DETERMINE and N == PETSC_DECIDE, size must be specified first");
-  b_is_unspecified = (b->n < 0) && (b->N < 0) ? PETSC_TRUE : PETSC_FALSE;
+  b_is_unspecified = (bool)((b->n < 0) && (b->N < 0));
   PetscValidLogicalCollectiveLayout(b, b_is_unspecified);
   if (b_is_unspecified) PetscFunctionReturn(PETSC_SUCCESS); // any layout can replace an unspecified layout
   // we don't want to change the setup states in this check, so make duplicates if they have not been setup
@@ -348,7 +348,7 @@ PETSC_INTERN PetscErrorCode MatLMVMJ0KSPIsExact(Mat B, PetscBool *is_exact)
   PetscCall(PCGetOperators(pc, NULL, &pc_pmat));
   if (pc_pmat != lmvm->J0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PCMatGetApplyOperation(pc, &matop));
-  *is_exact = (matop == MATOP_SOLVE) ? PETSC_TRUE : PETSC_FALSE;
+  *is_exact = (bool)(matop == MATOP_SOLVE);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1043,7 +1043,6 @@ static PetscErrorCode MatLMVMUpdateOpDiffVecs(Mat B, LMBasis Y, PetscScalar alph
 PETSC_INTERN PetscErrorCode MatLMVMGetUpdatedBasis(Mat B, MatLMVMBasisType type, LMBasis *basis_p, MatLMVMBasisType *returned_type, PetscScalar *scale)
 {
   Mat_LMVM   *lmvm = (Mat_LMVM *)B->data;
-  LMBasis     basis;
   PetscBool   is_scalar;
   PetscScalar scale_;
 
@@ -1066,7 +1065,7 @@ PETSC_INTERN PetscErrorCode MatLMVMGetUpdatedBasis(Mat B, MatLMVMBasisType type,
       *returned_type = (type == LMBASIS_B0S) ? LMBASIS_S : LMBASIS_Y;
       *scale         = (type == LMBASIS_B0S) ? scale_ : (1.0 / scale_);
     } else {
-      LMBasis orig_basis = (type == LMBASIS_B0S) ? lmvm->basis[LMBASIS_S] : lmvm->basis[LMBASIS_Y];
+      LMBasis orig_basis = (type == LMBASIS_B0S) ? lmvm->basis[LMBASIS_S] : lmvm->basis[LMBASIS_Y], basis;
 
       *returned_type = type;
       *scale         = 1.0;
@@ -1079,7 +1078,7 @@ PETSC_INTERN PetscErrorCode MatLMVMGetUpdatedBasis(Mat B, MatLMVMBasisType type,
   case LMBASIS_S_MINUS_H0Y:
   case LMBASIS_Y_MINUS_B0S: {
     MatLMVMBasisType op_basis_t = (type == LMBASIS_S_MINUS_H0Y) ? LMBASIS_H0Y : LMBASIS_B0S;
-    LMBasis          op_basis;
+    LMBasis          op_basis, basis;
 
     if (returned_type) *returned_type = type;
     if (scale) *scale = 1.0;
@@ -1092,7 +1091,6 @@ PETSC_INTERN PetscErrorCode MatLMVMGetUpdatedBasis(Mat B, MatLMVMBasisType type,
   default:
     PetscUnreachable();
   }
-  basis = *basis_p;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1232,7 +1230,7 @@ static PetscErrorCode MatLMVMApplyVecsThenOp(PetscScalar alpha, Mat B, PetscInt 
 PETSC_INTERN PetscErrorCode MatLMVMBasisGEMVH(Mat B, MatLMVMBasisType type, PetscInt oldest, PetscInt next, PetscScalar alpha, Vec v, PetscScalar beta, Vec array)
 {
   Mat_LMVM        *lmvm              = (Mat_LMVM *)B->data;
-  PetscBool        cache_J0_products = lmvm->do_not_cache_J0_products ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool        cache_J0_products = (bool)!lmvm->do_not_cache_J0_products;
   LMBasis          basis;
   MatLMVMBasisType basis_t;
   PetscScalar      gamma;
@@ -1268,7 +1266,7 @@ PETSC_INTERN PetscErrorCode MatLMVMBasisGEMVH(Mat B, MatLMVMBasisType type, Pets
 PETSC_INTERN PetscErrorCode MatLMVMBasisGEMV(Mat B, MatLMVMBasisType type, PetscInt oldest, PetscInt next, PetscScalar alpha, Vec x, PetscScalar beta, Vec y)
 {
   Mat_LMVM *lmvm              = (Mat_LMVM *)B->data;
-  PetscBool cache_J0_products = lmvm->do_not_cache_J0_products ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool cache_J0_products = (bool)!lmvm->do_not_cache_J0_products;
   LMBasis   basis;
 
   PetscFunctionBegin;

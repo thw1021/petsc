@@ -1734,7 +1734,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
       CGNS_ENUMT(DataType_t) datatype;
 
       PetscCallCGNSRead(cg_coord_info(cgid, base, zone, 1, &datatype, buffer), *dm, 0);
-      read_with_double = datatype == CGNS_ENUMV(RealDouble) ? PETSC_TRUE : PETSC_FALSE;
+      read_with_double = (bool)(datatype == CGNS_ENUMV(RealDouble));
     }
 
     // Read coords from file and set into component-major ordering

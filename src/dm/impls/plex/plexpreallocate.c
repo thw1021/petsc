@@ -258,7 +258,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMGetGlobalSection(dm, &sectionGlobal));
   PetscCall(PetscSFGetGraph(sf, &nroots, NULL, NULL, NULL));
-  doComm = nroots >= 0 ? PETSC_TRUE : PETSC_FALSE;
+  doComm = (bool)(nroots >= 0);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &doComm, 1, MPI_C_BOOL, MPI_LAND, comm));
   /* Create section for dof adjacency (dof ==> # adj dof) */
   PetscCall(PetscSectionGetChart(section, &pStart, &pEnd));

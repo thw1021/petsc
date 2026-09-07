@@ -8088,7 +8088,7 @@ PETSC_EXTERN void matsetvaluesmpiaij_(Mat *mmat, PetscInt *mm, const PetscInt im
     Mat_SeqAIJ *a     = (Mat_SeqAIJ *)A->data;
     PetscInt   *aimax = a->imax, *ai = a->i, *ailen = a->ilen, *aj = a->j;
     MatScalar  *aa;
-    PetscBool   ignorezeroentries = (a->ignorezeroentries && addv == ADD_VALUES) ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool   ignorezeroentries = (bool)(a->ignorezeroentries && addv == ADD_VALUES);
     Mat         B                 = aij->B;
     Mat_SeqAIJ *b                 = (Mat_SeqAIJ *)B->data;
     PetscInt   *bimax = b->imax, *bi = b->i, *bilen = b->ilen, *bj = b->j, bm = aij->B->rmap->n, am = aij->A->rmap->n;

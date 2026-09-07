@@ -719,7 +719,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_H2OPUS(PC pc)
   pch2opus->max_rank      = PETSC_DECIDE;
   pch2opus->bs            = PETSC_DECIDE;
   pch2opus->mrtol         = PETSC_DECIDE;
-  pch2opus->boundtocpu    = PetscDefined(H2OPUS_USE_GPU) ? PETSC_FALSE : PETSC_TRUE;
+  pch2opus->boundtocpu    = (bool)!PetscDefined(H2OPUS_USE_GPU);
   pc->ops->destroy        = PCDestroy_H2OPUS;
   pc->ops->setup          = PCSetUp_H2OPUS;
   pc->ops->apply          = PCApply_H2OPUS;

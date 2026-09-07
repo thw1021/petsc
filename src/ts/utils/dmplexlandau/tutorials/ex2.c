@@ -429,7 +429,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void
     if (!rectx->plotting) { /* first step of possible backtracks */
       rectx->plotting = PETSC_TRUE;
       /* diagnostics + change E field with Sptizer (not just a monitor) */
-      PetscCall(rectx->test(ts, X, stepi, time, reason ? PETSC_TRUE : PETSC_FALSE, ctx, rectx));
+      PetscCall(rectx->test(ts, X, stepi, time, (bool)(reason != TS_CONVERGED_ITERATING), ctx, rectx));
     } else {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\t\t ERROR SKIP test spit ------\n"));
       rectx->plotting = PETSC_TRUE;
@@ -444,7 +444,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void
   } else {
     if (rectx->plotting) PetscCall(PetscPrintf(PETSC_COMM_WORLD, " ERROR rectx->plotting=%s step %" PetscInt_FMT "\n", PetscBools[rectx->plotting], stepi));
     /* diagnostics + change E field with Sptizer (not just a monitor) - can we lag this? */
-    PetscCall(rectx->test(ts, X, stepi, time, reason ? PETSC_TRUE : PETSC_FALSE, ctx, rectx));
+    PetscCall(rectx->test(ts, X, stepi, time, (bool)(reason != TS_CONVERGED_ITERATING), ctx, rectx));
   }
   /* parallel check that only works of all batches are identical */
   if (reason && ctx->verbose > 3 && ctx->batch_sz > 1) {

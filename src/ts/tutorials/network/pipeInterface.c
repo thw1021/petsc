@@ -211,7 +211,7 @@ PetscErrorCode JunctionCreateJacobian(DM dm, PetscInt v, Mat *Jin, Mat *J[])
   for (e = 0; e < nedges; e++) {
     /* create Jv[2*e+1] = Jacobian(v,e), e: supporting edge */
     PetscCall(DMNetworkGetConnectedVertices(dm, edges[e], &cone));
-    isSelf = (v == cone[0]) ? PETSC_TRUE : PETSC_FALSE;
+    isSelf = (bool)(v == cone[0]);
 
     if (Jin) {
       if (isSelf) {

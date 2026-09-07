@@ -810,7 +810,7 @@ PetscErrorCode TSAdaptSetFromOptions(TSAdapt adapt, PetscOptionItems PetscOption
 
   PetscCall(PetscOptionsInt("-ts_adapt_time_step_increase_delay", "Number of timesteps to delay increasing the time step after it has been decreased due to failed solver", "TSAdaptSetTimeStepIncreaseDelay", adapt->timestepjustdecreased_delay, &adapt->timestepjustdecreased_delay, NULL));
 
-  PetscCall(PetscOptionsBool("-ts_adapt_monitor", "Print choices made by adaptive controller", "TSAdaptSetMonitor", adapt->monitor ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-ts_adapt_monitor", "Print choices made by adaptive controller", "TSAdaptSetMonitor", (bool)(adapt->monitor != NULL), &flg, &set));
   if (set) PetscCall(TSAdaptSetMonitor(adapt, flg));
 
   PetscTryTypeMethod(adapt, setfromoptions, PetscOptionsObject);

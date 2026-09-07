@@ -425,7 +425,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
   }
 
   /* Adapt connected components if needed */
-  adapt_interface = (cornerp || graph->multi_element) ? PETSC_TRUE : PETSC_FALSE;
+  adapt_interface = (bool)(cornerp || graph->multi_element);
   for (PetscInt i = 0; i < graph->n_subsets && !adapt_interface; i++) {
     if (graph->subset_ncc[i] > 1) adapt_interface = PETSC_TRUE;
   }

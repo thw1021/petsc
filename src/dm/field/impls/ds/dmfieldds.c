@@ -1196,7 +1196,7 @@ PetscErrorCode DMFieldCreateDSWithDG(DM dm, DM dmDG, PetscInt fieldNum, Vec vec,
   }
   if (disc) {
     PetscCall(PetscObjectGetClassId(disc, &id));
-    isContainer = (id == PETSC_CONTAINER_CLASSID) ? PETSC_TRUE : PETSC_FALSE;
+    isContainer = (bool)(id == PETSC_CONTAINER_CLASSID);
   }
   if (!disc || isContainer) {
     MPI_Comm       comm = PetscObjectComm((PetscObject)dm);

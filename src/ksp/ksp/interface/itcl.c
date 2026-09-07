@@ -403,7 +403,7 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
   PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_singular_value", "singular_value", ksp));
   PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_error", "error", ksp));
   PetscCall(PetscOptionsBool("-ksp_monitor_pause_final", "Pauses all draw monitors at the final iterate", "KSPMonitorPauseFinal_Internal", PETSC_FALSE, &ksp->pauseFinal, NULL));
-  PetscCall(PetscOptionsBool("-ksp_initial_guess_nonzero", "Use the contents of the solution vector for initial guess", "KSPSetInitialNonzero", ksp->guess_zero ? PETSC_FALSE : PETSC_TRUE, &flag, &flg));
+  PetscCall(PetscOptionsBool("-ksp_initial_guess_nonzero", "Use the contents of the solution vector for initial guess", "KSPSetInitialNonzero", (bool)!ksp->guess_zero, &flag, &flg));
   if (flg) PetscCall(KSPSetInitialGuessNonzero(ksp, flag));
 
   PetscCall(KSPGetReusePreconditioner(ksp, &reuse));

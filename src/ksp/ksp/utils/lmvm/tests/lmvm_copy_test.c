@@ -31,7 +31,7 @@ static PetscErrorCode VecEqualToTolerance(Vec a, Vec b, NormType norm_type, Pets
   PetscCall(VecAXPY(diff, -1.0, b));
   PetscCall(VecNorm(diff, norm_type, &diff_norm));
   PetscCall(VecDestroy(&diff));
-  *flg = (diff_norm <= tol) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(diff_norm <= tol);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

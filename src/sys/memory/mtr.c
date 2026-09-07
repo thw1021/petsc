@@ -969,7 +969,7 @@ PetscErrorCode PetscMallocSetDebug(PetscBool eachcall, PetscBool initializenan)
 PetscErrorCode PetscMallocGetDebug(PetscBool *basic, PetscBool *eachcall, PetscBool *initializenan)
 {
   PetscFunctionBegin;
-  if (basic) *basic = (PetscTrMalloc == PetscTrMallocDefault) ? PETSC_TRUE : PETSC_FALSE;
+  if (basic) *basic = (bool)(PetscTrMalloc == PetscTrMallocDefault);
   if (eachcall) *eachcall = TRdebug;
   if (initializenan) *initializenan = TRdebugIinitializenan;
   PetscFunctionReturn(PETSC_SUCCESS);

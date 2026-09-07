@@ -39,6 +39,6 @@ PetscErrorCode PetscHasExternalPackage(const char pkg[], PetscBool *has)
 #else
   #error "PETSC_HAVE_PACKAGES macro undefined. Please reconfigure"
 #endif
-  *has = loc ? PETSC_TRUE : PETSC_FALSE;
+  *has = (bool)(loc != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }

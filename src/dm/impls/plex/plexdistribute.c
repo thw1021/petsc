@@ -1276,7 +1276,7 @@ static PetscErrorCode DMPlexDistributeLabels(DM dm, PetscSF migrationSF, DM dmPa
   PetscCall(DMPlexGetDepth(dm, &depth));
   PetscCall(DMPlexGetDepthLabel(dm, &depthLabel));
   if (depthLabel) PetscCall(PetscObjectStateGet((PetscObject)depthLabel, &depthState));
-  sendDepth = mesh->depthState != depthState ? PETSC_TRUE : PETSC_FALSE;
+  sendDepth = (bool)(mesh->depthState != depthState);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &sendDepth, 1, MPI_C_BOOL, MPI_LOR, comm));
   if (sendDepth) {
     PetscCall(DMPlexGetDepthLabel(dmParallel, &dmParallel->depthLabel));
@@ -2479,7 +2479,7 @@ PetscErrorCode DMPlexIsDistributed(DM dm, PetscBool *distributed)
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
   count = (pEnd - pStart) > 0 ? 1 : 0;
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &count, 1, MPIU_INT, MPI_SUM, comm));
-  *distributed = count > 1 ? PETSC_TRUE : PETSC_FALSE;
+  *distributed = (bool)(count > 1);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

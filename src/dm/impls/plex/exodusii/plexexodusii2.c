@@ -1336,7 +1336,7 @@ static PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, PetscExodusIIIn
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(VecGetDM(v, &dm));
   PetscCall(DMGetUseNatural(dm, &useNatural));
-  useNatural = useNatural && size > 1 ? PETSC_TRUE : PETSC_FALSE;
+  useNatural = (bool)(useNatural && size > 1);
   if (useNatural) {
     PetscCall(DMPlexCreateNaturalVector(dm, &vNatural));
     PetscCall(DMPlexGlobalToNaturalBegin(dm, v, vNatural));
@@ -1388,7 +1388,7 @@ static PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, PetscExodusIIIn
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(VecGetDM(v, &dm));
   PetscCall(DMGetUseNatural(dm, &useNatural));
-  useNatural = useNatural && size > 1 ? PETSC_TRUE : PETSC_FALSE;
+  useNatural = (bool)(useNatural && size > 1);
   if (useNatural) PetscCall(DMPlexCreateNaturalVector(dm, &vNatural));
   else vNatural = v;
 
@@ -1440,7 +1440,7 @@ static PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, PetscExodusIIIn
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(VecGetDM(v, &dm));
   PetscCall(DMGetUseNatural(dm, &useNatural));
-  useNatural = useNatural && size > 1 ? PETSC_TRUE : PETSC_FALSE;
+  useNatural = (bool)(useNatural && size > 1);
   if (useNatural) {
     PetscCall(DMPlexCreateNaturalVector(dm, &vNatural));
     PetscCall(DMPlexGlobalToNaturalBegin(dm, v, vNatural));
@@ -1516,7 +1516,7 @@ static PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, PetscExodusIIIn
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(VecGetDM(v, &dm));
   PetscCall(DMGetUseNatural(dm, &useNatural));
-  useNatural = useNatural && size > 1 ? PETSC_TRUE : PETSC_FALSE;
+  useNatural = (bool)(useNatural && size > 1);
   if (useNatural) PetscCall(DMPlexCreateNaturalVector(dm, &vNatural));
   else vNatural = v;
 
@@ -1903,9 +1903,9 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
     };
     PetscBool flag[n];
 
-    flag[0] = cellSets ? PETSC_TRUE : PETSC_FALSE;
-    flag[1] = faceSets ? PETSC_TRUE : PETSC_FALSE;
-    flag[2] = vertSets ? PETSC_TRUE : PETSC_FALSE;
+    flag[0] = (bool)(cellSets != NULL);
+    flag[1] = (bool)(faceSets != NULL);
+    flag[2] = (bool)(vertSets != NULL);
     PetscCallMPI(MPI_Bcast(flag, n, MPI_C_BOOL, 0, comm));
     if (flag[0]) PetscCall(DMCreateLabel(*dm, "Cell Sets"));
     if (flag[1]) PetscCall(DMCreateLabel(*dm, "Face Sets"));

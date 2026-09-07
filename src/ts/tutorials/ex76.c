@@ -1418,7 +1418,7 @@ static PetscErrorCode CreateCellDM(DM dm, AppCtx *user)
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
 
   PetscCall(DMGetField(dm, VEL, NULL, (PetscObject *)&fe));
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, simplex, "div_", PETSC_DEFAULT, &fediv));
@@ -1458,7 +1458,7 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
   /* Create finite element */
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, dim, simplex, "vel_", PETSC_DEFAULT, &fe[0]));
   PetscCall(PetscObjectSetName((PetscObject)fe[0], "velocity"));

@@ -108,9 +108,9 @@ int main(int argc, char **args)
   for (i = 0; i < 2; i++) {
     PetscInt shift = i;
     for (j = 0; j < 2; j++) {
-      PetscBool symmetric = ((j > 0) ? PETSC_FALSE : PETSC_TRUE);
+      PetscBool symmetric = (bool)(j <= 0);
       for (k = 0; k < 2; k++) {
-        PetscBool compressed = ((k > 0) ? PETSC_FALSE : PETSC_TRUE);
+        PetscBool compressed = (bool)(k <= 0);
         PetscCall(DumpCSR(A, shift, symmetric, compressed));
         PetscCall(DumpCSR(B, shift, symmetric, compressed));
         PetscCall(DumpCSR(C, shift, symmetric, compressed));

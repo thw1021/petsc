@@ -130,7 +130,7 @@ int main(int argc, char **argv)
           PetscReal    noise;
           PetscInt     i, n, order = 1;
 
-          PetscCall(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex ? PETSC_TRUE : PETSC_FALSE), &dm));
+          PetscCall(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, (bool)(isSimplex != 0)), &dm));
           if (isFE) {
             DM         dmCoord;
             PetscSpace sp;
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
             PetscErrorCode (*funcs[1])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *) = {identityEmbedding};
             PetscCtx ctxs[1]                                                                                    = {NULL};
 
-            PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dim, isSimplex ? PETSC_TRUE : PETSC_FALSE, isSimplex ? NULL : "tensor_", PETSC_DEFAULT, &fe));
+            PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dim, (bool)(isSimplex != 0), isSimplex ? NULL : "tensor_", PETSC_DEFAULT, &fe));
             PetscCall(PetscFEGetBasisSpace(fe, &sp));
             PetscCall(PetscSpaceGetDegree(sp, &order, NULL));
             PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
             if (isFE) {
               PetscFE fe;
 
-              PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dimC, isSimplex ? PETSC_TRUE : PETSC_FALSE, isSimplex ? NULL : "tensor_", PETSC_DEFAULT, &fe));
+              PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dimC, (bool)(isSimplex != 0), isSimplex ? NULL : "tensor_", PETSC_DEFAULT, &fe));
               PetscCall(DMSetField(coordDM, 0, NULL, (PetscObject)fe));
               PetscCall(PetscFEDestroy(&fe));
               PetscCall(DMCreateDS(coordDM));
@@ -217,7 +217,7 @@ int main(int argc, char **argv)
           }
           PetscCall(VecRestoreArray(coords, &coordArray));
           PetscCall(DMSetCoordinatesLocal(dm, coords));
-          PetscCall(testIdentity(dm, isSimplex ? PETSC_TRUE : PETSC_FALSE, 0, randCtx, numTests, tol));
+          PetscCall(testIdentity(dm, (bool)(isSimplex != 0), 0, randCtx, numTests, tol));
           PetscCall(DMDestroy(&dm));
         }
       }

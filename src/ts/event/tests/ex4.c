@@ -170,7 +170,7 @@ int main(int argc, char **argv)
     PetscReal err = 10.0;
     if (j < ctx.cntref) err = PetscAbsReal(ctx.evres[j] - ctx.ref[j]);
     PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%d\t%g\t%g\t%s\n", ctx.rank, (double)ctx.evres[j], (double)err, err < ctx.errtol ? "pass" : "fail"));
-    pass = (pass && err < ctx.errtol ? PETSC_TRUE : PETSC_FALSE);
+    pass = (bool)(pass && err < ctx.errtol);
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "This test: %s\n", pass ? "PASSED" : "FAILED"));

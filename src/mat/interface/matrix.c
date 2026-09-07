@@ -5156,7 +5156,7 @@ PetscErrorCode MatGetFactorAvailable(Mat mat, MatSolverType type, MatFactorType 
   MatCheckPreallocated(mat, 1);
 
   PetscCall(MatSolverTypeGet(type, ((PetscObject)mat)->type_name, ftype, NULL, NULL, &gconv));
-  *flg = gconv ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(gconv != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5766,7 +5766,7 @@ PetscErrorCode MatIsTranspose(Mat A, Mat B, PetscReal tol, PetscBool *flg)
 PetscErrorCode MatHermitianTranspose(Mat mat, MatReuse reuse, Mat *B)
 {
   PetscFunctionBegin;
-  PetscCall(MatTranspose_Private(mat, reuse, B, PetscDefined(USE_COMPLEX) ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(MatTranspose_Private(mat, reuse, B, (bool)PetscDefined(USE_COMPLEX)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -8452,7 +8452,7 @@ PetscErrorCode MatSelectVariableBlockSizes(Mat subA, Mat A, IS isrow)
 {
   const PetscInt *rows;
   PetscInt        n, rStart, rEnd, Nb = 0;
-  PetscBool       flg = A->bsizes ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool       flg = (bool)(A->bsizes != NULL);
 
   PetscFunctionBegin;
   // The code for block size extraction does not support an unsorted IS
@@ -11720,7 +11720,7 @@ PetscErrorCode MatSetOperation(Mat mat, MatOperation op, PetscErrorCodeFn *f)
   else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
   else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
 #endif
-  (((PetscErrorCodeFn **)mat->ops)[op]) = f;
+  ((PetscErrorCodeFn **)mat->ops)[op] = f;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11765,7 +11765,7 @@ PetscErrorCode MatGetOperation(Mat mat, MatOperation op, PetscErrorCodeFn **f)
   else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
   else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
 #endif
-  *f = (((PetscErrorCodeFn **)mat->ops)[op]);
+  *f = ((PetscErrorCodeFn **)mat->ops)[op];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11843,7 +11843,7 @@ PetscErrorCode MatHasCongruentLayouts(Mat mat, PetscBool *cong)
   PetscValidType(mat, 1);
   PetscAssertPointer(cong, 2);
   if (!mat->rmap || !mat->cmap) {
-    *cong = mat->rmap == mat->cmap ? PETSC_TRUE : PETSC_FALSE;
+    *cong = (bool)(mat->rmap == mat->cmap);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (mat->congruentlayouts == PETSC_DECIDE) { /* first time we compare rows and cols layouts */
@@ -11852,7 +11852,7 @@ PetscErrorCode MatHasCongruentLayouts(Mat mat, PetscBool *cong)
     PetscCall(PetscLayoutCompare(mat->rmap, mat->cmap, cong));
     if (*cong) mat->congruentlayouts = 1;
     else mat->congruentlayouts = 0;
-  } else *cong = mat->congruentlayouts ? PETSC_TRUE : PETSC_FALSE;
+  } else *cong = (bool)(mat->congruentlayouts != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

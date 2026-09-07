@@ -18,7 +18,7 @@
 @*/
 PetscBool PetscEqualReal(PetscReal a, PetscReal b)
 {
-  return (a == b) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(a == b);
 }
 
 /*@
@@ -39,5 +39,5 @@ PetscBool PetscEqualReal(PetscReal a, PetscReal b)
 @*/
 PetscBool PetscEqualScalar(PetscScalar a, PetscScalar b)
 {
-  return (a == b) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(a == b);
 }

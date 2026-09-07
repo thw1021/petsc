@@ -147,7 +147,7 @@ PetscErrorCode PCFactorGetAllowDiagonalFill_Factor(PC pc, PetscBool *flg)
   PC_Factor *dir = (PC_Factor *)pc->data;
 
   PetscFunctionBegin;
-  *flg = dir->info.diagonal_fill ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(dir->info.diagonal_fill != 0.0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -233,7 +233,7 @@ PetscErrorCode PCSetFromOptions_Factor(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsReal("-pc_factor_zeropivot", "Pivot is considered zero if less than", "PCFactorSetZeroPivot", factor->info.zeropivot, &factor->info.zeropivot, NULL));
   PetscCall(PetscOptionsReal("-pc_factor_column_pivot", "Column pivot tolerance (used only for some factorization)", "PCFactorSetColumnPivot", factor->info.dtcol, &factor->info.dtcol, &flg));
 
-  PetscCall(PetscOptionsBool("-pc_factor_pivot_in_blocks", "Pivot inside matrix dense blocks for BAIJ and SBAIJ", "PCFactorSetPivotInBlocks", factor->info.pivotinblocks ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-pc_factor_pivot_in_blocks", "Pivot inside matrix dense blocks for BAIJ and SBAIJ", "PCFactorSetPivotInBlocks", (bool)(factor->info.pivotinblocks != 0.0), &flg, &set));
   if (set) PetscCall(PCFactorSetPivotInBlocks(pc, flg));
 
   PetscCall(PetscOptionsBool("-pc_factor_reuse_fill", "Use fill from previous factorization", "PCFactorSetReuseFill", PETSC_FALSE, &flg, &set));

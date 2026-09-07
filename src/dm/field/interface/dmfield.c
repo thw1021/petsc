@@ -435,7 +435,7 @@ PetscErrorCode DMFieldCreateDefaultFaceQuadrature(DMField field, IS pointIS, Pet
 @*/
 PetscErrorCode DMFieldCreateFEGeom(DMField field, IS pointIS, PetscQuadrature quad, PetscFEGeomMode mode, PetscFEGeom **geom)
 {
-  PetscBool    faceData = mode == PETSC_FEGEOM_BOUNDARY || mode == PETSC_FEGEOM_COHESIVE ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool    faceData = (bool)(mode == PETSC_FEGEOM_BOUNDARY || mode == PETSC_FEGEOM_COHESIVE);
   PetscInt     dim, dE;
   PetscInt     nPoints;
   PetscInt     maxDegree;
@@ -518,7 +518,7 @@ PetscErrorCode DMFieldCreateFEGeom(DMField field, IS pointIS, PetscQuadrature qu
   }
   PetscCall(PetscFEGeomComplete(g));
   PetscCall(DMFieldGetDegree(field, pointIS, NULL, &maxDegree));
-  g->isAffine = (maxDegree <= 1) ? PETSC_TRUE : PETSC_FALSE;
+  g->isAffine = (bool)(maxDegree <= 1);
   if (faceData) PetscUseTypeMethod(field, computeFaceData, pointIS, quad, g);
   *geom = g;
   PetscFunctionReturn(PETSC_SUCCESS);

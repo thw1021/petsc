@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     for (PetscInt j = 0; j < 10; j++) results[i][j] = 0;
     PetscCall(TSMonitorSet(ts, Monitor, results[i], NULL));
     PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
-    if (i) PetscCall(TSSetResize(ts, i == 1 ? PETSC_TRUE : PETSC_FALSE, TransferSetUp, Transfer, &alreadydone));
+    if (i) PetscCall(TSSetResize(ts, (bool)(i == 1), TransferSetUp, Transfer, &alreadydone));
     PetscCall(TSSetTime(ts, 0));
     PetscCall(TSSetTimeStep(ts, 1. / 4.));
     PetscCall(TSSetMaxSteps(ts, 10));

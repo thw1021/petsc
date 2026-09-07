@@ -99,7 +99,7 @@ static PetscErrorCode PetscViewerHDF5HasAttribute_Internal(PetscViewer viewer, c
   PetscFunctionBegin;
   PetscCall(PetscViewerHDF5GetFileId(viewer, &h5));
   PetscCallHDF5Return(hhas, H5Aexists_by_name, (h5, parent, name, H5P_DEFAULT));
-  *has = hhas ? PETSC_TRUE : PETSC_FALSE;
+  *has = (bool)(hhas != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -308,7 +308,7 @@ static PetscErrorCode PetscViewerHDF5GetCollective_HDF5(PetscViewer viewer, Pets
   *flg = PETSC_FALSE;
 #else
   PetscCallHDF5(H5Pget_dxpl_mpio, (hdf5->dxpl_id, &mode));
-  *flg = (mode == H5FD_MPIO_COLLECTIVE) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(mode == H5FD_MPIO_COLLECTIVE);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }

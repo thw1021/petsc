@@ -1005,7 +1005,7 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
 
       PetscCall(ISGetIndices(fieldIS, &fields));
       for (f = 0; f < NfTot; ++f) fieldActive[f] = PETSC_FALSE;
-      for (f = 0; f < Nf; ++f) fieldActive[fields[f]] = (funcs[f] && sp[f]) ? PETSC_TRUE : PETSC_FALSE;
+      for (f = 0; f < Nf; ++f) fieldActive[fields[f]] = (bool)(funcs[f] && sp[f]);
       PetscCall(ISRestoreIndices(fieldIS, &fields));
     }
     if (label) {

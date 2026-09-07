@@ -147,7 +147,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
       PetscInt numCoords = s->last - s->first + 1;
       PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, '('));
       PetscCall(PetscMalloc1(s->nd * numCoords, (PetscScalar **)&s->data));
-      PetscCall(DMPlexCreateFluent_ReadValues(viewer, s->data, s->nd * numCoords, PETSC_SCALAR, s->index == 2010 ? PETSC_TRUE : PETSC_FALSE, &numClosingParens));
+      PetscCall(DMPlexCreateFluent_ReadValues(viewer, s->data, s->nd * numCoords, PETSC_SCALAR, (bool)(s->index == 2010), &numClosingParens));
       if (!numClosingParens) PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
       else --numClosingParens;
     }
@@ -171,7 +171,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
         PetscInt numCells = s->last - s->first + 1;
         PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, '('));
         PetscCall(PetscMalloc1(numCells, (PetscInt **)&s->data));
-        PetscCall(DMPlexCreateFluent_ReadValues(viewer, s->data, numCells, PETSC_INT, s->index == 2012 ? PETSC_TRUE : PETSC_FALSE, &numClosingParens));
+        PetscCall(DMPlexCreateFluent_ReadValues(viewer, s->data, numCells, PETSC_INT, (bool)(s->index == 2012), &numClosingParens));
         if (!numClosingParens) PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
         else --numClosingParens;
       }
@@ -219,7 +219,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
         if (s->nd == 0) {
           /* Determine the size of the block for "mixed" facets */
           PetscInt numFaceVert = 0;
-          PetscCall(DMPlexCreateFluent_ReadValues(viewer, &numFaceVert, 1, PETSC_INT, s->index == 2013 ? PETSC_TRUE : PETSC_FALSE, &numClosingParens));
+          PetscCall(DMPlexCreateFluent_ReadValues(viewer, &numFaceVert, 1, PETSC_INT, (bool)(s->index == 2013), &numClosingParens));
           if (!f) {
             maxsize = (numFaceVert + 3) * numFaces;
             PetscCall(PetscMalloc1(maxsize, (PetscInt **)&s->data));
@@ -238,7 +238,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
           ++offset;
           numEntries = numFaceVert + 2;
         }
-        PetscCall(DMPlexCreateFluent_ReadValues(viewer, &(((PetscInt *)s->data)[offset]), numEntries, PETSC_INT, s->index == 2013 ? PETSC_TRUE : PETSC_FALSE, &numClosingParens));
+        PetscCall(DMPlexCreateFluent_ReadValues(viewer, &(((PetscInt *)s->data)[offset]), numEntries, PETSC_INT, (bool)(s->index == 2013), &numClosingParens));
         offset += numEntries;
       }
       if (s->nd != 0) PetscCall(PetscMPIIntCast(numEntries - 2, &s->nd));
@@ -377,7 +377,7 @@ static PetscErrorCode ReorderTetrahedron(PetscViewer viewer, DM dm, PetscInt cel
           //PetscCheck(eornt == -(eornt2 + 1), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell % " PetscInt_FMT " edge %" PetscInt_FMT " (%" PetscInt_FMT ") found twice with the same orientation in face %" PetscInt_FMT " edge %" PetscInt_FMT, cell, edge, e, c, c2);
           // Matched face `newCone[0]` with orientation `newOrnt[0]` to face `cone[c]` with orientation `ornt[c]` along edge `edge`
           PetscCall(PetscInfo((PetscObject)viewer, "CASE: Matched cell %" PetscInt_FMT " edge %" PetscInt_FMT "/%" PetscInt_FMT " (%" PetscInt_FMT ") to face %" PetscInt_FMT "/%" PetscInt_FMT " edge %" PetscInt_FMT " (%" PetscInt_FMT ")\n", cell, edge, e, eornt, cone[c], c, c2, eornt2));
-          flip = eornt != -(eornt2 + 1) ? PETSC_TRUE : PETSC_FALSE;
+          flip = (bool)(eornt != -(eornt2 + 1));
           break;
         }
       }
@@ -924,7 +924,7 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     };
     PetscBool flag[n];
 
-    flag[0] = faceSets ? PETSC_TRUE : PETSC_FALSE;
+    flag[0] = (bool)(faceSets != NULL);
     PetscCallMPI(MPI_Bcast(flag, n, MPI_C_BOOL, 0, comm));
     if (flag[0]) PetscCall(DMCreateLabel(*dm, "Face Sets"));
     // TODO Code to create all the zone labels on each process

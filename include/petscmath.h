@@ -2069,7 +2069,7 @@ PETSC_EXTERN PetscBool  PetscIsNanReal(PetscReal);
 PETSC_EXTERN PetscBool  PetscIsNormalReal(PetscReal);
 static inline PetscBool PetscIsInfOrNanReal(PetscReal v)
 {
-  return PetscIsInfReal(v) || PetscIsNanReal(v) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(PetscIsInfReal(v) || PetscIsNanReal(v));
 }
 static inline PetscBool PetscIsInfScalar(PetscScalar v)
 {

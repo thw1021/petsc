@@ -319,7 +319,7 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
       for k in fun.arguments:
         if k.stringlen: continue
         if k.stars and k.typename  in classes:
-          fd.write('  PetscBool null_' + k.name + ' = !*(void**) ' + k.name + ' ? PETSC_TRUE : PETSC_FALSE;\n')
+          fd.write('  PetscBool null_' + k.name + ' = (bool)(*(void **)' + k.name + ' == NULL);\n')
         cnt = cnt + 1
 
       # prevent an existing object from being overwritten by a new create

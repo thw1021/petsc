@@ -89,7 +89,7 @@ static PetscErrorCode SNESSetFromOptions_NGMRES(SNES snes, PetscOptionItems Pets
   PetscCall(PetscOptionsInt("-snes_ngmres_m", "Number of directions", "SNES", ngmres->msize, &ngmres->msize, NULL));
   PetscCall(PetscOptionsInt("-snes_ngmres_restart", "Iterations before forced restart", "SNES", ngmres->restart_periodic, &ngmres->restart_periodic, NULL));
   PetscCall(PetscOptionsInt("-snes_ngmres_restart_it", "Tolerance iterations before restart", "SNES", ngmres->restart_it, &ngmres->restart_it, NULL));
-  PetscCall(PetscOptionsBool("-snes_ngmres_monitor", "Monitor actions of NGMRES", "SNES", ngmres->monitor ? PETSC_TRUE : PETSC_FALSE, &debug, NULL));
+  PetscCall(PetscOptionsBool("-snes_ngmres_monitor", "Monitor actions of NGMRES", "SNES", (bool)(ngmres->monitor != NULL), &debug, NULL));
   if (debug) ngmres->monitor = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes));
   PetscCall(PetscOptionsReal("-snes_ngmres_gammaA", "Residual selection constant", "SNES", ngmres->gammaA, &ngmres->gammaA, NULL));
   PetscCall(PetscOptionsReal("-snes_ngmres_gammaC", "Residual restart constant", "SNES", ngmres->gammaC, &ngmres->gammaC, NULL));

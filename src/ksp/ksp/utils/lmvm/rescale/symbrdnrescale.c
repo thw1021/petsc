@@ -353,7 +353,7 @@ PETSC_INTERN PetscErrorCode SymBroydenRescaleSetDelta(Mat B, SymBroydenRescale l
   PetscBool same;
 
   PetscFunctionBegin;
-  same       = (delta == ldb->delta) ? PETSC_TRUE : PETSC_FALSE;
+  same       = (bool)(delta == ldb->delta);
   ldb->delta = delta;
   ldb->delta = PetscMin(ldb->delta, ldb->delta_max);
   ldb->delta = PetscMax(ldb->delta, ldb->delta_min);

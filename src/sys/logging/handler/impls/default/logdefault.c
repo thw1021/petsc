@@ -1020,7 +1020,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Detailed(PetscLogHandler handl
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
       if (event_id >= 0 && stage_id >= 0) PetscCall(PetscLogHandlerGetEventPerfInfo_Default(handler, stage_id, event_id, &eventInfo));
-      is_zero = eventInfo->count == 0 ? PETSC_TRUE : PETSC_FALSE;
+      is_zero = (bool)(eventInfo->count == 0);
       PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &is_zero, 1, MPI_C_BOOL, MPI_LAND, comm));
       if (!is_zero) PetscCall(PetscViewerASCIIPrintf(viewer, "Stages[\"%s\"][\"%s\"] = {}\n", stage_name, event_name));
     }
@@ -1063,7 +1063,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Detailed(PetscLogHandler handl
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
       if (event_id >= 0 && stage_id >= 0) PetscCall(PetscLogHandlerGetEventPerfInfo_Default(handler, stage_id, event_id, &eventInfo));
-      is_zero = eventInfo->count == 0 ? PETSC_TRUE : PETSC_FALSE;
+      is_zero = (bool)(eventInfo->count == 0);
       PetscCall(PetscArraycmp(eventInfo, &zero_info, 1, &is_zero));
       PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &is_zero, 1, MPI_C_BOOL, MPI_LAND, comm));
       if (!is_zero) {
