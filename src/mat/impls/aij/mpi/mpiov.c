@@ -1718,11 +1718,11 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
 
       lwrite = 0;
       for (PetscInt l = 0; l < nzB; l++) {
-        if ((bmap[cworkB[l]]) < cstart) vals[lwrite++] = vworkB[l];
+        if (bmap[cworkB[l]] < cstart) vals[lwrite++] = vworkB[l];
       }
       for (PetscInt l = 0; l < nzA; l++) vals[lwrite++] = vworkA[l];
       for (PetscInt l = 0; l < nzB; l++) {
-        if ((bmap[cworkB[l]]) >= cend) vals[lwrite++] = vworkB[l];
+        if (bmap[cworkB[l]] >= cend) vals[lwrite++] = vworkB[l];
       }
 
       ct2 += ncols;
@@ -2652,11 +2652,11 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_Local(Mat C, PetscInt ismax, const IS
 
           lwrite = 0;
           for (PetscInt l = 0; l < nzB; l++) {
-            if ((bmap[cworkB[l]]) < cstart) vals[lwrite++] = vworkB[l];
+            if (bmap[cworkB[l]] < cstart) vals[lwrite++] = vworkB[l];
           }
           for (PetscInt l = 0; l < nzA; l++) vals[lwrite++] = vworkA[l];
           for (PetscInt l = 0; l < nzB; l++) {
-            if ((bmap[cworkB[l]]) >= cend) vals[lwrite++] = vworkB[l];
+            if (bmap[cworkB[l]] >= cend) vals[lwrite++] = vworkB[l];
           }
 
           ct2 += ncols;

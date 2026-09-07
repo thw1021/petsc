@@ -3962,7 +3962,7 @@ PetscErrorCode DMHasVariableBounds(DM dm, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
-  *flg = (dm->ops->computevariablebounds) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = dm->ops->computevariablebounds ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4015,7 +4015,7 @@ PetscErrorCode DMHasColoring(DM dm, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
-  *flg = (dm->ops->getcoloring) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = dm->ops->getcoloring ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4039,7 +4039,7 @@ PetscErrorCode DMHasCreateRestriction(DM dm, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
-  *flg = (dm->ops->createrestriction) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = dm->ops->createrestriction ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4064,7 +4064,7 @@ PetscErrorCode DMHasCreateInjection(DM dm, PetscBool *flg)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(flg, 2);
   if (dm->ops->hascreateinjection) PetscUseTypeMethod(dm, hascreateinjection, flg);
-  else *flg = (dm->ops->createinjection) ? PETSC_TRUE : PETSC_FALSE;
+  else *flg = dm->ops->createinjection ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
