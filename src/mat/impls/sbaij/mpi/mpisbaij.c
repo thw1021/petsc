@@ -881,10 +881,8 @@ static PetscErrorCode MatAssemblyEnd_MPISBAIJ(Mat mat, MatAssemblyType mode)
   }
 
   if (!mat->was_assembled && mode == MAT_FINAL_ASSEMBLY) PetscCall(MatSetUpMultiply_MPISBAIJ(mat)); /* setup Mvctx and sMvctx */
-  if (!baij->B->structure_only || !baij->B->assembled) {
-    PetscCall(MatAssemblyBegin(baij->B, mode));
-    PetscCall(MatAssemblyEnd(baij->B, mode));
-  }
+  PetscCall(MatAssemblyBegin(baij->B, mode));
+  PetscCall(MatAssemblyEnd(baij->B, mode));
 
   PetscCall(PetscFree2(baij->rowvalues, baij->rowindices));
 
@@ -2194,6 +2192,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, P
   PetscCall(MatSetSizes(b->B, B->rmap->n, size > 1 ? B->cmap->N : 0, B->rmap->n, size > 1 ? B->cmap->N : 0));
   PetscCall(MatSetType(b->B, MATSEQBAIJ));
   MatSeqXAIJRestoreOptions_Private(b->B);
+  PetscCall(MatSetOption(b->B, MAT_STRUCTURE_ONLY, B->structure_only));
 
   MatSeqSBAIJGetOptions_Private(b->A);
   PetscCall(MatDestroy(&b->A));
@@ -2201,6 +2200,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, P
   PetscCall(MatSetSizes(b->A, B->rmap->n, B->cmap->n, B->rmap->n, B->cmap->n));
   PetscCall(MatSetType(b->A, MATSEQSBAIJ));
   MatSeqSBAIJRestoreOptions_Private(b->A);
+  PetscCall(MatSetOption(b->A, MAT_STRUCTURE_ONLY, B->structure_only));
 
   PetscCall(MatSeqSBAIJSetPreallocation(b->A, bs, d_nz, d_nnz));
   PetscCall(MatSeqBAIJSetPreallocation(b->B, bs, o_nz, o_nnz));
