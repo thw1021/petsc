@@ -914,7 +914,7 @@ static PetscErrorCode DMPlexTransformCellTransform_Cohesive(DMPlexTransform tr, 
   PetscFunctionBegin;
   PetscCheck(trType, PETSC_COMM_SELF, PETSC_ERR_SUP, "Missing transform type label");
   PetscCall(DMLabelGetValue(trType, p, &val));
-  identity = val < 100 && !(val % 2) ? PETSC_TRUE : PETSC_FALSE;
+  identity = (bool)(val < 100 && !(val % 2));
   if (rt) *rt = val;
   if (identity) {
     PetscCall(DMPlexTransformCellTransformIdentity(tr, source, p, NULL, Nt, target, size, cone, ornt));

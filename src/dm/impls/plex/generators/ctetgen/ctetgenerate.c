@@ -421,7 +421,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_CTetgen(DM dm, PetscReal *maxVolumes, D
     const PetscInt numVertices = out->numberofpoints;
     PetscReal     *meshCoords  = NULL;
     PetscInt      *cells       = NULL;
-    PetscBool      interpolate = isInterpolated == DMPLEX_INTERPOLATED_FULL ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool      interpolate = (bool)(isInterpolated == DMPLEX_INTERPOLATED_FULL);
 
     if (sizeof(PetscReal) == sizeof(out->pointlist[0])) {
       meshCoords = (PetscReal *)out->pointlist;

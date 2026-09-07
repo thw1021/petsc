@@ -1761,7 +1761,7 @@ PetscErrorCode KSPCreateVecs(KSP ksp, PetscInt rightn, Vec *right[], PetscInt le
   PetscFunctionBegin;
   if (ksp->dm) {
     PetscCall(PetscObjectTypeCompare((PetscObject)ksp->dm, DMSHELL, &isshell));
-    preferdm = isshell ? PETSC_FALSE : PETSC_TRUE;
+    preferdm = (bool)!isshell;
   }
   if (rightn) {
     PetscCheck(right, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "You asked for right vectors but did not pass a pointer to hold them");

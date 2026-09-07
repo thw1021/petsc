@@ -30,7 +30,7 @@ PetscBool PetscIsNormalReal(PetscReal a)
 #elif PetscDefined(HAVE_ISNORMAL)
 PetscBool PetscIsNormalReal(PetscReal a)
 {
-  return isnormal(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(isnormal(a) != 0);
 }
 #else
 PetscBool PetscIsNormalReal(PetscReal a)
@@ -63,12 +63,12 @@ PetscBool PetscIsNormalReal(PetscReal a)
 #if PetscDefined(USE_REAL___FLOAT128)
 PetscBool PetscIsInfReal(PetscReal a)
 {
-  return isinfq(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(isinfq(a) != 0);
 }
 #elif PetscDefined(HAVE_ISINF)
 PETSC_FORCE_NO_FINITE_MATH_ONLY PetscBool PetscIsInfReal(PetscReal a)
 {
-  return isinf(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(isinf(a) != 0);
 }
 #elif PetscDefined(HAVE__FINITE)
   #if PetscDefined(HAVE_FLOAT_H)
@@ -79,12 +79,12 @@ PETSC_FORCE_NO_FINITE_MATH_ONLY PetscBool PetscIsInfReal(PetscReal a)
   #endif
 PetscBool PetscIsInfReal(PetscReal a)
 {
-  return !_finite(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(_finite(a) == 0);
 }
 #else
 PetscBool PetscIsInfReal(PetscReal a)
 {
-  return (a && a / 2 == a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(a && a / 2 == a);
 }
 #endif
 
@@ -107,12 +107,12 @@ PetscBool PetscIsInfReal(PetscReal a)
 #if PetscDefined(USE_REAL___FLOAT128)
 PetscBool PetscIsNanReal(PetscReal a)
 {
-  return isnanq(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(isnanq(a) != 0);
 }
 #elif PetscDefined(HAVE_ISNAN)
 PETSC_FORCE_NO_FINITE_MATH_ONLY PetscBool PetscIsNanReal(PetscReal a)
 {
-  return isnan(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(isnan(a) != 0);
 }
 #elif PetscDefined(HAVE__ISNAN)
   #if PetscDefined(HAVE_FLOAT_H)
@@ -123,11 +123,11 @@ PETSC_FORCE_NO_FINITE_MATH_ONLY PetscBool PetscIsNanReal(PetscReal a)
   #endif
 PetscBool PetscIsNanReal(PetscReal a)
 {
-  return _isnan(a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(_isnan(a) != 0);
 }
 #else
 PetscBool PetscIsNanReal(PetscReal a)
 {
-  return (a != a) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(a != a);
 }
 #endif

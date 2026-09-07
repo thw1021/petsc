@@ -358,7 +358,7 @@ PetscErrorCode MatView_LMVM(Mat B, PetscViewer pv)
 PetscErrorCode MatSetFromOptions_LMVM(Mat B, PetscOptionItems PetscOptionsObject)
 {
   Mat_LMVM            *lmvm     = (Mat_LMVM *)B->data;
-  PetscBool            cache_J0 = lmvm->do_not_cache_J0_products ? PETSC_FALSE : PETSC_TRUE; // Default is false, but flipping double negative so that the command line option make sense
+  PetscBool            cache_J0 = (bool)!lmvm->do_not_cache_J0_products; // Default is false, but flipping double negative so that the command line option make sense
   PetscBool            set;
   PetscInt             hist_size = lmvm->m;
   MatLMVMMultAlgorithm mult_alg;
@@ -373,7 +373,7 @@ PetscErrorCode MatSetFromOptions_LMVM(Mat B, PetscOptionItems PetscOptionsObject
   PetscCall(PetscOptionsBool("-mat_lmvm_cache_gradient_products", "Cache data used to apply the inverse Hessian to a gradient vector to accelerate the quasi-Newton update", "", lmvm->cache_gradient_products, &lmvm->cache_gradient_products, NULL));
   PetscCall(PetscOptionsBool("-mat_lmvm_debug", "(developer) Perform internal debugging checks", "", lmvm->debug, &lmvm->debug, NULL));
   PetscOptionsHeadEnd();
-  lmvm->do_not_cache_J0_products = cache_J0 ? PETSC_FALSE : PETSC_TRUE;
+  lmvm->do_not_cache_J0_products = (bool)!cache_J0;
   if (hist_size != lmvm->m) PetscCall(MatLMVMSetHistorySize(B, hist_size));
   if (set) PetscCall(MatLMVMSetMultAlgorithm(B, mult_alg));
   if (lmvm->created_J0) PetscCall(MatSetFromOptions(lmvm->J0));

@@ -117,7 +117,7 @@ static PetscErrorCode PCPatchConstruct_Pardecomp(void *vpatch, DM dm, PetscInt p
     if (ghost) PetscCall(DMLabelHasPoint(ghost, opoint, &flg));
     else {
       PetscCall(PetscFindInt(opoint, nleaves, leaves, &loc));
-      flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
+      flg = (bool)(loc >= 0);
     }
     /* Not an owned entity, don't make a cell patch. */
     if (flg) continue;
@@ -1278,7 +1278,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       if (ghost) PetscCall(DMLabelHasPoint(ghost, v, &flg));
       else {
         PetscCall(PetscFindInt(v, nleaves, leaves, &loc));
-        flg = loc >= 0 ? PETSC_TRUE : PETSC_FALSE;
+        flg = (bool)(loc >= 0);
       }
       /* Not an owned entity, don't make a cell patch. */
       if (flg) continue;

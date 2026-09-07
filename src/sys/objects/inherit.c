@@ -868,7 +868,7 @@ PetscErrorCode PetscObjectHasFunction(PetscObject obj, const char name[], PetscB
   PetscFunctionBegin;
   PetscAssertPointer(has, 3);
   PetscCall(PetscObjectQueryFunction(obj, name, &fptr));
-  *has = fptr ? PETSC_TRUE : PETSC_FALSE;
+  *has = (bool)(fptr != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

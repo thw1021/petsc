@@ -659,7 +659,7 @@ static PetscErrorCode CreateMeshFromFile(MPI_Comm comm, AppCtx *user, DM *dm, DM
 {
   const char *filename     = user->filename;
   PetscBool   testHeavy    = user->testHeavy;
-  PetscBool   interpCreate = user->interpolate == CREATE ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool   interpCreate = (bool)(user->interpolate == CREATE);
   PetscBool   distributed  = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -688,9 +688,9 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   DM               serialDM       = NULL;
   PetscBool        cellSimplex    = user->cellSimplex;
   PetscBool        useGenerator   = user->useGenerator;
-  PetscBool        interpCreate   = user->interpolate == CREATE ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool        interpSerial   = user->interpolate == AFTER_CREATE ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool        interpParallel = user->interpolate == AFTER_DISTRIBUTE ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool        interpCreate   = (bool)(user->interpolate == CREATE);
+  PetscBool        interpSerial   = (bool)(user->interpolate == AFTER_CREATE);
+  PetscBool        interpParallel = (bool)(user->interpolate == AFTER_DISTRIBUTE);
   PetscBool        testHeavy      = user->testHeavy;
   PetscMPIInt      rank;
 

@@ -263,13 +263,13 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
     PetscCall(ISDestroy(&perm));
   }
   PetscCall(PetscMalloc1(numFields + 2, &sub));
-  sub[1] = rootSection->bc ? PETSC_TRUE : PETSC_FALSE;
+  sub[1] = (bool)(rootSection->bc != NULL);
   for (f = 0; f < numFields; ++f) {
     PetscSectionSym sym, dsym = NULL;
     const char     *name    = NULL;
     PetscInt        numComp = 0;
 
-    sub[2 + f] = rootSection->field[f]->bc ? PETSC_TRUE : PETSC_FALSE;
+    sub[2 + f] = (bool)(rootSection->field[f]->bc != NULL);
     PetscCall(PetscSectionGetFieldComponents(rootSection, f, &numComp));
     PetscCall(PetscSectionGetFieldName(rootSection, f, &name));
     PetscCall(PetscSectionGetFieldSym(rootSection, f, &sym));

@@ -995,7 +995,7 @@ static PetscErrorCode DMPlexShiftCoordinates_Internal(DM dm, PetscInt depthShift
   PetscCall(PetscSectionSetNumFields(newCoordSection, 1));
   PetscCall(PetscSectionSetFieldComponents(newCoordSection, 0, dim));
   PetscCall(PetscSectionGetChart(coordSection, &sStart, &sEnd));
-  hasCells = sStart == cStart ? PETSC_TRUE : PETSC_FALSE;
+  hasCells = (bool)(sStart == cStart);
   PetscCall(PetscSectionSetChart(newCoordSection, hasCells ? cStartNew : vStartNew, vEndNew));
   if (hasCells) {
     for (c = cStart; c < cEnd; ++c) {
@@ -1971,7 +1971,7 @@ static PetscErrorCode DMPlexConstructCohesiveCells_Internal(DM dm, DMLabel label
             ocell = vals[0] < 0 ? support[1] : support[0];
           } else {
             ocell = support[0];
-            flip  = vals[0] < 0 ? PETSC_TRUE : PETSC_FALSE;
+            flip  = (bool)(vals[0] < 0);
           }
           PetscCall(DMPlexGetConeSize(dm, ocell, &nconeSize));
           PetscCall(DMPlexGetCone(dm, ocell, &ncone));
@@ -2756,7 +2756,7 @@ PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel,
       if (pos) PetscCall(DMLabelSetValue(label, support[s], rev * (shift + dim)));
       else PetscCall(DMLabelSetValue(label, support[s], -rev * (shift + dim)));
       if (debug) PetscCall(PetscSynchronizedPrintf(comm, "[%d] Cell %" PetscInt_FMT " on %s side\n", rank, support[s], pos ? "positive" : "negative"));
-      if (rev < 0) pos = !pos ? PETSC_TRUE : PETSC_FALSE;
+      if (rev < 0) pos = (bool)!pos;
       /* Put closure touching the fault in the label */
       PetscCall(DMPlexGetTransitiveClosure(dm, support[s], PETSC_TRUE, &clSize, &closure));
       for (PetscInt cl = 0; cl < clSize * 2; cl += 2) {
@@ -3563,15 +3563,15 @@ static PetscErrorCode DMPlexGetFaceOrientation(DM dm, PetscInt cell, PetscInt nu
   if (cellDim == 1 && numCorners == 2) {
     /* Triangle */
     faceSize  = numCorners - 1;
-    posOrient = !(oppositeVertex % 2) ? PETSC_TRUE : PETSC_FALSE;
+    posOrient = (bool)(oppositeVertex % 2 == 0);
   } else if (cellDim == 2 && numCorners == 3) {
     /* Triangle */
     faceSize  = numCorners - 1;
-    posOrient = !(oppositeVertex % 2) ? PETSC_TRUE : PETSC_FALSE;
+    posOrient = (bool)(oppositeVertex % 2 == 0);
   } else if (cellDim == 3 && numCorners == 4) {
     /* Tetrahedron */
     faceSize  = numCorners - 1;
-    posOrient = (oppositeVertex % 2) ? PETSC_TRUE : PETSC_FALSE;
+    posOrient = (bool)(oppositeVertex % 2 != 0);
   } else if (cellDim == 1 && numCorners == 3) {
     /* Quadratic line */
     faceSize  = 1;
@@ -4541,7 +4541,7 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
 
       PetscCall(ISGetIndices(subpIS, &subpoints));
       PetscCall(ISGetLocalSize(subpIS, &numSubpoints));
-      for (p = 1; p < numSubpoints; ++p) sorted = sorted && (subpoints[p] >= subpoints[p - 1]) ? PETSC_TRUE : PETSC_FALSE;
+      for (p = 1; p < numSubpoints; ++p) sorted = (bool)(sorted && (subpoints[p] >= subpoints[p - 1]));
       if (!sorted) {
         PetscCall(PetscMalloc2(numSubpoints, &sortedPoints, numSubpoints, &sortedIndices));
         for (p = 0; p < numSubpoints; ++p) sortedIndices[p] = p;

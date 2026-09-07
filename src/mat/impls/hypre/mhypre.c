@@ -612,7 +612,7 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
   if (PetscDefined(HAVE_HYPRE_DEVICE)) {
     PetscCall(MatGetCurrentMemType(A, &memtype));
     PetscCall(PetscHYPREInitialize());
-    boundtocpu = PetscMemTypeHost(memtype) ? PETSC_TRUE : PETSC_FALSE;
+    boundtocpu = PetscMemTypeHost(memtype);
     PetscCallHYPRE(HYPRE_SetMemoryLocation(boundtocpu ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE));
   }
 
@@ -2558,7 +2558,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   B->ops->bindtocpu = MatBindToCPU_HYPRE;
   /* Get hypre's default memory location. Users can control this using the corresponding HYPRE_SetMemoryLocation API */
   PetscCallHYPRE(HYPRE_GetMemoryLocation(&memory_location));
-  B->boundtocpu = (memory_location == HYPRE_MEMORY_HOST) ? PETSC_TRUE : PETSC_FALSE;
+  B->boundtocpu = (bool)(memory_location == HYPRE_MEMORY_HOST);
 #endif
 
   /* build cache for off array entries formed */

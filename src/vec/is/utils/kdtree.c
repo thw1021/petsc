@@ -283,7 +283,7 @@ PetscErrorCode PetscKDTreeCreate(PetscCount num_coords, PetscInt dim, const Pets
   KDTreeBuild kd_build;
   PetscCall(PetscNew(&kd_build));
   kd_build->tree        = tree;
-  kd_build->copy_coords = copy_mode == PETSC_COPY_VALUES ? PETSC_TRUE : PETSC_FALSE;
+  kd_build->copy_coords = (bool)(copy_mode == PETSC_COPY_VALUES);
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-kdtree_debug", &kd_build->debug_build, NULL));
   PetscCall(PetscSegBufferCreate(sizeof(KDStem), num_stems, &kd_build->stems));
   PetscCall(PetscSegBufferCreate(sizeof(KDLeaf), num_leaves, &kd_build->leaves));

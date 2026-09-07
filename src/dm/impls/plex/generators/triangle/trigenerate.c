@@ -311,7 +311,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_Triangle(DM dm, PetscReal *inmaxVolumes
     const PetscInt numVertices = out.numberofpoints;
     PetscInt      *cells;
     PetscReal     *meshCoords;
-    PetscBool      interpolate = depth > 1 ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool      interpolate = (bool)(depth > 1);
 
     if (sizeof(PetscReal) == sizeof(out.pointlist[0])) {
       meshCoords = (PetscReal *)out.pointlist;

@@ -1043,7 +1043,7 @@ static PetscErrorCode MatDuplicate_H2OPUS(Mat B, MatDuplicateOption op, Mat *nA)
 {
   Mat         A;
   Mat_H2OPUS *a, *b = (Mat_H2OPUS *)B->data;
-  PetscBool   iscpu = PetscDefined(H2OPUS_USE_GPU) ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool   iscpu = (bool)!PetscDefined(H2OPUS_USE_GPU);
   MPI_Comm    comm;
 
   PetscFunctionBegin;
@@ -1613,7 +1613,7 @@ PetscErrorCode MatCreateH2OpusFromKernel(MPI_Comm comm, PetscInt m, PetscInt n, 
 {
   Mat         A;
   Mat_H2OPUS *h2opus;
-  PetscBool   iscpu = PetscDefined(H2OPUS_USE_GPU) ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool   iscpu = (bool)!PetscDefined(H2OPUS_USE_GPU);
 
   PetscFunctionBegin;
   PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_SUP, "Different row and column local sizes are not supported");

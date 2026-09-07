@@ -68,7 +68,7 @@ PetscErrorCode PetscDeviceInitialize(PETSC_UNUSED PetscDeviceType type)
 
 PetscBool PetscDeviceInitialized(PetscDeviceType type)
 {
-  return (type == PETSC_DEVICE_HOST) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(type == PETSC_DEVICE_HOST);
 }
 
 PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)

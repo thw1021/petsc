@@ -76,7 +76,7 @@ typedef enum {
 
 .seealso: `PetscMemType`, `PetscMemTypeDevice()`, `PetscMemTypeCUDA()`, `PetscMemTypeHIP()`, `PetscMemTypeSYCL()`, `PetscMemTypeNVSHMEM()`
 M*/
-#define PetscMemTypeHost(m) ((((m) & 0x1) == PETSC_MEMTYPE_HOST) ? PETSC_TRUE : PETSC_FALSE)
+#define PetscMemTypeHost(m) ((bool)(((m) & 0x1) == PETSC_MEMTYPE_HOST))
 
 /*MC
   PetscMemTypeDevice - Returns `PETSC_TRUE` if a given `PetscMemType` refers to any kind of memory accessible from the device, including Unified Virtual Memory (UVM) managed memory
@@ -94,7 +94,7 @@ M*/
 
 .seealso: `PetscMemType`, `PetscMemTypeHost()`, `PetscMemTypeCUDA()`, `PetscMemTypeHIP()`, `PetscMemTypeSYCL()`, `PetscMemTypeNVSHMEM()`
 M*/
-#define PetscMemTypeDevice(m) ((((m) & 0x1) == PETSC_MEMTYPE_DEVICE) ? PETSC_TRUE : PETSC_FALSE)
+#define PetscMemTypeDevice(m) ((bool)(((m) & 0x1) == PETSC_MEMTYPE_DEVICE))
 
 /*MC
   PetscMemTypeCUDA - Returns `PETSC_TRUE` if a given `PetscMemType` refers to CUDA device memory (including CUDA NVSHMEM memory)
@@ -112,7 +112,7 @@ M*/
 
 .seealso: `PetscMemType`, `PetscMemTypeDevice()`, `PetscMemTypeHIP()`, `PetscMemTypeSYCL()`, `PetscMemTypeNVSHMEM()`
 M*/
-#define PetscMemTypeCUDA(m) ((((m) & 0xF) == PETSC_MEMTYPE_CUDA) ? PETSC_TRUE : PETSC_FALSE)
+#define PetscMemTypeCUDA(m) ((bool)(((m) & 0xF) == PETSC_MEMTYPE_CUDA))
 
 /*MC
   PetscMemTypeHIP - Returns `PETSC_TRUE` if a given `PetscMemType` refers to HIP device memory
@@ -130,7 +130,7 @@ M*/
 
 .seealso: `PetscMemType`, `PetscMemTypeDevice()`, `PetscMemTypeCUDA()`, `PetscMemTypeSYCL()`, `PetscMemTypeNVSHMEM()`
 M*/
-#define PetscMemTypeHIP(m) ((((m) & 0xF) == PETSC_MEMTYPE_HIP) ? PETSC_TRUE : PETSC_FALSE)
+#define PetscMemTypeHIP(m) ((bool)(((m) & 0xF) == PETSC_MEMTYPE_HIP))
 
 /*MC
   PetscMemTypeSYCL - Returns `PETSC_TRUE` if a given `PetscMemType` refers to SYCL device memory
@@ -148,7 +148,7 @@ M*/
 
 .seealso: `PetscMemType`, `PetscMemTypeDevice()`, `PetscMemTypeCUDA()`, `PetscMemTypeHIP()`, `PetscMemTypeNVSHMEM()`
 M*/
-#define PetscMemTypeSYCL(m) ((((m) & 0xF) == PETSC_MEMTYPE_SYCL) ? PETSC_TRUE : PETSC_FALSE)
+#define PetscMemTypeSYCL(m) ((bool)(((m) & 0xF) == PETSC_MEMTYPE_SYCL))
 
 /*MC
   PetscMemTypeNVSHMEM - Returns `PETSC_TRUE` if a given `PetscMemType` refers to NVSHMEM memory
@@ -166,7 +166,7 @@ M*/
 
 .seealso: `PetscMemType`, `PetscMemTypeDevice()`, `PetscMemTypeCUDA()`, `PetscMemTypeHIP()`, `PetscMemTypeSYCL()`
 M*/
-#define PetscMemTypeNVSHMEM(m) (((m) == PETSC_MEMTYPE_NVSHMEM) ? PETSC_TRUE : PETSC_FALSE)
+#define PetscMemTypeNVSHMEM(m) ((bool)((m) == PETSC_MEMTYPE_NVSHMEM))
 
 #if defined(__cplusplus)
   #if PETSC_SHOULD_SILENCE_GCC_TAUTOLOGICAL_COMPARE_WARNING

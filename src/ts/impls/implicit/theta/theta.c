@@ -1042,7 +1042,7 @@ static PetscErrorCode TSSetUp_Theta(TS ts)
   }
   PetscCall(TSGetSNES(ts, &ts->snes));
 
-  ts->stifflyaccurate = (!th->endpoint && th->Theta != 1.0) ? PETSC_FALSE : PETSC_TRUE;
+  ts->stifflyaccurate = (bool)(th->endpoint || th->Theta == 1.0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

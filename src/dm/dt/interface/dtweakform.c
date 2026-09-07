@@ -827,7 +827,7 @@ PetscErrorCode PetscWeakFormHasJacobian(PetscWeakForm wf, PetscBool *hasJac)
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_G1], &n1));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_G2], &n2));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_G3], &n3));
-  *hasJac = n0 + n1 + n2 + n3 ? PETSC_TRUE : PETSC_FALSE;
+  *hasJac = (bool)(n0 + n1 + n2 + n3 != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1003,7 +1003,7 @@ PetscErrorCode PetscWeakFormHasJacobianPreconditioner(PetscWeakForm wf, PetscBoo
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_GP1], &n1));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_GP2], &n2));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_GP3], &n3));
-  *hasJacPre = n0 + n1 + n2 + n3 ? PETSC_TRUE : PETSC_FALSE;
+  *hasJacPre = (bool)(n0 + n1 + n2 + n3 != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1179,7 +1179,7 @@ PetscErrorCode PetscWeakFormHasBdJacobian(PetscWeakForm wf, PetscBool *hasJac)
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_BDG1], &n1));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_BDG2], &n2));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_BDG3], &n3));
-  *hasJac = n0 + n1 + n2 + n3 ? PETSC_TRUE : PETSC_FALSE;
+  *hasJac = (bool)(n0 + n1 + n2 + n3 != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1355,7 +1355,7 @@ PetscErrorCode PetscWeakFormHasBdJacobianPreconditioner(PetscWeakForm wf, PetscB
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_BDGP1], &n1));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_BDGP2], &n2));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_BDGP3], &n3));
-  *hasJacPre = n0 + n1 + n2 + n3 ? PETSC_TRUE : PETSC_FALSE;
+  *hasJacPre = (bool)(n0 + n1 + n2 + n3 != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1534,7 +1534,7 @@ PetscErrorCode PetscWeakFormHasDynamicJacobian(PetscWeakForm wf, PetscBool *hasD
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_GT1], &n1));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_GT2], &n2));
   PetscCall(PetscHMapFormGetSize(wf->form[PETSC_WF_GT3], &n3));
-  *hasDynJac = n0 + n1 + n2 + n3 ? PETSC_TRUE : PETSC_FALSE;
+  *hasDynJac = (bool)(n0 + n1 + n2 + n3 != 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

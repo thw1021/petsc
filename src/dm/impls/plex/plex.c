@@ -60,7 +60,7 @@ PetscErrorCode DMPlexIsSimplex(DM dm, PetscBool *simplex)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-  *simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  *simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2083,7 +2083,7 @@ static PetscErrorCode DMPlexView_Draw(DM dm, PetscViewer viewer)
   PetscCall(DMGetCoordinateDim(dm, &dim));
   PetscCheck(dim <= 2, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Cannot draw meshes of dimension %" PetscInt_FMT, dim);
   PetscCall(DMGetCoordinateDegree_Internal(dm, &cDegree));
-  drawAffine = cDegree > 1 ? PETSC_FALSE : PETSC_TRUE;
+  drawAffine = (bool)(cDegree <= 1);
   edgeDiv    = cDegree + 1;
   PetscCall(PetscOptionsGetInt(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_view_draw_line_color", &lineColor, NULL));
   PetscCall(PetscOptionsGetInt(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_view_draw_cell_color", &cellColor, NULL));
@@ -8697,7 +8697,7 @@ static PetscErrorCode DMPlexGetClosureIndices_Internal(DM dm, PetscSection secti
 
   PetscInt *idx;
   PetscInt  Nf, Ncl, Ni = 0, offsets[32], p, f;
-  PetscBool isLocal = (section == idxSection) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool isLocal = (bool)(section == idxSection);
   PetscInt  idxStart, idxEnd;
   PetscInt  nRows, nCols;
 
@@ -10994,7 +10994,7 @@ PetscErrorCode DMCreateInterpolation_Plex(DM dmCoarse, DM dmFine, Mat *interpola
   PetscInt     m, n;
   void        *ctx;
   DM           cdm;
-  PetscBool    regular, ismatis, isRefined = dmCoarse->data == dmFine->data ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool    regular, ismatis, isRefined = (bool)(dmCoarse->data != dmFine->data);
 
   PetscFunctionBegin;
   PetscCall(DMGetGlobalSection(dmFine, &gsf));

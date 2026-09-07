@@ -1536,7 +1536,7 @@ static PetscErrorCode MatConvertToTriples_nest_xaij(Mat A, PetscInt shift, MatRe
 {
   Mat     **mats;
   PetscInt  nr, nc;
-  PetscBool chol = mumps->sym ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool chol = (bool)(mumps->sym != 0);
 
   PetscFunctionBegin;
   PetscCall(MatNestGetSubMats(A, &nr, &nc, &mats));
@@ -2721,8 +2721,8 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
       if (mumps->petsc_size > 1) {
         PetscBool gs; /* gs is false if any rank other than root has non-empty IS */
 
-        mumps->id.ICNTL(19) = 1;                                                                            /* MUMPS returns Schur centralized on the host */
-        gs                  = mumps->myid ? (mumps->id.size_schur ? PETSC_FALSE : PETSC_TRUE) : PETSC_TRUE; /* always true on root; false on others if their size != 0 */
+        mumps->id.ICNTL(19) = 1;                                                     /* MUMPS returns Schur centralized on the host */
+        gs                  = (bool)(mumps->myid == 0 || mumps->id.size_schur == 0); /* always true on root; false on others if their size != 0 */
         PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gs, 1, MPI_C_BOOL, MPI_LAND, mumps->petsc_comm));
         PetscCheck(gs, PETSC_COMM_SELF, PETSC_ERR_SUP, "MUMPS distributed parallel Schur complements not yet supported from PETSc");
       } else {

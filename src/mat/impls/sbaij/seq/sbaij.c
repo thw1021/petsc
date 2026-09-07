@@ -1098,7 +1098,7 @@ static PetscErrorCode MatAXPY_SeqSBAIJ(Mat Y, PetscScalar a, Mat X, MatStructure
 
   PetscFunctionBegin;
   if (str == UNKNOWN_NONZERO_PATTERN || (PetscDefined(USE_DEBUG) && str == SAME_NONZERO_PATTERN)) {
-    PetscBool e = x->nz == y->nz && x->mbs == y->mbs ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool e = (bool)(x->nz == y->nz && x->mbs == y->mbs);
     if (e) {
       PetscCall(PetscArraycmp(x->i, y->i, x->mbs + 1, &e));
       if (e) {

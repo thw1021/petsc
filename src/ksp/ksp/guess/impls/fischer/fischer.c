@@ -282,7 +282,7 @@ static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
 static PetscErrorCode KSPGuessUpdate_Fischer_3(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer *itg    = (KSPGuessFischer *)guess->data;
-  PetscBool        rotate = itg->curl == itg->maxl ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool        rotate = (bool)(itg->curl == itg->maxl);
   PetscObjectState b_state;
   PetscScalar     *last_column;
   Vec              oldest;

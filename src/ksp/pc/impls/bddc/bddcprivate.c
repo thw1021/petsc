@@ -1957,7 +1957,7 @@ boundary:
           Vec                cvec;
           const PetscScalar *coords;
           PetscInt           dof, n, cdim;
-          PetscBool          memc = PetscDefined(USE_COMPLEX) ? PETSC_FALSE : PETSC_TRUE;
+          PetscBool          memc = (bool)!PetscDefined(USE_COMPLEX);
 
           PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
           PetscCall(DMGetCoordinates(dm, &cvec));
@@ -5914,7 +5914,7 @@ PetscErrorCode PCBDDCSetUpLocalSolvers(PC pc, PetscBool dirichlet, PetscBool neu
     PetscCall(MatGetNearNullSpace(pcbddc->local_mat, &nnsp));
     PetscCall(MatGetNearNullSpace(pc->pmat, &gnnsp1));
     PetscCall(MatGetNullSpace(pc->pmat, &gnnsp2));
-    ghas = nnsp ? PETSC_TRUE : PETSC_FALSE;
+    ghas = (bool)(nnsp != NULL);
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &ghas, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)pc)));
     if (!ghas && (gnnsp1 || gnnsp2)) PetscCall(MatNullSpacePropagateAny_Private(pc->pmat, NULL, NULL));
   }
@@ -6205,7 +6205,7 @@ static PetscErrorCode PCBDDCSolveSubstructureCorrection(PC pc, Vec inout_B, Vec 
 {
   PC_BDDC        *pcbddc       = (PC_BDDC *)pc->data;
   PCBDDCSubSchurs sub_schurs   = pcbddc->sub_schurs;
-  PetscBool       reuse_solver = sub_schurs ? (sub_schurs->reuse_solver ? PETSC_TRUE : PETSC_FALSE) : PETSC_FALSE;
+  PetscBool       reuse_solver = (bool)(sub_schurs && sub_schurs->reuse_solver != NULL);
 
   PetscFunctionBegin;
   if (!reuse_solver) PetscCall(VecSet(pcbddc->vec1_R, 0.));
@@ -6541,7 +6541,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
     PetscScalar *temp_basis = NULL, *correlation_mat = NULL;
     PetscBLASInt dummy_int    = 1;
     PetscScalar  dummy_scalar = 1.;
-    PetscBool    use_pod      = PetscDefined(MISSING_LAPACK_GESVD) || PetscDefined(HAVE_MKL_LIBS) ? PETSC_TRUE : PETSC_FALSE; /* MKL SVD with same input gives different results on different processes! */
+    PetscBool    use_pod      = (bool)(PetscDefined(MISSING_LAPACK_GESVD) || PetscDefined(HAVE_MKL_LIBS)); /* MKL SVD with same input gives different results on different processes! */
 
     /* Get index sets for faces, edges and vertices from graph */
     PetscCall(PCBDDCGraphGetCandidatesIS(pcbddc->mat_graph, &n_ISForFaces, &ISForFaces, &n_ISForEdges, &ISForEdges, &ISForVertices));
@@ -7799,7 +7799,7 @@ static PetscErrorCode PCBDDCMatISGetSubassemblingPattern(Mat mat, PetscInt *n_su
     } else {
       oldranks = NULL;
     }
-    aggregate = ((redprocs > 0 && redprocs < size) ? PETSC_TRUE : PETSC_FALSE);
+    aggregate = (bool)(redprocs > 0 && redprocs < size);
     if (aggregate) { /* TODO: all this part could be made more efficient */
       PetscInt     lrows, row, ncols, *cols;
       PetscMPIInt  nrank;
@@ -8562,7 +8562,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
       PetscMPIInt rank;
 
       PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)pc), &rank));
-      have_void = (active_procs == size) ? PETSC_FALSE : PETSC_TRUE;
+      have_void = (bool)(active_procs != size);
       PetscCall(ISCreateStride(PetscObjectComm((PetscObject)pc), 1, rank, 1, &pcbddc->coarse_subassembling));
       PetscCall(PetscObjectSetName((PetscObject)pcbddc->coarse_subassembling, "default subassembling"));
     }
@@ -8570,7 +8570,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
     if (pcbddc->coarse_ksp) ncoarse = 1;
     else ncoarse = 0;
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &ncoarse, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)pc)));
-    have_void = ncoarse < size ? PETSC_TRUE : PETSC_FALSE;
+    have_void = (bool)(ncoarse < size);
   }
   /* determine if we can go multilevel */
   if (multilevel_requested) {
@@ -9322,7 +9322,7 @@ PetscErrorCode PCBDDCComputeFakeChange(PC pc, PetscBool constraints, PCBDDCGraph
   PetscCall(PetscFree(pcbddcf->sub_schurs));
   pcbddcf->mat_graph             = graph ? graph : pcbddc->mat_graph;
   pcbddcf->sub_schurs            = schurs;
-  pcbddcf->adaptive_selection    = schurs ? PETSC_TRUE : PETSC_FALSE;
+  pcbddcf->adaptive_selection    = (bool)(schurs != NULL);
   pcbddcf->adaptive_threshold[0] = pcbddc->adaptive_threshold[0];
   pcbddcf->adaptive_threshold[1] = pcbddc->adaptive_threshold[1];
   pcbddcf->adaptive_nmin         = pcbddc->adaptive_nmin;

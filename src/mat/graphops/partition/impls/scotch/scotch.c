@@ -287,7 +287,7 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
     adj = (Mat_MPIAdj *)mat->data;
   }
 
-  proc_weight_flg = part->part_weights ? PETSC_TRUE : PETSC_FALSE;
+  proc_weight_flg = (bool)(part->part_weights != NULL);
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-mat_partitioning_ptscotch_proc_weight", &proc_weight_flg, NULL));
 
   PetscCall(PetscMalloc1(mat->rmap->n + 1, &locals));
@@ -350,7 +350,7 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
 
     /* detect whether all vertices are located at the same process in original graph */
     for (p = 0; !mat->rmap->range[p + 1] && p < nparts; ++p);
-    distributed = (mat->rmap->range[p + 1] == mat->rmap->N) ? PETSC_FALSE : PETSC_TRUE;
+    distributed = (bool)(mat->rmap->range[p + 1] != mat->rmap->N);
     if (distributed) {
       SCOTCH_Arch     archdat;
       SCOTCH_Dgraph   grafdat;

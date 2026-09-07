@@ -251,6 +251,6 @@ PetscErrorCode PetscObjectCompareId(PetscObject obj, PetscObjectId id, PetscBool
   PetscValidHeader(obj, 1);
   PetscAssertPointer(eq, 3);
   PetscCall(PetscObjectGetId(obj, &oid));
-  *eq = (id == oid) ? PETSC_TRUE : PETSC_FALSE;
+  *eq = (bool)(id == oid);
   PetscFunctionReturn(PETSC_SUCCESS);
 }

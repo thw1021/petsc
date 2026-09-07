@@ -211,7 +211,7 @@ PetscErrorCode PetscFEGeomGetPoint(PetscFEGeom *geom, PetscInt c, PetscInt p, co
 @*/
 PetscErrorCode PetscFEGeomGetCellPoint(PetscFEGeom *geom, PetscInt c, PetscInt p, PetscFEGeom *pgeom)
 {
-  const PetscBool bd  = geom->mode == PETSC_FEGEOM_BOUNDARY ? PETSC_TRUE : PETSC_FALSE;
+  const PetscBool bd  = (bool)(geom->mode == PETSC_FEGEOM_BOUNDARY);
   const PetscInt  dim = bd ? geom->dimEmbed : geom->dim;
   const PetscInt  dE  = geom->dimEmbed;
   const PetscInt  Np  = geom->numPoints;

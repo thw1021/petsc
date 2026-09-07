@@ -288,7 +288,7 @@ PETSC_INTERN PetscErrorCode LMProductsGetLocalMatrix(LMProducts dots, Mat *G_loc
   PetscCheck(dots->block_type != LMBLOCK_DIAGONAL, PETSC_COMM_SELF, PETSC_ERR_SUP, "Asking for full matrix of diagonal products");
   PetscCall(MatDenseGetLocalMatrix(dots->full, G_local));
   if (k) *k = dots->k;
-  if (local_is_nonempty) *local_is_nonempty = (dots->m_local == dots->m) ? PETSC_TRUE : PETSC_FALSE;
+  if (local_is_nonempty) *local_is_nonempty = (bool)(dots->m_local == dots->m);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1298,7 +1298,7 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
        Recursively apply BDDC in the multilevel case */
     if (!pcbddc->benign_vec) PetscCall(VecDuplicate(rhs, &pcbddc->benign_vec));
     /* keep applying coarse solver unless we no longer have benign subdomains */
-    pcbddc->benign_apply_coarse_only = pcbddc->benign_have_null ? PETSC_TRUE : PETSC_FALSE;
+    pcbddc->benign_apply_coarse_only = pcbddc->benign_have_null;
     if (!pcbddc->benign_skip_correction) {
       PetscCall(PCApply_BDDC(pc, rhs, pcbddc->benign_vec));
       benign_correction_computed = PETSC_TRUE;

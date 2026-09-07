@@ -17,7 +17,7 @@ static PetscErrorCode CheckSymmetry(PetscInt dim, PetscInt order, PetscBool tens
 
   PetscFunctionBegin;
   PetscCall(PetscDualSpaceCreate(PETSC_COMM_SELF, &sp));
-  PetscCall(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, tensor ? PETSC_FALSE : PETSC_TRUE), &dm));
+  PetscCall(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, (bool)!tensor), &dm));
   PetscCall(PetscDualSpaceSetType(sp, PETSCDUALSPACELAGRANGE));
   PetscCall(PetscDualSpaceSetDM(sp, dm));
   PetscCall(PetscDualSpaceSetOrder(sp, order));
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
   for (tensor = 0; tensor < 2; tensor++) {
     for (dim = 1; dim <= 3; dim++) {
       if (dim == 1 && tensor) continue;
-      for (order = 0; order <= (tensor ? 5 : 6); order++) PetscCall(CheckSymmetry(dim, order, tensor ? PETSC_TRUE : PETSC_FALSE));
+      for (order = 0; order <= (tensor ? 5 : 6); order++) PetscCall(CheckSymmetry(dim, order, tensor));
     }
   }
   PetscCall(PetscFinalize());

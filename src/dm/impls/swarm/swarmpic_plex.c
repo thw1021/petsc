@@ -24,7 +24,7 @@ static PetscErrorCode private_PetscFECreateDefault_scalar_pk1(DM dm, PetscInt di
   PetscSpace      P;
   PetscDualSpace  Q;
   PetscInt        order, quadPointsPerEdge;
-  PetscBool       tensor = isSimplex ? PETSC_FALSE : PETSC_TRUE;
+  PetscBool       tensor = (bool)!isSimplex;
 
   PetscFunctionBegin;
   /* Create space */

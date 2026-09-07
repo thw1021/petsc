@@ -1445,7 +1445,7 @@ static PetscErrorCode LandauBuildConstraintMaps_PetscSection(DM dm, PetscInt Nf_
         for (PetscInt b = 0; b < fdof; b++) {
           PetscInt  preind        = foffs[f] + fieldFoffs[f] + (perm ? perm[b] : b); /* natural order position */
           PetscInt  q             = clperm_arr ? clperm_arr[preind] : preind;        /* permuted position */
-          PetscBool isConstrained = (cfdof > 0 && cind < cfdof && b == fcdofs[cind]) ? PETSC_TRUE : PETSC_FALSE;
+          PetscBool isConstrained = (bool)(cfdof > 0 && cind < cfdof && b == fcdofs[cind]);
 
           q -= foffs[f];       /* subtract field base offset to get q within [0, Nb) */
           if (isConstrained) { /* constrained DOF */

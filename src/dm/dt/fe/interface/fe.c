@@ -2101,7 +2101,7 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   PetscCall(DMDestroy(&K));
   PetscCall(PetscDualSpaceSetNumComponents(Q, Nc));
   PetscCall(PetscDualSpaceSetOrder(Q, degree));
-  PetscCall(PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM)) ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(PetscDualSpaceLagrangeSetTensor(Q, (bool)(tensor || (ct == DM_POLYTOPE_TRI_PRISM))));
   if (setFromOptions) PetscCall(PetscDualSpaceSetFromOptions(Q));
   PetscCall(PetscDualSpaceSetUp(Q));
 
@@ -2975,10 +2975,10 @@ PetscErrorCode PetscFEUpdateElementMat_Internal_SparseIndices(PetscTabulation TI
   const PetscInt NcI     = TI->Nc;
   const PetscInt NbJ     = TJ->Nb;
   const PetscInt NcJ     = TJ->Nc;
-  PetscBool      has_g0  = g0 ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool      has_g1  = g1 ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool      has_g2  = g2 ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool      has_g3  = g3 ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool      has_g0  = (bool)(g0 != NULL);
+  PetscBool      has_g1  = (bool)(g1 != NULL);
+  PetscBool      has_g2  = (bool)(g2 != NULL);
+  PetscBool      has_g3  = (bool)(g3 != NULL);
   PetscInt      *g0_idxs = NULL, *g1_idxs = NULL, *g2_idxs = NULL, *g3_idxs = NULL;
   PetscInt       g0_i, g1_i, g2_i, g3_i;
 
@@ -3000,10 +3000,10 @@ PetscErrorCode PetscFEUpdateElementMat_Internal_SparseIndices(PetscTabulation TI
   if (g1_i == NbI * NbJ * NcI * NcJ * dE) g1_i = 0;
   if (g2_i == NbI * NbJ * NcI * NcJ * dE) g2_i = 0;
   if (g3_i == NbI * NbJ * NcI * NcJ * dE * dE) g3_i = 0;
-  has_g0 = g0_i ? PETSC_TRUE : PETSC_FALSE;
-  has_g1 = g1_i ? PETSC_TRUE : PETSC_FALSE;
-  has_g2 = g2_i ? PETSC_TRUE : PETSC_FALSE;
-  has_g3 = g3_i ? PETSC_TRUE : PETSC_FALSE;
+  has_g0 = (bool)(g0_i != 0);
+  has_g1 = (bool)(g1_i != 0);
+  has_g2 = (bool)(g2_i != 0);
+  has_g3 = (bool)(g3_i != 0);
   if (has_g0) PetscCall(PetscMalloc1(4 * g0_i, &g0_idxs));
   if (has_g1) PetscCall(PetscMalloc1(4 * g1_i, &g1_idxs));
   if (has_g2) PetscCall(PetscMalloc1(4 * g2_i, &g2_idxs));

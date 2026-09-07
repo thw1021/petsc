@@ -800,7 +800,7 @@ PetscErrorCode DMMoabIsEntityOnBoundary(DM dm, const moab::EntityHandle ent, Pet
 
   *ent_on_boundary = PETSC_FALSE;
   if (etype == moab::MBVERTEX && edim == 0) {
-    *ent_on_boundary = ((dmmoab->bndyvtx->index(ent) >= 0) ? PETSC_TRUE : PETSC_FALSE);
+    *ent_on_boundary = (bool)(dmmoab->bndyvtx->index(ent) >= 0);
   } else {
     if (edim == dmmoab->dim) { /* check the higher-dimensional elements first */
       if (dmmoab->bndyelems->index(ent) >= 0) *ent_on_boundary = PETSC_TRUE;
@@ -837,7 +837,7 @@ PetscErrorCode DMMoabCheckBoundaryVertices(DM dm, PetscInt nconn, const moab::En
   PetscAssertPointer(isbdvtx, 4);
   dmmoab = (DM_Moab *)dm->data;
 
-  for (i = 0; i < nconn; ++i) isbdvtx[i] = (dmmoab->bndyvtx->index(cnt[i]) >= 0 ? PETSC_TRUE : PETSC_FALSE);
+  for (i = 0; i < nconn; ++i) isbdvtx[i] = (bool)(dmmoab->bndyvtx->index(cnt[i]) >= 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

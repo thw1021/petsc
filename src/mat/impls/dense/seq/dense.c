@@ -3405,7 +3405,7 @@ PetscErrorCode MatDenseSetLDA_SeqDense(Mat B, PetscInt lda)
   PetscBool     data;
 
   PetscFunctionBegin;
-  data = (B->rmap->n > 0 && B->cmap->n > 0) ? (b->v ? PETSC_TRUE : PETSC_FALSE) : PETSC_FALSE;
+  data = (bool)(B->rmap->n > 0 && B->cmap->n > 0 && b->v != NULL);
   PetscCheck(b->user_alloc || !data || b->lda == lda, PETSC_COMM_SELF, PETSC_ERR_ORDER, "LDA cannot be changed after allocation of internal storage");
   PetscCheck(lda >= B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "LDA %" PetscInt_FMT " must be at least matrix dimension %" PetscInt_FMT, lda, B->rmap->n);
   PetscCall(PetscBLASIntCast(lda, &b->lda));

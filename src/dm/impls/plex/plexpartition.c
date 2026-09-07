@@ -646,7 +646,7 @@ PetscErrorCode DMPlexCreateNeighborCSR(DM dm, PetscInt cellHeight, PetscInt *num
     /* Get meet with each cell, and check with recognizer (could optimize to check each pair only once) */
     for (n = 0; n < numNeighbors; ++n) {
       PetscInt        cellPair[2];
-      PetscBool       found    = faceDepth > 1 ? PETSC_TRUE : PETSC_FALSE;
+      PetscBool       found    = (bool)(faceDepth > 1);
       PetscInt        meetSize = 0;
       const PetscInt *meet     = NULL;
 
@@ -682,7 +682,7 @@ PetscErrorCode DMPlexCreateNeighborCSR(DM dm, PetscInt cellHeight, PetscInt *num
       /* Get meet with each cell, and check with recognizer (could optimize to check each pair only once) */
       for (n = 0; n < numNeighbors; ++n) {
         PetscInt        cellPair[2];
-        PetscBool       found    = faceDepth > 1 ? PETSC_TRUE : PETSC_FALSE;
+        PetscBool       found    = (bool)(faceDepth > 1);
         PetscInt        meetSize = 0;
         const PetscInt *meet     = NULL;
 
@@ -1045,7 +1045,7 @@ static PetscErrorCode DMPlexAddClosureTree_Private(DM dm, PetscHSetI ht, PetscIn
 PetscErrorCode DMPlexClosurePoints_Private(DM dm, PetscInt numPoints, const PetscInt points[], IS *closureIS)
 {
   DM_Plex        *mesh    = (DM_Plex *)dm->data;
-  const PetscBool hasTree = (mesh->parentSection || mesh->childSection) ? PETSC_TRUE : PETSC_FALSE;
+  const PetscBool hasTree = (bool)(mesh->parentSection || mesh->childSection);
   PetscInt        nelems, *elems, off = 0, p;
   PetscHSetI      ht = NULL;
 

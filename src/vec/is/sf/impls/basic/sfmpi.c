@@ -78,14 +78,14 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf, MPI_Datatype unit, PetscMemType
   /* Can we directly use root/leafdirect with the given sf, sfop and op? */
   for (i = PETSCSF_LOCAL; i <= PETSCSF_REMOTE; i++) {
     if (sfop == PETSCSF_BCAST) {
-      rootdirect[i] = bas->rootcontig[i];                                                  /* Pack roots */
-      leafdirect[i] = (sf->leafcontig[i] && op == MPI_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack leaves */
+      rootdirect[i] = bas->rootcontig[i];                             /* Pack roots */
+      leafdirect[i] = (bool)(sf->leafcontig[i] && op == MPI_REPLACE); /* Unpack leaves */
     } else if (sfop == PETSCSF_REDUCE) {
-      leafdirect[i] = sf->leafcontig[i];                                                    /* Pack leaves */
-      rootdirect[i] = (bas->rootcontig[i] && op == MPI_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
-    } else {                                                                                /* PETSCSF_FETCH */
-      rootdirect[i] = PETSC_FALSE;                                                          /* FETCH always need a separate rootbuf */
-      leafdirect[i] = PETSC_FALSE;                                                          /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
+      leafdirect[i] = sf->leafcontig[i];                               /* Pack leaves */
+      rootdirect[i] = (bool)(bas->rootcontig[i] && op == MPI_REPLACE); /* Unpack roots */
+    } else {                                                           /* PETSCSF_FETCH */
+      rootdirect[i] = PETSC_FALSE;                                     /* FETCH always need a separate rootbuf */
+      leafdirect[i] = PETSC_FALSE;                                     /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
     }
   }
 

@@ -712,7 +712,7 @@ static PetscErrorCode PCPreSolve_HPDDM(PC pc, KSP ksp, Vec, Vec)
           KSPHPDDMType type;
 
           PetscCall(KSPHPDDMGetType(ksp, &type));
-          flg = (type == KSP_HPDDM_TYPE_CG || type == KSP_HPDDM_TYPE_BCG || type == KSP_HPDDM_TYPE_BFBCG ? PETSC_TRUE : PETSC_FALSE);
+          flg = (bool)(type == KSP_HPDDM_TYPE_CG || type == KSP_HPDDM_TYPE_BCG || type == KSP_HPDDM_TYPE_BFBCG);
         }
       }
     }
@@ -2779,7 +2779,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       }
       if (data->levels[0]->P) {
         /* if the pattern is the same and PCSetUp() has previously succeeded, reuse HPDDM buffers and connectivity */
-        PetscCall(HPDDM::Schwarz<PetscScalar>::destroy(data->levels[0], !pc->setupcalled || pc->flag == DIFFERENT_NONZERO_PATTERN ? PETSC_TRUE : PETSC_FALSE));
+        PetscCall(HPDDM::Schwarz<PetscScalar>::destroy(data->levels[0], (bool)(!pc->setupcalled || pc->flag == DIFFERENT_NONZERO_PATTERN)));
       }
       if (!data->levels[0]->P) data->levels[0]->P = new HPDDM::Schwarz<PetscScalar>();
       if (data->log_separate) PetscCall(PetscLogEventBegin(PC_HPDDM_SetUp[0], data->levels[0]->ksp, nullptr, nullptr, nullptr));
@@ -2897,7 +2897,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       }
       if (ctx) PetscCall(MatDestroy(&S));
       if (overlap == -1) PetscCall(PetscObjectComposeFunction((PetscObject)pc->pmat, "PCHPDDMAlgebraicAuxiliaryMat_Private_C", nullptr));
-    } else flg = reused ? PETSC_FALSE : PETSC_TRUE;
+    } else flg = (bool)(reused == 0);
     if (!ismatis && subdomains) {
       if (flg) PetscCall(KSPGetPC(data->levels[0]->ksp, &inner));
       else inner = data->levels[0]->pc;

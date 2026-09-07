@@ -27,7 +27,7 @@ PetscErrorCode TestCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec X, PetscBoo
 
   PetscFunctionBeginUser;
   PetscCall(TSGetStepNumber(ts, &step));
-  *accept = (step >= 2) ? PETSC_FALSE : PETSC_TRUE;
+  *accept = (bool)(step < 2);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

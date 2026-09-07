@@ -549,7 +549,7 @@ static PetscErrorCode DMPlexTransformSetUp_Extrude(DMPlexTransform tr)
           PetscCall(DMPlexGetSupport(ex->dmNormal, face, &supp));
           // Only use external faces, so I can get the orientation from any cell
           if (leaves) PetscCall(PetscFindInt(face, Nl, leaves, &floc));
-          shared = floc >= 0 || (ex->degree && ex->degree[face]) ? PETSC_TRUE : PETSC_FALSE;
+          shared = (bool)(floc >= 0 || (ex->degree && ex->degree[face]));
           if (suppSize == 1 && !shared) {
             const PetscInt *cone, *ornt;
             PetscInt        coneSize, c;
@@ -758,9 +758,9 @@ static PetscErrorCode DMPlexTransformCellTransform_Extrude(DMPlexTransform tr, D
   PetscFunctionBegin;
   if (trType) {
     PetscCall(DMLabelGetValue(trType, p, &val));
-    identity = val >= 100 ? PETSC_TRUE : PETSC_FALSE;
+    identity = (bool)(val >= 100);
   } else {
-    ignore = ex->Nt[source] < 0 ? PETSC_TRUE : PETSC_FALSE;
+    ignore = (bool)(ex->Nt[source] < 0);
   }
   if (rt) *rt = val;
   if (ignore) {

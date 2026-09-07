@@ -531,7 +531,7 @@ int main(int argc, char **argv)
   PetscCall(MatSetUp(B));
 
   PetscCall(MatIsHermitianKnown(B, &B_is_h_known, &B_is_h));
-  is_hermitian = (B_is_h_known && B_is_h) ? PETSC_TRUE : PETSC_FALSE;
+  is_hermitian = (bool)(B_is_h_known && B_is_h);
   PetscCall(MatGetLayouts(B, &rmap, &cmap));
   PetscCall(PetscLayoutCompare(rmap, cmap, &is_square));
 

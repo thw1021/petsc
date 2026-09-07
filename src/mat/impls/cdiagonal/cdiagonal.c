@@ -20,7 +20,7 @@ static PetscErrorCode MatEqual_ConstantDiagonal(Mat Y, Mat X, PetscBool *equal)
   Mat_ConstantDiagonal *xctx = (Mat_ConstantDiagonal *)X->data;
 
   PetscFunctionBegin;
-  *equal = (yctx->diag == xctx->diag) ? PETSC_TRUE : PETSC_FALSE;
+  *equal = (bool)(yctx->diag == xctx->diag);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

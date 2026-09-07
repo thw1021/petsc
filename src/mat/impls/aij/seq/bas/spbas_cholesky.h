@@ -10,7 +10,7 @@ static PetscBool spbas_cholesky_row_alloc(spbas_matrix retval, PetscInt k, Petsc
   retval.icols[k]  = &retval.alloc_icol[*n_alloc_used];
   retval.values[k] = &retval.alloc_val[*n_alloc_used];
   *n_alloc_used += r_nnz;
-  return (*n_alloc_used > retval.n_alloc_icol) ? PETSC_FALSE : PETSC_TRUE;
+  return (bool)(*n_alloc_used <= retval.n_alloc_icol);
 }
 
 /*

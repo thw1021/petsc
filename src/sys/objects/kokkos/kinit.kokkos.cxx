@@ -27,7 +27,7 @@ PetscErrorCode PetscKokkosFinalize_Private(void)
 PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
 {
   PetscFunctionBegin;
-  *isInitialized = Kokkos::is_initialized() ? PETSC_TRUE : PETSC_FALSE;
+  *isInitialized = Kokkos::is_initialized();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

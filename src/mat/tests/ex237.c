@@ -164,7 +164,7 @@ int main(int argc, char **argv)
         PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &flg, MATSEQAIJ, MATSEQBAIJ, MATSEQSBAIJ, ""));
         PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "Not implemented");
         PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJ, &flg));
-        PetscCall(MatGetRowIJ(A, 0, PETSC_FALSE, flg ? PETSC_FALSE : PETSC_TRUE, &An, &Ai, &Aj, &done));
+        PetscCall(MatGetRowIJ(A, 0, PETSC_FALSE, (bool)!flg, &An, &Ai, &Aj, &done));
         PetscCheck(done, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes");
         PetscCall(PetscMalloc1(An + 1, &ia_ptr));
         PetscCall(PetscMalloc1(Ai[An], &ja_ptr));
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
           }
         }
         PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJ, &flg));
-        PetscCall(MatRestoreRowIJ(A, 0, PETSC_FALSE, flg ? PETSC_FALSE : PETSC_TRUE, &An, &Ai, &Aj, &done));
+        PetscCall(MatRestoreRowIJ(A, 0, PETSC_FALSE, (bool)!flg, &An, &Ai, &Aj, &done));
       }
 
       PetscCall(MatViewFromOptions(A, NULL, "-A_view"));

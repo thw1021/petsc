@@ -297,7 +297,7 @@ PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
   PetscBool hessComputed, diagExists, hadactive;
 
   PetscFunctionBegin;
-  hadactive = bnk->active_idx ? PETSC_TRUE : PETSC_FALSE;
+  hadactive = (bool)(bnk->active_idx != NULL);
   switch (asType) {
   case BNK_AS_NONE:
     PetscCall(ISDestroy(&bnk->inactive_idx));

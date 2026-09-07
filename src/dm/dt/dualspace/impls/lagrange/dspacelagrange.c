@@ -2009,7 +2009,7 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
     lag->nodeType     = PETSCDTNODES_GAUSSJACOBI;
     lag->nodeExponent = 0.;
     /* trimmed spaces don't include corner vertices, so don't use end nodes by default */
-    lag->endNodes = lag->trimmed ? PETSC_FALSE : PETSC_TRUE;
+    lag->endNodes = (bool)!lag->trimmed;
   }
   /* If a trimmed space and the user did choose nodes with endpoints, skip them by default */
   if (lag->numNodeSkip < 0) lag->numNodeSkip = (lag->trimmed && lag->endNodes) ? 1 : 0;

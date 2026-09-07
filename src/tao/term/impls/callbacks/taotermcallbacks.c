@@ -297,7 +297,7 @@ static PetscErrorCode TaoTermIsObjectiveDefined_Callbacks(TaoTerm term, PetscBoo
   TaoTerm_Callbacks *tt = (TaoTerm_Callbacks *)term->data;
 
   PetscFunctionBegin;
-  *flg = (tt->objective != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(tt->objective != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -306,7 +306,7 @@ static PetscErrorCode TaoTermIsGradientDefined_Callbacks(TaoTerm term, PetscBool
   TaoTerm_Callbacks *tt = (TaoTerm_Callbacks *)term->data;
 
   PetscFunctionBegin;
-  *flg = (tt->gradient != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(tt->gradient != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -315,7 +315,7 @@ static PetscErrorCode TaoTermIsObjectiveAndGradientDefined_Callbacks(TaoTerm ter
   TaoTerm_Callbacks *tt = (TaoTerm_Callbacks *)term->data;
 
   PetscFunctionBegin;
-  *flg = (tt->objectiveandgradient != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(tt->objectiveandgradient != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -324,7 +324,7 @@ static PetscErrorCode TaoTermIsHessianDefined_Callbacks(TaoTerm term, PetscBool 
   TaoTerm_Callbacks *tt = (TaoTerm_Callbacks *)term->data;
 
   PetscFunctionBegin;
-  *flg = (tt->hessian != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  *flg = (bool)(tt->hessian != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1811,7 +1811,7 @@ PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm, const PetscReal[2], 
 
 .seealso: `PetscBool`, `PETSC_TRUE`, `PETSC_FALSE`
 M*/
-#define PetscNot(a) ((a) ? PETSC_FALSE : PETSC_TRUE)
+#define PetscNot(a) ((bool)!(a))
 
 /*MC
    PetscHelpPrintf - Prints help messages.
@@ -2634,7 +2634,7 @@ M*/
 static inline PetscBool PetscBinaryBigEndian(void)
 {
   long _petsc_v = 1;
-  return ((char *)&_petsc_v)[0] ? PETSC_FALSE : PETSC_TRUE;
+  return (bool)(((char *)&_petsc_v)[0] == 0);
 }
 
 PETSC_EXTERN PetscErrorCode PetscBinaryRead(int, void *, PetscCount, PetscInt *, PetscDataType);

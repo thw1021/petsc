@@ -190,7 +190,7 @@ static PetscErrorCode DMCeedCreateGeometry(DM dm, IS cellIS, PetscInt *Nqdata, C
 PetscErrorCode DMRefineHook_Ceed(DM coarse, DM fine, PetscCtx ctx)
 {
   PetscFunctionBegin;
-  if (coarse->dmceed) PetscCall(DMCeedCreate(fine, coarse->dmceed->geom ? PETSC_TRUE : PETSC_FALSE, coarse->dmceed->func, coarse->dmceed->funcSource));
+  if (coarse->dmceed) PetscCall(DMCeedCreate(fine, (bool)(coarse->dmceed->geom != NULL), coarse->dmceed->func, coarse->dmceed->funcSource));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

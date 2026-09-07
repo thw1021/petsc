@@ -668,7 +668,7 @@ PetscErrorCode DMPlexOrient(DM dm)
       if (rank == 0) {
         PetscCall(PetscMalloc1(Noff[size], &flips));
         for (p = 0; p < Noff[size]; ++p) {
-          flips[p] = PetscBTLookup(flippedProcs, p) ? PETSC_TRUE : PETSC_FALSE;
+          flips[p] = (bool)(PetscBTLookup(flippedProcs, p) != 0);
           if (flg && flips[p]) PetscCall(PetscPrintf(comm, "Flipping Proc+Comp %d:\n", p));
         }
         for (p = 0; p < size; ++p) displs[p + 1] = displs[p] + Nc[p];
@@ -1008,7 +1008,7 @@ static PetscErrorCode DMPlexOrientCreateProcessGraph_Internal(DM dm, IS faceIS, 
       PetscInt l;
 
       if (faceIsVertex) {
-        match[off] = neighbors[c][n].lornt != neighbors[c][n].rornt ? PETSC_TRUE : PETSC_FALSE;
+        match[off] = (bool)(neighbors[c][n].lornt != neighbors[c][n].rornt);
       } else {
         const PetscInt o = neighbors[c][n].lornt * neighbors[c][n].rornt;
 
@@ -1018,7 +1018,7 @@ static PetscErrorCode DMPlexOrientCreateProcessGraph_Internal(DM dm, IS faceIS, 
       // Flip sense if we are matching from an unowned cell
       PetscCall(PetscFindInt(neighbors[c][n].lcell, Nl, lpoints, &l));
       if (l >= 0) {
-        if (rpoints[l].rank == neighbors[c][n].rrank && rpoints[l].index == neighbors[c][n].rcell) match[off] = match[off] ? PETSC_FALSE : PETSC_TRUE;
+        if (rpoints[l].rank == neighbors[c][n].rrank && rpoints[l].index == neighbors[c][n].rcell) match[off] = (bool)!match[off];
       }
       nrankComp[off].rank  = neighbors[c][n].rrank;
       nrankComp[off].index = neighbors[c][n].rcomp;
@@ -1158,7 +1158,7 @@ static PetscErrorCode DMPlexOrientSolveProcessGraph_Internal(DM dm, IS cellIS, P
       if (rank == 0) {
         PetscCall(PetscMalloc1(Noff[size], &flips));
         for (PetscInt p = 0; p < Noff[size]; ++p) {
-          flips[p] = PetscBTLookup(flippedProcs, p) ? PETSC_TRUE : PETSC_FALSE;
+          flips[p] = (bool)(PetscBTLookup(flippedProcs, p) != 0);
           if (debug && flips[p]) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Flipping Proc+Comp %" PetscInt_FMT ":\n", p));
         }
         for (PetscInt p = 0; p < size; ++p) displs[p + 1] = displs[p] + Nc[p];
@@ -1392,7 +1392,7 @@ static PetscErrorCode DMPlexCheckOrientation_Internal(DM dm, IS cellIS, IS faceI
   }
   for (PetscInt f = fStart; f < fEnd; ++f) {
     const PetscInt  face  = faces ? faces[f] : f;
-    const PetscBool owner = rootdegree && rootdegree[face] ? PETSC_TRUE : PETSC_FALSE;
+    const PetscBool owner = (bool)(rootdegree && rootdegree[face]);
     const PetscInt *supp;
     PetscInt        neighbors[2], o[2] = {0, 0};
     PetscInt        lsS = 0, sS;

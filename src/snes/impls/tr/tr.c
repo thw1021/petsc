@@ -536,7 +536,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   PetscFunctionBegin;
   PetscCall(SNESGetObjective(snes, &objective, NULL));
-  has_objective = objective ? PETSC_TRUE : PETSC_FALSE;
+  has_objective = (bool)(objective != NULL);
 
   maxits = snes->max_its;                                   /* maximum number of iterations */
   X      = snes->vec_sol;                                   /* solution vector */

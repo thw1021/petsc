@@ -1708,7 +1708,7 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIDense(Mat);
 static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
 {
   PetscFunctionBegin;
-  B->boundtocpu                 = PetscDefined(HAVE_KOKKOS_WITHOUT_GPU) ? PETSC_TRUE : PETSC_FALSE; // MATAIJKOKKOS has yet to support CPU binding. But in this case, we deem it is bound to CPU.
+  B->boundtocpu                 = (bool)PetscDefined(HAVE_KOKKOS_WITHOUT_GPU); // MATAIJKOKKOS has yet to support CPU binding. But in this case, we deem it is bound to CPU.
   B->ops->assemblyend           = MatAssemblyEnd_MPIAIJKokkos;
   B->ops->mult                  = MatMult_MPIAIJKokkos;
   B->ops->multadd               = MatMultAdd_MPIAIJKokkos;

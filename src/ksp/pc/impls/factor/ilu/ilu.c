@@ -52,7 +52,7 @@ static PetscErrorCode PCSetFromOptions_ILU(PC pc, PetscOptionItems PetscOptionsO
   PetscCall(PetscOptionsInt("-pc_factor_levels", "levels of fill", "PCFactorSetLevels", (PetscInt)((PC_Factor *)ilu)->info.levels, &itmp, &flg));
   if (flg) ((PC_Factor *)ilu)->info.levels = itmp;
 
-  PetscCall(PetscOptionsBool("-pc_factor_diagonal_fill", "Allow fill into empty diagonal entry", "PCFactorSetAllowDiagonalFill", ((PC_Factor *)ilu)->info.diagonal_fill ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-pc_factor_diagonal_fill", "Allow fill into empty diagonal entry", "PCFactorSetAllowDiagonalFill", (bool)(((PC_Factor *)ilu)->info.diagonal_fill != 0.0), &flg, &set));
   if (set) ((PC_Factor *)ilu)->info.diagonal_fill = (PetscReal)flg;
   PetscCall(PetscOptionsName("-pc_factor_nonzeros_along_diagonal", "Reorder to remove zeros from diagonal", "PCFactorReorderForNonzeroDiagonal", &flg));
   if (flg) {

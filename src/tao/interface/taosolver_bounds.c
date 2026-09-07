@@ -59,7 +59,7 @@ PetscErrorCode TaoSetVariableBoundsRoutine(Tao tao, PetscErrorCode (*func)(Tao t
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   tao->user_boundsP       = ctx;
   tao->ops->computebounds = func;
-  tao->bounded            = func ? PETSC_TRUE : PETSC_FALSE;
+  tao->bounded            = (bool)(func != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -234,7 +234,7 @@ PetscErrorCode TaoSetConstraintsRoutine(Tao tao, Vec c, PetscErrorCode (*func)(T
   if (c) PetscValidHeaderSpecific(c, VEC_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)c));
   PetscCall(VecDestroy(&tao->constraints));
-  tao->constrained             = func ? PETSC_TRUE : PETSC_FALSE;
+  tao->constrained             = (bool)(func != NULL);
   tao->constraints             = c;
   tao->user_conP               = ctx;
   tao->ops->computeconstraints = func;
@@ -332,7 +332,7 @@ PetscErrorCode TaoSetEqualityConstraintsRoutine(Tao tao, Vec ce, PetscErrorCode 
   if (ce) PetscValidHeaderSpecific(ce, VEC_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)ce));
   PetscCall(VecDestroy(&tao->constraints_equality));
-  tao->eq_constrained                  = func ? PETSC_TRUE : PETSC_FALSE;
+  tao->eq_constrained                  = (bool)(func != NULL);
   tao->constraints_equality            = ce;
   tao->user_con_equalityP              = ctx;
   tao->ops->computeequalityconstraints = func;
@@ -401,7 +401,7 @@ PetscErrorCode TaoSetInequalityConstraintsRoutine(Tao tao, Vec ci, PetscErrorCod
   PetscCall(PetscObjectReference((PetscObject)ci));
   PetscCall(VecDestroy(&tao->constraints_inequality));
   tao->constraints_inequality            = ci;
-  tao->ineq_constrained                  = func ? PETSC_TRUE : PETSC_FALSE;
+  tao->ineq_constrained                  = (bool)(func != NULL);
   tao->user_con_inequalityP              = ctx;
   tao->ops->computeinequalityconstraints = func;
   PetscFunctionReturn(PETSC_SUCCESS);

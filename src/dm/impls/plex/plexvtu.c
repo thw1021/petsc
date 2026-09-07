@@ -65,7 +65,7 @@ static PetscErrorCode DMPlexGetVTKConnectivity(DM dm, PetscBool localized, Piece
   PetscCall(DMPlexGetHeightStratum(dm, cellHeight, &cStart, &cEnd));
   PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
   PetscCall(DMGetStratumSize(dm, "vtk", 1, &numLabelCells));
-  hasLabel = numLabelCells > 0 ? PETSC_TRUE : PETSC_FALSE;
+  hasLabel = (bool)(numLabelCells > 0);
 
   countcell = 0;
   countconn = 0;
@@ -200,7 +200,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
   PetscCall(PetscFPrintf(comm, fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"%s\" header_type=\"UInt64\">\n", byte_order));
   PetscCall(PetscFPrintf(comm, fp, "  <UnstructuredGrid>\n"));
 
-  hasLabel        = numLabelCells > 0 ? PETSC_TRUE : PETSC_FALSE;
+  hasLabel        = (bool)(numLabelCells > 0);
   piece.nvertices = 0;
   piece.ncells    = 0;
   piece.nconn     = 0;

@@ -827,7 +827,7 @@ PetscErrorCode TSTrajectorySetFromOptions(TSTrajectory tj, TS ts)
   PetscObjectOptionsBegin((PetscObject)tj);
   PetscCall(TSTrajectorySetTypeFromOptions_Private(PetscOptionsObject, tj, ts));
   PetscCall(PetscOptionsBool("-ts_trajectory_use_history", "Turn on/off usage of TSHistory", NULL, tj->usehistory, &tj->usehistory, NULL));
-  PetscCall(PetscOptionsBool("-ts_trajectory_monitor", "Print checkpointing schedules", "TSTrajectorySetMonitor", tj->monitor ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
+  PetscCall(PetscOptionsBool("-ts_trajectory_monitor", "Print checkpointing schedules", "TSTrajectorySetMonitor", (bool)(tj->monitor != NULL), &flg, &set));
   if (set) PetscCall(TSTrajectorySetMonitor(tj, flg));
   PetscCall(PetscOptionsInt("-ts_trajectory_reconstruction_order", "Interpolation order for reconstruction", NULL, tj->lag.order, &tj->lag.order, NULL));
   PetscCall(PetscOptionsBool("-ts_trajectory_reconstruction_caching", "Turn on/off caching of TSTrajectoryGetVecs input", NULL, tj->lag.caching, &tj->lag.caching, NULL));

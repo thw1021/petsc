@@ -29,7 +29,7 @@ static PetscErrorCode VecLoadIfExists_Private(Vec b, PetscViewer fd, PetscBool *
     PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
     ierrp = VecLoad(b, fd);
     PetscCall(PetscPopErrorHandler());
-    *has = ierrp ? PETSC_FALSE : PETSC_TRUE;
+    *has = (bool)(ierrp == PETSC_SUCCESS);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

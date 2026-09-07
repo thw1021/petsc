@@ -305,7 +305,7 @@ PetscErrorCode PetscStrcasecmp(const char a[], const char b[], PetscBool *t)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 #endif
-  *t = c ? PETSC_FALSE : PETSC_TRUE;
+  *t = (bool)(c == 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

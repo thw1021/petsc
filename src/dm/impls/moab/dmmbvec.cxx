@@ -419,7 +419,7 @@ static PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const mo
 
   /* Create the MOAB internal data object */
   PetscCall(PetscNew(&vmoab));
-  vmoab->is_native_vec = (gnative_vec > 0 ? PETSC_TRUE : PETSC_FALSE);
+  vmoab->is_native_vec = (bool)(gnative_vec > 0);
 
   if (!vmoab->is_native_vec) {
     merr = moab::MB_SUCCESS;

@@ -531,7 +531,7 @@ PETSC_EXTERN const char *const PetscBool3s[];
 
 .seealso: `PetscBool`, `PetscBool3`, `PetscBoolToBool3()`
 M*/
-#define PetscBool3ToBool(a) ((a) == PETSC_BOOL3_TRUE ? PETSC_TRUE : PETSC_FALSE)
+#define PetscBool3ToBool(a) ((bool)((a) == PETSC_BOOL3_TRUE))
 
 /*MC
    PetscBoolToBool3 - Convert a `PetscBool` to a `PetscBool3`

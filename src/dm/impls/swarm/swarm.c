@@ -2317,7 +2317,7 @@ PetscErrorCode DMSwarmSetPointCoordinatesRandom(DM dm, PetscInt Npc)
   PetscCall(DMGetDimension(cdm, &dim));
   PetscCall(DMPlexGetHeightStratum(cdm, 0, &cStart, &cEnd));
   PetscCall(DMPlexGetCellType(cdm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
 
   PetscCall(PetscMalloc5(dim, &centroid, dim, &xi0, dim, &v0, dim * dim, &J, dim * dim, &invJ));
   for (d = 0; d < dim; ++d) xi0[d] = -1.0;

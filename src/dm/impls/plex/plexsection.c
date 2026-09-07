@@ -119,7 +119,7 @@ static PetscErrorCode DMPlexCreateSectionDof(DM dm, DMLabel label[], const Petsc
     PetscCall(DMGetField(dm, f, NULL, &obj));
     PetscCall(PetscObjectGetClassId(obj, &id));
     /* User is allowed to put a "placeholder" field in (c.f. DMCreateDS) */
-    isFE[f] = id == PETSCFE_CLASSID ? PETSC_TRUE : PETSC_FALSE;
+    isFE[f] = (bool)(id == PETSCFE_CLASSID);
   }
 
   PetscCall(DMPlexGetVTKCellHeight(dm, &cellHeight));
@@ -127,7 +127,7 @@ static PetscErrorCode DMPlexCreateSectionDof(DM dm, DMLabel label[], const Petsc
     PetscBool avoidTensor;
 
     PetscCall(DMGetFieldAvoidTensor(dm, f, &avoidTensor));
-    avoidTensor = (avoidTensor || hasCohesive) ? PETSC_TRUE : PETSC_FALSE;
+    avoidTensor = (bool)(avoidTensor || hasCohesive);
     if (label && label[f]) {
       IS              pointIS;
       const PetscInt *points;
@@ -528,7 +528,7 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
         DMLabel l;
 
         PetscCall(PetscDSGetBoundary(dsBC, bd2, NULL, NULL, NULL, &l, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
-        duplicate = l == label ? PETSC_TRUE : PETSC_FALSE;
+        duplicate = (bool)(l == label);
         if (duplicate) break;
       }
       /* Filter out cells, if you actually want to constrain cells you need to do things by hand right now */

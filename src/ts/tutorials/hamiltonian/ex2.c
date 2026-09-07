@@ -1992,7 +1992,7 @@ static PetscErrorCode RHSFunctionV(TS ts, PetscReal t, Vec X, Vec Vres, void *Ct
     In the 1D (on the 2D mesh) case, every y component should be zero.
   */
   if (ctx->checkVRes) {
-    PetscBool pr = ctx->checkVRes > 1 ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool pr = (bool)(ctx->checkVRes > 1);
     PetscInt  step;
 
     PetscCall(TSGetStepNumber(ts, &step));

@@ -1930,7 +1930,7 @@ PetscErrorCode SNESCreate(MPI_Comm comm, SNES *outsnes)
   snes->maxLinearSolveFailures = 1;
 
   snes->vizerotolerance     = 1.e-8;
-  snes->checkjacdomainerror = PetscDefined(USE_DEBUG) ? PETSC_TRUE : PETSC_FALSE;
+  snes->checkjacdomainerror = (bool)PetscDefined(USE_DEBUG);
 
   /* Set this to true if the implementation of SNESSolve_XXX does compute the residual at the final solution. */
   snes->alwayscomputesfinalresidual = PETSC_FALSE;
@@ -2865,7 +2865,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
   PetscReal         threshold = 1.e-5;
   void             *functx;
   PetscBool         complete_print = PETSC_FALSE, threshold_print = PETSC_FALSE, flg, istranspose;
-  PetscBool         silent = diffNorm != PETSC_NULLPTR ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool         silent = (bool)(diffNorm != PETSC_NULLPTR);
   PetscViewer       viewer, mviewer;
   MPI_Comm          comm;
   PetscInt          tabs;
@@ -6016,7 +6016,7 @@ PetscErrorCode SNESHasNPC(SNES snes, PetscBool *has_npc)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscAssertPointer(has_npc, 2);
-  *has_npc = snes->npc ? PETSC_TRUE : PETSC_FALSE;
+  *has_npc = (bool)(snes->npc != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

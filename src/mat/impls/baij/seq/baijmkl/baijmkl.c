@@ -22,7 +22,7 @@ static PetscBool PetscSeqBAIJSupportsZeroBased(void)
 
   if (!set) {
     status = mkl_sparse_s_create_bsr(&A, SPARSE_INDEX_BASE_ZERO, SPARSE_LAYOUT_COLUMN_MAJOR, (MKL_INT)n, (MKL_INT)n, (MKL_INT)n, (MKL_INT *)ia, (MKL_INT *)ia, (MKL_INT *)ja, a);
-    value  = (status != SPARSE_STATUS_NOT_SUPPORTED) ? PETSC_TRUE : PETSC_FALSE;
+    value  = (bool)(status != SPARSE_STATUS_NOT_SUPPORTED);
     (void)mkl_sparse_destroy(A);
     set = PETSC_TRUE;
   }

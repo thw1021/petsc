@@ -2930,7 +2930,7 @@ PetscErrorCode MatAXPY_SeqAIJ(Mat Y, PetscScalar a, Mat X, MatStructure str)
 
   PetscFunctionBegin;
   if (str == UNKNOWN_NONZERO_PATTERN || (PetscDefined(USE_DEBUG) && str == SAME_NONZERO_PATTERN)) {
-    PetscBool e = x->nz == y->nz ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool e = (bool)(x->nz == y->nz);
     if (e) {
       PetscCall(PetscArraycmp(x->i, y->i, Y->rmap->n + 1, &e));
       if (e) {

@@ -1148,7 +1148,7 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
 
     if (gcell[cell] < 0) continue;
     if (cutLabel) PetscCall(DMLabelGetValue(cutLabel, cell, &value));
-    replace = (value == 2) ? PETSC_TRUE : PETSC_FALSE;
+    replace = (bool)(value == 2);
     PetscCall(DMPlexGetTransitiveClosure(dm, cell, PETSC_TRUE, &closureSize, &closure));
     for (p = 0; p < closureSize * 2; p += 2) {
       if ((closure[p] >= vStart) && (closure[p] < vEnd)) closure[Nc++] = closure[p];

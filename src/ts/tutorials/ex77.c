@@ -552,7 +552,7 @@ static PetscErrorCode SetupDiscretization(DM dm, DM sdm, AppCtx *user)
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
   /* Create finite element */
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCall(PetscFECreateDefault(comm, dim, dim, simplex, "vel_", PETSC_DEFAULT, &fe[0]));
@@ -853,7 +853,7 @@ static PetscErrorCode AdvectParticles(TS ts)
   PetscCall(DMSwarmMigrate(sdm, PETSC_TRUE));
   PetscCall(DMSwarmGetSize(sdm, &newN));
   PetscCall(DMSwarmGetLocalSize(sdm, &newn));
-  reset = (n != newn || N != newN) ? PETSC_TRUE : PETSC_FALSE;
+  reset = (bool)(n != newn || N != newN);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &reset, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)sts)));
   if (reset) {
     PetscCall(TSReset(sts));

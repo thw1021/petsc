@@ -204,7 +204,7 @@ static PetscInt ZCodeFind(ZCode key, PetscInt n, const ZCode X[])
 
 static inline PetscBool IsPointInsideStratum(PetscInt point, PetscInt pStart, PetscInt pEnd)
 {
-  return (point >= pStart && point < pEnd) ? PETSC_TRUE : PETSC_FALSE;
+  return (bool)(point >= pStart && point < pEnd);
 }
 
 static PetscErrorCode DMPlexCreateBoxMesh_Tensor_SFC_Periodicity_Private(DM dm, const ZLayout *layout, const ZCode *vert_z, PetscSegBuffer per_faces[3], const PetscReal *lower, const PetscReal *upper, const DMBoundaryType *periodicity, PetscSegBuffer donor_face_closure[3], PetscSegBuffer my_donor_faces[3])

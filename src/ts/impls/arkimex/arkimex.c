@@ -2401,7 +2401,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_ARKIMEX(TS ts)
 
   PetscCall(PetscNew(&ark));
   ts->data  = (void *)ark;
-  ark->imex = dirk ? PETSC_FALSE : PETSC_TRUE;
+  ark->imex = (bool)!dirk;
 
   ark->VecsDeltaLam   = NULL;
   ark->VecsSensiTemp  = NULL;

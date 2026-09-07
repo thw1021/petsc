@@ -1594,7 +1594,7 @@ static PetscErrorCode PCMGSetAdaptCoarseSpaceType_MG(PC pc, PCMGCoarseSpaceType 
   PC_MG *mg = (PC_MG *)pc->data;
 
   PetscFunctionBegin;
-  mg->adaptInterpolation = ctype != PCMG_ADAPT_NONE ? PETSC_TRUE : PETSC_FALSE;
+  mg->adaptInterpolation = (bool)(ctype != PCMG_ADAPT_NONE);
   mg->coarseSpaceType    = ctype;
   PetscCall(PCMGSetGalerkin(pc, PC_MG_GALERKIN_BOTH));
   PetscFunctionReturn(PETSC_SUCCESS);

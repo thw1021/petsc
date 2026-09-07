@@ -85,7 +85,7 @@ PetscErrorCode DMSetBasisFunction_Internal(PetscInt Nf, PetscBool usePoly, Petsc
 
 static PetscErrorCode PCMGCreateCoarseSpaceDefault_Private(PC pc, PetscInt level, PCMGCoarseSpaceType cstype, DM dm, KSP ksp, PetscInt Nc, Mat initialGuess, Mat *coarseSpace)
 {
-  PetscBool poly = cstype == PCMG_ADAPT_POLYNOMIAL ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool poly = (bool)(cstype == PCMG_ADAPT_POLYNOMIAL);
   PetscErrorCode (**funcs)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *);
   void   **ctxs;
   PetscInt dim, d, Nf, f, k, m, M;

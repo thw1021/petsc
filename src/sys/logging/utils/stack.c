@@ -41,7 +41,7 @@ PetscErrorCode PetscIntStackEmpty(PetscIntStack stack, PetscBool *empty)
   PetscFunctionBegin;
   PetscAssertPointer(stack, 1);
   PetscAssertPointer(empty, 2);
-  *empty = stack->top == -1 ? PETSC_TRUE : PETSC_FALSE;
+  *empty = (bool)(stack->top == -1);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

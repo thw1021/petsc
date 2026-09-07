@@ -815,7 +815,7 @@ PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm term, PetscBool *is_defined)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(is_defined, 2);
   if (term->ops->isobjectivedefined) PetscUseTypeMethod(term, isobjectivedefined, is_defined);
-  else *is_defined = (term->ops->objective != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  else *is_defined = (bool)(term->ops->objective != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -852,7 +852,7 @@ PetscErrorCode TaoTermIsGradientDefined(TaoTerm term, PetscBool *is_defined)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(is_defined, 2);
   if (term->ops->isgradientdefined) PetscUseTypeMethod(term, isgradientdefined, is_defined);
-  else *is_defined = (term->ops->gradient != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  else *is_defined = (bool)(term->ops->gradient != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -889,7 +889,7 @@ PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm term, PetscBool *is_
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(is_defined, 2);
   if (term->ops->isobjectiveandgradientdefined) PetscUseTypeMethod(term, isobjectiveandgradientdefined, is_defined);
-  else *is_defined = (term->ops->objectiveandgradient != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  else *is_defined = (bool)(term->ops->objectiveandgradient != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -925,7 +925,7 @@ PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(is_defined, 2);
   if (term->ops->ishessiandefined) PetscUseTypeMethod(term, ishessiandefined, is_defined);
-  else *is_defined = (term->ops->hessian != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  else *is_defined = (bool)(term->ops->hessian != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -957,7 +957,7 @@ PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(is_defined, 2);
   if (term->ops->iscreatehessianmatricesdefined) PetscUseTypeMethod(term, iscreatehessianmatricesdefined, is_defined);
-  else *is_defined = (term->ops->createhessianmatrices != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  else *is_defined = (bool)(term->ops->createhessianmatrices != NULL);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

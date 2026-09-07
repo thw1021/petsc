@@ -279,7 +279,7 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
   /* Create finite element */
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, dim, simplex, "field_", -1, &feq));
   PetscCall(PetscObjectSetName((PetscObject)feq, "field"));

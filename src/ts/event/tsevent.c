@@ -570,7 +570,7 @@ static PetscErrorCode TSEventTestZero(TS ts, PetscReal t)
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < event->nevents; i++) {
-    const PetscBool bracket_is_left = (event->fsign_prev[i] * event->fsign[i] < 0 && event->fsign[i] * event->direction[i] >= 0) ? PETSC_TRUE : PETSC_FALSE;
+    const PetscBool bracket_is_left = (bool)(event->fsign_prev[i] * event->fsign[i] < 0 && event->fsign[i] * event->direction[i] >= 0);
 
     if (bracket_is_left && ((t - event->ptime_prev <= event->timestep_min) || event->revisit_right)) event->side[i] = 0;          // mark zero-crossing from dt_min; 'bracket_is_left' accounts for direction
     if (event->fsign[i] == 0 && event->fsign_prev[i] != 0 && event->fsign_prev[i] * event->direction[i] <= 0) event->side[i] = 0; // mark zero-crossing from vtol
@@ -674,7 +674,7 @@ static inline PetscReal TSEvent_update_from_right(TSEvent event)
 
 static inline PetscBool Not_PETSC_DECIDE(PetscReal dt)
 {
-  return dt == PETSC_DECIDE ? PETSC_FALSE : PETSC_TRUE;
+  return (bool)(dt != PETSC_DECIDE);
 }
 
 // PetscClangLinter pragma disable: -fdoc-section-spacing

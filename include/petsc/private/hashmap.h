@@ -166,7 +166,7 @@ M*/
     PetscAssertPointer(ht, 1); \
     PetscAssertPointer(has, 3); \
     iter = kh_get(HashT, ht, key); \
-    *has = (iter != kh_end(ht)) ? PETSC_TRUE : PETSC_FALSE; \
+    *has = (bool)(iter != kh_end(ht)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
 \
@@ -230,7 +230,7 @@ M*/
     iter = kh_put(HashT, ht, key, &ret); \
     PetscHashAssert(ret >= 0); \
     kh_val(ht, iter) = val; \
-    *missing         = ret ? PETSC_TRUE : PETSC_FALSE; \
+    *missing         = (bool)(ret != 0); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
 \
@@ -258,7 +258,7 @@ M*/
     PetscAssertPointer(iter, 2); \
     PetscAssertPointer(found, 3); \
     *iter  = kh_get(HashT, ht, key); \
-    *found = (*iter != kh_end(ht)) ? PETSC_TRUE : PETSC_FALSE; \
+    *found = (bool)(*iter != kh_end(ht)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
 \
@@ -271,7 +271,7 @@ M*/
     PetscAssertPointer(missing, 3); \
     *iter = kh_put(HashT, ht, key, &ret); \
     PetscHashAssert(ret >= 0); \
-    *missing = ret ? PETSC_TRUE : PETSC_FALSE; \
+    *missing = (bool)(ret != 0); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
 \

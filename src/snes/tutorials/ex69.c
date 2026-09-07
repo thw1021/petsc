@@ -3227,7 +3227,7 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
   PetscCall(DMPlexGetCellType(dm, cStart, &ct));
-  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
+  simplex = (bool)(DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1);
   /* Create discretization of solution fields */
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, dim, simplex, "vel_", PETSC_DEFAULT, &fe[0]));
   PetscCall(PetscObjectSetName((PetscObject)fe[0], "velocity"));

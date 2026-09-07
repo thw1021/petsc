@@ -952,7 +952,7 @@ PetscErrorCode PetscDSSetCohesive(PetscDS ds, PetscInt f, PetscBool isCohesive)
   PetscCheck(!(f < 0) && !(f >= ds->Nf), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", f, ds->Nf);
   ds->cohesive[f] = isCohesive;
   ds->isCohesive  = PETSC_FALSE;
-  for (PetscInt i = 0; i < ds->Nf; ++i) ds->isCohesive = ds->isCohesive || ds->cohesive[f] ? PETSC_TRUE : PETSC_FALSE;
+  for (PetscInt i = 0; i < ds->Nf; ++i) ds->isCohesive = (bool)(ds->isCohesive || ds->cohesive[f]);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

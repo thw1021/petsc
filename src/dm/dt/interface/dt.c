@@ -1250,7 +1250,7 @@ PetscErrorCode PetscDTPTrimmedSize(PetscInt dim, PetscInt degree, PetscInt formD
 static PetscErrorCode PetscDTPTrimmedEvalJet_Internal(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt degree, PetscInt formDegree, PetscInt jetDegree, PetscReal p[])
 {
   PetscInt  formDegreeOrig = formDegree;
-  PetscBool formNegative   = (formDegreeOrig < 0) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool formNegative   = (bool)(formDegreeOrig < 0);
 
   PetscFunctionBegin;
   formDegree = PetscAbsInt(formDegreeOrig);

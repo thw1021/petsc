@@ -1481,7 +1481,7 @@ PetscErrorCode TSAdjointSetFromOptions(TS ts, PetscOptionItems PetscOptionsObjec
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
   PetscOptionsHeadBegin(PetscOptionsObject, "TS Adjoint options");
-  tflg = ts->adjoint_solve ? PETSC_TRUE : PETSC_FALSE;
+  tflg = ts->adjoint_solve;
   PetscCall(PetscOptionsBool("-ts_adjoint_solve", "Solve the adjoint problem immediately after solving the forward problem", "", tflg, &tflg, &opt));
   if (opt) {
     PetscCall(TSSetSaveTrajectory(ts));

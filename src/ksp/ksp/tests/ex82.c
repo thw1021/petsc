@@ -39,7 +39,7 @@ int main(int argc, char **argv)
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(KSPSolve(ksp, b, x));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-harmonic", &harmonic));
-  PetscCall(KSPComputeRitz(ksp, harmonic ? PETSC_FALSE : PETSC_TRUE, PETSC_TRUE, &Na, S, tetar, tetai));
+  PetscCall(KSPComputeRitz(ksp, (bool)!harmonic, PETSC_TRUE, &Na, S, tetar, tetai));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%% Number of Ritz pairs %" PetscInt_FMT "\n", Na));
   for (i = 0; i < Na; i++) {

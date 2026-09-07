@@ -4451,7 +4451,7 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
   PetscDS         prob       = NULL;
   PetscDS         probAux    = NULL;
   PetscBool       useFEM     = PETSC_FALSE;
-  PetscBool       isImplicit = (locX_t || t == PETSC_MIN_REAL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool       isImplicit = (bool)(locX_t || t == PETSC_MIN_REAL);
   DMField         coordField = NULL;
   Vec             locA;
   PetscScalar    *u = NULL, *u_t, *a, *uL = NULL, *uR = NULL;
@@ -4718,8 +4718,8 @@ PetscErrorCode DMPlexComputeJacobian_Patch_Internal(DM dm, PetscSection section,
   PetscCall(PetscDSHasJacobian(prob, &hasJac));
   PetscCall(PetscDSHasJacobianPreconditioner(prob, &hasPrec));
   PetscCall(PetscDSHasDynamicJacobian(prob, &hasDyn));
-  assembleJac = hasJac && hasPrec && (Jac != JacP) ? PETSC_TRUE : PETSC_FALSE;
-  hasDyn      = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
+  assembleJac = (bool)(hasJac && hasPrec && (Jac != JacP));
+  hasDyn      = (bool)(hasDyn && (X_tShift != 0.0));
   if (hasFV) PetscCall(MatSetOption(JP, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE)); /* No allocated space for FV stuff, so ignore the zero entries */
   PetscCall(PetscDSGetTotalDimension(prob, &totDim));
   if (probAux) PetscCall(PetscDSGetTotalDimension(probAux, &totDimAux));
@@ -5258,7 +5258,7 @@ PetscErrorCode DMPlexComputeResidualByKey(DM dm, PetscFormKey key, IS cellIS, Pe
   PetscSection    section    = NULL;
   PetscBool       useFEM     = PETSC_FALSE;
   PetscBool       useFVM     = PETSC_FALSE;
-  PetscBool       isImplicit = (locX_t || time == PETSC_MIN_REAL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool       isImplicit = (bool)(locX_t || time == PETSC_MIN_REAL);
   PetscFV         fvm        = NULL;
   DMField         coordField = NULL;
   Vec             locA, cellGeometryFVM = NULL, faceGeometryFVM = NULL, locGrad = NULL;
@@ -6294,7 +6294,7 @@ PetscErrorCode DMPlexComputeJacobianByKey(DM dm, PetscFormKey key, IS cellIS, Pe
      only assemble the Jacobian */
   if (hasJac && Jac == JacP) hasPrec = PETSC_FALSE;
   PetscCall(PetscDSHasDynamicJacobian(prob, &hasDyn));
-  hasDyn = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
+  hasDyn = (bool)(hasDyn && (X_tShift != 0.0));
   PetscCall(PetscMalloc5(numCells * totDim, &u, (locX_t ? (size_t)numCells * totDim : 0), &u_t, (hasJac ? (size_t)numCells * totDim * totDim : 0), &elemMat, (hasPrec ? (size_t)numCells * totDim * totDim : 0), &elemMatP, (hasDyn ? (size_t)numCells * totDim * totDim : 0), &elemMatD));
   if (dmAux) PetscCall(PetscMalloc1(numCells * totDimAux, &a));
   for (c = cStart; c < cEnd; ++c) {
@@ -6445,7 +6445,7 @@ PetscErrorCode DMPlexComputeJacobianByKey(DM dm, PetscFormKey key, IS cellIS, Pe
   PetscCall(DMPlexComputeBdJacobian_Internal(dm, locX, locX_t, t, X_tShift, Jac, JacP, ctx));
   /* Assemble matrix */
 end: {
-  PetscBool gassOp = hasJac && hasPrec ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool gassOp = (bool)(hasJac && hasPrec);
 
   if (dmAux) PetscCall(DMDestroy(&plex));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gassOp, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)dm)));
@@ -6541,7 +6541,7 @@ PetscErrorCode DMPlexComputeJacobianByKeyGeneral(DM dmr, DM dmc, PetscFormKey ke
      only assemble the Jacobian */
   if (hasJac && Jac == JacP) hasPrec = PETSC_FALSE;
   PetscCall(PetscDSHasDynamicJacobian(rds, &hasDyn));
-  hasDyn = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
+  hasDyn = (bool)(hasDyn && (X_tShift != 0.0));
   PetscCall(PetscMalloc5(numCells * totDim, &u, (locX_t ? (size_t)numCells * totDim : 0), &u_t, (hasJac ? (size_t)numCells * totDim * ctotDim : 0), &elemMat, (hasPrec ? (size_t)numCells * totDim * ctotDim : 0), &elemMatP, (hasDyn ? (size_t)numCells * totDim * ctotDim : 0), &elemMatD));
   if (dmAux) PetscCall(PetscMalloc1(numCells * totDimAux, &a));
   for (PetscInt c = cStart; c < cEnd; ++c) {
@@ -6692,7 +6692,7 @@ PetscErrorCode DMPlexComputeJacobianByKeyGeneral(DM dmr, DM dmc, PetscFormKey ke
   PetscCall(DMPlexComputeBdJacobian_Internal(dmr, locX, locX_t, t, X_tShift, Jac, JacP, ctx));
   /* Assemble matrix */
 end: {
-  PetscBool gassOp = hasJac && hasPrec ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool gassOp = (bool)(hasJac && hasPrec);
 
   if (dmAux) PetscCall(DMDestroy(&plex));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gassOp, 1, MPI_C_BOOL, MPI_LOR, comm));
@@ -7124,7 +7124,7 @@ PetscErrorCode DMPlexComputeJacobianActionByKey(DM dm, PetscFormKey key, IS cell
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetTotalDimension(prob, &totDim));
   PetscCall(PetscDSHasDynamicJacobian(prob, &hasDyn));
-  hasDyn = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
+  hasDyn = (bool)(hasDyn && (X_tShift != 0.0));
   PetscCall(DMGetAuxiliaryVec(dm, key.label, key.value, key.part, &A));
   if (A) {
     PetscCall(VecGetDM(A, &dmAux));

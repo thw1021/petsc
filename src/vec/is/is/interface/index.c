@@ -316,8 +316,8 @@ static PetscErrorCode ISSetInfo_Internal(IS is, ISInfo info, ISInfoType type, IS
 {
   ISInfoBool iflg          = flg ? IS_INFO_TRUE : IS_INFO_FALSE;
   PetscInt   itype         = (type == IS_LOCAL) ? 0 : 1;
-  PetscBool  permanent_set = (ipermanent == IS_INFO_UNKNOWN) ? PETSC_FALSE : PETSC_TRUE;
-  PetscBool  permanent     = (ipermanent == IS_INFO_TRUE) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool  permanent_set = (bool)(ipermanent != IS_INFO_UNKNOWN);
+  PetscBool  permanent     = (bool)(ipermanent == IS_INFO_TRUE);
 
   PetscFunctionBegin;
   /* set this property */
@@ -783,13 +783,13 @@ PetscErrorCode ISGetInfo(IS is, ISInfo info, ISInfoType type, PetscBool compute,
   hasprop = PETSC_FALSE;
   infer   = PETSC_FALSE;
   if (is->info_permanent[itype][(int)info]) {
-    hasprop = (is->info[itype][(int)info] == IS_INFO_TRUE) ? PETSC_TRUE : PETSC_FALSE;
+    hasprop = (bool)(is->info[itype][(int)info] == IS_INFO_TRUE);
     infer   = PETSC_TRUE;
   } else if ((itype == IS_LOCAL) && (is->info[IS_LOCAL][info] != IS_INFO_UNKNOWN)) {
     /* we can cache local properties as long as we clear them when the IS changes */
     /* NOTE: we only cache local values because there is no ISAssemblyBegin()/ISAssemblyEnd(),
      so we have no way of knowing when a cached value has been invalidated by changes on a different process */
-    hasprop = (is->info[itype][(int)info] == IS_INFO_TRUE) ? PETSC_TRUE : PETSC_FALSE;
+    hasprop = (bool)(is->info[itype][(int)info] == IS_INFO_TRUE);
     infer   = PETSC_TRUE;
   } else if (compute) {
     switch (info) {

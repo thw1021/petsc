@@ -101,9 +101,9 @@ PetscErrorCode VecGetValuesSection(Vec v, PetscSection s, PetscInt point, PetscS
 PetscErrorCode VecSetValuesSection(Vec v, PetscSection s, PetscInt point, const PetscScalar values[], InsertMode mode)
 {
   PetscScalar    *baseArray, *array;
-  const PetscBool doInsert    = mode == INSERT_VALUES || mode == INSERT_ALL_VALUES || mode == INSERT_BC_VALUES ? PETSC_TRUE : PETSC_FALSE;
-  const PetscBool doInterior  = mode == INSERT_ALL_VALUES || mode == ADD_ALL_VALUES || mode == INSERT_VALUES || mode == ADD_VALUES ? PETSC_TRUE : PETSC_FALSE;
-  const PetscBool doBC        = mode == INSERT_ALL_VALUES || mode == ADD_ALL_VALUES || mode == INSERT_BC_VALUES || mode == ADD_BC_VALUES ? PETSC_TRUE : PETSC_FALSE;
+  const PetscBool doInsert    = (bool)(mode == INSERT_VALUES || mode == INSERT_ALL_VALUES || mode == INSERT_BC_VALUES);
+  const PetscBool doInterior  = (bool)(mode == INSERT_ALL_VALUES || mode == ADD_ALL_VALUES || mode == INSERT_VALUES || mode == ADD_VALUES);
+  const PetscBool doBC        = (bool)(mode == INSERT_ALL_VALUES || mode == ADD_ALL_VALUES || mode == INSERT_BC_VALUES || mode == ADD_BC_VALUES);
   const PetscInt  p           = point - s->pStart;
   const PetscInt  orientation = 0; /* Needs to be included for use in closure operations */
   PetscInt        cDim        = 0;

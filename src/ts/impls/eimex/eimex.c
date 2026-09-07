@@ -108,7 +108,7 @@ static PetscErrorCode TSStep_EIMEX(TS ts)
     accept = PETSC_FALSE;
     while (!accept && ext->nstages < ext->max_rows) {
       PetscCall(TSErrorWeightedNorm(ts, ts->vec_sol, T[Map(ext->nstages - 1, ext->nstages - 2, ext->nstages)], ts->adapt->wnormtype, &local_error, &local_error_a, &local_error_r));
-      accept = (local_error < 1.0) ? PETSC_TRUE : PETSC_FALSE;
+      accept = (bool)(local_error < 1.0);
 
       if (!accept) { /* add one more stage*/
         PetscCall(TSStage_EIMEX(ts, ext->nstages));

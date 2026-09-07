@@ -978,7 +978,7 @@ static PetscErrorCode DMPlexCreateLineMesh_Internal(DM dm, PetscInt segments, Pe
   PetscBool    markerSeparate = PETSC_FALSE;
   PetscInt     markerLeft = 1, faceMarkerLeft = 1;
   PetscInt     markerRight = 1, faceMarkerRight = 2;
-  PetscBool    wrap = (bd == DM_BOUNDARY_PERIODIC || bd == DM_BOUNDARY_TWIST) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool    wrap = (bool)(bd == DM_BOUNDARY_PERIODIC || bd == DM_BOUNDARY_TWIST);
   PetscMPIInt  rank;
 
   PetscFunctionBegin;
@@ -2271,7 +2271,7 @@ static PetscErrorCode DMPlexCreateHypercubicMesh_Internal(DM dm, PetscInt dim, c
   PetscCall(PetscCalloc7(dim, &ledges, dim, &vertices, dim, &rvertices, dim, &vert, dim, &rvert, dim, &vstart, dim, &vtmp));
   PetscCall(DMCreateLabel(dm, "marker"));
   PetscCall(PetscOptionsGetBool(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_plex_periodic_cut", &cutMarker, NULL));
-  for (PetscInt d = 0; d < dim; ++d) periodic = (periodic || bd[d] == DM_BOUNDARY_PERIODIC) ? PETSC_TRUE : PETSC_FALSE;
+  for (PetscInt d = 0; d < dim; ++d) periodic = (bool)(periodic || bd[d] == DM_BOUNDARY_PERIODIC);
   if (periodic && cutMarker) {
     PetscCall(DMCreateLabel(dm, "periodic_cut"));
     PetscCall(DMGetLabel(dm, "periodic_cut", &cutLabel));
@@ -4963,7 +4963,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
       PetscReal      lower[3]  = {0, 0, 0};
       PetscReal      upper[3]  = {1, 1, 1};
       DMBoundaryType bdt[3]    = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-      PetscBool      isAnnular = shape == DM_SHAPE_ANNULUS ? PETSC_TRUE : PETSC_FALSE;
+      PetscBool      isAnnular = (bool)(shape == DM_SHAPE_ANNULUS);
       PetscInt       n;
 
       n = dim;
