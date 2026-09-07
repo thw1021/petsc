@@ -785,4 +785,12 @@ int main(int argc, char **argv)
     args: -dim 3 -dm_landau_thermal_temps 2 -ts_type beuler -ts_time_step .1 -ts_max_steps 1 -dm_landau_verbose 2 -ksp_type preonly -pc_type lu -dm_landau_device_type cpu -snes_rtol 1.e-14 -snes_stol 1.e-14 -snes_converged_reason \
      -dm_landau_sphere -ex2_grid_view_idx 0 -ex2_dm_view -dm_landau_domain_radius 6 -dm_landau_sphere_inner_radius_90degree_scale .35 -petscspace_degree 3 -dm_refine 0 # -ex2_dm_view hdf5:my.hdf5:hdf5_viz -ex2_vec_view hdf5:my.hdf5:hdf5_viz:append
 
+  # 3D AMR with hanging nodes on the host assembly path: the constraint maps have non-contiguous zero-scale entries
+  test:
+    requires: p4est double !complex !defined(PETSC_USE_DMLANDAU_2D)
+    suffix: amr_3d_cpu
+    nsize: 1
+    args: -dim 3 -dm_landau_thermal_temps 2 -ts_type beuler -ts_time_step .1 -ts_max_steps 1 -dm_landau_verbose 2 -ksp_type preonly -pc_type lu -dm_landau_device_type cpu -snes_rtol 1.e-14 -snes_stol 1.e-14 -snes_converged_reason \
+     -dm_landau_type p8est -dm_landau_amr_levels_max 2 -petscspace_degree 2 -dm_landau_domain_radius 6
+
 TEST*/

@@ -252,9 +252,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
                   idx              = -idx - 1;
                   coef[f * Nb + b] = 0;
                   for (q = 0; q < maps[grid].num_face; q++) {
-                    PetscInt    id    = maps[grid].c_maps[idx][q].gid;
-                    PetscScalar scale = maps[grid].c_maps[idx][q].scale;
-                    coef[f * Nb + b] += scale * xdata[id + moffset];
+                    const PetscInt id = maps[grid].c_maps[idx][q].gid;
+                    if (id >= 0) coef[f * Nb + b] += maps[grid].c_maps[idx][q].scale * xdata[id + moffset]; // skip gid < 0 (zero scale); they may be non-contiguous in 3D AMR
                   }
                 }
               }
@@ -480,10 +479,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
                 row_scale[0] = 1.;
               } else {
                 idx = -idx - 1;
-                for (q = 0, nr = 0; q < maps[grid].num_face; q++, nr++) {
-                  if (maps[grid].c_maps[idx][q].gid < 0) break;
-                  rows0[q]     = maps[grid].c_maps[idx][q].gid;
-                  row_scale[q] = maps[grid].c_maps[idx][q].scale;
+                for (q = 0, nr = 0; q < maps[grid].num_face; q++) {
+                  if (maps[grid].c_maps[idx][q].gid < 0) continue; // skip, do not break: zero-scale entries may be non-contiguous in 3D AMR
+                  rows0[nr]     = maps[grid].c_maps[idx][q].gid;
+                  row_scale[nr] = maps[grid].c_maps[idx][q].scale;
+                  nr++;
                 }
               }
               for (g = 0; g < Nb; ++g) {
@@ -494,10 +494,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
                   col_scale[0] = 1.;
                 } else {
                   idx = -idx - 1;
-                  for (q = 0, nc = 0; q < maps[grid].num_face; q++, nc++) {
-                    if (maps[grid].c_maps[idx][q].gid < 0) break;
-                    cols0[q]     = maps[grid].c_maps[idx][q].gid;
-                    col_scale[q] = maps[grid].c_maps[idx][q].scale;
+                  for (q = 0, nc = 0; q < maps[grid].num_face; q++) {
+                    if (maps[grid].c_maps[idx][q].gid < 0) continue; // skip, do not break: zero-scale entries may be non-contiguous in 3D AMR
+                    cols0[nc]     = maps[grid].c_maps[idx][q].gid;
+                    col_scale[nc] = maps[grid].c_maps[idx][q].scale;
+                    nc++;
                   }
                 }
                 const PetscInt    i   = fieldA * Nb + f; /* Element matrix row */
