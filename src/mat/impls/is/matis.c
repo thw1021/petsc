@@ -3329,7 +3329,7 @@ static PetscErrorCode MatGetLocalSubMatrix_IS(Mat A, IS row, IS col, Mat *submat
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), submat));
   PetscCall(MatSetSizes(*submat, PETSC_DECIDE, PETSC_DECIDE, M, N));
   PetscCall(MatSetType(*submat, MATIS));
-  matis             = (Mat_IS *)((*submat)->data);
+  matis             = (Mat_IS *)(*submat)->data;
   matis->islocalref = A;
   PetscCall(MatSetLocalToGlobalMapping(*submat, rl2g, cl2g));
   PetscCall(MatISGetLocalMat(A, &lA));

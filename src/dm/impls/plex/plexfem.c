@@ -2350,16 +2350,17 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
       PetscScalar   *grad = &gradsum[coordDim * numComponents];
       PetscScalar   *x    = NULL;
       PetscReal      vol  = 0.0;
+      PetscInt       qc   = 0;
 
       if ((cell < cStart) || (cell >= cEnd)) continue;
       PetscCall(DMPlexComputeCellGeometryFEM(dm, cell, quad, coords, fegeom.J, fegeom.invJ, fegeom.detJ));
       PetscCall(DMPlexVecGetClosure(dm, NULL, locX, cell, NULL, &x));
+      PetscCall(PetscArrayzero(grad, coordDim * numComponents));
       for (field = 0, fieldOffset = 0; field < numFields; ++field) {
         PetscObject  obj;
         PetscClassId id;
-        PetscInt     Nb, Nc, q, qc = 0;
+        PetscInt     Nb, Nc, q;
 
-        PetscCall(PetscArrayzero(grad, coordDim * numComponents));
         PetscCall(DMGetField(dm, field, NULL, &obj));
         PetscCall(PetscObjectGetClassId(obj, &id));
         if (id == PETSCFE_CLASSID) {
