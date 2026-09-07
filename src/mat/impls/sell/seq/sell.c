@@ -950,6 +950,9 @@ PetscErrorCode MatSetOption_SeqSELL(Mat A, MatOption op, PetscBool flg)
   case MAT_UNUSED_NONZERO_LOCATION_ERR:
     a->nounused = (flg ? -1 : 0);
     break;
+  case MAT_IGNORE_ZERO_ENTRIES:
+    a->ignorezeroentries = flg;
+    break;
   default:
     break;
   }
