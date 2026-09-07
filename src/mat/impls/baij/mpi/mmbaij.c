@@ -25,7 +25,7 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
   /* use a table - Mark Adams */
   PetscCall(PetscHMapICreateWithSize(B->mbs, &gid1_lid1));
   for (i = 0; i < B->mbs; i++) {
-    for (j = 0; j < B->ilen[i]; j++) {
+    for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
       PetscInt data, gid1 = aj[B->i[i] + j] + 1;
       PetscCall(PetscHMapIGetWithDefault(gid1_lid1, gid1, 0, &data));
       if (!data) {
@@ -50,7 +50,7 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
   for (i = 0; i < ec; i++) PetscCall(PetscHMapISet(gid1_lid1, garray[i] + 1, i + 1));
   /* compact out the extra columns in B */
   for (i = 0; i < B->mbs; i++) {
-    for (j = 0; j < B->ilen[i]; j++) {
+    for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
       PetscInt gid1 = aj[B->i[i] + j] + 1;
       PetscCall(PetscHMapIGetWithDefault(gid1_lid1, gid1, 0, &lid));
       lid--;
@@ -66,7 +66,7 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
   /* mark those columns that are in baij->B */
   PetscCall(PetscCalloc1(Nbs, &indices));
   for (i = 0; i < B->mbs; i++) {
-    for (j = 0; j < B->ilen[i]; j++) {
+    for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
       if (!indices[aj[B->i[i] + j]]) ec++;
       indices[aj[B->i[i] + j]] = 1;
     }
@@ -84,7 +84,7 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
 
   /* compact out the extra columns in B */
   for (i = 0; i < B->mbs; i++) {
-    for (j = 0; j < B->ilen[i]; j++) aj[B->i[i] + j] = indices[aj[B->i[i] + j]];
+    for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) aj[B->i[i] + j] = indices[aj[B->i[i] + j]];
   }
   B->nbs = ec;
   PetscCall(PetscLayoutDestroy(&baij->B->cmap));
@@ -132,7 +132,7 @@ PetscErrorCode MatDisAssemble_MPIBAIJ(Mat A)
   Mat_SeqBAIJ *Bbaij;
   PetscInt     i, j, mbs, n = A->cmap->N, col, *garray = baij->garray;
   PetscInt     bs2 = baij->bs2, *nz = NULL, m = A->rmap->n;
-  MatScalar   *a, *atmp;
+  MatScalar   *a;
 
   PetscFunctionBegin;
   /* free stuff related to matrix-vec multiply */
@@ -160,6 +160,7 @@ PetscErrorCode MatDisAssemble_MPIBAIJ(Mat A)
     PetscCall(MatCreate(PetscObjectComm((PetscObject)B), &Bnew));
     PetscCall(MatSetSizes(Bnew, m, n, m, n));
     PetscCall(MatSetType(Bnew, ((PetscObject)B)->type_name));
+    PetscCall(MatSetOption(Bnew, MAT_STRUCTURE_ONLY, B->structure_only));
     PetscCall(MatSeqBAIJSetPreallocation(Bnew, B->rmap->bs, 0, nz));
     /*
      Ensure that B's nonzerostate is monotonically increasing.
@@ -173,9 +174,8 @@ PetscErrorCode MatDisAssemble_MPIBAIJ(Mat A)
     PetscCall(MatSetOption(Bnew, MAT_ROW_ORIENTED, PETSC_FALSE));
     for (i = 0; i < mbs; i++) {
       for (j = Bbaij->i[i]; j < Bbaij->i[i + 1]; j++) {
-        col  = garray[Bbaij->j[j]];
-        atmp = a + j * bs2;
-        PetscCall(MatSetValuesBlocked_SeqBAIJ(Bnew, 1, &i, 1, &col, atmp, B->insertmode));
+        col = garray[Bbaij->j[j]];
+        PetscCall(MatSetValuesBlocked_SeqBAIJ(Bnew, 1, &i, 1, &col, PetscSafePointerPlusOffset(a, j * bs2), B->insertmode));
       }
     }
     PetscCall(MatSetOption(Bnew, MAT_ROW_ORIENTED, Bbaij->roworiented));
