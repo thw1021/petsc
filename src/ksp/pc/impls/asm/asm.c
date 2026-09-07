@@ -427,7 +427,7 @@ static PetscErrorCode PCSetUpOnBlocks_ASM(PC pc)
 static PetscErrorCode PCApply_ASM(PC pc, Vec x, Vec y)
 {
   PC_ASM     *osm  = (PC_ASM *)pc->data;
-  PCASMType   type = osm->type == PC_ASM_WEIGHTED ? PC_ASM_BASIC : osm->type;
+  PCASMType   type = osm->type == PC_ASM_WEIGHTED ? PC_ASM_BASIC : osm->type; /* PC_ASM_WEIGHTED scatters like PC_ASM_BASIC, then applies the PCASMSetLocalScaling() weights */
   PetscInt    i, n_local_true = osm->n_local_true;
   ScatterMode forward = SCATTER_FORWARD, reverse = SCATTER_REVERSE;
 
@@ -495,7 +495,7 @@ static PetscErrorCode PCApply_ASM(PC pc, Vec x, Vec y)
 static PetscErrorCode PCMatApply_ASM_Private(PC pc, Mat X, Mat Y, PetscBool transpose)
 {
   PC_ASM     *osm  = (PC_ASM *)pc->data;
-  PCASMType   type = osm->type == PC_ASM_WEIGHTED ? PC_ASM_BASIC : osm->type;
+  PCASMType   type = osm->type == PC_ASM_WEIGHTED ? PC_ASM_BASIC : osm->type; /* PC_ASM_WEIGHTED scatters like PC_ASM_BASIC, then applies the PCASMSetLocalScaling() weights */
   Mat         Z, W;
   Vec         x;
   PetscInt    i, m, N;
@@ -591,7 +591,7 @@ static PetscErrorCode PCMatApplyTranspose_ASM(PC pc, Mat X, Mat Y)
 static PetscErrorCode PCApplyTranspose_ASM(PC pc, Vec x, Vec y)
 {
   PC_ASM     *osm  = (PC_ASM *)pc->data;
-  PCASMType   type = osm->type == PC_ASM_WEIGHTED ? PC_ASM_BASIC : osm->type;
+  PCASMType   type = osm->type == PC_ASM_WEIGHTED ? PC_ASM_BASIC : osm->type; /* PC_ASM_WEIGHTED scatters like PC_ASM_BASIC, then applies the PCASMSetLocalScaling() weights */
   PetscInt    i, n_local_true = osm->n_local_true;
   ScatterMode forward = SCATTER_FORWARD, reverse = SCATTER_REVERSE;
 
