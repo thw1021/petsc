@@ -143,9 +143,9 @@ static inline PetscErrorCode MatSeqXSELLFreeSELL(Mat AA, MatScalar **val, PetscI
         break; \
       } \
     } \
-    if (!found) { \
+    if (!found && !(value == 0.0 && a->ignorezeroentries && orow != ocol) && a->nonew != 1) { \
       PetscCheck(a->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
-      if (a->nonew != 1 && !(value == 0.0 && a->ignorezeroentries) && a->rlen[row] >= (a->sliidx[row / a->sliceheight + 1] - a->sliidx[row / a->sliceheight]) / a->sliceheight) { \
+      if (a->rlen[row] >= (a->sliidx[row / a->sliceheight + 1] - a->sliidx[row / a->sliceheight]) / a->sliceheight) { \
         /* there is no extra room in row, therefore enlarge 1 slice column */ \
         if (a->maxallocmat < a->sliidx[a->totalslices] + a->sliceheight) { \
           /* allocates a larger array for the XSELL matrix types; only extend the current slice by one more column. */ \
