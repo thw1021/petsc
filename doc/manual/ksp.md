@@ -994,14 +994,12 @@ PCASMSetLocalScaling(PC pc,PetscInt n,Vec scaling[]);
 ```
 
 so that the preconditioner applies $\sum_i R_i^T D_i A_i^{-1} R_i$. This generalizes the
-Boolean ownership weighting of `PC_ASM_RESTRICT` to an arbitrary partition of unity, which
-is useful for optimized Schwarz methods and for sharing a partition of unity with a coarse
-space. One sequential `Vec` is supplied per overlapping subdomain, in the local ordering of
-the corresponding index set returned by `PCASMGetLocalSubdomains()`, so
-`PCASMSetLocalScaling()` must be called after `PCSetUp()`. PETSc uses the supplied values
-without normalization; the caller is responsible for the partition-of-unity property
-$\sum_i R_i^T D_i R_i = I$. The weights can be retrieved with `PCASMGetLocalScaling()` and
-are ignored by the other ASM types.
+Boolean ownership weighting of `PC_ASM_RESTRICT` to an arbitrary partition of unity, where
+the user is responsible for ensuring $\sum_i R_i^T D_i R_i = I$. One sequential `Vec` is
+supplied per overlapping subdomain, in the local ordering of the corresponding index set
+returned by `PCASMGetLocalSubdomains()`, so `PCASMSetLocalScaling()` must be called after
+`PCSetUp()`. The weights can be retrieved with `PCASMGetLocalScaling()` and are ignored by
+the other ASM types.
 
 The user can also set the number of blocks and sizes on a per-process
 basis with the commands
