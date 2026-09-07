@@ -28,7 +28,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     /* use a table */
     PetscCall(PetscHMapICreateWithSize(aij->B->rmap->n, &gid1_lid1));
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) {
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
         PetscInt data, gid1 = aj[B->i[i] + j] + 1;
         PetscCall(PetscHMapIGetWithDefault(gid1_lid1, gid1, 0, &data));
         if (!data) {
@@ -53,7 +53,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     for (i = 0; i < ec; i++) PetscCall(PetscHMapISet(gid1_lid1, garray[i] + 1, i + 1));
     /* compact out the extra columns in B */
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) {
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
         PetscInt gid1 = aj[B->i[i] + j] + 1;
         PetscCall(PetscHMapIGetWithDefault(gid1_lid1, gid1, 0, &lid));
         lid--;
@@ -68,7 +68,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     /* mark those columns that are in aij->B */
     PetscCall(PetscCalloc1(N, &indices));
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) {
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
         if (!indices[aj[B->i[i] + j]]) ec++;
         indices[aj[B->i[i] + j]] = 1;
       }
@@ -86,7 +86,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
 
     /* compact out the extra columns in B */
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) aj[B->i[i] + j] = indices[aj[B->i[i] + j]];
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) aj[B->i[i] + j] = indices[aj[B->i[i] + j]];
     }
     PetscCall(PetscLayoutDestroy(&aij->B->cmap));
     PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)aij->B), ec, ec, 1, &aij->B->cmap));
