@@ -2228,10 +2228,12 @@ PetscErrorCode MatAssemblyEnd_SeqBAIJ(Mat A, MatAssemblyType mode)
     rmax = PetscMax(rmax, ailen[i]);
     if (fshift) {
       ip = aj + ai[i];
-      ap = aa + bs2 * ai[i];
       N  = ailen[i];
       PetscCall(PetscArraymove(ip - fshift, ip, N));
-      if (!A->structure_only) PetscCall(PetscArraymove(ap - bs2 * fshift, ap, bs2 * N));
+      if (!A->structure_only) {
+        ap = aa + bs2 * ai[i];
+        PetscCall(PetscArraymove(ap - bs2 * fshift, ap, bs2 * N));
+      }
     }
     ai[i] = ai[i - 1] + ailen[i - 1];
   }
@@ -2242,13 +2244,9 @@ PetscErrorCode MatAssemblyEnd_SeqBAIJ(Mat A, MatAssemblyType mode)
 
   /* reset ilen and imax for each row */
   a->nonzerorowcnt = 0;
-  if (A->structure_only) {
-    PetscCall(PetscFree2(a->imax, a->ilen));
-  } else { /* !A->structure_only */
-    for (i = 0; i < mbs; i++) {
-      ailen[i] = imax[i] = ai[i + 1] - ai[i];
-      a->nonzerorowcnt += ((ai[i + 1] - ai[i]) > 0);
-    }
+  for (i = 0; i < mbs; i++) {
+    ailen[i] = imax[i] = ai[i + 1] - ai[i];
+    a->nonzerorowcnt += (ailen[i] > 0);
   }
   a->nz = ai[mbs];
 
@@ -3471,8 +3469,9 @@ PetscErrorCode MatSeqBAIJRestoreArray(Mat A, PetscScalar *array[])
    Level: beginner
 
    Notes:
-   `MatSetOptions`(,`MAT_STRUCTURE_ONLY`,`PETSC_TRUE`) may be called for this matrix type. In this no
-   space is allocated for the nonzero entries and any entries passed with `MatSetValues()` are ignored
+   Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+   The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+   Such matrices can be used for structural operations, but not for numerical operations.
 
    Run with `-info` to see what version of the matrix-vector product is being used
 
