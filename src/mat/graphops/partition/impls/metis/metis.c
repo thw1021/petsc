@@ -9,15 +9,15 @@
     PetscCheck(n != METIS_ERROR, PETSC_COMM_SELF, PETSC_ERR_LIB, "METIS general error in %s", func); \
   } while (0)
 
-#define PetscCallMetis_(name, func, args) \
+#define PetscCallMetis_(name, func, ...) \
   do { \
     PetscStackPushExternal(name); \
-    int status = func args; \
+    int status = func(__VA_ARGS__); \
     PetscStackPop; \
     PetscCallMETIS(status, name); \
   } while (0)
 
-#define PetscCallMetis(func, args) PetscCallMetis_(PetscStringize(func), func, args)
+#define PetscCallMetis(func, ...) PetscCallMetis_(PetscStringize(func), func, __VA_ARGS__)
 
 PETSC_EXTERN PetscErrorCode MatMeshToCellGraph_Metis(Mat mesh, PetscInt ncommonnodes, Mat *dual)
 {
@@ -40,7 +40,7 @@ PETSC_EXTERN PetscErrorCode MatMeshToCellGraph_Metis(Mat mesh, PetscInt ncommonn
     idx_t ne = mesh->rmap->N;
     idx_t nn = mesh->cmap->N;
 
-    PetscCallMetis(METIS_MeshToDual, (&ne, &nn, (idx_t *)adj->i, (idx_t *)adj->j, (idx_t *)&ncommonnodes, (idx_t *)&numflag, (idx_t **)&newxadj, (idx_t **)&newadjncy));
+    PetscCallMetis(METIS_MeshToDual, &ne, &nn, (idx_t *)adj->i, (idx_t *)adj->j, (idx_t *)&ncommonnodes, (idx_t *)&numflag, (idx_t **)&newxadj, (idx_t **)&newadjncy);
   }
 
   for (PetscInt i = 0; i < mesh->rmap->N; i++) PetscCall(PetscSortInt(newxadj[i + 1] - newxadj[i], newadjncy + newxadj[i]));
