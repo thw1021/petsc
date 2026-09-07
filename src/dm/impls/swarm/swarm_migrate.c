@@ -683,7 +683,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm, PetscErrorCode (*colle
 PetscErrorCode DMSwarmGetMigrateType(DM dm, DMSwarmMigrateType *mtype)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(mtype, 2);
   *mtype = ((DM_Swarm *)dm->data)->migrate_type;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -705,8 +705,8 @@ PetscErrorCode DMSwarmGetMigrateType(DM dm, DMSwarmMigrateType *mtype)
 PetscErrorCode DMSwarmSetMigrateType(DM dm, DMSwarmMigrateType mtype)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(dm, mtype, 2);
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveEnum(dm, mtype, 2);
   ((DM_Swarm *)dm->data)->migrate_type = mtype;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

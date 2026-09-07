@@ -113,7 +113,7 @@ static PetscErrorCode DMSwarmSortSetup(DMSwarmSort ctx, DM dm, PetscInt ncells)
 PetscErrorCode DMSwarmSortDestroy(DMSwarmSort *sort)
 {
   PetscFunctionBegin;
-  if (!sort) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscAssertPointer(sort, 1);
   if (!*sort) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*sort, DMSWARMSORT_CLASSID, 1);
   if (--((PetscObject)*sort)->refct > 0) {
@@ -184,6 +184,8 @@ PetscErrorCode DMSwarmSortGetNumberOfPointsPerCell(DM sw, PetscInt cell, PetscIn
   DMSwarmSort   ctx;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(npoints, 3);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetSort(celldm, &ctx));
   PetscCheck(ctx, PetscObjectComm((PetscObject)sw), PETSC_ERR_USER, "The DMSwarmSort context has not been created. Must call DMSwarmSortGetAccess() first");
@@ -219,6 +221,9 @@ PetscErrorCode DMSwarmSortGetPointsPerCell(DM sw, PetscInt cell, PetscInt *npoin
   DMSwarmSort   ctx;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(npoints, 3);
+  PetscAssertPointer(pidlist, 4);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetSort(celldm, &ctx));
   PetscCheck(ctx, PetscObjectComm((PetscObject)sw), PETSC_ERR_USER, "The DMSwarmSort context has not been created. Must call DMSwarmSortGetAccess() first");
@@ -253,6 +258,9 @@ PetscErrorCode DMSwarmSortGetPointsPerCell(DM sw, PetscInt cell, PetscInt *npoin
 PetscErrorCode DMSwarmSortRestorePointsPerCell(DM dm, PetscInt e, PetscInt *npoints, PetscInt **pidlist)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(npoints, 3);
+  PetscAssertPointer(pidlist, 4);
   PetscCall(DMRestoreWorkArray(dm, *npoints, MPIU_SCALAR, pidlist));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -305,6 +313,7 @@ PetscErrorCode DMSwarmSortGetAccess(DM sw)
   PetscBool     isda, isplex, isshell;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetSort(celldm, &ctx));
   if (!ctx) {
@@ -367,6 +376,7 @@ PetscErrorCode DMSwarmSortRestoreAccess(DM sw)
   DMSwarmSort   ctx;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetSort(celldm, &ctx));
   if (!ctx) PetscFunctionReturn(PETSC_SUCCESS);
@@ -396,6 +406,8 @@ PetscErrorCode DMSwarmSortGetIsValid(DM sw, PetscBool *isvalid)
   DMSwarmSort   ctx;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(isvalid, 2);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetSort(celldm, &ctx));
   if (!ctx) {
@@ -428,6 +440,9 @@ PetscErrorCode DMSwarmSortGetSizes(DM sw, PetscInt *ncells, PetscInt *npoints)
   DMSwarmSort   ctx;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  if (ncells) PetscAssertPointer(ncells, 2);
+  if (npoints) PetscAssertPointer(npoints, 3);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetSort(celldm, &ctx));
   if (!ctx) {

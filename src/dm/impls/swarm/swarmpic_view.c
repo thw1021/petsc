@@ -343,6 +343,12 @@ PetscErrorCode DMSwarmViewFieldsXDMF(DM dm, const char filename[], PetscInt nfie
   PetscViewer viewer;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(filename, 2);
+  PetscValidLogicalCollectiveInt(dm, nfields, 3);
+  PetscCheck(nfields >= 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be non-negative, not %" PetscInt_FMT, nfields);
+  if (nfields) PetscAssertPointer(field_name_list, 4);
+  for (PetscInt f = 0; f < nfields; ++f) PetscAssertPointer(field_name_list[f], 4);
   PetscCall(private_PetscViewerCreate_XDMF(PetscObjectComm((PetscObject)dm), filename, &viewer));
   PetscCall(private_DMSwarmView_XDMF(dm, viewer));
   PetscCall(DMSwarmGetLocalSize(dm, &N));
@@ -396,11 +402,14 @@ PetscErrorCode DMSwarmViewFieldsXDMF(DM dm, const char filename[], PetscInt nfie
 @*/
 PetscErrorCode DMSwarmViewXDMF(DM dm, const char filename[])
 {
-  DM_Swarm   *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm   *swarm;
   Vec         dvec;
   PetscViewer viewer;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(filename, 2);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(private_PetscViewerCreate_XDMF(PetscObjectComm((PetscObject)dm), filename, &viewer));
   PetscCall(private_DMSwarmView_XDMF(dm, viewer));
   for (PetscInt f = 4; f < swarm->db->nfields; f++) { /* only examine user defined fields - the first 4 are internally created by DMSwarmPIC */
