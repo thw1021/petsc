@@ -812,10 +812,8 @@ PetscErrorCode MatAssemblyEnd_MPIAIJ(Mat mat, MatAssemblyType mode)
 #if PetscDefined(HAVE_DEVICE)
   if (mat->offloadmask == PETSC_OFFLOAD_CPU && aij->B->offloadmask != PETSC_OFFLOAD_UNALLOCATED) aij->B->offloadmask = PETSC_OFFLOAD_CPU;
 #endif
-  if (!aij->B->structure_only || !aij->B->assembled) {
-    PetscCall(MatAssemblyBegin(aij->B, mode));
-    PetscCall(MatAssemblyEnd(aij->B, mode));
-  }
+  PetscCall(MatAssemblyBegin(aij->B, mode));
+  PetscCall(MatAssemblyEnd(aij->B, mode));
 
   PetscCall(PetscFree2(aij->rowvalues, aij->rowindices));
 
@@ -1656,12 +1654,15 @@ PetscErrorCode MatSetOption_MPIAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_USE_INODES:
   case MAT_IGNORE_ZERO_ENTRIES:
   case MAT_FORM_EXPLICIT_TRANSPOSE:
-  case MAT_STRUCTURE_ONLY:
   case MAT_ROW_ORIENTED:
     MatCheckPreallocated(A, 1);
     if (op == MAT_ROW_ORIENTED) a->roworiented = flg;
     PetscCall(MatSetOption(a->A, op, flg));
     PetscCall(MatSetOption(a->B, op, flg));
+    break;
+  case MAT_STRUCTURE_ONLY:
+    if (a->A) PetscCall(MatSetOption(a->A, op, flg));
+    if (a->B) PetscCall(MatSetOption(a->B, op, flg));
     break;
   case MAT_IGNORE_OFF_PROC_ENTRIES:
     a->donotstash = flg;
@@ -2909,6 +2910,7 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat B, PetscInt d_nz, const Pets
   PetscCall(MatSetBlockSizesFromMats(b->B, B, B));
   PetscCall(MatSetType(b->B, MATSEQAIJ));
   MatSeqXAIJRestoreOptions_Private(b->B);
+  PetscCall(MatSetOption(b->B, MAT_STRUCTURE_ONLY, B->structure_only));
 
   MatSeqXAIJGetOptions_Private(b->A);
   PetscCall(MatDestroy(&b->A));
@@ -2917,6 +2919,7 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat B, PetscInt d_nz, const Pets
   PetscCall(MatSetBlockSizesFromMats(b->A, B, B));
   PetscCall(MatSetType(b->A, MATSEQAIJ));
   MatSeqXAIJRestoreOptions_Private(b->A);
+  PetscCall(MatSetOption(b->A, MAT_STRUCTURE_ONLY, B->structure_only));
 
   PetscCall(MatSeqAIJSetPreallocation(b->A, d_nz, d_nnz));
   PetscCall(MatSeqAIJSetPreallocation(b->B, o_nz, o_nnz));
@@ -3489,6 +3492,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, PetscInt M, PetscInt N, 
   PetscCheck(m == B->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Am %" PetscInt_FMT " != Bm %" PetscInt_FMT, m, B->rmap->N);
   PetscCheck(A->rmap->bs == B->rmap->bs, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A row bs %" PetscInt_FMT " != B row bs %" PetscInt_FMT, A->rmap->bs, B->rmap->bs);
 
+  PetscCheck(A->structure_only == B->structure_only, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Diagonal and off-diagonal matrices must have the same MAT_STRUCTURE_ONLY option value");
   PetscCall(MatSetSizes(C, m, n, M, N));
   /* Determine the type of MPI matrix that should be created from the type of matrix A, which holds the "diagonal" portion. */
   PetscCall(MatGetMPIMatType_Private(A, &mpi_mat_type));
@@ -3512,6 +3516,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, PetscInt M, PetscInt N, 
   C->preallocated     = PETSC_TRUE;
   C->nooffprocentries = PETSC_TRUE; /* See MatAssemblyBegin_MPIAIJ. In effect, making MatAssemblyBegin a nop */
 
+  PetscCall(MatSetOption(C, MAT_STRUCTURE_ONLY, A->structure_only));
   PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
   /* MatAssemblyEnd is critical here. It sets mat->offloadmask according to A and B's, and
@@ -3678,6 +3683,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowDist(Mat mat, IS isrow, IS iscol
     PetscCall(MatSetSizes(M, m, nlocal, PETSC_DECIDE, Ncols));
     PetscCall(MatSetBlockSizes(M, bs, cbs));
     PetscCall(MatSetType(M, ((PetscObject)mat)->type_name));
+    PetscCall(MatSetOption(M, MAT_STRUCTURE_ONLY, mat->structure_only));
     PetscCall(MatMPIAIJSetPreallocation(M, 0, dlens, 0, olens));
     PetscCall(PetscFree(dlens));
 
@@ -3685,7 +3691,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowDist(Mat mat, IS isrow, IS iscol
     M = *newmat;
     PetscCall(MatGetLocalSize(M, &i, NULL));
     PetscCheck(i == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Previous matrix must be same size/layout as request");
-    PetscCall(MatZeroEntries(M));
+    if (!mat->structure_only) PetscCall(MatZeroEntries(M));
     /*
          The next two lines are needed so we may call MatSetValues_MPIAIJ() below directly,
        rather than the slower MatSetValues().
@@ -3706,7 +3712,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowDist(Mat mat, IS isrow, IS iscol
     for (j = 0; j < nz; j++) colsub[j] = cmap[jj[j]];
     PetscCall(MatSetValues_MPIAIJ(M, 1, &row, nz, colsub, aa, INSERT_VALUES));
     jj += nz;
-    aa += nz;
+    if (!mat->structure_only) aa += nz;
   }
   PetscCall(MatSeqAIJRestoreArrayRead(Msub, (const PetscScalar **)&aa));
   PetscCall(ISRestoreIndices(iscmap, &cmap));
@@ -3824,6 +3830,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_nonscalable(Mat mat, IS isrow, IS iscol
     PetscCall(MatSetSizes(M, m, nlocal, PETSC_DECIDE, n));
     PetscCall(MatSetBlockSizes(M, bs, cbs));
     PetscCall(MatSetType(M, ((PetscObject)mat)->type_name));
+    PetscCall(MatSetOption(M, MAT_STRUCTURE_ONLY, mat->structure_only));
     PetscCall(MatMPIAIJSetPreallocation(M, 0, dlens, 0, olens));
     PetscCall(PetscFree(dlens));
   } else {
@@ -3832,7 +3839,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_nonscalable(Mat mat, IS isrow, IS iscol
     M = *newmat;
     PetscCall(MatGetLocalSize(M, &ml, &nl));
     PetscCheck(ml == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Previous matrix must be same size/layout as request");
-    PetscCall(MatZeroEntries(M));
+    if (!mat->structure_only) PetscCall(MatZeroEntries(M));
     /*
          The next two lines are needed so we may call MatSetValues_MPIAIJ() below directly,
        rather than the slower MatSetValues().
