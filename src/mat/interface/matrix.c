@@ -582,7 +582,8 @@ PetscErrorCode MatImaginaryPart(Mat mat)
   whether the internal representation is 0-based (default) or 1-based.
 
   For better efficiency, set `cols` and/or `vals` to `NULL` if you do
-  not wish to extract these quantities.
+  not wish to extract these quantities. `vals` must be `NULL` for a matrix with
+  the `MAT_STRUCTURE_ONLY` option set to true, since no numerical values are stored.
 
   The user can only examine the values extracted with `MatGetRow()`;
   the values CANNOT be altered. To change the matrix entries, one
@@ -6723,10 +6724,12 @@ PetscErrorCode MatZeroEntries(Mat mat)
   PetscCheck(mat->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for matrices where you have set values but not yet assembled");
   MatCheckPreallocated(mat, 1);
 
-  PetscCall(PetscLogEventBegin(MAT_ZeroEntries, mat, 0, 0, 0));
-  PetscUseTypeMethod(mat, zeroentries);
-  PetscCall(PetscLogEventEnd(MAT_ZeroEntries, mat, 0, 0, 0));
-  PetscCall(PetscObjectStateIncrease((PetscObject)mat));
+  if (mat->structure_only == PETSC_FALSE) {
+    PetscCall(PetscLogEventBegin(MAT_ZeroEntries, mat, 0, 0, 0));
+    PetscUseTypeMethod(mat, zeroentries);
+    PetscCall(PetscLogEventEnd(MAT_ZeroEntries, mat, 0, 0, 0));
+    PetscCall(PetscObjectStateIncrease((PetscObject)mat));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -100,15 +100,14 @@ static PetscErrorCode MatPreallocateWithMats_Private(Mat B, PetscInt nm, Mat X[]
   PetscCall(MatSetUp(preallocator));
   PetscCall(MatGetOwnershipRange(preallocator, &rstart, &rend));
   for (r = rstart; r < rend; ++r) {
-    PetscInt           ncols;
-    const PetscInt    *row;
-    const PetscScalar *vals;
+    PetscInt        ncols;
+    const PetscInt *row;
 
     for (i = 0; i < nm; i++) {
-      PetscCall(MatGetRow(X[i], r, &ncols, &row, &vals));
-      PetscCall(MatSetValues(preallocator, 1, &r, ncols, row, vals, INSERT_VALUES));
-      if (symm && symm[i]) PetscCall(MatSetValues(preallocator, ncols, row, 1, &r, vals, INSERT_VALUES));
-      PetscCall(MatRestoreRow(X[i], r, &ncols, &row, &vals));
+      PetscCall(MatGetRow(X[i], r, &ncols, &row, NULL));
+      PetscCall(MatSetValues(preallocator, 1, &r, ncols, row, NULL, INSERT_VALUES));
+      if (symm && symm[i]) PetscCall(MatSetValues(preallocator, ncols, row, 1, &r, NULL, INSERT_VALUES));
+      PetscCall(MatRestoreRow(X[i], r, &ncols, &row, NULL));
     }
   }
   PetscCall(MatAssemblyBegin(preallocator, MAT_FINAL_ASSEMBLY));
@@ -881,10 +880,8 @@ static PetscErrorCode MatAssemblyEnd_MPISBAIJ(Mat mat, MatAssemblyType mode)
   }
 
   if (!mat->was_assembled && mode == MAT_FINAL_ASSEMBLY) PetscCall(MatSetUpMultiply_MPISBAIJ(mat)); /* setup Mvctx and sMvctx */
-  if (!baij->B->structure_only || !baij->B->assembled) {
-    PetscCall(MatAssemblyBegin(baij->B, mode));
-    PetscCall(MatAssemblyEnd(baij->B, mode));
-  }
+  PetscCall(MatAssemblyBegin(baij->B, mode));
+  PetscCall(MatAssemblyEnd(baij->B, mode));
 
   PetscCall(PetscFree2(baij->rowvalues, baij->rowindices));
 
@@ -1346,9 +1343,19 @@ static PetscErrorCode MatCreateSubMatrix_MPISBAIJ(Mat mat, IS isrow, IS iscol, M
     PetscCheck(issorted, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "For symmetric format, iscol must be sorted");
   }
   PetscCall(ISEqual_private(isrow, iscol_local, &isequal));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &isequal, 1, MPI_C_BOOL, MPI_LAND, PetscObjectComm((PetscObject)mat)));
   if (!isequal) {
     PetscCall(ISGetLocalSize(iscol_local, &csize_local));
     isidentity = (PetscBool)(mat->cmap->N == csize_local);
+    if (!isidentity && mat->structure_only) {
+      Mat full;
+
+      PetscCall(MatSBAIJCreateSymmetricStructure_Private(mat, MATMPIBAIJ, PETSC_TRUE, &full));
+      PetscCall(MatCreateSubMatrix(full, isrow, iscol, call, newmat));
+      PetscCall(MatDestroy(&full));
+      if (call == MAT_INITIAL_MATRIX) PetscCall(ISDestroy(&iscol_local));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
     if (!isidentity) {
       if (call == MAT_REUSE_MATRIX) {
         PetscCall(PetscObjectQuery((PetscObject)*newmat, "ISAllGather_other", (PetscObject *)&isrow_local));
@@ -1377,7 +1384,10 @@ static PetscErrorCode MatCreateSubMatrix_MPISBAIJ(Mat mat, IS isrow, IS iscol, M
     PetscCall(MatAXPY(C[0], 1.0, C[1], DIFFERENT_NONZERO_PATTERN));
     if (call == MAT_REUSE_MATRIX) PetscCall(MatCopy(C[0], *newmat, SAME_NONZERO_PATTERN));
     else if (mat->rmap->bs == 1) PetscCall(MatConvert(C[0], MATAIJ, MAT_INITIAL_MATRIX, newmat));
-    else PetscCall(MatCopy(C[0], *newmat, SAME_NONZERO_PATTERN));
+    else {
+      *newmat = C[0];
+      PetscCall(PetscObjectReference((PetscObject)*newmat));
+    }
     PetscCall(MatDestroy(C));
     PetscCall(MatDestroy(C + 1));
   }
@@ -1466,12 +1476,15 @@ static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_UNUSED_NONZERO_LOCATION_ERR:
   case MAT_KEEP_NONZERO_PATTERN:
   case MAT_NEW_NONZERO_LOCATION_ERR:
-  case MAT_STRUCTURE_ONLY:
   case MAT_ROW_ORIENTED:
     MatCheckPreallocated(A, 1);
     if (op == MAT_ROW_ORIENTED) a->roworiented = flg;
     PetscCall(MatSetOption(a->A, op, flg));
     PetscCall(MatSetOption(a->B, op, flg));
+    break;
+  case MAT_STRUCTURE_ONLY:
+    if (a->A) PetscCall(MatSetOption(a->A, op, flg));
+    if (a->B) PetscCall(MatSetOption(a->B, op, flg));
     break;
   case MAT_IGNORE_OFF_PROC_ENTRIES:
     a->donotstash = flg;
@@ -2146,6 +2159,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, P
   PetscCall(MatSetSizes(b->B, B->rmap->n, size > 1 ? B->cmap->N : 0, B->rmap->n, size > 1 ? B->cmap->N : 0));
   PetscCall(MatSetType(b->B, MATSEQBAIJ));
   MatSeqXAIJRestoreOptions_Private(b->B);
+  PetscCall(MatSetOption(b->B, MAT_STRUCTURE_ONLY, B->structure_only));
 
   MatSeqSBAIJGetOptions_Private(b->A);
   PetscCall(MatDestroy(&b->A));
@@ -2153,6 +2167,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, P
   PetscCall(MatSetSizes(b->A, B->rmap->n, B->cmap->n, B->rmap->n, B->cmap->n));
   PetscCall(MatSetType(b->A, MATSEQSBAIJ));
   MatSeqSBAIJRestoreOptions_Private(b->A);
+  PetscCall(MatSetOption(b->A, MAT_STRUCTURE_ONLY, B->structure_only));
 
   PetscCall(MatSeqSBAIJSetPreallocation(b->A, bs, d_nz, d_nnz));
   PetscCall(MatSeqBAIJSetPreallocation(b->B, bs, o_nz, o_nnz));
