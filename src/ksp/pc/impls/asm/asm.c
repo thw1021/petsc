@@ -1452,6 +1452,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   osm->lrestriction  = NULL;
   osm->x             = NULL;
   osm->y             = NULL;
+  osm->scaling       = NULL;
   osm->is            = NULL;
   osm->is_local      = NULL;
   osm->mat           = NULL;
