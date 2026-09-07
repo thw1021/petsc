@@ -582,7 +582,8 @@ PetscErrorCode MatImaginaryPart(Mat mat)
   whether the internal representation is 0-based (default) or 1-based.
 
   For better efficiency, set `cols` and/or `vals` to `NULL` if you do
-  not wish to extract these quantities.
+  not wish to extract these quantities. `vals` must be `NULL` for a matrix with
+  the `MAT_STRUCTURE_ONLY` option set to true, since no numerical values are stored.
 
   The user can only examine the values extracted with `MatGetRow()`;
   the values CANNOT be altered. To change the matrix entries, one

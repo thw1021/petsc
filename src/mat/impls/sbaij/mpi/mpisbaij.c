@@ -100,15 +100,14 @@ static PetscErrorCode MatPreallocateWithMats_Private(Mat B, PetscInt nm, Mat X[]
   PetscCall(MatSetUp(preallocator));
   PetscCall(MatGetOwnershipRange(preallocator, &rstart, &rend));
   for (r = rstart; r < rend; ++r) {
-    PetscInt           ncols;
-    const PetscInt    *row;
-    const PetscScalar *vals;
+    PetscInt        ncols;
+    const PetscInt *row;
 
     for (i = 0; i < nm; i++) {
-      PetscCall(MatGetRow(X[i], r, &ncols, &row, &vals));
-      PetscCall(MatSetValues(preallocator, 1, &r, ncols, row, vals, INSERT_VALUES));
-      if (symm && symm[i]) PetscCall(MatSetValues(preallocator, ncols, row, 1, &r, vals, INSERT_VALUES));
-      PetscCall(MatRestoreRow(X[i], r, &ncols, &row, &vals));
+      PetscCall(MatGetRow(X[i], r, &ncols, &row, NULL));
+      PetscCall(MatSetValues(preallocator, 1, &r, ncols, row, NULL, INSERT_VALUES));
+      if (symm && symm[i]) PetscCall(MatSetValues(preallocator, ncols, row, 1, &r, NULL, INSERT_VALUES));
+      PetscCall(MatRestoreRow(X[i], r, &ncols, &row, NULL));
     }
   }
   PetscCall(MatAssemblyBegin(preallocator, MAT_FINAL_ASSEMBLY));
@@ -881,10 +880,8 @@ static PetscErrorCode MatAssemblyEnd_MPISBAIJ(Mat mat, MatAssemblyType mode)
   }
 
   if (!mat->was_assembled && mode == MAT_FINAL_ASSEMBLY) PetscCall(MatSetUpMultiply_MPISBAIJ(mat)); /* setup Mvctx and sMvctx */
-  if (!baij->B->structure_only || !baij->B->assembled) {
-    PetscCall(MatAssemblyBegin(baij->B, mode));
-    PetscCall(MatAssemblyEnd(baij->B, mode));
-  }
+  PetscCall(MatAssemblyBegin(baij->B, mode));
+  PetscCall(MatAssemblyEnd(baij->B, mode));
 
   PetscCall(PetscFree2(baij->rowvalues, baij->rowindices));
 
@@ -903,7 +900,6 @@ extern PetscErrorCode MatSetValues_MPIBAIJ(Mat, PetscInt, const PetscInt[], Pets
 static PetscErrorCode MatView_MPISBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer viewer)
 {
   Mat_MPISBAIJ     *baij = (Mat_MPISBAIJ *)mat->data;
-  PetscInt          bs   = mat->rmap->bs;
   PetscMPIInt       rank = baij->rank;
   PetscBool         isascii, isdraw;
   PetscViewer       sviewer;
@@ -943,68 +939,23 @@ static PetscErrorCode MatView_MPISBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer 
 
   {
     /* assemble the entire matrix onto first processor. */
-    Mat           A;
-    Mat_SeqSBAIJ *Aloc;
-    Mat_SeqBAIJ  *Bloc;
-    PetscInt      M = mat->rmap->N, N = mat->cmap->N, *ai, *aj, col, i, j, k, *rvals, mbs = baij->mbs;
-    MatScalar    *a;
-    const char   *matname;
+    Mat A, Av;
+    IS  isrow, iscol;
 
-    /* Should this be the same type as mat? */
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)mat), &A));
-    PetscCall(MatSetSizes(A, rank == 0 ? M : 0, rank == 0 ? N : 0, M, N));
-    PetscCall(MatSetType(A, MATMPISBAIJ));
-    PetscCall(MatSetBlockSize(A, mat->rmap->bs));
-    PetscCall(MatSetOption(A, MAT_STRUCTURE_ONLY, mat->structure_only));
-    PetscCall(MatMPISBAIJSetPreallocation(A, mat->rmap->bs, 0, NULL, 0, NULL));
-    PetscCall(MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_FALSE));
-
-    /* copy over the A part */
-    Aloc = (Mat_SeqSBAIJ *)baij->A->data;
-    ai   = Aloc->i;
-    aj   = Aloc->j;
-    a    = Aloc->a;
-    PetscCall(PetscMalloc1(bs, &rvals));
-
-    for (i = 0; i < mbs; i++) {
-      rvals[0] = bs * (baij->rstartbs + i);
-      for (j = 1; j < bs; j++) rvals[j] = rvals[j - 1] + 1;
-      for (j = ai[i]; j < ai[i + 1]; j++) {
-        col = (baij->cstartbs + aj[j]) * bs;
-        for (k = 0; k < bs; k++, col++) {
-          PetscCall(MatSetValues_MPISBAIJ(A, bs, rvals, 1, &col, a, INSERT_VALUES));
-          if (!mat->structure_only) a += bs;
-        }
-      }
-    }
-    /* copy over the B part */
-    Bloc = (Mat_SeqBAIJ *)baij->B->data;
-    ai   = Bloc->i;
-    aj   = Bloc->j;
-    a    = Bloc->a;
-    for (i = 0; i < mbs; i++) {
-      rvals[0] = bs * (baij->rstartbs + i);
-      for (j = 1; j < bs; j++) rvals[j] = rvals[j - 1] + 1;
-      for (j = ai[i]; j < ai[i + 1]; j++) {
-        col = baij->garray[aj[j]] * bs;
-        for (k = 0; k < bs; k++, col++) {
-          PetscCall(MatSetValues_MPIBAIJ(A, bs, rvals, 1, &col, a, INSERT_VALUES));
-          if (!mat->structure_only) a += bs;
-        }
-      }
-    }
-    PetscCall(PetscFree(rvals));
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(ISCreateStride(PetscObjectComm((PetscObject)mat), rank == 0 ? mat->rmap->N : 0, 0, 1, &isrow));
+    PetscCall(ISCreateStride(PetscObjectComm((PetscObject)mat), rank == 0 ? mat->cmap->N : 0, 0, 1, &iscol));
+    PetscCall(MatCreateSubMatrix(mat, isrow, iscol, MAT_INITIAL_MATRIX, &A));
+    PetscCall(MatMPIBAIJGetSeqBAIJ(A, &Av, NULL, NULL));
+    PetscCall(ISDestroy(&isrow));
+    PetscCall(ISDestroy(&iscol));
     /*
        Everyone has to call to draw the matrix since the graphics waits are
        synchronized across all processors that share the PetscDraw object
     */
     PetscCall(PetscViewerGetSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
-    if (((PetscObject)mat)->name) PetscCall(PetscObjectGetName((PetscObject)mat, &matname));
     if (rank == 0) {
-      if (((PetscObject)mat)->name) PetscCall(PetscObjectSetName((PetscObject)((Mat_MPISBAIJ *)A->data)->A, matname));
-      PetscCall(MatView_SeqSBAIJ(((Mat_MPISBAIJ *)A->data)->A, sviewer));
+      if (((PetscObject)mat)->name) PetscCall(PetscObjectSetName((PetscObject)Av, ((PetscObject)mat)->name));
+      PetscCall(MatView_SeqSBAIJ(Av, sviewer));
     }
     PetscCall(PetscViewerRestoreSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
     PetscCall(MatDestroy(&A));
@@ -1394,9 +1345,19 @@ static PetscErrorCode MatCreateSubMatrix_MPISBAIJ(Mat mat, IS isrow, IS iscol, M
     PetscCheck(issorted, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "For symmetric format, iscol must be sorted");
   }
   PetscCall(ISEqual_private(isrow, iscol_local, &isequal));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &isequal, 1, MPI_C_BOOL, MPI_LAND, PetscObjectComm((PetscObject)mat)));
   if (!isequal) {
     PetscCall(ISGetLocalSize(iscol_local, &csize_local));
     isidentity = (PetscBool)(mat->cmap->N == csize_local);
+    if (!isidentity && mat->structure_only) {
+      Mat full;
+
+      PetscCall(MatSBAIJCreateSymmetricStructure_Private(mat, MATMPIBAIJ, PETSC_TRUE, &full));
+      PetscCall(MatCreateSubMatrix(full, isrow, iscol, call, newmat));
+      PetscCall(MatDestroy(&full));
+      if (call == MAT_INITIAL_MATRIX) PetscCall(ISDestroy(&iscol_local));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
     if (!isidentity) {
       if (call == MAT_REUSE_MATRIX) {
         PetscCall(PetscObjectQuery((PetscObject)*newmat, "ISAllGather_other", (PetscObject *)&isrow_local));
@@ -1425,7 +1386,10 @@ static PetscErrorCode MatCreateSubMatrix_MPISBAIJ(Mat mat, IS isrow, IS iscol, M
     PetscCall(MatAXPY(C[0], 1.0, C[1], DIFFERENT_NONZERO_PATTERN));
     if (call == MAT_REUSE_MATRIX) PetscCall(MatCopy(C[0], *newmat, SAME_NONZERO_PATTERN));
     else if (mat->rmap->bs == 1) PetscCall(MatConvert(C[0], MATAIJ, MAT_INITIAL_MATRIX, newmat));
-    else PetscCall(MatCopy(C[0], *newmat, SAME_NONZERO_PATTERN));
+    else {
+      *newmat = C[0];
+      PetscCall(PetscObjectReference((PetscObject)*newmat));
+    }
     PetscCall(MatDestroy(C));
     PetscCall(MatDestroy(C + 1));
   }
@@ -1514,12 +1478,15 @@ static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_UNUSED_NONZERO_LOCATION_ERR:
   case MAT_KEEP_NONZERO_PATTERN:
   case MAT_NEW_NONZERO_LOCATION_ERR:
-  case MAT_STRUCTURE_ONLY:
   case MAT_ROW_ORIENTED:
     MatCheckPreallocated(A, 1);
     if (op == MAT_ROW_ORIENTED) a->roworiented = flg;
     PetscCall(MatSetOption(a->A, op, flg));
     PetscCall(MatSetOption(a->B, op, flg));
+    break;
+  case MAT_STRUCTURE_ONLY:
+    if (a->A) PetscCall(MatSetOption(a->A, op, flg));
+    if (a->B) PetscCall(MatSetOption(a->B, op, flg));
     break;
   case MAT_IGNORE_OFF_PROC_ENTRIES:
     a->donotstash = flg;
@@ -2194,6 +2161,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, P
   PetscCall(MatSetSizes(b->B, B->rmap->n, size > 1 ? B->cmap->N : 0, B->rmap->n, size > 1 ? B->cmap->N : 0));
   PetscCall(MatSetType(b->B, MATSEQBAIJ));
   MatSeqXAIJRestoreOptions_Private(b->B);
+  PetscCall(MatSetOption(b->B, MAT_STRUCTURE_ONLY, B->structure_only));
 
   MatSeqSBAIJGetOptions_Private(b->A);
   PetscCall(MatDestroy(&b->A));
@@ -2201,6 +2169,7 @@ static PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, P
   PetscCall(MatSetSizes(b->A, B->rmap->n, B->cmap->n, B->rmap->n, B->cmap->n));
   PetscCall(MatSetType(b->A, MATSEQSBAIJ));
   MatSeqSBAIJRestoreOptions_Private(b->A);
+  PetscCall(MatSetOption(b->A, MAT_STRUCTURE_ONLY, B->structure_only));
 
   PetscCall(MatSeqSBAIJSetPreallocation(b->A, bs, d_nz, d_nnz));
   PetscCall(MatSeqBAIJSetPreallocation(b->B, bs, o_nz, o_nnz));
