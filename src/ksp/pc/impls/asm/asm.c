@@ -885,13 +885,13 @@ static PetscErrorCode PCASMSetLocalScaling_ASM(PC pc, PetscInt n, Vec scaling[])
   PetscCheck(n == osm->n_local_true, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of scaling vectors %" PetscInt_FMT " must match number of local subdomains %" PetscInt_FMT, n, osm->n_local_true);
   for (PetscInt i = 0; i < n; i++) {
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)scaling[i]), &size));
-    PetscCheck(size == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Scaling vector %" PetscInt_FMT " must have a single-process communicator", i);
+    PetscCheck(size == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Scaling vector %" PetscInt_FMT " must have a single-process communicator; create it with MatCreateVecs() from PCASMGetLocalSubmatrices()", i);
     PetscCall(VecGetSize(scaling[i], &nvec));
     PetscCall(VecGetSize(osm->x[i], &m));
-    PetscCheck(nvec == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Scaling vector %" PetscInt_FMT " has size %" PetscInt_FMT ", expected %" PetscInt_FMT, i, nvec, m);
+    PetscCheck(nvec == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Scaling vector %" PetscInt_FMT " has size %" PetscInt_FMT ", expected %" PetscInt_FMT "; create it with MatCreateVecs() from PCASMGetLocalSubmatrices()", i, nvec, m);
     PetscCall(VecGetType(osm->x[i], &type));
     PetscCall(PetscObjectTypeCompare((PetscObject)scaling[i], type, &match));
-    PetscCheck(match, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Scaling vector %" PetscInt_FMT " must have local solver vector type %s", i, type);
+    PetscCheck(match, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Scaling vector %" PetscInt_FMT " must have local solver vector type %s; create it with MatCreateVecs() from PCASMGetLocalSubmatrices()", i, type);
   }
   PetscCall(PetscMalloc1(n, &newscaling));
   for (PetscInt i = 0; i < n; i++) {
@@ -1185,12 +1185,16 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 .vb
   PCASMSetType(pc, PC_ASM_WEIGHTED);
   PCSetUp(pc);
-  PCASMGetLocalSubdomains(pc, &n, &is, NULL);
-  // Create scaling[i] in the local ordering of is[i].
+  PCASMGetLocalSubmatrices(pc, &n, &submat);
+  PCASMGetLocalSubdomains(pc, NULL, &is, NULL);
+  for (i = 0; i < n; i++) {
+    MatCreateVecs(submat[i], &scaling[i], NULL); // a Vec of the right size and type
+    // fill scaling[i] in the local ordering of is[i]
+  }
   PCASMSetLocalScaling(pc, n, scaling);
 .ve
 
-.seealso: [](ch_ksp), `PCASM`, `PCASMType`, `PCASMSetType()`, `PCASMGetLocalScaling()`, `PCASMGetLocalSubdomains()`, `PCASMSetLocalSubdomains()`, `PCASMSetLocalType()`
+.seealso: [](ch_ksp), `PCASM`, `PCASMType`, `PCASMSetType()`, `PCASMGetLocalScaling()`, `PCASMGetLocalSubdomains()`, `PCASMGetLocalSubmatrices()`, `PCASMSetLocalSubdomains()`, `PCASMSetLocalType()`
 @*/
 PetscErrorCode PCASMSetLocalScaling(PC pc, PetscInt n, Vec scaling[])
 {
