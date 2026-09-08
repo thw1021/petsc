@@ -632,7 +632,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       PetscInt     vpc = 0;
       char         fec[64];
       PetscInt     vids[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-      PetscInt     hexv[8] = {0, 1, 3, 2, 4, 5, 7, 6}, tetv[4] = {0, 1, 2, 3};
+      PetscInt     hexv[8] = {0, 1, 3, 2, 4, 5, 7, 6}, tetv[4] = {0, 2, 1, 3};
       PetscInt     quadv[8] = {0, 1, 3, 2}, triv[3] = {0, 1, 2};
       PetscInt    *dof = NULL;
       PetscScalar *array, *ptr;
@@ -666,7 +666,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
           case 4: /* TODO: still need to understand L2 ordering for tets */
             vpc = 4;
             dof = tetv;
-            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unhandled tethraedral case");
           case 6:
             PetscCheck(!cellvertex, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unhandled case: vertices per cell %" PetscInt_FMT, fpc);
             vpc = 8;
