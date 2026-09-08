@@ -71,6 +71,7 @@ class PCASMType(object):
     BASIC       = PC_ASM_BASIC
     RESTRICT    = PC_ASM_RESTRICT
     INTERPOLATE = PC_ASM_INTERPOLATE
+    WEIGHTED    = PC_ASM_WEIGHTED
 
 
 class PCGASMType(object):
@@ -897,6 +898,69 @@ cdef class PC(Object):
         """
         cdef PetscInt ival = asInt(overlap)
         CHKERR(PCASMSetOverlap(self.pc, ival))
+
+    def setASMLocalScaling(self, scaling: Sequence[Vec]) -> None:
+        """Set diagonal interpolation weights for local ASM subdomains.
+
+        Not collective.
+
+        Parameters
+        ----------
+        scaling
+            One sequential vector for each local overlapping subdomain, in the
+            subdomain and index order returned by `getASMLocalSubdomains`.
+
+        Notes
+        -----
+        Call after `setUp` so that subdomain overlap and index sorting are
+        finalized. Select `PC.ASMType.WEIGHTED` separately with `setASMType`.
+        The vectors are retained by the preconditioner, and changes to their
+        values affect subsequent applications. Supply them again after
+        `reset`. Their entries are used without normalization; the caller is
+        responsible for providing a partition of unity.
+
+        See Also
+        --------
+        setASMType, getASMLocalScaling, getASMLocalSubdomains
+        petsc.PCASMSetLocalScaling
+
+        """
+        cdef PetscInt n = asInt(len(scaling))
+        cdef PetscInt i = 0
+        cdef PetscVec *cscaling = NULL
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&cscaling)
+        for i from 0 <= i < n:
+            cscaling[i] = (<Vec?>scaling[<Py_ssize_t>i]).vec
+        CHKERR(PCASMSetLocalScaling(self.pc, n, cscaling))
+
+    def getASMLocalScaling(self) -> list[Vec]:
+        """Return the diagonal interpolation weights of the local subdomains.
+
+        Not collective.
+
+        Returns
+        -------
+        list of Vec
+            The weights previously given to `setASMLocalScaling`, in subdomain
+            order, empty if none have been supplied.
+
+        Notes
+        -----
+        The returned Python objects hold references to the scaling vectors,
+        not copies of their values.
+
+        See Also
+        --------
+        setASMLocalScaling, getASMLocalSubdomains, petsc.PCASMGetLocalScaling
+
+        """
+        cdef PetscInt n = 0
+        cdef PetscVec *cscaling = NULL
+        CHKERR(PCASMGetLocalScaling(self.pc, &n, &cscaling))
+        cdef list scaling = []
+        if cscaling != NULL:
+            scaling = [ref_Vec(cscaling[i]) for i from 0 <= i < n]
+        return scaling
 
     def setASMLocalSubdomains(
         self,
