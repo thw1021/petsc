@@ -2235,6 +2235,7 @@ cdef PetscErrorCode SNESSolve_Python(
     CHKERR(SNESGetSolution(snes, &x))
     #
     snes.iter = 0
+    snes.reason = SNES_CONVERGED_ITERATING
     #
     cdef solve = PySNES(snes).solve
     if solve is not None:
