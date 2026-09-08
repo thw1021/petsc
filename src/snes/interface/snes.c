@@ -4552,7 +4552,7 @@ PetscErrorCode SNESSetConvergedReason(SNES snes, SNESConvergedReason reason)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCheck(!snes->errorifnotconverged || reason > 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "SNES code should have previously errored due to negative reason");
+  PetscValidLogicalCollectiveEnum(snes, reason, 2);
   snes->reason = reason;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
