@@ -998,8 +998,10 @@ Boolean ownership weighting of `PC_ASM_RESTRICT` to an arbitrary partition of un
 the user is responsible for ensuring $\sum_i R_i^T D_i R_i = I$. One sequential `Vec` is
 supplied per overlapping subdomain, in the local ordering of the corresponding index set
 returned by `PCASMGetLocalSubdomains()`, so `PCASMSetLocalScaling()` must be called after
-`PCSetUp()`. The weights can be retrieved with `PCASMGetLocalScaling()` and are ignored by
-the other ASM types.
+`PCSetUp()`. Create each `Vec` with `MatCreateVecs()` from the matching submatrix returned
+by `PCASMGetLocalSubmatrices()`, so that it has the size and `VecType` the local solver
+expects. The weights can be retrieved with `PCASMGetLocalScaling()` and are ignored by the
+other ASM types.
 
 The user can also set the number of blocks and sizes on a per-process
 basis with the commands
