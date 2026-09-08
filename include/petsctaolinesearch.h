@@ -57,6 +57,7 @@ PETSC_EXTERN const char *const *TaoLineSearchConvergedReasons;
 .   `TAOLINESEARCHGPCG`     - "gpcg"
 .   `TAOLINESEARCHARMIJO`   - "armijo" simple backtracking line search enforcing only the sufficient decrease condition
 .   `TAOLINESEARCHOWARMIJO` - "owarmijo"
+.   `TAOLINESEARCHPS`       - "ps" backtracking line search for proximal splitting algorithms such as `TAOFB`
 -   `TAOLINESEARCHIPM`      - "ipm"
 
    Options Database Key:

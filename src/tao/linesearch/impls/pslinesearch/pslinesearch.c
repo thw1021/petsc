@@ -8,12 +8,21 @@ static PetscErrorCode TaoLineSearchDestroy_PS(TaoLineSearch ls)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetTerms_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetRegularizerTerm_C", NULL));
   PetscCall(PetscFree(armP->memory));
-  PetscCall(PetscObjectDereference((PetscObject)armP->x));
+  PetscCall(VecDestroy(&armP->x));
   PetscCall(VecDestroy(&armP->work));
   PetscCall(VecDestroy(&armP->work2));
   PetscCall(PetscFree(ls->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoLineSearchReset_PS(TaoLineSearch ls)
+{
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFree(armP->memory));
+  armP->memorySetup = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -44,23 +53,6 @@ static PetscErrorCode TaoLineSearchView_PS(TaoLineSearch ls, PetscViewer pv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoPSLineSearchSetRegularizerTerm(TaoLineSearch ls, TaoTermMapping reg)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
-  PetscUseMethod(ls, "TaoPSLineSearchSetRegularizerTerm_C", (TaoLineSearch, TaoTermMapping), (ls, reg));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoPSLineSearchSetRegularizerTerm_PS(TaoLineSearch ls, TaoTermMapping reg)
-{
-  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-
-  PetscFunctionBegin;
-  armP->reg_term = reg;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode TaoPSLineSearchSetTerms(TaoLineSearch ls, TaoTermMapping f_term, Vec f_param, TaoTermMapping g_term, Vec g_param)
 {
   PetscFunctionBegin;
@@ -83,32 +75,44 @@ static PetscErrorCode TaoPSLineSearchSetTerms_PS(TaoLineSearch ls, TaoTermMappin
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Evaluate f at the trial point xnew and the certificate f(xnew) - (R + <g, xnew - xold> + |xnew - xold|^2 / (2 step)) */
+static PetscErrorCode TaoLineSearchComputeCertificate_PS(TaoLineSearch ls, Vec xold, PetscReal *f, Vec g, Vec xnew)
+{
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
+  PetscReal         diffnorm;
+  PetscScalar       inprod;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermComputeObjective(armP->f_term, xnew, armP->f_param, f));
+  *f *= armP->f_scale;
+  ls->nfeval++;
+  PetscCall(VecWAXPY(armP->work2, -1., xold, xnew));
+  PetscCall(VecDotNorm2(g, armP->work2, &inprod, &diffnorm));
+  armP->cert = *f - (armP->ref + PetscRealPart(inprod) + diffnorm / (2 * ls->step));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscReal *f, Vec g, Vec xnew)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
   PetscInt          i, its = 0;
-  MPI_Comm          comm;
-  Vec               vecin, vecout;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectGetComm((PetscObject)ls, &comm));
-  ls->nfeval = 0;
   ls->reason = TAOLINESEARCH_CONTINUE_ITERATING;
   if (!armP->work) {
     PetscCall(VecDuplicate(xold, &armP->work));
     PetscCall(VecDuplicate(xold, &armP->work2));
+    PetscCall(PetscObjectReference((PetscObject)xold));
     armP->x = xold;
-    PetscCall(PetscObjectReference((PetscObject)armP->x));
   } else if (xold != armP->x) {
     PetscCall(VecDestroy(&armP->work));
     PetscCall(VecDestroy(&armP->work2));
     PetscCall(VecDuplicate(xold, &armP->work));
     PetscCall(VecDuplicate(xold, &armP->work2));
-    PetscCall(PetscObjectDereference((PetscObject)armP->x));
+    PetscCall(VecDestroy(&armP->x));
+    PetscCall(PetscObjectReference((PetscObject)xold));
     armP->x = xold;
-    PetscCall(PetscObjectReference((PetscObject)armP->x));
   }
-
   PetscCall(TaoLineSearchMonitor(ls, 0, *f, 0.0));
 
   /* Check linesearch parameters */
@@ -122,87 +126,78 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
     PetscCall(PetscInfo(ls, "PS line search error: initial function inf or nan\n"));
     ls->reason = TAOLINESEARCH_FAILED_BADPARAMETER;
   }
-
   if (ls->reason != TAOLINESEARCH_CONTINUE_ITERATING) PetscFunctionReturn(PETSC_SUCCESS);
 
-  /* Check whether the memory has been allocated. If not, allocate
-     the historical array and populate it with the initial function values. */
+  /* Nonmonotone reference: largest of the last memorySize values of f at the base points */
   if (armP->memorySize > 1) {
     if (!armP->memory) PetscCall(PetscMalloc1(armP->memorySize, &armP->memory));
-
     if (!armP->memorySetup) {
-      for (i = 0; i < armP->memorySize; i++) armP->memory[i] = 0.;
-      armP->current               = 0;
-      armP->memorySetup           = PETSC_TRUE;
+      for (i = 0; i < armP->memorySize; i++) armP->memory[i] = *f;
+      armP->current     = 0;
+      armP->memorySetup = PETSC_TRUE;
+    } else {
+      armP->current               = (armP->current + 1) % armP->memorySize;
       armP->memory[armP->current] = *f;
     }
-
-    /* Calculate reference value (MAX) */
     armP->ref = armP->memory[0];
-    for (i = 1; i < armP->memorySize; i++) {
-      if (armP->memory[i] > armP->ref) {
-        armP->ref = armP->memory[i];
-      }
-    }
+    for (i = 1; i < armP->memorySize; i++) armP->ref = PetscMax(armP->ref, armP->memory[i]);
   } else armP->ref = *f;
 
+  /* xnew already holds prox_g(xold - step g) for the initial step; shrink the step until the certificate holds */
   ls->step = ls->initstep;
-
-  if (ls->ops->preapply) PetscUseTypeMethod(ls, preapply, xold, f, xnew, g);
-
-  while (armP->cert >= ls->ftol && ls->nproxeval < ls->max_funcs) {
-    /* Calculate iterate */
+  PetscCall(TaoLineSearchComputeCertificate_PS(ls, xold, f, g, xnew));
+  while (armP->cert > ls->ftol && ls->nproxeval < ls->max_funcs && ls->step >= ls->stepmin) {
     ++its;
-
-    if (ls->ops->update) PetscUseTypeMethod(ls, update, xold, f, xnew, g);
-    vecin  = armP->work;
-    vecout = xnew;
-    PetscCall(TaoTermProximalMap(armP->prox_term, armP->term_param, armP->term_scale * armP->test_step, armP->reg_term.term, vecin, armP->reg_term.scale, vecout));
+    ls->step *= armP->eta;
+    PetscCall(VecWAXPY(armP->work, -ls->step, g, xold));
+    PetscCall(TaoTermProximalMap(armP->prox_term, armP->term_param, armP->term_scale * ls->step, NULL, armP->work, 1.0, xnew));
     ls->nproxeval++;
-    if (ls->ops->postupdate) PetscUseTypeMethod(ls, postupdate, xold, f, xnew, g);
+    PetscCall(TaoLineSearchComputeCertificate_PS(ls, xold, f, g, xnew));
     PetscCall(TaoLineSearchMonitor(ls, its, *f, ls->step));
   }
 
-  /* Check termination */
   if (PetscIsInfOrNanReal(*f)) {
     PetscCall(PetscInfo(ls, "Function is inf or nan.\n"));
-    ls->reason = TAOLINESEARCH_FAILED_BADPARAMETER;
+    ls->reason = TAOLINESEARCH_FAILED_INFORNAN;
+  } else if (armP->cert <= ls->ftol) {
+    PetscCall(PetscInfo(ls, "%" PetscInt_FMT " prox evals in line search, step = %10.4f\n", ls->nproxeval, (double)ls->step));
+    ls->reason = TAOLINESEARCH_SUCCESS;
   } else if (ls->nproxeval >= ls->max_funcs) {
-    PetscCall(PetscInfo(ls, "Number of line search prox evals (%" PetscInt_FMT ") > maximum allowed (%" PetscInt_FMT ")\n", ls->nproxeval, ls->max_funcs));
+    PetscCall(PetscInfo(ls, "Number of line search prox evals (%" PetscInt_FMT ") >= maximum allowed (%" PetscInt_FMT ")\n", ls->nproxeval, ls->max_funcs));
     ls->reason = TAOLINESEARCH_HALTED_MAXFCN;
-  } else if (ls->step < ls->stepmin) {
-    PetscCall(PetscInfo(ls, "Step length is below tolerance.\n"));
+  } else {
+    PetscCall(PetscInfo(ls, "Step length %g is below tolerance %g.\n", (double)ls->step, (double)ls->stepmin));
     ls->reason = TAOLINESEARCH_HALTED_RTOL;
   }
-
-  if (ls->ops->postapply) PetscUseTypeMethod(ls, postapply, xold, f, xnew, g);
-  if (ls->reason) PetscFunctionReturn(PETSC_SUCCESS);
-
-  /* Successful termination, update memory. Only FIFO for PS */
-  ls->reason = TAOLINESEARCH_SUCCESS;
-  PetscCall(PetscInfo(ls, "%" PetscInt_FMT " prox evals in line search, step = %10.4f\n", ls->nproxeval, (double)ls->step));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoLineSearchSetUp_PS(TaoLineSearch ls)
 {
-  Tao       tao;
-  PetscBool is_fb;
+  PetscBool is_fb = PETSC_FALSE;
 
   PetscFunctionBegin;
-  tao = ls->tao;
-
-  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOFB, &is_fb));
-  PetscCheck(is_fb, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "TAOLINESEARCHPS currently only supports TAOFB");
+  if (ls->tao) PetscCall(PetscObjectTypeCompare((PetscObject)ls->tao, TAOFB, &is_fb));
+  PetscCheck(is_fb, PetscObjectComm((PetscObject)ls), PETSC_ERR_SUP, "TAOLINESEARCHPS currently only supports TAOFB");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  TAOLINESEARCHPS - Special line-search type for proximal splitting algorithms.
+  TAOLINESEARCHPS - Backtracking line search for proximal splitting algorithms such as `TAOFB`.
 
-  This line search should not be used with any other algorithm.
+  Options Database Keys:
++ -tao_ls_ps_eta eta          - factor by which the step size shrinks on each backtrack (default 0.5)
+. -tao_ls_ps_memory_size size - number of previous function values in the nonmonotone reference (default 1, monotone)
+. -tao_ls_max_funcs n         - maximum number of proximal maps per line search; 0 disables the line search
+- -tao_ls_ftol tol            - slack allowed in the descent condition, to absorb rounding (default 1e-12)
 
   Level: developer
+
+  Notes:
+  Given the base point x_k with f(x_k) and grad f(x_k), and the trial point x_{k+1} = prox_{step g}(x_k - step grad f(x_k)),
+  the step is shrunk by eta (and the trial point recomputed) until f(x_{k+1}) <= R + <grad f(x_k), x_{k+1} - x_k> + |x_{k+1} - x_k|^2 / (2 step) + ftol,
+  where R = f(x_k), or for the nonmonotone variant the largest of the last memory_size values of f at the base points.
+  This line search evaluates only the smooth term of the `TAOFB` objective and cannot be used with other solvers.
 
 .seealso: `TaoLineSearch`, `TAOFB`, `Tao`
 M*/
@@ -214,20 +209,21 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
   PetscCall(PetscNew(&armP));
 
-  armP->memory            = NULL;
-  armP->eta               = 0.5;
-  armP->memorySize        = 1;
-  ls->data                = (void *)armP;
-  ls->initstep            = 0;
+  armP->memory     = NULL;
+  armP->eta        = 0.5;
+  armP->memorySize = 1;
+  ls->data         = (void *)armP;
+  ls->initstep     = 0;
+  ls->ftol         = 1.e-12;
+
   ls->ops->monitor        = NULL;
   ls->ops->setup          = TaoLineSearchSetUp_PS;
-  ls->ops->reset          = NULL;
+  ls->ops->reset          = TaoLineSearchReset_PS;
   ls->ops->apply          = TaoLineSearchApply_PS;
   ls->ops->view           = TaoLineSearchView_PS;
   ls->ops->destroy        = TaoLineSearchDestroy_PS;
   ls->ops->setfromoptions = TaoLineSearchSetFromOptions_PS;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetTerms_C", TaoPSLineSearchSetTerms_PS));
-  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetRegularizerTerm_C", TaoPSLineSearchSetRegularizerTerm_PS));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

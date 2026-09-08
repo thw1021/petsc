@@ -112,7 +112,7 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
 . newls - the new `TaoLineSearch` context
 
   Options Database Key:
-. -tao_ls_type (unit|more-thuente|gpcg|armijo|owarmijo|ipm) - select which line search `Tao` should use
+. -tao_ls_type (unit|more-thuente|gpcg|armijo|owarmijo|ps|ipm) - select which line search `Tao` should use
 
   Level: developer
 
@@ -367,7 +367,7 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
 - type - the `TaoLineSearchType` selection
 
   Options Database Key:
-. -tao_ls_type (unit|more-thuente|gpcg|armijo|owarmijo|ipm) - select which line search `Tao` should use
+. -tao_ls_type (unit|more-thuente|gpcg|armijo|owarmijo|ps|ipm) - select which line search `Tao` should use
 
   Level: beginner
 
@@ -403,10 +403,6 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
   ls->ops->view           = NULL;
   ls->ops->setfromoptions = NULL;
   ls->ops->destroy        = NULL;
-  ls->ops->preapply       = NULL;
-  ls->ops->postapply      = NULL;
-  ls->ops->update         = NULL;
-  ls->ops->postupdate     = NULL;
   ls->setupcalled         = PETSC_FALSE;
   PetscCall((*r)(ls));
   PetscCall(PetscObjectChangeTypeName((PetscObject)ls, type));
@@ -462,7 +458,7 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
 . ls - the `TaoLineSearch` context
 
   Options Database Keys:
-+ -tao_ls_type (unit|more-thuente|gpcg|armijo|owarmijo|ipm) - select which line search `Tao` should use
++ -tao_ls_type (unit|more-thuente|gpcg|armijo|owarmijo|ps|ipm) - select which line search `Tao` should use
 . -tao_ls_ftol tol                                          - tolerance for sufficient decrease
 . -tao_ls_gtol tol                                          - tolerance for curvature condition
 . -tao_ls_rtol tol                                          - relative tolerance for acceptable step

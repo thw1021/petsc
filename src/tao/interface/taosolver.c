@@ -3174,7 +3174,9 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)old_sum, tao_prefix));
     PetscCall(TaoTermSumSetNumberTerms(old_sum, 1));
+    // A term added with TaoAddTerm() keeps its prefix; the callbacks term (no mapping prefix) keeps its object prefix
     PetscCall(TaoTermMappingGetData(&tao->objective_term, &term_prefix, NULL, NULL, NULL));
+    if (!term_prefix) PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao->objective_term.term, &term_prefix));
     PetscCall(TaoTermSumSetTerm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
     PetscCall(TaoTermSumSetTermHessianMatrices(old_sum, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
     PetscCall(MatDestroy(&tao->hessian));

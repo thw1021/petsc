@@ -6,20 +6,15 @@ Tao Object: 1 MPI process
         type: shell
         solution vector space: N = 20
         Context has been set
-        The following methods have been set: objectiveandgradient,
-        total number of function/gradient evaluations=306
+        The following methods have been set: objectiveandgradient
+        total number of function/gradient evaluations=209
       g Term:
       TaoTerm Object: 1 MPI process
         type: l1
         solution vector space: N = 20
         parameter vector space: (optional) K = 20
         epsilon (tao_term_l1_epsilon): 0.
-        total number of function evaluations=101
-      Regularizer Term:
-      TaoTerm Object: 1 MPI process
-        type: halfl2squared
-        solution vector space: N = 20
-        parameter vector space: (optional) K = 20
+        total number of function evaluations=100
   Objective function:
     TaoTerm Object: 1 MPI process
       type: sum
@@ -32,26 +27,32 @@ Tao Object: 1 MPI process
           solution vector space: N = 20
           parameter vector space: (optional) K = 20
           epsilon (tao_term_l1_epsilon): 0.
-          total number of function evaluations=101
+          total number of function evaluations=100
       f_1:
         TaoTerm Object: 1 MPI process
           type: shell
           solution vector space: N = 20
           Context has been set
-          The following methods have been set: objectiveandgradient,
-          total number of function/gradient evaluations=306
+          The following methods have been set: objectiveandgradient
+          total number of function/gradient evaluations=209
+      total number of function evaluations=106
+      total number of gradient evaluations=2
+      total number of function/gradient evaluations=101
   TaoLineSearch Object: 1 MPI process
     type: ps
       PS linesearch    eta=0.5     memsize=1
     maximum function evaluations=30
-    tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
-    total number of function evaluations=0
+    tolerances: ftol=1e-12, rtol=1e-10, gtol=0.9
+    total number of function evaluations=1
     total number of gradient evaluations=0
     total number of function/gradient evaluations=0
     Termination reason: SUCCESS
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=1e-08
-  Residual in Function/Gradient:=4.22011
-  Objective value=18.1332
-  total number of iterations=101,                          (max: 100)
+  Residual in Function/Gradient:=38.0737
+  Objective value=159.821
+  total number of iterations=100,                          (max: 100)
+  total number of function evaluations=106,                  (max: unlimited)
+  total number of gradient evaluations=2,                  (max: unlimited)
+  total number of function/gradient evaluations=101,      (max: unlimited)
   Solver failed:    Maximum Iterations
-relative reconstruction error: ||x-xGT||/||xGT|| = 3.8314e+00.
+relative reconstruction error: ||x-xGT||/||xGT|| = 3.4991e+00.

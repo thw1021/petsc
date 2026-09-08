@@ -1,5 +1,5 @@
 /* TAOFB example. Solves 0.5 |Ax-b|_2^2 + \lambda |x|_1,
- * with A is Gaussian random with size M*N, and b is a measurement vector of size M. */
+   where A is Gaussian random with size M*N, and b is a measurement vector of size M. */
 
 #include <petsctao.h>
 #include <petscdm.h>
@@ -9,7 +9,7 @@
 
 static char help[] = "This example demonstrates TaoFB to solve proximal algorithm. \n";
 
-//ADAPGM example. Nesterov lasso construction
+// The lasso problem follows the construction of Nesterov used in the adaPGM examples
 
 typedef enum {
   PROB_LASSO,
@@ -34,7 +34,7 @@ PetscErrorCode Log_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f
   PetscMPIInt size, rank;
   MPI_Comm    comm;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -88,14 +88,14 @@ PetscErrorCode Log_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f
 }
 
 /* Objective and Gradient
- *
- * f(x) = 0.5 |Ax-b|_2^2
- * grad f = A^T (A x - b)               */
+
+   f(x) = 0.5 |Ax-b|_2^2
+   grad f = A^T (A x - b) */
 PetscErrorCode UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
   AppCtx *user;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(MatMult(user->A, X, user->workvec));
   PetscCall(VecAXPY(user->workvec, -1., user->b));
@@ -113,7 +113,7 @@ PetscErrorCode DataCreate(AppCtx *user)
   MPI_Comm    comm;
   PetscMPIInt size, rank;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   switch (user->probType) {
   case PROB_LASSO:
     PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
@@ -162,13 +162,11 @@ PetscErrorCode DataCreate(AppCtx *user)
 
     for (i = user->n - 1; i >= 0; i--) {
       temp = indices[i];
-      if (i >= user->n - p) {
-        array3[temp] = user->scale / array2[temp];
-      } else {
+      if (i >= user->n - p) array3[temp] = user->scale / array2[temp];
+      else {
         temp2 = array2[temp];
-        if (temp2 < 0.1 * user->scale) {
-          array3[temp] = user->scale;
-        } else {
+        if (temp2 < 0.1 * user->scale) array3[temp] = user->scale;
+        else {
           PetscCall(PetscRandomGetValueReal(rctx, &randreal));
           array3[temp] = user->scale * randreal / temp2;
         }
@@ -191,7 +189,7 @@ PetscErrorCode DataCreate(AppCtx *user)
         PetscCall(PetscRandomGetValueReal(rctx, &randreal));
         PetscCall(MatGetColumnVector(user->A, user->workvec3, temp));
         PetscCall(VecDot(user->workvec3, user->workvec, &norm));
-        array[temp] = randreal * PetscSqrtReal((int)p) * PetscSign(norm);
+        array[temp] = randreal * PetscSqrtReal((PetscReal)p) * PetscSign(norm);
       }
     }
     PetscCall(VecRestoreArray(user->x0, &array));
@@ -254,14 +252,13 @@ PetscErrorCode DataCreate(AppCtx *user)
     PetscCall(MatGetOwnershipRangeColumn(user->A, &low, &high));
     PetscCall(ISCreateStride(PETSC_COMM_WORLD, high - low, low, 1, &user->is_set));
   } break;
-    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DataDestroy(AppCtx *user)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(VecDestroy(&user->x));
   PetscCall(VecDestroy(&user->b));
   PetscCall(VecDestroy(&user->workvec));
@@ -290,7 +287,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
 
   PetscInt probtype;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   user->k        = 5;
   user->n        = 20;
   user->m        = 10;
@@ -336,12 +333,12 @@ int main(int argc, char **argv)
   PetscCall(TaoTermSetType(gterm, TAOTERML1));
 
   switch (user.probType) {
-  case PROB_LASSO: {
+  case PROB_LASSO:
     PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, UserObjGrad_Term));
-  } break;
-  case PROB_LOG_REG: {
+    break;
+  case PROB_LOG_REG:
     PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, Log_UserObjGrad_Term));
-  } break;
+    break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Invalid problem formulation type.");
   }
@@ -403,6 +400,12 @@ int main(int argc, char **argv)
       suffix: lasso_ls
       args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 0 -scale 10 -tao_ls_max_funcs 30 -tao_fb_ls_scale 1.05 -tao_max_it 100 -tao_view
       output_file: output/fb_example_lasso_ls.out
+      requires: !single
+
+   test:
+      suffix: lasso_fista_ls
+      args: -problem prob_lasso -tao_fb_accel 1 -tao_fb_adaptive 0 -scale 10 -tao_ls_max_funcs 30 -tao_fb_ls_scale 1.05 -tao_max_it 100 -tao_converged_reason
+      output_file: output/fb_example_lasso_fista_ls.out
       requires: !single
 
    test:

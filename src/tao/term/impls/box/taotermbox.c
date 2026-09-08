@@ -89,9 +89,13 @@ static PetscErrorCode TaoTermProximalMap_Box(TaoTerm term, Vec p, PetscReal alph
     PetscCheck(is_l2, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TAOTERMBOX only supports TAOTERMHALFL2SQUARED as its proximal regularizer");
   }
   PetscCheck(!p, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TAOTERMBOX does not support parameterized proximal maps");
-  PetscCheck(q, PetscObjectComm((PetscObject)term), PETSC_ERR_SUP, "TAOTERMBOX requires the center of the proximal regularizer");
-  if (alpha == 0.0) PetscCall(VecCopy(q, x));
-  else PetscCall(TaoTermBoxProject(term, q, x));
+  if (q) {
+    if (alpha == 0.0) PetscCall(VecCopy(q, x));
+    else PetscCall(TaoTermBoxProject(term, q, x));
+  } else {
+    PetscCall(VecZeroEntries(x));
+    if (alpha != 0.0) PetscCall(TaoTermBoxProject(term, x, x));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
