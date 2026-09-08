@@ -46,6 +46,22 @@ class BaseTestPlex:
             self.assertEqual(vEnd - vStart, len(self.COORDS))
             self.assertTrue((coords == self.COORDS).all())
 
+    def testCellCoordinates(self):
+        cStart, cEnd = self.plex.getHeightStratum(0)
+        if cStart == cEnd:
+            return
+        for _ in range(2):
+            _is_dg, coordinates = self.plex.getPlexCellCoordinates(cStart)
+            self.assertEqual(coordinates.shape[1], self.DIM)
+
+    def testDistributeOverlapNoChange(self):
+        if self.COMM.getSize() != 1:
+            return
+        sf = self.plex.distributeOverlap(1)
+        self.assertIsNone(sf)
+        self.assertTrue(self.plex)
+        self.assertEqual(self.plex.getDimension(), self.DIM)
+
     def testClosure(self):
         pStart, pEnd = self.plex.getChart()
         for p in range(pStart, pEnd):
@@ -276,6 +292,40 @@ class BaseTestPlex:
         self.plex.globalToNaturalEnd(gv, nv)
         self.plex.naturalToGlobalBegin(nv, gv)
         self.plex.naturalToGlobalEnd(nv, gv)
+
+    def testLabeledField(self):
+        dim = self.plex.getDimension()
+        ct = self.plex.getCellType(0)
+        fe = PETSc.FE().createByCell(dim, 1, ct)
+        self.plex.createLabel('field_support')
+        label = self.plex.getLabel('field_support')
+        self.plex.setField(0, fe, 'field_support')
+        field, field_label = self.plex.getField(0)
+        self.assertEqual(field, fe)
+        self.assertEqual(field_label, label)
+        field.destroy()
+        field_label.destroy()
+        self.plex.clearFields()
+        self.plex.addField(fe, 'field_support')
+        field, field_label = self.plex.getField(0)
+        self.assertEqual(field, fe)
+        self.assertEqual(field_label, label)
+        field.destroy()
+        field_label.destroy()
+        label.destroy()
+        fe.destroy()
+
+    def testAuxiliaryVecReference(self):
+        aux = self.plex.createLocalVec()
+        self.plex.setAuxiliaryVec(aux, None)
+        retrieved = self.plex.getAuxiliaryVec()
+        retrieved.destroy()
+        self.assertTrue(aux)
+        retrieved = self.plex.getAuxiliaryVec()
+        self.assertTrue(retrieved)
+        retrieved.destroy()
+        self.plex.setAuxiliaryVec(PETSc.Vec(), None)
+        aux.destroy()
 
     def testSpaceSubspaceReferences(self):
         subspace = PETSc.Space().create(PETSc.COMM_SELF)

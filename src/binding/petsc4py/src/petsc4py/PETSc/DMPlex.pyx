@@ -1747,8 +1747,9 @@ cdef class DMPlex(DM):
         cdef PetscDM dmOverlap = NULL
         CHKERR(DMPlexDistributeOverlap(self.dm, coverlap,
                                        &sf.sf, &dmOverlap))
-        CHKERR(PetscCLEAR(self.obj)); self.dm = dmOverlap
-        return sf
+        if dmOverlap != NULL:
+            CHKERR(PetscCLEAR(self.obj)); self.dm = dmOverlap
+            return sf
 
     def isDistributed(self) -> bool:
         """Return the flag indicating if the mesh is distributed.
@@ -2373,18 +2374,18 @@ cdef class DMPlex(DM):
         petsc.DMPlexComputeCellGeometryFVM
 
         """
-        cdef PetscInt dims[2]
+        cdef PetscInt dims[2], ncoords = 0
         CHKERR(DMGetCoordinateDim(self.dm, &dims[1]))
         cdef PetscInt ccell = asInt(cell)
         cdef PetscBool isDG = PETSC_FALSE
         cdef const PetscScalar *array = NULL
         cdef PetscScalar *coords = NULL
-        CHKERR(DMPlexGetCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
-        dims[0] /= dims[1]
+        CHKERR(DMPlexGetCellCoordinates(self.dm, ccell, &isDG, &ncoords, &array, &coords))
+        dims[0] = ncoords // dims[1]
         try:
             out = array_sd(2, dims, coords)
         finally:
-            CHKERR(DMPlexRestoreCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
+            CHKERR(DMPlexRestoreCellCoordinates(self.dm, ccell, &isDG, &ncoords, &array, &coords))
         return (toBool(isDG), out)
 
     def computeCellGeometryFVM(self, cell: int) -> tuple[float, ArrayReal, ArrayReal]:
