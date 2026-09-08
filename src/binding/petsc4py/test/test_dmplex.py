@@ -11,6 +11,24 @@ import importlib
 ERR_ARG_OUTOFRANGE = 63
 
 
+class TestPartitioner(unittest.TestCase):
+    def setUp(self):
+        self.partitioner = PETSc.Partitioner().create(PETSc.COMM_SELF)
+        self.partitioner.setType(PETSc.Partitioner.Type.SHELL)
+
+    def tearDown(self):
+        self.partitioner.destroy()
+        self.partitioner = None
+        PETSc.garbage_cleanup()
+
+    def testShellPartitionPointExtent(self):
+        self.partitioner.setShellPartition(2, [1, 2], [2, 0, 1])
+        with self.assertRaisesRegex(
+            ValueError, 'points array should have at least 3 entries'
+        ):
+            self.partitioner.setShellPartition(2, [1, 2], [0, 1])
+
+
 class BaseTestPlex:
     COMM = PETSc.COMM_WORLD
     DIM = 1
