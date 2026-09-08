@@ -707,14 +707,32 @@ cdef class DMSwarm(DM):
 
         """
         cdef ndarray xyz = iarray(coordinates, NPY_PETSC_REAL)
+        cdef PetscDMSwarmCellDM celldm = NULL
+        cdef PetscDM dm = NULL
+        cdef PetscVec coorlocal = NULL
+        cdef PetscInt bs = 0
+        cdef MPI_Comm comm = MPI_COMM_NULL
+        cdef int rank = 0
+        cdef PetscInt cnpoints = 0
+        cdef PetscBool credundant = asBool(redundant)
+        cdef PetscInsertMode cmode = insertmode(mode)
+        cdef PetscReal *coords = NULL
+
         if PyArray_ISFORTRAN(xyz): xyz = PyArray_Copy(xyz)
         if PyArray_NDIM(xyz) != 2: raise ValueError(
             ("coordinates must have two dimensions: "
              "coordinates.ndim=%d") % (PyArray_NDIM(xyz)))
-        cdef PetscInt cnpoints = <PetscInt> PyArray_DIM(xyz, 0)
-        cdef PetscBool credundant = asBool(redundant)
-        cdef PetscInsertMode cmode = insertmode(mode)
-        cdef PetscReal *coords = <PetscReal*> PyArray_DATA(xyz)
+        CHKERR(DMSwarmGetCellDMActive(self.dm, &celldm))
+        CHKERR(DMSwarmCellDMGetDM(celldm, &dm))
+        CHKERR(DMGetCoordinatesLocal(dm, &coorlocal))
+        CHKERR(VecGetBlockSize(coorlocal, &bs))
+        CHKERR(PetscObjectGetComm(self.obj[0], &comm))
+        CHKERRMPI(MPI_Comm_rank(comm, &rank))
+        if (credundant == PETSC_FALSE or rank == 0) and PyArray_DIM(xyz, 1) != bs:
+            raise ValueError("coordinates must have %d columns (has %d)" %
+                             (toInt(bs), PyArray_DIM(xyz, 1)))
+        cnpoints = <PetscInt> PyArray_DIM(xyz, 0)
+        coords = <PetscReal*> PyArray_DATA(xyz)
         CHKERR(DMSwarmSetPointCoordinates(self.dm, cnpoints, coords, credundant, cmode))
 
     def insertPointUsingCellDM(self, layoutType: PICLayoutType, fill_param: int) -> None:

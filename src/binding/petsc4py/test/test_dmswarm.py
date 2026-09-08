@@ -90,38 +90,61 @@ class TestCellDM(unittest.TestCase):
         PETSc.garbage_cleanup()
 
 
-class TestDMSwarmSort(unittest.TestCase):
-    def testGetPointsPerCellRestoresWorkArray(self):
-        plex = PETSc.DMPlex().createFromCellList(
+class BaseTestDMSwarmPIC:
+    def setUp(self):
+        self.plex = PETSc.DMPlex().createFromCellList(
             2,
             [[0, 1, 2]],
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             comm=PETSc.COMM_SELF,
         )
-        swarm = PETSc.DMSwarm().create(PETSc.COMM_SELF)
-        swarm.setDimension(2)
-        swarm.setType(PETSc.DMSwarm.Type.PIC)
-        swarm.setCellDM(plex)
-        swarm.finalizeFieldRegister()
-        swarm.setLocalSizes(1, 0)
-        cStart, _ = plex.getHeightStratum(0)
-        cell_dm = swarm.getCellDMActive()
+        self.swarm = PETSc.DMSwarm().create(PETSc.COMM_SELF)
+        self.swarm.setDimension(2)
+        self.swarm.setType(PETSc.DMSwarm.Type.PIC)
+        self.swarm.setCellDM(self.plex)
+        self.swarm.finalizeFieldRegister()
+        self.swarm.setLocalSizes(1, 0)
+
+    def tearDown(self):
+        self.swarm.destroy()
+        self.plex.destroy()
+        self.swarm = None
+        self.plex = None
+        PETSc.garbage_cleanup()
+
+
+class TestDMSwarmPIC(BaseTestDMSwarmPIC, unittest.TestCase):
+    def testPointCoordinateExtent(self):
+        with self.assertRaisesRegex(ValueError, 'coordinates must have 2 columns'):
+            self.swarm.setPointCoordinates([[0.25]])
+
+        self.swarm.setPointCoordinates([[0.25, 0.25]])
+        self.assertEqual(self.swarm.getLocalSize(), 1)
+        cell_dm = self.swarm.getCellDMActive()
+        coordinate_field = cell_dm.getCoordinateFields()[0]
+        cell_dm.destroy()
+        coordinates = self.swarm.getField(coordinate_field).copy()
+        self.swarm.restoreField(coordinate_field)
+        np.testing.assert_allclose(coordinates, [[0.25, 0.25]])
+
+
+class TestDMSwarmSort(BaseTestDMSwarmPIC, unittest.TestCase):
+    def testGetPointsPerCellRestoresWorkArray(self):
+        cStart, _ = self.plex.getHeightStratum(0)
+        cell_dm = self.swarm.getCellDMActive()
         cell_id = cell_dm.getCellID()
         cell_dm.destroy()
-        field = swarm.getField(cell_id)
+        field = self.swarm.getField(cell_id)
         field[0] = cStart
-        swarm.restoreField(cell_id)
-        swarm.sortGetAccess()
+        self.swarm.restoreField(cell_id)
+        self.swarm.sortGetAccess()
         try:
-            first = swarm.sortGetPointsPerCell(cStart)
-            second = swarm.sortGetPointsPerCell(cStart)
+            first = self.swarm.sortGetPointsPerCell(cStart)
+            second = self.swarm.sortGetPointsPerCell(cStart)
         finally:
-            swarm.sortRestoreAccess()
+            self.swarm.sortRestoreAccess()
         self.assertEqual(first, second)
         self.assertEqual(len(first), 1)
-        swarm.destroy()
-        plex.destroy()
-        PETSc.garbage_cleanup()
 
 
 if __name__ == '__main__':
