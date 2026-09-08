@@ -6520,8 +6520,8 @@ PetscErrorCode MatAssemblyEnd(Mat mat, MatAssemblyType type)
   `MAT_KEEP_NONZERO_PATTERN` indicates when `MatZeroRows()` is called the zeroed entries
   are kept in the nonzero structure. This flag is not used for `MatZeroRowsColumns()`
 
-  `MAT_IGNORE_ZERO_ENTRIES` - for `MATAIJ` and `MATIS` matrices this will stop zero values from creating
-  a zero location in the matrix
+  `MAT_IGNORE_ZERO_ENTRIES` - for `MATAIJ`, `MATSELL`, and `MATIS` matrices this will stop zero values
+  from creating a zero location in the matrix
 
   `MAT_USE_INODES` - indicates using inode version of the code - works with `MATAIJ` matrix types
 
