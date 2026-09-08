@@ -717,14 +717,26 @@ static PetscErrorCode DMSwarmProjectFields_DA_Internal(DM swarm, DM celldm, Pets
 @*/
 PetscErrorCode DMSwarmProjectFields(DM sw, DM dm, PetscInt nfields, const char *fieldnames[], Vec fields[], ScatterMode mode)
 {
-  DM_Swarm         *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm         *swarm;
   DMSwarmDataField *gfield;
   PetscBool         isDA, isPlex;
   MPI_Comm          comm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  if (dm) PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscValidLogicalCollectiveInt(sw, nfields, 3);
+  PetscCheck(nfields > 0, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be positive, not %" PetscInt_FMT, nfields);
+  PetscAssertPointer(fieldnames, 4);
+  PetscAssertPointer(fields, 5);
+  for (PetscInt f = 0; f < nfields; ++f) {
+    PetscAssertPointer(fieldnames[f], 4);
+    PetscValidHeaderSpecific(fields[f], VEC_CLASSID, 5);
+  }
+  PetscValidLogicalCollectiveEnum(sw, mode, 6);
   DMSWARMPICVALID(sw);
   PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
+  swarm = (DM_Swarm *)sw->data;
   if (!dm) PetscCall(DMSwarmGetCellDM(sw, &dm));
   PetscCall(PetscObjectTypeCompare((PetscObject)dm, DMDA, &isDA));
   PetscCall(PetscObjectTypeCompare((PetscObject)dm, DMPLEX, &isPlex));
@@ -885,6 +897,17 @@ PetscErrorCode DMSwarmProjectGradientFields(DM sw, DM dm, PetscInt nfields, cons
   MPI_Comm  comm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  if (dm) PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscValidLogicalCollectiveInt(sw, nfields, 3);
+  PetscCheck(nfields > 0, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be positive, not %" PetscInt_FMT, nfields);
+  PetscAssertPointer(fieldnames, 4);
+  PetscAssertPointer(fields, 5);
+  for (PetscInt f = 0; f < nfields; ++f) {
+    PetscAssertPointer(fieldnames[f], 4);
+    PetscValidHeaderSpecific(fields[f], VEC_CLASSID, 5);
+  }
+  PetscValidLogicalCollectiveEnum(sw, mode, 6);
   DMSWARMPICVALID(sw);
   PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
   if (!dm) PetscCall(DMSwarmGetCellDM(sw, &dm));
@@ -1409,10 +1432,12 @@ static PetscErrorCode DMSwarmRemapMonitor_Internal(DM sw, DM rsw)
 @*/
 PetscErrorCode DMSwarmRemap(DM sw)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
   DM        rsw;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)sw->data;
   switch (swarm->remap_type) {
   case DMSWARM_REMAP_NONE:
     PetscFunctionReturn(PETSC_SUCCESS);

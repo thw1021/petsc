@@ -1,9 +1,25 @@
 from petsc4py import PETSc
 import unittest
+import weakref
 import numpy as np
 from math import sqrt
 
 # --------------------------------------------------------------------
+
+
+class DLPackArray:
+    missing = object()
+
+    def __init__(self, array):
+        self.array = array
+        self.stream = self.missing
+
+    def __dlpack_device__(self):
+        return self.array.__dlpack_device__()
+
+    def __dlpack__(self, *, stream=missing):
+        self.stream = stream
+        return self.array.__dlpack__()
 
 
 class BaseTestVec:
@@ -43,6 +59,12 @@ class BaseTestVec:
         self.vec.dotBegin(self.vec)
         d = self.vec.dotEnd(self.vec)
         self.assertAlmostEqual(abs(d), self.vec.getSize())
+        self.vec.tDotBegin(self.vec)
+        d = self.vec.tDotEnd(self.vec)
+        self.assertAlmostEqual(abs(d), self.vec.getSize())
+        d, n2 = self.vec.dotNorm2(self.vec)
+        self.assertAlmostEqual(abs(d), self.vec.getSize())
+        self.assertAlmostEqual(n2, self.vec.getSize())
 
     def testNorm(self):
         self.vec.set(1)
@@ -156,6 +178,18 @@ class BaseTestVec:
         self.assertEqual(arr3.max(), 1)
         del arr3
         self.assertEqual(self.vec.getRefCount(), refs)
+
+    @unittest.skipUnless(hasattr(np, 'from_dlpack'), 'NumPy has no DLPack support')
+    def testDLPackDtype(self):
+        self.vec.set(1)
+        array = np.from_dlpack(self.vec)
+        self.assertEqual(array.dtype, np.dtype(PETSc.ScalarType))
+
+    def testDLPackHostStream(self):
+        capsule = self.vec.__dlpack__(stream=None)
+        del capsule
+        with self.assertRaisesRegex(RuntimeError, 'only supports stream=None'):
+            self.vec.__dlpack__(stream=-1)
 
     def testPlaceArray(self):
         self.vec.set(1)
@@ -297,6 +331,56 @@ class TestVecShared(BaseTestVec, unittest.TestCase):
 
 
 class TestVecWithArray(unittest.TestCase):
+    def testCreateDeviceWithOptionalCPUArray(self):
+        constructors = [
+            ('cuda', 'createCUDAWithArrays'),
+            ('hip', 'createHIPWithArrays'),
+            ('viennacl', 'createViennaCLWithArrays'),
+        ]
+        for package, constructor in constructors:
+            if not PETSc.Sys.hasExternalPackage(package):
+                continue
+            for cpuarray in (None, np.arange(5, dtype=PETSc.ScalarType)):
+                with self.subTest(package=package, cpuarray=cpuarray is not None):
+                    vec = getattr(PETSc.Vec(), constructor)(
+                        cpuarray=cpuarray, size=5, comm=PETSc.COMM_SELF
+                    )
+                    self.assertEqual(vec.getSize(), 5)
+                    if cpuarray is not None:
+                        np.testing.assert_array_equal(vec.getArray(), cpuarray)
+                    vec.destroy()
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackDtype(self):
+        array = np.zeros(5, dtype=np.int64)
+        with self.assertRaisesRegex(TypeError, 'does not match PETSc ScalarType'):
+            PETSc.Vec().createWithDLPack(array, comm=PETSc.COMM_SELF)
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackStrided(self):
+        array = np.arange(10, dtype=PETSc.ScalarType)[::2]
+        with self.assertRaisesRegex(ValueError, 'storage must be contiguous'):
+            PETSc.Vec().createWithDLPack(array, comm=PETSc.COMM_SELF)
+
+    @unittest.skipUnless(
+        hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
+    )
+    def testCreateWithDLPackStream(self):
+        source = np.arange(5, dtype=PETSc.ScalarType)
+        source_ref = weakref.ref(source)
+        array = DLPackArray(source)
+        vec = PETSc.Vec().createWithDLPack(array, comm=PETSc.COMM_SELF)
+        self.assertIsNone(array.stream)
+        del source, array
+        self.assertIsNotNone(source_ref())
+        np.testing.assert_array_equal(vec.getArray(), np.arange(5))
+        vec.destroy()
+        self.assertIsNone(source_ref())
+
     def testCreateSeq(self):
         a = np.zeros(5, dtype=PETSc.ScalarType)
 

@@ -213,6 +213,26 @@ class BaseTestMatDense(BaseTestMatAnyDense, unittest.TestCase):
     BSIZE = None
 
 
+class TestMatDLPack(unittest.TestCase):
+    @unittest.skipUnless(hasattr(np, 'from_dlpack'), 'NumPy has no DLPack support')
+    def testDtype(self):
+        A = PETSc.Mat().createDense((2, 3), comm=PETSc.COMM_SELF)
+        A.setUp()
+        array = np.from_dlpack(A)
+        self.assertEqual(array.dtype, np.dtype(PETSc.ScalarType))
+        del array
+        A.destroy()
+
+    def testHostStream(self):
+        A = PETSc.Mat().createDense((2, 3), comm=PETSc.COMM_SELF)
+        A.setUp()
+        capsule = A.__dlpack__(stream=None)
+        del capsule
+        with self.assertRaisesRegex(RuntimeError, 'only supports stream=None'):
+            A.__dlpack__(stream=-1)
+        A.destroy()
+
+
 # -- Seq Dense --
 
 
@@ -440,6 +460,18 @@ class TestMatMPIDense_B_G77_B5(TestMatMPIDense_B_G77):
 
 class TestMatMPIDense_B_G89_B5(TestMatMPIDense_B_G89):
     BSIZE = 5
+
+
+class TestMatDenseCUDAConstructor(unittest.TestCase):
+    @unittest.skipUnless(
+        PETSc.Sys.hasExternalPackage('cuda'), 'PETSc was built without CUDA'
+    )
+    def testCreateWithHostArray(self):
+        array = np.arange(6, dtype=PETSc.ScalarType)
+        A = PETSc.Mat().createDenseCUDA([2, 3], array=array, comm=PETSc.COMM_SELF)
+        self.assertEqual(A.getSize(), (2, 3))
+        self.assertIs(A.getDict()['__array__'], array)
+        A.destroy()
 
 
 # -----

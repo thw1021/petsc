@@ -24,6 +24,7 @@ PetscClassId DMSWARMCELLDM_CLASSID;
 PetscErrorCode DMSwarmCellDMDestroy(DMSwarmCellDM *celldm)
 {
   PetscFunctionBegin;
+  PetscAssertPointer(celldm, 1);
   if (!*celldm) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*celldm, DMSWARMCELLDM_CLASSID, 1);
   if (--((PetscObject)*celldm)->refct > 0) {
@@ -237,7 +238,7 @@ PetscErrorCode DMSwarmCellDMSetSort(DMSwarmCellDM celldm, DMSwarmSort sort)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(celldm, DMSWARMCELLDM_CLASSID, 1);
-  if (sort) PetscAssertPointer(sort, 2);
+  if (sort) PetscValidHeaderSpecific(sort, DMSWARMSORT_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)sort));
   PetscCall(DMSwarmSortDestroy(&celldm->sort));
   celldm->sort = sort;
@@ -264,7 +265,7 @@ PetscErrorCode DMSwarmCellDMGetBlockSize(DMSwarmCellDM celldm, DM sw, PetscInt *
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(celldm, DMSWARMCELLDM_CLASSID, 1);
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 2);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 2, DMSWARM);
   PetscAssertPointer(bs, 3);
   *bs = 0;
   for (PetscInt f = 0; f < celldm->Nf; ++f) {
@@ -303,8 +304,15 @@ PetscErrorCode DMSwarmCellDMCreate(DM dm, PetscInt Nf, const char *dmFields[], P
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(dm, Nf, 2);
+  PetscValidLogicalCollectiveInt(dm, Nfc, 4);
+  PetscCheck(Nf >= 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be non-negative, not %" PetscInt_FMT, Nf);
+  PetscCheck(Nfc >= 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of coordinate fields must be non-negative, not %" PetscInt_FMT, Nfc);
   if (Nf) PetscAssertPointer(dmFields, 3);
+  for (PetscInt f = 0; f < Nf; ++f) PetscAssertPointer(dmFields[f], 3);
   if (Nfc) PetscAssertPointer(coordFields, 5);
+  for (PetscInt f = 0; f < Nfc; ++f) PetscAssertPointer(coordFields[f], 5);
+  PetscAssertPointer(celldm, 6);
   PetscCall(DMInitializePackage());
 
   PetscCall(PetscHeaderCreate(b, DMSWARMCELLDM_CLASSID, "DMSwarmCellDM", "Background DM for a Swarm", "DM", PetscObjectComm((PetscObject)dm), DMSwarmCellDMDestroy, DMSwarmCellDMView));
@@ -365,6 +373,11 @@ PetscErrorCode DMSwarmSetPointsUniformCoordinates(DM sw, PetscReal min[], PetscR
   const char       **coordFields, *cellid;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(min, 2);
+  PetscAssertPointer(max, 3);
+  PetscAssertPointer(npoints, 4);
+  PetscValidLogicalCollectiveEnum(sw, mode, 5);
   DMSWARMPICVALID(sw);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetCoordinateFields(celldm, &Nfc, &coordFields));
@@ -375,6 +388,7 @@ PetscErrorCode DMSwarmSetPointsUniformCoordinates(DM sw, PetscReal min[], PetscR
   PetscCall(DMGetCoordinateDim(dm, &bs));
 
   for (b = 0; b < bs; b++) {
+    PetscCheck(npoints[b] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of points in direction %" PetscInt_FMT " must be non-negative, not %" PetscInt_FMT, b, npoints[b]);
     if (npoints[b] > 1) {
       dx[b] = (max[b] - min[b]) / ((PetscReal)(npoints[b] - 1));
     } else {
@@ -522,9 +536,16 @@ PetscErrorCode DMSwarmSetPointCoordinates(DM sw, PetscInt npoints, PetscReal coo
   const char       **coordFields, *cellid;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveBool(sw, redundant, 4);
+  PetscValidLogicalCollectiveEnum(sw, mode, 5);
   DMSWARMPICVALID(sw);
   PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  if (!redundant || rank == 0) {
+    PetscCheck(npoints >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be non-negative, not %" PetscInt_FMT, npoints);
+    if (npoints) PetscAssertPointer(coor, 3);
+  }
 
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetCoordinateFields(celldm, &Nfc, &coordFields));
@@ -678,6 +699,9 @@ PetscErrorCode DMSwarmInsertPointsUsingCellDM(DM dm, DMSwarmPICLayoutType layout
   PetscBool isDA, isPLEX;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscCheck(layout_type >= DMSWARMPIC_LAYOUT_REGULAR && layout_type <= DMSWARMPIC_LAYOUT_SUBDIVISION, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid layout type %d", (int)layout_type);
+  PetscCheck(fill_param >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Layout parameter must be non-negative, not %" PetscInt_FMT, fill_param);
   DMSWARMPICVALID(dm);
   PetscCall(DMSwarmGetCellDM(dm, &celldm));
   PetscCall(PetscObjectTypeCompare((PetscObject)celldm, DMDA, &isDA));
@@ -725,6 +749,9 @@ PetscErrorCode DMSwarmSetPointCoordinatesCellwise(DM dm, PetscInt npoints, Petsc
   PetscBool isDA, isPLEX;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscCheck(npoints >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be non-negative, not %" PetscInt_FMT, npoints);
+  if (npoints) PetscAssertPointer(xi, 3);
   DMSWARMPICVALID(dm);
   PetscCall(DMSwarmGetCellDM(dm, &celldm));
   PetscCall(PetscObjectTypeCompare((PetscObject)celldm, DMDA, &isDA));
@@ -763,6 +790,9 @@ PetscErrorCode DMSwarmCreatePointPerCellCount(DM sw, PetscInt *ncells, PetscInt 
   const char   *cellid;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  if (ncells) PetscAssertPointer(ncells, 2);
+  PetscAssertPointer(count, 3);
   PetscCall(DMSwarmSortGetIsValid(sw, &isvalid));
   nel = 0;
   if (isvalid) {
@@ -836,10 +866,13 @@ PetscErrorCode DMSwarmCreatePointPerCellCount(DM sw, PetscInt *ncells, PetscInt 
 @*/
 PetscErrorCode DMSwarmGetNumSpecies(DM sw, PetscInt *Ns)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  *Ns = swarm->Ns;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(Ns, 2);
+  swarm = (DM_Swarm *)sw->data;
+  *Ns   = swarm->Ns;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -858,9 +891,12 @@ PetscErrorCode DMSwarmGetNumSpecies(DM sw, PetscInt *Ns)
 @*/
 PetscErrorCode DMSwarmSetNumSpecies(DM sw, PetscInt Ns)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscCheck(Ns > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of species must be positive, not %" PetscInt_FMT, Ns);
+  swarm     = (DM_Swarm *)sw->data;
   swarm->Ns = Ns;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -882,11 +918,12 @@ PetscErrorCode DMSwarmSetNumSpecies(DM sw, PetscInt Ns)
 @*/
 PetscErrorCode DMSwarmGetCoordinateFunction(DM sw, PetscSimplePointFn **coordFunc)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(coordFunc, 2);
+  swarm      = (DM_Swarm *)sw->data;
   *coordFunc = swarm->coordFunc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -906,11 +943,12 @@ PetscErrorCode DMSwarmGetCoordinateFunction(DM sw, PetscSimplePointFn **coordFun
 @*/
 PetscErrorCode DMSwarmSetCoordinateFunction(DM sw, PetscSimplePointFn *coordFunc)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscValidFunction(coordFunc, 2);
+  swarm            = (DM_Swarm *)sw->data;
   swarm->coordFunc = coordFunc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -932,11 +970,12 @@ PetscErrorCode DMSwarmSetCoordinateFunction(DM sw, PetscSimplePointFn *coordFunc
 @*/
 PetscErrorCode DMSwarmGetVelocityFunction(DM sw, PetscSimplePointFn **velFunc)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(velFunc, 2);
+  swarm    = (DM_Swarm *)sw->data;
   *velFunc = swarm->velFunc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -956,11 +995,12 @@ PetscErrorCode DMSwarmGetVelocityFunction(DM sw, PetscSimplePointFn **velFunc)
 @*/
 PetscErrorCode DMSwarmSetVelocityFunction(DM sw, PetscSimplePointFn *velFunc)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscValidFunction(velFunc, 2);
+  swarm          = (DM_Swarm *)sw->data;
   swarm->velFunc = velFunc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -996,6 +1036,9 @@ PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFn *density)
   const char      *cellid;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscCheck(N >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of particles must be non-negative, not %" PetscInt_FMT, N);
+  PetscValidFunction(density, 3);
   PetscCall(DMSwarmGetNumSpecies(sw, &Ns));
   PetscCall(DMSwarmGetCellDM(sw, &dm));
   PetscCall(DMGetDimension(dm, &dim));
@@ -1069,6 +1112,7 @@ PetscErrorCode DMSwarmComputeLocalSizeFromOptions(DM sw)
   PetscMPIInt  size, rank;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sw), &size));
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)sw), &rank));
   PetscCall(PetscCalloc1(size, &N));
@@ -1127,7 +1171,8 @@ PetscErrorCode DMSwarmInitializeCoordinates(DM sw)
   PetscInt            Nfc, Np, p, Ns, dim, d, bs;
   const char        **coordFields;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
   PetscCall(DMSwarmGetNumSpecies(sw, &Ns));
@@ -1222,6 +1267,9 @@ PetscErrorCode DMSwarmInitializeVelocities(DM sw, PetscProbFn *sampler, const Pe
   PetscInt            dim, Np, p;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  if (sampler) PetscValidFunction(sampler, 2);
+  PetscAssertPointer(v0, 3);
   PetscCall(DMSwarmGetVelocityFunction(sw, &velFunc));
 
   PetscCall(DMGetDimension(sw, &dim));
@@ -1242,6 +1290,7 @@ PetscErrorCode DMSwarmInitializeVelocities(DM sw, PetscProbFn *sampler, const Pe
   } else {
     PetscRandom rnd;
 
+    PetscValidFunction(sampler, 2);
     PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)sw), &rnd));
     PetscCall(PetscRandomSetInterval(rnd, 0, 1.));
     PetscCall(PetscRandomSetFromOptions(rnd));
@@ -1283,6 +1332,8 @@ PetscErrorCode DMSwarmInitializeVelocitiesFromOptions(DM sw, const PetscReal v0[
   PetscBool    flg;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(v0, 2);
   PetscOptionsBegin(PetscObjectComm((PetscObject)sw), "", "DMSwarm Options", "DMSWARM");
   PetscCall(PetscOptionsString("-dm_swarm_velocity_function", "Function to determine particle velocities", "DMSwarmSetVelocityFunction", funcname, funcname, sizeof(funcname), &flg));
   PetscOptionsEnd();

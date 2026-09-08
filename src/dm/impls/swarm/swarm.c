@@ -120,6 +120,8 @@ PetscErrorCode DMSwarmVectorGetField(DM sw, PetscInt *Nf, const char **fieldname
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(Nf, 2);
+  PetscAssertPointer(fieldnames, 3);
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetFields(celldm, Nf, fieldnames));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -148,6 +150,8 @@ PetscErrorCode DMSwarmVectorGetField(DM sw, PetscInt *Nf, const char **fieldname
 PetscErrorCode DMSwarmVectorDefineField(DM dm, const char fieldname[])
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
   PetscCall(DMSwarmVectorDefineFields(dm, 1, &fieldname));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -175,14 +179,17 @@ PetscErrorCode DMSwarmVectorDefineField(DM dm, const char fieldname[])
 @*/
 PetscErrorCode DMSwarmVectorDefineFields(DM sw, PetscInt Nf, const char *fieldnames[])
 {
-  DM_Swarm     *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm     *swarm;
   DMSwarmCellDM celldm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
-  if (fieldnames) PetscAssertPointer(fieldnames, 3);
-  if (!swarm->issetup) PetscCall(DMSetUp(sw));
+  PetscValidLogicalCollectiveInt(sw, Nf, 2);
   PetscCheck(Nf >= 0, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be non-negative, not %" PetscInt_FMT, Nf);
+  if (Nf) PetscAssertPointer(fieldnames, 3);
+  for (PetscInt f = 0; f < Nf; ++f) PetscAssertPointer(fieldnames[f], 3);
+  swarm = (DM_Swarm *)sw->data;
+  if (!swarm->issetup) PetscCall(DMSetUp(sw));
   // Create a dummy cell DM if none has been specified (I think we should not support this mode)
   if (!swarm->activeCellDM) {
     DM            dm;
@@ -472,8 +479,8 @@ PetscErrorCode DMSwarmPreallocateMassMatrix(DM dmc, DM dmf, Mat mass, PetscInt *
   PetscInt     cStart, cEnd, locRows, locCols, colStart, colEnd, Nf, totNc = 0;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dmc, DM_CLASSID, 1);
-  PetscValidHeaderSpecific(dmf, DM_CLASSID, 2);
+  PetscValidHeaderSpecificType(dmc, DM_CLASSID, 1, DMSWARM);
+  PetscValidHeaderSpecificType(dmf, DM_CLASSID, 2, DMPLEX);
   PetscValidHeaderSpecific(mass, MAT_CLASSID, 3);
   PetscAssertPointer(rStart, 4);
   PetscAssertPointer(maxC, 5);
@@ -589,15 +596,28 @@ PetscErrorCode DMSwarmFillMassMatrix(DM dmc, DM dmf, Mat mass, PetscInt rStart, 
   const char  *name = "Mass Matrix";
   PetscDS      ds;
   PetscSection fsection, globalFSection;
-  PetscInt     dim, cStart, cEnd, Nf, totDim, totNc = 0, *rowIDXs;
+  PetscInt     dim, cStart, cEnd, Nf, totDim, totNc = 0, coordDim = 0, *rowIDXs;
   PetscReal   *xi, *v0, *J, *invJ, detJ = 1.0, v0ref[3] = {-1.0, -1.0, -1.0};
   PetscScalar *elemMat;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dmc, DM_CLASSID, 1);
-  PetscValidHeaderSpecific(dmf, DM_CLASSID, 2);
+  PetscValidHeaderSpecificType(dmc, DM_CLASSID, 1, DMSWARM);
+  PetscValidHeaderSpecificType(dmf, DM_CLASSID, 2, DMPLEX);
   PetscValidHeaderSpecific(mass, MAT_CLASSID, 3);
+  PetscValidLogicalCollectiveBool(dmc, useDeltaFunction, 6);
+  PetscValidLogicalCollectiveInt(dmc, Nfc, 7);
+  PetscCheck(Nfc >= 0, PetscObjectComm((PetscObject)dmc), PETSC_ERR_ARG_OUTOFRANGE, "Number of coordinate fields must be non-negative, not %" PetscInt_FMT, Nfc);
+  if (Nfc) {
+    PetscAssertPointer(bs, 8);
+    PetscAssertPointer(coordVals, 9);
+  }
   PetscCall(DMGetCoordinateDim(dmf, &dim));
+  for (PetscInt f = 0; f < Nfc; ++f) {
+    PetscCheck(bs[f] > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Coordinate field %" PetscInt_FMT " block size must be positive, not %" PetscInt_FMT, f, bs[f]);
+    PetscAssertPointer(coordVals[f], 9);
+    coordDim += bs[f];
+  }
+  PetscCheck(coordDim == dim, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Total coordinate field block size %" PetscInt_FMT " must equal coordinate dimension %" PetscInt_FMT, coordDim, dim);
   PetscCall(DMPlexGetHeightStratum(dmf, 0, &cStart, &cEnd));
   PetscCall(DMGetLocalSection(dmf, &fsection));
   PetscCall(DMGetGlobalSection(dmf, &globalFSection));
@@ -980,6 +1000,9 @@ PetscErrorCode DMSwarmCreateMassMatrixSquare(DM dmCoarse, DM dmFine, Mat *mass)
   void    *ctx;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dmCoarse, DM_CLASSID, 1, DMSWARM);
+  PetscValidHeaderSpecificType(dmFine, DM_CLASSID, 2, DMPLEX);
+  PetscAssertPointer(mass, 3);
   PetscCall(DMSwarmGetLocalSize(dmCoarse, &n));
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dmCoarse), mass));
   PetscCall(MatSetSizes(*mass, n, n, PETSC_DETERMINE, PETSC_DETERMINE));
@@ -1200,10 +1223,13 @@ static PetscErrorCode DMCreateGradientMatrix_Swarm(DM sw, DM dm, Mat *derv)
 @*/
 PetscErrorCode DMSwarmCreateGlobalVectorFromField(DM dm, const char fieldname[], Vec *vec)
 {
-  MPI_Comm comm = PetscObjectComm((PetscObject)dm);
+  MPI_Comm comm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscAssertPointer(vec, 3);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCall(DMSwarmCreateVectorFromField_Private(dm, fieldname, comm, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1228,6 +1254,9 @@ PetscErrorCode DMSwarmDestroyGlobalVectorFromField(DM dm, const char fieldname[]
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscAssertPointer(vec, 3);
+  PetscValidHeaderSpecific(*vec, VEC_CLASSID, 3);
   PetscCall(DMSwarmDestroyVectorFromField_Private(dm, fieldname, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1254,6 +1283,9 @@ PetscErrorCode DMSwarmDestroyGlobalVectorFromField(DM dm, const char fieldname[]
 PetscErrorCode DMSwarmCreateLocalVectorFromField(DM dm, const char fieldname[], Vec *vec)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscAssertPointer(vec, 3);
   PetscCall(DMSwarmCreateVectorFromField_Private(dm, fieldname, PETSC_COMM_SELF, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1278,6 +1310,9 @@ PetscErrorCode DMSwarmDestroyLocalVectorFromField(DM dm, const char fieldname[],
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscAssertPointer(vec, 3);
+  PetscValidHeaderSpecific(*vec, VEC_CLASSID, 3);
   PetscCall(DMSwarmDestroyVectorFromField_Private(dm, fieldname, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1306,10 +1341,16 @@ PetscErrorCode DMSwarmDestroyLocalVectorFromField(DM dm, const char fieldname[],
 @*/
 PetscErrorCode DMSwarmCreateGlobalVectorFromFields(DM dm, PetscInt Nf, const char *fieldnames[], Vec *vec)
 {
-  MPI_Comm comm = PetscObjectComm((PetscObject)dm);
+  MPI_Comm comm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveInt(dm, Nf, 2);
+  PetscCheck(Nf > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be positive, not %" PetscInt_FMT, Nf);
+  PetscAssertPointer(fieldnames, 3);
+  for (PetscInt f = 0; f < Nf; ++f) PetscAssertPointer(fieldnames[f], 3);
+  PetscAssertPointer(vec, 4);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCall(DMSwarmCreateVectorFromFields_Private(dm, Nf, fieldnames, comm, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1335,6 +1376,12 @@ PetscErrorCode DMSwarmDestroyGlobalVectorFromFields(DM dm, PetscInt Nf, const ch
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveInt(dm, Nf, 2);
+  PetscCheck(Nf > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be positive, not %" PetscInt_FMT, Nf);
+  PetscAssertPointer(fieldnames, 3);
+  for (PetscInt f = 0; f < Nf; ++f) PetscAssertPointer(fieldnames[f], 3);
+  PetscAssertPointer(vec, 4);
+  PetscValidHeaderSpecific(*vec, VEC_CLASSID, 4);
   PetscCall(DMSwarmDestroyVectorFromFields_Private(dm, Nf, fieldnames, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1364,6 +1411,12 @@ PetscErrorCode DMSwarmDestroyGlobalVectorFromFields(DM dm, PetscInt Nf, const ch
 PetscErrorCode DMSwarmCreateLocalVectorFromFields(DM dm, PetscInt Nf, const char *fieldnames[], Vec *vec)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveInt(dm, Nf, 2);
+  PetscCheck(Nf > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be positive, not %" PetscInt_FMT, Nf);
+  PetscAssertPointer(fieldnames, 3);
+  for (PetscInt f = 0; f < Nf; ++f) PetscAssertPointer(fieldnames[f], 3);
+  PetscAssertPointer(vec, 4);
   PetscCall(DMSwarmCreateVectorFromFields_Private(dm, Nf, fieldnames, PETSC_COMM_SELF, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1389,6 +1442,12 @@ PetscErrorCode DMSwarmDestroyLocalVectorFromFields(DM dm, PetscInt Nf, const cha
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveInt(dm, Nf, 2);
+  PetscCheck(Nf > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields must be positive, not %" PetscInt_FMT, Nf);
+  PetscAssertPointer(fieldnames, 3);
+  for (PetscInt f = 0; f < Nf; ++f) PetscAssertPointer(fieldnames[f], 3);
+  PetscAssertPointer(vec, 4);
+  PetscValidHeaderSpecific(*vec, VEC_CLASSID, 4);
   PetscCall(DMSwarmDestroyVectorFromFields_Private(dm, Nf, fieldnames, vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1411,9 +1470,11 @@ PetscErrorCode DMSwarmDestroyLocalVectorFromFields(DM dm, PetscInt Nf, const cha
 @*/
 PetscErrorCode DMSwarmInitializeFieldRegister(DM dm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   if (!swarm->field_registration_initialized) {
     swarm->field_registration_initialized = PETSC_TRUE;
     PetscCall(DMSwarmRegisterPetscDatatypeField(dm, DMSwarmField_pid, 1, PETSC_INT64)); /* unique identifier */
@@ -1440,9 +1501,11 @@ PetscErrorCode DMSwarmInitializeFieldRegister(DM dm)
 @*/
 PetscErrorCode DMSwarmFinalizeFieldRegister(DM dm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   if (!swarm->field_registration_finalized) PetscCall(DMSwarmDataBucketFinalize(swarm->db));
   swarm->field_registration_finalized = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1464,11 +1527,14 @@ PetscErrorCode DMSwarmFinalizeFieldRegister(DM dm)
 @*/
 PetscErrorCode DMSwarmSetLocalSizes(DM sw, PetscInt nlocal, PetscInt buffer)
 {
-  DM_Swarm   *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm   *swarm;
   PetscMPIInt rank;
   PetscInt   *rankval;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscCheck(nlocal >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Local size must be non-negative, not %" PetscInt_FMT, nlocal);
+  swarm = (DM_Swarm *)sw->data;
   PetscCall(PetscLogEventBegin(DMSWARM_SetSizes, 0, 0, 0, 0));
   PetscCall(DMSwarmDataBucketSetSizes(swarm->db, nlocal, buffer));
   PetscCall(PetscLogEventEnd(DMSWARM_SetSizes, 0, 0, 0, 0));
@@ -1506,7 +1572,7 @@ PetscErrorCode DMSwarmSetCellDM(DM sw, DM dm)
   char         *coordName;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCall(PetscStrallocpy(DMSwarmPICField_coor, &coordName));
   PetscCall(DMSwarmCellDMCreate(dm, 0, NULL, 1, (const char **)&coordName, &celldm));
@@ -1535,11 +1601,14 @@ PetscErrorCode DMSwarmSetCellDM(DM sw, DM dm)
 @*/
 PetscErrorCode DMSwarmGetCellDM(DM sw, DM *dm)
 {
-  DM_Swarm     *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm     *swarm;
   DMSwarmCellDM celldm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(dm, 2);
+  swarm = (DM_Swarm *)sw->data;
+  PetscCheck(swarm->activeCellDM, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_WRONGSTATE, "Swarm has no active cell DM");
   PetscCall(PetscObjectListFind(swarm->cellDMs, swarm->activeCellDM, (PetscObject *)&celldm));
   PetscCheck(celldm, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_WRONG, "There is no cell DM named %s in this Swarm", swarm->activeCellDM);
   PetscCall(DMSwarmCellDMGetDM(celldm, dm));
@@ -1564,14 +1633,16 @@ PetscErrorCode DMSwarmGetCellDM(DM sw, DM *dm)
 @*/
 PetscErrorCode DMSwarmGetCellDMNames(DM sw, PetscInt *Ndm, const char **celldms[])
 {
-  DM_Swarm       *swarm = (DM_Swarm *)sw->data;
-  PetscObjectList next  = swarm->cellDMs;
-  PetscInt        n     = 0;
+  DM_Swarm       *swarm;
+  PetscObjectList next;
+  PetscInt        n = 0;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(Ndm, 2);
   PetscAssertPointer(celldms, 3);
+  swarm = (DM_Swarm *)sw->data;
+  next  = swarm->cellDMs;
   while (next) {
     next = next->next;
     ++n;
@@ -1607,15 +1678,18 @@ PetscErrorCode DMSwarmGetCellDMNames(DM sw, PetscInt *Ndm, const char **celldms[
 @*/
 PetscErrorCode DMSwarmSetCellDMActive(DM sw, const char name[])
 {
-  DM_Swarm     *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm     *swarm;
   DMSwarmCellDM celldm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(name, 2);
+  swarm = (DM_Swarm *)sw->data;
+  PetscCall(PetscObjectListFind(swarm->cellDMs, name, (PetscObject *)&celldm));
+  PetscCheck(celldm, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_WRONG, "There is no cell DM named %s in this Swarm", name);
   PetscCall(PetscInfo(sw, "Setting cell DM to %s\n", name));
   PetscCall(PetscFree(swarm->activeCellDM));
   PetscCall(PetscStrallocpy(name, (char **)&swarm->activeCellDM));
-  PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1636,11 +1710,12 @@ PetscErrorCode DMSwarmSetCellDMActive(DM sw, const char name[])
 @*/
 PetscErrorCode DMSwarmGetCellDMActive(DM sw, DMSwarmCellDM *celldm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(celldm, 2);
+  swarm = (DM_Swarm *)sw->data;
   PetscCheck(swarm->activeCellDM, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_WRONGSTATE, "Swarm has no active cell DM");
   PetscCall(PetscObjectListFind(swarm->cellDMs, swarm->activeCellDM, (PetscObject *)celldm));
   PetscCheck(*celldm, PetscObjectComm((PetscObject)sw), PETSC_ERR_ARG_WRONGSTATE, "Swarm has no valid cell DM for %s", swarm->activeCellDM);
@@ -1665,12 +1740,13 @@ PetscErrorCode DMSwarmGetCellDMActive(DM sw, DMSwarmCellDM *celldm)
 @*/
 PetscErrorCode DMSwarmGetCellDMByName(DM sw, const char name[], DMSwarmCellDM *celldm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(name, 2);
   PetscAssertPointer(celldm, 3);
+  swarm = (DM_Swarm *)sw->data;
   PetscCall(PetscObjectListFind(swarm->cellDMs, name, (PetscObject *)celldm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1693,16 +1769,17 @@ PetscErrorCode DMSwarmGetCellDMByName(DM sw, const char name[], DMSwarmCellDM *c
 @*/
 PetscErrorCode DMSwarmAddCellDM(DM sw, DMSwarmCellDM celldm)
 {
-  DM_Swarm   *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm   *swarm;
   const char *name;
   PetscInt    dim;
   PetscBool   flg;
   MPI_Comm    comm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
-  PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscValidHeaderSpecific(celldm, DMSWARMCELLDM_CLASSID, 2);
+  PetscCall(PetscObjectGetComm((PetscObject)sw, &comm));
+  swarm = (DM_Swarm *)sw->data;
   PetscCall(PetscObjectGetName((PetscObject)celldm, &name));
   PetscCall(PetscObjectListAdd(&swarm->cellDMs, name, (PetscObject)celldm));
   PetscCall(DMGetDimension(sw, &dim));
@@ -1752,9 +1829,12 @@ PetscErrorCode DMSwarmAddCellDM(DM sw, DMSwarmCellDM celldm)
 @*/
 PetscErrorCode DMSwarmGetLocalSize(DM dm, PetscInt *nlocal)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(nlocal, 2);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, nlocal, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1779,9 +1859,12 @@ PetscErrorCode DMSwarmGetLocalSize(DM dm, PetscInt *nlocal)
 @*/
 PetscErrorCode DMSwarmGetSize(DM dm, PetscInt *n)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(n, 2);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, n, NULL, NULL));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, n, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)dm)));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1807,10 +1890,16 @@ PetscErrorCode DMSwarmGetSize(DM dm, PetscInt *n)
 @*/
 PetscErrorCode DMSwarmRegisterPetscDatatypeField(DM dm, const char fieldname[], PetscInt blocksize, PetscDataType type)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
   size_t    size;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscValidLogicalCollectiveInt(dm, blocksize, 3);
+  PetscValidLogicalCollectiveEnum(dm, type, 4);
+  PetscCheck(blocksize > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Block size must be positive, not %" PetscInt_FMT, blocksize);
+  swarm = (DM_Swarm *)dm->data;
   PetscCheck(swarm->field_registration_initialized, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "Must call DMSwarmInitializeFieldRegister() first");
   PetscCheck(!swarm->field_registration_finalized, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "Cannot register additional fields after calling DMSwarmFinalizeFieldRegister() first");
 
@@ -1852,9 +1941,15 @@ PetscErrorCode DMSwarmRegisterPetscDatatypeField(DM dm, const char fieldname[], 
 @*/
 PetscErrorCode DMSwarmRegisterUserStructField(DM dm, const char fieldname[], size_t size)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscCheck(size > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Data type size must be positive");
+  swarm = (DM_Swarm *)dm->data;
+  PetscCheck(swarm->field_registration_initialized, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "Must call DMSwarmInitializeFieldRegister() first");
+  PetscCheck(!swarm->field_registration_finalized, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "Cannot register additional fields after calling DMSwarmFinalizeFieldRegister() first");
   PetscCall(DMSwarmDataBucketRegisterField(swarm->db, "DMSwarmRegisterUserStructField", fieldname, size, NULL));
   swarm->db->field[swarm->db->nfields - 1]->petsc_type = PETSC_STRUCT;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1880,9 +1975,17 @@ PetscErrorCode DMSwarmRegisterUserStructField(DM dm, const char fieldname[], siz
 @*/
 PetscErrorCode DMSwarmRegisterUserDatatypeField(DM dm, const char fieldname[], size_t size, PetscInt blocksize)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  PetscValidLogicalCollectiveInt(dm, blocksize, 4);
+  PetscCheck(size > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Data type size must be positive");
+  PetscCheck(blocksize > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Block size must be positive, not %" PetscInt_FMT, blocksize);
+  swarm = (DM_Swarm *)dm->data;
+  PetscCheck(swarm->field_registration_initialized, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "Must call DMSwarmInitializeFieldRegister() first");
+  PetscCheck(!swarm->field_registration_finalized, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "Cannot register additional fields after calling DMSwarmFinalizeFieldRegister() first");
   PetscCall(DMSwarmDataBucketRegisterField(swarm->db, "DMSwarmRegisterUserDatatypeField", fieldname, blocksize * size, NULL));
   {
     DMSwarmDataField gfield;
@@ -1920,11 +2023,16 @@ PetscErrorCode DMSwarmRegisterUserDatatypeField(DM dm, const char fieldname[], s
 @*/
 PetscErrorCode DMSwarmGetField(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type, void **data) PeNS
 {
-  DM_Swarm        *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm        *swarm;
   DMSwarmDataField gfield;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  if (blocksize) PetscAssertPointer(blocksize, 3);
+  if (type) PetscAssertPointer(type, 4);
+  PetscAssertPointer(data, 5);
+  swarm = (DM_Swarm *)dm->data;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
   PetscCall(DMSwarmDataBucketGetDMSwarmDataFieldByName(swarm->db, fieldname, &gfield));
   PetscCall(DMSwarmDataFieldGetAccess(gfield));
@@ -1960,11 +2068,15 @@ PetscErrorCode DMSwarmGetField(DM dm, const char fieldname[], PetscInt *blocksiz
 @*/
 PetscErrorCode DMSwarmRestoreField(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type, void **data) PeNS
 {
-  DM_Swarm        *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm        *swarm;
   DMSwarmDataField gfield;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  if (blocksize) PetscAssertPointer(blocksize, 3);
+  if (type) PetscAssertPointer(type, 4);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(DMSwarmDataBucketGetDMSwarmDataFieldByName(swarm->db, fieldname, &gfield));
   PetscCall(DMSwarmDataFieldRestoreAccess(gfield));
   if (data) *data = NULL;
@@ -1990,11 +2102,15 @@ PetscErrorCode DMSwarmRestoreField(DM dm, const char fieldname[], PetscInt *bloc
 @*/
 PetscErrorCode DMSwarmGetFieldInfo(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type)
 {
-  DM_Swarm        *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm        *swarm;
   DMSwarmDataField gfield;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(fieldname, 2);
+  if (blocksize) PetscAssertPointer(blocksize, 3);
+  if (type) PetscAssertPointer(type, 4);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(DMSwarmDataBucketGetDMSwarmDataFieldByName(swarm->db, fieldname, &gfield));
   if (blocksize) *blocksize = gfield->bs;
   if (type) *type = gfield->petsc_type;
@@ -2018,9 +2134,11 @@ PetscErrorCode DMSwarmGetFieldInfo(DM dm, const char fieldname[], PetscInt *bloc
 @*/
 PetscErrorCode DMSwarmAddPoint(DM dm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
   PetscCall(PetscLogEventBegin(DMSWARM_AddPoints, 0, 0, 0, 0));
   PetscCall(DMSwarmDataBucketAddPoint(swarm->db));
@@ -2046,10 +2164,13 @@ PetscErrorCode DMSwarmAddPoint(DM dm)
 @*/
 PetscErrorCode DMSwarmAddNPoints(DM dm, PetscInt npoints)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
   PetscInt  nlocal;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscCheck(npoints >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be non-negative, not %" PetscInt_FMT, npoints);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(PetscLogEventBegin(DMSWARM_AddPoints, 0, 0, 0, 0));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &nlocal, NULL, NULL));
   nlocal = PetscMax(nlocal, 0) + npoints;
@@ -2072,9 +2193,11 @@ PetscErrorCode DMSwarmAddNPoints(DM dm, PetscInt npoints)
 @*/
 PetscErrorCode DMSwarmRemovePoint(DM dm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(PetscLogEventBegin(DMSWARM_RemovePoints, 0, 0, 0, 0));
   PetscCall(DMSwarmDataBucketRemovePoint(swarm->db));
   PetscCall(PetscLogEventEnd(DMSWARM_RemovePoints, 0, 0, 0, 0));
@@ -2096,9 +2219,14 @@ PetscErrorCode DMSwarmRemovePoint(DM dm)
 @*/
 PetscErrorCode DMSwarmRemovePointAtIndex(DM dm, PetscInt idx)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
+  PetscInt  nlocal;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
+  PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &nlocal, NULL, NULL));
+  PetscCheck(idx >= 0 && idx < nlocal, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point index %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", idx, nlocal);
   PetscCall(PetscLogEventBegin(DMSWARM_RemovePoints, 0, 0, 0, 0));
   PetscCall(DMSwarmDataBucketRemovePointAtIndex(swarm->db, idx));
   PetscCall(PetscLogEventEnd(DMSWARM_RemovePoints, 0, 0, 0, 0));
@@ -2121,10 +2249,16 @@ PetscErrorCode DMSwarmRemovePointAtIndex(DM dm, PetscInt idx)
 @*/
 PetscErrorCode DMSwarmCopyPoint(DM dm, PetscInt pi, PetscInt pj)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
+  PetscInt  nlocal;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
+  PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &nlocal, NULL, NULL));
+  PetscCheck(pi >= 0 && pi < nlocal, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Source point index %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", pi, nlocal);
+  PetscCheck(pj >= 0 && pj < nlocal, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Destination point index %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", pj, nlocal);
   PetscCall(DMSwarmDataBucketCopyPoint(swarm->db, pi, swarm->db, pj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2156,9 +2290,12 @@ static PetscErrorCode DMSwarmMigrate_Basic(DM dm, PetscBool remove_sent_points)
 @*/
 PetscErrorCode DMSwarmMigrate(DM dm, PetscBool remove_sent_points)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveBool(dm, remove_sent_points, 2);
+  swarm = (DM_Swarm *)dm->data;
   PetscCall(PetscLogEventBegin(DMSWARM_Migrate, 0, 0, 0, 0));
   switch (swarm->migrate_type) {
   case DMSWARM_MIGRATE_BASIC:
@@ -2216,10 +2353,12 @@ PetscErrorCode DMSwarmMigrate_GlobalToLocal_Basic(DM dm, PetscInt *globalsize);
 @*/
 PetscErrorCode DMSwarmCollectViewCreate(DM dm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
   PetscInt  ng;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   PetscCheck(!swarm->collect_view_active, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "CollectView currently active");
   PetscCall(DMSwarmGetLocalSize(dm, &ng));
   switch (swarm->collect_type) {
@@ -2259,9 +2398,11 @@ PetscErrorCode DMSwarmCollectViewCreate(DM dm)
 @*/
 PetscErrorCode DMSwarmCollectViewDestroy(DM dm)
 {
-  DM_Swarm *swarm = (DM_Swarm *)dm->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  swarm = (DM_Swarm *)dm->data;
   PetscCheck(swarm->collect_view_active, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "CollectView is currently not active");
   PetscCall(DMSwarmSetLocalSizes(dm, swarm->collect_view_reset_nlocal, -1));
   swarm->collect_view_active = PETSC_FALSE;
@@ -2308,7 +2449,10 @@ PetscErrorCode DMSwarmSetPointCoordinatesRandom(DM dm, PetscInt Npc)
   PetscInt       dim, d, cStart, cEnd, c, p, Nfc;
   const char   **coordFields;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveInt(dm, Npc, 2);
+  PetscCheck(Npc >= 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of particles per cell must be non-negative, not %" PetscInt_FMT, Npc);
   PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)dm), &rnd));
   PetscCall(PetscRandomSetInterval(rnd, -1.0, 1.0));
   PetscCall(PetscRandomSetType(rnd, PETSCRAND48));
@@ -2368,11 +2512,12 @@ PetscErrorCode DMSwarmSetPointCoordinatesRandom(DM dm, PetscInt Npc)
 @*/
 PetscErrorCode DMSwarmGetType(DM sw, DMSwarmType *stype)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(stype, 2);
+  swarm  = (DM_Swarm *)sw->data;
   *stype = swarm->swarm_type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2392,10 +2537,12 @@ PetscErrorCode DMSwarmGetType(DM sw, DMSwarmType *stype)
 @*/
 PetscErrorCode DMSwarmSetType(DM sw, DMSwarmType stype)
 {
-  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm *swarm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscValidLogicalCollectiveEnum(sw, stype, 2);
+  swarm             = (DM_Swarm *)sw->data;
   swarm->swarm_type = stype;
   if (swarm->swarm_type == DMSWARM_PIC) PetscCall(DMSwarmSetUpPIC(sw));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2674,13 +2821,16 @@ static PetscErrorCode DMView_Swarm(DM dm, PetscViewer viewer)
 @*/
 PetscErrorCode DMSwarmGetCellSwarm(DM sw, PetscInt cellID, DM cellswarm)
 {
-  DM_Swarm   *original = (DM_Swarm *)sw->data;
+  DM_Swarm   *original;
   DMLabel     label;
   DM          dmc, subdmc;
   PetscInt   *pids, particles, dim;
   const char *name;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscValidHeaderSpecific(cellswarm, DM_CLASSID, 3);
+  original = (DM_Swarm *)sw->data;
   /* Configure new swarm */
   PetscCall(DMSetType(cellswarm, DMSWARM));
   PetscCall(DMGetDimension(sw, &dim));
@@ -2729,6 +2879,8 @@ PetscErrorCode DMSwarmRestoreCellSwarm(DM sw, PetscInt cellID, DM cellswarm)
   PetscInt *pids, particles, p;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscValidHeaderSpecificType(cellswarm, DM_CLASSID, 3, DMSWARM);
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(DMSwarmSortGetPointsPerCell(sw, cellID, &particles, &pids));
   PetscCall(DMSwarmSortRestoreAccess(sw));
@@ -2772,7 +2924,7 @@ PetscErrorCode DMSwarmComputeMoments(DM sw, const char coordinate[], const char 
   MPI_Comm         comm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
   PetscAssertPointer(coordinate, 2);
   PetscAssertPointer(weight, 3);
   PetscAssertPointer(moments, 4);
@@ -2791,11 +2943,11 @@ PetscErrorCode DMSwarmComputeMoments(DM sw, const char coordinate[], const char 
     moments[0] += wp;
     for (PetscInt d = 0; d < bsc; ++d) {
       moments[d + 1] += wp * c[d];
-      moments[d + bsc + 1] += wp * PetscSqr(c[d]);
+      moments[bsc + 1] += wp * PetscSqr(c[d]);
     }
   }
-  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&w));
+  PetscCall(DMSwarmRestoreField(sw, coordinate, NULL, NULL, (void **)&coords));
+  PetscCall(DMSwarmRestoreField(sw, weight, NULL, NULL, (void **)&w));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, moments, bsc + 2, MPIU_REAL, MPI_SUM, PetscObjectComm((PetscObject)sw)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2960,11 +3112,15 @@ PETSC_EXTERN PetscErrorCode DMCreate_Swarm(DM dm)
 @*/
 PetscErrorCode DMSwarmReplace(DM dm, DM *ndm)
 {
-  DM               dmNew = *ndm;
+  DM               dmNew;
   const PetscReal *maxCell, *Lstart, *L;
   PetscInt         dim;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(ndm, 2);
+  PetscValidHeaderSpecificType(*ndm, DM_CLASSID, 2, DMSWARM);
+  dmNew = *ndm;
   if (dm == dmNew) {
     PetscCall(DMDestroy(ndm));
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -3005,7 +3161,7 @@ PetscErrorCode DMSwarmReplace(DM dm, DM *ndm)
 @*/
 PetscErrorCode DMSwarmDuplicate(DM sw, DM *nsw)
 {
-  DM_Swarm         *swarm = (DM_Swarm *)sw->data;
+  DM_Swarm         *swarm;
   DMSwarmDataField *fields;
   DMSwarmCellDM     celldm, ncelldm;
   DMSwarmType       stype;
@@ -3015,6 +3171,9 @@ PetscErrorCode DMSwarmDuplicate(DM sw, DM *nsw)
   PetscBool         flg;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecificType(sw, DM_CLASSID, 1, DMSWARM);
+  PetscAssertPointer(nsw, 2);
+  swarm = (DM_Swarm *)sw->data;
   PetscCall(DMCreate(PetscObjectComm((PetscObject)sw), nsw));
   PetscCall(DMSetType(*nsw, DMSWARM));
   PetscCall(PetscObjectGetName((PetscObject)sw, &name));

@@ -170,6 +170,9 @@ PetscErrorCode DMSwarmDataBucketGetDMSwarmDataFieldIdByName(DMSwarmDataBucket db
   PetscBool found;
 
   PetscFunctionBegin;
+  PetscAssertPointer(db, 1);
+  PetscAssertPointer(name, 2);
+  PetscAssertPointer(idx, 3);
   *idx = -1;
   PetscCall(DMSwarmDataFieldStringInList(name, db->nfields, (const DMSwarmDataField *)db->field, &found));
   PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot find DMSwarmDataField with name %s", name);
@@ -202,6 +205,9 @@ PetscErrorCode DMSwarmDataBucketGetDMSwarmDataFieldByName(DMSwarmDataBucket db, 
   PetscBool found;
 
   PetscFunctionBegin;
+  PetscAssertPointer(db, 1);
+  PetscAssertPointer(name, 2);
+  PetscAssertPointer(gfield, 3);
   PetscCall(DMSwarmDataFieldStringInList(name, db->nfields, (const DMSwarmDataField *)db->field, &found));
   PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot find DMSwarmDataField with name %s", name);
   PetscCall(DMSwarmDataFieldStringFindInList(name, db->nfields, (const DMSwarmDataField *)db->field, &idx));
@@ -228,6 +234,9 @@ PetscErrorCode DMSwarmDataBucketGetDMSwarmDataFieldByName(DMSwarmDataBucket db, 
 PetscErrorCode DMSwarmDataBucketQueryDMSwarmDataFieldByName(DMSwarmDataBucket db, const char name[], PetscBool *found)
 {
   PetscFunctionBegin;
+  PetscAssertPointer(db, 1);
+  PetscAssertPointer(name, 2);
+  PetscAssertPointer(found, 3);
   *found = PETSC_FALSE;
   PetscCall(DMSwarmDataFieldStringInList(name, db->nfields, (const DMSwarmDataField *)db->field, found));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -461,7 +470,9 @@ PetscErrorCode DMSwarmDataFieldGetAtomicSize(const DMSwarmDataField gfield, size
 PetscErrorCode DMSwarmDataFieldGetEntries(const DMSwarmDataField gfield, void **data)
 {
   PetscFunctionBegin;
-  if (data) *data = gfield->data;
+  PetscAssertPointer(gfield, 1);
+  PetscAssertPointer(data, 2);
+  *data = gfield->data;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -483,7 +494,9 @@ PetscErrorCode DMSwarmDataFieldGetEntries(const DMSwarmDataField gfield, void **
 PetscErrorCode DMSwarmDataFieldRestoreEntries(const DMSwarmDataField gfield, void **data)
 {
   PetscFunctionBegin;
-  if (data) *data = NULL;
+  PetscAssertPointer(gfield, 1);
+  PetscAssertPointer(data, 2);
+  *data = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -636,7 +649,7 @@ PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket db)
 {
   PetscFunctionBegin;
-  PetscCheck(db->L > 0, PetscObjectComm((PetscObject)db), PETSC_ERR_ARG_WRONG, "Swarm has no points to be removed");
+  PetscCheck(db->L > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Swarm has no points to be removed");
   PetscCall(DMSwarmDataBucketSetSizes(db, db->L - 1, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
