@@ -442,6 +442,18 @@ class TestMatMPIDense_B_G89_B5(TestMatMPIDense_B_G89):
     BSIZE = 5
 
 
+class TestMatDenseCUDAConstructor(unittest.TestCase):
+    @unittest.skipUnless(
+        PETSc.Sys.hasExternalPackage('cuda'), 'PETSc was built without CUDA'
+    )
+    def testCreateWithHostArray(self):
+        array = np.arange(6, dtype=PETSc.ScalarType)
+        A = PETSc.Mat().createDenseCUDA([2, 3], array=array, comm=PETSc.COMM_SELF)
+        self.assertEqual(A.getSize(), (2, 3))
+        self.assertIs(A.getDict()['__array__'], array)
+        A.destroy()
+
+
 # -----
 
 if __name__ == '__main__':
