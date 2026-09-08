@@ -263,8 +263,9 @@ int main(int argc, char **args)
      The weights follow the overlapping subdomain ordering, which is only final after setup,
      hence the KSPSetUp() below. Unit weights reproduce PC_ASM_BASIC exactly.
   */
-  PetscCall(PCASMGetType(pc, &asmtype));
-  if (asmtype == PC_ASM_WEIGHTED) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCASM, &flg));
+  if (flg) PetscCall(PCASMGetType(pc, &asmtype));
+  if (flg && asmtype == PC_ASM_WEIGHTED) {
     Mat     *submat;
     Vec     *scaling, *stored;
     PetscInt nsub, nstored;
