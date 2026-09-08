@@ -59,6 +59,12 @@ class BaseTestVec:
         self.vec.dotBegin(self.vec)
         d = self.vec.dotEnd(self.vec)
         self.assertAlmostEqual(abs(d), self.vec.getSize())
+        self.vec.tDotBegin(self.vec)
+        d = self.vec.tDotEnd(self.vec)
+        self.assertAlmostEqual(abs(d), self.vec.getSize())
+        d, n2 = self.vec.dotNorm2(self.vec)
+        self.assertAlmostEqual(abs(d), self.vec.getSize())
+        self.assertAlmostEqual(n2, self.vec.getSize())
 
     def testNorm(self):
         self.vec.set(1)
@@ -325,6 +331,25 @@ class TestVecShared(BaseTestVec, unittest.TestCase):
 
 
 class TestVecWithArray(unittest.TestCase):
+    def testCreateDeviceWithOptionalCPUArray(self):
+        constructors = [
+            ('cuda', 'createCUDAWithArrays'),
+            ('hip', 'createHIPWithArrays'),
+            ('viennacl', 'createViennaCLWithArrays'),
+        ]
+        for package, constructor in constructors:
+            if not PETSc.Sys.hasExternalPackage(package):
+                continue
+            for cpuarray in (None, np.arange(5, dtype=PETSc.ScalarType)):
+                with self.subTest(package=package, cpuarray=cpuarray is not None):
+                    vec = getattr(PETSc.Vec(), constructor)(
+                        cpuarray=cpuarray, size=5, comm=PETSc.COMM_SELF
+                    )
+                    self.assertEqual(vec.getSize(), 5)
+                    if cpuarray is not None:
+                        np.testing.assert_array_equal(vec.getArray(), cpuarray)
+                    vec.destroy()
+
     @unittest.skipUnless(
         hasattr(np.ndarray, '__dlpack__'), 'NumPy has no DLPack support'
     )
