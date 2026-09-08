@@ -1817,7 +1817,7 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
   // One MPI datatype covers a key; both members are 8 bytes wide and only ever copied.
-  PetscCallMPI(MPI_Type_contiguous(2, MPI_UINT64_T, &keytype));
+  PetscCallMPI(MPI_Type_contiguous(2, MPIU_INT64, &keytype));
   PetscCallMPI(MPI_Type_commit(&keytype));
 
   // Morton encode the centroids, pair each code with a globally unique cell number, then sort
