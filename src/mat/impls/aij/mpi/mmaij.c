@@ -28,7 +28,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     /* use a table */
     PetscCall(PetscHMapICreateWithSize(aij->B->rmap->n, &gid1_lid1));
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) {
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
         PetscInt data, gid1 = aj[B->i[i] + j] + 1;
         PetscCall(PetscHMapIGetWithDefault(gid1_lid1, gid1, 0, &data));
         if (!data) {
@@ -53,7 +53,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     for (i = 0; i < ec; i++) PetscCall(PetscHMapISet(gid1_lid1, garray[i] + 1, i + 1));
     /* compact out the extra columns in B */
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) {
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
         PetscInt gid1 = aj[B->i[i] + j] + 1;
         PetscCall(PetscHMapIGetWithDefault(gid1_lid1, gid1, 0, &lid));
         lid--;
@@ -68,7 +68,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
     /* mark those columns that are in aij->B */
     PetscCall(PetscCalloc1(N, &indices));
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) {
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) {
         if (!indices[aj[B->i[i] + j]]) ec++;
         indices[aj[B->i[i] + j]] = 1;
       }
@@ -86,7 +86,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
 
     /* compact out the extra columns in B */
     for (i = 0; i < aij->B->rmap->n; i++) {
-      for (j = 0; j < B->ilen[i]; j++) aj[B->i[i] + j] = indices[aj[B->i[i] + j]];
+      for (j = 0; j < (B->ilen ? B->ilen[i] : B->i[i + 1] - B->i[i]); j++) aj[B->i[i] + j] = indices[aj[B->i[i] + j]];
     }
     PetscCall(PetscLayoutDestroy(&aij->B->cmap));
     PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)aij->B), ec, ec, 1, &aij->B->cmap));
@@ -150,16 +150,15 @@ PetscErrorCode MatDisAssemble_MPIAIJ(Mat A, PetscBool use_preallocation)
 
   if (B) {
     Mat_SeqAIJ        *Baij = (Mat_SeqAIJ *)B->data;
-    PetscInt           i, j, m = B->rmap->n, n = A->cmap->N, col, ct = 0, *garray = aij->garray, *nz;
-    PetscScalar        v;
-    const PetscScalar *ba;
+    PetscInt           i, j, m = B->rmap->n, n = A->cmap->N, col, *garray = aij->garray, *nz;
+    const PetscScalar *ba = NULL;
 
     /* make sure that B is assembled so we can access its values */
     PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
 
     /* invent new B and copy stuff over */
-    PetscCall(PetscMalloc1(m + 1, &nz));
+    PetscCall(PetscMalloc1(m, &nz));
     if (use_preallocation)
       for (i = 0; i < m; i++) nz[i] = Baij->ipre[i];
     else
@@ -168,6 +167,7 @@ PetscErrorCode MatDisAssemble_MPIAIJ(Mat A, PetscBool use_preallocation)
     PetscCall(MatSetSizes(Bnew, m, n, m, n)); /* Bnew now uses A->cmap->N as its col size */
     PetscCall(MatSetBlockSizesFromMats(Bnew, A, A));
     PetscCall(MatSetType(Bnew, ((PetscObject)B)->type_name));
+    PetscCall(MatSetOption(Bnew, MAT_STRUCTURE_ONLY, B->structure_only));
     PetscCall(MatSeqAIJSetPreallocation(Bnew, 0, nz));
 
     if (Baij->nonew >= 0) { /* Inherit insertion error options (if positive). */
@@ -181,15 +181,14 @@ PetscErrorCode MatDisAssemble_MPIAIJ(Mat A, PetscBool use_preallocation)
     Bnew->nonzerostate = B->nonzerostate;
 
     PetscCall(PetscFree(nz));
-    PetscCall(MatSeqAIJGetArrayRead(B, &ba));
+    if (!B->structure_only) PetscCall(MatSeqAIJGetArrayRead(B, &ba));
     for (i = 0; i < m; i++) {
       for (j = Baij->i[i]; j < Baij->i[i + 1]; j++) {
-        col = garray[Baij->j[ct]];
-        v   = ba[ct++];
-        PetscCall(MatSetValues(Bnew, 1, &i, 1, &col, &v, B->insertmode));
+        col = garray[Baij->j[j]];
+        PetscCall(MatSetValues(Bnew, 1, &i, 1, &col, PetscSafePointerPlusOffset(ba, j), B->insertmode));
       }
     }
-    PetscCall(MatSeqAIJRestoreArrayRead(B, &ba));
+    if (!B->structure_only) PetscCall(MatSeqAIJRestoreArrayRead(B, &ba));
     PetscCall(MatDestroy(&B));
   }
   PetscCall(PetscFree(aij->garray));
