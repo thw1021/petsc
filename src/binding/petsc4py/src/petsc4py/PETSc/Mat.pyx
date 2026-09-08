@@ -1251,7 +1251,7 @@ cdef class Mat(Object):
         else:
             Mat_Create(MATDENSECUDA, comm, size, bsize, &newmat)
             if array is not None:
-                array = Mat_AllocDense(self.mat, array)
+                array = Mat_AllocDense(newmat, array)
                 self.set_attr('__array__', array)
         CHKERR(PetscCLEAR(self.obj)); self.mat = newmat
         return self
@@ -3314,7 +3314,7 @@ cdef class Mat(Object):
         ndim = asDims(dims, &cdims[0], &cdims[1], &cdims[2])
         ndof = asInt(dof)
         if starts is not None:
-            asDims(dims, &cstarts[0], &cstarts[1], &cstarts[2])
+            asDims(starts, &cstarts[0], &cstarts[1], &cstarts[2])
         CHKERR(MatSetStencil(self.mat, ndim, cdims, cstarts, ndof))
 
     def setValueStencil(
