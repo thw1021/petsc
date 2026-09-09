@@ -8,7 +8,8 @@ so if that matters it should show up as K grows or as compute is added.\n\
   -n <count>     message size per exchange, in PetscScalars (default 4096)\n\
   -nexch <K>     number of independent concurrent exchanges (default 1)\n\
   -naxpy <m>     VecAXPYs on a work vector between Begin and End, as overlappable compute\n\
-  -iters <it>    timed iterations (default 200)\n\n";
+  -iters <it>    timed iterations (default 200)\n\
+  -w <len>       work vector length in PetscScalars (default 1048576; use >= 16M for GPU-bound compute)\n\n";
 
 #include <petscsf.h>
 #include <petscvec.h>
@@ -35,6 +36,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-nexch", &K, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-naxpy", &naxpy, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-iters", &iters, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-w", &W, NULL));
   PetscCheck(size > 1, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "Need >= 2 ranks");
   PetscCheck(K >= 1 && K <= MAXK, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "-nexch must be in [1,%d]", MAXK);
 

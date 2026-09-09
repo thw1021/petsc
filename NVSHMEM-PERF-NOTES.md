@@ -1219,3 +1219,268 @@ Residuals from 28.8/28.9 that the same night answered (`results-20260902-residua
   reporting; do not use the get protocol above 8 MB.
 - **The MPI 4 MB drift is run-to-run variance, not the port pin**: pinned 912 us vs
   unpinned 1043 us today, 1002-1041 earlier tonight, 886 in August.
+
+## 29. The SF-NCCL backend, built and measured: where NCCL beats GPU-aware MPI (2026-09-09)
+
+Job 2779, nodes `x2003c0s9b0n0` + `x2003c0s5b0n0`, NCCL 2.28.3 (`--with-nccl-dir`), HPC-X Open MPI
+4.1.7a1 / UCX 1.17 (host-staged across nodes; the `mpigdr` arm is UCX 1.19 with `JANUS_UCX119=1`),
+NVSHMEM 3.4.5. Raw output: `nvshmem-tools/results-20260909-sfnccl.txt`. Everything below is the
+`-use_nccl` transport of section 3.2 of `SESSION-SUMMARY-2026-09-04.md`, compiled today for the
+first time; no tuning was done beyond what is listed.
+
+### 29.1 Correctness and the engagement checks
+
+`sf/tests/ex22`, `snes/tutorials/ex19` and `ksp/ksp/tutorials/ex45` are byte-identical to MPI at
+np=4 (one node) and np=8 (two nodes); the harness test `ex22_cuda_nccl` passes at nsize 1 and 4.
+Positive discriminators: `-info :sf` prints `PetscSF will use NCCL ...`, `-info` prints
+`Created a NCCL (version 22803) communicator with N ranks ... in T seconds`. One rank: refused
+(single-rank SF). Eight ranks on four GPUs: `Some ranks of MPI_Comm ... share a GPU ... PetscSF
+will use MPI on it`, output still correct. `-log_view` counts NCCL sends/receives as MPI messages
+(after switching the counters to `PetscAddLogDouble()`; raw `+=` misses the `_th` copies the
+event accounting reads).
+
+### 29.2 The ring: NCCL halves latency below 256 KB, loses above 2 MB
+
+`sfbench` (us per `PetscSFBcast`, max over ranks, best of 3):
+
+| bytes | 1 node MPI | 1 node NCCL | NVput | 2 nodes/8 MPI | NCCL | NCCL ch8 | GDR-MPI | 2+2 MPI | NCCL |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 B-8 KB | 13.1 | 6.4 | 17.3 | 19.6 | 14.8 | 15.0 | 20.5 | 21.3 | 16.2 |
+| 32 KB | 13.5 | 8.1 | 17.8 | 25.9 | 16.7 | 18.2 | 16.7 | 25.8 | 18.9 |
+| 256 KB | 15.3 | 13.4 | 19.8 | 39.0 | 25.9 | 25.7 | 42.7 | 39.0 | 29.0 |
+| 1 MB | 21.1 | 23.1 | 26.6 | 66.1 | 57.5 | 45.7 | 70.9 | 72.1 | 67.3 |
+| 4 MB | 45.2 | 58.0 | 53.2 | 138 | 171 | 156 | 164 | 171 | 213 |
+| 32 MB | 265 | 305 | 338 | 828 | 1270 | 1220 | 1012 | 1438 | 1566 |
+
+- One node: 2.0x at 64 B-32 KB (6.4 vs 13.1 us), parity at 512 KB, 15-28% slower from 1 MB up
+  (NCCL's SM-driven p2p copies move less than UCX's `cuda_ipc` copy engines).
+- Two nodes: 25-35% faster up to 1 MB, 20-55% slower from 2 MB. GDR-MPI (UCX 1.19) ties NCCL in
+  its 16-64 KB rendezvous window and is worse elsewhere (eager host-staged below `UCX_RNDV_THRESH`).
+- `NCCL_NCHANNELS_PER_NET_PEER=8 NCCL_MIN_NCHANNELS=8` helps only 512 KB-1 MB (38 -> 31, 58 -> 46 us).
+- Against non-GPU-aware MPI (`-use_gpu_aware_mpi 0`, host staging) NCCL is 2x at 64 B and 17x at 4 MB.
+- NVSHMEM put stays 1.2-1.3x slower than MPI on one node (section 21's protocol cost); NCCL wins
+  because one group kernel replaces PetscSF's five stream ops.
+
+### 29.3 The legacy null stream costs 35 us per exchange; use a nonblocking PETSc stream
+
+`sfbench2 -n 4096` (32 KB) with `-naxpy k` VecAXPYs on a 1M work vector between Begin and End,
+one node, us per iteration (`compute_alone` is the same loop without the exchange):
+
+| PETSc stream | MPI k=8 | NCCL k=8 | MPI k=32 | NCCL k=32 | compute alone k=8 / 32 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| default (legacy null) | 49.7 | 55.7 | 178 | 218 | 42 / 169 |
+| `-root_device_context_stream_type nonblocking` | 41.9 | 47.6 | 167 | 174 | 42 / 168 |
+
+On the null stream NCCL adds ~45 us per iteration; on a nonblocking stream ~5 us (its host enqueue).
+Independent of `NCCL_MAX_NCHANNELS` (1/2/4), `NCCL_PROTO` (Simple/LL) and `NCCL_P2P_LL_THRESHOLD`,
+so it is not SM contention; it is the null stream's implicit synchronization with NCCL's internal
+(blocking) streams. Rule: with `-use_nccl`, run with `-root_device_context_stream_type nonblocking`.
+The same option is what CUDA-graph capture needs (29.5).
+
+The `-w 16777216` arm (128 MB work vectors, GPU-bound AXPYs of 185 us each) shows the exchange
+fully hidden under every transport (MPI +0.1 us, NCCL +1.5 us, NVput +11 us over compute alone at
+32 KB, both placements): once there is enough GPU work to hide behind, the transport does not
+matter, and the 1M default is host-launch-bound (5 us per `VecAXPY` on the host, ~2.5 us on the
+GPU), which is why sections 21-23 saw exposed costs at all.
+
+### 29.4 The ACGN DAG: NCCL wins the 64 KB skeleton by 37% on one node
+
+`acgnbench` with the nonblocking stream, us per iteration (G=8, P=4):
+
+| placement | msg | branch MPI | branch NCCL | branch NVput | allreduce MPI | allreduce NCCL |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 node | 64 KB | 148 | **93** | 109 | 209 | 132 |
+| 1 node | 4 MB | 318 | 377 | 301 | 506 | 448 |
+| 2+2 | 64 KB | 190 | **165** | 183 | (see below) | |
+| 2+2 | 4 MB | 927 | 1060 | 854 | | |
+
+(On the null stream the same runs gave 160 / 212 / 183 at 64 KB: NCCL lost. The `-allreduce` arm
+keeps its host `MPI_Allreduce`; only the three broadcasts use NCCL.) The 93 us sits between the
+hand-rolled eager NCCL groups (107, which fuse a whole stage) and graph replay (32): the SF form
+cannot fuse across SFs, but it removes the host block in every stage. At 4 MB the bulk-bandwidth
+loss of 29.2 dominates and NVSHMEM put is best.
+
+Independent exchanges in flight serialize under NCCL: `sfbench2 -nexch 4` costs 12.1 us per
+exchange on one node (MPI 9.2) and 22.8 at 2+2 (MPI 11.9), because NCCL orders every operation on
+one communicator, so four groups on four streams run back to back while MPI pipelines them. A
+per-link communicator (`ncclCommSplit`) would fix it at the price of one init per link.
+
+### 29.5 CUDA-graph capture works, and turns 45 us into 9
+
+`nvshmem-tools/sfgraph.c` captures m Begin/End pairs (plus k AXPYs each) into one graph and
+replays it. The MPI path aborts at `cudaStreamBeginCapture()` (host sync in Begin); NCCL captures.
+us per exchange, 32 KB:
+
+| placement | eager k=0 | graph m=1 | graph m=16 | eager k=8 | graph m=1 k=8 | graph m=16 k=8 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 node | 8.1 | 11.4 | 9.0 | 45 | 11.4 | 9.0 |
+| 2+2 | 19.1 | 61 | 23.1 | 45 | 66 | 23.1 |
+
+A single-exchange graph costs a graph launch (~3 us on one node, ~40 us across nodes, where the
+NCCL network kernels' host proxy work moves inside the launch); sixteen per graph amortize it. The
+k=8 columns are the point: eager, the host cannot launch 8 AXPYs faster than 42 us; replayed, the
+same work plus the exchange runs in 9 us. This is the 5x of section 28.3 available from PetscSF
+without hand-written NCCL code, for any loop body PETSc can enqueue (no host-side decisions).
+
+### 29.6 Real solver: NCCL costs 2.5-3 s once, then is 20% better per iteration on a node and 2x worse across nodes
+
+`ksp/ex45` (7-point Laplacian, GMRES/Jacobi, `aijcusparse`), `KSPSolve` seconds:
+
+| grid, iterations | 1 node MPI | 1 node NCCL | 2 nodes MPI | 2 nodes NCCL |
+| --- | ---: | ---: | ---: | ---: |
+| 32^3, 80 | 0.344 | 3.239 | 0.351 | 2.828 |
+| 64^3, 222 | 0.354 | 3.238 | 0.372 | 2.950 |
+| 96^3, 381 | 0.408 | 3.290 | 0.424 | 2.982 |
+| per iteration from the 32 -> 96 slope | 0.21 ms | 0.17 ms | 0.24 ms | 0.51 ms |
+
+The 2.9 s is one-time: `ncclCommInitRank` takes 2.4-2.5 s (NCCL's own timing: `alloc 2.13 s`,
+its cuMem-based buffers mapped to every peer; `NCCL_CUMEM_ENABLE=0` makes it 2.9 s), and NCCL
+connects all 128 (peer, channel, direction) p2p links lazily inside the first exchange (nsys:
+64 `cuMemExportToShareableHandle` at 5 ms each on the service thread, 162 `cuMemSetAccess` at 1 ms
+on the main thread). `NCCL_MAX_NCHANNELS=1`, `NCCL_P2P_DISABLE=1`, `NCCL_LOCAL_REGISTER=0`,
+`NCCL_LEGACY_CUDA_REGISTER=0` move it by at most 0.6 s. The backend now prints the init time in
+`-info`. So: NCCL only pays off for solves longer than ~3 s, i.e. thousands of iterations or
+repeated solves in one process, and on one node; across two nodes the per-iteration cost doubled
+(0.51 vs 0.24 ms) even though the ring says 73 KB halos are 20% cheaper under NCCL -- the DMDA
+pattern (3-5 peers, mixed intra/inter-node, plus host-scalar `MPI_Allreduce`s on the same NIC) is
+not the ring, and this was not chased further.
+
+### 29.7 Fabric trap: UCX and NCCL must use the same RoCE version on mlx5_0
+
+With NCCL on RoCE v1 (the section 28 pin) and UCX on its RoCE v2 default, a host `MPI_Allreduce`
+on 64 KB GPU buffers at 2+2 took 11.1 ms instead of 260 us (347 ms at 4 MB), regardless of
+`NCCL_NET_GDR_LEVEL=0` or `UCX_MEMTYPE_CACHE=n`; `NCCL_IB_DISABLE=1` (NCCL over sockets) also
+avoided it. `UCX_IB_GID_INDEX=2` (UCX on RoCE v1 too) restores 272 us and costs nothing for
+MPI-only runs (266 us). It is now a default in `janus-env-nvshmem.sh`. The 2-node ex45 numbers
+above were taken with it.
+
+### 29.8 Answer to "when does NCCL help", in one place
+
+NCCL (through PetscSF, no application change) beats GPU-aware MPI when the exchange is
+latency-bound (< ~512 KB on a node, < ~1 MB across nodes: 1.3-2x), when the application runs on a
+nonblocking PETSc stream, when it can capture its loop into a CUDA graph (5x on a host-bound loop),
+when MPI is not GPU-aware (2-17x), and when the process lives long enough to amortize ~3 s of NCCL
+setup. It loses for bulk messages above 2 MB (up to 1.5x), for several independent exchanges in
+flight, and (unexplained) per iteration for the 2-node DMDA solve. NVSHMEM through PetscSF never
+beats either on a node; its niche stays the device-initiated designs of sections 23-28.
+
+### 29.9 Why NCCL is slower than GPU-aware MPI at 4 MB, taken apart (2026-09-09, later)
+
+`nvshmem-tools/sfbw.c` exchanges the same device buffers through PetscSF, bare `MPI_Isend/Irecv`
+or a bare `ncclGroup`, ring or pair, each message size in its own `PetscLogStage` (setup, the
+NCCL communicator and first-touch connections sit in other stages, so `-log_view` reports the
+exchange alone; the wall clock per stage agrees with it). One node, us per exchange (GB/s sent
+per rank), 40 iterations:
+
+| bytes | SF-MPI | bare MPI | SF-NCCL | bare NCCL | pair MPI | pair NCCL | uni MPI | uni NCCL |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 MB | 27.2 | 25.2 | 23.5 | 23.2 | 25.4 | 26.5 | 24.7 | 18.0 |
+| 4 MB | 48.9 (86) | 46.9 (89) | 57.6 (73) | 56.9 (74) | 47.9 (88) | 64.9 (65) | 49.2 (85) | 44.5 (94) |
+| 16 MB | 143 (117) | 141 (119) | 169 (99) | 165 (102) | 141 (119) | 218 (77) | 144 (116) | 148 (113) |
+| 64 MB | 515 (130) | 518 (130) | 580 (116) | 579 (116) | 520 (129) | 816 (82) | 519 (129) | 567 (118) |
+
+(ring = np 4, pair = np 2 exchanging with each other, uni = pair with one side sending only.)
+
+1. **PetscSF is not the cause.** SF-MPI equals bare MPI and SF-NCCL equals bare NCCL within
+   2 us at every size; the side-stream fork/join costs nothing measurable.
+2. **The transports differ in kind.** nsys on the MPI arm shows one 4 MB peer-to-peer
+   `cudaMemcpy` (copy kind PtoP, 39.9 us) per exchange: UCX `cuda_ipc` maps the peer's buffer
+   and lets a copy engine DMA it, full rate from the first byte, both directions independent.
+   The NCCL arm shows one `ncclDevKernel_SendRecv` of 4 blocks x 640 threads per 4 MB op (8
+   blocks in the ring, where send and receive go to different peers): SMs doing loads and stores
+   over NVLink through NCCL's staging buffers. Four SMs move ~94 GB/s one way (23 GB/s each),
+   and in the bidirectional pair the same four blocks serve both directions, so each gets half
+   (65 vs 45 us). A copy engine does not care about direction (pair MPI = uni MPI).
+3. **The block count is NCCL's size heuristic, not a knob.** `NCCL_MIN/MAX_P2P_NCHANNELS=32`
+   and `NCCL_MIN/MAX_NCHANNELS=32` leave the grid at 8 (16 only at 64 MB); 16 and 8 make it
+   worse (65 and 109 us at 4 MB). `NCCL_BUFFSIZE`, `NCCL_NTHREADS`, `NCCL_PROTO=Simple`,
+   `NCCL_P2P_READ_ENABLE`, `NCCL_P2P_DIRECT_DISABLE` do nothing. `NCCL_P2P_USE_CUDA_MEMCPY=1`
+   (NCCL's own copy-engine path) is 2.4x worse (137 us): it stages through the proxy.
+4. **What helps: a smaller NVLink chunk.** `NCCL_P2P_NVL_CHUNKSIZE` (default 512 KB) at 64 KB
+   gives 49.3 us at 4 MB (bare MPI 46.9) and 555 us at 64 MB (MPI 518): the gap closes from
+   21% to 5-7%. At 128 KB: 51.7 / 559. The smaller chunk pipelines the staging buffers better
+   at the same block count; it is free at small sizes (1 MB: 22.1 vs 23.2).
+5. **Across the fabric it is the same story with the roles reversed.** Cross-node pair,
+   bidirectional, 4 MB: host-staged MPI 262 us (16 GB/s per direction), SF-NCCL 232 (18.1),
+   GDR-MPI (UCX 1.19) 179 (23.5); unidirectional: NCCL 142 (29.6), MPI 143 (29.3), and at 64 MB
+   NCCL 31 GB/s vs MPI 41. NCCL's default two channels per network peer are the limit:
+   `NCCL_NCHANNELS_PER_NET_PEER=8` gives 190 us (22 GB/s) bidirectional, on par with GDR-MPI;
+   `NCCL_NET_GDR_READ=1` changes nothing, `NCCL_NET_GDR_LEVEL=0` costs 25%, and a 2 MB net
+   chunk stalls the 64 MB size (9 ms). Nobody reaches the 50 GB/s line rate per direction.
+   The 8-rank ring of 29.2 lost because its cross-node links are unidirectional per rank while
+   the same kernel also serves that rank's NVLink receive.
+
+So "NCCL is slower at 4 MB" means: NCCL's point-to-point is an SM-driven, staged, chunked copy
+whose parallelism NCCL picks from the message size, while GPU-aware MPI on NVLink is a DMA. Set
+`NCCL_P2P_NVL_CHUNKSIZE=65536` (node) and `NCCL_NCHANNELS_PER_NET_PEER=8` (fabric) with
+`-use_nccl` and the bulk loss is 5-7% on a node and gone across nodes; the wins of 29.2 are
+unchanged. Both could become PETSc defaults set from `PetscNcclCommGet()` via `setenv` before
+`ncclCommInitRank()`, if NVIDIA confirms they are safe generally.
+
+### 29.10 What the two knobs are, and whether PETSc should set them (2026-09-09, later)
+
+The gist of 29.2-29.9: below ~1 MB an exchange is fixed costs (host sync, handshake, launch)
+and NCCL wins by having fewer of them; from 1-2 MB up it is bytes over copy rate, and NCCL's
+rate is lower because it copies with a few SMs instead of a DMA engine. 4 MB is where that
+crossover lands on this machine.
+
+`NCCL_P2P_NVL_CHUNKSIZE` and `NCCL_NCHANNELS_PER_NET_PEER` are legitimate tuning knobs, but they
+are process-wide environment variables that NCCL reads once at init from its hardware model
+(NVLink present, NIC type, GPU generation); it measures nothing and never adapts them. The
+defaults serve NCCL's main workload, collectives in training, where many channels are busy at
+once and a large chunk amortizes the per-chunk handshake. Point-to-point with one or two peers
+and four blocks, which is what PetscSF issues, is not that case.
+- The NVLink chunk (512 KB default) is the size of one staged transfer. 64 KB lets the sender's
+  block start chunk k+1 while the receiver drains chunk k, so the pipeline fills faster. It adds
+  no SMs, so the 64 MB ceiling moves only from 116 to 121 GB/s, but at 4 MB it recovers most of
+  the gap (57 -> 49 us).
+- The network channels per peer (2 default) each carry their own queue pair and proxy path.
+  Eight gives ~25% more cross-node bandwidth (19 -> 24 GB/s per direction), level with GDR-MPI.
+Caveats: neither is per message, both apply to any collectives the application issues itself;
+the sweeps had sharp edges (16 or 8 p2p channels worse, a 2 MB net chunk stalled 64 MB at 9 ms
+on this RoCE fabric), so the values are Janus-tuned and other hardware needs its own sweep; and
+the real limiter on NVLink, the block count per message, is not exposed at all
+(`NCCL_MIN/MAX_P2P_NCHANNELS` do not change it), so that one is a question for NVIDIA.
+
+For the backend: (1) document the two variables in the `-use_nccl` help and the notes, leave the
+choice to the user (safe, what a reviewer accepts); or (2) `setenv` them in `PetscNcclCommGet()`
+before `ncclCommInitRank()` when unset, which makes the bulk case a wash out of the box but
+hard-codes a Janus sweep into PETSc and touches process-wide NCCL behavior; only behind an
+explicit opt-in and after asking NVIDIA whether the values are generally safe. Both are now
+defaults in `janus-env-nvshmem.sh`; 29.11 reruns the ring with them.
+
+Poster summary: NCCL through PetscSF is the right transport for latency-bound exchanges and for
+graph-captured loops; for bulk transfers it is at best a tuned tie with GPU-aware MPI, and the
+tuning is manual.
+
+### 29.11 The ring with the tuned defaults (2026-09-09, later)
+
+Same `sfbench` ring as 29.2, best of 3, with `NCCL_P2P_NVL_CHUNKSIZE=65536`,
+`NCCL_NCHANNELS_PER_NET_PEER=8` and `UCX_IB_GID_INDEX=2` from the env script. Untuned NCCL
+values from 29.2 in parentheses; MPI moved by at most 2 us except where noted.
+
+| bytes | 1 node MPI | 1 node NCCL | ratio | 8 ranks/2 nodes MPI | NCCL | ratio | 2+2 MPI | NCCL | ratio |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 B-8 KB | 11.8 | 6.4 (6.4) | 0.55 | 19.6 | 14.9 (14.8) | 0.76 | 21.4 | 16.2 (16.2) | 0.76 |
+| 256 KB | 13.8 | 13.3 (13.4) | 0.97 | 39.8 | 25.5 (25.9) | 0.64 | 40.2 | 29.2 (29.0) | 0.73 |
+| 512 KB | 16.1 | 16.6 (16.7) | 1.03 | 56.4 | 29.4 (38.0) | 0.52 | 57.6 | 46.7 (47.8) | 0.81 |
+| 1 MB | 19.9 | 22.2 (23.1) | 1.12 | 68.3 | 48.9 (57.5) | 0.72 | 73.6 | 67.0 (67.3) | 0.91 |
+| 4 MB | 44.1 | 50.3 (58.0) | 1.14 | 140 | 158 (171) | 1.12 | 178 | 214 (213) | 1.20 |
+| 32 MB | 264 | 288 (305) | 1.09 | 827 | 1222 (1270) | 1.48 | unstable | 1570 (1566) | -- |
+
+- One node: the bulk loss went from 21-28% to 9-14% (4 MB 58 -> 50 us); everything below
+  256 KB is untouched. Not the 5% of the bare `sfbw` pair, so run-to-run spread of 2-4 us is
+  part of the remaining gap.
+- 8-rank ring over two nodes: the 8 net channels lift 512 KB-1 MB by 15-23% (38 -> 29, 58 ->
+  49 us) and 4 MB by 8%; from 8 MB up the cross-node link still loses 1.3-1.5x, because each
+  rank's kernel serves its NVLink receive and its network send together (29.9 point 5).
+- 2+2: no change at 4-8 MB (each rank has one cross-node peer and the 4-block kernel is the
+  limit); at 16-32 MB the *MPI* side is unstable, see below.
+
+**MPI bulk at 2+2 is unstable and it is not the GID pin.** An A/B of MPI-only rings, 2 reps
+each: at 2+2, 16 MB took 1232 / 4549 us with UCX on RoCE v1 (GID 2) and 711 / 692 with v2
+(GID 3), 32 MB 6423 / 1789 vs 1414 / 5429 -- stalls of milliseconds on both settings, in
+either rep, while 4-8 MB are steady within 2%. The 8-rank ring is steady on both GIDs and the
+pin costs it 1-2% (4 MB 141.7 vs 138.6-140.4 us). So the UCX pin stays (it is what keeps host
+MPI collectives alive next to NCCL, 29.7), and 2+2 host-staged MPI above 8 MB is not a usable
+baseline on this fabric (the 28.x "MPI 4 MB drift" was the small end of the same thing).

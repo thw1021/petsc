@@ -66,6 +66,22 @@ export UCX_NET_DEVICES=${UCX_NET_DEVICES:-mlx5_0:1}
 export NCCL_IB_HCA=${NCCL_IB_HCA:-mlx5_0}
 export NCCL_IB_ROCE_VERSION_NUM=${NCCL_IB_ROCE_VERSION_NUM:-1}
 export NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX:-2}
+# (2026-09-09) UCX must sit on the SAME RoCE version as NCCL when both are active in one
+# process (PETSc -use_nccl for PetscSF + MPI for reductions): with UCX on its RoCE v2
+# default and NCCL on v1, a 64 KB MPI_Allreduce at 2+2 took 11 ms instead of 270 us and
+# KSPSolve of ksp/ex45 on 8 GPUs went from 0.38 s to 3.0 s. Pinning UCX to GID 2 fixes
+# both (results-20260909-sfnccl.txt). Harmless for MPI-only runs (265 us).
+export UCX_IB_GID_INDEX=${UCX_IB_GID_INDEX:-2}
+# (2026-09-09) NCCL point-to-point tuning for PetscSF -use_nccl (PN 29.9-29.10). NCCL picks these
+# once at init from its hardware model, tuned for collectives, and never adapts them. For the
+# one-peer p2p pattern PetscSF issues: a 64 KB NVLink staging chunk (default 512 KB) pipelines
+# the 4-block copy kernel better and closes the >2 MB gap to GPU-aware MPI from 21% to 5-7%;
+# 8 network channels per peer (default 2) lift cross-node bandwidth from 19 to 24 GB/s per
+# direction, level with GDR-MPI. Both are process-wide (they also apply to any collectives the
+# application issues) and were swept on Janus only: 16/8 p2p channels and a 2 MB net chunk
+# were WORSE, so re-sweep on other hardware. Sizes below 1 MB are unaffected.
+export NCCL_P2P_NVL_CHUNKSIZE=${NCCL_P2P_NVL_CHUNKSIZE:-65536}
+export NCCL_NCHANNELS_PER_NET_PEER=${NCCL_NCHANNELS_PER_NET_PEER:-8}
 # Multi-node UCX_TLS: append ,rc (see the 2026-08 notes: ud is broken; rc slows small
 # intra-node messages, so keep the sm-only set for single-node measurements).
 # Verified 2026-09-01 (nvshmem_smoke, 8 PEs over 2 nodes): NVSHMEM IBRC transport

@@ -1,0 +1,595 @@
+# PetscSF NCCL backend (-use_nccl) vs GPU-aware MPI vs NVSHMEM put, 2026-09-09, job 2779, nodes: x2003c0s9b0n0 x2003c0s5b0n0 
+# NCCL 2.28.3 cuda12.9, HPC-X OMPI 4.1.7a1 UCX 1.17 (host-staged; 'mpigdr' arm = UCX 1.19 LD_PRELOAD, UCX_RNDV_THRESH=16k), NVSHMEM 3.4.5, CUDA 12.9.1
+# ring = sfbench (us per PetscSFBcast, max over ranks, best of reps); overlap = sfbench2; acgn = acgnbench; graph = sfgraph (CUDA-graph capture of Begin/End)
+# NCCL env: NCCL_IB_HCA=mlx5_0 NCCL_IB_ROCE_VERSION_NUM=1 NCCL_IB_GID_INDEX=2; nccl_ch8 = NCCL_NCHANNELS_PER_NET_PEER=8 NCCL_MIN_NCHANNELS=8
+
+########## campaign 1
+##### ring 1 node np=4 (best of 3)
+     bytes |     mpi us    nccl us   nvput us |  nccl/mpi nvput/mpi
+        64 |      20.80       6.07      17.29 |      0.29      0.83
+       128 |      14.12       6.50      17.53 |      0.46      1.24
+       256 |      13.15       6.37      17.16 |      0.48      1.30
+       512 |      13.12       6.42      17.45 |      0.49      1.33
+      1024 |      13.10       6.67      17.40 |      0.51      1.33
+      2048 |      13.23       6.68      17.35 |      0.51      1.31
+      4096 |      13.20       7.18      17.29 |      0.54      1.31
+      8192 |      13.30       7.86      17.76 |      0.59      1.34
+     16384 |      13.42       7.91      17.95 |      0.59      1.34
+     32768 |      13.49       8.08      17.82 |      0.60      1.32
+     65536 |      13.76       8.44      18.00 |      0.61      1.31
+    131072 |      14.27       9.97      18.86 |      0.70      1.32
+    262144 |      15.30      13.43      19.77 |      0.88      1.29
+    524288 |      17.42      16.71      22.06 |      0.96      1.27
+   1048576 |      21.08      23.06      26.63 |      1.09      1.26
+   2097152 |      29.24      35.17      35.18 |      1.20      1.20
+   4194304 |      45.16      57.99      53.20 |      1.28      1.18
+   8388608 |      76.39      97.85      88.06 |      1.28      1.15
+  16777216 |     139.20     167.77     175.25 |      1.21      1.26
+  33554432 |     265.11     305.49     338.31 |      1.15      1.28
+##### ring 2 nodes np=8 ppr:4 (best of 3)
+     bytes |     mpi us    nccl us   nvput us |  nccl/mpi nvput/mpi
+        64 |      23.01      15.01      25.39 |      0.65      1.10
+       128 |      20.46      14.71      25.36 |      0.72      1.24
+       256 |      19.52      14.85      25.26 |      0.76      1.29
+       512 |      19.62      14.79      25.45 |      0.75      1.30
+      1024 |      19.64      14.79      25.31 |      0.75      1.29
+      2048 |      19.79      14.94      25.38 |      0.76      1.28
+      4096 |      19.85      15.09      25.42 |      0.76      1.28
+      8192 |      20.46      15.33      25.45 |      0.75      1.24
+     16384 |      25.38      15.73      25.56 |      0.62      1.01
+     32768 |      25.85      16.73      25.70 |      0.65      0.99
+     65536 |      27.68      22.36      25.85 |      0.81      0.93
+    131072 |      31.37      24.79      26.78 |      0.79      0.85
+    262144 |      39.02      25.86      30.50 |      0.66      0.78
+    524288 |      55.60      38.00      35.77 |      0.68      0.64
+   1048576 |      66.10      57.51      56.58 |      0.87      0.86
+   2097152 |      90.20      94.66      98.81 |      1.05      1.10
+   4194304 |     138.37     170.75     179.50 |      1.23      1.30
+   8388608 |     233.59     329.49     344.15 |      1.41      1.47
+  16777216 |     426.35     639.37     672.94 |      1.50      1.58
+  33554432 |     828.23    1269.13    1334.63 |      1.53      1.61
+##### ring 2 nodes np=4 2+2 (best of 3)
+     bytes |     mpi us    nccl us   nvput us |  nccl/mpi nvput/mpi
+        64 |      24.39      16.12      26.12 |      0.66      1.07
+       128 |      24.49      16.23      26.03 |      0.66      1.06
+       256 |      22.02      16.01      26.01 |      0.73      1.18
+       512 |      21.25      16.30      26.09 |      0.77      1.23
+      1024 |      21.15      16.18      26.07 |      0.76      1.23
+      2048 |      21.35      16.34      26.06 |      0.77      1.22
+      4096 |      21.58      16.26      26.09 |      0.75      1.21
+      8192 |      22.32      16.91      26.22 |      0.76      1.17
+     16384 |      25.36      17.30      26.21 |      0.68      1.03
+     32768 |      25.75      18.90      26.27 |      0.73      1.02
+     65536 |      27.69      23.64      26.53 |      0.85      0.96
+    131072 |      31.77      26.54      28.04 |      0.84      0.88
+    262144 |      39.01      29.02      33.84 |      0.74      0.87
+    524288 |      56.06      47.78      43.46 |      0.85      0.78
+   1048576 |      72.13      67.25      59.66 |      0.93      0.83
+   2097152 |      98.96     116.45     111.39 |      1.18      1.13
+   4194304 |     171.20     213.38     224.71 |      1.25      1.31
+   8388608 |     331.40     404.81     455.65 |      1.22      1.37
+  16777216 |     644.86     797.10     931.66 |      1.24      1.44
+  33554432 |    1437.81    1566.03    1856.37 |      1.09      1.29
+##### overlap 1 node np=4, n=4096 (32KB)
+mpi      n=4096    K=1   naxpy=0     total=    16.53 us  per_exchange=   16.53 us  compute_alone=    0.00 us
+nccl     n=4096    K=1   naxpy=0     total=     8.05 us  per_exchange=    8.05 us  compute_alone=    0.00 us
+nvput    n=4096    K=1   naxpy=0     total=    17.65 us  per_exchange=   17.65 us  compute_alone=    0.00 us
+mpi      n=4096    K=1   naxpy=2     total=    22.93 us  per_exchange=   22.93 us  compute_alone=   10.54 us
+nccl     n=4096    K=1   naxpy=2     total=    15.46 us  per_exchange=   15.46 us  compute_alone=   10.93 us
+nvput    n=4096    K=1   naxpy=2     total=    21.44 us  per_exchange=   21.44 us  compute_alone=   10.82 us
+mpi      n=4096    K=1   naxpy=8     total=    49.72 us  per_exchange=   49.72 us  compute_alone=   42.00 us
+nccl     n=4096    K=1   naxpy=8     total=    55.74 us  per_exchange=   55.74 us  compute_alone=   43.26 us
+nvput    n=4096    K=1   naxpy=8     total=    48.84 us  per_exchange=   48.84 us  compute_alone=   43.33 us
+mpi      n=4096    K=1   naxpy=32    total=   178.23 us  per_exchange=  178.23 us  compute_alone=  168.79 us
+nccl     n=4096    K=1   naxpy=32    total=   218.19 us  per_exchange=  218.19 us  compute_alone=  173.26 us
+nvput    n=4096    K=1   naxpy=32    total=   178.36 us  per_exchange=  178.36 us  compute_alone=  172.90 us
+mpi      n=4096    K=4   naxpy=0     total=    38.02 us  per_exchange=    9.50 us  compute_alone=    0.00 us
+nccl     n=4096    K=4   naxpy=0     total=    47.28 us  per_exchange=   11.82 us  compute_alone=    0.00 us
+nvput    n=4096    K=4   naxpy=0     total=    68.39 us  per_exchange=   17.10 us  compute_alone=    0.00 us
+mpi      n=4096    K=4   naxpy=2     total=    40.66 us  per_exchange=   10.17 us  compute_alone=   10.46 us
+nccl     n=4096    K=4   naxpy=2     total=    49.74 us  per_exchange=   12.43 us  compute_alone=   10.58 us
+nvput    n=4096    K=4   naxpy=2     total=    72.35 us  per_exchange=   18.09 us  compute_alone=   10.52 us
+mpi      n=4096    K=4   naxpy=8     total=    59.17 us  per_exchange=   14.79 us  compute_alone=   41.90 us
+nccl     n=4096    K=4   naxpy=8     total=    64.74 us  per_exchange=   16.19 us  compute_alone=   42.03 us
+nvput    n=4096    K=4   naxpy=8     total=    84.69 us  per_exchange=   21.17 us  compute_alone=   42.88 us
+mpi      n=4096    K=4   naxpy=32    total=   185.82 us  per_exchange=   46.46 us  compute_alone=  168.31 us
+nccl     n=4096    K=4   naxpy=32    total=   229.60 us  per_exchange=   57.40 us  compute_alone=  171.41 us
+nvput    n=4096    K=4   naxpy=32    total=   193.87 us  per_exchange=   48.47 us  compute_alone=  171.31 us
+##### overlap 2+2 np=4, n=4096 (32KB)
+mpi      n=4096    K=1   naxpy=0     total=    26.23 us  per_exchange=   26.23 us  compute_alone=    0.00 us
+nccl     n=4096    K=1   naxpy=0     total=    19.11 us  per_exchange=   19.11 us  compute_alone=    0.00 us
+nvput    n=4096    K=1   naxpy=0     total=    26.42 us  per_exchange=   26.42 us  compute_alone=    0.00 us
+mpi      n=4096    K=1   naxpy=2     total=    27.77 us  per_exchange=   27.77 us  compute_alone=   10.51 us
+nccl     n=4096    K=1   naxpy=2     total=    21.70 us  per_exchange=   21.70 us  compute_alone=   10.78 us
+nvput    n=4096    K=1   naxpy=2     total=    29.04 us  per_exchange=   29.04 us  compute_alone=   10.75 us
+mpi      n=4096    K=1   naxpy=8     total=    50.76 us  per_exchange=   50.76 us  compute_alone=   41.81 us
+nccl     n=4096    K=1   naxpy=8     total=    52.36 us  per_exchange=   52.36 us  compute_alone=   42.89 us
+nvput    n=4096    K=1   naxpy=8     total=    51.91 us  per_exchange=   51.91 us  compute_alone=   43.18 us
+mpi      n=4096    K=1   naxpy=32    total=   176.79 us  per_exchange=  176.79 us  compute_alone=  168.24 us
+nccl     n=4096    K=1   naxpy=32    total=   216.41 us  per_exchange=  216.41 us  compute_alone=  171.92 us
+nvput    n=4096    K=1   naxpy=32    total=   180.84 us  per_exchange=  180.84 us  compute_alone=  172.24 us
+mpi      n=4096    K=4   naxpy=0     total=    48.62 us  per_exchange=   12.16 us  compute_alone=    0.00 us
+nccl     n=4096    K=4   naxpy=0     total=    91.50 us  per_exchange=   22.87 us  compute_alone=    0.00 us
+nvput    n=4096    K=4   naxpy=0     total=    67.00 us  per_exchange=   16.75 us  compute_alone=    0.00 us
+mpi      n=4096    K=4   naxpy=2     total=    54.00 us  per_exchange=   13.50 us  compute_alone=   10.68 us
+nccl     n=4096    K=4   naxpy=2     total=    93.84 us  per_exchange=   23.46 us  compute_alone=   10.85 us
+nvput    n=4096    K=4   naxpy=2     total=    70.68 us  per_exchange=   17.67 us  compute_alone=   10.74 us
+mpi      n=4096    K=4   naxpy=8     total=    69.25 us  per_exchange=   17.31 us  compute_alone=   42.14 us
+nccl     n=4096    K=4   naxpy=8     total=    96.25 us  per_exchange=   24.06 us  compute_alone=   42.95 us
+nvput    n=4096    K=4   naxpy=8     total=    83.79 us  per_exchange=   20.95 us  compute_alone=   42.97 us
+mpi      n=4096    K=4   naxpy=32    total=   183.40 us  per_exchange=   45.85 us  compute_alone=  167.78 us
+nccl     n=4096    K=4   naxpy=32    total=   247.86 us  per_exchange=   61.96 us  compute_alone=  171.97 us
+nvput    n=4096    K=4   naxpy=32    total=   201.40 us  per_exchange=   50.35 us  compute_alone=  171.77 us
+##### acgn 1 node
+d=8192    branch      mpi    mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   159.94 us
+d=8192    branch      nccl   mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   211.83 us
+d=8192    branch      nvput  mode=branch     nvshmem=1 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   182.81 us
+d=8192    -allreduce  mpi    mode=allreduce  nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   212.63 us
+d=8192    -allreduce  nccl   mode=allreduce  nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   197.10 us
+d=8192    -allreduce  nvput  mode=allreduce  nvshmem=1 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   204.19 us
+d=524288  branch      mpi    mode=branch     nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   361.38 us
+d=524288  branch      nccl   mode=branch     nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   546.08 us
+d=524288  branch      nvput  mode=branch     nvshmem=1 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   413.81 us
+d=524288  -allreduce  mpi    mode=allreduce  nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   550.88 us
+d=524288  -allreduce  nccl   mode=allreduce  nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   564.20 us
+d=524288  -allreduce  nvput  mode=allreduce  nvshmem=1 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   555.84 us
+##### acgn 2+2
+d=8192    branch      mpi    mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   205.28 us
+d=8192    branch      nccl   mode=branch     nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   283.37 us
+d=8192    branch      nvput  mode=branch     nvshmem=1 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   254.51 us
+d=8192    -allreduce  mpi    mode=allreduce  nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   259.30 us
+d=8192    -allreduce  nccl   mode=allreduce  nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter= 11181.04 us
+d=8192    -allreduce  nvput  mode=allreduce  nvshmem=1 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   279.74 us
+d=524288  branch      mpi    mode=branch     nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=  1005.88 us
+d=524288  branch      nccl   mode=branch     nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=  1213.67 us
+d=524288  branch      nvput  mode=branch     nvshmem=1 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   919.97 us
+d=524288  -allreduce  mpi    mode=allreduce  nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=  1004.53 us
+d=524288  -allreduce  nccl   mode=allreduce  nvshmem=0 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=347180.81 us
+d=524288  -allreduce  nvput  mode=allreduce  nvshmem=1 d=524288   msg=   4096 KB  G=8   P=4   m=1   per_iter=   925.62 us
+##### DONE
+
+########## campaign 2 (1-node graph arm invalid: old binary aborted on a test-side norm check; see campaign 4)
+##### graph capture 1 node np=4
+--- mpi (expect capture failure):
+nccl    eager    n=64      per_graph=1   naxpy=0        6.51 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=0        6.45 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       44.82 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0        7.86 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0        8.10 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       44.45 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       44.19 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       16.41 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       17.77 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       45.52 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       45.88 us/exchange 
+##### graph capture 2+2 np=4
+--- mpi (expect capture failure):
+nccl  
+nccl    eager    n=64      per_graph=1   naxpy=0       16.28 us/exchange   graph    n=64      per_graph=16  naxpy=0       20.39 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       45.78 us/exchange   graph    n=64      per_graph=1   naxpy=8       68.28 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       45.78 us/exchange   graph    n=64      per_graph=16  naxpy=8       20.56 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0       19.01 us/exchange   graph    n=4096    per_graph=1   naxpy=0       68.16 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0       19.41 us/exchange   graph    n=4096    per_graph=16  naxpy=0       23.72 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       45.07 us/exchange   graph    n=4096    per_graph=1   naxpy=8       62.85 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       45.70 us/exchange   graph    n=4096    per_graph=16  naxpy=8       23.21 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       47.02 us/exchange   graph    n=65536   per_graph=1   naxpy=0       86.87 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       47.46 us/exchange   graph    n=65536   per_graph=16  naxpy=0       51.34 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       55.70 us/exchange   graph    n=65536   per_graph=1   naxpy=8       89.35 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       56.11 us/exchange   graph    n=65536   per_graph=16  naxpy=8       50.92 us/exchange 
+##### non-GPU-aware MPI vs NCCL, 1 node np=4
+     bytes |     mpi us mpi_nogam us nccl_nogam us | mpi_nogam/mpi nccl_nogam/mpi
+        64 |      20.71      13.12       6.42 |      0.63      0.31
+       128 |      14.17      14.45       6.47 |      1.02      0.46
+       256 |      13.13      13.68       6.42 |      1.04      0.49
+       512 |      13.09      13.99       6.46 |      1.07      0.49
+      1024 |      13.18      14.44       6.53 |      1.10      0.50
+      2048 |      13.06      15.59       6.58 |      1.19      0.50
+      4096 |      13.18      17.21       7.16 |      1.31      0.54
+      8192 |      13.24      18.37       7.76 |      1.39      0.59
+     16384 |      13.36      20.01       7.83 |      1.50      0.59
+     32768 |      13.44      32.28       7.97 |      2.40      0.59
+     65536 |      13.85      39.08       8.31 |      2.82      0.60
+    131072 |      14.21      55.30       9.88 |      3.89      0.69
+    262144 |      15.12      83.32      13.31 |      5.51      0.88
+    524288 |      17.37     137.99      16.64 |      7.95      0.96
+   1048576 |      21.30     261.20      23.29 |     12.26      1.09
+   2097152 |      29.31     470.78      35.36 |     16.06      1.21
+   4194304 |      45.50     776.96      58.09 |     17.08      1.28
+   8388608 |      77.35    1379.65      97.84 |     17.84      1.26
+##### 2-node np=8: GDR-MPI (UCX 1.19) and NCCL channel tuning
+     bytes |     mpi us    nccl us nccl_ch8 us |  nccl/mpi nccl_ch8/mpi
+        64 |      23.05      15.42      14.97 |      0.67      0.65
+       128 |      20.67      14.58      14.65 |      0.71      0.71
+       256 |      19.79      14.61      15.31 |      0.74      0.77
+       512 |      19.81      14.67      16.35 |      0.74      0.83
+      1024 |      19.78      14.75      15.09 |      0.75      0.76
+      2048 |      19.95      14.75      15.48 |      0.74      0.78
+      4096 |      20.24      14.88      14.87 |      0.73      0.73
+      8192 |      20.64      15.13      15.22 |      0.73      0.74
+     16384 |      25.53      15.71      15.68 |      0.62      0.61
+     32768 |      25.89      16.43      18.20 |      0.63      0.70
+     65536 |      27.77      22.28      22.42 |      0.80      0.81
+    131072 |      31.61      24.99      24.61 |      0.79      0.78
+    262144 |      39.13      25.74      25.71 |      0.66      0.66
+    524288 |      55.03      37.95      31.05 |      0.69      0.56
+   1048576 |      65.85      57.67      45.67 |      0.88      0.69
+   2097152 |      90.75     109.18     104.40 |      1.20      1.15
+   4194304 |     138.94     170.35     155.97 |      1.23      1.12
+   8388608 |     234.85     326.14     308.22 |      1.39      1.31
+  16777216 |     426.29     639.36     611.59 |      1.50      1.43
+  33554432 |     827.92    1270.54    1219.68 |      1.53      1.47
+##### 2-node np=8 GDR-MPI arm
+     bytes |  mpigdr us | 
+        64 |      20.89 | 
+       128 |      20.31 | 
+       256 |      20.36 | 
+       512 |      20.73 | 
+      1024 |      21.05 | 
+      2048 |      21.85 | 
+      4096 |      23.08 | 
+      8192 |      22.54 | 
+     16384 |      16.06 | 
+     32768 |      16.73 | 
+     65536 |      17.44 | 
+    131072 |      34.98 | 
+    262144 |      42.66 | 
+    524288 |      58.56 | 
+   1048576 |      70.90 | 
+   2097152 |     101.83 | 
+   4194304 |     164.39 | 
+   8388608 |     278.55 | 
+  16777216 |     522.30 | 
+  33554432 |    1011.76 | 
+##### DONE2
+
+########## campaign 3 (anomaly diagnostics, log_view before the accounting fix, harness test)
+##### acgn 2+2 allreduce arm anomaly: repeat and variants (64KB)
+plain                     11081.25 us
+NCCL_NET_GDR_LEVEL=0      11089.16 us
+UCX_MEMTYPE_CACHE=n       11119.77 us
+NCCL_IB_DISABLE=1        ##### overlap 1 node, NCCL channel count vs compute slowdown (n=4096, K=1)
+NCCL_MAX_NCHANNELS=1   n=4096    K=1   naxpy=8     total=    55.79 us  per_exchange=   55.79 us  compute_alone=   43.02 us
+NCCL_MAX_NCHANNELS=1   n=4096    K=1   naxpy=32    total=   216.58 us  per_exchange=  216.58 us  compute_alone=  171.80 us
+NCCL_MAX_NCHANNELS=2   n=4096    K=1   naxpy=8     total=    55.03 us  per_exchange=   55.03 us  compute_alone=   42.91 us
+NCCL_MAX_NCHANNELS=2   n=4096    K=1   naxpy=32    total=   212.36 us  per_exchange=  212.36 us  compute_alone=  171.93 us
+NCCL_MAX_NCHANNELS=4   n=4096    K=1   naxpy=8     total=    54.92 us  per_exchange=   54.92 us  compute_alone=   43.50 us
+NCCL_MAX_NCHANNELS=4   n=4096    K=1   naxpy=32    total=   214.35 us  per_exchange=  214.35 us  compute_alone=  171.89 us
+##### overlap 1 node, NCCL protocol/threshold variants
+NCCL_PROTO=Simple            n=4096    K=1   naxpy=0     total=     8.11 us  per_exchange=    8.11 us  compute_alone=    0.00 us
+NCCL_PROTO=Simple            n=4096    K=1   naxpy=32    total=   211.80 us  per_exchange=  211.80 us  compute_alone=  171.86 us
+NCCL_PROTO=LL                n=4096    K=1   naxpy=0     total=     7.98 us  per_exchange=    7.98 us  compute_alone=    0.00 us
+NCCL_PROTO=LL                n=4096    K=1   naxpy=32    total=   215.76 us  per_exchange=  215.76 us  compute_alone=  172.02 us
+NCCL_P2P_LL_THRESHOLD=0      n=4096    K=1   naxpy=0     total=    11.93 us  per_exchange=   11.93 us  compute_alone=    0.00 us
+NCCL_P2P_LL_THRESHOLD=0      n=4096    K=1   naxpy=32    total=   206.38 us  per_exchange=  206.38 us  compute_alone=  167.59 us
+##### log_view message counts (ex22 np=4 mpi vs nccl)
+mpi SFFetchOpBegin         1 1.0  n/a     n/a   0.00e+00 0.0 3.0e+00 2.4e+01 0.0e+00  0  0 10 16  0   0  0 10 16  0  n/a    n/a       0 0.00e+00    0 0.00e+00  0
+mpi SFFetchOpEnd           1 1.0  n/a     n/a   9.00e+00 0.0 3.0e+00 2.4e+01 0.0e+00 16 100 10 16  0  16 100 10 16  0  n/a    n/a       0 0.00e+00    0 0.00e+00 100
+-use_nccl SFFetchOpBegin         1 1.0  n/a     n/a   0.00e+00 0.0 0.0e+00 0.0e+00 4.0e+00 57  0  0  0 12  57  0  0  0 25  n/a    n/a       0 0.00e+00    0 0.00e+00  0
+-use_nccl SFFetchOpEnd           1 1.0  n/a     n/a   9.00e+00 0.0 0.0e+00 0.0e+00 0.0e+00  3 100  0  0  0   3 100  0  0  0  n/a    n/a       0 0.00e+00    0 0.00e+00 100
+##### harness test
+    CLINKER arch-janus-nvshmem/tests/vec/is/sf/tests/ex22
+       TEST arch-janus-nvshmem/tests/counts/vec_is_sf_tests-ex22_cuda_nccl.counts
+ ok vec_is_sf_tests-ex22_cuda_nccl+nsize-1
+ ok diff-vec_is_sf_tests-ex22_cuda_nccl+nsize-1
+ ok vec_is_sf_tests-ex22_cuda_nccl+nsize-4
+ ok diff-vec_is_sf_tests-ex22_cuda_nccl+nsize-4
+##### DONE3
+
+########## campaign 4 (CUDA graph capture, fixed binary; MPI arm aborts at capture as expected)
+##### graph capture 1 node np=4
+--- mpi (expect capture failure):
+  eager    n=4096    per_graph=1   naxpy=0       14.14 us/exchange
+nccl    eager    n=64      per_graph=1   naxpy=0        6.51 us/exchange   graph    n=64      per_graph=1   naxpy=0        8.52 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=0        6.49 us/exchange   graph    n=64      per_graph=16  naxpy=0        7.22 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       45.17 us/exchange   graph    n=64      per_graph=1   naxpy=8        8.70 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       45.37 us/exchange   graph    n=64      per_graph=16  naxpy=8        7.44 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0        8.22 us/exchange   graph    n=4096    per_graph=1   naxpy=0       11.44 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0        8.12 us/exchange   graph    n=4096    per_graph=16  naxpy=0        9.01 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       45.04 us/exchange   graph    n=4096    per_graph=1   naxpy=8       11.41 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       45.18 us/exchange   graph    n=4096    per_graph=16  naxpy=8        8.98 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       16.43 us/exchange   graph    n=65536   per_graph=1   naxpy=0       28.31 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       16.36 us/exchange   graph    n=65536   per_graph=16  naxpy=0       17.22 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       46.27 us/exchange   graph    n=65536   per_graph=1   naxpy=8       18.59 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       46.13 us/exchange   graph    n=65536   per_graph=16  naxpy=8       17.34 us/exchange 
+##### graph capture 2+2 np=4
+--- mpi (expect capture failure):
+  eager    n=4096    per_graph=1   naxpy=0       26.00 us/exchange
+nccl    eager    n=64      per_graph=1   naxpy=0       16.34 us/exchange   graph    n=64      per_graph=1   naxpy=0       61.57 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=0       16.24 us/exchange   graph    n=64      per_graph=16  naxpy=0       20.24 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       45.05 us/exchange   graph    n=64      per_graph=1   naxpy=8       57.24 us/exchange 
+nccl    eager    n=64      per_graph=1   naxpy=8       45.02 us/exchange   graph    n=64      per_graph=16  naxpy=8       20.17 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0       19.08 us/exchange   graph    n=4096    per_graph=1   naxpy=0       60.85 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=0       19.03 us/exchange   graph    n=4096    per_graph=16  naxpy=0       23.05 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       45.25 us/exchange   graph    n=4096    per_graph=1   naxpy=8       66.05 us/exchange 
+nccl    eager    n=4096    per_graph=1   naxpy=8       45.56 us/exchange   graph    n=4096    per_graph=16  naxpy=8       23.10 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       46.02 us/exchange   graph    n=65536   per_graph=1   naxpy=0       86.75 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=0       46.30 us/exchange   graph    n=65536   per_graph=16  naxpy=0       50.46 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       55.40 us/exchange   graph    n=65536   per_graph=1   naxpy=8       89.83 us/exchange 
+nccl    eager    n=65536   per_graph=1   naxpy=8       55.92 us/exchange   graph    n=65536   per_graph=16  naxpy=8       51.02 us/exchange 
+##### DONE4
+
+########## campaign 5 (-root_device_context_stream_type nonblocking; allreduce collapse = UCX RoCE v2 vs NCCL RoCE v1 on one port)
+##### overlap with nonblocking PETSc stream, 1 node np=4, n=4096
+mpi      n=4096    K=1   naxpy=0     total=    16.74 us  per_exchange=   16.74 us  compute_alone=    0.00 us
+nccl     n=4096    K=1   naxpy=0     total=     8.08 us  per_exchange=    8.08 us  compute_alone=    0.00 us
+nvput    n=4096    K=1   naxpy=0     total=    21.43 us  per_exchange=   21.43 us  compute_alone=    0.00 us
+mpi      n=4096    K=1   naxpy=8     total=    41.92 us  per_exchange=   41.92 us  compute_alone=   41.90 us
+nccl     n=4096    K=1   naxpy=8     total=    47.63 us  per_exchange=   47.63 us  compute_alone=   43.15 us
+nvput    n=4096    K=1   naxpy=8     total=    45.02 us  per_exchange=   45.02 us  compute_alone=   43.40 us
+mpi      n=4096    K=1   naxpy=32    total=   167.47 us  per_exchange=  167.47 us  compute_alone=  167.75 us
+nccl     n=4096    K=1   naxpy=32    total=   174.13 us  per_exchange=  174.13 us  compute_alone=  171.71 us
+nvput    n=4096    K=1   naxpy=32    total=   174.64 us  per_exchange=  174.64 us  compute_alone=  173.45 us
+mpi      n=4096    K=4   naxpy=0     total=    36.84 us  per_exchange=    9.21 us  compute_alone=    0.00 us
+nccl     n=4096    K=4   naxpy=0     total=    48.43 us  per_exchange=   12.11 us  compute_alone=    0.00 us
+nvput    n=4096    K=4   naxpy=0     total=    67.07 us  per_exchange=   16.77 us  compute_alone=    0.00 us
+mpi      n=4096    K=4   naxpy=8     total=    55.44 us  per_exchange=   13.86 us  compute_alone=   41.77 us
+nccl     n=4096    K=4   naxpy=8     total=    62.00 us  per_exchange=   15.50 us  compute_alone=   43.53 us
+nvput    n=4096    K=4   naxpy=8     total=    82.28 us  per_exchange=   20.57 us  compute_alone=   43.21 us
+mpi      n=4096    K=4   naxpy=32    total=   168.43 us  per_exchange=   42.11 us  compute_alone=  168.34 us
+nccl     n=4096    K=4   naxpy=32    total=   180.87 us  per_exchange=   45.22 us  compute_alone=  171.37 us
+nvput    n=4096    K=4   naxpy=32    total=   189.60 us  per_exchange=   47.40 us  compute_alone=  171.90 us
+##### overlap with nonblocking PETSc stream, 2+2 np=4, n=4096
+mpi      n=4096    K=1   naxpy=0     total=    26.78 us  per_exchange=   26.78 us  compute_alone=    0.00 us
+nccl     n=4096    K=1   naxpy=0     total=    19.28 us  per_exchange=   19.28 us  compute_alone=    0.00 us
+nvput    n=4096    K=1   naxpy=0     total=    30.65 us  per_exchange=   30.65 us  compute_alone=    0.00 us
+mpi      n=4096    K=1   naxpy=8     total=    42.20 us  per_exchange=   42.20 us  compute_alone=   42.13 us
+nccl     n=4096    K=1   naxpy=8     total=    47.75 us  per_exchange=   47.75 us  compute_alone=   43.22 us
+nvput    n=4096    K=1   naxpy=8     total=    48.73 us  per_exchange=   48.73 us  compute_alone=   44.35 us
+mpi      n=4096    K=1   naxpy=32    total=   167.13 us  per_exchange=  167.13 us  compute_alone=  167.07 us
+nccl     n=4096    K=1   naxpy=32    total=   174.96 us  per_exchange=  174.96 us  compute_alone=  171.30 us
+nvput    n=4096    K=1   naxpy=32    total=   174.84 us  per_exchange=  174.84 us  compute_alone=  171.80 us
+mpi      n=4096    K=4   naxpy=0     total=    47.42 us  per_exchange=   11.86 us  compute_alone=    0.00 us
+nccl     n=4096    K=4   naxpy=0     total=    91.13 us  per_exchange=   22.78 us  compute_alone=    0.00 us
+nvput    n=4096    K=4   naxpy=0     total=    64.12 us  per_exchange=   16.03 us  compute_alone=    0.00 us
+mpi      n=4096    K=4   naxpy=8     total=    65.96 us  per_exchange=   16.49 us  compute_alone=   41.78 us
+nccl     n=4096    K=4   naxpy=8     total=    94.50 us  per_exchange=   23.63 us  compute_alone=   42.97 us
+nvput    n=4096    K=4   naxpy=8     total=    82.05 us  per_exchange=   20.51 us  compute_alone=   42.97 us
+mpi      n=4096    K=4   naxpy=32    total=   164.74 us  per_exchange=   41.19 us  compute_alone=  164.57 us
+nccl     n=4096    K=4   naxpy=32    total=   182.90 us  per_exchange=   45.72 us  compute_alone=  169.11 us
+nvput    n=4096    K=4   naxpy=32    total=   197.40 us  per_exchange=   49.35 us  compute_alone=  171.38 us
+##### acgn with nonblocking PETSc stream, 1 node
+d=8192    branch      mpi       148.22 us
+d=8192    branch      nccl       92.99 us
+d=8192    branch      nvput     109.32 us
+d=8192    -allreduce  mpi       209.23 us
+d=8192    -allreduce  nccl      132.34 us
+d=8192    -allreduce  nvput     151.83 us
+d=524288  branch      mpi       318.31 us
+d=524288  branch      nccl      377.36 us
+d=524288  branch      nvput     300.67 us
+d=524288  -allreduce  mpi       505.74 us
+d=524288  -allreduce  nccl      447.79 us
+d=524288  -allreduce  nvput     488.15 us
+##### acgn with nonblocking PETSc stream, 2+2 (branch only)
+d=8192    branch      mpi       190.34 us
+d=8192    branch      nccl      165.21 us
+d=8192    branch      nvput     183.30 us
+d=524288  branch      mpi       927.02 us
+d=524288  branch      nccl     1059.84 us
+d=524288  branch      nvput     853.85 us
+##### ring 1 node with nonblocking PETSc stream (does the stream type move the baselines?)
+mpi              8           64         19.730          0.003
+mpi           4096        32768         12.089          2.711
+mpi          32768       262144         13.964         18.773
+mpi         131072      1048576         19.790         52.984
+mpi        1048576      8388608         75.802        110.665
+nccl              8           64          6.260          0.010
+nccl           4096        32768          8.108          4.041
+nccl          32768       262144         13.422         19.531
+nccl         131072      1048576         23.209         45.180
+nccl        1048576      8388608         97.983         85.613
+##### allreduce collapse: MPI side on RoCE v1 GID 2; and NCCL_IB_DISABLE output
+UCX_IB_GID_INDEX=2           272.38 us
+UCX_IB_GID_INDEX=2 mpi       265.86 us
+NCCL_IB_DISABLE=1:
+mode=allreduce  nvshmem=0 d=8192     msg=     64 KB  G=8   P=4   m=1   per_iter=   554.10 us
+##### ksp ex45 2 nodes np=8: KSPSolve time mpi vs nccl (host-scalar allreduces under NCCL)
+mpi: Time (sec):           1.854e+00     1.002   1.852e+00
+mpi: KSPSolve               1 1.0 3.8284e-01 1.0 5.65e+08 1.0 5.3e+03 8.2e+03 4.4e+02 20 1
+mpi: VecNorm              223 1.0  n/a     n/a   1.46e+07 1.0 0.0e+00 0.0e+00 2.2e+02  1  
+-use_nccl: Time (sec):           4.985e+00     1.019   4.938e+00
+-use_nccl: KSPSolve               1 1.0 3.0348e+00 1.0 5.65e+08 1.0 0.0e+00 0.0e+00 4.4e+0
+-use_nccl: VecNorm              223 1.0  n/a     n/a   1.46e+07 1.0 0.0e+00 0.0e+00 2.2e+0
+##### DONE5
+
+########## campaign 6 (log_view fix; ex45 with UCX on RoCE v1; GPU-bound overlap with -w 16777216)
+##### log_view message counts after the PetscAddLogDouble fix (ex22 np=4 nccl)
+SFFetchOpBegin         1 1.0  n/a     n/a   0.00e+00 0.0 3.0e+00 2.4e+01 4.0e+00 58  0 10 16 12  58 
+##### ksp ex45: KSPSolve time; 2 nodes np=8 with UCX on RoCE v1 (UCX_IB_GID_INDEX=2), and 1 node np=4
+nodes=2 np=8 mpi                                                  KSPSolve 3.7214e-01 s
+nodes=2 np=8 -use_nccl                                            KSPSolve 2.9504e+00 s
+nodes=2 np=8 -use_nccl -root_device_context_stream_type nonblocking KSPSolve 2.8867e+00 s
+nodes=1 np=4 mpi                                                  KSPSolve 3.5395e-01 s
+nodes=1 np=4 -use_nccl                                            KSPSolve 3.2379e+00 s
+nodes=1 np=4 -use_nccl -root_device_context_stream_type nonblocking KSPSolve 3.2260e+00 s
+##### GPU-bound overlap: sfbench2 -w 16777216 (128 MB work vectors), n=4096, K=1
+nodes=1  mpi         n=4096    K=1   naxpy=1     total=   184.61 us  per_exchange=  184.61 us  compute_alone=  184.58 us
+nodes=1  nccl        n=4096    K=1   naxpy=1     total=   186.20 us  per_exchange=  186.20 us  compute_alone=  184.96 us
+nodes=1  nccl_null   n=4096    K=1   naxpy=1     total=   189.43 us  per_exchange=  189.43 us  compute_alone=  184.71 us
+nodes=1  nvput       n=4096    K=1   naxpy=1     total=   195.46 us  per_exchange=  195.46 us  compute_alone=  184.70 us
+nodes=1  mpi         n=4096    K=1   naxpy=2     total=   368.69 us  per_exchange=  368.69 us  compute_alone=  368.56 us
+nodes=1  nccl        n=4096    K=1   naxpy=2     total=   370.06 us  per_exchange=  370.06 us  compute_alone=  368.95 us
+nodes=1  nccl_null   n=4096    K=1   naxpy=2     total=   375.08 us  per_exchange=  375.08 us  compute_alone=  369.49 us
+nodes=1  nvput       n=4096    K=1   naxpy=2     total=   371.01 us  per_exchange=  371.01 us  compute_alone=  369.92 us
+nodes=22 mpi         n=4096    K=1   naxpy=1     total=   184.83 us  per_exchange=  184.83 us  compute_alone=  184.75 us
+nodes=22 nccl        n=4096    K=1   naxpy=1     total=   186.25 us  per_exchange=  186.25 us  compute_alone=  185.11 us
+nodes=22 nccl_null   n=4096    K=1   naxpy=1     total=   189.29 us  per_exchange=  189.29 us  compute_alone=  185.10 us
+nodes=22 nvput       n=4096    K=1   naxpy=1     total=   199.23 us  per_exchange=  199.23 us  compute_alone=  184.99 us
+nodes=22 mpi         n=4096    K=1   naxpy=2     total=   369.01 us  per_exchange=  369.01 us  compute_alone=  369.09 us
+nodes=22 nccl        n=4096    K=1   naxpy=2     total=   370.76 us  per_exchange=  370.76 us  compute_alone=  369.79 us
+nodes=22 nccl_null   n=4096    K=1   naxpy=2     total=   374.94 us  per_exchange=  374.94 us  compute_alone=  370.00 us
+nodes=22 nvput       n=4096    K=1   naxpy=2     total=   371.19 us  per_exchange=  371.19 us  compute_alone=  370.03 us
+##### GPU-bound overlap at 256 KB (n=32768) and 1 MB (n=131072), naxpy=1, 1 node and 2+2
+nodes=1  mpi     n=32768   K=1   naxpy=1     total=   184.70 us  per_exchange=  184.70 us  compute_alone=  184.52 us
+nodes=1  nccl    n=32768   K=1   naxpy=1     total=   186.94 us  per_exchange=  186.94 us  compute_alone=  185.02 us
+nodes=1  mpi     n=131072  K=1   naxpy=1     total=   185.41 us  per_exchange=  185.41 us  compute_alone=  184.47 us
+nodes=1  nccl    n=131072  K=1   naxpy=1     total=   188.28 us  per_exchange=  188.28 us  compute_alone=  184.83 us
+nodes=22 mpi     n=32768   K=1   naxpy=1     total=   184.96 us  per_exchange=  184.96 us  compute_alone=  184.68 us
+nodes=22 nccl    n=32768   K=1   naxpy=1     total=   186.82 us  per_exchange=  186.82 us  compute_alone=  185.07 us
+nodes=22 mpi     n=131072  K=1   naxpy=1     total=   185.48 us  per_exchange=  185.48 us  compute_alone=  184.41 us
+nodes=22 nccl    n=131072  K=1   naxpy=1     total=   195.12 us  per_exchange=  195.12 us  compute_alone=  184.85 us
+##### DONE6
+
+########## ex45 diagnosis: NCCL time is a one-time cost (ncclCommInitRank 2.4 s + 128 lazy p2p connections in the first exchange), not per exchange
+# max_it sweep, all 1 node np=4 (ex45 ignores -ksp_max_it here; shows run-to-run stability):
+# mpi 0.34 s; nccl 3.19-3.24 s; NCCL_P2P_DISABLE=1 2.57 s; NCCL_MAX_NCHANNELS=4 2.90 s; =1 2.82 s; NCCL_LOCAL_REGISTER=0 3.24 s; NCCL_CUMEM_ENABLE=0 3.01 s; NCCL_LEGACY_CUDA_REGISTER=0 3.25 s
+# NCCL_DEBUG=INFO: all 128 'via P2P/CUMEM' connections appear before KSP iteration 1; Init timings total 2.42 s (alloc 2.13, kernels 0.18)
+# nsys (rank 0): cuMemExportToShareableHandle 64 calls 5.0 ms avg on NCCL service thread; cuMemSetAccess 162 x 1 ms, cuMemImportFromShareableHandle 64 x 1.4 ms on main thread
+# grid 32 / 96 (80 / 381 iterations), 1 node np=4: mpi 0.332 / 0.409 s; nccl 3.225 / 3.294 s
+
+########## campaign 7 (init time; per-iteration scaling on 2 nodes and 1 node)
+##### NCCL communicator creation time (ex45 1 node np=4, -info), default and NCCL_CUMEM_ENABLE=0
+default                communicator with 4 ranks on MPI_Comm 49626960 in 2.45824 seconds
+NCCL_CUMEM_ENABLE=0    communicator with 4 ranks on MPI_Comm 40769712 in 2.94542 seconds
+##### per-iteration cost from grid scaling, 2 nodes np=8 (UCX_IB_GID_INDEX=2) and 1 node np=4
+nodes=2 np=8 grid=32  mpi        KSPSolve 3.5120e-01 s  MatMult n/a s  iterations 80
+nodes=2 np=8 grid=32  -use_nccl  KSPSolve 2.8282e+00 s  MatMult n/a s  iterations 80
+nodes=2 np=8 grid=96  mpi        KSPSolve 4.2355e-01 s  MatMult n/a s  iterations 381
+nodes=2 np=8 grid=96  -use_nccl  KSPSolve 2.9819e+00 s  MatMult n/a s  iterations 381
+nodes=1 np=4 grid=32  mpi        KSPSolve 3.4393e-01 s  MatMult n/a s  iterations 80
+nodes=1 np=4 grid=32  -use_nccl  KSPSolve 3.2387e+00 s  MatMult n/a s  iterations 80
+nodes=1 np=4 grid=96  mpi        KSPSolve 4.0829e-01 s  MatMult n/a s  iterations 381
+nodes=1 np=4 grid=96  -use_nccl  KSPSolve 3.2899e+00 s  MatMult n/a s  iterations 381
+##### DONE7
+
+########## campaign 8 (sfbw.c: PetscSF vs bare MPI vs bare NCCL on the same device buffers, log stages; the 4 MB question)
+##### 1 node np=4 ring, 1..64 MB: usec (GB/s per rank) per size
+sf mpi                                       1MB:27.21(38.5) 2MB:34.74(60.4) 4MB:48.94(85.7) 8MB:80.68(104.0) 16MB:143.12(117.2) 32MB:266.77(125.8) 64MB:514.87(130.3) 
+sf nccl                                      1MB:23.46(44.7) 2MB:34.86(60.2) 4MB:57.60(72.8) 8MB:97.42(86.1) 16MB:168.94(99.3) 32MB:308.38(108.8) 64MB:579.67(115.8) 
+bare mpi                                     1MB:25.19(41.6) 2MB:33.43(62.7) 4MB:46.92(89.4) 8MB:78.14(107.4) 16MB:141.10(118.9) 32MB:265.45(126.4) 64MB:517.89(129.6) 
+bare nccl                                    1MB:23.18(45.2) 2MB:34.42(60.9) 4MB:56.85(73.8) 8MB:96.62(86.8) 16MB:164.82(101.8) 32MB:306.53(109.5) 64MB:578.71(116.0) 
+bare nccl side-stream                        1MB:23.48(44.7) 2MB:34.63(60.6) 4MB:57.67(72.7) 8MB:97.33(86.2) 16MB:166.59(100.7) 32MB:311.29(107.8) 64MB:580.87(115.5) 
+##### 1 node np=2 pair (bidirectional) and unidirectional
+pair sf mpi                                  1MB:25.42(41.2) 2MB:33.90(61.9) 4MB:47.89(87.6) 8MB:79.28(105.8) 16MB:140.85(119.1) 32MB:267.22(125.6) 64MB:520.49(128.9) 
+pair sf nccl                                 1MB:26.67(39.3) 2MB:40.99(51.2) 4MB:65.43(64.1) 8MB:116.30(72.1) 16MB:225.42(74.4) 32MB:425.59(78.8) 64MB:818.71(82.0) 
+pair bare nccl                               1MB:26.47(39.6) 2MB:40.82(51.4) 4MB:64.90(64.6) 8MB:115.97(72.3) 16MB:217.73(77.1) 32MB:425.02(78.9) 64MB:815.89(82.3) 
+uni sf mpi                                   1MB:24.65(42.5) 2MB:32.44(64.7) 4MB:49.16(85.3) 8MB:80.05(104.8) 16MB:144.11(116.4) 32MB:268.29(125.1) 64MB:518.67(129.4) 
+uni sf nccl                                  1MB:18.24(57.5) 2MB:26.98(77.7) 4MB:44.85(93.5) 8MB:79.63(105.3) 16MB:148.96(112.6) 32MB:286.78(117.0) 64MB:569.62(117.8) 
+uni bare nccl                                1MB:17.99(58.3) 2MB:27.23(77.0) 4MB:44.51(94.2) 8MB:79.71(105.2) 16MB:148.39(113.1) 32MB:286.67(117.0) 64MB:566.94(118.4) 
+##### 1 node np=4 ring, NCCL knobs on the bare nccl arm
+NCCL_MIN_P2P_NCHANNELS=8 NCCL_MAX_P2P_NCHANNELS=8 1MB:35.84(29.3) 2MB:59.23(35.4) 4MB:109.37(38.3) 8MB:208.47(40.2) 16MB:410.63(40.9) 32MB:806.34(41.6) 64MB:821.87(81.7) 
+NCCL_MIN_P2P_NCHANNELS=16 NCCL_MAX_P2P_NCHANNELS=16 1MB:51.15(20.5) 2MB:40.40(51.9) 4MB:64.86(64.7) 8MB:115.63(72.5) 16MB:223.22(75.2) 32MB:427.23(78.5) 64MB:819.63(81.9) 
+NCCL_MIN_P2P_NCHANNELS=32 NCCL_MAX_P2P_NCHANNELS=32 1MB:23.13(45.3) 2MB:34.88(60.1) 4MB:57.53(72.9) 8MB:96.89(86.6) 16MB:168.47(99.6) 32MB:309.67(108.4) 64MB:580.06(115.7) 
+NCCL_MIN_NCHANNELS=32 NCCL_MAX_NCHANNELS=32  1MB:23.19(45.2) 2MB:34.75(60.3) 4MB:57.25(73.3) 8MB:96.87(86.6) 16MB:168.37(99.6) 32MB:308.45(108.8) 64MB:579.37(115.8) 
+NCCL_P2P_NVL_CHUNKSIZE=2097152               1MB:23.25(45.1) 2MB:34.47(60.8) 4MB:57.53(72.9) 8MB:96.78(86.7) 16MB:165.70(101.3) 32MB:308.15(108.9) 64MB:581.34(115.4) 
+NCCL_P2P_NVL_CHUNKSIZE=4194304 NCCL_BUFFSIZE=16777216 1MB:25.85(40.6) 2MB:34.47(60.8) 4MB:57.17(73.4) 8MB:102.67(81.7) 16MB:197.92(84.8) 32MB:335.71(100.0) 64MB:611.05(109.8) 
+NCCL_BUFFSIZE=16777216                       1MB:23.10(45.4) 2MB:34.30(61.1) 4MB:56.83(73.8) 8MB:95.55(87.8) 16MB:167.20(100.3) 32MB:313.66(107.0) 64MB:591.34(113.5) 
+NCCL_NTHREADS=640                            1MB:23.49(44.6) 2MB:34.87(60.1) 4MB:56.99(73.6) 8MB:97.27(86.2) 16MB:166.34(100.9) 32MB:307.31(109.2) 64MB:581.40(115.4) 
+NCCL_PROTO=Simple                            1MB:23.15(45.3) 2MB:34.77(60.3) 4MB:57.39(73.1) 8MB:97.00(86.5) 16MB:165.79(101.2) 32MB:309.47(108.4) 64MB:578.18(116.1) 
+NCCL_P2P_READ_ENABLE=1                       1MB:25.20(41.6) 2MB:37.54(55.9) 4MB:60.01(69.9) 8MB:98.98(84.7) 16MB:172.19(97.4) 32MB:311.62(107.7) 64MB:591.33(113.5) 
+NCCL_P2P_USE_CUDA_MEMCPY=1                   1MB:117.19(8.9) 2MB:119.88(17.5) 4MB:137.29(30.6) 8MB:217.92(38.5) 16MB:403.46(41.6) 32MB:726.59(46.2) 64MB:1399.46(48.0) 
+NCCL_P2P_DIRECT_DISABLE=1                    1MB:23.39(44.8) 2MB:34.88(60.1) 4MB:57.31(73.2) 8MB:97.14(86.4) 16MB:167.96(99.9) 32MB:309.89(108.3) 64MB:578.68(116.0) 
+##### 1 node np=4 ring, best knobs on the PetscSF-NCCL arm
+sf nccl NCCL_MIN_P2P_NCHANNELS=32 NCCL_MAX_P2P_NCHANNELS=32 1MB:23.77(44.1) 2MB:34.77(60.3) 4MB:57.60(72.8) 8MB:97.29(86.2) 16MB:166.42(100.8) 32MB:313.27(107.1) 64MB:579.75(115.8) 
+sf nccl NCCL_P2P_USE_CUDA_MEMCPY=1           1MB:86.53(12.1) 2MB:114.23(18.4) 4MB:127.66(32.9) 8MB:203.76(41.2) 16MB:388.01(43.2) 32MB:699.26(48.0) 64MB:1366.55(49.1) 
+sf nccl NCCL_P2P_NVL_CHUNKSIZE=2097152 NCCL_MIN_P2P_NCHANNELS=32 NCCL_MAX_P2P_NCHANNELS=32 1MB:23.30(45.0) 2MB:35.34(59.3) 4MB:58.28(72.0) 8MB:97.35(86.2) 16MB:169.32(99.1) 32MB:309.94(108.3) 64MB:579.79(115.7) 
+##### nsys: NCCL kernel grid and duration at 4 MB (bare nccl arm, ring np=4, rank 0)
+##### 2 nodes: np=2 pair across nodes (ppr:1) and np=8 ring (ppr:4), inter-node knobs
+x-node pair sf mpi (host-staged)             1MB:77.31(13.6) 2MB:140.81(14.9) 4MB:261.87(16.0) 8MB:477.46(17.6) 16MB:913.76(18.4) 32MB:1770.46(19.0) 64MB:3484.38(19.3) 
+x-node pair sf nccl                          1MB:78.63(13.3) 2MB:127.01(16.5) 4MB:231.58(18.1) 8MB:445.94(18.8) 16MB:860.68(19.5) 32MB:1689.43(19.9) 64MB:3374.97(19.9) 
+x-node pair bare nccl                        1MB:79.23(13.2) 2MB:129.41(16.2) 4MB:237.01(17.7) 8MB:455.28(18.4) 16MB:885.40(18.9) 32MB:1734.24(19.3) 64MB:3449.60(19.5) 
+x-node uni bare nccl                         1MB:51.50(20.4) 2MB:76.09(27.6) 4MB:141.52(29.6) 8MB:274.76(30.5) 16MB:535.76(31.3) 32MB:1068.77(31.4) 64MB:2149.68(31.2) 
+x-node uni sf mpi                            1MB:68.51(15.3) 2MB:94.34(22.2) 4MB:143.29(29.3) 8MB:241.91(34.7) 16MB:439.05(38.2) 32MB:831.14(40.4) 64MB:1617.32(41.5) 
+x-node pair bare nccl NCCL_NET_GDR_READ=1    1MB:79.08(13.3) 2MB:129.49(16.2) 4MB:235.09(17.8) 8MB:454.99(18.4) 16MB:884.35(19.0) 32MB:1738.65(19.3) 64MB:3460.01(19.4) 
+x-node pair bare nccl NCCL_NCHANNELS_PER_NET_PEER=8 1MB:71.90(14.6) 2MB:111.13(18.9) 4MB:190.30(22.0) 8MB:356.72(23.5) 16MB:695.70(24.1) 32MB:1374.84(24.4) 64MB:2736.01(24.5) 
+x-node pair bare nccl NCCL_NET_GDR_READ=1 NCCL_NCHANNELS_PER_NET_PEER=8 1MB:72.34(14.5) 2MB:112.02(18.7) 4MB:190.02(22.1) 8MB:357.78(23.4) 16MB:690.89(24.3) 32MB:1366.33(24.6) 64MB:2721.07(24.7) 
+x-node pair bare nccl NCCL_P2P_NET_CHUNKSIZE=2097152 NCCL_NET_GDR_READ=1 NCCL_NCHANNELS_PER_NET_PEER=8 1MB:78.93(13.3) 2MB:114.28(18.4) 4MB:201.83(20.8) 8MB:353.11(23.8) 16MB:656.16(25.6) 32MB:1280.79(26.2) 64MB:9097.32(7.4) 
+x-node pair bare nccl NCCL_NET_GDR_LEVEL=0   1MB:91.68(11.4) 2MB:156.35(13.4) 4MB:288.07(14.6) 8MB:544.23(15.4) 16MB:1058.80(15.8) 32MB:2094.09(16.0) 64MB:4146.37(16.2) 
+x-node pair sf mpi GDR (UCX 1.19)            1MB:57.27(18.3) 2MB:98.60(21.3) 4MB:178.82(23.5) 8MB:337.69(24.8) 16MB:655.98(25.6) 32MB:1291.36(26.0) 64MB:2564.26(26.2) 
+##### DONE8
+##### chunk size vs channels per op, bare nccl ring np=4, 1 node (1..64 MB)
+NCCL_P2P_NVL_CHUNKSIZE=262144                                  1MB:23.76(44.1) 2MB:34.76(60.3) 4MB:54.97(76.3) 8MB:90.12(93.1) 16MB:162.54(103.2) 32MB:302.06(111.1) 64MB:574.68(116.8) 
+NCCL_P2P_NVL_CHUNKSIZE=131072                                  1MB:23.13(45.3) 2MB:32.75(64.0) 4MB:51.67(81.2) 8MB:87.79(95.6) 16MB:157.49(106.5) 32MB:295.64(113.5) 64MB:559.07(120.0) 
+NCCL_P2P_NVL_CHUNKSIZE=65536                                   1MB:22.12(47.4) 2MB:31.66(66.2) 4MB:49.30(85.1) 8MB:84.15(99.7) 16MB:154.59(108.5) 32MB:286.27(117.2) 64MB:554.66(121.0) 
+NCCL_P2P_NVL_CHUNKSIZE=131072 NCCL_MIN_P2P_NCHANNELS=32 NCCL_MAX_P2P_NCHANNELS=32 1MB:23.36(44.9) 2MB:32.79(64.0) 4MB:51.74(81.1) 8MB:87.65(95.7) 16MB:156.45(107.2) 32MB:295.68(113.5) 64MB:558.20(120.2) 
+NCCL_P2P_NVL_CHUNKSIZE=131072 NCCL_MIN_NCHANNELS=32 NCCL_MAX_NCHANNELS=32 1MB:23.30(45.0) 2MB:32.72(64.1) 4MB:51.68(81.2) 8MB:87.72(95.6) 16MB:156.63(107.1) 32MB:296.02(113.4) 64MB:560.23(119.8) 
+NCCL_P2P_NVL_CHUNKSIZE=131072 NCCL_BUFFSIZE=1048576            1MB:22.92(45.8) 2MB:32.74(64.0) 4MB:51.93(80.8) 8MB:87.71(95.6) 16MB:155.84(107.7) 32MB:296.51(113.2) 64MB:558.07(120.3) 
+
+########## nsys, rank 0, 4 MB, ncclDevKernel_SendRecv grid (blocks of 640 threads) and duration; MPI arm memcpy
+# ring np=4 (send to one peer + recv from another): grid=8, 58.7 us
+# pair np=2 bidirectional (send+recv, same peer): grid=4, 66.8 us
+# pair np=2 unidirectional: grid=4, 44.7 us
+# MPI arm: one cudaMemcpy PtoP (copy kind 10) of 4 MB per exchange, 39.9 us (UCX cuda_ipc), exchange 46.9 us
+# with NCCL_P2P_NVL_CHUNKSIZE=131072, ring: grid=8 for 4-32 MB, grid=16 at 64 MB; NCCL_MIN_P2P_NCHANNELS=32 does not raise the per-op block count
+
+########## campaign 9 (ring rerun with the tuned env defaults NCCL_P2P_NVL_CHUNKSIZE=65536 NCCL_NCHANNELS_PER_NET_PEER=8 UCX_IB_GID_INDEX=2; then the UCX GID A/B for MPI)
+##### env check (forwarded to ranks):
+UCX_IB_GID_INDEX=2
+NCCL_NCHANNELS_PER_NET_PEER=8
+NCCL_P2P_NVL_CHUNKSIZE=65536
+##### TUNED ring 1 node np=4 (best of 3)
+     bytes |     mpi us    nccl us |  nccl/mpi
+        64 |      19.58       6.07 |      0.31
+       128 |      12.92       6.50 |      0.50
+       256 |      11.78       6.27 |      0.53
+       512 |      11.77       6.43 |      0.55
+      1024 |      11.78       6.47 |      0.55
+      2048 |      11.78       6.54 |      0.55
+      4096 |      11.86       7.08 |      0.60
+      8192 |      11.95       7.75 |      0.65
+     16384 |      12.04       7.82 |      0.65
+     32768 |      12.07       8.01 |      0.66
+     65536 |      12.39       8.36 |      0.68
+    131072 |      12.87       9.85 |      0.77
+    262144 |      13.79      13.31 |      0.97
+    524288 |      16.08      16.61 |      1.03
+   1048576 |      19.90      22.20 |      1.12
+   2097152 |      28.16      32.26 |      1.15
+   4194304 |      44.09      50.33 |      1.14
+   8388608 |      75.40      85.16 |      1.13
+  16777216 |     137.98     155.61 |      1.13
+  33554432 |     263.79     288.06 |      1.09
+##### TUNED ring 2 nodes np=8 ppr:4 (best of 3)
+     bytes |     mpi us    nccl us |  nccl/mpi
+        64 |      22.66      14.78 |      0.65
+       128 |      20.29      14.87 |      0.73
+       256 |      19.55      14.82 |      0.76
+       512 |      19.58      14.82 |      0.76
+      1024 |      19.51      14.96 |      0.77
+      2048 |      19.70      14.90 |      0.76
+      4096 |      19.78      14.92 |      0.75
+      8192 |      20.45      15.36 |      0.75
+     16384 |      25.48      15.71 |      0.62
+     32768 |      25.80      16.65 |      0.65
+     65536 |      27.78      22.29 |      0.80
+    131072 |      31.52      24.75 |      0.78
+    262144 |      39.77      25.47 |      0.64
+    524288 |      56.36      29.36 |      0.52
+   1048576 |      68.28      48.92 |      0.72
+   2097152 |      92.14      86.33 |      0.94
+   4194304 |     140.07     157.55 |      1.12
+   8388608 |     236.47     309.71 |      1.31
+  16777216 |     427.21     614.56 |      1.44
+  33554432 |     827.19    1222.23 |      1.48
+##### TUNED ring 2 nodes np=4 2+2 (best of 3)
+     bytes |     mpi us    nccl us |  nccl/mpi
+        64 |      24.02      16.15 |      0.67
+       128 |      24.06      16.15 |      0.67
+       256 |      22.11      16.18 |      0.73
+       512 |      21.36      16.15 |      0.76
+      1024 |      21.30      16.19 |      0.76
+      2048 |      21.54      16.31 |      0.76
+      4096 |      21.61      16.28 |      0.75
+      8192 |      22.33      16.74 |      0.75
+     16384 |      25.71      17.48 |      0.68
+     32768 |      26.28      18.87 |      0.72
+     65536 |      28.23      23.77 |      0.84
+    131072 |      32.04      26.67 |      0.83
+    262144 |      40.17      29.16 |      0.73
+    524288 |      57.58      46.71 |      0.81
+   1048576 |      73.55      66.97 |      0.91
+   2097152 |     103.72     115.31 |      1.11
+   4194304 |     178.18     214.08 |      1.20
+   8388608 |     339.55     404.96 |      1.19
+  16777216 |     802.22     792.66 |      0.99
+  33554432 |    2335.11    1570.02 |      0.67
+##### DONE9
+##### A/B: MPI-only ring at 2+2 and np=8, 4-32 MB, UCX on RoCE v1 (GID 2, new default) vs v2 (GID 3), 2 reps each
+nodes=22 np=4 UCX_IB_GID_INDEX=2 rep1  4MB:179.764 8MB:341.537 16MB:1232.149 32MB:6423.240 
+nodes=22 np=4 UCX_IB_GID_INDEX=2 rep2  4MB:179.849 8MB:342.070 16MB:4548.867 32MB:1788.527 
+nodes=22 np=4 UCX_IB_GID_INDEX=3 rep1  4MB:175.752 8MB:338.309 16MB:710.598 32MB:1413.667 
+nodes=22 np=4 UCX_IB_GID_INDEX=3 rep2  4MB:175.727 8MB:340.098 16MB:692.130 32MB:5429.074 
+nodes=2  np=8 UCX_IB_GID_INDEX=2 rep1  4MB:141.707 8MB:238.032 16MB:429.693 32MB:842.295 
+nodes=2  np=8 UCX_IB_GID_INDEX=2 rep2  4MB:141.606 8MB:236.200 16MB:427.687 32MB:831.194 
+nodes=2  np=8 UCX_IB_GID_INDEX=3 rep1  4MB:138.590 8MB:233.566 16MB:424.538 32MB:827.475 
+nodes=2  np=8 UCX_IB_GID_INDEX=3 rep2  4MB:140.356 8MB:234.603 16MB:427.149 32MB:829.399 
