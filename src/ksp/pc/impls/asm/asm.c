@@ -1176,11 +1176,18 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
   Level: intermediate
 
   Notes:
-  Register before setup and select `PC_ASM_WEIGHTED`. Whenever `PCSetUp()` rebuilds weighted ASM,
+  Register before setup and select `PC_ASM_WEIGHTED`.
+  
+  Whenever `PCSetUp()` rebuilds weighted ASM,
   `fn` is called once per local subdomain, after overlap expansion and index sorting, with a vector
-  of the correct size and type. No explicit setup or vector allocation is needed by the caller.
-  The callback overwrites any existing weights, including those supplied by `PCASMWeightedSetScaling()`.
+  of the correct size and type.
+  
+  No explicit setup or vector allocation is needed by the caller.
+
+  The callback overwrites any existing weights, including those supplied directlyby `PCASMWeightedSetScaling()`.
+
   Registration does not trigger setup. Passing `NULL` leaves the current weights in place.
+  
   The callback and context survive `PCReset()`. The caller owns `ctx` and must keep it valid
   until the callback is replaced or disabled, or the preconditioner is destroyed.
 
