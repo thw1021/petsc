@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "id": "poisson2d-analysis",
+  "results_manifest_id": "poisson2d-run2",
+  "vis_spec_id": "poisson2d-vis",
+  "visualizations_produced": [
+    {
+      "type": "warp",
+      "fields": ["u"],
+      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/warp_u.png",
+      "tool": "matplotlib"
+    },
+    {
+      "type": "mesh_render",
+      "fields": [],
+      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/mesh_render.png",
+      "tool": "matplotlib"
+    },
+    {
+      "type": "out_of_range_highlight",
+      "fields": ["u"],
+      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/out_of_range_u.png",
+      "tool": "matplotlib"
+    },
+    {
+      "type": "pointwise_error",
+      "fields": ["u", "u_exact"],
+      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/pointwise_error.png",
+      "tool": "matplotlib"
+    }
+  ],
+  "diagnostics": [
+    {
+      "type": "nan_inf",
+      "field": "u",
+      "finding": "No NaN or Inf present in u, u_exact, or error (all 16641 values finite).",
+      "severity": "info"
+    },
+    {
+      "type": "range",
+      "field": "u",
+      "finding": "u does NOT stay strictly within nominal [0,1]. min = -6.563782e-12 (81 nodes below 0, at roundoff scale ~1e-12, clustered near boundary), max = 1.00005020 (1 node above 1, magnitude of excursion 5.02e-5, at the domain center).",
+      "location": "81 nodes < 0 near boundary; 1 node > 1 at center (0.5, 0.5)",
+      "severity": "warning"
+    },
+    {
+      "type": "sanity_check",
+      "field": "error",
+      "finding": "Max pointwise error |u_h - u_exact| = 5.020091e-05. Recomputed |u_h - u_exact| from u and u_exact matches the dumped 'error' field exactly (max abs difference = 0.0).",
+      "severity": "info"
+    },
+    {
+      "type": "sanity_check",
+      "field": "u",
+      "finding": "Field array sizes confirmed: u, u_exact, and error are each 129x129 = 16641 nodes (matches both the .vts structured grid and the raw .bin dumps). u range [-6.563782e-12, 1.00005020], u_exact range [0.0, 1.0], error range [2.769956e-14, 5.020091e-05].",
+      "severity": "info"
+    },
+    {
+      "type": "other",
+      "finding": "Solver-convergence plot (residual vs iteration) SKIPPED: no residual-history data was dumped by the runs. convergence.csv contains only per-level iteration counts (10,10,11,12), not per-iteration residuals, and no KSP residual-history / *.log file exists in the artifact directory. Not fabricated.",
+      "severity": "info"
+    }
+  ],
+  "convergence_plots": [
+    {
+      "kind": "mesh_refinement",
+      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/mesh_convergence.png"
+    }
+  ],
+  "post_processors": [
+    {
+      "name": "poisson2d post-processor",
+      "script_path": "/home/jczhang/pedsim/examples/poisson2d/postprocess.py",
+      "command": "/home/jczhang/soft/ParaView-5.12.1-MPI-Linux-Python3.10-x86_64/bin/pvpython postprocess.py",
+      "tool": "pvpython"
+    }
+  ],
+  "notes": "Tooling present: ParaView 5.12.1 pvpython (bundles vtk 9.3, numpy 1.26.4, matplotlib 3.7.2); the system python3 has no numpy/vtk/matplotlib, so all post-processing runs under pvpython. Field renders read the native .vts (u, u_exact, error), cross-checked against the raw <f8 .bin dumps (identical). No .h5 present (this PETSc build has no HDF5); the XDMF wrapper + .bin and the .vts were the available inputs, as noted in the results manifest. Mesh render draws every 4th grid line of the 129x129 grid for legibility plus the full boundary. Observed convergence orders (computed factually, no quality judgement): L2 ~ [2.002, 2.001, 2.000], Linf ~ [2.002, 2.001, 2.000] across the 4 refinement levels; both track the reference slope-2 line."
+}
