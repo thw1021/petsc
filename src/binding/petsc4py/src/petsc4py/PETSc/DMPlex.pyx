@@ -1820,7 +1820,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexDistributeGetDefault(self.dm, &dist))
         return toBool(dist)
 
-    def distributeSetDefault(self, flag: bool) -> None:
+    def distributeSetDefault(self, flag: bool = True) -> None:
         """Set flag indicating whether the `DMPlex` should be distributed by default.
 
         Logically collective.
@@ -2524,7 +2524,7 @@ cdef class DMPlex(DM):
         # FIXME petsc.DMPlexMetricSetFromOptions
         CHKERR(DMPlexMetricSetFromOptions(self.dm))
 
-    def metricSetUniform(self, uniform: bool) -> None:
+    def metricSetUniform(self, uniform: bool = True) -> None:
         """Record whether the metric is uniform or not.
 
         Logically collective.
@@ -2558,7 +2558,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricIsUniform(self.dm, &uniform))
         return toBool(uniform)
 
-    def metricSetIsotropic(self, isotropic: bool) -> None:
+    def metricSetIsotropic(self, isotropic: bool = True) -> None:
         """Record whether the metric is isotropic or not.
 
         Logically collective.
@@ -2592,7 +2592,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricIsIsotropic(self.dm, &isotropic))
         return toBool(isotropic)
 
-    def metricSetRestrictAnisotropyFirst(self, restrictAnisotropyFirst: bool) -> None:
+    def metricSetRestrictAnisotropyFirst(self, restrictAnisotropyFirst: bool = True) -> None:
         """Record whether anisotropy is be restricted before normalization or after.
 
         Logically collective.
@@ -2626,7 +2626,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricRestrictAnisotropyFirst(self.dm, &restrictAnisotropyFirst))
         return toBool(restrictAnisotropyFirst)
 
-    def metricSetNoInsertion(self, noInsert: bool) -> None:
+    def metricSetNoInsertion(self, noInsert: bool = True) -> None:
         """Set the flag indicating whether node insertion should be turned off.
 
         Logically collective.
@@ -2662,7 +2662,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricNoInsertion(self.dm, &noInsert))
         return toBool(noInsert)
 
-    def metricSetNoSwapping(self, noSwap: bool) -> None:
+    def metricSetNoSwapping(self, noSwap: bool = True) -> None:
         """Set the flag indicating whether facet swapping should be turned off.
 
         Logically collective.
@@ -2698,7 +2698,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricNoSwapping(self.dm, &noSwap))
         return toBool(noSwap)
 
-    def metricSetNoMovement(self, noMove: bool) -> None:
+    def metricSetNoMovement(self, noMove: bool = True) -> None:
         """Set the flag indicating whether node movement should be turned off.
 
         Logically collective.
@@ -2734,7 +2734,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricNoMovement(self.dm, &noMove))
         return toBool(noMove)
 
-    def metricSetNoSurf(self, noSurf: bool) -> None:
+    def metricSetNoSurf(self, noSurf: bool = True) -> None:
         """Set the flag indicating whether surface modification should be turned off.
 
         Logically collective.
