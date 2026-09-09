@@ -1222,7 +1222,7 @@ PetscErrorCode PCASMWeightedSetComputeScaling(PC pc, PCASMWeightedComputeScaling
   or satisfy $\sum_i R_i^T D_i R_i = I$.
   The PC increments the reference count of the vectors but does not copy them. 
   `PCReset()` discards the weights along with the subdomains.
-  Alternatively, use `PCASMWeightedSetComputeScaling()` to fill PETSc-created vectors during setup.
+  Alternatively, use `PCASMWeightedSetComputeScaling()` to fill internally-created vectors during `PCSetup()`.
 
   Example Usage:
 .vb
