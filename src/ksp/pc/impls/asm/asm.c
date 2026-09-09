@@ -1446,11 +1446,11 @@ PetscErrorCode PCASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, K
            its own `KSP` object, {cite}`dryja1987additive` and {cite}`1sbg`
 
    Options Database Keys:
-+  -pc_asm_blocks blks                            - Sets total blocks. Defaults to one block per MPI process.
-.  -pc_asm_overlap ovl                            - Sets overlap
++  -pc_asm_blocks blks                                     - Sets total blocks. Defaults to one block per MPI process.
+.  -pc_asm_overlap ovl                                     - Sets overlap
 .  -pc_asm_type (basic|restrict|interpolate|none|weighted) - Sets `PCASMType`, default is restrict. See `PCASMSetType()`
-.  -pc_asm_dm_subdomains (true|false)             - use subdomains defined by the `DM` with `DMCreateDomainDecomposition()`
--  -pc_asm_local_type (additive|multiplicative)   - Sets `PCCompositeType`, default is additive. See `PCASMSetLocalType()`
+.  -pc_asm_dm_subdomains (true|false)                      - use subdomains defined by the `DM` with `DMCreateDomainDecomposition()`
+-  -pc_asm_local_type (additive|multiplicative)            - Sets `PCCompositeType`, default is additive. See `PCASMSetLocalType()`
 
    Level: beginner
 
