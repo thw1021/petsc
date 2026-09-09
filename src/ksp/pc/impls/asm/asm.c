@@ -312,7 +312,7 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
     PetscCall(MatCreateVecs(pc->pmat, &vec, NULL));
 
     PetscCheck(!osm->is_local || osm->n_local_true == 1 || (osm->type != PC_ASM_INTERPOLATE && osm->type != PC_ASM_NONE), PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Cannot use interpolate or none PCASMType if is_local was provided to PCASMSetLocalSubdomains() with more than a single subdomain");
-    if (osm->is_local && osm->type != PC_ASM_BASIC && osm->loctype == PC_COMPOSITE_ADDITIVE) PetscCall(PetscMalloc1(osm->n_local_true, &osm->lprolongation));
+    if (osm->is_local && osm->type != PC_ASM_BASIC && osm->type != PC_ASM_WEIGHTED && osm->loctype == PC_COMPOSITE_ADDITIVE) PetscCall(PetscMalloc1(osm->n_local_true, &osm->lprolongation));
     PetscCall(PetscMalloc1(osm->n_local_true, &osm->lrestriction));
     PetscCall(PetscMalloc1(osm->n_local_true, &osm->x));
     PetscCall(PetscMalloc1(osm->n_local_true, &osm->y));
@@ -1184,7 +1184,7 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 
   No explicit setup or vector allocation is needed by the caller.
 
-  The callback overwrites any existing weights, including those supplied directlyby `PCASMWeightedSetScaling()`.
+  The callback overwrites any existing weights, including those supplied directly by `PCASMWeightedSetScaling()`.
 
   Registration does not trigger setup. Passing `NULL` leaves the current weights in place.
 
@@ -1229,7 +1229,7 @@ PetscErrorCode PCASMWeightedSetComputeScaling(PC pc, PCASMWeightedComputeScaling
   or satisfy $\sum_i R_i^T D_i R_i = I$.
   The PC increments the reference count of the vectors but does not copy them.
   `PCReset()` discards the weights along with the subdomains.
-  Alternatively, use `PCASMWeightedSetComputeScaling()` to fill internally-created vectors during `PCSetup()`.
+  Alternatively, use `PCASMWeightedSetComputeScaling()` to fill internally-created vectors during `PCSetUp()`.
 
   Example Usage:
 .vb
