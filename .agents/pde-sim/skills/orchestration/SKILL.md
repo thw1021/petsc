@@ -7,7 +7,8 @@ description: >-
   visualization) through modeling → discretization → code+verify → run → analyze,
   passing JSON contracts between stages, looping back on failure, pausing at
   human-in-the-loop approval gates (default interactive), and escalating to
-  higher-fidelity studies. Invoke with /orchestration.
+  higher-fidelity studies. This brief is loaded by the `/pde-sim` command
+  (Claude Code binding); it is not an auto-discovered skill.
 ---
 
 # Orchestrator: PETSc PDE simulation pipeline
@@ -17,7 +18,18 @@ simulations. You do the coordinating; four skillful specialists do the work. You
 are the ONLY agent that dispatches subagents — specialists never call each other;
 everything routes through you (clean audit trail, no nested delegation).
 
-## Your specialists (dispatch each as a subagent — via the Agent tool under the Claude Code binding)
+## How to dispatch a specialist (Claude Code binding)
+The four specialists are **not** registered subagents. Dispatch each as a
+**general-purpose** subagent (Agent tool, `subagent_type: general-purpose`): read
+its role prompt from `.agents/agents/<role>.md` and pass it as the subagent's
+instructions, and tell the subagent which skills to load by path from
+`.agents/pde-sim/skills/<name>/SKILL.md` (the role prompt lists them). The
+subagent writes its contract file and reports the path back to you. This keeps the
+pipeline opt-in (nothing is auto-registered) and the loading path-based (portable
+to other tools). You are the main session and the ONLY dispatcher — specialists
+never call each other.
+
+## Your specialists
 - **pde-modeling** — phenomenon text → `problem-spec.json`.
 - **numerical-analysis** — problem spec → `numerical-plan.json` (grid,
   discretization, solvers, MMS); and results → `numerical-assessment.json`.
@@ -30,7 +42,7 @@ everything routes through you (clean audit trail, no nested delegation).
   happen.**
 
 ## Contracts (the interface between stages)
-All handoffs are JSON files under `.agents/pde-pipeline/contracts/*.schema.json`. Pass file
+All handoffs are JSON files under `.agents/pde-sim/contracts/*.schema.json`. Pass file
 paths between agents; never inline large data. Store per-study artifacts under
 `artifacts/<study-id>/`.
 
@@ -66,18 +78,18 @@ fabricate approval or treat silence as consent.
 ## Reuse & learning (Level-1 self-improvement)
 Verified knowledge accumulates across runs, guarded by the MMS gate.
 - **Retrieve first.** Before planning from scratch, read
-  `.agents/pde-pipeline/components/case-index.json` for a verified case with the same
+  `.agents/pde-sim/components/case-index.json` for a verified case with the same
   `problem_class`/geometry. If one exists, have numerical-analysis adapt its plan
-  and code-generation start from the referenced `.agents/pde-pipeline/components/<name>` building
+  and code-generation start from the referenced `.agents/pde-sim/components/<name>` building
   block rather than a blank file.
 - **Promote on success.** When a study passes MMS, add or refresh its
   `case-index.json` entry; if it produced a reusable building block, promote it
-  into `.agents/pde-pipeline/components/` with a `component.json` and provenance.
+  into `.agents/pde-sim/components/` with a `component.json` and provenance.
 - **Distill lessons.** Turn recurring escalations (and what fixed them) into
   proposed edits to the relevant skill — presented as a diff for the human to
   approve, never a silent self-edit (gated like the HITL gates).
 - **Guard against drift.** A promotion or skill edit is valid only if
-  `.agents/pde-pipeline/tests/run_regression.sh` still passes (MMS orders hold). Every change is a
+  `.agents/pde-sim/tests/run_regression.sh` still passes (MMS orders hold). Every change is a
   git commit and therefore revertible.
 
 ## Stages of work

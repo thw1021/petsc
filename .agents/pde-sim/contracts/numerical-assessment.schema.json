@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/numerical-assessment.schema.json",
+  "$id": "https://pde-sim/contracts/numerical-assessment.schema.json",
   "title": "Numerical Assessment",
   "description": "numerical-analysis's INTERPRETATION of a Results Manifest: convergence and conservation verdicts plus recommended revisions. Returned to the orchestrator, which routes revisions to the responsible agent.",
   "type": "object",

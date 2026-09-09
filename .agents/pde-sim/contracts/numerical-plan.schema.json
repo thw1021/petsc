@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/numerical-plan.schema.json",
+  "$id": "https://pde-sim/contracts/numerical-plan.schema.json",
   "title": "Numerical Plan",
   "description": "Discretization, solver, and verification plan. Produced by numerical-analysis from a Problem Spec; consumed by code-generation.",
   "type": "object",

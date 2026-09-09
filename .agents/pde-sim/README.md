@@ -1,4 +1,4 @@
-# pedsim — a multi-agent system for PETSc-based PDE simulation
+# pde-sim — a multi-agent system for PETSc-based PDE simulation
 
 A multi-agent system that takes a **text description of a physical phenomenon**
 and drives it through modeling → discretization → code generation →
@@ -8,15 +8,16 @@ visualized numerical solutions.
 The design is split into a framework-neutral **core** (contracts, agent role
 prompts, domain-knowledge skills, example components, tests) and a thin per-tool
 **binding**. Inside PETSc the core lives under `.agents/`: the domain **skills**
-in `.agents/skills/` (alongside PETSc's other agent skills), the four agent role
-prompts in `.agents/agents/`, and the contracts, components, tests, and docs under
-`.agents/pde-pipeline/` (this directory). The only binding built so far is for
-**Claude Code**; see [Running under Claude Code](#running-under-claude-code) and
-[Portability](#portability).
+in `.agents/pde-sim/skills/` (deliberately **not** in the auto-discovered
+`.agents/skills/`, so they never load until the pipeline is invoked), the four
+agent role prompts in `.agents/agents/`, and the contracts, components, tests, and
+docs under `.agents/pde-sim/` (this directory). The only binding built so far
+is for **Claude Code**; see [Running under Claude Code](#running-under-claude-code)
+and [Portability](#portability).
 
-> Paths written as `contracts/…`, `components/…`, `tests/…`, `docs/…` below are
-> relative to this `.agents/pde-pipeline/` directory. Skills and agent role prompts
-> are referenced by their repo-root paths under `.agents/skills/` and `.agents/agents/`.
+> Paths written as `contracts/…`, `components/…`, `skills/…`, `tests/…`, `docs/…`
+> below are relative to this `.agents/pde-sim/` directory. Agent role prompts
+> are referenced by their repo-root paths under `.agents/agents/`.
 
 ## Architecture at a glance
 
@@ -25,7 +26,7 @@ prompts in `.agents/agents/`, and the contracts, components, tests, and docs und
                                         │
                                         ▼
        ┌─────────────────────────────────────────────────────────────────┐
-       │  ORCHESTRATOR  (main session · skills/orchestration)            │
+       │  ORCHESTRATOR  (main session · /pde-sim → orchestration brief) │
        │  only it dispatches subagents · every handoff flows through it  │
        └─────────────────────────────────────────────────────────────────┘
                                         │
@@ -57,8 +58,8 @@ Three kinds of building block:
 
 | Kind | Location | What it is |
 |------|----------|------------|
-| **Agents** (roles) | `.agents/agents/*.md` | Subagents with their own context and tools (model inherited from the session). Dispatched by the orchestrator. |
-| **Skills** (knowledge) | `.agents/skills/*/SKILL.md` | On-demand expertise, loaded by whichever agent needs it. Two are **shared**. |
+| **Agents** (roles) | `.agents/agents/*.md` | Role prompts dispatched by the orchestrator as `general-purpose` subagents (own context; model inherited from the session). |
+| **Skills** (knowledge) | `.agents/pde-sim/skills/*/SKILL.md` | On-demand expertise, loaded by path by whichever agent needs it. Two are **shared**. |
 | **Contracts** (interfaces) | `contracts/*.schema.json` | JSON Schemas for every inter-agent handoff. The robustness backbone. |
 
 ### Why the orchestrator is the *main session*, not a subagent
@@ -130,7 +131,7 @@ production runs; `autonomous` runs through and stops only on escalation. Gates:
 after the Problem Spec, after the Numerical Plan, before production/large runs,
 at results + interpretation, and before higher-fidelity escalation.
 `open_questions` and `environment`/`unknown` escalations are always surfaced —
-never silently assumed. See `.agents/skills/orchestration/SKILL.md` and
+never silently assumed. See `.agents/pde-sim/skills/orchestration/SKILL.md` and
 `docs/DECISIONS.md` (D17).
 
 ## Reuse & self-improvement (Level 1)
@@ -173,44 +174,48 @@ eval-driven plan optimization) are deferred.
 
 ## Running under Claude Code
 
-PETSc keeps the tool-agnostic core under `.agents/` and **git-ignores `.claude/`**
-(see `.gitignore`), so the Claude Code binding is not committed — you create it
-locally. Claude Code discovers subagents in `.claude/agents/` and skills in
-`.claude/skills/`; point those at the core with symlinks from the repo root:
+The pipeline is **opt-in**: none of its skills or agents load until you invoke the
+command. Start Claude Code at the repo root and run:
 
 ```
-mkdir -p .claude
-ln -s ../.agents/agents .claude/agents
-ln -s ../.agents/skills .claude/skills
-```
-
-Then start Claude Code at the repo root and invoke the orchestrator:
-
-```
-/orchestration simulate 2-D steady heat conduction on the unit square with
+/pde-sim simulate 2-D steady heat conduction on the unit square with
 homogeneous Dirichlet boundaries
 ```
 
-The orchestrator dispatches the specialists in turn, writing the contract
-artifacts under a scratch `artifacts/<study-id>/` directory (add it to your local
-`.git/info/exclude`; `.claude/` is already ignored). The `.claude/skills` symlink
-also surfaces PETSc's own review/codegraph skills to Claude Code, which is
-harmless.
+`/pde-sim` (committed at `.claude/commands/pde-sim.md`) loads the orchestration
+brief (`.agents/pde-sim/skills/orchestration/SKILL.md`) into the main session,
+which then reads the specialist role prompts (`.agents/agents/<role>.md`) and domain
+skills (`.agents/pde-sim/skills/<name>/SKILL.md`) **by path** and dispatches
+each specialist as a `general-purpose` subagent. Contract artifacts are written
+under a scratch `artifacts/<study-id>/` directory (add it to your local
+`.git/info/exclude`).
+
+> **Why by path, not auto-discovery.** PETSc commits a `.claude/skills ->
+> ../.agents/skills` symlink, so *anything under `.agents/skills/` auto-loads into
+> every Claude Code session* (this is how PETSc's own `codegraph` and `review-*`
+> skills ship). The pipeline skills therefore live **outside** that directory, under
+> `.agents/pde-sim/skills/`, and are loaded explicitly by the command. The four
+> specialists are dispatched as `general-purpose` subagents rather than registered in
+> `.claude/agents/`, so nothing about the pipeline is auto-registered either. Net:
+> the only always-on footprint is the one `/pde-sim` entry in the command menu.
+> (`.gitignore` lists `.claude/*`, but the committed `.claude/skills` symlink and
+> `.claude/commands/pde-sim.md` are force-added and tracked regardless.)
 
 ## Repository layout
 
 ```
 .agents/                        # tracked, tool-agnostic core
-├── skills/                     # domain knowledge (loaded on demand)
-│   ├── orchestration/          #   pipeline driver (main session)
-│   ├── numerical-methods/  petsc-solvers/        # (petsc-solvers shared)
-│   ├── pde-formulation/    pde-visualization/    # (pde-visualization shared)
-│   └── petsc-codegen/
-│                               #   (PETSc's own review-*/codegraph skills also live here)
-├── agents/                     # role definitions (subagents), one per specialist
+├── skills/                     # AUTO-LOADED Claude Code skills (via committed .claude/skills)
+│   └── codegraph/  review-branch/  review-mr/  review-mr-post/   # PETSc's own skills
+├── agents/                     # specialist role prompts (loaded by path, not registered)
 │   ├── pde-modeling.md         numerical-analysis.md
 │   └── code-generation.md      visualization.md
-└── pde-pipeline/               # framework-neutral core (this directory)
+└── pde-sim/                    # framework-neutral core (this directory)
+    ├── skills/       # pipeline domain knowledge — loaded by path, NOT auto-discovered
+    │   ├── orchestration/                          #   pipeline driver (main session)
+    │   ├── numerical-methods/  petsc-solvers/       #   (petsc-solvers shared)
+    │   ├── pde-formulation/    pde-visualization/   #   (pde-visualization shared)
+    │   └── petsc-codegen/
     ├── contracts/    # JSON Schemas for inter-agent handoffs
     ├── components/   # verified, reusable building blocks + case-index.json (reuse registry)
     ├── examples/     # complete worked studies (e.g. examples/poisson2d)
@@ -218,25 +223,28 @@ harmless.
     ├── docs/         # DECISIONS.md
     └── README.md     # this file
 
-.claude/          # Claude Code binding — created locally, git-ignored (see above)
+.claude/          # Claude Code binding (committed): skills symlink + commands/pde-sim.md
 artifacts/        # per-study runtime output (scratch, regenerated per run)
 ```
 
 ## Portability
 
 The design is framework-neutral; only the **binding** is tool-specific. The neutral
-core is `.agents/pde-pipeline/contracts/`, the agent role prompts in
-`.agents/agents/`, the `.agents/skills/` knowledge, and the `examples/`,
-`components/`, and `tests/` under `.agents/pde-pipeline/` — no hardcoded model, and prose free of tool
-assumptions (Skill/Agent-tool mechanics are flagged as binding-specific and fall
-back to reading files directly).
+core is `.agents/pde-sim/contracts/`, the agent role prompts in
+`.agents/agents/`, the pipeline knowledge in `.agents/pde-sim/skills/`, and the
+`examples/`, `components/`, and `tests/` under `.agents/pde-sim/` — no hardcoded
+model, and prose free of tool assumptions. Everything is loaded by **explicit file
+path**, so the core does not depend on any tool's auto-discovery.
 
-The **Claude Code binding** is the local `.claude/` layout described in
-[Running under Claude Code](#running-under-claude-code): agents and skills
-discovered there (via symlinks into `.agents/`) and the agent frontmatter dialect
-(`tools:`). PETSc git-ignores `.claude/`, so the binding is not committed.
+The **Claude Code binding** is the committed `/pde-sim` command
+(`.claude/commands/pde-sim.md`) described in
+[Running under Claude Code](#running-under-claude-code): it loads the orchestration
+brief, which dispatches specialists as `general-purpose` subagents. (The separate
+`.claude/skills` symlink is a pre-existing PETSc convenience for its own
+`codegraph`/`review-*` skills and is not part of the pipeline.)
 
-To add another tool (e.g. **opencode**) as a second binding, you would add its own
-config pointing at the same core — for opencode, `.opencode/agents/*.md` with
-`mode`/`permission`/`provider/model-id` frontmatter and a `{file:...}` include of each
-role prompt. No second binding is built yet (see `docs/DECISIONS.md` D15).
+To add another tool (e.g. **Codex** or **opencode**) as a second binding, add a thin
+per-tool trigger that points at the same brief — e.g. a Codex custom prompt
+(`~/.codex/prompts/pde-sim.md`) whose body is "read
+`.agents/pde-sim/skills/orchestration/SKILL.md` and act as orchestrator." No
+second binding is built yet (see `docs/DECISIONS.md` D15/D19).

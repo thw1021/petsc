@@ -51,16 +51,16 @@ agent, which writes and runs them itself.
 - `pde-visualization` — to write correct solution output and any in-situ
   rendering (shared with the visualization agent).
 
-Load each via the Skill tool under the Claude Code binding; otherwise read the file directly:
-`.agents/skills/petsc-codegen/SKILL.md`,
-`.agents/skills/petsc-solvers/SKILL.md`,
-`.agents/skills/pde-visualization/SKILL.md`.
+Load each by reading the file directly (loaded by path, not auto-discovered):
+`.agents/pde-sim/skills/petsc-codegen/SKILL.md`,
+`.agents/pde-sim/skills/petsc-solvers/SKILL.md`,
+`.agents/pde-sim/skills/pde-visualization/SKILL.md`.
 
 ## Inputs (contract)
-- **Numerical Plan** (`.agents/pde-pipeline/contracts/numerical-plan.schema.json`): geometry
+- **Numerical Plan** (`.agents/pde-sim/contracts/numerical-plan.schema.json`): geometry
   class, discretization, coefficient functions to implement, solver stack, MMS,
   and verification plan.
-- **Vis Spec** (`.agents/pde-pipeline/contracts/vis-spec.schema.json`, optional): implement
+- **Vis Spec** (`.agents/pde-sim/contracts/vis-spec.schema.json`, optional): implement
   only the items marked `execution: "in_situ"` (solution output, in-situ
   rendering, in-binary auxiliary computations such as particle tracing). Ignore
   `post_hoc` items — the visualization agent handles those.
@@ -74,7 +74,7 @@ Load each via the Skill tool under the Claude Code binding; otherwise read the f
   (`include ${PETSC_DIR}/lib/petsc/conf/variables` and `.../rules`, link with
   `${PETSC_LIB}`), exposing build and `run` targets — the `run` target invoking
   `mpiexec -n <N> ./<app> <options>`. Build and run THROUGH this makefile.
-- A **Results Manifest** (`.agents/pde-pipeline/contracts/results-manifest.schema.json`)
+- A **Results Manifest** (`.agents/pde-sim/contracts/results-manifest.schema.json`)
   inventorying build status, runs, and output files (large artifacts are
   referenced by path, never inlined) — these paths are what the visualization
   agent's post-processors read.

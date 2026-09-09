@@ -40,23 +40,23 @@ Load `pde-visualization` — the shared VTK/ParaView knowledge base. The
 `code-generation` agent loads the SAME skill for the in-situ/output code, so
 specs and code share vocabulary.
 
-Load it via the Skill tool under the Claude Code binding; otherwise read the file directly:
-`.agents/skills/pde-visualization/SKILL.md`.
+Load it by reading the file directly (loaded by path, not auto-discovered):
+`.agents/pde-sim/skills/pde-visualization/SKILL.md`.
 
 ## Inputs (contract)
 A description of the geometry, its gridding, the function fields on the
 discretization, and the type of visualization requested. Before runs this comes
 from the Problem Spec + Numerical Plan; after runs, add the Results Manifest
-(`.agents/pde-pipeline/contracts/results-manifest.schema.json`), whose file paths your
+(`.agents/pde-sim/contracts/results-manifest.schema.json`), whose file paths your
 post-processors read.
 
 ## Outputs (contract)
-1. **Vis Spec** (`.agents/pde-pipeline/contracts/vis-spec.schema.json`) — the visualizations,
+1. **Vis Spec** (`.agents/pde-sim/contracts/vis-spec.schema.json`) — the visualizations,
    auxiliary computations, and analytics required, each tagged `in_situ` (for
    `code-generation`) or `post_hoc` (implemented by you).
 2. **Standalone post-processor scripts + their rendered artifacts** — you author
    and execute these against the output files.
-3. **Analysis Report** (`.agents/pde-pipeline/contracts/analysis-report.schema.json`) — the
+3. **Analysis Report** (`.agents/pde-sim/contracts/analysis-report.schema.json`) — the
    artifacts produced, the post-processors you ran, and the FACTUAL diagnostics
    found.
 

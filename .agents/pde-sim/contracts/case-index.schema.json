@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/case-index.schema.json",
+  "$id": "https://pde-sim/contracts/case-index.schema.json",
   "title": "Case Index",
   "description": "Registry of solved, MMS-verified studies for reuse. The orchestrator/numerical-analysis consult this before planning from scratch; entries point at the study artifacts and any promoted reusable component. Part of the Level-1 self-improvement loop.",
   "type": "object",

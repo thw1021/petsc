@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/problem-spec.schema.json",
+  "$id": "https://pde-sim/contracts/problem-spec.schema.json",
   "title": "Problem Spec",
   "description": "Machine-readable mathematical description of an ODE/PDE problem. Produced by the pde-modeling agent; consumed by the numerical-analysis agent. This is the continuous problem only — no discretization choices belong here.",
   "type": "object",

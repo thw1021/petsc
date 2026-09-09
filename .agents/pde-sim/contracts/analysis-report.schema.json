@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/analysis-report.schema.json",
+  "$id": "https://pde-sim/contracts/analysis-report.schema.json",
   "title": "Analysis Report",
   "description": "visualization's output: the artifacts produced plus FACTUAL diagnostics (no numerical interpretation — that is numerical-analysis's job). Returned to the orchestrator.",
   "type": "object",

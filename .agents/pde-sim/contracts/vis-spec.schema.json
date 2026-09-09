@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/vis-spec.schema.json",
+  "$id": "https://pde-sim/contracts/vis-spec.schema.json",
   "title": "Vis Spec",
   "description": "High-level specification of the visualizations and analytics required. Produced by the visualization agent. Each item is tagged `execution`: `in_situ` items (solution output, in-situ rendering) are implemented by code-generation inside the simulation binary; `post_hoc` items are implemented and run by the visualization agent as standalone post-processors.",
   "type": "object",

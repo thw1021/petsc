@@ -61,5 +61,5 @@ model only — discretization lives in `numerical-methods`.
 
 ## Output discipline
 The model must be emitted as a **Problem Spec JSON** (see
-`.agents/pde-pipeline/contracts/problem-spec.schema.json`), not prose — it is a contract the
+`.agents/pde-sim/contracts/problem-spec.schema.json`), not prose — it is a contract the
 downstream agents parse.

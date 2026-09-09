@@ -93,13 +93,15 @@ reads its output files," not "who codes." (David's Q2.)
 **Cost accepted:** two execution-capable agents (both hold `Bash`); reopens the
 run-boundary, now spelled out in the orchestration skill. See **OQ-2**.
 
-## D11 — Agents get the Skill tool *and* explicit skill paths
-**Status:** Accepted · `561abad`
-**Decision:** Add `Skill` to each agent's `tools:`, keep the named "Knowledge to
-load" directive, and append the explicit `.agents/skills/<name>/SKILL.md` path.
-**Why:** Three redundant layers — native progressive disclosure (Skill tool),
-deterministic selection (named directive), and a portable fallback (path works via
-plain `Read`, even under Codex / pure-skill / cross-model). See **OQ-3**.
+## D11 — Agents reference skills by explicit path (superseded in part by D19)
+**Status:** Accepted · `561abad` — path loading is now the **primary** mechanism (D19)
+**Decision:** Keep the named "Knowledge to load" directive plus the explicit
+`.agents/pde-sim/skills/<name>/SKILL.md` path in each role prompt.
+**Why:** Originally three redundant layers — native progressive disclosure (Skill
+tool), deterministic selection (named directive), and a path fallback. Since D19 the
+pipeline skills are **not** auto-discovered, so the explicit path is no longer a
+fallback but the load path itself (works via plain `Read`, portable across tools).
+The Skill-tool layer no longer applies to the pipeline skills. See **D19**, **OQ-3**.
 
 ## D12 — Structured failure escalation + retry budget
 **Status:** Accepted · `ee7ffc4`
@@ -140,12 +142,16 @@ Claude-isms (the Skill/Agent-tool mechanics are flagged as binding-specific, wit
 file-read fallback). The **Claude Code binding** is the `.claude/` layout (agent +
 skill discovery, frontmatter dialect, `settings.local.json`) and is the only binding
 built so far.
-**Why:** Experiments compare multiple models/tools (e.g. opencode). Keeping the core
-neutral means a second binding is additive — e.g. opencode would add `.opencode/
-agents/*.md` with `mode`/`permission`/`provider/model-id` frontmatter pointing at the
-same core — without touching the shared content.
-**Deferred:** a second (opencode) binding, a source→binding generator, and extracting
-agent/skill *bodies* out of `.claude/` into neutral files. See **OQ-5**.
+**Why:** Experiments compare multiple models/tools (e.g. Codex, opencode). Keeping the
+core neutral means a second binding is additive.
+**Update (D19):** the Claude Code binding is now a single committed command
+(`.claude/commands/pde-sim.md`), not agent/skill auto-discovery. All pipeline content
+loads by explicit path, so a second binding is just a thin trigger pointing at the same
+orchestration brief (e.g. a Codex custom prompt at `~/.codex/prompts/pde-sim.md`). The
+pre-existing `.claude/skills` symlink is a PETSc convenience for its own
+`codegraph`/`review-*` skills only — unrelated to the pipeline.
+**Deferred:** a second (Codex/opencode) binding and a source→binding generator. See
+**OQ-5**.
 
 ## D16 — Visualization stack = VTK / ParaView (+ matplotlib)
 **Status:** Open (assumption) · `df6f6af`
@@ -187,6 +193,26 @@ prompt drift.
 **Rejected:** unsupervised self-editing of skills/prompts — drift and error
 accumulation with no arbiter.
 
+## D19 — Opt-in: pipeline skills off the auto-discovery path; command is the trigger
+**Status:** Accepted — supersedes the auto-load behavior implied by D1/D3/D11
+**Decision:** The six pipeline skills live under `.agents/pde-sim/skills/`, **not**
+under `.agents/skills/`. PETSc commits a `.claude/skills -> ../.agents/skills` symlink,
+so anything under `.agents/skills/` auto-loads into *every* Claude Code session; the
+pipeline skills are kept out of it. The Claude Code binding is a single committed
+command, `.claude/commands/pde-sim.md` (`/pde-sim`), which loads the orchestration brief;
+the orchestrator then reads role prompts (`.agents/agents/<role>.md`) and skills by path
+and dispatches specialists as `general-purpose` subagents. `.claude/agents` is **not**
+committed, so no specialist is auto-registered either.
+**Why:** The pipeline should engage only when a user asks for it. The prior placement
+would have auto-loaded six skills' metadata (~3.5k tokens) and made them
+model-invokable in every repo session — contradicting the opt-in intent and the README.
+The only always-on footprint is now the one `/pde-sim` menu entry.
+**Cost accepted:** `general-purpose` workers get the full toolset (no per-role `tools:`
+scoping). Alternative (rejected for now): commit `.claude/agents` for native subagents,
+which reintroduces always-on registration.
+**Note:** `codegraph` and `review-*` remain under `.agents/skills/` and auto-load as
+before — intended and unrelated.
+
 ---
 
 ## Open questions (for David / the team)
@@ -196,8 +222,9 @@ accumulation with no arbiter.
 - **OQ-2 — Two execution-capable agents.** D10 gives both code-generation and
   visualization `Bash`. Accept the extra surface area, or keep a single code owner
   for the prototype phase? (Revert = one commit.)
-- **OQ-3 — Do subagents receive project skills via the Skill tool** in our Claude
-  Code build? Verify on the first live run; the path fallback (D11) covers us if not.
+- **OQ-3 — Do subagents receive project skills via the Skill tool?** **Resolved/moot
+  (D19):** the pipeline no longer uses native subagents or skill auto-discovery —
+  specialists are `general-purpose` subagents and all skills load by explicit path.
 - **OQ-4 — Formalize the envelope?** Add a `handoff-receipt` contract when we start
   automating dispatch (e.g. via the Workflow tool's structured-output option)?
 - **OQ-5 — Cross-model support.** If/when we want Codex/GPT/Gemini: add `AGENTS.md`
@@ -218,3 +245,4 @@ accumulation with no arbiter.
 | `7117397` | Assume PETSc env; require makefiles (D13) |
 | `24536670` | Human-in-the-loop gates, default interactive (D17) |
 | `8ba2acd8` | Level-1 self-improvement: case index, components, regression (D18) |
+| _(this branch)_ | Opt-in re-scope: skills → `.agents/pde-sim/skills/`, `/pde-sim` command, general-purpose dispatch (D19) |

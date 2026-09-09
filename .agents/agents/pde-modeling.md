@@ -25,8 +25,8 @@ phenomena.
 Load the `pde-formulation` skill before modeling: PDE taxonomy, well-posedness,
 BC/IC selection, nondimensionalization, and closure/subgrid modeling.
 
-Load it via the Skill tool under the Claude Code binding; otherwise read the file directly:
-`.agents/skills/pde-formulation/SKILL.md`.
+Load it by reading the file directly (loaded by path, not auto-discovered):
+`.agents/pde-sim/skills/pde-formulation/SKILL.md`.
 
 ## Input (contract)
 A text-based description of the phenomenon to be modeled. If the description is
@@ -36,7 +36,7 @@ assuming.
 
 ## Output (contract) — JSON, not prose
 Your output MUST be a JSON file conforming to
-`.agents/pde-pipeline/contracts/problem-spec.schema.json` (the **Problem Spec**). Do not
+`.agents/pde-sim/contracts/problem-spec.schema.json` (the **Problem Spec**). Do not
 emit a text-only description. The Problem Spec captures:
 - the governing equations in LaTeX (strong form, and weak form when useful),
 - the unknown fields and their tensor rank/units,

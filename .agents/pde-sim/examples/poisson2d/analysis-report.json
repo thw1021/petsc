@@ -7,25 +7,25 @@
     {
       "type": "warp",
       "fields": ["u"],
-      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/warp_u.png",
+      "artifact_path": "/home/jczhang/pde-sim/examples/poisson2d/warp_u.png",
       "tool": "matplotlib"
     },
     {
       "type": "mesh_render",
       "fields": [],
-      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/mesh_render.png",
+      "artifact_path": "/home/jczhang/pde-sim/examples/poisson2d/mesh_render.png",
       "tool": "matplotlib"
     },
     {
       "type": "out_of_range_highlight",
       "fields": ["u"],
-      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/out_of_range_u.png",
+      "artifact_path": "/home/jczhang/pde-sim/examples/poisson2d/out_of_range_u.png",
       "tool": "matplotlib"
     },
     {
       "type": "pointwise_error",
       "fields": ["u", "u_exact"],
-      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/pointwise_error.png",
+      "artifact_path": "/home/jczhang/pde-sim/examples/poisson2d/pointwise_error.png",
       "tool": "matplotlib"
     }
   ],
@@ -64,13 +64,13 @@
   "convergence_plots": [
     {
       "kind": "mesh_refinement",
-      "artifact_path": "/home/jczhang/pedsim/examples/poisson2d/mesh_convergence.png"
+      "artifact_path": "/home/jczhang/pde-sim/examples/poisson2d/mesh_convergence.png"
     }
   ],
   "post_processors": [
     {
       "name": "poisson2d post-processor",
-      "script_path": "/home/jczhang/pedsim/examples/poisson2d/postprocess.py",
+      "script_path": "/home/jczhang/pde-sim/examples/poisson2d/postprocess.py",
       "command": "/home/jczhang/soft/ParaView-5.12.1-MPI-Linux-Python3.10-x86_64/bin/pvpython postprocess.py",
       "tool": "pvpython"
     }

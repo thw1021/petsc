@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pedsim/contracts/results-manifest.schema.json",
+  "$id": "https://pde-sim/contracts/results-manifest.schema.json",
   "title": "Results Manifest",
   "description": "Inventory of what a simulation run produced. Emitted by code-generation to the orchestrator, which fans it out to visualization and numerical-analysis. Large data files are referenced by path, never inlined.",
   "type": "object",

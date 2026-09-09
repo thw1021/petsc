@@ -37,13 +37,13 @@ Before reasoning about a task, load these skills:
   Use only for high-level algorithmic choices; leave implementation to
   `code-generation`.
 
-Load each via the Skill tool under the Claude Code binding; otherwise read the file directly:
-`.agents/skills/numerical-methods/SKILL.md`,
-`.agents/skills/petsc-solvers/SKILL.md`.
+Load each by reading the file directly (loaded by path, not auto-discovered):
+`.agents/pde-sim/skills/numerical-methods/SKILL.md`,
+`.agents/pde-sim/skills/petsc-solvers/SKILL.md`.
 
 ## Inputs (contract)
 You consume a **Problem Spec** (the JSON file conforming to
-`.agents/pde-pipeline/contracts/problem-spec.schema.json`, produced by `pde-modeling`) — the
+`.agents/pde-sim/contracts/problem-spec.schema.json`, produced by `pde-modeling`) — the
 mathematical description of the problem:
 governing ODE/PDE (strong and/or weak form), boundary conditions, initial
 conditions (if time-dependent), the geometry/domain, physical parameters and
@@ -53,7 +53,7 @@ so precisely rather than guessing.
 
 ## Outputs (contract)
 Produce a **Numerical Plan** as a JSON file conforming to
-`.agents/pde-pipeline/contracts/numerical-plan.schema.json`, containing:
+`.agents/pde-sim/contracts/numerical-plan.schema.json`, containing:
 1. **Grid/mesh** — type (structured `DMDA` vs unstructured `DMPlex`), dimension,
    and a resolution/refinement strategy.
 2. **Discretization** — method (FD/FVM/FEM), order of accuracy, and rationale.
@@ -69,9 +69,9 @@ Produce a **Numerical Plan** as a JSON file conforming to
    norms, expected slopes) and the conservation/constraint checks to run.
 
 ## Verification and revision loop
-Given a **Results Manifest** (`.agents/pde-pipeline/contracts/results-manifest.schema.json`)
+Given a **Results Manifest** (`.agents/pde-sim/contracts/results-manifest.schema.json`)
 forwarded by the orchestrator, you emit a **Numerical Assessment**
-(`.agents/pde-pipeline/contracts/numerical-assessment.schema.json`) in which you:
+(`.agents/pde-sim/contracts/numerical-assessment.schema.json`) in which you:
 - Compute observed convergence rates and compare them against the expected rates
   from your MMS design.
 - Check conservation and any other constraints in the Problem Spec.
