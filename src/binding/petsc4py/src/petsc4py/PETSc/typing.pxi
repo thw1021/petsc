@@ -118,6 +118,11 @@ cdef TAOTermGradientFunction
 cdef TAOTermObjectiveGradientFunction
 cdef TAOTermHessianFunction
 
+# --- Regressor ---
+
+cdef RegressorNLLSFunction
+cdef RegressorNLLSJacobianFunction
+
 # --- MPI ---
 
 cdef Intracomm

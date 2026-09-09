@@ -29,6 +29,7 @@ from .PETSc import (
     TAO,
     TAOLineSearch,
     DM,
+    Regressor,
 )
 
 __all__ = [
@@ -103,6 +104,8 @@ __all__ = [
     'TAOLSObjectiveFunction',
     'TAOLSGradientFunction',
     'TAOLSObjectiveGradientFunction',
+    'RegressorNLLSFunction',
+    'RegressorNLLSJacobianFunction',
 ]
 
 # --- Sys ---
@@ -488,3 +491,11 @@ TAOLSGradientFunction = Callable[[TAOLineSearch, Vec, Vec], None]
 
 TAOLSObjectiveGradientFunction = Callable[[TAOLineSearch, Vec, Vec], float]
 """`TAOLineSearch` objective function and gradient callback."""
+
+# --- Regressor ---
+
+RegressorNLLSFunction = Callable[[Regressor, Mat, Vec, Vec], None]
+"""`Regressor` nonlinear least squares model callback."""
+
+RegressorNLLSJacobianFunction = Callable[[Regressor, Mat, Vec, Mat, Mat], None]
+"""`Regressor` nonlinear least squares model Jacobian callback."""

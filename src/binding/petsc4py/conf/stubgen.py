@@ -474,6 +474,8 @@ from petsc4py.typing import (
     OptionValueSpec,
     PetscOptionsHandlerFunction,
     PCHPDDMAssembleAuxiliaryMatFunction,
+    RegressorNLLSFunction,
+    RegressorNLLSJacobianFunction,
     ScatterModeSpec,
     SNESMonitorFunction,
     SNESObjFunction,
