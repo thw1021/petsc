@@ -83,6 +83,15 @@ Load each via the Skill tool under the Claude Code binding; otherwise read the f
 Build → run → read errors → fix → repeat. Run the MMS validation and report
 observed vs expected behavior in the manifest.
 
+Keep formatting OUT of this loop — it is orthogonal to correctness, and code you
+are about to rewrite would just be reflowed. Once the code compiles, runs, and
+passes MMS, run the formatting/source-style gate exactly once as the final step
+before reporting done: `make clangformat` (normalizes layout to what CI's
+`make checkclangformat` requires) then `make checkbadSource`. Emit code that is
+already close to clang-format's output so this pass is a small diff, not a large
+reflow (see `petsc-codegen`). Treat a failure here like a compile error: fix it
+before finishing.
+
 **Retry budget.** Make at most ~5 build/run fix attempts. Stop early if two
 consecutive attempts fail with the *same* error (you are stuck, not
 converging). Do NOT keep spinning and do NOT force a green result.

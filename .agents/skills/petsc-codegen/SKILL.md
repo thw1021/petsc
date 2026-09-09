@@ -21,8 +21,29 @@ from `petsc-solvers`; this skill is about correct, parallel, buildable code.
 ## Error handling (non-negotiable)
 - Wrap every PETSc call: `PetscCall(...)`, `PetscCallMPI(...)`,
   `PetscCall(PetscMalloc1(...))`, etc. Functions return `PetscErrorCode` and
-  begin with `PetscFunctionBeginUser;` and end with `PetscFunctionReturn(0);`.
+  begin with `PetscFunctionBeginUser;` and end with
+  `PetscFunctionReturn(PETSC_SUCCESS);` (not `PetscFunctionReturn(0)`).
 - Never ignore a return code.
+
+## Source style — let the formatter own layout
+PETSc's layout is defined by `.clang-format` (and checked in CI by
+`make checkclangformat`). Do not try to reproduce its many rules by hand — the
+formatter is authoritative and you run it as a final step (see Build & run).
+Just avoid the habits that turn that pass into a huge reflow diff:
+- **One statement per line** — never `row.i = i; row.j = j;`; the formatter
+  splits them anyway.
+- **Don't hand-align** `=` or declarations with padding spaces, and don't indent
+  continuation lines yourself — clang-format recomputes all alignment.
+- **Don't manually wrap long calls/signatures** — the column limit is wide (250),
+  so a long `DMDACreate2d(...)`/`PetscPrintf(...)` stays on one line; manual
+  wrapping just gets reflowed.
+- **Short `if`/`else` bodies stay on one line without braces:**
+  `if (i == 1) val += ...;`.
+
+Grammar-level rules that clang-format does NOT fix are still on you (see
+AGENTS.md): contiguous top-of-function declaration block, `PetscFunctionBeginUser`
+after declarations, `//` for short and `/* ... */` for multiline comments, `()`
+on function names in comments.
 
 ## Discretization scaffolding
 - **DMDA**: `DMDACreateNd`, `DMDAVecGetArray` for stencil loops; use local/global
@@ -76,3 +97,13 @@ from `petsc-solvers`; this skill is about correct, parallel, buildable code.
   (CMake via pkg-config is an alternative, but a makefile is the default.)
 - Build and run THROUGH the makefile; capture logs; iterate on compile/runtime
   errors until clean.
+
+## Final cleanup (once, after the code is correct)
+Formatting is orthogonal to correctness, so do NOT run it inside the
+compile/run/fix loop — code you are about to rewrite will just be reflowed. Only
+after the program compiles, runs, and passes MMS, run once as a final gate:
+- `make clangformat` (or `clang-format -i` on the files you wrote) to normalize
+  layout to the canonical form CI checks.
+- `make checkbadSource` to catch source-style rules the formatter does not.
+Treat a failure here like any other verify failure — fix it before reporting the
+code as done.
