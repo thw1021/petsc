@@ -40,7 +40,7 @@ const char *const PetscSFConcatenateRootModes[] = {"local", "shared", "global", 
   Options Database Key:
 + -sf_type (basic|window|neighbor)     - Use MPI persistent Isend/Irecv, or MPI-3 one-sided window, or MPI-3 neighborhood collectives for communication
 . -sf_neighbor_persistent (true|false) - Use MPI-4 persistent neighborhood collectives for communication (used along with `-sf_type neighbor`)
-- -use_nccl (true|false)               - Use NCCL instead of MPI for the inter-process communication of `PETSCSFBASIC` when the root and leaf data are on CUDA devices (requires PETSc configured with NCCL)
+- -use_nccl (true|false)               - Use NCCL instead of MPI for the inter-process communication of `PETSCSFBASIC` when the root and leaf data are on CUDA devices (requires PETSc configured with NCCL). The NCCL communicator is created on first use, which costs seconds; pair it with `-root_device_context_stream_type nonblocking`
 
   Level: intermediate
 
