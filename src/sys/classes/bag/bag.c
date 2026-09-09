@@ -55,9 +55,9 @@ PetscErrorCode PetscBagRegisterEnum(PetscBag bag, void *addr, const char *const 
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  /* bag options are registered outside a PetscOptionsBegin() block and belong to no manual section,
-     so a "-help mansec,..." restriction never selects them */
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  /* bag options are registered outside a PetscOptionsBegin() block, so they name their manual section
+     here; it matches SUBMANSEC in the makefile of this directory, so "-help bag" selects them */
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) {
     while (list[i++]);
     PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%s>: (%s) %s (choose one of) ", bag->bagprefix ? bag->bagprefix : "", name, list[mdefault], list[i - 3], help));
@@ -112,7 +112,7 @@ PetscErrorCode PetscBagRegisterIntArray(PetscBag bag, void *addr, PetscInt msize
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) {
     PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <", bag->bagprefix ? bag->bagprefix : "", name));
     for (i = 0; i < msize; i++) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "%" PetscInt_FMT " ", values[i]));
@@ -164,7 +164,7 @@ PetscErrorCode PetscBagRegisterRealArray(PetscBag bag, void *addr, PetscInt msiz
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) {
     PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <", bag->bagprefix ? bag->bagprefix : "", name));
     for (i = 0; i < msize; i++) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "%g ", (double)values[i]));
@@ -214,7 +214,7 @@ PetscErrorCode PetscBagRegisterInt(PetscBag bag, void *addr, PetscInt mdefault, 
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%" PetscInt_FMT ">: %s \n", bag->bagprefix ? bag->bagprefix : "", name, mdefault, help));
   PetscCall(PetscOptionsGetInt(NULL, bag->bagprefix, nname, &mdefault, NULL));
 
@@ -261,7 +261,7 @@ PetscErrorCode PetscBagRegisterInt64(PetscBag bag, void *addr, PetscInt64 mdefau
 
   PetscCall(PetscIntCast(mdefault, &odefault));
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%" PetscInt_FMT ">: %s \n", bag->bagprefix ? bag->bagprefix : "", name, odefault, help));
   PetscCall(PetscOptionsGetInt(NULL, bag->bagprefix, nname, &odefault, &flg));
   if (flg) mdefault = odefault;
@@ -311,7 +311,7 @@ PetscErrorCode PetscBagRegisterBoolArray(PetscBag bag, void *addr, PetscInt msiz
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) {
     PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <", bag->bagprefix ? bag->bagprefix : "", name));
     for (i = 0; i < msize; i++) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "%" PetscInt_FMT " ", (PetscInt)values[i]));
@@ -366,7 +366,7 @@ PetscErrorCode PetscBagRegisterString(PetscBag bag, void *addr, PetscInt msize, 
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%s>: %s \n", bag->bagprefix ? bag->bagprefix : "", name, mdefault, help));
 
   PetscCall(PetscNew(&item));
@@ -413,7 +413,7 @@ PetscErrorCode PetscBagRegisterReal(PetscBag bag, void *addr, PetscReal mdefault
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%g>: %s \n", bag->bagprefix ? bag->bagprefix : "", name, (double)mdefault, help));
   PetscCall(PetscOptionsGetReal(NULL, bag->bagprefix, nname, &mdefault, NULL));
 
@@ -460,7 +460,7 @@ PetscErrorCode PetscBagRegisterScalar(PetscBag bag, void *addr, PetscScalar mdef
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%g + %gi>: %s \n", bag->bagprefix ? bag->bagprefix : "", name, (double)PetscRealPart(mdefault), (double)PetscImaginaryPart(mdefault), help));
   PetscCall(PetscOptionsGetScalar(NULL, bag->bagprefix, nname, &mdefault, NULL));
 
@@ -507,7 +507,7 @@ PetscErrorCode PetscBagRegisterBool(PetscBag bag, void *addr, PetscBool mdefault
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));
-  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, NULL, &printhelp));
+  PetscCall(PetscOptionsHelpPrintable_Internal(NULL, "Bag", &printhelp));
   if (printhelp) PetscCall((*PetscHelpPrintf)(bag->bagcomm, "  -%s%s <%s>: %s \n", bag->bagprefix ? bag->bagprefix : "", name, PetscBools[mdefault], help));
   PetscCall(PetscOptionsGetBool(NULL, bag->bagprefix, nname, &mdefault, NULL));
 
@@ -584,7 +584,7 @@ PetscErrorCode PetscBagSetFromOptions(PetscBag bag)
   PetscCall(PetscStrncpy(helpname, bag->bagname, sizeof(helpname)));
   PetscCall(PetscStrlcat(helpname, " ", sizeof(helpname)));
   PetscCall(PetscStrlcat(helpname, bag->baghelp, sizeof(helpname)));
-  PetscOptionsBegin(bag->bagcomm, bag->bagprefix, helpname, NULL);
+  PetscOptionsBegin(bag->bagcomm, bag->bagprefix, helpname, "Bag");
   while (nitem) {
     name[0] = '-';
     name[1] = 0;
