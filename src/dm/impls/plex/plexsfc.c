@@ -1672,10 +1672,10 @@ static PetscErrorCode DMPlexCentroidsToZCodes(PetscInt spaceDim, PetscInt numCel
 // ranks that hold almost no data, every splitter would fall in that range, and the reorder would
 // move nothing.
 //
-// The target sample count is `size`*max(`size`, 32), which becomes the classical `size`*`size`
-// choice on 32 or more processes. Rounding and limiting each local sample count to the local number
-// of cells can reduce the actual total. The selection uses no random numbers, so every rank derives
-// the same splitters from the gathered samples without further communication.
+// The target is 32 samples per destination, or 32*`size` in total. Rounding and limiting each local
+// sample count to the local number of cells can reduce the actual total. The selection uses no
+// random numbers, so every rank derives the same splitters from the gathered samples without
+// further communication.
 //
 // These splitters decide the intermediate distribution only. The caller equidistributes exactly
 // afterwards, so a poor split costs memory and message volume in the exchange below, and it does
@@ -1694,17 +1694,17 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
   // Sample count for this rank, proportional to its share of the cells. A rank with cells always
   // offers at least one sample; a rank with none offers none.
   //
-  // The target is `size` samples per rank once `size` passes the floor below, which is the classical
-  // regular-sampling choice. Below that the floor takes over. Two ranks would otherwise be asked for
-  // two samples each, and after rounding for three in total, so a single value would decide the only
-  // splitter. On a mesh whose cells reach every rank in file order the smallest sample from each rank
-  // sits near the start of the curve, that value becomes the splitter, and every cell lands on one
-  // rank. Measured on 11.4 million tetrahedra over two ranks: one rank kept 11,416,998 of them.
+  // The target is 32 samples per destination. A target proportional to `size` keeps the replicated
+  // sample set linear in the number of processes. The factor of 32 also avoids undersampling at low
+  // process counts. With only two samples per rank, rounding gives three in total, so one value
+  // decides the only splitter. On a mesh whose cells reach every rank in file order that value sits
+  // near the start of the curve, and every cell lands on one rank. Measured on 11.4 million
+  // tetrahedra over two ranks: one rank kept 11,416,998 of them.
   //
-  // Round to nearest rather than truncate, so equal shares ask for equal counts. The product needs
-  // 64 bits: `numCells` times the target reaches 4.2e11 on 192 ranks.
+  // Round to nearest rather than truncate, so equal shares ask for equal counts. Form the product
+  // in 64 bits because `numCells` times the target can exceed 2^31.
   if (NCells > 0 && numCells > 0) {
-    const PetscInt64 target = (PetscInt64)size * (PetscInt64)PetscMax(size, 32);
+    const PetscInt64 target = 32 * (PetscInt64)size;
     PetscInt64       want   = ((PetscInt64)numCells * target + (PetscInt64)NCells / 2) / (PetscInt64)NCells;
 
     nloc = (PetscInt)PetscMin((PetscInt64)numCells, PetscMax((PetscInt64)1, want));
@@ -1716,14 +1716,11 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
   total = displs[size];
 
   if (nloc) PetscCall(PetscMalloc1(nloc, &samples));
-  // Form the stride in 64 bits. `nloc` reaches `size`*`size` when one rank holds nearly every cell,
+  // Form the stride in 64 bits. `nloc` reaches 32*`size` when one rank holds nearly every cell,
   // so the product with `numCells` passes 2^31 for a mesh of a few million cells on 16 ranks.
   for (PetscInt j = 0; j < nloc; ++j) {
-    // 64 bits are required. `nloc` rises to `size` times `size` when one rank holds most of the
-    // mesh, and a 32-bit product then wraps for a few million cells on 16 ranks and reads outside
-    // the array. Reaching that from the public interface costs either 216 ranks or fifty megabytes
-    // of centroids, so no test drives it; the check below runs in every build instead, because the
-    // wrap used to pass unnoticed and only showed up as a poor split.
+    // A 32-bit product wraps for a few million cells on 16 ranks and reads outside the array.
+    // The sample_overflow suffix in ex105.c drives this path.
     const PetscInt64 pos = ((PetscInt64)j * (PetscInt64)numCells) / (PetscInt64)nloc;
 
     PetscCheck(pos >= 0 && pos < (PetscInt64)numCells, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Sample index %" PetscInt64_FMT " outside [0, %" PetscInt_FMT "); the product overflowed", pos, numCells);

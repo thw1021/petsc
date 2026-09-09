@@ -748,8 +748,8 @@ static PetscErrorCode TestHighCoordinateDim(MPI_Comm comm)
 
 // Part J: the sample stride passes 2^31. DMPlexZCodeSelectSplitters() forms the sample index in 64
 // bits, because a 32-bit product wraps and then reads outside the array. Reaching the wrap needs
-// size*max(size, 32)*NCells above 2^31, which is 4.3 million cells on 16 processes, 2.5 million on
-// 32, and 33 million on two. That costs either processes or memory, so this part is off by default.
+// 32*size*NCells above 2^31, which is 4.3 million cells on 16 processes and 33 million on two. That
+// costs either processes or memory, so this part is off by default.
 // The sample_overflow suffix turns it on. Run it by hand with, for example:
 //
 //   mpiexec -n 32 ./ex105 -n 4 -sample_overflow -overflow_cells 2500000
@@ -766,11 +766,11 @@ static PetscErrorCode TestSampleOverflow(MPI_Comm comm, PetscInt NCells)
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   // Every cell starts on rank 0, the distribution that asks one rank for every sample. That rank
-  // then takes size*max(size, 32) samples, and the largest sample index it forms is that count minus
-  // one times the local cell count.
+  // then takes 32*size samples, and the largest sample index it forms is that count minus one times
+  // the local cell count.
   numCells = rank == 0 ? NCells : 0;
-  stride   = ((PetscInt64)size * (PetscInt64)PetscMax(size, 32) - 1) * (PetscInt64)NCells;
-  PetscCheck(stride > 2147483647, comm, PETSC_ERR_ARG_OUTOFRANGE, "The largest sample index here is %" PetscInt64_FMT ", which does not pass 2^31. Use more processes or more cells: size*max(size, 32)*cells must pass 2^31", stride);
+  stride   = (32 * (PetscInt64)size - 1) * (PetscInt64)NCells;
+  PetscCheck(stride > 2147483647, comm, PETSC_ERR_ARG_OUTOFRANGE, "The largest sample index here is %" PetscInt64_FMT ", which does not pass 2^31. Use more processes or more cells: 32*size*cells must pass 2^31", stride);
   PetscCall(PetscMalloc2(PetscMax(1, numCells), &cent, PetscMax(1, numCells), &tags));
   // One axis, one cell per unit. The curve quantizes to 21 bits, so cells beyond 2^21 share a code
   // and the global cell number separates them.
@@ -865,11 +865,11 @@ int main(int argc, char **argv)
     nsize: {{2 4 8}}
     args: -n 6
 
-  # The sample index passes 2^31. This needs size*max(size, 32)*cells above 2^31, so it costs either
-  # processes or memory: 16 processes with 4.3 million cells takes 0.3 s and 200 MB on the loaded
-  # process, and 32 processes with 2.5 million cells takes 0.4 s and 130 MB. A 32-bit product wraps
-  # to a negative index here, which the range check in DMPlexZCodeSelectSplitters() reports. A build
-  # with 64-bit indices cannot form a 32-bit product, so it skips the test and keeps the memory.
+  # The sample index passes 2^31. This needs 32*size*cells above 2^31, so it costs either processes
+  # or memory: 16 processes with 4.3 million cells takes 0.3 s and 200 MB on the loaded process. A
+  # 32-bit product wraps to a negative index here, which the range check in
+  # DMPlexZCodeSelectSplitters() reports. A build with 64-bit indices cannot form a 32-bit product,
+  # so it skips the test and keeps the memory.
   test:
     suffix: sample_overflow
     nsize: 16
