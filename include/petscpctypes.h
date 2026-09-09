@@ -152,11 +152,11 @@ typedef enum {
                            and computed values in ghost regions are added together.
                            Classical standard additive Schwarz as introduced in {cite}`dryja1987additive`.
 -  `PC_ASM_WEIGHTED`     - Full restriction and interpolation, with local corrections scaled by
-                           user-provided diagonal weights from `PCASMSetLocalScaling()`.
+                           user-provided diagonal weights from `PCASMWeightedSetScaling()`.
 
    Level: beginner
 
-.seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCASMSetLocalScaling()`, `PCGASMType`
+.seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCASMWeightedSetScaling()`, `PCGASMType`
 E*/
 typedef enum {
   PC_ASM_NONE        = 0,

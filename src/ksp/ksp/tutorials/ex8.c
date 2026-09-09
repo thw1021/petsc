@@ -283,7 +283,7 @@ int main(int argc, char **args)
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-check_zero_weights", &flg, NULL));
     if (flg) {
       for (i = 0; i < nsub; i++) PetscCall(VecSet(scaling[i], 0.0));
-      PetscCall(PCASMSetLocalScaling(pc, nsub, scaling));
+      PetscCall(PCASMWeightedSetScaling(pc, nsub, scaling));
       PetscCall(PCApply(pc, b, x));
       PetscCall(VecNorm(x, NORM_INFINITY, &e));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Zero weights annihilate the correction: %s\n", PetscBools[e == 0.0]));
@@ -291,9 +291,9 @@ int main(int argc, char **args)
 
     /* installing a second time also exercises replacing the weights on an already set up PC */
     for (i = 0; i < nsub; i++) PetscCall(VecSet(scaling[i], 1.0));
-    PetscCall(PCASMSetLocalScaling(pc, nsub, scaling));
-    PetscCall(PCASMGetLocalScaling(pc, &nstored, &stored));
-    PetscCheck(nstored == nsub && stored, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCASMGetLocalScaling() did not return the supplied weights");
+    PetscCall(PCASMWeightedSetScaling(pc, nsub, scaling));
+    PetscCall(PCASMWeightedGetScaling(pc, &nstored, &stored));
+    PetscCheck(nstored == nsub && stored, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCASMWeightedGetScaling() did not return the supplied weights");
     for (i = 0; i < nsub; i++) PetscCall(VecDestroy(&scaling[i]));
     PetscCall(PetscFree(scaling));
   }
