@@ -1154,7 +1154,7 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 /*@
   PCASMSetLocalScaling - Sets the diagonal weights for the overlapping local corrections in weighted additive Schwarz.
 
-  Not Collective
+  Logically Collective
 
   Input Parameters:
 + pc      - the `PCASM` preconditioner
