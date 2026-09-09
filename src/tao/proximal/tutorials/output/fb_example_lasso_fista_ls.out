@@ -1,0 +1,2 @@
+TAO solve did not converge due to DIVERGED_MAXITS iteration 100
+relative reconstruction error: ||x-xGT||/||xGT|| = 1.1840e+00.
