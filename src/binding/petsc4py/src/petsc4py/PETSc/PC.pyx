@@ -899,7 +899,7 @@ cdef class PC(Object):
         cdef PetscInt ival = asInt(overlap)
         CHKERR(PCASMSetOverlap(self.pc, ival))
 
-    def setASMLocalScaling(self, scaling: Sequence[Vec]) -> None:
+    def setASMWeightedScaling(self, scaling: Sequence[Vec]) -> None:
         """Set diagonal interpolation weights for local ASM subdomains.
 
         Not collective.
@@ -921,8 +921,8 @@ cdef class PC(Object):
 
         See Also
         --------
-        setASMType, getASMLocalScaling, getASMLocalSubdomains
-        petsc.PCASMSetLocalScaling
+        setASMType, getASMWeightedScaling, getASMLocalSubdomains
+        petsc.PCASMWeightedSetScaling
 
         """
         cdef PetscInt n = asInt(len(scaling))
@@ -931,9 +931,9 @@ cdef class PC(Object):
         cdef object unused = oarray_p(empty_p(n), NULL, <void**>&cscaling)
         for i from 0 <= i < n:
             cscaling[i] = (<Vec?>scaling[<Py_ssize_t>i]).vec
-        CHKERR(PCASMSetLocalScaling(self.pc, n, cscaling))
+        CHKERR(PCASMWeightedSetScaling(self.pc, n, cscaling))
 
-    def getASMLocalScaling(self) -> list[Vec]:
+    def getASMWeightedScaling(self) -> list[Vec]:
         """Return the diagonal interpolation weights of the local subdomains.
 
         Not collective.
@@ -941,7 +941,7 @@ cdef class PC(Object):
         Returns
         -------
         list of Vec
-            The weights previously given to `setASMLocalScaling`, in subdomain
+            The weights previously given to `setASMWeightedScaling`, in subdomain
             order, empty if none have been supplied.
 
         Notes
@@ -951,12 +951,12 @@ cdef class PC(Object):
 
         See Also
         --------
-        setASMLocalScaling, getASMLocalSubdomains, petsc.PCASMGetLocalScaling
+        setASMWeightedScaling, getASMLocalSubdomains, petsc.PCASMWeightedGetScaling
 
         """
         cdef PetscInt n = 0
         cdef PetscVec *cscaling = NULL
-        CHKERR(PCASMGetLocalScaling(self.pc, &n, &cscaling))
+        CHKERR(PCASMWeightedGetScaling(self.pc, &n, &cscaling))
         cdef list scaling = []
         if cscaling != NULL:
             scaling = [ref_Vec(cscaling[i]) for i from 0 <= i < n]
