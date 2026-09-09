@@ -1177,7 +1177,7 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
   Input Parameters:
 + pc  - the `PCASM` preconditioner
 . fn  - function to fill each local scaling vector, or `NULL` to disable the callback
-- ctx - user context passed to `fn`
+- ctx - function context passed to `fn`
 
   Level: intermediate
 
