@@ -902,7 +902,7 @@ cdef class PC(Object):
     def setASMWeightedScaling(self, scaling: Sequence[Vec]) -> None:
         """Set diagonal interpolation weights for local ASM subdomains.
 
-        Not collective.
+        Logically collective.
 
         Parameters
         ----------
