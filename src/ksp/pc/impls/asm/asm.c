@@ -406,6 +406,13 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
     PetscCall(MatSetOptionsPrefix(osm->pmat[i], prefix));
     if (!pc->setupcalled) PetscCall(KSPSetFromOptions(osm->ksp[i]));
   }
+  if (osm->type == PC_ASM_WEIGHTED && osm->computescaling) {
+    if (!osm->scaling) PetscCall(PetscCalloc1(osm->n_local_true, &osm->scaling));
+    for (i = 0; i < osm->n_local_true; i++) {
+      if (!osm->scaling[i]) PetscCall(VecDuplicate(osm->x[i], &osm->scaling[i]));
+      PetscCallBack("PCASMWeightedComputeScalingFn", (*osm->computescaling)(pc, i, osm->scaling[i], osm->computescalingctx));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -713,6 +720,7 @@ static PetscErrorCode PCDestroy_ASM(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMGetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMWeightedSetScaling_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMWeightedSetComputeScaling_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetLocalType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMGetLocalType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetSortIndices_C", NULL));
@@ -868,6 +876,16 @@ static PetscErrorCode PCASMGetType_ASM(PC pc, PCASMType *type)
 
   PetscFunctionBegin;
   *type = osm->type;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCASMWeightedSetComputeScaling_ASM(PC pc, PCASMWeightedComputeScalingFn *fn, PetscCtx ctx)
+{
+  PC_ASM *osm = (PC_ASM *)pc->data;
+
+  PetscFunctionBegin;
+  osm->computescaling    = fn;
+  osm->computescalingctx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1146,6 +1164,37 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 }
 
 /*@
+  PCASMWeightedSetComputeScaling - Sets a callback to compute weighted ASM scaling during setup.
+
+  Logically Collective
+
+  Input Parameters:
++ pc  - the `PCASM` preconditioner
+. fn  - function to fill each local scaling vector, or `NULL` to disable the callback
+- ctx - user context passed to `fn`
+
+  Level: intermediate
+
+  Notes:
+  Register before setup and select `PC_ASM_WEIGHTED`. Whenever `PCSetUp()` rebuilds weighted ASM,
+  `fn` is called once per local subdomain, after overlap expansion and index sorting, with a vector
+  of the correct size and type. No explicit setup or vector allocation is needed by the caller.
+  The callback overwrites any existing weights, including those supplied by `PCASMWeightedSetScaling()`.
+  Registration does not trigger setup. Passing `NULL` leaves the current weights in place.
+  The callback and context survive `PCReset()`. The caller owns `ctx` and must keep it valid
+  until the callback is replaced or disabled, or the preconditioner is destroyed.
+
+.seealso: [](ch_ksp), `PCASM`, `PCASMWeightedComputeScalingFn`, `PCASMWeightedSetScaling()`, `PCASMWeightedGetScaling()`, `PCASMSetType()`
+@*/
+PetscErrorCode PCASMWeightedSetComputeScaling(PC pc, PCASMWeightedComputeScalingFn *fn, PetscCtx ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscTryMethod(pc, "PCASMWeightedSetComputeScaling_C", (PC, PCASMWeightedComputeScalingFn *, PetscCtx), (pc, fn, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PCASMWeightedSetScaling - Sets the diagonal weights for the overlapping local corrections in weighted additive Schwarz.
 
   Logically Collective
@@ -1173,6 +1222,7 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
   or satisfy $\sum_i R_i^T D_i R_i = I$.
   The PC increments the reference count of the vectors but does not copy them. 
   `PCReset()` discards the weights along with the subdomains.
+  Alternatively, use `PCASMWeightedSetComputeScaling()` to fill PETSc-created vectors during setup.
 
   Example Usage:
 .vb
@@ -1202,7 +1252,7 @@ PetscErrorCode PCASMWeightedSetScaling(PC pc, PetscInt n, Vec scaling[])
 }
 
 /*@
-  PCASMWeightedGetScaling - Gets the diagonal weights previously supplied to `PCASMWeightedSetScaling()`.
+  PCASMWeightedGetScaling - Gets the diagonal weights supplied explicitly or computed during setup.
 
   Not Collective
 
@@ -1474,6 +1524,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetType_C", PCASMSetType_ASM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMGetType_C", PCASMGetType_ASM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMWeightedSetScaling_C", PCASMWeightedSetScaling_ASM));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMWeightedSetComputeScaling_C", PCASMWeightedSetComputeScaling_ASM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetLocalType_C", PCASMSetLocalType_ASM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMGetLocalType_C", PCASMGetLocalType_ASM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetSortIndices_C", PCASMSetSortIndices_ASM));

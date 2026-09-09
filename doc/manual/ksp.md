@@ -1001,7 +1001,8 @@ returned by `PCASMGetLocalSubdomains()`, so `PCASMWeightedSetScaling()` must be 
 `PCSetUp()`. Create each `Vec` with `MatCreateVecs()` from the matching submatrix returned
 by `PCASMGetLocalSubmatrices()`, so that it has the size and `VecType` the local solver
 expects. The weights can be retrieved with `PCASMWeightedGetScaling()` and are ignored by the
-other ASM types.
+other ASM types. Alternatively, register `PCASMWeightedSetComputeScaling()` before setup to
+fill PETSc-created scaling vectors through a callback, avoiding explicit setup and allocation.
 
 The user can also set the number of blocks and sizes on a per-process
 basis with the commands
