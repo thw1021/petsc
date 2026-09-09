@@ -1183,6 +1183,7 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 
   Example Usage:
 .vb
+  KSPGetPC(ksp, &pc);
   PCASMSetType(pc, PC_ASM_WEIGHTED);
   PCSetUp(pc);
   PCASMGetLocalSubmatrices(pc, &n, &submat);
