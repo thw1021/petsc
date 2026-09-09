@@ -57,9 +57,9 @@ entirely or multiple executable/diff tests within a single test. At the
 core, the executable/diff test combination will look something like
 this:
 
-```sh
-mpiexec -n 1 ../ex1 1> ex1.tmp 2> ex1.err
-diff ex1.tmp output/ex1.out 1> diff-ex1.tmp 2> diff-ex1.err
+```console
+$ mpiexec -n 1 ../ex1 1> ex1.tmp 2> ex1.err
+$ diff ex1.tmp output/ex1.out 1> diff-ex1.tmp 2> diff-ex1.err
 ```
 
 In practice, we want to do various logging and counting by the test
@@ -188,12 +188,11 @@ With this background, these keywords are as follows.
     directory given by the environmental variable `DATAFILESPATH`.
     For these tests `requires: datafilespath` is
     specified. See {any}`test harness data<test_harness_data>`
-  - Packages are indicated with lower-case specification, for example,
-    `requires: superlu_dist`.
-  - Any defined variable in petscconf.h can be specified with the
-    `defined(...)` syntax, for example, `defined(PETSC_USE_INFO)`.
-  - Any definition of the form `PETSC_HAVE_FOO` can just use
-    `requires: foo` similar to how third-party packages are handled.
+  - Package and feature requirements check the corresponding `PETSC_HAVE_*` definition; for example,
+    `requires: mpi_gpu_aware` checks `PETSC_HAVE_MPI_GPU_AWARE`, and
+    `requires: superlu_dist` checks for the external package.
+  - The `defined(...)` syntax checks the exact variable from `petscconf.h`, for example,
+    `defined(PETSC_USE_INFO)`.
 
 - **timeoutfactor**: (*Optional*; *Default:* `"1"`)
 
@@ -507,14 +506,14 @@ TEST*/
 
 ## Running the tests
 
-The make rules for running tests are contained in `gmakefile.test` in the PETSc root directory. They can usually be accessed by
-simply using commands such as
+The make rules for running tests are contained in `gmakefile.test` in the PETSc root directory.
+Run tests through the root makefile with commands such as
 
 ```console
 $ make test
 ```
 
-or, for a list of test options,
+List the test options with
 
 ```console
 $ make help-test
@@ -713,7 +712,7 @@ $ make vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
 <copy command>
 <edit>
 $ make $PETSC_ARCH/tests/vec/is/sf/tests/ex1
-$ /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
+$ mpiexec -n 1 $PETSC_ARCH/tests/vec/is/sf/tests/ex1
 ...
 $ cd $PETSC_DIR
 $ git commit -a
@@ -802,6 +801,16 @@ Searching using GNU make's native regexp functionality is kept for people who li
     ```
 
 ### Query-based searching
+
+Queries through `gmakefile.test` search tests generated for the active `PETSC_ARCH`; tests with
+unavailable requirements are absent. To query every source definition instead, use
+
+```console
+$ ./config/query_tests.py --use-source --petsc-dir="$PETSC_DIR" requires '*GPU_AWARE*'
+```
+
+Source queries can return tests that the active configuration cannot build or run. A glob matches
+all distinct field values satisfying the pattern and returns the union of their tests.
 
 Note the use of glob style matching is also accepted in the value field:
 
@@ -1000,14 +1009,15 @@ desired requirements for reporting and logging.
 
 ### Testing the Parsing
 
-After inserting the language into the file, you can test the parsing by
-executing
+After adding or changing a `/*TEST ... TEST*/` block, test its parsing with
 
-A dictionary will be pretty-printed. From this dictionary printout, any
-problems in the parsing are is usually obvious. This python file is used
-by
+```console
+$ ./config/testparse.py --test_file=path/to/example.c --verbosity=1
+```
 
-in generating the test harness.
+The command prints the parsed tests. Inspect this output for missing or
+incorrect fields. `config/gmakegentest.py` uses this parser when generating
+the test harness.
 
 ## Test Output Standards: TAP
 
@@ -1056,8 +1066,8 @@ A sample shell script is given the following.
 #!/bin/sh
 . petsc_harness.sh
 
-petsc_testrun ./ex1 ex1.tmp ex1.err
-petsc_testrun 'diff ex1.tmp output/ex1.out' diff-ex1.tmp diff-ex1.err
+petsc_testrun './ex1' ex1.tmp ex1.err ex1 ''
+petsc_testrun 'diff ex1.tmp output/ex1.out' diff-ex1.tmp diff-ex1.err diff-ex1 ''
 
 petsc_testend
 ```
