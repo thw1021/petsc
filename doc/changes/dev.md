@@ -95,6 +95,9 @@
 - Fix `MatNorm()` for `MATMPIDENSE` to respect the leading dimension of the local matrix, which was previously ignored in parallel for `NORM_1` and `NORM_FROBENIUS` and gave wrong results, for example on matrices obtained with `MatDenseGetSubMatrix()`
 - Add device implementations of `MatNorm()` with `NORM_1`, `NORM_FROBENIUS`, and `NORM_INFINITY` for `MATDENSECUDA` and `MATDENSEHIP`; previously all norms copied the matrix to the host
 - Change `MatNorm()` for `MATMPIDENSE` to compute `NORM_FROBENIUS` and `NORM_INFINITY` via the local matrix norm, so `MATMPIDENSECUDA` and `MATMPIDENSEHIP` no longer copy to the host for those norms
+- Change `MATSELL` to honor `MatSetOption(mat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE)`; the option was previously accepted but silently ignored, so a matrix that sets it now gets a sparser nonzero structure
+- Change `MatSetValues()` for `MATMPISELL` to skip, rather than error on, a new off-diagonal location when `MatSetOption(mat, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE)` was called, matching `MATMPIAIJ`
+- Fix `MatSetValues()` for `MATMPIAIJ` to decide the `MAT_IGNORE_ZERO_ENTRIES` diagonal exemption from the global row and column, not from the indices local to the diagonal block. The two differ only when the row and column layouts differ, where a zero off the diagonal could wrongly create a location and a zero on the diagonal could wrongly be dropped
 
 ## MatCoarsen
 
