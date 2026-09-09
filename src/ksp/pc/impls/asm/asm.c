@@ -1164,22 +1164,15 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
   Its vector type must match the local solver vectors. Compatible vectors can be created with
   `MatCreateVecs()` from the corresponding matrix returned by `PCASMGetLocalSubmatrices()`.
   These are local subdomain vectors, not vectors in the parallel global layout.
-  The weights may also be installed from a callback registered with `PCSetPostSetUp()`.
   Select `PC_ASM_WEIGHTED` with `PCASMSetType()` or `-pc_asm_type weighted` to use the weights.
-  Selection may precede setup, but all weights must be installed before applying the preconditioner.
-  The weights are ignored by the other ASM types. Weighted ASM supports only `PC_COMPOSITE_ADDITIVE` local composition.
-  With restriction operators R_i, local solvers A_i^{-1}, and D_i = diag(scaling[i]), the action is
-  B = sum_i R_i^T D_i A_i^{-1} R_i. Full overlapping corrections are added, independently of any
-  inner index sets passed to `PCASMSetLocalSubdomains()`. `PCApplyTranspose()` applies D_i before
-  the local transpose solve, without conjugation. `PCMatApply()` and `PCMatApplyTranspose()` also
-  use the weights, with their existing restriction to one local subdomain per process.
-  PETSc uses the supplied values without normalization. The caller is responsible for any desired
-  partition-of-unity property, sum_i R_i^T D_i R_i = I, and for supplying the local operators
-  (including transmission conditions) independently of these interpolation weights.
-  PETSc copies the array and retains references to its vectors, so the caller may destroy its
-  references after this call. Changes to the vector entries affect subsequent applications.
-  Calling this routine again replaces the weights without rebuilding the subdomain solvers.
-  `PCReset()` discards the weights along with the subdomains; install new weights after the next setup.
+  The weights are ignored by the other ASM types. 
+
+  With restriction operators $R_i$, local solvers $A_i^{-1}$, and $D_i = \text{diag}(scaling[i])$, the action is
+  $B = \sum_i R_i^T D_i A_i^{-1} R_i$.
+  PETSc uses the supplied weights as-is, without checking whether they are real, non-negative,
+  or satisfy $\sum_i R_i^T D_i R_i = I$.
+  The PC increments the reference count of the vectors but does not copy them. 
+  `PCReset()` discards the weights along with the subdomains.
 
   Example Usage:
 .vb
