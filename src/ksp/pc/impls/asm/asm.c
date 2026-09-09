@@ -1258,7 +1258,7 @@ PetscErrorCode PCASMWeightedSetScaling(PC pc, PetscInt n, Vec scaling[])
 }
 
 /*@
-  PCASMWeightedGetScaling - Gets the diagonal weights supplied explicitly or computed during setup.
+  PCASMWeightedGetScaling - Gets the diagonal weights supplied with `PCASMWeightedSetScaling()` or computed by the function provided with `PCASMWeightedSetComputeScaling()`. 
 
   Not Collective
 
