@@ -144,9 +144,9 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
             vec = PETSc.Vec().createSeq(iset.getLocalSize(), comm=self.COMM)
             vec.array[:] = [weights[i] for i in iset.getIndices()]
             scaling.append(vec)
-        self.assertEqual(pc.getASMLocalScaling(), [])
-        pc.setASMLocalScaling(scaling)
-        got = pc.getASMLocalScaling()
+        self.assertEqual(pc.getASMWeightedScaling(), [])
+        pc.setASMWeightedScaling(scaling)
+        got = pc.getASMWeightedScaling()
         self.assertEqual(len(got), nsd)
         for stored, vec in zip(got, scaling):
             self.assertTrue(stored.equal(vec))
