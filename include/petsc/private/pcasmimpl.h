@@ -23,5 +23,7 @@ typedef struct {
   PCCompositeType loctype;       /* the type of composition for local solves */
   MatType         sub_mat_type;  /* the type of Mat used for subdomain solves (can be MATSAME or NULL) */
   /* For multiplicative solve */
-  Mat *lmats; /* submatrices for overlapping multiplicative (process) subdomain */
+  Mat                           *lmats; /* submatrices for overlapping multiplicative (process) subdomain */
+  PCASMWeightedComputeScalingFn *computescaling;
+  PetscCtx                       computescalingctx;
 } PC_ASM;
