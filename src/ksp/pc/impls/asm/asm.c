@@ -1170,7 +1170,7 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 }
 
 /*@
-  PCASMWeightedSetComputeScaling - Sets a callback to compute weighted ASM scaling during setup.
+  PCASMWeightedSetComputeScaling - Sets a callback to compute `PC_ASM_WEIGHTED` scaling during `PCSetUp()`.
 
   Logically Collective
 
