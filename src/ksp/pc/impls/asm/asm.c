@@ -1183,17 +1183,17 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
 
   Notes:
   Register before setup and select `PC_ASM_WEIGHTED`.
-  
+
   Whenever `PCSetUp()` rebuilds weighted ASM,
   `fn` is called once per local subdomain, after overlap expansion and index sorting, with a vector
   of the correct size and type.
-  
+
   No explicit setup or vector allocation is needed by the caller.
 
   The callback overwrites any existing weights, including those supplied directlyby `PCASMWeightedSetScaling()`.
 
   Registration does not trigger setup. Passing `NULL` leaves the current weights in place.
-  
+
   The callback and context survive `PCReset()`. The caller owns `ctx` and must keep it valid
   until the callback is replaced or disabled, or the preconditioner is destroyed.
 
@@ -1227,13 +1227,13 @@ PetscErrorCode PCASMWeightedSetComputeScaling(PC pc, PCASMWeightedComputeScaling
   `MatCreateVecs()` from the corresponding matrix returned by `PCASMGetLocalSubmatrices()`.
   These are local subdomain vectors, not vectors in the parallel global layout.
   Select `PC_ASM_WEIGHTED` with `PCASMSetType()` or `-pc_asm_type weighted` to use the weights.
-  The weights are ignored by the other ASM types. 
+  The weights are ignored by the other ASM types.
 
   With restriction operators $R_i$, local solvers $A_i^{-1}$, and $D_i = \text{diag}(scaling[i])$, the action is
   $B = \sum_i R_i^T D_i A_i^{-1} R_i$.
   PETSc uses the supplied weights as-is, without checking whether they are real, non-negative,
   or satisfy $\sum_i R_i^T D_i R_i = I$.
-  The PC increments the reference count of the vectors but does not copy them. 
+  The PC increments the reference count of the vectors but does not copy them.
   `PCReset()` discards the weights along with the subdomains.
   Alternatively, use `PCASMWeightedSetComputeScaling()` to fill internally-created vectors during `PCSetup()`.
 
@@ -1265,7 +1265,7 @@ PetscErrorCode PCASMWeightedSetScaling(PC pc, PetscInt n, Vec scaling[])
 }
 
 /*@
-  PCASMWeightedGetScaling - Gets the diagonal weights supplied with `PCASMWeightedSetScaling()` or computed by the function provided with `PCASMWeightedSetComputeScaling()`. 
+  PCASMWeightedGetScaling - Gets the diagonal weights supplied with `PCASMWeightedSetScaling()` or computed by the function provided with `PCASMWeightedSetComputeScaling()`.
 
   Not Collective
 
