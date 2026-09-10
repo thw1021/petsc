@@ -37,7 +37,7 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.setupHelp(self,help)
     import nargs
     help.addArgument('MPICH', '-download-mpich-pm=<hydra, gforker or mpd>',              nargs.Arg(None, 'hydra', 'Launcher for MPI processes'))
-    help.addArgument('MPICH', '-download-mpich-device=<ch3:nemesis or see MPICH docs>', nargs.Arg(None, None, 'Communicator for MPI processes'))
+    help.addArgument('MPICH', '-download-mpich-device=<ch4:ucx or see MPICH docs>',      nargs.Arg(None, None, 'Communicator for MPI processes'))
     return
 
   def checkDownload(self):
@@ -71,9 +71,8 @@ class Configure(config.package.GNUPackage):
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")
       args.append("--enable-error-messages=all")
-      mpich_device = 'ch3:sock'
-    else:
-      mpich_device = 'ch3:nemesis'
+    # Set default
+    mpich_device = 'ch4:ofi'
     if self.cuda.found:
       if not hasattr(self.cuda, 'cudaDir'):
         raise RuntimeError('CUDA directory not detected! Mail configure.log to petsc-maint@mcs.anl.gov.')
