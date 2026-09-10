@@ -30,7 +30,26 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 - mpi4py is not a dependency of petsc4py; do not make it a required build or runtime dependency. Tests may use mpi4py, but must guard its import with `try`/`except ImportError` and skip only the tests that require it when it is unavailable. The remaining test suite must still load and run.
 - When a caller needs object metadata, such as the length of a returned array, use an existing PETSc accessor. If the API does not expose the required information, add or extend a focused accessor at the layer that owns it instead of reconstructing internal layouts or duplicating implementation logic in callers or petsc4py. Document the returned information, including the size, ownership, and lifetime of any returned data. If only the documentation is unclear, clarify the existing API instead of adding one.
 - If you modify source, check whether test blocks, expected output files, or documentation need corresponding updates. For public interfaces, include headers and examples in that check.
+- The user selects `PETSC_ARCH`. If it has not already been supplied for the task, ask for it before configuring or building PETSc or petsc4py, running tests that depend on them, importing petsc4py, or running a PETSc executable; never infer or change it unless asked to do so.
+- Pass it to commands that perform those actions. Targets that manage a dedicated default architecture, such as `make docs`, are exempt when using that default.
+- Architecture-independent checks, such as skill validation and pure Python helper tests that do not load PETSc or petsc4py, do not require `PETSC_ARCH`.
+- A documentation audit or review does not authorize `make docs`; run it only when the user explicitly requests it or approves it.
 - Never call `PetscFinalize()` inside an `if (...)` block, including early-return patterns like `if (flag) { ...; PetscFinalize(); return 0; }`. Arrange control flow so finalization happens exactly once on every normal exit path.
+
+## Development Skills
+
+Use the skill for the current task. If your tool does not discover skills automatically, read the
+corresponding file directly:
+
+- Configure or reconfigure PETSc: `.agents/skills/petsc-configure/SKILL.md`.
+- Build PETSc or petsc4py: `.agents/skills/petsc-build/SKILL.md`.
+- Select, run, debug, or update tests: `.agents/skills/petsc-test/SKILL.md`.
+- Format source or run source checks: `.agents/skills/petsc-lint/SKILL.md`.
+- Audit or build PETSc or petsc4py documentation: `.agents/skills/petsc-docs/SKILL.md`.
+
+Read only the skills needed for the work. Explain relevant verification results and limitations
+that affect correctness, confidence, or next steps. Include exact file paths, commands, and
+architecture or configuration details when needed to understand or reproduce a result.
 
 ## Human-Facing Writing
 
@@ -77,7 +96,7 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 
 ## C Coding Style
 
-- Formatting is controlled by `.clang-format`. Use `make clangformat` when needed.
+- Formatting is controlled by `.clang-format`.
 - CI also checks source rules with `make checkbadSource`.
 - Header prototypes should not include parameter names, but function typedef declarations should.
 - The declaration block at the top of a routine or nested scope is one contiguous group: variables grouped by type (all `PetscInt`s adjacent, all `PetscReal`s adjacent, etc.), no mixed pointer arities on a single line, no blank lines or section comments splitting the block. Initialize in the declaration when practical. Exactly one blank line separates the block from the first statement, including `PetscFunctionBegin`/`PetscFunctionBeginUser` at routine scope.
@@ -110,7 +129,7 @@ When a persistent workspace view is processed in chunks, only build a `Kokkos::s
 
 ## Docstring Conventions (`/*@ ... @*/`)
 
-`petsclinter` (run by `make lint`) enforces docstring formatting.
+`petsclinter` enforces docstring formatting. See the `petsc-lint` skill for commands and dependencies.
 
 - **Section order.** Sections in `/*@ ... @*/` always appear in this order:
   1. One-line synopsis (`FunctionName - one-line description`)
@@ -137,42 +156,14 @@ Two recurring traps the linter catches:
 
 - **Stray paragraphs in `Notes:`.** A bare paragraph that starts with a capitalized word and no trailing colon can be misparsed as a section header (`-fdoc-section-header-maybe-header`). Keep follow-up sentences in the same paragraph as the existing Notes text (no blank line between them), or rephrase so the line cannot look like a heading.
 
-When in doubt, pattern-match against existing well-formatted docstrings in the same file. `make lint` requires the `clang` Python package; if it isn't installed, eyeball the alignment carefully before pushing.
-
-## Testing Requirements
-
-- PETSc tests are described in `/*TEST ... TEST*/` blocks at the bottom of source files.
-- If behavior changes, update the test block and expected output files under the local `output/` directory when needed.
-- Common test block keys include:
-  - `test` or `testset`
-  - `suffix`
-  - `nsize`
-  - `args`
-  - `requires`
-  - `output_file`
-  - `filter` and `filter_output`
-  - `localrunfiles`
-  - `temporaries`
-  - `timeoutfactor`
-  - `env`
-- Use `requires:` for runtime requirements such as packages, precision, `!complex`, or `datafilespath`.
-- Expected output normally lives in `output/<testname>.out` relative to the source file.
-- Keep tests targeted. Add or update the narrowest test that proves the behavior you changed.
-
-## Build And Test Commands
-
-- `make clangformat` - format source
-- `make checkclangformat` - verify formatting
-- `make checkbadSource` - run PETSc source-style checks
-- `make test search='<pattern>'` - run tests matching a pattern
-- `make alltests TIMEOUT=600` - run the full suite with an extended timeout
-- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` - run AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`
+When in doubt, pattern-match against existing well-formatted docstrings in the same file.
 
 ## Merge Request Expectations
 
 - All changes are expected to arrive through GitLab merge requests.
 - Keep diffs reviewable and focused.
-- Before concluding work, consider whether formatting, source-style checks, and at least one relevant test should be run.
+- For source changes, run the applicable source checks and a relevant test.
+- `make branch-review [PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname]` runs AI-assisted review on the current branch. `PETSC_LLM_CLI` defaults to `claude`.
 - If relevant verification cannot run in the current environment, explain the resulting gap and its effect on confidence in the change. Do not list inapplicable checks.
 
 ## Anti-Patterns (MUST avoid when writing or reviewing)

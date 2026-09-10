@@ -71,6 +71,28 @@ $ git checkout -b yourname/fix-component-name origin/main
   For developers using agents, PETSc provides repository-specific instructions for LLM coding tools in `AGENTS.md` and reusable skills in `.agents/skills`.
   Claude Code loads `AGENTS.md` through `CLAUDE.md` and finds the same skills through the `.claude/skills` symbolic link.
 
+  Each skill has a `SKILL.md` with a name, a description that helps the tool select it, and instructions loaded when the task needs them.
+  This is the [Agent Skills format](https://agentskills.io/specification), supported by [Codex](https://developers.openai.com/codex/skills/) and [Claude Code](https://code.claude.com/docs/en/skills).
+  Other tools can use the instructions if they support the format and are configured to discover this directory, or are explicitly told to read the relevant file.
+
+  The development skills are organized by task, with PETSc and petsc4py procedures together where they share that task:
+
+  | Skill | Use |
+  | --- | --- |
+  | `petsc-configure` | Choose configure options, configure, or reconfigure PETSc. |
+  | `petsc-build` | Build PETSc libraries, Fortran bindings, or petsc4py. |
+  | `petsc-test` | Select, run, and diagnose tests or update expected output. |
+  | `petsc-lint` | Format source and run PETSc or petsc4py source checks. |
+  | `petsc-docs` | Audit or build PETSc and petsc4py documentation. |
+
+  For example, a request to configure PETSc can select `petsc-configure` directly; a request to build and test petsc4py can use `petsc-build` and `petsc-test`.
+  Shared repository rules stay in `AGENTS.md`, and each skill contains its task's procedure.
+
+  The optional `agents/openai.yaml` inside a skill contains OpenAI-specific metadata.
+  PETSc uses its `interface` fields for the display name, short description, and suggested invocation prompt in the Codex UI.
+  These files do not define or launch subagents, choose a model, or implement the PETSc workflow; the instructions remain in `SKILL.md`.
+  Claude Code uses the shared skills without needing this metadata.
+
   One of these skills integrates [CodeGraph](https://colbymchenry.github.io/codegraph/) with PETSc source navigation and review.
   CodeGraph is third-party software; it is not maintained or vetted by the PETSc team.
   Install the CodeGraph CLI with `npx @colbymchenry/codegraph`.
