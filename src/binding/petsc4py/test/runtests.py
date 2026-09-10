@@ -219,7 +219,6 @@ def import_package(options, pkgname):
     args = [sys.argv[0]]
     if options.memdebug:
         args.append('-malloc_debug')
-        args.append('-malloc_dump')
     if options.summary:
         args.append('-log_view')
     package = __import__(pkgname)
@@ -347,6 +346,11 @@ def main(args=None):
     print_banner(options)
     testsuite = load_tests(options, args)
     success = run_tests(options, testsuite)
+    if not success and options.memdebug:
+        from petsc4py import PETSc
+
+        OptDB = PETSc.Options()
+        OptDB.delValue('-malloc_debug')
     if not success and options.failfast:
         abort()
     shutdown(success)
