@@ -4,13 +4,18 @@ description: Review code changes in a PETSc GitLab merge request and report find
 argument-hint: <MR_IID | empty for current branch>
 ---
 
-Reviews the **remote MR state**, not local `HEAD`. Adhere to @AGENTS.md.
+Reviews the **remote MR state**, not local `HEAD`.
 
 ## Identify and fetch
 Follow @identify.md (Sections 1–2) to fetch the merge request, check for drift, and repeat its warnings.
 
 ## Review
-Follow @review-procedure.md (Sections 3–5) to read the diff, classify findings, verify each one, compose report.
+Follow @review-procedure.md (Sections 3–5) to read the diff, classify findings, verify each one,
+and compose the report.
 
 ## Write report
-Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, the effort level (read from `$CLAUDE_EFFORT`), date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
+Always write the titled report to `ai-review.html`, including when there are no findings. Add a
+footnote with the agent, version, model, and effort level actually used for this review, the
+current date and time, `MR_IID`, `CI_PIPELINE_ID`, and `CI_JOB_ID`. Omit unavailable values; use
+`$CLAUDE_EFFORT` only when Claude performed the review; do not infer the agent or model from
+installed executables or unrelated environment settings.
