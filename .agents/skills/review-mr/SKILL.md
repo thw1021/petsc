@@ -13,4 +13,4 @@ Follow @identify.md (Sections 1–2) to fetch the merge request, check for drift
 Follow @review-procedure.md (Sections 3–5) to read the diff, classify findings, verify each one, compose report.
 
 ## Write report
-Always write the report (with a title) to ai-review.html! Add a footnote with claude version and model used, the effort level (read from `$CLAUDE_EFFORT`), date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
+Always write the report (with a title) to ai-review.html! Add a footnote with AI_CLI version and model used, the effort level (read from `$CLAUDE_EFFORT`), date, time, MR_IID, CI_PIPELINE_ID, CI_JOB_ID, when available.
