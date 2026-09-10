@@ -15,6 +15,7 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 - `src/binding/petsc4py/` - Python bindings and packaging logic
 - `config/` - configure, build, and test harness generation
 - `doc/` - user and developer documentation
+- `.agents/pde-sim/` - opt-in multi-agent PDE simulation pipeline; in Claude Code run `/pde-sim <phenomenon>` to start it (nothing loads until invoked)
 
 ## CodeGraph
 

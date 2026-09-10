@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "id": "poisson2d-run2",
+  "numerical_plan_id": "poisson2d-plan",
+  "vis_spec_id": "poisson2d-vis",
+  "build": {
+    "status": "success",
+    "compiler": "mpicc",
+    "flags": "-g -O0 -Wall (PETSC_ARCH=arch-kokkos-dbg)",
+    "log_path": "examples/poisson2d/build.log"
+  },
+  "runs": [
+    {
+      "label": "mms-convergence-study",
+      "command": "mpiexec -n 4 ./poisson -mms_base 17 -mms_levels 4 -pc_type gamg -mms_csv convergence.csv",
+      "mpi_ranks": 4,
+      "status": "success",
+      "output_files": [
+        { "path": "examples/poisson2d/convergence.csv", "kind": "convergence_data", "format": "csv" }
+      ]
+    },
+    {
+      "label": "solution-output-129x129",
+      "command": "mpiexec -n 4 ./poisson -out_grid 129 -mms_levels 0 -ksp_type cg -pc_type gamg -out_prefix poisson_solution",
+      "mpi_ranks": 4,
+      "status": "success",
+      "output_files": [
+        { "path": "examples/poisson2d/poisson_solution.xdmf", "kind": "solution", "format": "xdmf" },
+        { "path": "examples/poisson2d/poisson_solution_u.bin", "kind": "solution", "format": "binary" },
+        { "path": "examples/poisson2d/poisson_solution_u_exact.bin", "kind": "solution", "format": "binary" },
+        { "path": "examples/poisson2d/poisson_solution_error.bin", "kind": "diagnostic", "format": "binary" },
+        { "path": "examples/poisson2d/poisson_solution.vts", "kind": "solution", "format": "vts" }
+      ]
+    }
+  ],
+  "convergence_study": {
+    "levels": [
+      { "h": 0.0625,    "dof": 225,   "errors": { "L2": 1.609482e-3, "Linf": 3.218964e-3 }, "solver_iterations": 10 },
+      { "h": 0.03125,   "dof": 961,   "errors": { "L2": 4.017888e-4, "Linf": 8.035777e-4 }, "solver_iterations": 10 },
+      { "h": 0.015625,  "dof": 3969,  "errors": { "L2": 1.004109e-4, "Linf": 2.008218e-4 }, "solver_iterations": 11 },
+      { "h": 0.0078125, "dof": 16129, "errors": { "L2": 2.510046e-5, "Linf": 5.020091e-5 }, "solver_iterations": 12 }
+    ]
+  },
+  "notes": "Actual PETSc build + run (PETSC_ARCH=arch-kokkos-dbg, OpenMPI, 4 ranks, CG + GAMG). Convergence: observed orders 2.00 in both L2 and Linf (errors quarter per h-halving) => second order confirmed. In-situ NaN/Inf check on the 129x129 solution passed (||u||_2 = 6.400321e+01; boundary residual ~1e-11, center u=1.00005 vs exact 1.0, max pointwise error 5.02e-5). SOLUTION OUTPUT FORMAT NOTE: the vis-spec requested HDF5+XDMF, but this PETSc build was configured WITHOUT HDF5 (no PETSC_HAVE_HDF5, no hdf5 lib in arch-kokkos-dbg), so PetscViewerHDF5Open is unavailable. To honor the XDMF request without an env change, code-generation writes an XDMF 2.0 wrapper (uniform 2DCoRectMesh) over headerless raw little-endian double field dumps (poisson_solution_u.bin, poisson_solution_u_exact.bin, poisson_solution_error.bin), which ParaView opens directly; a native VTK poisson_solution.vts (u, u_exact, error) is also emitted as a robust companion. Both carry the three fields the warp/mesh/error renders need. If true .h5 output is required, the orchestrator should rebuild PETSc with --download-hdf5 (environment change, not a code fix). poisson.c changes: added CheckNanInf (in-situ), FillExactAndError (pointwise |u_h-u_exact|), WriteFieldBinary (parallel gather to natural order on rank 0), WriteXDMF, OutputSolve, and -out_grid/-out_prefix options; convergence loop skipped when -mms_levels 0."
+}
