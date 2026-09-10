@@ -464,8 +464,7 @@ PetscErrorCode MatSetValues_SeqAIJ(Mat A, PetscInt m, const PetscInt im[], Petsc
           goto noinsert;
         }
       }
-      if (value == 0.0 && ignorezeroentries && row != col) goto noinsert;
-      if (nonew == 1) goto noinsert;
+      if ((!A->structure_only && value == 0.0 && ignorezeroentries && row != col) || nonew == 1) goto noinsert;
       PetscCheck(nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") in the matrix", row, col);
       if (A->structure_only) {
         MatSeqXAIJReallocateAIJ_structure_only(A, A->rmap->n, 1, nrow, row, col, rmax, ai, aj, rp, imax, nonew, MatScalar);
@@ -1105,10 +1104,12 @@ PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat A, MatAssemblyType mode)
     rmax = PetscMax(rmax, ailen[i]);
     if (fshift) {
       ip = aj + ai[i];
-      ap = aa + ai[i];
       N  = ailen[i];
       PetscCall(PetscArraymove(ip - fshift, ip, N));
-      if (!A->structure_only) PetscCall(PetscArraymove(ap - fshift, ap, N));
+      if (!A->structure_only) {
+        ap = aa + ai[i];
+        PetscCall(PetscArraymove(ap - fshift, ap, N));
+      }
     }
     ai[i] = ai[i - 1] + ailen[i - 1];
   }
@@ -1118,14 +1119,9 @@ PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat A, MatAssemblyType mode)
   }
   /* reset ilen and imax for each row */
   a->nonzerorowcnt = 0;
-  if (A->structure_only) {
-    PetscCall(PetscFree(a->imax));
-    PetscCall(PetscFree(a->ilen));
-  } else { /* !A->structure_only */
-    for (i = 0; i < m; i++) {
-      ailen[i] = imax[i] = ai[i + 1] - ai[i];
-      a->nonzerorowcnt += ((ai[i + 1] - ai[i]) > 0);
-    }
+  for (i = 0; i < m; i++) {
+    ailen[i] = imax[i] = ai[i + 1] - ai[i];
+    a->nonzerorowcnt += ((ai[i + 1] - ai[i]) > 0);
   }
   a->nz = ai[m];
   PetscCheck(!fshift || a->nounused != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unused space detected in matrix: %" PetscInt_FMT " X %" PetscInt_FMT ", %" PetscInt_FMT " unneeded", m, A->cmap->n, fshift);
@@ -2377,10 +2373,10 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
   PetscInt          *smap, i, k, kstart, kend, oldcols = A->cmap->n, *lens;
   PetscInt           row, mat_i, *mat_j, tcol, first, step, *mat_ilen, sum, lensi;
   const PetscInt    *irow, *icol;
-  const PetscScalar *aa;
+  const PetscScalar *aa = NULL;
   PetscInt           nrows, ncols;
   PetscInt          *starts, *j_new, *i_new, *aj = a->j, *ai = a->i, ii, *ailen = a->ilen;
-  MatScalar         *a_new, *mat_a, *c_a;
+  MatScalar         *a_new = NULL, *mat_a, *c_a = NULL;
   Mat                C;
   PetscBool          stride;
 
@@ -2432,28 +2428,35 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
       PetscCall(ISGetBlockSize(iscol, &cbs));
       PetscCall(MatSetBlockSizes(C, rbs, cbs));
       PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+      PetscCall(MatSetOption(C, MAT_STRUCTURE_ONLY, A->structure_only));
       PetscCall(MatSeqAIJSetPreallocation_SeqAIJ(C, 0, lens));
     }
     c = (Mat_SeqAIJ *)C->data;
 
     /* loop over rows inserting into submatrix */
-    PetscCall(MatSeqAIJGetArrayWrite(C, &a_new)); // Not 'a_new = c->a-new', since that raw usage ignores offload state of C
     j_new = c->j;
     i_new = c->i;
-    PetscCall(MatSeqAIJGetArrayRead(A, &aa));
+    if (!A->structure_only) {
+      PetscCall(MatSeqAIJGetArrayWrite(C, &a_new)); // Not 'a_new = c->a-new', since that raw usage ignores offload state of C
+      PetscCall(MatSeqAIJGetArrayRead(A, &aa));
+    }
     for (i = 0; i < nrows; i++) {
       ii    = starts[i];
       lensi = lens[i];
       if (lensi) {
         for (k = 0; k < lensi; k++) *j_new++ = aj[ii + k] - first;
-        PetscCall(PetscArraycpy(a_new, aa + starts[i], lensi));
-        a_new += lensi;
+        if (!A->structure_only) {
+          PetscCall(PetscArraycpy(a_new, aa + starts[i], lensi));
+          a_new += lensi;
+        }
       }
       i_new[i + 1] = i_new[i] + lensi;
       c->ilen[i]   = lensi;
     }
-    PetscCall(MatSeqAIJRestoreArrayWrite(C, &a_new)); // Set C's offload state properly
-    PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
+    if (!A->structure_only) {
+      PetscCall(MatSeqAIJRestoreArrayWrite(C, &a_new)); // Set C's offload state properly
+      PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
+    }
     PetscCall(PetscFree2(lens, starts));
   } else {
     PetscCall(ISGetIndices(iscol, &icol));
@@ -2491,12 +2494,14 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
       PetscCall(ISGetBlockSize(iscol, &cbs));
       if (rbs > 1 || cbs > 1) PetscCall(MatSetBlockSizes(C, rbs, cbs));
       PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+      PetscCall(MatSetOption(C, MAT_STRUCTURE_ONLY, A->structure_only));
       PetscCall(MatSeqAIJSetPreallocation_SeqAIJ(C, 0, lens));
     }
-    PetscCall(MatSeqAIJGetArrayRead(A, &aa));
-
     c = (Mat_SeqAIJ *)C->data;
-    PetscCall(MatSeqAIJGetArrayWrite(C, &c_a)); // Not 'c->a', since that raw usage ignores offload state of C
+    if (!A->structure_only) {
+      PetscCall(MatSeqAIJGetArrayRead(A, &aa));
+      PetscCall(MatSeqAIJGetArrayWrite(C, &c_a)); // Not 'c->a', since that raw usage ignores offload state of C
+    }
     for (i = 0; i < nrows; i++) {
       row      = irow[i];
       kstart   = ai[row];
@@ -2508,12 +2513,12 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
       for (k = kstart; k < kend; k++) {
         if ((tcol = smap[a->j[k]])) {
           *mat_j++ = tcol - 1;
-          *mat_a++ = aa[k];
+          if (!A->structure_only) *mat_a++ = aa[k];
           (*mat_ilen)++;
         }
       }
     }
-    PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
+    if (!A->structure_only) PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
     /* Free work space */
     PetscCall(ISRestoreIndices(iscol, &icol));
     PetscCall(PetscFree(smap));
@@ -2526,9 +2531,10 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
       mat_j = PetscSafePointerPlusOffset(c->j, mat_i);
       mat_a = PetscSafePointerPlusOffset(c_a, mat_i);
       ilen  = c->ilen[i];
-      PetscCall(PetscSortIntWithScalarArray(ilen, mat_j, mat_a));
+      if (A->structure_only) PetscCall(PetscSortInt(ilen, mat_j));
+      else PetscCall(PetscSortIntWithScalarArray(ilen, mat_j, mat_a));
     }
-    PetscCall(MatSeqAIJRestoreArrayWrite(C, &c_a));
+    if (!A->structure_only) PetscCall(MatSeqAIJRestoreArrayWrite(C, &c_a));
   }
 #if PetscDefined(HAVE_DEVICE)
   PetscCall(MatBindToCPU(C, A->boundtocpu));
@@ -4235,12 +4241,11 @@ PetscErrorCode MatMatMultSymbolic_SeqDense_SeqAIJ(Mat A, Mat B, PetscReal fill, 
    Level: beginner
 
    Notes:
-    `MatSetValues()` may be called for this matrix type with a `NULL` argument for the numerical values,
-    in this case the values associated with the rows and columns one passes in are set to zero
-    in the matrix
+    `MatSetValues()` may be called with a `NULL` argument for the numerical values to insert zeros at the supplied row and column indices.
 
-    `MatSetOptions`(,`MAT_STRUCTURE_ONLY`,`PETSC_TRUE`) may be called for this matrix type. In this no
-    space is allocated for the nonzero entries and any entries passed with `MatSetValues()` are ignored
+    Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+    The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+    Such matrices can be used for structural operations, but not for numerical operations.
 
   Developer Note:
     It would be nice if all matrix formats supported passing `NULL` in for the numerical values
@@ -4262,7 +4267,11 @@ M*/
 
   Level: beginner
 
-   Note:
+   Notes:
+   Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+   The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+   Such matrices can be used for structural operations, but not for numerical operations.
+
    Subclasses include `MATAIJCUSPARSE`, `MATAIJPERM`, `MATAIJSELL`, `MATAIJMKL`, `MATAIJCRL`, and also automatically switches over to use inodes when
    enough exist.
 
@@ -5522,8 +5531,7 @@ PETSC_EXTERN void matsetvaluesseqaij_(Mat *AA, PetscInt *mm, const PetscInt im[]
           goto noinsert;
         }
       }
-      if (value == 0.0 && ignorezeroentries) goto noinsert;
-      if (nonew == 1) goto noinsert;
+      if ((value == 0.0 && ignorezeroentries) || nonew == 1) goto noinsert;
       PetscCheck(nonew != -1, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero in the matrix");
       MatSeqXAIJReallocateAIJ(A, A->rmap->n, 1, nrow, row, col, rmax, aa, ai, aj, rp, ap, imax, nonew, MatScalar);
       N = nrow++ - 1;

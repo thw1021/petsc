@@ -172,7 +172,7 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
   do { \
     brow = row / bs; \
     rp   = PetscSafePointerPlusOffset(aj, ai[brow]); \
-    ap   = PetscSafePointerPlusOffset(aa, bs2 * ai[brow]); \
+    if (!A->structure_only) ap = PetscSafePointerPlusOffset(aa, bs2 * ai[brow]); \
     rmax = aimax[brow]; \
     nrow = ailen[brow]; \
     bcol = col / bs; \
@@ -188,6 +188,7 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
     for (_i = low; _i < high; _i++) { \
       if (rp[_i] > bcol) break; \
       if (rp[_i] == bcol) { \
+        if (A->structure_only) goto a_noinsert; \
         bap = ap + bs2 * _i + bs * cidx + ridx; \
         if (addv == ADD_VALUES) *bap += value; \
         else *bap = value; \
@@ -196,14 +197,17 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
     } \
     if (a->nonew == 1) goto a_noinsert; \
     PetscCheck(a->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
-    MatSeqXAIJReallocateAIJ(A, a->mbs, bs2, nrow, brow, bcol, rmax, aa, ai, aj, rp, ap, aimax, a->nonew, MatScalar); \
+    if (A->structure_only) MatSeqXAIJReallocateAIJ_structure_only(A, a->mbs, bs2, nrow, brow, bcol, rmax, ai, aj, rp, aimax, a->nonew, MatScalar); \
+    else MatSeqXAIJReallocateAIJ(A, a->mbs, bs2, nrow, brow, bcol, rmax, aa, ai, aj, rp, ap, aimax, a->nonew, MatScalar); \
     N = nrow++ - 1; \
     /* shift up all the later entries in this row */ \
     PetscCall(PetscArraymove(rp + _i + 1, rp + _i, N - _i + 1)); \
-    PetscCall(PetscArraymove(ap + bs2 * (_i + 1), ap + bs2 * _i, bs2 * (N - _i + 1))); \
-    PetscCall(PetscArrayzero(ap + bs2 * _i, bs2)); \
-    rp[_i]                          = bcol; \
-    ap[bs2 * _i + bs * cidx + ridx] = value; \
+    rp[_i] = bcol; \
+    if (!A->structure_only) { \
+      PetscCall(PetscArraymove(ap + bs2 * (_i + 1), ap + bs2 * _i, bs2 * (N - _i + 1))); \
+      PetscCall(PetscArrayzero(ap + bs2 * _i, bs2)); \
+      ap[bs2 * _i + bs * cidx + ridx] = value; \
+    } \
   a_noinsert:; \
     ailen[brow] = nrow; \
   } while (0)
@@ -212,7 +216,7 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
   do { \
     brow = row / bs; \
     rp   = PetscSafePointerPlusOffset(bj, bi[brow]); \
-    ap   = PetscSafePointerPlusOffset(ba, bs2 * bi[brow]); \
+    if (!B->structure_only) ap = PetscSafePointerPlusOffset(ba, bs2 * bi[brow]); \
     rmax = bimax[brow]; \
     nrow = bilen[brow]; \
     bcol = col / bs; \
@@ -228,6 +232,7 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
     for (_i = low; _i < high; _i++) { \
       if (rp[_i] > bcol) break; \
       if (rp[_i] == bcol) { \
+        if (B->structure_only) goto b_noinsert; \
         bap = ap + bs2 * _i + bs * cidx + ridx; \
         if (addv == ADD_VALUES) *bap += value; \
         else *bap = value; \
@@ -236,22 +241,25 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
     } \
     if (b->nonew == 1) goto b_noinsert; \
     PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
-    MatSeqXAIJReallocateAIJ(B, b->mbs, bs2, nrow, brow, bcol, rmax, ba, bi, bj, rp, ap, bimax, b->nonew, MatScalar); \
+    if (B->structure_only) MatSeqXAIJReallocateAIJ_structure_only(B, b->mbs, bs2, nrow, brow, bcol, rmax, bi, bj, rp, bimax, b->nonew, MatScalar); \
+    else MatSeqXAIJReallocateAIJ(B, b->mbs, bs2, nrow, brow, bcol, rmax, ba, bi, bj, rp, ap, bimax, b->nonew, MatScalar); \
     N = nrow++ - 1; \
     /* shift up all the later entries in this row */ \
     PetscCall(PetscArraymove(rp + _i + 1, rp + _i, N - _i + 1)); \
-    PetscCall(PetscArraymove(ap + bs2 * (_i + 1), ap + bs2 * _i, bs2 * (N - _i + 1))); \
-    PetscCall(PetscArrayzero(ap + bs2 * _i, bs2)); \
-    rp[_i]                          = bcol; \
-    ap[bs2 * _i + bs * cidx + ridx] = value; \
+    rp[_i] = bcol; \
+    if (!B->structure_only) { \
+      PetscCall(PetscArraymove(ap + bs2 * (_i + 1), ap + bs2 * _i, bs2 * (N - _i + 1))); \
+      PetscCall(PetscArrayzero(ap + bs2 * _i, bs2)); \
+      ap[bs2 * _i + bs * cidx + ridx] = value; \
+    } \
   b_noinsert:; \
     bilen[brow] = nrow; \
   } while (0)
 
-PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], PetscInt n, const PetscInt in[], const PetscScalar v[], InsertMode addv)
+static PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], PetscInt n, const PetscInt in[], const PetscScalar v[], InsertMode addv)
 {
-  Mat_MPIBAIJ *baij = (Mat_MPIBAIJ *)mat->data;
-  MatScalar    value;
+  Mat_MPIBAIJ *baij        = (Mat_MPIBAIJ *)mat->data;
+  MatScalar    value       = 0.0;
   PetscBool    roworiented = baij->roworiented;
   PetscInt     i, j, row, col;
   PetscInt     rstart_orig = mat->rmap->rstart;
@@ -271,7 +279,7 @@ PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], Pe
 
   PetscInt  *rp, ii, nrow, _i, rmax, N, brow, bcol;
   PetscInt   low, high, t, ridx, cidx, bs2 = a->bs2;
-  MatScalar *ap, *bap;
+  MatScalar *ap = NULL, *bap;
 
   PetscFunctionBegin;
   for (i = 0; i < m; i++) {
@@ -282,8 +290,10 @@ PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], Pe
       for (j = 0; j < n; j++) {
         if (in[j] >= cstart_orig && in[j] < cend_orig) {
           col = in[j] - cstart_orig;
-          if (roworiented) value = v[i * n + j];
-          else value = v[i + j * m];
+          if (!mat->structure_only) {
+            if (roworiented) value = v[i * n + j];
+            else value = v[i + j * m];
+          }
           MatSetValues_SeqBAIJ_A_Private(row, col, value, addv, im[i], in[j]);
         } else if (in[j] < 0) {
           continue;
@@ -313,8 +323,10 @@ PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], Pe
               col += in[j] % bs;
             }
           } else col = in[j];
-          if (roworiented) value = v[i * n + j];
-          else value = v[i + j * m];
+          if (!mat->structure_only) {
+            if (roworiented) value = v[i * n + j];
+            else value = v[i + j * m];
+          }
           MatSetValues_SeqBAIJ_B_Private(row, col, value, addv, im[i], in[j]);
           /* PetscCall(MatSetValues_SeqBAIJ(baij->B,1,&row,1,&col,&value,addv)); */
         }
@@ -324,9 +336,9 @@ PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], Pe
       if (!baij->donotstash) {
         mat->assembled = PETSC_FALSE;
         if (roworiented) {
-          PetscCall(MatStashValuesRow_Private(&mat->stash, im[i], n, in, v + i * n, PETSC_FALSE));
+          PetscCall(MatStashValuesRow_Private(&mat->stash, im[i], n, in, PetscSafePointerPlusOffset(v, i * n), PETSC_FALSE));
         } else {
-          PetscCall(MatStashValuesCol_Private(&mat->stash, im[i], n, in, v + i, m, PETSC_FALSE));
+          PetscCall(MatStashValuesCol_Private(&mat->stash, im[i], n, in, PetscSafePointerPlusOffset(v, i), m, PETSC_FALSE));
         }
       }
     }
@@ -342,11 +354,11 @@ static inline PetscErrorCode MatSetValuesBlocked_SeqBAIJ_Inlined(Mat A, PetscInt
   PetscInt          *aj = a->j, nonew = a->nonew, bs2 = a->bs2, bs = A->rmap->bs;
   PetscBool          roworiented = a->roworiented;
   const PetscScalar *value       = v;
-  MatScalar         *ap, *aa = a->a, *bap;
+  MatScalar         *ap = NULL, *aa = a->a, *bap;
 
   PetscFunctionBegin;
-  rp    = aj + ai[row];
-  ap    = aa + bs2 * ai[row];
+  rp = aj + ai[row];
+  if (!A->structure_only) ap = aa + bs2 * ai[row];
   rmax  = imax[row];
   nrow  = ailen[row];
   value = v;
@@ -360,6 +372,7 @@ static inline PetscErrorCode MatSetValuesBlocked_SeqBAIJ_Inlined(Mat A, PetscInt
   for (i = low; i < high; i++) {
     if (rp[i] > col) break;
     if (rp[i] == col) {
+      if (A->structure_only) goto noinsert2;
       bap = ap + bs2 * i;
       if (roworiented) {
         if (is == ADD_VALUES) {
@@ -389,21 +402,24 @@ static inline PetscErrorCode MatSetValuesBlocked_SeqBAIJ_Inlined(Mat A, PetscInt
   }
   if (nonew == 1) goto noinsert2;
   PetscCheck(nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new global block indexed nonzero block (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", orow, ocol);
-  MatSeqXAIJReallocateAIJ(A, a->mbs, bs2, nrow, row, col, rmax, aa, ai, aj, rp, ap, imax, nonew, MatScalar);
+  if (A->structure_only) MatSeqXAIJReallocateAIJ_structure_only(A, a->mbs, bs2, nrow, row, col, rmax, ai, aj, rp, imax, nonew, MatScalar);
+  else MatSeqXAIJReallocateAIJ(A, a->mbs, bs2, nrow, row, col, rmax, aa, ai, aj, rp, ap, imax, nonew, MatScalar);
   N = nrow++ - 1;
   high++;
   /* shift up all the later entries in this row */
   PetscCall(PetscArraymove(rp + i + 1, rp + i, N - i + 1));
-  PetscCall(PetscArraymove(ap + bs2 * (i + 1), ap + bs2 * i, bs2 * (N - i + 1)));
   rp[i] = col;
-  bap   = ap + bs2 * i;
-  if (roworiented) {
-    for (ii = 0; ii < bs; ii++) {
-      for (jj = ii; jj < bs2; jj += bs) bap[jj] = *value++;
-    }
-  } else {
-    for (ii = 0; ii < bs; ii++) {
-      for (jj = 0; jj < bs; jj++) *bap++ = *value++;
+  if (!A->structure_only) {
+    PetscCall(PetscArraymove(ap + bs2 * (i + 1), ap + bs2 * i, bs2 * (N - i + 1)));
+    bap = ap + bs2 * i;
+    if (roworiented) {
+      for (ii = 0; ii < bs; ii++) {
+        for (jj = ii; jj < bs2; jj += bs) bap[jj] = *value++;
+      }
+    } else {
+      for (ii = 0; ii < bs; ii++) {
+        for (jj = 0; jj < bs; jj++) *bap++ = *value++;
+      }
     }
   }
 noinsert2:;
@@ -426,7 +442,7 @@ static PetscErrorCode MatSetValuesBlocked_MPIBAIJ(Mat mat, PetscInt m, const Pet
   PetscInt           cend = baij->cendbs, bs = mat->rmap->bs, bs2 = baij->bs2;
 
   PetscFunctionBegin;
-  if (!barray) {
+  if (!mat->structure_only && !barray) {
     PetscCall(PetscMalloc1(bs2, &barray));
     baij->barray = barray;
   }
@@ -440,22 +456,24 @@ static PetscErrorCode MatSetValuesBlocked_MPIBAIJ(Mat mat, PetscInt m, const Pet
     if (im[i] >= rstart && im[i] < rend) {
       row = im[i] - rstart;
       for (j = 0; j < n; j++) {
-        /* If NumCol = 1 then a copy is not required */
-        if ((roworiented) && (n == 1)) {
-          barray = (MatScalar *)v + i * bs2;
-        } else if ((!roworiented) && (m == 1)) {
-          barray = (MatScalar *)v + j * bs2;
-        } else { /* Here a copy is required */
-          if (roworiented) {
-            value = v + (i * (stepval + bs) + j) * bs;
-          } else {
-            value = v + (j * (stepval + bs) + i) * bs;
+        if (!mat->structure_only) {
+          /* If NumCol = 1 then a copy is not required */
+          if ((roworiented) && (n == 1)) {
+            barray = (MatScalar *)v + i * bs2;
+          } else if ((!roworiented) && (m == 1)) {
+            barray = (MatScalar *)v + j * bs2;
+          } else { /* Here a copy is required */
+            if (roworiented) {
+              value = v + (i * (stepval + bs) + j) * bs;
+            } else {
+              value = v + (j * (stepval + bs) + i) * bs;
+            }
+            for (ii = 0; ii < bs; ii++, value += bs + stepval) {
+              for (jj = 0; jj < bs; jj++) barray[jj] = value[jj];
+              barray += bs;
+            }
+            barray -= bs2;
           }
-          for (ii = 0; ii < bs; ii++, value += bs + stepval) {
-            for (jj = 0; jj < bs; jj++) barray[jj] = value[jj];
-            barray += bs;
-          }
-          barray -= bs2;
         }
 
         if (in[j] >= cstart && in[j] < cend) {
@@ -1005,7 +1023,6 @@ static PetscErrorCode MatView_MPIBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer v
 {
   Mat_MPIBAIJ      *baij = (Mat_MPIBAIJ *)mat->data;
   PetscMPIInt       rank = baij->rank;
-  PetscInt          bs   = mat->rmap->bs;
   PetscBool         isascii, isdraw;
   PetscViewer       sviewer;
   PetscViewerFormat format;
@@ -1042,74 +1059,24 @@ static PetscErrorCode MatView_MPIBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer v
     if (isnull) PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  {
-    /* assemble the entire matrix onto first processor. */
-    Mat          A;
-    Mat_SeqBAIJ *Aloc;
-    PetscInt     M = mat->rmap->N, N = mat->cmap->N, *ai, *aj, col, i, j, k, *rvals, mbs = baij->mbs;
-    MatScalar   *a;
-    const char  *matname;
+  { /* assemble the entire matrix onto first process */
+    Mat A, Av;
+    IS  isrow, iscol;
 
-    /* Here we are creating a temporary matrix, so will assume MPIBAIJ is acceptable */
-    /* Perhaps this should be the type of mat? */
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)mat), &A));
-    if (rank == 0) {
-      PetscCall(MatSetSizes(A, M, N, M, N));
-    } else {
-      PetscCall(MatSetSizes(A, 0, 0, M, N));
-    }
-    PetscCall(MatSetType(A, MATMPIBAIJ));
-    PetscCall(MatMPIBAIJSetPreallocation(A, mat->rmap->bs, 0, NULL, 0, NULL));
-    PetscCall(MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_FALSE));
-
-    /* copy over the A part */
-    Aloc = (Mat_SeqBAIJ *)baij->A->data;
-    ai   = Aloc->i;
-    aj   = Aloc->j;
-    a    = Aloc->a;
-    PetscCall(PetscMalloc1(bs, &rvals));
-
-    for (i = 0; i < mbs; i++) {
-      rvals[0] = bs * (baij->rstartbs + i);
-      for (j = 1; j < bs; j++) rvals[j] = rvals[j - 1] + 1;
-      for (j = ai[i]; j < ai[i + 1]; j++) {
-        col = (baij->cstartbs + aj[j]) * bs;
-        for (k = 0; k < bs; k++) {
-          PetscCall(MatSetValues_MPIBAIJ(A, bs, rvals, 1, &col, a, INSERT_VALUES));
-          col++;
-          a += bs;
-        }
-      }
-    }
-    /* copy over the B part */
-    Aloc = (Mat_SeqBAIJ *)baij->B->data;
-    ai   = Aloc->i;
-    aj   = Aloc->j;
-    a    = Aloc->a;
-    for (i = 0; i < mbs; i++) {
-      rvals[0] = bs * (baij->rstartbs + i);
-      for (j = 1; j < bs; j++) rvals[j] = rvals[j - 1] + 1;
-      for (j = ai[i]; j < ai[i + 1]; j++) {
-        col = baij->garray[aj[j]] * bs;
-        for (k = 0; k < bs; k++) {
-          PetscCall(MatSetValues_MPIBAIJ(A, bs, rvals, 1, &col, a, INSERT_VALUES));
-          col++;
-          a += bs;
-        }
-      }
-    }
-    PetscCall(PetscFree(rvals));
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(ISCreateStride(PetscObjectComm((PetscObject)mat), rank == 0 ? mat->rmap->N : 0, 0, 1, &isrow));
+    PetscCall(ISCreateStride(PetscObjectComm((PetscObject)mat), rank == 0 ? mat->cmap->N : 0, 0, 1, &iscol));
+    PetscCall(MatCreateSubMatrix(mat, isrow, iscol, MAT_INITIAL_MATRIX, &A));
+    PetscCall(MatMPIBAIJGetSeqBAIJ(A, &Av, NULL, NULL));
+    PetscCall(ISDestroy(&isrow));
+    PetscCall(ISDestroy(&iscol));
     /*
        Everyone has to call to draw the matrix since the graphics waits are
        synchronized across all processors that share the PetscDraw object
     */
     PetscCall(PetscViewerGetSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
-    if (((PetscObject)mat)->name) PetscCall(PetscObjectGetName((PetscObject)mat, &matname));
     if (rank == 0) {
-      if (((PetscObject)mat)->name) PetscCall(PetscObjectSetName((PetscObject)((Mat_MPIBAIJ *)A->data)->A, matname));
-      PetscCall(MatView_SeqBAIJ(((Mat_MPIBAIJ *)A->data)->A, sviewer));
+      if (((PetscObject)mat)->name) PetscCall(PetscObjectSetName((PetscObject)Av, ((PetscObject)mat)->name));
+      PetscCall(MatView_SeqBAIJ(Av, sviewer));
     }
     PetscCall(PetscViewerRestoreSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
     PetscCall(MatDestroy(&A));
@@ -1465,6 +1432,10 @@ static PetscErrorCode MatSetOption_MPIBAIJ(Mat A, MatOption op, PetscBool flg)
     if (op == MAT_ROW_ORIENTED) a->roworiented = flg;
     PetscCall(MatSetOption(a->A, op, flg));
     PetscCall(MatSetOption(a->B, op, flg));
+    break;
+  case MAT_STRUCTURE_ONLY:
+    if (a->A) PetscCall(MatSetOption(a->A, op, flg));
+    if (a->B) PetscCall(MatSetOption(a->B, op, flg));
     break;
   case MAT_IGNORE_OFF_PROC_ENTRIES:
     a->donotstash = flg;
@@ -1994,6 +1965,7 @@ PetscErrorCode MatCreateSubMatrix_MPIBAIJ_Private(Mat mat, IS isrow, IS iscol, P
     PetscCall(MatCreate(comm, &M));
     PetscCall(MatSetSizes(M, bs * m, bs * nlocal, PETSC_DECIDE, bs * n));
     PetscCall(MatSetType(M, sym ? ((PetscObject)mat)->type_name : MATMPIBAIJ));
+    PetscCall(MatSetOption(M, MAT_STRUCTURE_ONLY, mat->structure_only));
     PetscCall(MatMPIBAIJSetPreallocation(M, bs, 0, dlens, 0, olens));
     PetscCall(MatMPISBAIJSetPreallocation(M, bs, 0, dlens, 0, olens));
     PetscCall(PetscFree2(dlens, olens));
@@ -2002,7 +1974,7 @@ PetscErrorCode MatCreateSubMatrix_MPIBAIJ_Private(Mat mat, IS isrow, IS iscol, P
 
     M = *newmat;
     PetscCall(MatGetLocalSize(M, &ml, &nl));
-    PetscCheck(ml == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Previous matrix must be same size/layout as request");
+    PetscCheck(ml == m * bs, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Previous matrix must be same size/layout as request");
     PetscCall(MatZeroEntries(M));
     /*
          The next two lines are needed so we may call MatSetValues_MPIAIJ() below directly,
@@ -2024,7 +1996,7 @@ PetscErrorCode MatCreateSubMatrix_MPIBAIJ_Private(Mat mat, IS isrow, IS iscol, P
     jj    = PetscSafePointerPlusOffset(jj, nz);
     vwork = aa;
     aa    = PetscSafePointerPlusOffset(aa, nz * bs * bs);
-    PetscCall(MatSetValuesBlocked_MPIBAIJ(M, 1, &row, nz, cwork, vwork, INSERT_VALUES));
+    PetscUseTypeMethod(M, setvaluesblocked, 1, &row, nz, cwork, vwork, INSERT_VALUES);
   }
 
   PetscCall(MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY));
@@ -2117,6 +2089,7 @@ static PetscErrorCode MatGetSeqNonzeroStructure_MPIBAIJ(Mat A, Mat *newmat)
   PetscCall(MatCreate(PETSC_COMM_SELF, &B));
   PetscCall(MatSetSizes(B, A->rmap->N / bs, A->cmap->N / bs, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatSetType(B, MATSEQAIJ));
+  PetscCall(MatSetOption(B, MAT_STRUCTURE_ONLY, PETSC_TRUE));
   PetscCall(MatSeqAIJSetPreallocation(B, 0, lens));
   b = (Mat_SeqAIJ *)B->data;
 
@@ -2707,6 +2680,7 @@ PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJ(Mat B, PetscInt bs, PetscInt d
   PetscCall(MatSetSizes(b->B, B->rmap->n, size > 1 ? B->cmap->N : 0, B->rmap->n, size > 1 ? B->cmap->N : 0));
   PetscCall(MatSetType(b->B, MATSEQBAIJ));
   MatSeqXAIJRestoreOptions_Private(b->B);
+  PetscCall(MatSetOption(b->B, MAT_STRUCTURE_ONLY, B->structure_only));
 
   MatSeqXAIJGetOptions_Private(b->A);
   PetscCall(MatDestroy(&b->A));
@@ -2714,6 +2688,7 @@ PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJ(Mat B, PetscInt bs, PetscInt d
   PetscCall(MatSetSizes(b->A, B->rmap->n, B->cmap->n, B->rmap->n, B->cmap->n));
   PetscCall(MatSetType(b->A, MATSEQBAIJ));
   MatSeqXAIJRestoreOptions_Private(b->A);
+  PetscCall(MatSetOption(b->A, MAT_STRUCTURE_ONLY, B->structure_only));
 
   PetscCall(MatSeqBAIJSetPreallocation(b->A, bs, d_nz, d_nnz));
   PetscCall(MatSeqBAIJSetPreallocation(b->B, bs, o_nz, o_nnz));
@@ -2837,9 +2812,10 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIAIJ(Mat A, MatType newtype, Ma
 
    Level: beginner
 
-   Note:
-    `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` may be called for this matrix type. In this no
-    space is allocated for the nonzero entries and any entries passed with `MatSetValues()` are ignored
+   Notes:
+    Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+    The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+    Such matrices can be used for structural operations, but not for numerical operations.
 
 .seealso: `Mat`, `MATBAIJ`, `MATSEQBAIJ`, `MatCreateBAIJ`
 M*/
@@ -3105,6 +3081,11 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
 . -mat_type baij - sets the matrix type to `MATBAIJ` during a call to `MatSetFromOptions()`
 
   Level: beginner
+
+  Notes:
+  Call `MatSetOption(A, MAT_STRUCTURE_ONLY, PETSC_TRUE)` before preallocation or `MatSetUp()` to store only the nonzero pattern.
+  The assembled matrix has no numerical value array. Row and column indices supplied during insertion are retained, while numerical values are ignored.
+  Such matrices can be used for structural operations, but not for numerical operations.
 
 .seealso: `Mat`, `MatCreateBAIJ()`, `MATSEQBAIJ`, `MATMPIBAIJ`, `MatMPIBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocationCSR()`
 M*/
