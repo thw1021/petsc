@@ -509,12 +509,12 @@ PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
   PetscCall(PetscInfo(a_pc, "%s%sSquare Graph on level %" PetscInt_FMT ": high memory mark, if OOM try -%spc_gamg_aggressive_square_graph false; see \"Reducing memory usage for PCGAMG\" in the users manual\n", prefix ? prefix : "", prefix ? ": " : "",
                       pc_gamg->current_level + 1, prefix ? prefix : ""));
   PetscCall(MatProductCreate(Gmat1, Gmat1, NULL, Gmat2));
+  PetscCall(MatSetOption(*Gmat2, MAT_STRUCTURE_ONLY, PETSC_TRUE));
   PetscCall(MatSetOptionsPrefix(*Gmat2, prefix));
   PetscCall(PetscSNPrintf(addp, sizeof(addp), "pc_gamg_square_%" PetscInt_FMT "_", pc_gamg->current_level));
   PetscCall(MatAppendOptionsPrefix(*Gmat2, addp));
-  if ((*Gmat2)->structurally_symmetric == PETSC_BOOL3_TRUE) {
-    PetscCall(MatProductSetType(*Gmat2, MATPRODUCT_AB));
-  } else {
+  if (Gmat1->structurally_symmetric == PETSC_BOOL3_TRUE) PetscCall(MatProductSetType(*Gmat2, MATPRODUCT_AB));
+  else {
     PetscCall(MatSetOption(Gmat1, MAT_FORM_EXPLICIT_TRANSPOSE, PETSC_TRUE));
     PetscCall(MatProductSetType(*Gmat2, MATPRODUCT_AtB));
   }
@@ -523,8 +523,6 @@ PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
   PetscCall(MatProductSymbolic(*Gmat2));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[pc_gamg->current_level][0], 0, 0, 0, 0));
   PetscCall(MatProductClear(*Gmat2));
-  /* we only need the sparsity, cheat and tell PETSc the matrix has been assembled */
-  (*Gmat2)->assembled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

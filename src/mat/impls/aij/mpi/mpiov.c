@@ -1232,7 +1232,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
 #endif
   PetscInt      ctr_j, *sbuf1_j, *sbuf_aj_i, *rbuf1_i, kmax, *sbuf1_i, *rbuf2_i, *rbuf3_i, jcnt;
   PetscInt     *cworkB, lwrite, *subcols, ib, jb;
-  PetscScalar  *vworkA, *vworkB, *a_a, *b_a, *subvals = NULL;
+  PetscScalar  *vworkA, *vworkB, *a_a = NULL, *b_a = NULL, *subvals = NULL;
   MPI_Request  *s_waits1, *r_waits1, *s_waits2, *r_waits2, *r_waits3;
   MPI_Request  *r_waits4, *s_waits3 = NULL, *s_waits4;
   MPI_Status   *r_status1, *r_status2, *s_status1, *s_status3 = NULL, *s_status2;
@@ -1247,8 +1247,6 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
   PetscValidLogicalCollectiveInt(C, ismax, 2);
   PetscValidLogicalCollectiveEnum(C, scall, 5);
   PetscCheck(ismax == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "This routine only works when all processes have ismax=1");
-  PetscCall(MatSeqAIJGetArrayRead(A, (const PetscScalar **)&a_a));
-  PetscCall(MatSeqAIJGetArrayRead(B, (const PetscScalar **)&b_a));
   PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
   size = c->size;
   rank = c->rank;
@@ -1265,6 +1263,16 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
     PetscCall(ISGetLocalSize(iscol[0], &ncol));
   }
 
+  /* MAT_REUSE_MATRIX requires an unchanged pattern, so there are no values to update for a structure-only matrix */
+  if (C->structure_only && scall == MAT_REUSE_MATRIX) {
+    PetscCheck(submats[0]->rmap->n == nrow && submats[0]->cmap->n == ncol, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot reuse matrix: wrong dimensions");
+    PetscCall(ISRestoreIndices(isrow[0], &irow));
+    if (!allcolumns) PetscCall(ISRestoreIndices(iscol[0], &icol));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  PetscCall(MatSeqAIJGetArrayRead(A, (const PetscScalar **)&a_a));
+  PetscCall(MatSeqAIJGetArrayRead(B, (const PetscScalar **)&b_a));
   if (scall == MAT_INITIAL_MATRIX) {
     PetscInt *sbuf2_i, *cworkA, lwrite, ctmp;
 
@@ -1603,6 +1611,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
     PetscCall(ISGetBlockSize(iscol[0], &jb));
     if (ib > 1 || jb > 1) PetscCall(MatSetBlockSizes(submat, ib, jb));
     PetscCall(MatSetType(submat, ((PetscObject)A)->type_name));
+    PetscCall(MatSetOption(submat, MAT_STRUCTURE_ONLY, C->structure_only));
     PetscCall(MatSeqAIJSetPreallocation(submat, 0, lens));
 
     /* create struct Mat_SubSppt and attached it to submat */
@@ -1681,53 +1690,56 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
   }
 
   /* Post recv matrix values */
-  PetscCall(PetscMalloc3(nrqs, &rbuf4, rmax, &subcols, rmax, &subvals));
-  PetscCall(PetscMalloc4(nrqs, &r_waits4, nrqr, &s_waits4, nrqs, &r_status4, nrqr, &s_status4));
-  PetscCall(PetscObjectGetNewTag((PetscObject)C, &tag4));
-  for (PetscMPIInt i = 0; i < nrqs; ++i) {
-    PetscCall(PetscMalloc1(rbuf2[i][0], &rbuf4[i]));
-    PetscCallMPI(MPIU_Irecv(rbuf4[i], rbuf2[i][0], MPIU_SCALAR, req_source2[i], tag4, comm, r_waits4 + i));
-  }
-
-  /* Allocate sending buffers for a->a, and send them off */
-  PetscCall(PetscMalloc1(nrqr, &sbuf_aa));
-  jcnt = 0;
-  for (PetscMPIInt i = 0; i < nrqr; i++) jcnt += req_size[i];
-  if (nrqr) PetscCall(PetscMalloc1(jcnt, &sbuf_aa[0]));
-  for (PetscMPIInt i = 1; i < nrqr; i++) sbuf_aa[i] = sbuf_aa[i - 1] + req_size[i - 1];
-
-  for (PetscMPIInt i = 0; i < nrqr; i++) {
-    rbuf1_i   = rbuf1[i];
-    sbuf_aa_i = sbuf_aa[i];
-    ct1       = 2 * rbuf1_i[0] + 1;
-    ct2       = 0;
-    /* max1=rbuf1_i[0]; PetscCheck(max1 == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"max1 !=1"); */
-
-    kmax = rbuf1_i[2];
-    for (PetscInt k = 0; k < kmax; k++, ct1++) {
-      row    = rbuf1_i[ct1] - rstart;
-      nzA    = ai[row + 1] - ai[row];
-      nzB    = bi[row + 1] - bi[row];
-      ncols  = nzA + nzB;
-      cworkB = PetscSafePointerPlusOffset(bj, bi[row]);
-      vworkA = PetscSafePointerPlusOffset(a_a, ai[row]);
-      vworkB = PetscSafePointerPlusOffset(b_a, bi[row]);
-
-      /* load the column values for this row into vals*/
-      vals = PetscSafePointerPlusOffset(sbuf_aa_i, ct2);
-
-      lwrite = 0;
-      for (PetscInt l = 0; l < nzB; l++) {
-        if ((bmap[cworkB[l]]) < cstart) vals[lwrite++] = vworkB[l];
-      }
-      for (PetscInt l = 0; l < nzA; l++) vals[lwrite++] = vworkA[l];
-      for (PetscInt l = 0; l < nzB; l++) {
-        if ((bmap[cworkB[l]]) >= cend) vals[lwrite++] = vworkB[l];
-      }
-
-      ct2 += ncols;
+  PetscCall(PetscMalloc1(rmax, &subcols));
+  if (!C->structure_only) {
+    PetscCall(PetscMalloc2(nrqs, &rbuf4, rmax, &subvals));
+    PetscCall(PetscMalloc4(nrqs, &r_waits4, nrqr, &s_waits4, nrqs, &r_status4, nrqr, &s_status4));
+    PetscCall(PetscObjectGetNewTag((PetscObject)C, &tag4));
+    for (PetscMPIInt i = 0; i < nrqs; ++i) {
+      PetscCall(PetscMalloc1(rbuf2[i][0], &rbuf4[i]));
+      PetscCallMPI(MPIU_Irecv(rbuf4[i], rbuf2[i][0], MPIU_SCALAR, req_source2[i], tag4, comm, r_waits4 + i));
     }
-    PetscCallMPI(MPIU_Isend(sbuf_aa_i, req_size[i], MPIU_SCALAR, req_source1[i], tag4, comm, s_waits4 + i));
+
+    /* Allocate sending buffers for a->a, and send them off */
+    PetscCall(PetscMalloc1(nrqr, &sbuf_aa));
+    jcnt = 0;
+    for (PetscMPIInt i = 0; i < nrqr; i++) jcnt += req_size[i];
+    if (nrqr) PetscCall(PetscMalloc1(jcnt, &sbuf_aa[0]));
+    for (PetscMPIInt i = 1; i < nrqr; i++) sbuf_aa[i] = sbuf_aa[i - 1] + req_size[i - 1];
+
+    for (PetscMPIInt i = 0; i < nrqr; i++) {
+      rbuf1_i   = rbuf1[i];
+      sbuf_aa_i = sbuf_aa[i];
+      ct1       = 2 * rbuf1_i[0] + 1;
+      ct2       = 0;
+      /* max1=rbuf1_i[0]; PetscCheck(max1 == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"max1 !=1"); */
+
+      kmax = rbuf1_i[2];
+      for (PetscInt k = 0; k < kmax; k++, ct1++) {
+        row    = rbuf1_i[ct1] - rstart;
+        nzA    = ai[row + 1] - ai[row];
+        nzB    = bi[row + 1] - bi[row];
+        ncols  = nzA + nzB;
+        cworkB = PetscSafePointerPlusOffset(bj, bi[row]);
+        vworkA = PetscSafePointerPlusOffset(a_a, ai[row]);
+        vworkB = PetscSafePointerPlusOffset(b_a, bi[row]);
+
+        /* load the column values for this row into vals*/
+        vals = PetscSafePointerPlusOffset(sbuf_aa_i, ct2);
+
+        lwrite = 0;
+        for (PetscInt l = 0; l < nzB; l++) {
+          if ((bmap[cworkB[l]]) < cstart) vals[lwrite++] = vworkB[l];
+        }
+        for (PetscInt l = 0; l < nzA; l++) vals[lwrite++] = vworkA[l];
+        for (PetscInt l = 0; l < nzB; l++) {
+          if ((bmap[cworkB[l]]) >= cend) vals[lwrite++] = vworkB[l];
+        }
+
+        ct2 += ncols;
+      }
+      PetscCallMPI(MPIU_Isend(sbuf_aa_i, req_size[i], MPIU_SCALAR, req_source1[i], tag4, comm, s_waits4 + i));
+    }
   }
 
   /* Assemble submat */
@@ -1749,18 +1761,18 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
         ncols = ai[Crow + 1] - ai[Crow];
         cols  = PetscSafePointerPlusOffset(aj, ai[Crow]);
         vals  = PetscSafePointerPlusOffset(a_a, ai[Crow]);
-        for (PetscInt k = 0; k < ncols; k++) {
-          subcols[ncol]   = cols[k] + cstart;
-          subvals[ncol++] = vals[k];
+        for (PetscInt k = 0; k < ncols; k++, ncol++) {
+          subcols[ncol] = cols[k] + cstart;
+          if (!C->structure_only) subvals[ncol] = vals[k];
         }
 
         /* off-diagonal part B = c->B */
         ncols = bi[Crow + 1] - bi[Crow];
         cols  = PetscSafePointerPlusOffset(bj, bi[Crow]);
         vals  = PetscSafePointerPlusOffset(b_a, bi[Crow]);
-        for (PetscInt k = 0; k < ncols; k++) {
-          subcols[ncol]   = bmap[cols[k]];
-          subvals[ncol++] = vals[k];
+        for (PetscInt k = 0; k < ncols; k++, ncol++) {
+          subcols[ncol] = bmap[cols[k]];
+          if (!C->structure_only) subvals[ncol] = vals[k];
         }
 
         PetscCall(MatSetValues_SeqAIJ(submat, 1, &row, ncol, subcols, subvals, INSERT_VALUES));
@@ -1776,8 +1788,9 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
         for (PetscInt k = 0; k < ncols; k++) {
           tcol = cmap_loc[cols[k]];
           if (tcol) {
-            subcols[ncol]   = --tcol;
-            subvals[ncol++] = vals[k];
+            subcols[ncol] = --tcol;
+            if (!C->structure_only) subvals[ncol] = vals[k];
+            ncol++;
           }
         }
 
@@ -1788,32 +1801,35 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
         for (PetscInt k = 0; k < ncols; k++) {
           PetscCall(PetscHMapIGetWithDefault(cmap, bmap[cols[k]] + 1, 0, &tcol));
           if (tcol) {
-            subcols[ncol]   = --tcol;
-            subvals[ncol++] = vals[k];
+            subcols[ncol] = --tcol;
+            if (!C->structure_only) subvals[ncol] = vals[k];
+            ncol++;
           }
         }
 #else
         /* diagonal part A = c->A */
         ncols = ai[Crow + 1] - ai[Crow];
         cols  = aj + ai[Crow];
-        vals  = a_a + ai[Crow];
+        vals  = PetscSafePointerPlusOffset(a_a, ai[Crow]);
         for (PetscInt k = 0; k < ncols; k++) {
           tcol = cmap[cols[k] + cstart];
           if (tcol) {
-            subcols[ncol]   = --tcol;
-            subvals[ncol++] = vals[k];
+            subcols[ncol] = --tcol;
+            if (!C->structure_only) subvals[ncol] = vals[k];
+            ncol++;
           }
         }
 
         /* off-diagonal part B = c->B */
         ncols = bi[Crow + 1] - bi[Crow];
         cols  = bj + bi[Crow];
-        vals  = b_a + bi[Crow];
+        vals  = PetscSafePointerPlusOffset(b_a, bi[Crow]);
         for (PetscInt k = 0; k < ncols; k++) {
           tcol = cmap[bmap[cols[k]]];
           if (tcol) {
-            subcols[ncol]   = --tcol;
-            subvals[ncol++] = vals[k];
+            subcols[ncol] = --tcol;
+            if (!C->structure_only) subvals[ncol] = vals[k];
+            ncol++;
           }
         }
 #endif
@@ -1825,15 +1841,16 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
   /* Now assemble the off-proc rows */
   for (PetscMPIInt i = 0; i < nrqs; i++) { /* for each requested message */
     /* recv values from other processes */
-    PetscCallMPI(MPI_Waitany(nrqs, r_waits4, &idex, r_status4 + i));
+    if (!C->structure_only) PetscCallMPI(MPI_Waitany(nrqs, r_waits4, &idex, r_status4 + i));
+    else idex = i;
     sbuf1_i = sbuf1[pa[idex]];
     /* jmax    = sbuf1_i[0]; PetscCheck(jmax == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"jmax %d != 1",jmax); */
     ct1     = 2 + 1;
-    ct2     = 0;           /* count of received C->j */
-    ct3     = 0;           /* count of received C->j that will be inserted into submat */
-    rbuf2_i = rbuf2[idex]; /* int** received length of C->j from other processes */
-    rbuf3_i = rbuf3[idex]; /* int** received C->j from other processes */
-    rbuf4_i = rbuf4[idex]; /* scalar** received C->a from other processes */
+    ct2     = 0;                                      /* count of received C->j */
+    ct3     = 0;                                      /* count of received C->j that will be inserted into submat */
+    rbuf2_i = rbuf2[idex];                            /* int** received length of C->j from other processes */
+    rbuf3_i = rbuf3[idex];                            /* int** received C->j from other processes */
+    rbuf4_i = C->structure_only ? NULL : rbuf4[idex]; /* scalar** received C->a from other processes */
 
     /* is_no = sbuf1_i[2*j-1]; PetscCheck(is_no == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"is_no !=0"); */
     max1 = sbuf1_i[2];                           /* num of rows */
@@ -1854,8 +1871,9 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
             tcol = cmap[rbuf3_i[ct2]];
 #endif
             if (tcol) {
-              subcols[idex]   = --tcol; /* may not be sorted */
-              subvals[idex++] = rbuf4_i[ct2];
+              subcols[idex] = --tcol; /* may not be sorted */
+              if (!C->structure_only) subvals[idex] = rbuf4_i[ct2];
+              idex++;
 
               /* We receive an entire column of C, but a subset of it needs to be inserted into submat.
                For reuse, we replace received C->j with index that should be inserted to submat */
@@ -1885,8 +1903,10 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
   }
 
   /* sending a->a are done */
-  PetscCallMPI(MPI_Waitall(nrqr, s_waits4, s_status4));
-  PetscCall(PetscFree4(r_waits4, s_waits4, r_status4, s_status4));
+  if (!C->structure_only) {
+    PetscCallMPI(MPI_Waitall(nrqr, s_waits4, s_status4));
+    PetscCall(PetscFree4(r_waits4, s_waits4, r_status4, s_status4));
+  }
 
   PetscCall(MatAssemblyBegin(submat, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(submat, MAT_FINAL_ASSEMBLY));
@@ -1897,11 +1917,14 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
   if (!allcolumns) PetscCall(ISRestoreIndices(iscol[0], &icol));
 
   /* Destroy allocated memory */
-  for (PetscMPIInt i = 0; i < nrqs; ++i) PetscCall(PetscFree(rbuf4[i]));
-  PetscCall(PetscFree3(rbuf4, subcols, subvals));
-  if (sbuf_aa) {
-    PetscCall(PetscFree(sbuf_aa[0]));
-    PetscCall(PetscFree(sbuf_aa));
+  PetscCall(PetscFree(subcols));
+  if (!C->structure_only) {
+    for (PetscMPIInt i = 0; i < nrqs; ++i) PetscCall(PetscFree(rbuf4[i]));
+    PetscCall(PetscFree2(rbuf4, subvals));
+    if (sbuf_aa) {
+      PetscCall(PetscFree(sbuf_aa[0]));
+      PetscCall(PetscFree(sbuf_aa));
+    }
   }
 
   if (scall == MAT_INITIAL_MATRIX) {
