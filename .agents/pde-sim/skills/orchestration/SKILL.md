@@ -21,7 +21,7 @@ everything routes through you (clean audit trail, no nested delegation).
 ## How to dispatch a specialist (Claude Code binding)
 The four specialists are **not** registered subagents. Dispatch each as a
 **general-purpose** subagent (Agent tool, `subagent_type: general-purpose`): read
-its role prompt from `.agents/agents/<role>.md` and pass it as the subagent's
+its role prompt from `.agents/pde-sim/agents/<role>.md` and pass it as the subagent's
 instructions, and tell the subagent which skills to load by path from
 `.agents/pde-sim/skills/<name>/SKILL.md` (the role prompt lists them). The
 subagent writes its contract file and reports the path back to you. This keeps the

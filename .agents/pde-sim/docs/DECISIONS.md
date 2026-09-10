@@ -12,7 +12,7 @@ Dates are when the decision was made; commit hashes point at the change.
 
 ## D1 — Hybrid design: subagents for roles, skills for knowledge
 **Status:** Accepted · `df6f6af`
-**Decision:** Each specialist is a *subagent* (`.agents/agents/*.md`); the reusable
+**Decision:** Each specialist is a *subagent* (`.agents/pde-sim/agents/*.md`); the reusable
 domain expertise lives in *skills* (`.agents/skills/*/SKILL.md`) the subagents load.
 **Why:** Keeps *roles* (behavior, tools, handoffs) separate from *knowledge*
 (testable, reusable, shareable) so each can evolve independently — the right shape
@@ -200,7 +200,7 @@ under `.agents/skills/`. PETSc commits a `.claude/skills -> ../.agents/skills` s
 so anything under `.agents/skills/` auto-loads into *every* Claude Code session; the
 pipeline skills are kept out of it. The Claude Code binding is a single committed
 command, `.claude/commands/pde-sim.md` (`/pde-sim`), which loads the orchestration brief;
-the orchestrator then reads role prompts (`.agents/agents/<role>.md`) and skills by path
+the orchestrator then reads role prompts (`.agents/pde-sim/agents/<role>.md`) and skills by path
 and dispatches specialists as `general-purpose` subagents. `.claude/agents` is **not**
 committed, so no specialist is auto-registered either.
 **Why:** The pipeline should engage only when a user asks for it. The prior placement

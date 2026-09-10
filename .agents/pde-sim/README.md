@@ -10,14 +10,14 @@ prompts, domain-knowledge skills, example components, tests) and a thin per-tool
 **binding**. Inside PETSc the core lives under `.agents/`: the domain **skills**
 in `.agents/pde-sim/skills/` (deliberately **not** in the auto-discovered
 `.agents/skills/`, so they never load until the pipeline is invoked), the four
-agent role prompts in `.agents/agents/`, and the contracts, components, tests, and
+agent role prompts in `.agents/pde-sim/agents/`, and the contracts, components, tests, and
 docs under `.agents/pde-sim/` (this directory). The only binding built so far
 is for **Claude Code**; see [Running under Claude Code](#running-under-claude-code)
 and [Portability](#portability).
 
 > Paths written as `contracts/…`, `components/…`, `skills/…`, `tests/…`, `docs/…`
 > below are relative to this `.agents/pde-sim/` directory. Agent role prompts
-> are referenced by their repo-root paths under `.agents/agents/`.
+> are referenced by their repo-root paths under `.agents/pde-sim/agents/`.
 
 ## Architecture at a glance
 
@@ -58,7 +58,7 @@ Three kinds of building block:
 
 | Kind | Location | What it is |
 |------|----------|------------|
-| **Agents** (roles) | `.agents/agents/*.md` | Role prompts dispatched by the orchestrator as `general-purpose` subagents (own context; model inherited from the session). |
+| **Agents** (roles) | `.agents/pde-sim/agents/*.md` | Role prompts dispatched by the orchestrator as `general-purpose` subagents (own context; model inherited from the session). |
 | **Skills** (knowledge) | `.agents/pde-sim/skills/*/SKILL.md` | On-demand expertise, loaded by path by whichever agent needs it. Two are **shared**. |
 | **Contracts** (interfaces) | `contracts/*.schema.json` | JSON Schemas for every inter-agent handoff. The robustness backbone. |
 
@@ -184,7 +184,7 @@ homogeneous Dirichlet boundaries
 
 `/pde-sim` (committed at `.claude/commands/pde-sim.md`) loads the orchestration
 brief (`.agents/pde-sim/skills/orchestration/SKILL.md`) into the main session,
-which then reads the specialist role prompts (`.agents/agents/<role>.md`) and domain
+which then reads the specialist role prompts (`.agents/pde-sim/agents/<role>.md`) and domain
 skills (`.agents/pde-sim/skills/<name>/SKILL.md`) **by path** and dispatches
 each specialist as a `general-purpose` subagent. Contract artifacts are written
 under a scratch `artifacts/<study-id>/` directory (add it to your local
@@ -207,10 +207,10 @@ under a scratch `artifacts/<study-id>/` directory (add it to your local
 .agents/                        # tracked, tool-agnostic core
 ├── skills/                     # AUTO-LOADED Claude Code skills (via committed .claude/skills)
 │   └── codegraph/  review-branch/  review-mr/  review-mr-post/   # PETSc's own skills
-├── agents/                     # specialist role prompts (loaded by path, not registered)
-│   ├── pde-modeling.md         numerical-analysis.md
-│   └── code-generation.md      visualization.md
 └── pde-sim/                    # framework-neutral core (this directory)
+    ├── agents/      # specialist role prompts (loaded by path, not registered)
+    │   ├── pde-modeling.md      numerical-analysis.md
+    │   └── code-generation.md   visualization.md
     ├── skills/       # pipeline domain knowledge — loaded by path, NOT auto-discovered
     │   ├── orchestration/                          #   pipeline driver (main session)
     │   ├── numerical-methods/  petsc-solvers/       #   (petsc-solvers shared)
@@ -231,7 +231,7 @@ artifacts/        # per-study runtime output (scratch, regenerated per run)
 
 The design is framework-neutral; only the **binding** is tool-specific. The neutral
 core is `.agents/pde-sim/contracts/`, the agent role prompts in
-`.agents/agents/`, the pipeline knowledge in `.agents/pde-sim/skills/`, and the
+`.agents/pde-sim/agents/`, the pipeline knowledge in `.agents/pde-sim/skills/`, and the
 `examples/`, `components/`, and `tests/` under `.agents/pde-sim/` — no hardcoded
 model, and prose free of tool assumptions. Everything is loaded by **explicit file
 path**, so the core does not depend on any tool's auto-discovery.
