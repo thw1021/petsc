@@ -600,12 +600,12 @@ class TestSNESVI(unittest.TestCase):
         self.snes.reset()
         self.assertEqual(inact2.getSize(), len(inact2.getIndices()))
 
-    def testGetVIInactiveSetWrongType(self):
+    def testGetVIInactiveSetOtherType(self):
         self.snes.setType(PETSc.SNES.Type.VINEWTONSSLS)
         self.snes.setVariableBounds(self.xl, self.xu)
         self.x.set(0.0)
         self.snes.solve(None, self.x)
-        self.assertRaises(PETSc.Error, self.snes.getVIInactiveSet)
+        self.assertIsNone(self.snes.getVIInactiveSet())
 
 
 class TestSNESLineSearchAPI(unittest.TestCase):

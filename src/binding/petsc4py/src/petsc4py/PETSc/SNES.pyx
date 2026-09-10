@@ -2224,20 +2224,19 @@ cdef class SNES(Object):
         CHKERR(PetscINCREF(xl.obj)); CHKERR(PetscINCREF(xu.obj))
         return (xl, xu)
 
-    def getVIInactiveSet(self) -> IS:
+    def getVIInactiveSet(self) -> IS | None:
         """Return the index set for the inactive set.
 
         Collective.
 
         Notes
         -----
-        The solver must be of type `Type.VINEWTONRSLS`. When called during
-        the reduced linear solve of a Newton iteration, for instance from a
-        `KSP` monitor, the returned index set is the one the linear system is
-        solved on. Otherwise, for instance from a `SNES` monitor or after
-        `solve` has returned, the inactive set is computed from the current
-        solution and residual. Previously, an `IS` with a null handle was
-        returned in the latter case.
+        Returns `None` for solver types other than `Type.VINEWTONRSLS`.
+        When called during the reduced linear solve of a Newton iteration,
+        for instance from a `KSP` monitor, the returned index set is the one
+        the linear system is solved on. Otherwise, for instance from a `SNES`
+        monitor or after `solve` has returned, the inactive set is computed
+        from the current solution and residual.
 
         See Also
         --------
@@ -2246,6 +2245,7 @@ cdef class SNES(Object):
         """
         cdef IS inact = IS()
         CHKERR(SNESVIGetInactiveSet(self.snes, &inact.iset))
+        if inact.iset == NULL: return None
         CHKERR(PetscINCREF(inact.obj))
         return inact
 

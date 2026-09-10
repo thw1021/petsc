@@ -133,7 +133,7 @@
 - Add `SNESFASSetUseCoarseCorrectionLineSearch()` and `-snes_fas_use_coarse_correction_linesearch` to implement the algorithm in {cite}`nash2000mgopt`.
 - Add `SNESFASGetCoarseCorrectionLineSearch()`
 - Change default linesearch for `SNESFAS` with `SNESFASType` of `SNES_FAS_ADDITIVE` to `SNESLINESEARCHSECANT`
-- Change `SNESVIGetInactiveSet()` to compute the inactive set from the current solution and residual when called outside of the reduced linear solve of a Newton iteration, for example after `SNESSolve()` or from a `SNES` monitor, instead of returning `NULL`, and to raise an error for `SNES` types other than `SNESVINEWTONRSLS`
+- Change `SNESVIGetInactiveSet()` to compute the inactive set from the current solution and residual when called outside of the reduced linear solve of a Newton iteration, for example after `SNESSolve()` or from a `SNES` monitor, instead of returning `NULL`, and to return `NULL` for `SNES` types other than `SNESVINEWTONRSLS` instead of an invalid pointer
 
 ## SNESLineSearch
 

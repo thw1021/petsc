@@ -31,27 +31,23 @@ static PetscErrorCode SNESVIComputeInactiveSet_Private(SNES snes, Vec X, Vec F, 
   Collective
 
   Input Parameter:
-. snes - the `SNES` context, must be of type `SNESVINEWTONRSLS`
+. snes - the `SNES` context
 
   Output Parameter:
-. inact - the inactive set index set, owned by `snes`
+. inact - the inactive set index set, owned by `snes`, or `NULL` if `snes` is not of type `SNESVINEWTONRSLS`
 
   Level: advanced
 
   Notes:
-  The iterate the inactive set refers to depends on when this routine is called\:
-  - During the reduced linear solve of a Newton iteration, for example from a `KSP` monitor, it returns the inactive set the linear system is solved on,
-    which was determined from the iterate at the beginning of that Newton iteration.
-  - Otherwise, for example from a `SNES` monitor, from a convergence test, or after `SNESSolve()` has returned, the inactive set is computed from the
-    current solution and residual of `snes` with the rule of `SNESVIGetActiveSetIS()`, taking into account a redundancy check provided with
-    `SNESVISetRedundancyCheck()`. The result is cached, so repeated calls return the same `IS` without recomputing it.
+  The iterate the inactive set refers to depends on when this routine is called.
+  During the reduced linear solve of a Newton iteration, for example from a `KSP` monitor, it returns the inactive set the linear system is solved on,
+  which was determined from the iterate at the beginning of that Newton iteration. Otherwise, for example from a `SNES` monitor, from a convergence
+  test, or after `SNESSolve()` has returned, the inactive set is computed from the current solution and residual of `snes` with the rule of
+  `SNESVIGetActiveSetIS()`, taking into account a redundancy check provided with `SNESVISetRedundancyCheck()`. The result is cached, so repeated calls
+  return the same `IS` without recomputing it.
 
   In both cases the returned `IS` is owned by `snes` and destroyed at the next Newton iteration, `SNESSolve()`, or `SNESReset()`. Do not destroy it, and
   call `PetscObjectReference()` on it if it must outlive these events.
-
-  In earlier versions of PETSc, this routine returned `NULL` in the second case above, since the inactive set was destroyed right after each reduced
-  linear solve. Additionally, it could be called with any `SNES` type and then returned an invalid pointer. It now raises an error for `SNES` types other
-  than `SNESVINEWTONRSLS`.
 
   See `SNESVINEWTONRSLS` for a concise description of the active and inactive sets
 
@@ -65,8 +61,9 @@ PetscErrorCode SNESVIGetInactiveSet(SNES snes, IS *inact)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscAssertPointer(inact, 2);
+  *inact = NULL;
   PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESVINEWTONRSLS, &isrsls));
-  PetscCheck(isrsls, PetscObjectComm((PetscObject)snes), PETSC_ERR_SUP, "Only supported for SNES type %s", SNESVINEWTONRSLS);
+  if (!isrsls) PetscFunctionReturn(PETSC_SUCCESS);
   if (!vi->IS_inact) {
     PetscCheck(snes->vec_sol && snes->vec_func && snes->xl && snes->xu, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "Must set the variable bounds and call SNESSolve() before requesting the inactive set");
     PetscCall(SNESVIComputeInactiveSet_Private(snes, snes->vec_sol, snes->vec_func, NULL, &vi->IS_inact));
