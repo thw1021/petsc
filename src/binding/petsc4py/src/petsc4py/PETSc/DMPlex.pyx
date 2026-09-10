@@ -126,7 +126,8 @@ cdef class DMPlex(DM):
         cdef Py_ssize_t i = 0
         cdef PetscInt dim = 0, *cfaces = NULL
         faces = iarray_i(faces, &dim, &cfaces)
-        assert dim >= 1 and dim <= 3
+        if dim < 1 or dim > 3:
+            raise ValueError("number of face dimensions must be between 1 and 3")
         cdef PetscReal clower[3]
         clower[0] = clower[1] = clower[2] = 0
         for i from 0 <= i < dim: clower[i] = lower[i]
@@ -175,7 +176,8 @@ cdef class DMPlex(DM):
         cdef Py_ssize_t i = 0
         cdef PetscInt dim = 0, *cfaces = NULL
         faces = iarray_i(faces, &dim, &cfaces)
-        assert dim >= 1 and dim <= 3
+        if dim < 1 or dim > 3:
+            raise ValueError("number of face dimensions must be between 1 and 3")
         cdef PetscReal clower[3]
         clower[0] = clower[1] = clower[2] = 0
         for i from 0 <= i < dim: clower[i] = lower[i]
@@ -550,10 +552,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexGetConeSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt csize = 0
         CHKERR(DMPlexGetConeSize(self.dm, cp, &csize))
         return toInt(csize)
@@ -576,10 +575,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetConeSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt csize = asInt(size)
         CHKERR(DMPlexSetConeSize(self.dm, cp, csize))
 
@@ -599,10 +595,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexGetCone
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt        ncone = 0
         cdef const PetscInt *icone = NULL
         CHKERR(DMPlexGetConeSize(self.dm, cp, &ncone))
@@ -630,22 +623,18 @@ cdef class DMPlex(DM):
         DMPlex.setSupportSize, petsc.DMPlexSetCone
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         #
-        cdef PetscInt  ncone = 0
-        cdef PetscInt *icone = NULL
+        cdef PetscInt  ncone = 0, norie = 0
+        cdef PetscInt *icone = NULL, *iorie = NULL
         cone = iarray_i(cone, &ncone, &icone)
-        CHKERR(DMPlexSetConeSize(self.dm, cp, ncone))
-        CHKERR(DMPlexSetCone(self.dm, cp, icone))
-        #
-        cdef PetscInt  norie = 0
-        cdef PetscInt *iorie = NULL
         if orientation is not None:
             orientation = iarray_i(orientation, &norie, &iorie)
-            assert norie == ncone
+            if norie != ncone:
+                raise ValueError("cone and orientation arrays must have equal length")
+        CHKERR(DMPlexSetConeSize(self.dm, cp, ncone))
+        CHKERR(DMPlexSetCone(self.dm, cp, icone))
+        if orientation is not None:
             CHKERR(DMPlexSetConeOrientation(self.dm, cp, iorie))
 
     def insertCone(self, p: int, conePos: int, conePoint: int) -> None:
@@ -714,10 +703,7 @@ cdef class DMPlex(DM):
         DMPlex.setChart, petsc.DMPlexGetConeOrientation
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt        norie = 0
         cdef const PetscInt *iorie = NULL
         CHKERR(DMPlexGetConeSize(self.dm, cp, &norie))
@@ -743,16 +729,14 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetConeOrientation
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt ncone = 0
         CHKERR(DMPlexGetConeSize(self.dm, cp, &ncone))
         cdef PetscInt  norie = 0
         cdef PetscInt *iorie = NULL
         orientation = iarray_i(orientation, &norie, &iorie)
-        assert norie == ncone
+        if norie != ncone:
+            raise ValueError("cone and orientation arrays must have equal length")
         CHKERR(DMPlexSetConeOrientation(self.dm, cp, iorie))
 
     def setCellType(self, p: int, ctype: DM.PolytopeType) -> None:
@@ -830,10 +814,7 @@ cdef class DMPlex(DM):
         DMPlex.getConeSize, petsc.DMPlexGetSupportSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt ssize = 0
         CHKERR(DMPlexGetSupportSize(self.dm, cp, &ssize))
         return toInt(ssize)
@@ -856,10 +837,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetSupportSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt ssize = asInt(size)
         CHKERR(DMPlexSetSupportSize(self.dm, cp, ssize))
 
@@ -879,10 +857,7 @@ cdef class DMPlex(DM):
         DMPlex.setChart, petsc.DMPlexGetSupport
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt        nsupp = 0
         cdef const PetscInt *isupp = NULL
         CHKERR(DMPlexGetSupportSize(self.dm, cp, &nsupp))
@@ -908,10 +883,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetSupport
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt  nsupp = 0
         cdef PetscInt *isupp = NULL
         supp = iarray_i(supp, &nsupp, &isupp)
@@ -1273,10 +1245,7 @@ cdef class DMPlex(DM):
         DMPlex.getCone, petsc.DMPlexGetTransitiveClosure
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscBool cuseCone = useCone
         cdef PetscInt  numPoints = 0
         cdef PetscInt *points = NULL
@@ -2009,7 +1978,8 @@ cdef class DMPlex(DM):
         cdef PetscInt *icomp = NULL, *idof = NULL
         numComp = iarray_i(numComp, &ncomp, &icomp)
         numDof  = iarray_i(numDof, &ndof, &idof)
-        assert ndof == ncomp*(dim+1)
+        if ndof != ncomp*(dim+1):
+            raise ValueError("numDof length must equal len(numComp) * (dim + 1)")
         # boundary conditions
         cdef PetscInt nbc = 0, i = 0
         cdef PetscInt *bcfield = NULL
@@ -2020,21 +1990,25 @@ cdef class DMPlex(DM):
             bcField = iarray_i(bcField, &nbc, &bcfield)
             if bcComps is not None:
                 bcComps = list(bcComps)
-                assert len(bcComps) == nbc
+                if len(bcComps) != nbc:
+                    raise ValueError("bcComps and bcField must have equal length")
                 unused1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
                 for i from 0 <= i < nbc:
                     bccomps[i] = (<IS?>bcComps[<Py_ssize_t>i]).iset
             if bcPoints is not None:
                 bcPoints = list(bcPoints)
-                assert len(bcPoints) == nbc
+                if len(bcPoints) != nbc:
+                    raise ValueError("bcPoints and bcField must have equal length")
                 unused2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
                 for i from 0 <= i < nbc:
                     bcpoints[i] = (<IS?>bcPoints[<Py_ssize_t>i]).iset
             else:
                 raise ValueError("bcPoints is a required argument")
         else:
-            assert bcComps  is None
-            assert bcPoints is None
+            if bcComps is not None:
+                raise ValueError("bcComps requires bcField")
+            if bcPoints is not None:
+                raise ValueError("bcPoints requires bcField")
         # optional chart permutations
         cdef PetscIS cperm = NULL
         if perm is not None: cperm = perm.iset
