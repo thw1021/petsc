@@ -3,6 +3,66 @@ static char help[] = "Tests for DMLabel\n\n";
 #include <petscdmplex.h>
 #include <petsc/private/dmimpl.h>
 
+static PetscErrorCode CheckValueISGlobal(MPI_Comm comm, DMLabel label, PetscBool get_nonempty, PetscInt num_expected, const PetscInt expected[])
+{
+  IS              values;
+  const PetscInt *indices;
+  PetscInt        num_values;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMLabelGetValueISGlobal(comm, label, get_nonempty, &values));
+  PetscCall(ISGetLocalSize(values, &num_values));
+  PetscCheck(num_values == num_expected, comm, PETSC_ERR_PLIB, "Expected %" PetscInt_FMT " global label values, got %" PetscInt_FMT, num_expected, num_values);
+  PetscCall(ISGetIndices(values, &indices));
+  for (PetscInt i = 0; i < num_values; ++i) PetscCheck(indices[i] == expected[i], comm, PETSC_ERR_PLIB, "Global label value %" PetscInt_FMT " is %" PetscInt_FMT ", expected %" PetscInt_FMT, i, indices[i], expected[i]);
+  PetscCall(ISRestoreIndices(values, &indices));
+  PetscCall(ISDestroy(&values));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestValueISGlobal(MPI_Comm comm)
+{
+  DMLabel         label           = NULL;
+  const PetscInt  empty_stratum[] = {42}, expected[] = {-2, 0, 7}, extrema[] = {PETSC_INT_MIN, PETSC_INT_MAX};
+  const PetscBool modes[] = {PETSC_FALSE, PETSC_TRUE};
+  PetscMPIInt     rank;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  for (PetscInt m = 0; m < 2; ++m) {
+    PetscCall(CheckValueISGlobal(comm, NULL, modes[m], 0, NULL));
+    PetscCall(DMLabelCreate(PETSC_COMM_SELF, "Empty Label", &label));
+    PetscCall(CheckValueISGlobal(comm, label, modes[m], 0, NULL));
+    PetscCall(DMLabelAddStratum(label, empty_stratum[0]));
+    PetscCall(CheckValueISGlobal(comm, label, modes[m], modes[m] ? 0 : 1, empty_stratum));
+    PetscCall(DMLabelDestroy(&label));
+  }
+  if (!rank) {
+    PetscCall(DMLabelCreate(PETSC_COMM_SELF, "Populated Label", &label));
+    PetscCall(DMLabelSetValue(label, 0, 7));
+    PetscCall(DMLabelSetValue(label, 1, -2));
+    PetscCall(DMLabelSetValue(label, 2, 0));
+  }
+  // Ranks without a label must participate in collecting the values.
+  for (PetscInt m = 0; m < 2; ++m) PetscCall(CheckValueISGlobal(comm, label, modes[m], 3, expected));
+  if (rank) PetscCall(DMLabelCreate(PETSC_COMM_SELF, "Empty Label", &label));
+  // An empty local label must not discard values on another rank.
+  for (PetscInt m = 0; m < 2; ++m) PetscCall(CheckValueISGlobal(comm, label, modes[m], 3, expected));
+  PetscCall(DMLabelDestroy(&label));
+  // Each extreme is a valid singleton value, distinct from an empty global range.
+  for (PetscInt e = 0; e < 2; ++e) {
+    if (!rank) {
+      PetscCall(DMLabelCreate(PETSC_COMM_SELF, "Singleton Label", &label));
+      PetscCall(DMLabelSetValue(label, 0, extrema[e]));
+    }
+    for (PetscInt m = 0; m < 2; ++m) PetscCall(CheckValueISGlobal(comm, label, modes[m], 1, &extrema[e]));
+    if (rank) PetscCall(DMLabelCreate(PETSC_COMM_SELF, "Empty Label", &label));
+    for (PetscInt m = 0; m < 2; ++m) PetscCall(CheckValueISGlobal(comm, label, modes[m], 1, &extrema[e]));
+    PetscCall(DMLabelDestroy(&label));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TestInsertion(void)
 {
   DMLabel        label, label2;
@@ -292,18 +352,29 @@ static PetscErrorCode TestUniversalLabel(MPI_Comm comm)
 
 int main(int argc, char **argv)
 {
+  PetscBool value_is_global = PETSC_FALSE;
+
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  /*PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));*/
-  PetscCall(TestInsertion());
-  PetscCall(TestEmptyStrata(PETSC_COMM_WORLD));
-  PetscCall(TestDistribution(PETSC_COMM_WORLD));
-  PetscCall(TestUniversalLabel(PETSC_COMM_WORLD));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-value_is_global", &value_is_global, NULL));
+  if (value_is_global) PetscCall(TestValueISGlobal(PETSC_COMM_WORLD));
+  else {
+    PetscCall(TestInsertion());
+    PetscCall(TestEmptyStrata(PETSC_COMM_WORLD));
+    PetscCall(TestDistribution(PETSC_COMM_WORLD));
+    PetscCall(TestUniversalLabel(PETSC_COMM_WORLD));
+  }
   PetscCall(PetscFinalize());
   return 0;
 }
 
 /*TEST
+
+  test:
+    suffix: value_is_global
+    nsize: {{1 2}}
+    args: -value_is_global
+    output_file: output/empty.out
 
   test:
     suffix: 0
