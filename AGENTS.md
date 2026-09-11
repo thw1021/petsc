@@ -2,7 +2,7 @@
 
 PETSc is a C library for parallel numerical computation using MPI. The codebase is primarily C, with Python bindings in `src/binding/petsc4py/`.
 
-This file must be self-contained. Do not rely on linked Markdown files being read automatically. The essential repo guidance is embedded below.
+Shared rules are below; optional skills provide task procedures through the coding tool's skill system. Respect the user's skill settings, including for references between skills; do not load disabled skills through direct file reads. Read conditional convention references explicitly when relevant.
 
 ## Project Layout
 
@@ -21,49 +21,34 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 - Keep edits minimal and local to the request. Read nearby code, preserve PETSc style, and reuse or extend existing logic. Do not add speculative abstractions or broad refactors unless requested.
 - When several APIs make the same decision, for example which implementation or strategy to select, implement it once in a private helper that also reports what it chose, and call that helper from each API.
 - Use PETSc accessors for object metadata instead of reconstructing internal layouts in callers or bindings. If metadata is missing, extend the owning API and document returned data's size, ownership, and lifetime. If only the documentation is unclear, clarify it.
-- If `.codegraph/` exists, follow `.agents/skills/codegraph/SKILL.md` before navigating, modifying, or reviewing PETSc C, C++, or Python code.
 - Fix only what the task requires. Report other improvements you notice, in scripts, makefiles, tools, or documentation, to the user separately with the file path and expected benefit; do not put them in the patch, review findings, or MR comments unless asked.
-- For source changes, check test blocks, expected outputs, and documentation; include headers and examples for public interfaces. Run relevant checks and tests using the development skills.
-- The user selects `PETSC_ARCH`. Ask if it is missing before configuring or building PETSc or petsc4py, running PETSc-dependent tests or executables, or importing petsc4py; pass it explicitly and never infer or change it unless asked. Architecture-independent checks need no architecture. Targets managing a dedicated default architecture, such as `make docs`, are exempt when using that default.
+- For source changes, check test blocks, expected outputs, and documentation; include headers and examples for public interfaces. Run relevant checks and tests.
+- The user selects `PETSC_ARCH`; reuse the value already supplied for the task. Ask if it is missing before configuring or building PETSc or petsc4py, running PETSc-dependent tests or executables, or importing petsc4py; pass it explicitly and never infer or change it unless asked. Architecture-independent checks need no architecture. Targets managing a dedicated default architecture, such as `make docs`, are exempt when using that default.
 - A documentation audit or review does not authorize a documentation build; run it only when explicitly requested or approved for the task.
 - All changes are expected to arrive through focused, reviewable GitLab merge requests.
 
-## Development Skills
+## Conditional Conventions
 
-The skills assume this file is loaded. Read a skill when its task first applies, directly by path
-if your tool does not discover skills. Reread it, or this file, only if it changed or its
-instructions are no longer in context.
+Before working on any of the following, read its convention reference. Load only the references
+relevant to the task, including during reviews and when no build or lint check will run.
+Reread this file or a convention reference only if it changed or is no longer in context.
 
-| Task | Skill file |
+| Task | Reference |
 | --- | --- |
-| Configure or reconfigure | `.agents/skills/petsc-configure/SKILL.md` |
-| Build PETSc or petsc4py | `.agents/skills/petsc-build/SKILL.md` |
-| Define, select, run, or debug tests; update expected output | `.agents/skills/petsc-test/SKILL.md` |
-| Format source or run source checks | `.agents/skills/petsc-lint/SKILL.md` |
-| Audit or build documentation | `.agents/skills/petsc-docs/SKILL.md` |
-| Review a local branch | `.agents/skills/review-branch/SKILL.md` |
+| New features, API changes, or documentation edits/reviews | [Documentation](.agents/conventions/documentation.md) |
+| C API docstrings (`/*@ ... @*/`) | [C docstrings](.agents/conventions/c-docstrings.md) |
+| Kokkos code | [Kokkos](.agents/conventions/kokkos.md) |
+| petsc4py source or tests | [petsc4py](.agents/conventions/petsc4py.md) |
 
-## Human-Facing Writing
+## Writing PETSc Contribution Materials
 
-These rules apply to responses, commits, MR descriptions, review reports, comments, documentation, and messages.
+Apply these rules to PETSc contribution materials and their drafts: commit messages, MR
+descriptions, review reports and comments, documentation, and code comments. They do not govern
+unrelated conversations or prescribe the user's conversational style.
 
-- Lead with the result and why it matters. Include the context, evidence, and next steps the reader needs; make MR descriptions and review comments understandable without the conversation. Explain relevant verification results and gaps, their effect on confidence, and commands, paths, or configuration needed to reproduce or diagnose them. Do not list inapplicable checks.
-- Write clear, grammatical, complete sentences; titles, labels, and concise list items may be fragments. Explain unfamiliar terms at first use, with essential explanations inline and useful authoritative links. Preserve exact API names, commands, and diagnostics.
-- Before presenting or posting, check spelling, grammar, and readability. Remove repetition, boilerplate, routine process narration, and details that do not help the reader assess the result or act.
-
-## Documentation And Code Comments
-
-- Write for peer mathematicians and software engineers. Prefer active voice, present tense for current behavior, and one idea per sentence; preserve PETSc terminology and mathematical precision.
-- Prefer self-explanatory code. Add comments or docstrings for non-obvious behavior, correctness constraints, durable rationale, or required PETSc documentation. Do not narrate operations, record edit history, or describe abandoned approaches. Preserve existing comments unless inaccurate or obsolete.
-- Add `doc/changes/dev.md` entries for new features or API changes, otherwise only when requested. Preserve pre-existing entries; all other Markdown files in `doc/changes/` are immutable.
-- Describe designs conceptually. For copied PETSc source beyond standalone prototypes, use `literalinclude` with narrow `:start-at:` and `:end-at:` anchors. Keep illustrative code, pseudocode, and standalone prototypes in fenced blocks; retain prototype parameter names referenced by the text.
-- Mention nonexistent, obsolete, or deprecated symbols only for historical, migration, or compatibility context, never as current API.
-
-## petsc4py
-
-- Validate user arguments in public Python-callable methods with explicit exceptions, not `assert`, which optimized Python can remove. Internal helpers and callback trampolines may use `assert`.
-- Do not add Python-side state or validation to compensate for invariants the C API cannot express or validate. Validate only what is needed to marshal Python-owned data safely, then call PETSc.
-- Do not make mpi4py a required build or runtime dependency. In tests, guard its import with `try`/`except ImportError` and skip only tests that need it; the remaining suite must load and run.
+- Lead with the result and why it matters. Make the text understandable without the drafting conversation; include relevant verification, limitations, and reproduction details.
+- Write clear, grammatical, concise prose for peer mathematicians and engineers. Explain unfamiliar terms, preserve PETSc terminology and exact API names, commands, and diagnostics, and remove repetition and boilerplate before presenting.
+- Prefer self-explanatory code. Use comments and docstrings for non-obvious behavior, correctness constraints, rationale, or required documentation. Preserve accurate comments; omit process narration and edit history.
 
 ## PETSc Naming And API Conventions
 
@@ -91,7 +76,7 @@ These rules apply to responses, commits, MR descriptions, review reports, commen
 
 ## C Coding Style
 
-- Formatting is enforced by `.clang-format`; format changed C/C++ files as described in the `petsc-lint` skill.
+- Format changed C/C++ files in PETSc's formatting set with the repository's `.clang-format` and required clang-format version.
 - Header prototypes should not include parameter names, but function typedef declarations should.
 - The declaration block at the top of a routine or nested scope is one contiguous group: variables grouped by type (all `PetscInt`s adjacent, all `PetscReal`s adjacent, etc.), no mixed pointer arities on a single line, no blank lines or section comments splitting the block. Initialize in the declaration when practical. Exactly one blank line separates the block from the first statement, including `PetscFunctionBegin`/`PetscFunctionBeginUser` at routine scope.
 - In PETSc tutorials and tests, `main()` and all functions returning `PetscErrorCode` must begin with `PetscFunctionBeginUser` after declarations.
@@ -149,43 +134,6 @@ else PetscCall(RunForwardModel(comm, &sw));
 PetscCall(PetscFinalize());
 return 0;
 ```
-
-## Kokkos / Device Code
-
-For an unreachable guard (a `default:` arm or "can't happen" branch) inside a `KOKKOS_INLINE_FUNCTION`, use `Kokkos::abort("message")`. `SETERRQ`/`SETERRABORT` are not device-callable.
-
-When a persistent workspace view is processed in chunks, only build a `Kokkos::subview` for the active range when a consumer actually reads the view extent (e.g. `KokkosBatched::TeamVectorGMRES` infers batch size from `view.extent(0)`). If every kernel is bounded by an explicit count parameter (`RangePolicy(0, n_active)`, or a function arg like `n_batch`), pass the full-capacity view directly — the subview adds no safety and obscures intent.
-
-## Docstring Conventions (`/*@ ... @*/`)
-
-`petsclinter` enforces docstring formatting. See the `petsc-lint` skill for commands and dependencies.
-
-- **Section order.** Sections in `/*@ ... @*/` always appear in this order:
-  1. One-line synopsis (`FunctionName - one-line description`)
-  2. Collectivity (`Collective`, `Logically Collective`, `Not Collective`, `Asynchronous`)
-  3. `Input Parameter(s):`
-  4. `Output Parameter(s):`
-  5. `Options Database Key(s):`
-  6. `Level:`  ← always before Notes
-  7. `Notes:` / `Note:`
-  8. `Example Usage:`
-  9. `Fortran Notes:`
-  10. `.seealso:`
-
-Two recurring traps the linter catches:
-
-- **Param-list alignment.** In `Input Parameters:` / `Output Parameters:` blocks, every entry's `-` must sit exactly one space past the longest valid argument name. With args `da, xyz, bd, H` (longest is `xyz`), the correct form is:
-  ```
-  + da  - the `PetscDA` context
-  . xyz - array of coordinate vectors
-  . bd  - array of periodic-domain extents
-  - H   - the observation operator
-  ```
-  Continuation lines for a multi-line description must be indented to line up under the description (i.e., the column right after `- `), not under the argument name.
-
-- **Stray paragraphs in `Notes:`.** A bare paragraph that starts with a capitalized word and no trailing colon can be misparsed as a section header (`-fdoc-section-header-maybe-header`). Keep follow-up sentences in the same paragraph as the existing Notes text (no blank line between them), or rephrase so the line cannot look like a heading.
-
-When in doubt, pattern-match against existing well-formatted docstrings in the same file.
 
 ## Key References
 

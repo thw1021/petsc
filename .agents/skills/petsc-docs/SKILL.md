@@ -9,18 +9,21 @@ description: >-
 
 # PETSc and petsc4py documentation
 
-Read and follow `AGENTS.md` at the PETSc repository root. For an audit or edit, inspect the
-relevant Markdown or reStructuredText, toctrees, references, docstrings, and included source.
+For an audit or edit, inspect the relevant Markdown or reStructuredText, toctrees, references,
+docstrings, and included source.
 Run a documentation build only when the user requests or approves it; reuse authorization
 already given for the task.
 
 ## PETSc website and manual
 
-Before choosing a build command, read the checkout's `doc/makefile`, the HTML builder hooks in
-`doc/conf.py`, and the architecture selection in `doc/build_manpages_c2html.py`. Read
-`doc/prepare_docs.py` when the makefile uses it to prepare the documentation sources. These
-files determine the build directory, architecture, prerequisites, and generated output; do not
-assume that all branches use the same layout.
+When choosing a build command, inspect only the relevant targets and path variables in
+`doc/makefile`, HTML builder hooks in `doc/conf.py`, and architecture selection in
+`doc/build_manpages_c2html.py`. Consult the relevant preparation logic in `doc/prepare_docs.py`
+only if the makefile uses it and its behavior needs clarification. Reuse these details while
+the inspected sections are unchanged and remain in context; do not reread them for each build.
+Expand the reads when a failure or unresolved dependency requires more context. These sections
+determine the build directory, architecture, prerequisites, and generated output; do not assume
+that all branches use the same layout.
 
 - When the rules define `DOCS_DIR` under `PETSC_ARCH/doc/`, use their `SOURCEDIR` and `BUILDDIR`
   paths. Edit the original files under `doc/`, not the prepared source tree.
@@ -54,10 +57,10 @@ effects. They also require a request or approval to run.
 
 ## Standalone petsc4py documentation
 
-Read `src/binding/petsc4py/makefile` and `docs/source/conf.py` under that directory before
-choosing a command. These docs import the bindings for introspection, so use the architecture
-supplied by the user and ensure its PETSc libraries are current as described in
-[petsc-build](../petsc-build/SKILL.md).
+Apply the same scoped reading and reuse rules to the relevant documentation targets in
+`src/binding/petsc4py/makefile` and binding imports in `docs/source/conf.py` under that directory.
+These docs import the bindings for introspection, so use the architecture supplied by the user
+and ensure its PETSc libraries are current as described in [petsc-build](../petsc-build/SKILL.md).
 
 For an explicitly requested documentation check, run from `src/binding/petsc4py/`:
 
@@ -77,6 +80,6 @@ imports the intended bindings.
 After a build, confirm from the output that Sphinx completed successfully and inspect warnings.
 Do not rely solely on the wrapper's exit status: older shell recipes can mask intermediate
 failures. Inspect the affected generated pages and links. Give the actual output path when the
-user needs to inspect the result. Follow the reporting rules in `AGENTS.md`: include relevant
-results and limitations, with commands and architecture details when needed to reproduce or
-diagnose them. For an audit, report the findings and any material limits of source inspection.
+user needs to inspect the result. Report relevant results and limitations, with commands and
+architecture details when needed to reproduce or diagnose them. For an audit, report the findings
+and any material limits of source inspection.
