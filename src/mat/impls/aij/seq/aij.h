@@ -174,11 +174,12 @@ typedef struct {
 } Mat_SeqAIJ;
 
 typedef struct {
-  PetscInt    nz;   /* nz of the matrix after assembly */
-  PetscCount  n;    /* Number of entries in MatSetPreallocationCOO() */
-  PetscCount  Atot; /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
-  PetscCount *jmap; /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
-  PetscCount *perm; /* The permutation array in sorting (i,j) by row and then by col */
+  PetscObjectState nonzerostate; /* Structure associated with the COO maps */
+  PetscInt         nz;           /* nz of the matrix after assembly */
+  PetscCount       n;            /* Number of entries in MatSetPreallocationCOO() */
+  PetscCount       Atot;         /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
+  PetscCount      *jmap;         /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
+  PetscCount      *perm;         /* The permutation array in sorting (i,j) by row and then by col */
 } MatCOOStruct_SeqAIJ;
 
 #define MatSeqXAIJGetOptions_Private(A) \

@@ -1285,6 +1285,8 @@ PetscErrorCode MatDestroy_SeqAIJ(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqAIJKron_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatGetValuesCOOCompactMap_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOOCompact_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   /* these calls do not belong here: the subclasses Duplicate/Destroy are wrong */
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijsell_seqaij_C", NULL));
@@ -4710,6 +4712,9 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   coo->Atot = coo_n - nneg; // Annz is seqaij->nz, so no need to record that again
   coo->jmap = jmap;         // of length nnz+1
   coo->perm = perm;
+  PetscCall(MatGetNonzeroState(mat, &coo->nonzerostate));
+  // MatSetPreallocationCOO() increments the state after this implementation returns.
+  ++coo->nonzerostate;
   PetscCall(PetscObjectContainerCompose((PetscObject)mat, "__PETSc_MatCOOStruct_Host", coo, MatCOOStructDestroy_SeqAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -4734,6 +4739,60 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
     PetscScalar sum = 0.0;
     for (j = jmap[i]; j < jmap[i + 1]; j++) sum += v[perm[j]];
     Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
+  }
+  PetscCall(MatSeqAIJRestoreArray(A, &Aa));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatGetCOOStructCompact_SeqAIJ(Mat A, MatCOOStruct_SeqAIJ **coo)
+{
+  Mat_SeqAIJ      *aij = (Mat_SeqAIJ *)A->data;
+  PetscObjectState nonzerostate;
+  PetscContainer   container;
+  PetscErrorCode (*setvaluescoo)(Mat, const PetscScalar[], InsertMode);
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSetValuesCOO_C", &setvaluescoo));
+  PetscCheck(setvaluescoo == MatSetValuesCOO_SeqAIJ, PETSC_COMM_SELF, PETSC_ERR_SUP, "Compact COO assembly requires the host COO implementation for matrix type %s", ((PetscObject)A)->type_name);
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call MatSetPreallocationCOO() or MatSetPreallocationCOOLocal() first");
+  PetscCall(PetscContainerGetPointer(container, coo));
+  PetscCall(MatGetNonzeroState(A, &nonzerostate));
+  PetscCheck(aij->nz == (*coo)->nz && nonzerostate == (*coo)->nonzerostate, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix structure changed; repeat COO preallocation before compact assembly");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatGetValuesCOOCompactMap_SeqAIJ(Mat A, PetscCount *ncompact, PetscInt *coo_map[])
+{
+  MatCOOStruct_SeqAIJ *coo;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetCOOStructCompact_SeqAIJ(A, &coo));
+  PetscCheck((PetscCount)coo->nz < PETSC_COUNT_MAX, PETSC_COMM_SELF, PETSC_ERR_SUP, "Compact COO size including the discarded slot exceeds PetscCount");
+  PetscCall(PetscMalloc1(coo->n, coo_map));
+  for (PetscCount k = 0; k < coo->n; k++) (*coo_map)[k] = coo->nz;
+  for (PetscInt i = 0; i < coo->nz; i++) {
+    for (PetscCount k = coo->jmap[i]; k < coo->jmap[i + 1]; k++) (*coo_map)[coo->perm[k]] = i;
+  }
+  *ncompact = (PetscCount)coo->nz + 1;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetValuesCOOCompact_SeqAIJ(Mat A, const PetscScalar v[], InsertMode imode)
+{
+  Mat_SeqAIJ          *aseq = (Mat_SeqAIJ *)A->data;
+  MatCOOStruct_SeqAIJ *coo;
+  PetscScalar         *Aa;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetCOOStructCompact_SeqAIJ(A, &coo));
+  if (A->structure_only) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(MatSeqAIJGetArray(A, &Aa));
+  if (imode == INSERT_VALUES) {
+    if (v) PetscCall(PetscArraycpy(Aa, v, aseq->nz));
+    else PetscCall(PetscArrayzero(Aa, aseq->nz));
+  } else if (v) {
+    for (PetscInt i = 0; i < aseq->nz; i++) Aa[i] += v[i];
   }
   PetscCall(MatSeqAIJRestoreArray(A, &Aa));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -4838,6 +4897,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqAIJKron_C", MatSeqAIJKron_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_SeqAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatGetValuesCOOCompactMap_C", MatGetValuesCOOCompactMap_SeqAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOOCompact_C", MatSetValuesCOOCompact_SeqAIJ));
   PetscCall(MatCreate_SeqAIJ_Inode(B));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATSEQAIJ));
   PetscCall(MatSeqAIJSetTypeFromOptions(B)); /* this allows changing the matrix subtype to say MATSEQAIJPERM */
