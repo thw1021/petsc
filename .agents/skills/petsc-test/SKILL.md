@@ -8,9 +8,8 @@ description: >-
 
 # Test PETSc and petsc4py
 
-Read and follow `AGENTS.md` at the PETSc repository root. `arch-name` is a placeholder for the
-architecture supplied by the user. Run PETSc commands from the repository root and petsc4py
-commands from `src/binding/petsc4py/`.
+`arch-name` is the user-supplied architecture. Run PETSc commands from the repository root and
+petsc4py commands from `src/binding/petsc4py/`.
 
 Keep test runs relevant to the change. Do not run `make test` without a selector, `make alltests`,
 or the complete petsc4py suite with an unfiltered `python test/runtests.py` unless the user
@@ -33,10 +32,9 @@ nearby tests or generated scripts. Create a source only if none can naturally ex
 behavior or the user explicitly requests a new one. Harness tests apply metadata and expected-output
 comparison; for focused diagnosis or an unregistered scenario, run the executable directly and
 state what it validates. Use `testset` inheritance for shared setup and loops for related variants.
-Use separate suffixes for distinct tests or the `{{X Y}separate output}` loop syntax when loop
-values need separate expected outputs. The latter generates a separate script and output-file
-name for each value; loops use shared output by default. Do not invent a broad option matrix
-merely to increase coverage.
+Use separate suffixes for distinct tests. Loops share output by default; use
+`{{X Y}separate output}` for a script and expected-output file per value. Do not invent broad
+option matrices merely to increase coverage.
 
 ## Select tests
 
