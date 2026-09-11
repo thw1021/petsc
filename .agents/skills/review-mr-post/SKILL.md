@@ -8,8 +8,17 @@ argument-hint: <MR_IID | empty for current branch>
 Follow @../review-mr/identify.md (Sections 1–2) to fetch the merge request, check for drift, and repeat its warnings.
 
 ## Review
-Follow @../review-mr/review-procedure.md (Sections 3–6) to read the diff, classify findings, verify
-each one, compose the report, and write the report artifact. Then continue below to filter and post.
+Follow @../review-mr/review-procedure.md (Sections 3–5) to read the diff, classify findings,
+verify each one, and compose the report.
+
+## 6. Write report
+Always write the titled report to `ai-review.html`, including when there are no findings. Add a
+footnote with the agent, version, model, and effort level actually used for this review, the
+current date and time, `MR_IID`, `CI_PIPELINE_ID`, and `CI_JOB_ID`. Omit unavailable values; use
+`$CLAUDE_EFFORT` only when Claude performed the review; do not infer the agent or model from
+installed executables or unrelated environment settings.
+
+Then continue below to filter and post.
 
 ## 7. Filter findings
 Only post findings that have a **concrete, actionable fix** (a code change the author can apply). Do NOT post:
