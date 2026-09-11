@@ -18,64 +18,52 @@ This file must be self-contained. Do not rely on linked Markdown files being rea
 
 ## Core Working Rules
 
-- Preserve PETSc style and naming conventions.
-- Keep edits minimal and local to the requested change.
-- Read nearby code and match existing patterns in the package you are modifying before introducing a new one.
-- Avoid unnecessary code duplication. Prefer reusing or extending nearby logic when it keeps behavior clear and local.
+- Keep edits minimal and local to the request. Read nearby code, preserve PETSc style, and reuse or extend existing logic. Do not add speculative abstractions or broad refactors unless requested.
+- When several APIs make the same decision, for example which implementation or strategy to select, implement it once in a private helper that also reports what it chose, and call that helper from each API.
+- Use PETSc accessors for object metadata instead of reconstructing internal layouts in callers or bindings. If metadata is missing, extend the owning API and document returned data's size, ownership, and lifetime. If only the documentation is unclear, clarify it.
 - If `.codegraph/` exists, follow `.agents/skills/codegraph/SKILL.md` before navigating, modifying, or reviewing PETSc C, C++, or Python code.
-- When higher-level APIs depend on the same inference or selection policy, centralize that policy in one private helper that returns any provenance or strategy its callers need; do not duplicate the decision tree across those APIs.
-- Do not add speculative abstractions or broad refactors unless explicitly requested.
-- When a procedure, script, makefile rule, configuration step, test tool, or documentation requires avoidable workarounds or obscures how it works, identify the concrete problem and suggest the smallest useful improvement, with its file path and expected benefit. Apply fixes needed for the requested task; keep broader suggestions separate from required fixes and formal MR findings. Do not expand the patch or post unrelated suggestions externally unless requested.
-- Do not add shadow state or extra validation in petsc4py to compensate for invariants that the PETSc C API cannot express or validate. Validate only requirements needed to safely marshal Python-owned data, then call the PETSc API directly.
-- mpi4py is not a dependency of petsc4py; do not make it a required build or runtime dependency. Tests may use mpi4py, but must guard its import with `try`/`except ImportError` and skip only the tests that require it when it is unavailable. The remaining test suite must still load and run.
-- When a caller needs object metadata, such as the length of a returned array, use an existing PETSc accessor. If the API does not expose the required information, add or extend a focused accessor at the layer that owns it instead of reconstructing internal layouts or duplicating implementation logic in callers or petsc4py. Document the returned information, including the size, ownership, and lifetime of any returned data. If only the documentation is unclear, clarify the existing API instead of adding one.
-- If you modify source, check whether test blocks, expected output files, or documentation need corresponding updates. For public interfaces, include headers and examples in that check.
-- The user selects `PETSC_ARCH`. If it has not already been supplied for the task, ask for it before configuring or building PETSc or petsc4py, running tests that depend on them, importing petsc4py, or running a PETSc executable; never infer or change it unless asked to do so.
-- Pass it to commands that perform those actions. Targets that manage a dedicated default architecture, such as `make docs`, are exempt when using that default.
-- Architecture-independent checks, such as skill validation and pure Python helper tests that do not load PETSc or petsc4py, do not require `PETSC_ARCH`.
-- A documentation audit or review does not authorize `make docs`; run it only when the user explicitly requests it or approves it.
-- Never call `PetscFinalize()` inside an `if (...)` block, including early-return patterns like `if (flag) { ...; PetscFinalize(); return 0; }`. Arrange control flow so finalization happens exactly once on every normal exit path.
+- Fix only what the task requires. Report other improvements you notice, in scripts, makefiles, tools, or documentation, to the user separately with the file path and expected benefit; do not put them in the patch, review findings, or MR comments unless asked.
+- For source changes, check test blocks, expected outputs, and documentation; include headers and examples for public interfaces. Run relevant checks and tests using the development skills.
+- The user selects `PETSC_ARCH`. Ask if it is missing before configuring or building PETSc or petsc4py, running PETSc-dependent tests or executables, or importing petsc4py; pass it explicitly and never infer or change it unless asked. Architecture-independent checks need no architecture. Targets managing a dedicated default architecture, such as `make docs`, are exempt when using that default.
+- A documentation audit or review does not authorize a documentation build; run it only when explicitly requested or approved for the task.
+- All changes are expected to arrive through focused, reviewable GitLab merge requests.
 
 ## Development Skills
 
-Use the skill for the current task. If your tool does not discover skills automatically, read the
-corresponding file directly:
+The skills assume this file is loaded. Read a skill when its task first applies, directly by path
+if your tool does not discover skills. Reread it, or this file, only if it changed or its
+instructions are no longer in context.
 
-- Configure or reconfigure PETSc: `.agents/skills/petsc-configure/SKILL.md`.
-- Build PETSc or petsc4py: `.agents/skills/petsc-build/SKILL.md`.
-- Select, run, debug, or update tests: `.agents/skills/petsc-test/SKILL.md`.
-- Format source or run source checks: `.agents/skills/petsc-lint/SKILL.md`.
-- Audit or build PETSc or petsc4py documentation: `.agents/skills/petsc-docs/SKILL.md`.
-- Review a local branch: `.agents/skills/review-branch/SKILL.md`.
-
-Read only the skills needed for the work. Read a relevant skill when it first applies, unless
-its instructions are already available in the current context. Reuse those instructions throughout
-the task. Reread only when the file has changed, the needed guidance is no longer available in
-context, or a specific uncertainty requires checking it. For a targeted clarification, read only
-the relevant section. Apply the same principle to `AGENTS.md` and supporting references.
-
-Explain relevant verification results and limitations that affect correctness, confidence, or
-next steps. Include exact file paths, commands, and architecture or configuration details when
-needed to understand or reproduce a result.
+| Task | Skill file |
+| --- | --- |
+| Configure or reconfigure | `.agents/skills/petsc-configure/SKILL.md` |
+| Build PETSc or petsc4py | `.agents/skills/petsc-build/SKILL.md` |
+| Define, select, run, or debug tests; update expected output | `.agents/skills/petsc-test/SKILL.md` |
+| Format source or run source checks | `.agents/skills/petsc-lint/SKILL.md` |
+| Audit or build documentation | `.agents/skills/petsc-docs/SKILL.md` |
+| Review a local branch | `.agents/skills/review-branch/SKILL.md` |
 
 ## Human-Facing Writing
 
-- Use clear, natural, grammatically correct English in all human-facing text, including responses, MR titles and descriptions, commit messages, GitLab comments, review reports, documentation, and user-facing messages.
-- Treat the reader's time as limited. Include information that helps the intended reader understand the result, assess its consequences or evidence, make a decision, or take action. Omit routine process narration, repeated context, boilerplate assurances, and statements about unchanged or unperformed work unless they serve one of those purposes or were requested.
-- Instructions to perform work do not automatically require reporting every step. Report verification results when they help the intended reader assess the change or decide what to do. Explain what the results establish and any material limitations, using concrete descriptions that make sense without knowledge of the agent's tools or working process.
-- Write complete sentences in prose. Titles, labels, and concise list items may be fragments. Avoid unexplained shorthand, telegraphic notes, and mechanical phrasing.
-- Lead with the result and why it matters. Scale the detail to the task's complexity and the reader's needs. For MR descriptions and review comments, provide enough context and evidence for a reviewer who has not read the conversation; brevity must not hide material risks or uncertainty.
-- Do not assume readers know agent-specific terminology, formats, or features. Explain unfamiliar concepts briefly at first use and state why they matter to the task or change. Include the essential explanation in the text and add useful links to authoritative sources for further detail, so readers can understand the point without following the links.
-- Check relevance, repetition, spelling, grammar, and readability before presenting or posting text. Remove sentences whose omission would not reduce the reader's understanding or ability to act. Preserve exact API names, commands, diagnostics, and other technical identifiers when quoting them.
+These rules apply to responses, commits, MR descriptions, review reports, comments, documentation, and messages.
 
-## Documentation And Code comments
+- Lead with the result and why it matters. Include the context, evidence, and next steps the reader needs; make MR descriptions and review comments understandable without the conversation. Explain relevant verification results and gaps, their effect on confidence, and commands, paths, or configuration needed to reproduce or diagnose them. Do not list inapplicable checks.
+- Write clear, grammatical, complete sentences; titles, labels, and concise list items may be fragments. Explain unfamiliar terms at first use, with essential explanations inline and useful authoritative links. Preserve exact API names, commands, and diagnostics.
+- Before presenting or posting, check spelling, grammar, and readability. Remove repetition, boilerplate, routine process narration, and details that do not help the reader assess the result or act.
 
-- Write technical documentation for peer mathematicians and software engineers. Follow ASD-STE100 when it does not conflict with established PETSc terminology or mathematical precision.
-- Prefer self-explanatory code. Add comments or docstrings only to explain non-obvious behavior, correctness constraints, or durable design rationale, or when PETSc documentation conventions require them. Do not narrate operations, explain obvious code, summarize edits, record implementation history, or describe removed and rejected approaches.
-- Preserve existing comments unless a change makes them inaccurate or obsolete.
-- Add an entry to `doc/changes/dev.md` for new features or API changes; otherwise, add one only when requested. Preserve entries that predate the task. All other Markdown files in `doc/changes/` are immutable.
-- In Markdown, describe designs conceptually. When a code block reproduces PETSc source beyond a standalone function prototype, such as a structure, macro definition, or function body, use a narrowly anchored `literalinclude` with `:start-at:` and `:end-at:`. Keep illustrative code, pseudocode, and standalone function prototypes in fenced code blocks. In standalone function prototypes, retain parameter names that surrounding text references.
-- Do not present nonexistent, obsolete, or deprecated symbols as current API. Mention them only when historical, migration, or compatibility context requires it.
+## Documentation And Code Comments
+
+- Write for peer mathematicians and software engineers. Prefer active voice, present tense for current behavior, and one idea per sentence; preserve PETSc terminology and mathematical precision.
+- Prefer self-explanatory code. Add comments or docstrings for non-obvious behavior, correctness constraints, durable rationale, or required PETSc documentation. Do not narrate operations, record edit history, or describe abandoned approaches. Preserve existing comments unless inaccurate or obsolete.
+- Add `doc/changes/dev.md` entries for new features or API changes, otherwise only when requested. Preserve pre-existing entries; all other Markdown files in `doc/changes/` are immutable.
+- Describe designs conceptually. For copied PETSc source beyond standalone prototypes, use `literalinclude` with narrow `:start-at:` and `:end-at:` anchors. Keep illustrative code, pseudocode, and standalone prototypes in fenced blocks; retain prototype parameter names referenced by the text.
+- Mention nonexistent, obsolete, or deprecated symbols only for historical, migration, or compatibility context, never as current API.
+
+## petsc4py
+
+- Validate user arguments in public Python-callable methods with explicit exceptions, not `assert`, which optimized Python can remove. Internal helpers and callback trampolines may use `assert`.
+- Do not add Python-side state or validation to compensate for invariants the C API cannot express or validate. Validate only what is needed to marshal Python-owned data safely, then call PETSc.
+- Do not make mpi4py a required build or runtime dependency. In tests, guard its import with `try`/`except ImportError` and skip only tests that need it; the remaining suite must load and run.
 
 ## PETSc Naming And API Conventions
 
@@ -103,28 +91,64 @@ needed to understand or reproduce a result.
 
 ## C Coding Style
 
+- Formatting is enforced by `.clang-format`; format changed C/C++ files as described in the `petsc-lint` skill.
 - Header prototypes should not include parameter names, but function typedef declarations should.
 - The declaration block at the top of a routine or nested scope is one contiguous group: variables grouped by type (all `PetscInt`s adjacent, all `PetscReal`s adjacent, etc.), no mixed pointer arities on a single line, no blank lines or section comments splitting the block. Initialize in the declaration when practical. Exactly one blank line separates the block from the first statement, including `PetscFunctionBegin`/`PetscFunctionBeginUser` at routine scope.
 - In PETSc tutorials and tests, `main()` and all functions returning `PetscErrorCode` must begin with `PetscFunctionBeginUser` after declarations.
 - Functions that begin with `PetscFunctionBegin` must return with `PetscFunctionReturn(...)` or `PetscFunctionReturnVoid()`, not raw `return`.
 - For `PetscErrorCode` functions, return `PetscFunctionReturn(PETSC_SUCCESS)` on success.
 - Wrap PETSc calls with `PetscCall(...)`. For external library calls, use the appropriate PETSc wrapper such as `PetscCallExternal()` or package-specific variants.
-- Omit braces around any `if`, `else if`, or `else` branch whose body is a single statement.
 - Do not leave commented-out code or dead `#ifdef` blocks in source files.
 - Use `/* ... */` for multiline comments and `// ...` for short single-line comments.
 - Do not decorate multiline comments with leading `*` on each line.
 - Always append `()` to function names when mentioning them in comments, for example `MatAssemblyEnd_MPIAIJ()`.
 - Follow C90-style declarations at the start of their enclosing block. Prefer declaring variables used only within a genuinely new nested `{ ... }` scope at the beginning of that scope. The only other allowed exception is a loop index in a `for (...)` initializer. Do **not** sprinkle `const T x = ...;` lines between statements, including after an early-return guard.
 
+### Braces on single-statement if/else
+
+Omit braces around any `if`, `else if`, or `else` branch whose body is one statement. Check each
+branch independently, including an `else` paired with a multi-statement `if`:
+
+```c
+// Incorrect
+if (type == TYPE_A) {
+  stmt1;
+  stmt2;
+} else {
+  SETERRQ(comm, PETSC_ERR_SUP, "unsupported");
+}
+// Correct
+if (type == TYPE_A) {
+  stmt1;
+  stmt2;
+} else SETERRQ(comm, PETSC_ERR_SUP, "unsupported");
+```
+
 ## Error Handling And PETSc Idioms
 
 - Most PETSc functions return `PetscErrorCode`.
-- In petsc4py public Python-callable methods, validate user arguments with explicit exceptions, not `assert`, because optimized Python can remove assertions. Internal implementation code, including `.pxi` helpers and callback trampolines, may use `assert`.
-- Use `PetscFunctionBegin`/`PetscFunctionBeginUser` and `PetscFunctionReturn(...)` consistently.
 - Check object validity and arguments using the usual PETSc validation macros when working in code paths that already use them.
-- Reuse existing PETSc utility routines and macros before adding custom helpers.
 - Do not wrap `PetscCheck()` in an outer `if (...)` when the condition can be expressed directly in the check. Prefer a single guard such as `PetscCheck(!use_mms || sw->Ax == sw->Ay, ...)` over `if (use_mms) PetscCheck(sw->Ax == sw->Ay, ...)`.
 - Do not call `MatAssemblyBegin()`/`MatAssemblyEnd()` after `MatDenseRestoreArray*()` or `MatDenseRestoreColumnVec*()`. The Get/Restore pair is the assembled write path for dense matrices — the matrix stays assembled across it. Adding "just to be safe" assembly is wrong, not defensive. Assembly is only needed after `MatSetValues()`-style entry, where deferred stashing actually requires a flush.
+
+### PetscFinalize inside conditional
+
+Never call `PetscFinalize()` inside an `if` block. Arrange one finalization on every normal exit
+path, including when a mode bypasses the main computation:
+
+```c
+// Incorrect
+if (test_spatial_order) {
+  PetscCall(TestSpatialOrder(comm, &sw));
+  PetscCall(PetscFinalize());
+  return 0;
+}
+// Correct
+if (test_spatial_order) PetscCall(TestSpatialOrder(comm, &sw));
+else PetscCall(RunForwardModel(comm, &sw));
+PetscCall(PetscFinalize());
+return 0;
+```
 
 ## Kokkos / Device Code
 
@@ -162,64 +186,6 @@ Two recurring traps the linter catches:
 - **Stray paragraphs in `Notes:`.** A bare paragraph that starts with a capitalized word and no trailing colon can be misparsed as a section header (`-fdoc-section-header-maybe-header`). Keep follow-up sentences in the same paragraph as the existing Notes text (no blank line between them), or rephrase so the line cannot look like a heading.
 
 When in doubt, pattern-match against existing well-formatted docstrings in the same file.
-
-## Merge Request Expectations
-
-- All changes are expected to arrive through GitLab merge requests.
-- Keep diffs reviewable and focused.
-- For source changes, select and run relevant checks and tests according to the guidance in the development skills.
-- If relevant verification cannot run in the current environment, explain the resulting gap and its effect on confidence in the change. Do not list inapplicable checks.
-
-## Anti-Patterns (MUST avoid when writing or reviewing)
-
-### PetscFinalize inside conditional
-
-WRONG — finalization inside an early-return `if`:
-```c
-if (test_spatial_order) {
-  PetscCall(TestSpatialOrder(comm, &sw));
-  PetscCall(PetscFinalize());
-  return 0;
-}
-```
-RIGHT — finalization on the single exit path:
-```c
-if (test_spatial_order) PetscCall(TestSpatialOrder(comm, &sw));
-else PetscCall(RunForwardModel(comm, &sw));
-PetscCall(PetscFinalize());
-return 0;
-```
-
-### Braces on single-statement if/else
-
-WRONG:
-```c
-if (radius <= 0.0) {
-  return 0.0;
-}
-```
-RIGHT:
-```c
-if (radius <= 0.0) return 0.0;
-```
-
-This also applies to `else` blocks paired with multi-statement `if` — check each branch independently:
-WRONG:
-```c
-  if (type == TYPE_A) {
-    stmt1;
-    stmt2;
-  } else {
-    SETERRQ(comm, PETSC_ERR_SUP, "unsupported");
-  }
-```
-RIGHT:
-```c
-  if (type == TYPE_A) {
-    stmt1;
-    stmt2;
-  } else SETERRQ(comm, PETSC_ERR_SUP, "unsupported");
-```
 
 ## Key References
 

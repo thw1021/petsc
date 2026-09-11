@@ -4,8 +4,6 @@ description: Review a PETSc GitLab merge request and post the findings back as i
 argument-hint: <MR_IID | empty for current branch>
 ---
 
-Adhere to @AGENTS.md while reviewing and drafting comments.
-
 ## Identify and fetch
 Follow @../review-mr/identify.md (Sections 1–2) to fetch the merge request, check for drift, and repeat its warnings.
 
@@ -20,10 +18,7 @@ Only post findings that have a **concrete, actionable fix** (a code change the a
 - Style nits with no specific suggested change
 - Comments on code that was not changed in the MR (surrounding context is for understanding, not reviewing)
 
-Each posted comment opens a discussion thread the author must resolve — avoid noise.
-Write each comment as clear, grammatical English that stands on its own for the author. Explain
-the problem and concrete fix before any suggestion block, following the human-facing writing
-rules in `AGENTS.md`. Check the final comment body for spelling, grammar, and readability.
+Explain the problem and concrete fix before any suggestion block.
 
 ## 8. Line number mapping
 Each comment anchors to `line`, the line number in the **new** version of the file.

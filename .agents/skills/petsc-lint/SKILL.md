@@ -9,9 +9,8 @@ description: >-
 
 # Lint and format PETSc and petsc4py
 
-Read and follow `AGENTS.md` at the PETSc repository root. Run commands from that root except
-where a different directory is stated. `arch-name` is a placeholder for the architecture supplied
-by the user. Apply only the checks relevant to the changed files.
+Run from the repository root unless stated otherwise; `arch-name` is the user-supplied
+architecture. Apply only checks relevant to the changed files.
 
 The repository-root `make lint` runs PETSc's C/C++ source and docstring linter. The `make lint`
 target in `src/binding/petsc4py/` runs the bindings' Cython and Ruff checks. Select the directory
@@ -19,28 +18,26 @@ and target according to the source being checked.
 
 ## C and C++
 
-Formatting is controlled by the repository's `.clang-format` file. Run `make clangformat` for
-C/C++ changes:
+For files in PETSc's C/C++ formatting set, use `.clang-format` and restrict the make target to
+changed tracked files with `GITCFSRC` pathspecs, for example:
 
 ```console
-$ make clangformat
+$ make clangformat GITCFSRC='src/ksp/ksp/interface/itfunc.c'
 ```
 
-PETSc hardcodes the required clang-format major version. If the default executable has the wrong
-version, select the correct executable through the make variable PETSCCLANGFORMAT:
+Read the formatting exclusions and `checkclangformatversion` in `lib/petsc/conf/rules_util.mk`.
+Select the required clang-format major version with `PETSCCLANGFORMAT` if needed:
 
 ```console
-$ make PETSCCLANGFORMAT=/path/to/clang-format clangformat
+$ make PETSCCLANGFORMAT=/path/to/clang-format clangformat GITCFSRC='src/ksp/ksp/interface/itfunc.c'
 ```
 
-Inspect the `checkclangformatversion` rule in `lib/petsc/conf/rules_util.mk` to determine the
-required version. If a compatible executable is unavailable, report the required version and
-that formatting could not be completed.
-
-`make clangformat` processes all tracked C/C++ files in its formatting set. Compare the result
-with the working tree before formatting to preserve existing edits and keep the task's patch
-focused. Inspect the formatter output as well as the diff: the recipe ignores formatter errors,
-so a successful `make` exit alone does not establish that formatting completed.
+`GITCFSRC` replaces the whole pathspec, including the exclusions in `GITSRCEXCL` and
+`GITCFSRCEXCL` (for example `src/binding/`, `khash`, `yaml`, `finclude`); never name files
+from those locations. The target uses `git ls-files`, so format new untracked files directly with
+the same executable. Without `GITCFSRC`, it processes the entire formatting set. Preserve existing edits and inspect
+both the diff and output: the recipe ignores formatter errors. If the required version is
+unavailable, report it and the formatting gap.
 
 ## Handwritten Fortran
 
@@ -73,9 +70,8 @@ substituting an unrelated policy.
 
 ## CI checks for reference
 
-These descriptions explain CI behavior; they do not add local verification requirements. Run
-these CI checks only when the user specifically requests them, whether through these targets
-or equivalent commands.
+Run these checks, or equivalent commands, only when specifically requested. They describe CI
+behavior, not mandatory local verification.
 
 - `make checkfprettifyformat`: The `checksource` job requires a clean tracked working tree,
   runs `make fprettify`, and fails if formatting changes it.

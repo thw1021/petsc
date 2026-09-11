@@ -131,10 +131,8 @@ Use these checks to scope the requested change, not to expand it into unrelated 
   same symbol merely to verify it. Before editing, read the containing file for surrounding context
   omitted from symbol-scoped snippets, such as declarations, `PetscFunctionBegin` pairing, and the
   `/*TEST*/` block. This read supplies editing context rather than re-validating CodeGraph's source.
-- CodeGraph describes its indexed checkout. When reviewing a different commit, or when relevant
-  files have uncommitted changes, use graph results only to locate symbols and relationships.
-  Obtain evidence from the reviewed commit, including relevant callees, macros, and declarations.
-  Reading that revision is necessary verification, not a duplicate read of the graph's source.
+- Review evidence must come from the reviewed revision, which may differ from the graph or
+  working tree. Follow [review verification](../review-mr/review-procedure.md#4-verify-each-finding-before-reporting).
 - Use other repository-inspection capabilities only for details CodeGraph did not cover,
   especially macro expansion, function-pointer assignment, generated files, preprocessor
   variants, and text-only configuration.
