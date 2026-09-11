@@ -3,8 +3,8 @@ name: petsc-lint
 description: >-
   Format PETSc C/C++ and handwritten Fortran, and run checks for C docstrings, Python configure
   code, and petsc4py. Also explain CI checks for manual-page metadata, shell scripts, and
-  petsclinter. Use for source formatting or check failures. Documentation builds are covered
-  by petsc-docs.
+  petsclinter. Use for source formatting, C docstring changes, or check failures. Documentation
+  builds are covered by petsc-docs.
 ---
 
 # Lint and format PETSc and petsc4py
@@ -25,8 +25,10 @@ changed tracked files with `GITCFSRC` pathspecs, for example:
 $ make clangformat GITCFSRC='src/ksp/ksp/interface/itfunc.c'
 ```
 
-Read the formatting exclusions and `checkclangformatversion` in `lib/petsc/conf/rules_util.mk`.
-Select the required clang-format major version with `PETSCCLANGFORMAT` if needed:
+Inspect only the `checkclangformatversion`, `GITCFSRC`, `GITSRCEXCL`, and `GITCFSRCEXCL`
+definitions in `lib/petsc/conf/rules_util.mk`. Reuse these details while the definitions are
+unchanged and remain in context. Select the required clang-format major version with
+`PETSCCLANGFORMAT` if needed:
 
 ```console
 $ make PETSCCLANGFORMAT=/path/to/clang-format clangformat GITCFSRC='src/ksp/ksp/interface/itfunc.c'
@@ -47,18 +49,20 @@ edits.
 
 ## C docstrings
 
-The repository-root `make lint` invokes `petsclinter`. It is an optional check for C docstrings,
-not a mandatory completion step for every source change. When requested or useful for a specific
-change, restrict it to the affected directory, for example:
+The repository-root `make lint` invokes `petsclinter`. For C docstring changes, follow the
+[docstring conventions](../../conventions/c-docstrings.md) and run a local check of the
+affected directory when dependencies are available. The `linux-analyzer` CI job checks `./src`
+with `--werror 1`, so unresolved warnings there fail CI. Local lint is not required for every
+source change. For a scoped check, use:
 
 ```console
-$ make PETSC_ARCH=arch-name lint DIRECTORY=src/ksp/ksp/interface
+$ make PETSC_ARCH=arch-name lint DIRECTORY=src/ksp/ksp/interface LINTER_OPTIONS="--werror 1"
 ```
 
 It requires the Python `clang` package and a compatible `libclang`. Inspect `help-lint` and the
 requirements under `lib/petsc/bin/maint/petsclinter/` when dependency or invocation details are
-needed. If the dependencies are unavailable, report the limitation and inspect the docstrings
-against the conventions in `AGENTS.md`.
+needed. If the local check is skipped, report that verification gap and inspect the changed
+docstrings against the conventions above; identify unavailable dependencies when relevant.
 
 For Markdown and Sphinx documentation work, follow [petsc-docs](../petsc-docs/SKILL.md).
 

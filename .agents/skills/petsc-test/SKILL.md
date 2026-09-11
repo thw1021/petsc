@@ -44,8 +44,11 @@ forwarding with `make -f gmakefile` using the system make. If an older checkout 
 forwarding rule, read `OMAKE` from `arch-name/lib/petsc/conf/petscvariables` and use that configured
 executable with `-f gmakefile` for the test targets below.
 
-Test definitions are generated as needed. Use `print-test` to inspect every selection before using
-the same selectors with `make test` to run it.
+Test definitions are generated as needed. Use `print-test` to inspect a selection before its
+first run, then use the same selectors with `make test`. Reuse the inspected selection while
+the selectors, test definitions, and architecture configuration are unchanged; repeat
+`print-test` when any of them changes or the selection is no longer in context. Recheck dynamic
+selections such as `test-fail=1` after each test run.
 
 ```console
 # Select by source path, directory, or target glob

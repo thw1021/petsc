@@ -1,7 +1,7 @@
 ### 3. Read and review the diff
 
 - Read `DIFF_FILE` through line `LINES`; do not regenerate the diff per file. Report binary files as not covered.
-- Review correctness, performance, source style, documentation, and error handling (for example calls missing `PetscCall()`) against `AGENTS.md` and `doc/developers/style.md`.
+- Review correctness, performance, source style, documentation, and error handling (for example calls missing `PetscCall()`) against `AGENTS.md`, its applicable convention references, and `doc/developers/style.md`.
 - Never review `.out` contents. Flag missing, unjustified, or orphaned expected-output updates.
 - Treat `PetscCall()`, `PetscCheck()`, and `SETERRQ` as terminal on error. Report resource errors on normal paths or before an error fires, not missing cleanup on fatal paths.
 
@@ -16,7 +16,7 @@
 | Severity | Required evidence |
 | --- | --- |
 | CRITICAL / HIGH / MEDIUM | A concrete trigger (an input, event, or MPI rank/partition condition) and a concrete impact: wrong result, crash, hang, leak, or slowdown of a named operation. Discard a trigger outside documented use unless the change breaks a guarantee documented for that case. |
-| Style (a review blocker, alongside MEDIUM) | For a convention violation, name the `AGENTS.md` clause, style-guide section, or linter check; do not invent a trigger or impact. For factually wrong user-facing text, quote it and state what the code does; use a higher severity if following the text causes damage. |
+| Style (a review blocker, alongside MEDIUM) | For a convention violation, name the `AGENTS.md` clause, convention reference, style-guide section, or linter check; do not invent a trigger or impact. For factually wrong user-facing text, quote it and state what the code does; use a higher severity if following the text causes damage. |
 | LOW | Use LOW for confirmed issues whose impact is only awkward but accurate wording, lost convenience, or one cheap test/CI rerun, not a production solve. Count these; list them only when asked. |
 
 A design alternative is not a finding. Factually wrong user-facing text is never LOW.
