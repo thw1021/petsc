@@ -1584,7 +1584,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A, Mat P, PetscReal fill, Mat C
     for (j = 0; j < nzi; j++) {
       row  = aj[j];
       pnz  = pi[row + 1] - pi[row];
-      Jptr = p_loc->j + pi[row];
+      Jptr = PetscSafePointerPlusOffset(p_loc->j, pi[row]);
       /* add non-zero cols of P into the sorted linked list lnk */
       PetscCall(PetscLLCondensedAddSorted(pnz, Jptr, lnk, lnkbt));
     }
