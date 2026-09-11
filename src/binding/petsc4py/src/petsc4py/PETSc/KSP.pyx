@@ -1123,10 +1123,16 @@ cdef class KSP(Object):
         if kargs is None: kargs = {}
         self.set_attr('__converged__', (converged, args, kargs))
 
-    def getConvergenceTest(self) -> KSPConvergenceTestFunction:
+    def getConvergenceTest(self) -> tuple[KSPConvergenceTestFunction, tuple[Any, ...], dict[str, Any]] | None:
         """Return the function to be used to determine convergence.
 
         Logically collective.
+
+        Returns
+        -------
+        context : tuple or None
+            The callback, positional arguments, and keyword arguments, or
+            `None` if the default convergence test is used.
 
         See Also
         --------
@@ -1136,7 +1142,7 @@ cdef class KSP(Object):
         """
         return self.get_attr('__converged__')
 
-    def callConvergenceTest(self, its: int, rnorm: float) -> None:
+    def callConvergenceTest(self, its: int, rnorm: float) -> ConvergedReason:
         """Call the convergence test callback.
 
         Collective.
@@ -1147,6 +1153,11 @@ cdef class KSP(Object):
             Number of iterations.
         rnorm
             The residual norm.
+
+        Returns
+        -------
+        reason : ConvergedReason
+            The convergence reason.
 
         Notes
         -----
@@ -1419,7 +1430,7 @@ cdef class KSP(Object):
         CHKERR(KSPGetNormType(self.ksp, &normtype))
         return normtype
 
-    def setComputeEigenvalues(self, flag: bool) -> None:
+    def setComputeEigenvalues(self, flag: bool = True) -> None:
         """Set a flag to compute eigenvalues.
 
         Logically collective.
@@ -1463,7 +1474,7 @@ cdef class KSP(Object):
         CHKERR(KSPGetComputeEigenvalues(self.ksp, &flag))
         return toBool(flag)
 
-    def setComputeSingularValues(self, flag: bool) -> None:
+    def setComputeSingularValues(self, flag: bool = True) -> None:
         """Set flag to calculate singular values.
 
         Logically collective.
@@ -1509,7 +1520,7 @@ cdef class KSP(Object):
 
     # --- initial guess ---
 
-    def setInitialGuessNonzero(self, flag: bool) -> None:
+    def setInitialGuessNonzero(self, flag: bool = True) -> None:
         """Tell the iterative solver that the initial guess is nonzero.
 
         Logically collective.
@@ -1545,7 +1556,7 @@ cdef class KSP(Object):
         CHKERR(KSPGetInitialGuessNonzero(self.ksp, &flag))
         return toBool(flag)
 
-    def setInitialGuessKnoll(self, flag: bool) -> None:
+    def setInitialGuessKnoll(self, flag: bool = True) -> None:
         """Tell solver to use `PC.apply` to compute the initial guess.
 
         Logically collective.
@@ -2081,7 +2092,7 @@ cdef class KSP(Object):
         if L: nl = asInt(left)
         cdef object vecsr = [] if R else None
         cdef object vecsl = [] if L else None
-        CHKERR(KSPCreateVecs(self.ksp, nr, &vr, nl, &vr))
+        CHKERR(KSPCreateVecs(self.ksp, nr, &vr, nl, &vl))
         try:
             for i from 0 <= i < nr:
                 vecsr.append(ref_Vec(vr[i]))

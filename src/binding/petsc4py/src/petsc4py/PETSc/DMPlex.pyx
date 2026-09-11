@@ -126,7 +126,8 @@ cdef class DMPlex(DM):
         cdef Py_ssize_t i = 0
         cdef PetscInt dim = 0, *cfaces = NULL
         faces = iarray_i(faces, &dim, &cfaces)
-        assert dim >= 1 and dim <= 3
+        if dim < 1 or dim > 3:
+            raise ValueError("number of face dimensions must be between 1 and 3")
         cdef PetscReal clower[3]
         clower[0] = clower[1] = clower[2] = 0
         for i from 0 <= i < dim: clower[i] = lower[i]
@@ -175,7 +176,8 @@ cdef class DMPlex(DM):
         cdef Py_ssize_t i = 0
         cdef PetscInt dim = 0, *cfaces = NULL
         faces = iarray_i(faces, &dim, &cfaces)
-        assert dim >= 1 and dim <= 3
+        if dim < 1 or dim > 3:
+            raise ValueError("number of face dimensions must be between 1 and 3")
         cdef PetscReal clower[3]
         clower[0] = clower[1] = clower[2] = 0
         for i from 0 <= i < dim: clower[i] = lower[i]
@@ -445,9 +447,17 @@ cdef class DMPlex(DM):
         cdef ISColoring coloring = NULL
 
         CHKERR(DMPlexCreateColoring(self.dm, cdepth, cdistance, &coloring))
-        CHKERR(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors))
-
-        cdef list isets = [ref_IS(iscolors[i]) for i from 0 <= i < ncolors]
+        cdef list isets = []
+        try:
+            CHKERR(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors))
+            for i from 0 <= i < ncolors:
+                isets.append(ref_IS(iscolors[i]))
+        finally:
+            try:
+                if iscolors != NULL:
+                    CHKERR(ISColoringRestoreIS(coloring, PETSC_USE_POINTER, &iscolors))
+            finally:
+                CHKERR(ISColoringDestroy(&coloring))
         return isets
 
     def filter(self, label: DMLabel | None = None, value: int | None = None, ignoreHalo: bool = False,
@@ -550,10 +560,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexGetConeSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt csize = 0
         CHKERR(DMPlexGetConeSize(self.dm, cp, &csize))
         return toInt(csize)
@@ -576,10 +583,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetConeSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt csize = asInt(size)
         CHKERR(DMPlexSetConeSize(self.dm, cp, csize))
 
@@ -599,10 +603,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexGetCone
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt        ncone = 0
         cdef const PetscInt *icone = NULL
         CHKERR(DMPlexGetConeSize(self.dm, cp, &ncone))
@@ -630,22 +631,18 @@ cdef class DMPlex(DM):
         DMPlex.setSupportSize, petsc.DMPlexSetCone
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         #
-        cdef PetscInt  ncone = 0
-        cdef PetscInt *icone = NULL
+        cdef PetscInt  ncone = 0, norie = 0
+        cdef PetscInt *icone = NULL, *iorie = NULL
         cone = iarray_i(cone, &ncone, &icone)
-        CHKERR(DMPlexSetConeSize(self.dm, cp, ncone))
-        CHKERR(DMPlexSetCone(self.dm, cp, icone))
-        #
-        cdef PetscInt  norie = 0
-        cdef PetscInt *iorie = NULL
         if orientation is not None:
             orientation = iarray_i(orientation, &norie, &iorie)
-            assert norie == ncone
+            if norie != ncone:
+                raise ValueError("cone and orientation arrays must have equal length")
+        CHKERR(DMPlexSetConeSize(self.dm, cp, ncone))
+        CHKERR(DMPlexSetCone(self.dm, cp, icone))
+        if orientation is not None:
             CHKERR(DMPlexSetConeOrientation(self.dm, cp, iorie))
 
     def insertCone(self, p: int, conePos: int, conePoint: int) -> None:
@@ -714,10 +711,7 @@ cdef class DMPlex(DM):
         DMPlex.setChart, petsc.DMPlexGetConeOrientation
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt        norie = 0
         cdef const PetscInt *iorie = NULL
         CHKERR(DMPlexGetConeSize(self.dm, cp, &norie))
@@ -743,16 +737,14 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetConeOrientation
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt ncone = 0
         CHKERR(DMPlexGetConeSize(self.dm, cp, &ncone))
         cdef PetscInt  norie = 0
         cdef PetscInt *iorie = NULL
         orientation = iarray_i(orientation, &norie, &iorie)
-        assert norie == ncone
+        if norie != ncone:
+            raise ValueError("cone and orientation arrays must have equal length")
         CHKERR(DMPlexSetConeOrientation(self.dm, cp, iorie))
 
     def setCellType(self, p: int, ctype: DM.PolytopeType) -> None:
@@ -830,10 +822,7 @@ cdef class DMPlex(DM):
         DMPlex.getConeSize, petsc.DMPlexGetSupportSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt ssize = 0
         CHKERR(DMPlexGetSupportSize(self.dm, cp, &ssize))
         return toInt(ssize)
@@ -856,10 +845,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetSupportSize
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt ssize = asInt(size)
         CHKERR(DMPlexSetSupportSize(self.dm, cp, ssize))
 
@@ -879,10 +865,7 @@ cdef class DMPlex(DM):
         DMPlex.setChart, petsc.DMPlexGetSupport
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt        nsupp = 0
         cdef const PetscInt *isupp = NULL
         CHKERR(DMPlexGetSupportSize(self.dm, cp, &nsupp))
@@ -908,10 +891,7 @@ cdef class DMPlex(DM):
         petsc.DMPlexSetSupport
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscInt  nsupp = 0
         cdef PetscInt *isupp = NULL
         supp = iarray_i(supp, &nsupp, &isupp)
@@ -1273,10 +1253,7 @@ cdef class DMPlex(DM):
         DMPlex.getCone, petsc.DMPlexGetTransitiveClosure
 
         """
-        cdef PetscInt cp = asInt(p)
-        cdef PetscInt pStart = 0, pEnd = 0
-        CHKERR(DMPlexGetChart(self.dm, &pStart, &pEnd))
-        assert cp>=pStart and cp<pEnd
+        cdef PetscInt cp = DMPlex_ChartPoint(self.dm, p)
         cdef PetscBool cuseCone = useCone
         cdef PetscInt  numPoints = 0
         cdef PetscInt *points = NULL
@@ -1489,9 +1466,16 @@ cdef class DMPlex(DM):
 
         Parameters
         ----------
+        label
+            The name of the label to create or update.
         value
             The marker value, or `DETERMINE` or `None` to use some
             value in the closure (or 1 if none are found).
+
+        Returns
+        -------
+        boundary : DMLabel
+            The label containing the boundary faces.
 
         See Also
         --------
@@ -1500,14 +1484,18 @@ cdef class DMPlex(DM):
 
         """
         cdef PetscInt ival = PETSC_DETERMINE
+        cdef PetscDMLabel clbl = NULL
+        cdef const char *cval = NULL
+        cdef DMLabel boundary = DMLabel()
         if value is not None: ival = asInt(value)
         if not self.hasLabel(label):
             self.createLabel(label)
-        cdef const char *cval = NULL
         label = str2bytes(label, &cval)
-        cdef PetscDMLabel clbl = NULL
         CHKERR(DMGetLabel(self.dm, cval, &clbl))
         CHKERR(DMPlexMarkBoundaryFaces(self.dm, ival, clbl))
+        boundary.dmlabel = clbl
+        CHKERR(PetscINCREF(boundary.obj))
+        return boundary
 
     def labelComplete(self, DMLabel label, useCone: bool = True) -> None:
         """Add the transitive closure or the star of each point in the label.
@@ -1721,7 +1709,7 @@ cdef class DMPlex(DM):
             CHKERR(PetscCLEAR(self.obj)); self.dm = dmParallel
             return sf
 
-    def distributeOverlap(self, overlap: int | None = 0) -> SF:
+    def distributeOverlap(self, overlap: int | None = 0) -> SF | None:
         """Add partition overlap to a distributed non-overlapping `DMPlex`.
 
         Collective.
@@ -1733,8 +1721,10 @@ cdef class DMPlex(DM):
 
         Returns
         -------
-        sf : SF
-            The `SF` used for point distribution.
+        sf : SF or None
+            The `SF` used for point distribution, or `None` if the
+            mesh was not distributed, in which case the `DMPlex` is left
+            unchanged.
 
         See Also
         --------
@@ -1747,8 +1737,9 @@ cdef class DMPlex(DM):
         cdef PetscDM dmOverlap = NULL
         CHKERR(DMPlexDistributeOverlap(self.dm, coverlap,
                                        &sf.sf, &dmOverlap))
-        CHKERR(PetscCLEAR(self.obj)); self.dm = dmOverlap
-        return sf
+        if dmOverlap != NULL:
+            CHKERR(PetscCLEAR(self.obj)); self.dm = dmOverlap
+            return sf
 
     def isDistributed(self) -> bool:
         """Return the flag indicating if the mesh is distributed.
@@ -1799,7 +1790,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexDistributeGetDefault(self.dm, &dist))
         return toBool(dist)
 
-    def distributeSetDefault(self, flag: bool) -> None:
+    def distributeSetDefault(self, flag: bool = True) -> None:
         """Set flag indicating whether the `DMPlex` should be distributed by default.
 
         Logically collective.
@@ -2009,7 +2000,8 @@ cdef class DMPlex(DM):
         cdef PetscInt *icomp = NULL, *idof = NULL
         numComp = iarray_i(numComp, &ncomp, &icomp)
         numDof  = iarray_i(numDof, &ndof, &idof)
-        assert ndof == ncomp*(dim+1)
+        if ndof != ncomp*(dim+1):
+            raise ValueError("numDof length must equal len(numComp) * (dim + 1)")
         # boundary conditions
         cdef PetscInt nbc = 0, i = 0
         cdef PetscInt *bcfield = NULL
@@ -2020,21 +2012,25 @@ cdef class DMPlex(DM):
             bcField = iarray_i(bcField, &nbc, &bcfield)
             if bcComps is not None:
                 bcComps = list(bcComps)
-                assert len(bcComps) == nbc
+                if len(bcComps) != nbc:
+                    raise ValueError("bcComps and bcField must have equal length")
                 unused1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
                 for i from 0 <= i < nbc:
                     bccomps[i] = (<IS?>bcComps[<Py_ssize_t>i]).iset
             if bcPoints is not None:
                 bcPoints = list(bcPoints)
-                assert len(bcPoints) == nbc
+                if len(bcPoints) != nbc:
+                    raise ValueError("bcPoints and bcField must have equal length")
                 unused2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
                 for i from 0 <= i < nbc:
                     bcpoints[i] = (<IS?>bcPoints[<Py_ssize_t>i]).iset
             else:
                 raise ValueError("bcPoints is a required argument")
         else:
-            assert bcComps  is None
-            assert bcPoints is None
+            if bcComps is not None:
+                raise ValueError("bcComps requires bcField")
+            if bcPoints is not None:
+                raise ValueError("bcPoints requires bcField")
         # optional chart permutations
         cdef PetscIS cperm = NULL
         if perm is not None: cperm = perm.iset
@@ -2373,18 +2369,18 @@ cdef class DMPlex(DM):
         petsc.DMPlexComputeCellGeometryFVM
 
         """
-        cdef PetscInt dims[2]
+        cdef PetscInt dims[2], ncoords = 0
         CHKERR(DMGetCoordinateDim(self.dm, &dims[1]))
         cdef PetscInt ccell = asInt(cell)
         cdef PetscBool isDG = PETSC_FALSE
         cdef const PetscScalar *array = NULL
         cdef PetscScalar *coords = NULL
-        CHKERR(DMPlexGetCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
-        dims[0] /= dims[1]
+        CHKERR(DMPlexGetCellCoordinates(self.dm, ccell, &isDG, &ncoords, &array, &coords))
+        dims[0] = ncoords // dims[1]
         try:
             out = array_sd(2, dims, coords)
         finally:
-            CHKERR(DMPlexRestoreCellCoordinates(self.dm, ccell, &isDG, &dims[0], &array, &coords))
+            CHKERR(DMPlexRestoreCellCoordinates(self.dm, ccell, &isDG, &ncoords, &array, &coords))
         return (toBool(isDG), out)
 
     def computeCellGeometryFVM(self, cell: int) -> tuple[float, ArrayReal, ArrayReal]:
@@ -2503,7 +2499,7 @@ cdef class DMPlex(DM):
         # FIXME petsc.DMPlexMetricSetFromOptions
         CHKERR(DMPlexMetricSetFromOptions(self.dm))
 
-    def metricSetUniform(self, uniform: bool) -> None:
+    def metricSetUniform(self, uniform: bool = True) -> None:
         """Record whether the metric is uniform or not.
 
         Logically collective.
@@ -2537,7 +2533,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricIsUniform(self.dm, &uniform))
         return toBool(uniform)
 
-    def metricSetIsotropic(self, isotropic: bool) -> None:
+    def metricSetIsotropic(self, isotropic: bool = True) -> None:
         """Record whether the metric is isotropic or not.
 
         Logically collective.
@@ -2571,7 +2567,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricIsIsotropic(self.dm, &isotropic))
         return toBool(isotropic)
 
-    def metricSetRestrictAnisotropyFirst(self, restrictAnisotropyFirst: bool) -> None:
+    def metricSetRestrictAnisotropyFirst(self, restrictAnisotropyFirst: bool = True) -> None:
         """Record whether anisotropy is be restricted before normalization or after.
 
         Logically collective.
@@ -2605,7 +2601,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricRestrictAnisotropyFirst(self.dm, &restrictAnisotropyFirst))
         return toBool(restrictAnisotropyFirst)
 
-    def metricSetNoInsertion(self, noInsert: bool) -> None:
+    def metricSetNoInsertion(self, noInsert: bool = True) -> None:
         """Set the flag indicating whether node insertion should be turned off.
 
         Logically collective.
@@ -2641,7 +2637,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricNoInsertion(self.dm, &noInsert))
         return toBool(noInsert)
 
-    def metricSetNoSwapping(self, noSwap: bool) -> None:
+    def metricSetNoSwapping(self, noSwap: bool = True) -> None:
         """Set the flag indicating whether facet swapping should be turned off.
 
         Logically collective.
@@ -2677,7 +2673,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricNoSwapping(self.dm, &noSwap))
         return toBool(noSwap)
 
-    def metricSetNoMovement(self, noMove: bool) -> None:
+    def metricSetNoMovement(self, noMove: bool = True) -> None:
         """Set the flag indicating whether node movement should be turned off.
 
         Logically collective.
@@ -2713,7 +2709,7 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexMetricNoMovement(self.dm, &noMove))
         return toBool(noMove)
 
-    def metricSetNoSurf(self, noSurf: bool) -> None:
+    def metricSetNoSurf(self, noSurf: bool = True) -> None:
         """Set the flag indicating whether surface modification should be turned off.
 
         Logically collective.

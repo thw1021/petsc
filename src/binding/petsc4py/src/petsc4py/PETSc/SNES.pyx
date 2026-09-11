@@ -622,7 +622,7 @@ cdef class SNES(Object):
         CHKERR(PetscINCREF(smooth.obj))
         return smooth
 
-    def setFASUseCoarseCorrectionLineSearch(self, use: bool) -> None:
+    def setFASUseCoarseCorrectionLineSearch(self, use: bool = True) -> None:
         """Set if to use a line search for the coarse corrections in FAS.
 
         Logically collective.
@@ -1354,7 +1354,8 @@ cdef class SNES(Object):
             self.set_attr('__converged__', None)
             CHKERR(SNESSetConvergenceTest(self.snes, SNESConvergedDefault, NULL, NULL))
         else:
-            assert callable(converged)
+            if not callable(converged):
+                raise TypeError("converged must be callable, 'skip', 'default', or None")
             if args  is None: args  = ()
             if kargs is None: kargs = {}
             context = (converged, args, kargs)
@@ -1856,7 +1857,7 @@ cdef class SNES(Object):
         CHKERR(SNESGetIterationNumber(self.snes, &ival))
         return toInt(ival)
 
-    def setForceIteration(self, force: bool) -> None:
+    def setForceIteration(self, force: bool = True) -> None:
         """Force solve to take at least one iteration.
 
         Collective.

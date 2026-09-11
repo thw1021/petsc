@@ -130,7 +130,6 @@ cdef class Viewer(Object):
 
     def __call__(self, Object obj) -> None:
         """View a generic object."""
-        assert obj.obj != NULL
         CHKERR(PetscObjectView(obj.obj[0], self.vwr))
 
     #
@@ -160,7 +159,6 @@ cdef class Viewer(Object):
         elif isinstance(obj, Viewer):
             CHKERR(PetscViewerView(self.vwr, (<Viewer?>obj).vwr))
         else:
-            assert (<Object?>obj).obj != NULL
             CHKERR(PetscObjectView((<Object?>obj).obj[0], self.vwr))
 
     def destroy(self) -> Self:
@@ -763,7 +761,7 @@ cdef class Viewer(Object):
         """
         CHKERR(PetscViewerASCIIPopTab(self.vwr))
 
-    def useASCIITabs(self, flag: bool) -> None:
+    def useASCIITabs(self, flag: bool = True) -> None:
         """Enable/disable the use of ASCII tabs.
 
         Collective.
