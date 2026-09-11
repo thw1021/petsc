@@ -8,3 +8,4 @@ OneDimensional: cells ascending on one axis, plex built and checked
 Validation: every invalid argument set rejected
 NoCells: empty input gives an empty migration
 HighCoordinateDim: four coordinates per vertex rejected
+NoCoordinates: Morton ordering rejected a mesh without coordinates

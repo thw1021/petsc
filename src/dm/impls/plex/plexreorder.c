@@ -65,7 +65,8 @@ static PetscErrorCode DMPlexCreateOrderingClosure_Static(DM dm, PetscInt numPoin
   has different types of cells, and then loop over each set of reordered cells for assembly.
 
   Passing `DMPLEXCURVEMORTON` orders the cells along a Morton (Z-order) curve computed from the cell
-  centroids, which needs no adjacency graph. Every other value currently gives reverse Cuthill-McKee.
+  centroids. This requires the `DMPLEX` to have coordinates. It needs no adjacency graph. Every other
+  value currently gives reverse Cuthill-McKee.
 
 .seealso: `DMPLEX`, `DMPlexPermute()`, `MatOrderingType`, `MatGetOrdering()`
 @*/
@@ -81,13 +82,19 @@ PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS
   PetscCall(PetscStrcmp(otype, DMPLEXCURVEMORTON, &iscurve));
   if (iscurve) {
     /* A space-filling curve orders the cells from their coordinates, so it needs no adjacency graph */
+    Vec      coordinates;
     PetscInt cStart, cEnd, cdim;
 
     /* The curve interleaves at most three axes. Check that before anything is allocated, so a mesh
        in a higher-dimensional space reports the limit instead of leaking the work arrays. */
     PetscCall(DMGetCoordinateDim(dm, &cdim));
     PetscCheck(cdim >= 1 && cdim <= 3, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension %" PetscInt_FMT " must be in [1, 3] for a space-filling curve", cdim);
+    PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+    PetscCheck(coordinates, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "A space-filling curve orders cells by centroid, but this DMPLEX has no coordinates");
+    PetscCall(DMGetCellCoordinatesLocalSetUp(dm));
     PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+    /* DMPlexCreateOrderingClosure_Static() indexes the permutation by the cell point number */
+    PetscCheck(cStart == 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Cells must start at point 0, not %" PetscInt_FMT, cStart);
     numCells = cEnd - cStart;
     PetscCall(PetscMalloc1(numCells, &cperm));
     PetscCall(DMPlexGetCellOrderingByCurve_Internal(dm, otype, cStart, cEnd, cperm));

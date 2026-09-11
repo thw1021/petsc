@@ -1558,14 +1558,14 @@ PetscErrorCode DMPlexSetIsoperiodicFaceTransform(DM dm, PetscInt n, const PetscS
 
 // ***** Space-filling-curve reorder of a distributed cell list *****
 //
-// `DMPlexCreateFromCellListParallel()` interpolates in parallel. The cost of that interpolation
+// `DMPlexCreateFromCellListParallelPetsc()` interpolates in parallel. The cost of that interpolation
 // depends on how spatially compact each rank's cells are. Cells supplied in file order leave each
 // rank owning a globally scattered set, so most created faces and edges are shared and the
 // interpolation star forest is large. Sorting the cells along a space-filling curve before the
 // build makes each rank's cells spatially compact, so almost all created faces are rank-local.
 //
 // The reorder runs before any `DM` exists, so it works on the same plain arrays that
-// `DMPlexCreateFromCellListParallel()` accepts. It returns a migration `PetscSF` whose roots are
+// `DMPlexCreateFromCellListParallelPetsc()` accepts. It returns a migration `PetscSF` whose roots are
 // the caller's original cells and whose leaves are the reordered cells. Callers use that
 // `PetscSF` to migrate their own per-cell data, such as region tags or boundary labels.
 //
@@ -1788,7 +1788,7 @@ static PetscErrorCode DMPlexZCodeSelectSplitters(MPI_Comm comm, MPI_Datatype key
 
   Use `DMPlexReorderCellListByCurve()` to reorder a cell connectivity array directly.
 
-.seealso: [](ch_unstructured), `DMPLEX`, `DMPlexReorderCellListByCurve()`, `DMPlexCreateFromCellListParallel()`, `PetscSF`
+.seealso: [](ch_unstructured), `DMPLEX`, `DMPlexReorderCellListByCurve()`, `DMPlexCreateFromCellListParallelPetsc()`, `PetscSF`
 @*/
 PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCurveType curvetype, PetscInt spaceDim, PetscInt numCells, const PetscReal centroids[], PetscSF *migrationSF, PetscInt *newNumCells)
 {
@@ -1982,7 +1982,7 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
   Level: advanced
 
   Notes:
-  Call this before `DMPlexCreateFromCellListParallel()` to reduce the cost of parallel
+  Call this before `DMPlexCreateFromCellListParallelPetsc()` to reduce the cost of parallel
   interpolation. The vertex distribution stays unchanged, because the interpolation cost follows
   the cell distribution.
 
@@ -1998,7 +1998,7 @@ PetscErrorCode DMPlexReorderCellListByCurveFromCentroids(MPI_Comm comm, DMPlexCu
 
   `curvetype`, `numCorners`, `spaceDim`, and `NVertices` must hold the same value on every process.
 
-.seealso: [](ch_unstructured), `DMPLEX`, `DMPlexReorderCellListByCurveFromCentroids()`, `DMPlexCreateFromCellListParallel()`, `PetscSF`
+.seealso: [](ch_unstructured), `DMPLEX`, `DMPlexReorderCellListByCurveFromCentroids()`, `DMPlexCreateFromCellListParallelPetsc()`, `PetscSF`
 @*/
 PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curvetype, PetscInt numCells, PetscInt numCorners, const PetscInt cells[], PetscInt spaceDim, PetscInt numVertices, PetscInt NVertices, const PetscReal coords[], PetscSF *migrationSF, PetscInt *newNumCells, PetscInt *newCells[])
 {
@@ -2034,7 +2034,8 @@ PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curve
   PetscCall(PetscSFSetGraphLayout(sfVert, layout, numCells * numCorners, NULL, PETSC_OWN_POINTER, cells));
   PetscCall(PetscLayoutDestroy(&layout));
 
-  PetscCall(PetscMalloc2(numCells * numCorners * spaceDim, &cornercoords, numCells * spaceDim, &centroids));
+  PetscCall(PetscMalloc1(numCells * numCorners * spaceDim, &cornercoords));
+  PetscCall(PetscMalloc1(numCells * spaceDim, &centroids));
   PetscCall(PetscMPIIntCast(spaceDim, &spaceDimi));
   PetscCallMPI(MPI_Type_contiguous(spaceDimi, MPIU_REAL, &coordtype));
   PetscCallMPI(MPI_Type_commit(&coordtype));
@@ -2051,8 +2052,10 @@ PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curve
       centroids[c * spaceDim + d] = sum / (PetscReal)numCorners;
     }
   }
+  PetscCall(PetscFree(cornercoords));
 
   PetscCall(DMPlexReorderCellListByCurveFromCentroids(comm, curvetype, spaceDim, numCells, centroids, &sf, &nnew));
+  PetscCall(PetscFree(centroids));
 
   // Move the connectivity into the new order. One cell is one unit of numCorners vertices.
   PetscCall(PetscMalloc1(nnew * numCorners, &ncells));
@@ -2063,7 +2066,6 @@ PetscErrorCode DMPlexReorderCellListByCurve(MPI_Comm comm, DMPlexCurveType curve
   PetscCall(PetscSFBcastEnd(sf, celltype, cells, ncells, MPI_REPLACE));
   PetscCallMPI(MPI_Type_free(&celltype));
 
-  PetscCall(PetscFree2(cornercoords, centroids));
   *migrationSF = sf;
   *newNumCells = nnew;
   *newCells    = ncells;
@@ -2087,10 +2089,6 @@ PETSC_INTERN PetscErrorCode DMPlexGetCellOrderingByCurve_Internal(DM dm, DMPlexC
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(curvetype, DMPLEXCURVEMORTON, &ismorton));
   PetscCheck(ismorton, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DMPlexCurveType \"%s\"; only \"%s\" is registered", curvetype ? curvetype : "(null)", DMPLEXCURVEMORTON);
-  // DMPlexCreateOrderingClosure_Static() indexes the permutation by the plex point number of the
-  // cell, so the reverse Cuthill-McKee path in DMPlexGetOrdering() already requires the cells to
-  // start at point 0. State that requirement rather than produce a wrong permutation quietly.
-  PetscCheck(cStart == 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Cells must start at point 0, not %" PetscInt_FMT, cStart);
   // DMPlexGetOrdering() checks that the coordinate dimension is at most 3, which the bounding box
   // below requires, and it checks it before it allocates.
   PetscCall(DMGetCoordinateDim(dm, &cdim));

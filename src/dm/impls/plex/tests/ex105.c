@@ -349,9 +349,9 @@ static PetscErrorCode TestLocalityImproves(MPI_Comm comm, PetscInt N)
   // process holds a real block require a factor of two. Measured values: a 2x2 grid over 8
   // processes gives no change, an 8x8 grid over 8 processes gives 1.68, and a 16x16 grid gives
   // more than 4.
-  if (size > 1 && NCells >= 2 * (PetscInt)size) {
+  if (size > 1 && NCells >= 8 * (PetscInt)size) {
     PetscCheck(4 * sharedAfter <= 3 * sharedBefore, comm, PETSC_ERR_PLIB, "Shared points only fell from %" PetscInt_FMT " to %" PetscInt_FMT ", less than a quarter", sharedBefore, sharedAfter);
-    if (NCells >= 32 * (PetscInt)size) PetscCheck(2 * sharedAfter <= sharedBefore, comm, PETSC_ERR_PLIB, "Shared points only fell from %" PetscInt_FMT " to %" PetscInt_FMT ", less than a factor of two", sharedBefore, sharedAfter);
+    PetscCheck(NCells < 32 * (PetscInt)size || 2 * sharedAfter <= sharedBefore, comm, PETSC_ERR_PLIB, "Shared points only fell from %" PetscInt_FMT " to %" PetscInt_FMT ", less than a factor of two", sharedBefore, sharedAfter);
   }
   // The counts depend on the number of processes, so keep them out of the reference output.
   PetscCall(PetscPrintf(comm, "Locality: reorder cuts shared points\n"));
@@ -804,6 +804,34 @@ static PetscErrorCode TestSampleOverflow(MPI_Comm comm, PetscInt NCells)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Part K: Morton ordering needs cell coordinates. A topology-only DMPLEX must be rejected before
+// DMPlexGetCellCoordinates() reaches its coordinate-vector closure path.
+static PetscErrorCode TestNoCoordinates(MPI_Comm comm)
+{
+  DM             dm;
+  IS             perm    = NULL;
+  PetscInt       cone[4] = {1, 2, 3, 4};
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMPlexCreate(comm, &dm));
+  PetscCall(DMSetDimension(dm, 2));
+  PetscCall(DMPlexSetChart(dm, 0, 5));
+  PetscCall(DMPlexSetConeSize(dm, 0, 4));
+  PetscCall(DMSetUp(dm));
+  PetscCall(DMPlexSetCone(dm, 0, cone));
+  PetscCall(DMPlexSymmetrize(dm));
+  PetscCall(DMPlexStratify(dm));
+  PetscCall(PetscPushErrorHandler(PetscReturnErrorHandler, NULL));
+  ierr = DMPlexGetOrdering(dm, DMPLEXCURVEMORTON, NULL, &perm);
+  PetscCall(PetscPopErrorHandler());
+  PetscCheck(ierr == PETSC_ERR_ARG_WRONGSTATE, comm, PETSC_ERR_PLIB, "DMPlexGetOrdering() returned %d for a mesh without coordinates, not PETSC_ERR_ARG_WRONGSTATE", (int)ierr);
+  PetscCheck(!perm, comm, PETSC_ERR_PLIB, "The rejected call returned a permutation");
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscPrintf(comm, "NoCoordinates: Morton ordering rejected a mesh without coordinates\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   MPI_Comm  comm;
@@ -830,6 +858,7 @@ int main(int argc, char **argv)
   PetscCall(TestArgumentValidation(comm));
   PetscCall(TestNoCells(comm));
   PetscCall(TestHighCoordinateDim(comm));
+  PetscCall(TestNoCoordinates(comm));
   if (overflow) PetscCall(TestSampleOverflow(comm, overflowCells));
   PetscCall(PetscFinalize());
   return 0;
@@ -847,12 +876,12 @@ int main(int argc, char **argv)
     nsize: {{2 5 7}}
     args: -n 16
 
-  # Fewer cells than processes, so some ranks own nothing before and after the reorder. At 8 the
-  # three-dimensional parts still give every rank a cell. At 16 those parts leave half the ranks
-  # empty, which exercises collective key checks with locally NULL tag arrays.
+  # Small and empty-rank cases. At 2 the locality check has only two cells per process. At 8 the
+  # three-dimensional parts give every rank one cell. At 16 those parts leave half the ranks empty,
+  # which exercises collective key checks with locally NULL tag arrays.
   test:
     suffix: empty_ranks
-    nsize: {{8 16}}
+    nsize: {{2 8 16}}
     args: -n 2
 
   # Every cell starts on rank 0, the distribution a serial read produces. Check that the output is

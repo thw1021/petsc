@@ -8,4 +8,5 @@ OneDimensional: cells ascending on one axis, plex built and checked
 Validation: every invalid argument set rejected
 NoCells: empty input gives an empty migration
 HighCoordinateDim: four coordinates per vertex rejected
+NoCoordinates: Morton ordering rejected a mesh without coordinates
 SampleOverflow: largest sample index 2197300000 above 2^31, split balanced from 268750 to 268750 cells
