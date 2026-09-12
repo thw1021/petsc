@@ -777,7 +777,8 @@ cdef PetscErrorCode MatDuplicate_Python(
     cdef duplicate = PyMat(mat).duplicate
     if duplicate is None: return UNSUPPORTED(b"duplicate")
     cdef Mat m = duplicate(Mat_(mat), <long>op)
-    out[0] = m.mat; m.mat = NULL
+    CHKERR(PetscObjectReference(<PetscObject>m.mat))
+    out[0] = m.mat
     return FunctionEnd()
 
 cdef PetscErrorCode MatCopy_Python(
@@ -966,11 +967,11 @@ cdef PetscErrorCode MatCreateVecs_Python(
     cdef Vec u, v
     u, v = createVecs(Mat_(mat))
     if x != NULL:
+        CHKERR(PetscObjectReference(<PetscObject>u.vec))
         x[0] = u.vec
-        u.vec = NULL
     if y != NULL:
+        CHKERR(PetscObjectReference(<PetscObject>v.vec))
         y[0] = v.vec
-        v.vec = NULL
     return FunctionEnd()
 
 cdef PetscErrorCode MatMult_Python(

@@ -686,6 +686,63 @@ class TestDiagonal(TestMatrix):
         self.assertTrue(self.A.equal(B))
 
 
+class TestMatPythonReturnedObjects(unittest.TestCase):
+    def testDuplicate(self):
+        class Context(ScaledIdentity):
+            def duplicate(self, mat, op):
+                self.result = super().duplicate(mat, op)
+                return self.result
+
+        for comm in (PETSc.COMM_SELF, PETSc.COMM_WORLD):
+            ctx = Context()
+            A = PETSc.Mat().createPython(((2, None), (2, None)), ctx, comm=comm)
+            A.setUp()
+            B = A.duplicate()
+            self.assertTrue(ctx.result)
+            self.assertEqual(ctx.result, B)
+            self.assertEqual(ctx.result.getRefCount(), 2)
+            B.destroy()
+            self.assertEqual(ctx.result.getRefCount(), 1)
+            self.assertEqual(ctx.result.getPythonContext().s, ctx.s)
+            ctx.result.destroy()
+            A.destroy()
+
+    def testCreateVecs(self):
+        class Context(Matrix):
+            def createVecs(self, mat):
+                rows, cols = mat.getSizes()
+                self.right = PETSc.Vec().createMPI(cols, comm=mat.getComm())
+                self.left = PETSc.Vec().createMPI(rows, comm=mat.getComm())
+                return self.right, self.left
+
+        for comm in (PETSc.COMM_SELF, PETSc.COMM_WORLD):
+            ctx = Context()
+            A = PETSc.Mat().createPython(((2, None), (3, None)), ctx, comm=comm)
+            A.setUp()
+            for side in (None, 'left', 'right'):
+                with self.subTest(size=comm.size, side=side):
+                    if side is None:
+                        result = A.createVecs()
+                        retained = ctx.right, ctx.left
+                    elif side == 'left':
+                        result = (A.createVecLeft(),)
+                        retained = (ctx.left,)
+                    else:
+                        result = (A.createVecRight(),)
+                        retained = (ctx.right,)
+                    for vec, saved in zip(result, retained):
+                        self.assertTrue(saved)
+                        self.assertEqual(saved, vec)
+                        self.assertEqual(saved.getRefCount(), 2)
+                        vec.set(3)
+                        vec.destroy()
+                        self.assertEqual(saved.getRefCount(), 1)
+                        self.assertEqual(saved.sum(), 3 * saved.getSize())
+                    ctx.right.destroy()
+                    ctx.left.destroy()
+            A.destroy()
+
+
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
