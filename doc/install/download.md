@@ -26,15 +26,15 @@ library.
 
 Tarball which contains only the source. Documentation available [online](https://petsc.org/release).
 
-- {release-snapshot}`petsc` (latest patch release)
+- [petsc-3.25.5.tar.gz](https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc-3.25.5.tar.gz)
 
 Tarball which includes all documentation, recommended for offline use.
 
-- {release-snapshot}`petsc-with-docs` (latest patch release)
+- [petsc-with-docs-3.25.5.tar.gz](https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc-with-docs-3.25.5.tar.gz)
 
 Tarball to enable a separate installation of petsc4py.
 
-- {release-snapshot}`petsc4py` (latest patch release)
+- [petsc4py-3.25.5.tar.gz](https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc4py-3.25.5.tar.gz)
 
 To extract the sources use:
 

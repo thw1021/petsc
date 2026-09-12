@@ -507,7 +507,8 @@ TEST*/
 ## Running the tests
 
 The make rules for running tests are contained in `gmakefile.test` in the PETSc root directory.
-Run tests through the root makefile with commands such as
+The root `GNUmakefile` or `makefile`, selected according to the make implementation,
+provides access to these rules with commands such as
 
 ```console
 $ make test
@@ -802,7 +803,7 @@ Searching using GNU make's native regexp functionality is kept for people who li
 
 ### Query-based searching
 
-Queries through `gmakefile.test` search tests generated for the active `PETSC_ARCH`; tests with
+Queries through `make test` or `make print-test` are limited to tests generated for the active `PETSC_ARCH`; tests with
 unavailable requirements are absent. To query every source definition instead, use
 
 ```console

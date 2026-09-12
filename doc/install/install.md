@@ -493,19 +493,21 @@ $ brew install gcc
 This installs `gfortran`, `gcc`, and `g++`. Homebrew also provides version-suffixed
 compiler names such as `gfortran-MAJOR`, `gcc-MAJOR`, and `g++-MAJOR`.
 
-After upgrading macOS, you generally need to update the Xcode GUI development system (using the standard Apple software update system),
-and the Xcode Command Line tools (run `xcode-select --install` again).
+After upgrading macOS, you generally need to update the Xcode GUI development system or the Xcode Command Line tools (using the standard Apple software update system).
 
 It is best to update `brew` after all macOS or Xcode upgrades (use `brew upgrade`). Sometimes
-`gfortran` will not work correctly after an upgrade. First reinstall its Homebrew formula:
+`gfortran` or its dependencies will not work correctly after an upgrade. To reconstruct the
+Homebrew installation, save the installed packages in a `Brewfile`, then remove and reinstall them:
 
 ```console
-$ brew reinstall gcc
+$ brew bundle dump --force        # Write ./Brewfile listing formulae and casks
+$ brew uninstall --force $(brew list)
+$ brew cleanup
+$ brew update
+$ brew bundle install             # Reinstall everything from the Brewfile
 ```
 
-If the whole Homebrew installation must be reconstructed, use `brew bundle dump` to save
-formulae and casks in a `Brewfile`, then restore them with `brew bundle`. See the
-[Homebrew Bundle documentation](https://docs.brew.sh/Brew-Bundle-and-Brewfile).
+See the [Homebrew Bundle documentation](https://docs.brew.sh/Brew-Bundle-and-Brewfile).
 
 (doc_config_install)=
 
@@ -672,16 +674,15 @@ has a [CUDA] enabled GPU by consulting <https://developer.nvidia.com/cuda-gpus>.
 
 On Linux - verify [^id12] that CUDA compatible [NVIDIA driver](https://www.nvidia.com/en-us/drivers) is installed.
 
-On Microsoft Windows, use either [Cygwin] or [WSL]. PETSc's CUDA configuration with WSL is
-currently untested. For WSL, first install CUDA by following NVIDIA's [CUDA on WSL
-guide](https://docs.nvidia.com/cuda/wsl-user-guide/). If you have experience building PETSc
+For an experimental CUDA build on Microsoft Windows with [WSL], first install CUDA by following
+NVIDIA's [CUDA on WSL guide](https://docs.nvidia.com/cuda/wsl-user-guide/). If you have experience building PETSc
 with CUDA under WSL, we welcome your input at <mailto:petsc-maint@mcs.anl.gov>. See the
 bug-reporting {ref}`documentation <doc_creepycrawly>` for more details.
 
 In most cases you need only pass the configure option `--with-cuda`; see the repository's
 {download}`CUDA configuration example <../../config/examples/arch-ci-linux-cuda-latest.py>`.
 
-CUDA builds of PETSc currently work on Linux and Microsoft Windows with [Cygwin]. WSL is
+CUDA builds of PETSc currently work on Linux only. Windows/WSL builds are
 not included in PETSc's tested configurations. CUDA builds are not supported on macOS:
 [NVIDIA ended macOS support after CUDA
 10.2](https://docs.nvidia.com/cuda/archive/10.2/cuda-toolkit-release-notes/index.html),
