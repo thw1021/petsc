@@ -18,6 +18,11 @@ class TestMatPartitioning(unittest.TestCase):
         self.part.destroy()
         self.adj.destroy()
 
+    def testCall(self):
+        result = self.part()
+        self.addCleanup(result.destroy)
+        self.assertEqual(result.getIndices().tolist(), self.expected)
+
     def testApply(self):
         result = PETSc.IS()
         self.addCleanup(result.destroy)
