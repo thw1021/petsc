@@ -1899,9 +1899,9 @@ PETSC_EXTERN PetscErrorCode MatPartitioningViewFromOptions(MatPartitioning, Pets
 PETSC_EXTERN PetscErrorCode MatPartitioningSetFromOptions(MatPartitioning);
 PETSC_EXTERN PetscErrorCode MatPartitioningGetType(MatPartitioning, MatPartitioningType *);
 
-PETSC_EXTERN PetscErrorCode MatPartitioningParmetisSetRepartition(MatPartitioning);
-PETSC_EXTERN PetscErrorCode MatPartitioningParmetisSetCoarseSequential(MatPartitioning);
-PETSC_EXTERN PetscErrorCode MatPartitioningParmetisGetEdgeCut(MatPartitioning, PetscInt *);
+PETSC_EXTERN PetscErrorCode MatPartitioningParMETISSetRepartition(MatPartitioning);
+PETSC_EXTERN PetscErrorCode MatPartitioningParMETISSetCoarseSequential(MatPartitioning);
+PETSC_EXTERN PetscErrorCode MatPartitioningParMETISGetEdgeCut(MatPartitioning, PetscInt *);
 
 /*E
    MPChacoGlobalType - Global partitioning method used by `MATPARTITIONINGCHACO` when delegating to the Chaco library
