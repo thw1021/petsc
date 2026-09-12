@@ -32,7 +32,7 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DGKLIB_PATH=../GKlib')
-    # force metis/parmetis to use a portable random number generator that will produce the same partitioning results on all systems
+    # force METIS/ParMETIS to use a portable random number generator that will produce the same partitioning results on all systems
     args.append('-DGKRAND=1')
     if not config.setCompilers.Configure.isWindows(self.setCompilers.CC, self.log) and self.checkSharedLibrariesEnabled():
       args.append('-DSHARED=1')

@@ -63,7 +63,7 @@ class Configure(config.package.CMakePackage):
       else:
         args.append('-DEXODUSII_DIR:FILEPATH='+self.trilinos.directory)
 
-    #  Need to pass -DMETIS_5 to C and C++ compiler flags otherwise assumes older Metis
+    #  Need to pass -DMETIS_5 to C and C++ compiler flags otherwise assumes older METIS
     args = self.rmArgsStartsWith(args,['-DCMAKE_CXX_FLAGS:STRING','-DCMAKE_C_FLAGS:STRING'])
     args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -DMETIS_5"')
     if hasattr(self.compilers, 'CXX'):
