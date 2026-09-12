@@ -2695,11 +2695,13 @@ cdef class TS(Object):
             mem1 = oarray_p(empty_p(<PetscInt>n), NULL, <void**>&vecl)
             for i from 0 <= i < n:
                 vecl[i] = (<Vec?>vl[i]).vec
+            vl = [ref_Vec(vecl[i]) for i from 0 <= i < n]
         if vm is not None:
             mem2 = oarray_p(empty_p(<PetscInt>n), NULL, <void**>&vecm)
             for i from 0 <= i < n:
                 vecm[i] = (<Vec?>vm[i]).vec
-        self.set_attr('__costgradients_memory', (mem1, mem2))
+            vm = [ref_Vec(vecm[i]) for i from 0 <= i < n]
+        self.set_attr('__costgradients_memory', (mem1, mem2, vl, vm))
         CHKERR(TSSetCostGradients(self.ts, n, vecl, vecm))
 
     def getCostGradients(self) -> tuple[list[Vec], list[Vec]]:

@@ -285,6 +285,32 @@ class TestTSContextLifetime(unittest.TestCase):
         gc.collect()
         PETSc.garbage_cleanup()
 
+    def testCostGradients(self):
+        vl = PETSc.Vec().createSeq(2, comm=PETSc.COMM_SELF)
+        vm = PETSc.Vec().createSeq(1, comm=PETSc.COMM_SELF)
+        vl.set(7)
+        vm.set(3)
+        self.ts.setCostGradients(vl, vm)
+        vl.destroy()
+        vm.destroy()
+        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+
+        gradients, parameters = self.ts.getCostGradients()
+        self.assertEqual(gradients[0].getArray().tolist(), [7, 7])
+        self.assertEqual(parameters[0].getArray().tolist(), [3])
+
+        # Replacing gradients releases the old vector references.
+        vl = gradients[0].duplicate()
+        vm = parameters[0].duplicate()
+        self.ts.setCostGradients([vl], [vm])
+        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+        self.assertEqual(gradients[0].getRefCount(), 1)
+        self.assertEqual(parameters[0].getRefCount(), 1)
+        self.ts.destroy()
+        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+        self.assertEqual(vl.getRefCount(), 1)
+        self.assertEqual(vm.getRefCount(), 1)
+
     def testCloneCallback(self):
         class RHS:
             def __call__(self, ts, t, u, f):
