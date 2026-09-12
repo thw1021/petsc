@@ -525,7 +525,7 @@ PetscErrorCode MatSetValues_MPIAIJ(Mat mat, PetscInt m, const PetscInt im[], Pet
   MatScalar  *aa, *ba;
   PetscInt   *rp1, *rp2, ii, nrow1, nrow2, _i, rmax1, rmax2, N, low1, high1, low2, high2, t, lastcol1, lastcol2;
   PetscInt    nonew;
-  MatScalar  *ap1 = NULL, *ap2 = NULL;
+  MatScalar  *ap1, *ap2;
 
   PetscFunctionBegin;
   PetscCall(MatSeqAIJGetArray(A, &aa));
@@ -537,18 +537,18 @@ PetscErrorCode MatSetValues_MPIAIJ(Mat mat, PetscInt m, const PetscInt im[], Pet
       row      = im[i] - rstart;
       lastcol1 = -1;
       rp1      = PetscSafePointerPlusOffset(aj, ai[row]);
-      if (!A->structure_only) ap1 = PetscSafePointerPlusOffset(aa, ai[row]);
+      ap1      = PetscSafePointerPlusOffset(aa, ai[row]);
       rmax1    = aimax[row];
       nrow1    = ailen[row];
       low1     = 0;
       high1    = nrow1;
       lastcol2 = -1;
       rp2      = PetscSafePointerPlusOffset(bj, bi[row]);
-      if (!B->structure_only) ap2 = PetscSafePointerPlusOffset(ba, bi[row]);
-      rmax2 = bimax[row];
-      nrow2 = bilen[row];
-      low2  = 0;
-      high2 = nrow2;
+      ap2      = PetscSafePointerPlusOffset(ba, bi[row]);
+      rmax2    = bimax[row];
+      nrow2    = bilen[row];
+      low2     = 0;
+      high2    = nrow2;
 
       for (j = 0; j < n; j++) {
         if (v && !mat->structure_only) value = roworiented ? v[i * n + j] : v[i + j * m];
@@ -581,7 +581,7 @@ PetscErrorCode MatSetValues_MPIAIJ(Mat mat, PetscInt m, const PetscInt im[], Pet
               bj    = b->j;
               ba    = b->a;
               rp2   = PetscSafePointerPlusOffset(bj, bi[row]);
-              if (!B->structure_only) ap2 = PetscSafePointerPlusOffset(ba, bi[row]);
+              ap2   = PetscSafePointerPlusOffset(ba, bi[row]);
               rmax2 = bimax[row];
               nrow2 = bilen[row];
               low2  = 0;
@@ -5166,7 +5166,7 @@ PetscErrorCode MatMPIAIJGetLocalMat_Private(Mat A, MatReuse scall, PetscBool str
   Mat_MPIAIJ        *mpimat = (Mat_MPIAIJ *)A->data;
   Mat_SeqAIJ        *mat, *a, *b;
   PetscInt          *ai, *aj, *bi, *bj, *cmap = mpimat->garray;
-  const PetscScalar *aa = NULL, *ba = NULL, *aav = NULL, *bav = NULL;
+  const PetscScalar *aa, *ba, *aav = NULL, *bav = NULL;
   PetscScalar       *ca = NULL, *cam;
   PetscMPIInt        size;
   PetscInt           am = A->rmap->n, i, j, k, cstart = A->cmap->rstart;
@@ -5182,9 +5182,7 @@ PetscErrorCode MatMPIAIJGetLocalMat_Private(Mat A, MatReuse scall, PetscBool str
     if (scall == MAT_INITIAL_MATRIX) {
       PetscCall(PetscObjectReference((PetscObject)mpimat->A));
       *A_loc = mpimat->A;
-    } else if (scall == MAT_REUSE_MATRIX) {
-      PetscCall(MatCopy(mpimat->A, *A_loc, SAME_NONZERO_PATTERN));
-    }
+    } else if (scall == MAT_REUSE_MATRIX) PetscCall(MatCopy(mpimat->A, *A_loc, SAME_NONZERO_PATTERN));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 

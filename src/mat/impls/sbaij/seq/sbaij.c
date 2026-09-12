@@ -726,8 +726,8 @@ PetscErrorCode MatSetValuesBlocked_SeqSBAIJ(Mat A, PetscInt m, const PetscInt im
     row = im[k];
     if (row < 0) continue;
     PetscCheck(row < a->mbs, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Block index row too large %" PetscInt_FMT " max %" PetscInt_FMT, row, a->mbs - 1);
-    rp = aj + ai[row];
-    if (!A->structure_only) ap = aa + bs2 * ai[row];
+    rp   = aj + ai[row];
+    ap   = PetscSafePointerPlusOffset(aa, bs2 * ai[row]);
     rmax = imax[row];
     nrow = ailen[row];
     low  = 0;
@@ -885,7 +885,7 @@ PetscErrorCode MatSetValues_SeqSBAIJ(Mat A, PetscInt m, const PetscInt im[], Pet
   PetscInt     *imax = a->imax, *ai = a->i, *ailen = a->ilen, roworiented = a->roworiented;
   PetscInt     *aj = a->j, nonew = a->nonew, bs = A->rmap->bs, brow, bcol;
   PetscInt      ridx, cidx, bs2                 = a->bs2;
-  MatScalar    *ap = NULL, value = 0.0, *aa = a->a, *bap;
+  MatScalar    *ap, value = 0.0, *aa = a->a, *bap;
 
   PetscFunctionBegin;
   for (k = 0; k < m; k++) { /* loop over added rows */
@@ -893,10 +893,10 @@ PetscErrorCode MatSetValues_SeqSBAIJ(Mat A, PetscInt m, const PetscInt im[], Pet
     brow = row / bs;        /* block row number */
     if (row < 0) continue;
     PetscCheck(row < A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT, row, A->rmap->N - 1);
-    rp = aj + ai[brow];                               /*ptr to beginning of column value of the row block*/
-    if (!A->structure_only) ap = aa + bs2 * ai[brow]; /*ptr to beginning of element value of the row block*/
-    rmax = imax[brow];                                /* maximum space allocated for this row */
-    nrow = ailen[brow];                               /* actual length of this row */
+    rp   = aj + ai[brow];                                  /*ptr to beginning of column value of the row block*/
+    ap   = PetscSafePointerPlusOffset(aa, bs2 * ai[brow]); /*ptr to beginning of element value of the row block*/
+    rmax = imax[brow];                                     /* maximum space allocated for this row */
+    nrow = ailen[brow];                                    /* actual length of this row */
     low  = 0;
     high = nrow;
     for (l = 0; l < n; l++) { /* loop over added columns */

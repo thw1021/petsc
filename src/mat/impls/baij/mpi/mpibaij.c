@@ -357,8 +357,8 @@ static inline PetscErrorCode MatSetValuesBlocked_SeqBAIJ_Inlined(Mat A, PetscInt
   MatScalar         *ap = NULL, *aa = a->a, *bap;
 
   PetscFunctionBegin;
-  rp = aj + ai[row];
-  if (!A->structure_only) ap = aa + bs2 * ai[row];
+  rp    = aj + ai[row];
+  ap    = PetscSafePointerPlusOffset(aa, bs2 * ai[row]);
   rmax  = imax[row];
   nrow  = ailen[row];
   value = v;

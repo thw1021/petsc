@@ -416,15 +416,15 @@ static inline PetscErrorCode MatSetValuesBlocked_SeqSBAIJ_Inlined(Mat A, PetscIn
   PetscInt          *aj = a->j, nonew = a->nonew, bs2 = a->bs2, bs = A->rmap->bs;
   PetscBool          roworiented = a->roworiented;
   const PetscScalar *value       = v;
-  MatScalar         *ap = NULL, *aa = a->a, *bap;
+  MatScalar         *ap, *aa = a->a, *bap;
 
   PetscFunctionBegin;
   if (col < row) {
     PetscCheck(a->ignore_ltriangular, PETSC_COMM_SELF, PETSC_ERR_USER, "Lower triangular value cannot be set for sbaij format. Ignoring these values, run with -mat_ignore_lower_triangular or call MatSetOption(mat,MAT_IGNORE_LOWER_TRIANGULAR,PETSC_TRUE)");
     PetscFunctionReturn(PETSC_SUCCESS); /* ignore lower triangular block */
   }
-  rp = aj + ai[row];
-  if (!A->structure_only) ap = aa + bs2 * ai[row];
+  rp    = aj + ai[row];
+  ap    = PetscSafePointerPlusOffset(aa, bs2 * ai[row]);
   rmax  = imax[row];
   nrow  = ailen[row];
   value = v;
@@ -503,11 +503,11 @@ static inline PetscErrorCode MatSetValuesBlocked_SeqBAIJ_Inlined(Mat A, PetscInt
   PetscInt          *aj = a->j, nonew = a->nonew, bs2 = a->bs2, bs = A->rmap->bs;
   PetscBool          roworiented = a->roworiented;
   const PetscScalar *value       = v;
-  MatScalar         *ap = NULL, *aa = a->a, *bap;
+  MatScalar         *ap, *aa = a->a, *bap;
 
   PetscFunctionBegin;
-  rp = aj + ai[row];
-  if (!A->structure_only) ap = aa + bs2 * ai[row];
+  rp    = aj + ai[row];
+  ap    = PetscSafePointerPlusOffset(aa, bs2 * ai[row]);
   rmax  = imax[row];
   nrow  = ailen[row];
   low   = 0;
