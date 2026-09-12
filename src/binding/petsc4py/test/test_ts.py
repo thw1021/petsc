@@ -1,4 +1,6 @@
+import gc
 import unittest
+import weakref
 from petsc4py import PETSc
 
 # --------------------------------------------------------------------
@@ -272,6 +274,40 @@ class TestTSTheta(BaseTestTSNonlinearRHS, BaseTestTSNonlinearI, unittest.TestCas
 
 class TestTSAlpha(BaseTestTSNonlinearRHS, BaseTestTSNonlinearI, unittest.TestCase):
     TYPE = PETSc.TS.Type.ALPHA
+
+
+class TestTSContextLifetime(unittest.TestCase):
+    def setUp(self):
+        self.ts = PETSc.TS().create(PETSc.COMM_SELF)
+
+    def tearDown(self):
+        self.ts.destroy()
+        gc.collect()
+        PETSc.garbage_cleanup()
+
+    def testCloneCallback(self):
+        class RHS:
+            def __call__(self, ts, t, u, f):
+                f.set(3)
+
+        self.ts.setType('euler')
+        rhs = RHS()
+        ref = weakref.ref(rhs)
+        self.ts.setRHSFunction(rhs)
+        clone = self.ts.clone()
+        self.addCleanup(clone.destroy)
+        self.ts.destroy()
+        del rhs
+        gc.collect()
+        self.assertIsNotNone(ref())
+
+        u = PETSc.Vec().createSeq(1, comm=PETSc.COMM_SELF)
+        f = u.duplicate()
+        clone.computeRHSFunction(0, u, f)
+        self.assertEqual(f.getArray().tolist(), [3])
+        clone.destroy()
+        gc.collect()
+        self.assertIsNone(ref())
 
 
 # --------------------------------------------------------------------
