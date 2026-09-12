@@ -1,4 +1,6 @@
+import gc
 import unittest
+import weakref
 from petsc4py import PETSc
 
 # --------------------------------------------------------------------
@@ -272,6 +274,144 @@ class TestTSTheta(BaseTestTSNonlinearRHS, BaseTestTSNonlinearI, unittest.TestCas
 
 class TestTSAlpha(BaseTestTSNonlinearRHS, BaseTestTSNonlinearI, unittest.TestCase):
     TYPE = PETSc.TS.Type.ALPHA
+
+
+class TestTSContextLifetime(unittest.TestCase):
+    def setUp(self):
+        self.ts = PETSc.TS().create(PETSc.COMM_SELF)
+
+    def tearDown(self):
+        self.ts.destroy()
+        gc.collect()
+        PETSc.garbage_cleanup()
+
+    def testCostGradients(self):
+        vl = PETSc.Vec().createSeq(2, comm=PETSc.COMM_SELF)
+        vm = PETSc.Vec().createSeq(1, comm=PETSc.COMM_SELF)
+        vl.set(7)
+        vm.set(3)
+        self.ts.setCostGradients(vl, vm)
+        vl.destroy()
+        vm.destroy()
+        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+
+        gradients, parameters = self.ts.getCostGradients()
+        self.assertEqual(gradients[0].getArray().tolist(), [7, 7])
+        self.assertEqual(parameters[0].getArray().tolist(), [3])
+
+        # Replacing gradients releases the old vector references.
+        vl = gradients[0].duplicate()
+        vm = parameters[0].duplicate()
+        self.ts.setCostGradients([vl], [vm])
+        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+        self.assertEqual(gradients[0].getRefCount(), 1)
+        self.assertEqual(parameters[0].getRefCount(), 1)
+        self.ts.destroy()
+        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+        self.assertEqual(vl.getRefCount(), 1)
+        self.assertEqual(vm.getRefCount(), 1)
+
+    def testCloneCallback(self):
+        class RHS:
+            def __call__(self, ts, t, u, f):
+                f.set(3)
+
+        self.ts.setType('euler')
+        rhs = RHS()
+        ref = weakref.ref(rhs)
+        self.ts.setRHSFunction(rhs)
+        clone = self.ts.clone()
+        self.addCleanup(clone.destroy)
+        self.ts.destroy()
+        del rhs
+        gc.collect()
+        self.assertIsNotNone(ref())
+
+        u = PETSc.Vec().createSeq(1, comm=PETSc.COMM_SELF)
+        f = u.duplicate()
+        clone.computeRHSFunction(0, u, f)
+        self.assertEqual(f.getArray().tolist(), [3])
+        clone.destroy()
+        gc.collect()
+        self.assertIsNone(ref())
+
+    def testRHSSplitSameFunction(self):
+        class Rate:
+            def __init__(self, value):
+                self.value = value
+
+        def rhs(ts, t, u, f, rate):
+            f.set(rate.value)
+
+        self.ts.setType('basicsymplectic')
+        u = PETSc.Vec().createSeq(2, comm=PETSc.COMM_SELF)
+        u.set(0)
+        self.ts.setSolution(u)
+        refs = []
+        for index, name, value in ((0, 'position', 2), (1, 'momentum', 3)):
+            iset = PETSc.IS().createGeneral([index], comm=PETSc.COMM_SELF)
+            self.ts.setRHSSplitIS(name, iset)
+            iset.destroy()
+            rate = Rate(value)
+            refs.append(weakref.ref(rate))
+            self.ts.setRHSSplitRHSFunction(name, rhs, args=(rate,))
+            del rate
+        gc.collect()
+        self.assertTrue(all(ref() is not None for ref in refs))
+        self.ts.setTimeStep(0.1)
+        self.ts.setMaxTime(0.1)
+        self.ts.setMaxSteps(1)
+        self.ts.setExactFinalTime(PETSc.TS.ExactFinalTime.MATCHSTEP)
+        self.ts.solve(u)
+        self.assertAlmostEqual(u[0], 0.2, places=6)
+        self.assertAlmostEqual(u[1], 0.3, places=6)
+        self.ts.destroy()
+        gc.collect()
+        self.assertTrue(all(ref() is None for ref in refs))
+
+    def testImplicitSplitSameName(self):
+        class RHS:
+            def evaluate(self, ts, t, u, f):
+                f.set(2)
+
+        class IFunction:
+            def evaluate(self, ts, t, u, udot, f):
+                udot.copy(f)
+                f.shift(-3)
+
+        class IJacobian:
+            def evaluate(self, ts, t, u, udot, shift, J, P):
+                P[0, 0] = shift
+                P.assemble()
+
+        self.ts.setType('arkimex')
+        self.ts.setARKIMEXFastSlowSplit()
+        u = PETSc.Vec().createSeq(2, comm=PETSc.COMM_SELF)
+        u.set(0)
+        self.ts.setSolution(u)
+        for index, name in enumerate(('slow', 'fast')):
+            iset = PETSc.IS().createGeneral([index], comm=PETSc.COMM_SELF)
+            self.ts.setRHSSplitIS(name, iset)
+            iset.destroy()
+        J = PETSc.Mat().createAIJ([1, 1], nnz=1, comm=PETSc.COMM_SELF)
+        rhs, ifunction, ijacobian = RHS(), IFunction(), IJacobian()
+        refs = [weakref.ref(callback) for callback in (rhs, ifunction, ijacobian)]
+        self.ts.setRHSSplitRHSFunction('slow', rhs.evaluate)
+        self.ts.setRHSSplitIFunction('fast', ifunction.evaluate)
+        self.ts.setRHSSplitIJacobian('fast', ijacobian.evaluate, J)
+        del rhs, ifunction, ijacobian
+        gc.collect()
+        self.assertTrue(all(ref() is not None for ref in refs))
+        self.ts.setTimeStep(0.1)
+        self.ts.setMaxTime(0.1)
+        self.ts.setMaxSteps(1)
+        self.ts.setExactFinalTime(PETSc.TS.ExactFinalTime.MATCHSTEP)
+        self.ts.solve(u)
+        self.assertAlmostEqual(u[0], 0.2, places=6)
+        self.assertAlmostEqual(u[1], 0.3, places=6)
+        self.ts.destroy()
+        gc.collect()
+        self.assertTrue(all(ref() is None for ref in refs))
 
 
 # --------------------------------------------------------------------
