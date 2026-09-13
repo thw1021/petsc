@@ -232,25 +232,24 @@ PetscErrorCode TSComputeIJacobianP(TS ts, PetscReal t, Vec U, Vec Udot, PetscRea
 
   PetscCall(PetscLogEventBegin(TS_JacobianPEval, ts, U, Amat, 0));
   if (ts->ijacobianp) PetscCallBack("TS callback JacobianP for sensitivity analysis", (*ts->ijacobianp)(ts, t, U, Udot, shift, Amat, ts->ijacobianpctx));
-  if (imex) {
-    if (!ts->ijacobianp) { /* system was written as Udot = G(t,U) */
-      PetscBool assembled;
-      PetscCall(MatZeroEntries(Amat));
-      PetscCall(MatAssembled(Amat, &assembled));
-      if (!assembled) {
-        PetscCall(MatAssemblyBegin(Amat, MAT_FINAL_ASSEMBLY));
-        PetscCall(MatAssemblyEnd(Amat, MAT_FINAL_ASSEMBLY));
-      }
+  else { /* system was written as Udot = G(t,U), so the implicit term is zero; Amat must still be cleared because it can
+            hold values left by an earlier registration or by the previous call on shared RHS storage */
+    PetscBool assembled;
+
+    PetscCall(MatZeroEntries(Amat));
+    PetscCall(MatAssembled(Amat, &assembled));
+    if (!assembled) {
+      PetscCall(MatAssemblyBegin(Amat, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(Amat, MAT_FINAL_ASSEMBLY));
     }
-  } else {
+  }
+  if (!imex) {
     if (ts->rhsjacobianp) PetscCall(TSComputeRHSJacobianP(ts, t, U, ts->Jacprhs));
     if (ts->Jacprhs == Amat) { /* No IJacobian, so we only have the RHS matrix */
       PetscCall(MatScale(Amat, -1));
     } else if (ts->Jacprhs) { /* Both IJacobian and RHSJacobian */
       MatStructure axpy = DIFFERENT_NONZERO_PATTERN;
-      if (!ts->ijacobianp) { /* No IJacobianp provided, but we have a separate RHS matrix */
-        PetscCall(MatZeroEntries(Amat));
-      }
+
       PetscCall(MatAXPY(Amat, -1, ts->Jacprhs, axpy));
     }
   }
