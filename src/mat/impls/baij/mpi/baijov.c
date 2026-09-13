@@ -1022,7 +1022,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const I
           row    = row - rstart;
           nzA    = a_i[row + 1] - a_i[row];
           nzB    = b_i[row + 1] - b_i[row];
-          cworkA = PetscSafePointerPlusOffset(a_j, a_i[row]);
+          cworkA = a_j + a_i[row];
           cworkB = PetscSafePointerPlusOffset(b_j, b_i[row]);
 
           if (!allcolumns[i]) {
@@ -1296,7 +1296,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const I
         row    = row - rstart;
         nzA    = a_i[row + 1] - a_i[row];
         nzB    = b_i[row + 1] - b_i[row];
-        cworkA = PetscSafePointerPlusOffset(a_j, a_i[row]);
+        cworkA = a_j + a_i[row];
         cworkB = PetscSafePointerPlusOffset(b_j, b_i[row]);
         vworkA = PetscSafePointerPlusOffset(a_a, a_i[row] * bs2);
         vworkB = PetscSafePointerPlusOffset(b_a, b_i[row] * bs2);
@@ -1440,7 +1440,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const I
         ilen  = imat_ilen[row];
         mat_i = imat_i[row];
         mat_a = PetscSafePointerPlusOffset(imat_a, mat_i * bs2);
-        mat_j = PetscSafePointerPlusOffset(imat_j, mat_i);
+        mat_j = imat_j + mat_i;
         max2  = rbuf2_i[ct1];
         if (!allcolumns[is_no]) {
           for (PetscInt l = 0; l < max2; l++, ct2++) {
@@ -1487,7 +1487,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const I
       jmax = nrow[i];
       for (PetscInt j = 0; j < jmax; j++) {
         mat_i = imat_i[j];
-        mat_j = PetscSafePointerPlusOffset(imat_j, mat_i);
+        mat_j = imat_j + mat_i;
         ilen  = imat_ilen[j];
         mat_a = PetscSafePointerPlusOffset(imat_a, mat_i * bs2);
         if (C->structure_only) PetscCall(PetscSortInt(ilen, mat_j));
