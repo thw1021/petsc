@@ -1370,8 +1370,16 @@ PetscErrorCode DMLabelGetValueISGlobal(MPI_Comm comm, DMLabel label, PetscBool g
   }
 
   PetscCall(PetscGlobalMinMaxInt(comm, minmax_values_loc, minmax_values));
-  // The global range is empty when no rank has any values.
-  value_range = minmax_values[0] > minmax_values[1] ? 0 : minmax_values[1] - minmax_values[0] + 1;
+  if (minmax_values[0] > minmax_values[1]) {
+    // The global range is empty when no rank has any values.
+    value_range = 0;
+  } else {
+    PetscCheck(minmax_values[0] >= 0 || minmax_values[1] <= minmax_values[0] + (PETSC_INT_MAX - 1), comm, PETSC_ERR_SUP,
+             "Global label value range [%" PetscInt_FMT ", %" PetscInt_FMT "] is too large", minmax_values[0], minmax_values[1]);
+    PetscCheck(minmax_values[0] < 0 || minmax_values[1] - minmax_values[0] < PETSC_INT_MAX, comm, PETSC_ERR_SUP,
+             "Global label value range [%" PetscInt_FMT ", %" PetscInt_FMT "] is too large", minmax_values[0], minmax_values[1]);
+    value_range = minmax_values[1] - minmax_values[0] + 1;
+  }
 
   // Create a "ballot" where each rank marks which values they have into the PetscBT.
   // An Allreduce using bitwise-OR over the ranks then communicates which values are owned by a rank in comm
