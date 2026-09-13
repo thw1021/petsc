@@ -732,12 +732,12 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::PlaceArray(Vec v, const PetscScalar *a
 
       PetscCheck(!backup_array, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
       PetscCall(CopyToDevice_(dctx, v));
-      PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
       backup_array = util::exchange(VecCUPMCast(v)->array_d, const_cast<PetscScalar *>(a));
       // only update the offload mask if we actually assign a pointer
       if (a) v->offloadmask = PETSC_OFFLOAD_GPU;
     }
   }
+  PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -819,7 +819,6 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetArray(Vec v) noexcept
         PetscCall(CopyToDevice_(dctx, v));
         PetscCall(PetscDeviceContextSynchronize(dctx)); // Above H2D might be async, so we must sync dctx, otherwise if later user writes v's host array, it could ruin the H2D
       }
-      PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
       // Need to reset the offloadmask. If we had a stashed pointer we are on the GPU,
       // otherwise check if the host has a valid pointer. If neither, then we are not
       // allocated.
@@ -834,6 +833,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetArray(Vec v) noexcept
       }
     }
   }
+  PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
