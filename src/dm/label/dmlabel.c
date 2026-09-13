@@ -1342,9 +1342,9 @@ PetscErrorCode DMLabelGetNonEmptyStratumValuesIS(DMLabel label, IS *values)
 PetscErrorCode DMLabelGetValueISGlobal(MPI_Comm comm, DMLabel label, PetscBool get_nonempty, IS *values)
 {
   PetscInt        num_values_local = 0, num_values_global, value_range, minmax_values[2], minmax_values_loc[2] = {PETSC_INT_MAX, PETSC_INT_MIN};
-  IS              is_values    = NULL;
-  const PetscInt *values_local = NULL;
   PetscInt       *values_global;
+  const PetscInt *values_local = NULL;
+  IS              is_values    = NULL;
   PetscBT         global_values_bt;
 
   PetscFunctionBegin;
@@ -1370,10 +1370,9 @@ PetscErrorCode DMLabelGetValueISGlobal(MPI_Comm comm, DMLabel label, PetscBool g
   }
 
   PetscCall(PetscGlobalMinMaxInt(comm, minmax_values_loc, minmax_values));
-  if (minmax_values[0] > minmax_values[1]) {
-    // The global range is empty when no rank has any values.
-    value_range = 0;
-  } else {
+  // The global range is empty when no rank has any values.
+  if (minmax_values[0] > minmax_values[1]) value_range = 0;
+  else {
     PetscCheck(minmax_values[0] >= 0 || minmax_values[1] <= minmax_values[0] + (PETSC_INT_MAX - 1), comm, PETSC_ERR_SUP, "Global label value range [%" PetscInt_FMT ", %" PetscInt_FMT "] is too large", minmax_values[0], minmax_values[1]);
     PetscCheck(minmax_values[0] < 0 || minmax_values[1] - minmax_values[0] < PETSC_INT_MAX, comm, PETSC_ERR_SUP, "Global label value range [%" PetscInt_FMT ", %" PetscInt_FMT "] is too large", minmax_values[0], minmax_values[1]);
     value_range = minmax_values[1] - minmax_values[0] + 1;
