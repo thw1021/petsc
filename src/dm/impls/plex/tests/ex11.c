@@ -352,29 +352,18 @@ static PetscErrorCode TestUniversalLabel(MPI_Comm comm)
 
 int main(int argc, char **argv)
 {
-  PetscBool value_is_global = PETSC_FALSE;
-
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-value_is_global", &value_is_global, NULL));
-  if (value_is_global) PetscCall(TestValueISGlobal(PETSC_COMM_WORLD));
-  else {
-    PetscCall(TestInsertion());
-    PetscCall(TestEmptyStrata(PETSC_COMM_WORLD));
-    PetscCall(TestDistribution(PETSC_COMM_WORLD));
-    PetscCall(TestUniversalLabel(PETSC_COMM_WORLD));
-  }
+  PetscCall(TestValueISGlobal(PETSC_COMM_WORLD));
+  PetscCall(TestInsertion());
+  PetscCall(TestEmptyStrata(PETSC_COMM_WORLD));
+  PetscCall(TestDistribution(PETSC_COMM_WORLD));
+  PetscCall(TestUniversalLabel(PETSC_COMM_WORLD));
   PetscCall(PetscFinalize());
   return 0;
 }
 
 /*TEST
-
-  test:
-    suffix: value_is_global
-    nsize: {{1 2}}
-    args: -value_is_global
-    output_file: output/empty.out
 
   test:
     suffix: 0
