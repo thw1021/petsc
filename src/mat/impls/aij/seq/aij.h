@@ -180,11 +180,12 @@ typedef struct {
   { \
     const PetscBool oldvalues = (PetscBool)(A != PETSC_NULLPTR); \
     PetscInt        nonew = 0, nounused = 0; \
-    PetscBool       roworiented = PETSC_FALSE; \
+    PetscBool       roworiented = PETSC_FALSE, structure_only = PETSC_FALSE; \
     if (oldvalues) { \
-      nonew       = ((Mat_SeqAIJ *)A->data)->nonew; \
-      nounused    = ((Mat_SeqAIJ *)A->data)->nounused; \
-      roworiented = ((Mat_SeqAIJ *)A->data)->roworiented; \
+      nonew          = ((Mat_SeqAIJ *)A->data)->nonew; \
+      nounused       = ((Mat_SeqAIJ *)A->data)->nounused; \
+      roworiented    = ((Mat_SeqAIJ *)A->data)->roworiented; \
+      structure_only = A->structure_only; \
     } \
     (void)0
 
@@ -203,6 +204,7 @@ typedef struct {
     ((Mat_SeqAIJ *)A->data)->nonew       = nonew; \
     ((Mat_SeqAIJ *)A->data)->nounused    = nounused; \
     ((Mat_SeqAIJ *)A->data)->roworiented = roworiented; \
+    A->structure_only                    = structure_only; \
   } \
   } \
   (void)0
