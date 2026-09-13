@@ -11725,7 +11725,7 @@ PetscErrorCode MatSetOperation(Mat mat, MatOperation op, PetscErrorCodeFn *f)
   else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
   else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
 #endif
-  (((PetscErrorCodeFn **)mat->ops)[op]) = f;
+  ((PetscErrorCodeFn **)mat->ops)[op] = f;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11770,7 +11770,7 @@ PetscErrorCode MatGetOperation(Mat mat, MatOperation op, PetscErrorCodeFn **f)
   else if (op == MATOP_MULT_HERMITIAN_TRANS_ADD) op = MATOP_MULT_TRANSPOSE_ADD;
   else if (op == MATOP_HERMITIAN_TRANSPOSE) op = MATOP_TRANSPOSE;
 #endif
-  *f = (((PetscErrorCodeFn **)mat->ops)[op]);
+  *f = ((PetscErrorCodeFn **)mat->ops)[op];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

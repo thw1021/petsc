@@ -1392,8 +1392,8 @@ PetscErrorCode PCGetOperatorsSet(PC pc, PetscBool *mat, PetscBool *pmat)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  if (mat) *mat = (pc->mat) ? PETSC_TRUE : PETSC_FALSE;
-  if (pmat) *pmat = (pc->pmat) ? PETSC_TRUE : PETSC_FALSE;
+  if (mat) *mat = pc->mat ? PETSC_TRUE : PETSC_FALSE;
+  if (pmat) *pmat = pc->pmat ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
