@@ -1,12 +1,14 @@
-static const char help[] = "Tests MatDenseGetColumnVec() and friends on dense matrices created from a VecType, including device dense matrices whose vectors are VECKOKKOS\n\n";
+static const char help[] = "Tests MatDenseGetColumnVec() and friends on dense matrices created from a VecType, and on the Mats a MatProduct and MatDenseGetSubMatrix() derive from them\n\n";
 
 #include <petscmat.h>
 
 int main(int argc, char **argv)
 {
-  Mat                A;
-  Vec                v;
+  Mat                A, C, P, S;
+  Vec                v, w;
   char               vtype[64] = VECSTANDARD;
+  VecType            avtype, cvtype, pvtype;
+  PetscBool          same;
   PetscInt           M = 9, N = 3, lda, rstart, rend, i, j;
   PetscReal          norm;
   PetscScalar        sum;
@@ -48,6 +50,45 @@ int main(int argc, char **argv)
   }
   PetscCall(MatDenseRestoreArrayRead(A, &array));
 
+  /* The Mat a MatProduct creates must have the VecType of the Mat it is built from */
+  PetscCall(MatCreateConstantDiagonal(PETSC_COMM_WORLD, rend - rstart, rend - rstart, M, M, 3.0, &S));
+  PetscCall(MatMatMult(S, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &C));
+  PetscCall(MatGetVecType(A, &avtype));
+  PetscCall(MatGetVecType(C, &cvtype));
+  PetscCall(PetscStrcmp(avtype, cvtype, &same));
+  PetscCheck(same, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "The Mat the product created has VecType %s, expected %s", cvtype, avtype);
+
+  /* C is 3 A, so the columns cancel, which needs both column Vecs to be of the same type */
+  for (j = 0; j < N; j++) {
+    PetscCall(MatDenseGetColumnVec(C, j, &v));
+    PetscCall(MatDenseGetColumnVecRead(A, j, &w));
+    PetscCall(VecAXPY(v, -3.0, w));
+    PetscCall(VecNorm(v, NORM_INFINITY, &norm));
+    PetscCall(MatDenseRestoreColumnVecRead(A, j, &w));
+    PetscCall(MatDenseRestoreColumnVec(C, j, &v));
+    PetscCheck(norm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of the product differs from three times the column it was built from by %g", j, (double)norm);
+  }
+
+  /* A submatrix must have the VecType of its parent Mat */
+  PetscCall(MatDenseGetSubMatrix(C, PETSC_DECIDE, PETSC_DECIDE, 1, N, &P));
+  PetscCall(MatGetVecType(P, &pvtype));
+  PetscCall(PetscStrcmp(avtype, pvtype, &same));
+  PetscCheck(same, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "The submatrix has VecType %s, expected %s", pvtype, avtype);
+
+  /* The columns of C are zero after the loop above, so adding back a column of A recovers it */
+  for (j = 0; j < N - 1; j++) {
+    PetscCall(MatDenseGetColumnVec(P, j, &v));
+    PetscCall(MatDenseGetColumnVecRead(A, j + 1, &w));
+    PetscCall(VecAXPY(v, 1.0, w));
+    PetscCall(VecNorm(v, NORM_INFINITY, &norm));
+    PetscCall(MatDenseRestoreColumnVecRead(A, j + 1, &w));
+    PetscCall(MatDenseRestoreColumnVec(P, j, &v));
+    PetscCheck(PetscAbsReal(norm - 2.0 * (j + 2)) < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of the submatrix gives %g, expected %g", j, (double)norm, 2.0 * (j + 2));
+  }
+  PetscCall(MatDenseRestoreSubMatrix(C, &P));
+
+  PetscCall(MatDestroy(&C));
+  PetscCall(MatDestroy(&S));
   PetscCall(MatDestroy(&A));
   PetscCall(PetscFinalize());
   return 0;

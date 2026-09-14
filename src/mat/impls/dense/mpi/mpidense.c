@@ -1633,7 +1633,7 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
   pcend   = PetscMin(A->cmap->n, PetscMax(0, cend - A->cmap->rstart));
   if (!a->cmat) {
     PetscCall(MatCreate(comm, &a->cmat));
-    PetscCall(MatSetType(a->cmat, ((PetscObject)A)->type_name));
+    PetscCall(MatSetTypesFromMat_Private(a->cmat, A));
     if (rend - rbegin == A->rmap->N) PetscCall(PetscLayoutReference(A->rmap, &a->cmat->rmap));
     else {
       PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, prend - prbegin));
@@ -2205,7 +2205,7 @@ static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 #if PetscDefined(HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
 #endif
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+  if (!cisdense) PetscCall(MatSetTypesFromMat_Private(C, A));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse C */
