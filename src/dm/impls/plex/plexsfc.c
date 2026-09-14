@@ -1633,8 +1633,8 @@ static PetscErrorCode DMPlexCentroidBoundingBox(MPI_Comm comm, PetscBool global,
     }
   }
   if (global) {
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, lo, 3, MPIU_REAL, MPI_MIN, comm));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, hi, 3, MPIU_REAL, MPI_MAX, comm));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, lo, 3, MPIU_REAL, MPIU_MIN, comm));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, hi, 3, MPIU_REAL, MPIU_MAX, comm));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
