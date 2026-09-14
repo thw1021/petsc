@@ -25,6 +25,7 @@ from .PETSc import (
     NullSpace,
     KSP,
     SNES,
+    Regressor,
     TS,
     TAO,
     TAOLineSearch,
@@ -103,6 +104,8 @@ __all__ = [
     'TAOLSObjectiveFunction',
     'TAOLSGradientFunction',
     'TAOLSObjectiveGradientFunction',
+    'RegressorNLLSFunction',
+    'RegressorNLLSJacobianFunction',
 ]
 
 # --- Sys ---
@@ -488,3 +491,27 @@ TAOLSGradientFunction = Callable[[TAOLineSearch, Vec, Vec], None]
 
 TAOLSObjectiveGradientFunction = Callable[[TAOLineSearch, Vec, Vec], float]
 """`TAOLineSearch` objective function and gradient callback."""
+
+# --- Regressor ---
+
+RegressorNLLSFunction = Callable[[Regressor, Mat, Vec, Vec], None]
+"""`PETSCREGRESSORNLLS` model function callback.
+
+   Called as ``f(regressor, X, p, f)`` with model values written to ``f``.
+
+   See Also
+   --------
+   petsc.PetscRegressorNLLSSetFunction
+
+"""
+
+RegressorNLLSJacobianFunction = Callable[[Regressor, Mat, Vec, Mat, Mat], None]
+"""`PETSCREGRESSORNLLS` Jacobian callback.
+
+   Called as ``f(regressor, X, p, J, P)``.
+
+   See Also
+   --------
+   petsc.PetscRegressorNLLSSetJacobian
+
+"""

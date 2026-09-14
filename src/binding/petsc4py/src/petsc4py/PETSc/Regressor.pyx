@@ -7,6 +7,7 @@ class RegressorType(object):
 
     """
     LINEAR = S_(PETSCREGRESSORLINEAR)
+    NLLS = S_(PETSCREGRESSORNLLS)
 
 
 class RegressorLinearType(object):
@@ -313,5 +314,169 @@ cdef class Regressor(Object):
         cdef PetscRegressorLinearType cval = REGRESSOR_LINEAR_OLS
         CHKERR(PetscRegressorLinearGetType(self.regressor, &cval))
         return cval
+
+
+    # --- NLLS ---
+
+    def setNLLSFunction(self, function: RegressorNLLSFunction,
+                        Vec f=None,
+                        args: tuple[Any, ...] | None = None,
+                        kargs: dict[str, Any] | None = None) -> None:
+        """Set the callback to compute the nonlinear least-squares model values.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        function
+            The callback evaluating the model $f(X, p)$.
+        f
+            An optional vector to store the model evaluations. If omitted, a
+            matching vector is created from the target vector at setup time.
+        args
+            Positional arguments for the callback.
+        kargs
+            Keyword arguments for the callback.
+
+        Notes
+        -----
+        The callback receives the model values rather than the residual; the
+        implementation forms the residual $f(X, p) - y$ internally. This
+        matches the ``scipy.optimize.curve_fit`` convention.
+
+        See Also
+        --------
+        getNLLSFunction, petsc.PetscRegressorNLLSSetFunction
+
+        """
+        cdef PetscVec fvec = NULL
+        if f is not None: fvec = f.vec
+        if function is not None:
+            if args  is None: args  = ()
+            if kargs is None: kargs = {}
+            context = (function, args, kargs)
+            self.set_attr("__nlls_function__", context)
+            CHKERR(PetscRegressorNLLSSetFunction(self.regressor, fvec, Regressor_NLLSFunction, <void*>context))
+        else:
+            if f is None:
+                self.set_attr("__nlls_function__", None)
+            CHKERR(PetscRegressorNLLSSetFunction(self.regressor, fvec, NULL, NULL))
+
+    def getNLLSFunction(self) -> tuple[Vec, RegressorNLLSFunction]:
+        """Return the model function set with :meth:`setNLLSFunction`.
+
+        Not collective.
+
+        See Also
+        --------
+        setNLLSFunction, petsc.PetscRegressorNLLSGetFunction
+
+        """
+        cdef Vec f = Vec()
+        CHKERR(PetscRegressorNLLSGetFunction(self.regressor, &f.vec, NULL, NULL))
+        CHKERR(PetscINCREF(f.obj))
+        cdef object function = self.get_attr("__nlls_function__")
+        if function is not None:
+            return (f, function)
+        return (f, None)
+
+    def setNLLSJacobian(self, jacobian: RegressorNLLSJacobianFunction,
+                        Mat J=None,
+                        Mat P=None,
+                        args: tuple[Any, ...] | None = None,
+                        kargs: dict[str, Any] | None = None) -> None:
+        """Set the callback to compute the Jacobian of the model values.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        jacobian
+            The Jacobian callback.
+        J
+            The matrix to store the Jacobian.
+        P
+            The matrix to construct the preconditioner. Defaults to ``J``.
+        args
+            Positional arguments for the callback.
+        kargs
+            Keyword arguments for the callback.
+
+        Notes
+        -----
+        Omitting the Jacobian is supported; a forward-difference Jacobian is
+        then computed by the underlying solver.
+
+        See Also
+        --------
+        getNLLSJacobian, petsc.PetscRegressorNLLSSetJacobian
+
+        """
+        cdef PetscMat Jmat = NULL
+        if J is not None: Jmat = J.mat
+        cdef PetscMat Pmat = Jmat
+        if P is not None: Pmat = P.mat
+        if jacobian is not None:
+            if args  is None: args  = ()
+            if kargs is None: kargs = {}
+            context = (jacobian, args, kargs)
+            self.set_attr("__nlls_jacobian__", context)
+            CHKERR(PetscRegressorNLLSSetJacobian(self.regressor, Jmat, Pmat, Regressor_NLLSJacobian, <void*>context))
+        else:
+            if J is None:
+                self.set_attr("__nlls_jacobian__", None)
+            CHKERR(PetscRegressorNLLSSetJacobian(self.regressor, Jmat, Pmat, NULL, NULL))
+
+    def getNLLSJacobian(self) -> tuple[Mat, Mat, RegressorNLLSJacobianFunction]:
+        """Return the matrices and callback used to compute the Jacobian.
+
+        Not collective.
+
+        See Also
+        --------
+        setNLLSJacobian, petsc.PetscRegressorNLLSGetJacobian
+
+        """
+        cdef Mat J = Mat()
+        cdef Mat P = Mat()
+        CHKERR(PetscRegressorNLLSGetJacobian(self.regressor, &J.mat, &P.mat, NULL, NULL))
+        CHKERR(PetscINCREF(J.obj))
+        CHKERR(PetscINCREF(P.obj))
+        cdef object jacobian = self.get_attr("__nlls_jacobian__")
+        return (J, P, jacobian)
+
+    def setNLLSInitialParameters(self, Vec p0) -> None:
+        """Set the initial guess for the parameters.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        p0
+            Vector containing the initial parameter values. Its length
+            determines the number of model parameters. Must be called before
+            :meth:`fit`.
+
+        See Also
+        --------
+        getNLLSParameters, petsc.PetscRegressorNLLSSetInitialParameters
+
+        """
+        CHKERR(PetscRegressorNLLSSetInitialParameters(self.regressor, p0.vec))
+
+    def getNLLSParameters(self) -> Vec:
+        """Return the vector of fitted parameters.
+
+        Not collective, but the vector is parallel if the regressor is.
+
+        See Also
+        --------
+        setNLLSInitialParameters, petsc.PetscRegressorNLLSGetParameters
+
+        """
+        cdef Vec parameters = Vec()
+        CHKERR(PetscRegressorNLLSGetParameters(self.regressor, &parameters.vec))
+        CHKERR(PetscINCREF(parameters.obj))
+        return parameters
 
 del RegressorType

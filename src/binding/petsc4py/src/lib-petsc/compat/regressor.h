@@ -14,6 +14,12 @@ PetscErrorCode PetscRegressorLinearGetCoefficients(PETSC_UNUSED PetscRegressor r
 PetscErrorCode PetscRegressorLinearGetIntercept(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED PetscScalar *intercept) {PetscRegressorError;}
 PetscErrorCode PetscRegressorLinearSetType(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED PetscRegressorLinearType type) {PetscRegressorError;}
 PetscErrorCode PetscRegressorLinearGetType(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED PetscRegressorLinearType *type) {PetscRegressorError;}
+PetscErrorCode PetscRegressorNLLSSetFunction(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED Vec f,PETSC_UNUSED PetscRegressorNLLSFunctionFn *fn,PETSC_UNUSED void *ctx) {PetscRegressorError;}
+PetscErrorCode PetscRegressorNLLSGetFunction(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED Vec *f,PETSC_UNUSED PetscRegressorNLLSFunctionFn **fn,PETSC_UNUSED void **ctx) {PetscRegressorError;}
+PetscErrorCode PetscRegressorNLLSSetJacobian(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED Mat J,PETSC_UNUSED Mat Jpre,PETSC_UNUSED PetscRegressorNLLSJacobianFn *fn,PETSC_UNUSED void *ctx) {PetscRegressorError;}
+PetscErrorCode PetscRegressorNLLSGetJacobian(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED Mat *J,PETSC_UNUSED Mat *Jpre,PETSC_UNUSED PetscRegressorNLLSJacobianFn **fn,PETSC_UNUSED void **ctx) {PetscRegressorError;}
+PetscErrorCode PetscRegressorNLLSSetInitialParameters(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED Vec p0) {PetscRegressorError;}
+PetscErrorCode PetscRegressorNLLSGetParameters(PETSC_UNUSED PetscRegressor regressor,PETSC_UNUSED Vec *p) {PetscRegressorError;}
 #undef PetscRegressorError
 
 #endif/*PETSC_USE_COMPLEX*/

@@ -484,6 +484,8 @@ from petsc4py.typing import (
     SNESLSPreFunction,
     SNESNGSFunction,
     SNESConvergedFunction,
+    RegressorNLLSFunction,
+    RegressorNLLSJacobianFunction,
     TAOConstraintsFunction,
     TAOConstraintsJacobianFunction,
     TAOConvergedFunction,
