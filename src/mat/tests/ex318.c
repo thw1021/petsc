@@ -1,12 +1,14 @@
-static const char help[] = "Tests MatDenseGetColumnVec() and friends on dense matrices created from a VecType, including device dense matrices whose vectors are VECKOKKOS\n\n";
+static const char help[] = "Tests MatDenseGetColumnVec() and friends on dense matrices created from a VecType, including device dense matrices whose vectors are VECKOKKOS, and on the block a MatProduct builds from one\n\n";
 
 #include <petscmat.h>
 
 int main(int argc, char **argv)
 {
-  Mat                A;
-  Vec                v;
+  Mat                A, C, P, S;
+  Vec                v, w;
   char               vtype[64] = VECSTANDARD;
+  VecType            avtype, cvtype, pvtype;
+  PetscBool          same;
   PetscInt           M = 9, N = 3, lda, rstart, rend, i, j;
   PetscReal          norm;
   PetscScalar        sum;
@@ -48,6 +50,48 @@ int main(int argc, char **argv)
   }
   PetscCall(MatDenseRestoreArrayRead(A, &array));
 
+  /* The block a MatProduct creates is given the MatType of the block it is built from, so it must be given its
+     VecType too; a MATDENSECUDA/MATDENSEHIP block whose VecType is VECKOKKOS would otherwise hand out CUDA/HIP
+     column Vecs, which cannot be combined with the VECKOKKOS Vecs of the rest of the run */
+  PetscCall(MatCreateConstantDiagonal(PETSC_COMM_WORLD, rend - rstart, rend - rstart, M, M, 3.0, &S));
+  PetscCall(MatMatMult(S, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &C));
+  PetscCall(MatGetVecType(A, &avtype));
+  PetscCall(MatGetVecType(C, &cvtype));
+  PetscCall(PetscStrcmp(avtype, cvtype, &same));
+  PetscCheck(same, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "The block of the product has VecType %s, expected %s", cvtype, avtype);
+
+  /* C is 3 A, so subtracting the columns of the two blocks, which needs their column Vecs to be of the same type, gives zero */
+  for (j = 0; j < N; j++) {
+    PetscCall(MatDenseGetColumnVec(C, j, &v));
+    PetscCall(MatDenseGetColumnVecRead(A, j, &w));
+    PetscCall(VecAXPY(v, -3.0, w));
+    PetscCall(VecNorm(v, NORM_INFINITY, &norm));
+    PetscCall(MatDenseRestoreColumnVecRead(A, j, &w));
+    PetscCall(MatDenseRestoreColumnVec(C, j, &v));
+    PetscCheck(norm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of the product differs from three times the column of the block it was built from by %g", j, (double)norm);
+  }
+
+  /* A submatrix of a block, which the batched paths of KSPMatSolve() and MatProduct use, is a view of it, so it is
+     the same kind of block and hands out column Vecs of the same type */
+  PetscCall(MatDenseGetSubMatrix(C, PETSC_DECIDE, PETSC_DECIDE, 1, N, &P));
+  PetscCall(MatGetVecType(P, &pvtype));
+  PetscCall(PetscStrcmp(avtype, pvtype, &same));
+  PetscCheck(same, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "The submatrix of the block has VecType %s, expected %s", pvtype, avtype);
+
+  /* The columns of C are zero after the loop above, so adding a column of A to the column of the submatrix that holds it gives it back */
+  for (j = 0; j < N - 1; j++) {
+    PetscCall(MatDenseGetColumnVec(P, j, &v));
+    PetscCall(MatDenseGetColumnVecRead(A, j + 1, &w));
+    PetscCall(VecAXPY(v, 1.0, w));
+    PetscCall(VecNorm(v, NORM_INFINITY, &norm));
+    PetscCall(MatDenseRestoreColumnVecRead(A, j + 1, &w));
+    PetscCall(MatDenseRestoreColumnVec(P, j, &v));
+    PetscCheck(PetscAbsReal(norm - 2.0 * (j + 2)) < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of the submatrix gives %g, expected %g", j, (double)norm, 2.0 * (j + 2));
+  }
+  PetscCall(MatDenseRestoreSubMatrix(C, &P));
+
+  PetscCall(MatDestroy(&C));
+  PetscCall(MatDestroy(&S));
   PetscCall(MatDestroy(&A));
   PetscCall(PetscFinalize());
   return 0;

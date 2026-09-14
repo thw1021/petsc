@@ -3558,6 +3558,8 @@ PetscErrorCode MatDenseGetSubMatrix_SeqDense(Mat A, PetscInt rbegin, PetscInt re
   if (a->cmat && (cend - cbegin != a->cmat->cmap->N || rend - rbegin != a->cmat->rmap->N)) PetscCall(MatDestroy(&a->cmat));
   if (!a->cmat) {
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)A), rend - rbegin, PETSC_DECIDE, rend - rbegin, cend - cbegin, PetscSafePointerPlusOffset(a->v, rbegin + (size_t)cbegin * a->lda), &a->cmat));
+    /* the submatrix is a view of A, so its columns are Vecs of the same type as A's */
+    PetscCall(MatSetVecType(a->cmat, A->defaultvectype));
   } else {
     PetscCall(MatDensePlaceArray(a->cmat, PetscSafePointerPlusOffset(a->v, rbegin + (size_t)cbegin * a->lda)));
   }
