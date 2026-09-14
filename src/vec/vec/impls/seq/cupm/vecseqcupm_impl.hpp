@@ -1637,7 +1637,9 @@ inline PetscErrorCode VecSeq_CUPM<T>::AXPBYPCZAsync(Vec zin, PetscScalar alpha, 
 {
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  if (gamma != PetscScalar(1.0)) PetscCall(ScaleAsync(zin, gamma, dctx));
+  // We cannot scale an uninitialized vector with 0, so we use SetAsync() here
+  if (gamma == PetscScalar(0.0)) PetscCall(SetAsync(zin, 0.0, dctx));
+  else if (gamma != PetscScalar(1.0)) PetscCall(ScaleAsync(zin, gamma, dctx));
   PetscCall(AXPYAsync(zin, alpha, xin, dctx));
   PetscCall(AXPYAsync(zin, beta, yin, dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
