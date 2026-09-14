@@ -139,7 +139,7 @@ class TestASMPC(BaseTestPC, unittest.TestCase):
         nsd, is_sub, is_local = pc.getASMLocalSubdomains()
         self.assertEqual(nsd, 2)
         scaling = []
-        values = ({0: 1, 1: .25, 2: .5}, {1: .75, 2: .5, 3: 1})
+        values = ({0: 1, 1: 0.25, 2: 0.5}, {1: 0.75, 2: 0.5, 3: 1})
         for iset, weights in zip(is_sub, values):
             vec = PETSc.Vec().createSeq(iset.getLocalSize(), comm=self.COMM)
             vec.array[:] = [weights[i] for i in iset.getIndices()]
