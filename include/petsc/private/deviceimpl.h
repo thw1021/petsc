@@ -449,7 +449,7 @@ static inline PetscErrorCode PetscDeviceContextSynchronizeIfWithBarrier_Internal
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if PetscDefined(HAVE_CUDA)
+#if PetscDefined(HAVE_NVML)
 
   #define PetscCallNVML(...) \
     do { \
