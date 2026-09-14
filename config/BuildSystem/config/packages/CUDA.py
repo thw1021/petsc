@@ -48,11 +48,11 @@ class Configure(config.package.Package):
     help.addArgument(
       'CUDA', '-with-cuda-nvml=<bool>',
       nargs.ArgBool(
-        None, 1,
+        None, 0,
         'Use NVML (NVIDIA Management Library) for GPU power and energy monitoring. NVML makes the '
-        'PETSc libraries depend at runtime on libnvidia-ml, which is installed by the NVIDIA driver; '
-        'use --with-cuda-nvml=0 to build CUDA-enabled PETSc libraries that also run on machines '
-        'without the driver'
+        'PETSc libraries depend at runtime on libnvidia-ml, which is installed by the NVIDIA driver, '
+        'so it is off by default and CUDA-enabled PETSc libraries also run on machines without the '
+        'driver; use --with-cuda-nvml=1 to enable -log_view_gpu_energy and -log_view_gpu_energy_meter'
       )
     )
     return
