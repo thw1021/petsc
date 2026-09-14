@@ -1,12 +1,14 @@
-static const char help[] = "Tests MatDenseGetColumnVec() and friends on dense matrices created from a VecType, including device dense matrices whose vectors are VECKOKKOS\n\n";
+static const char help[] = "Tests MatDenseGetColumnVec() and friends on dense matrices created from a VecType, and on the Mat a MatProduct derives from them\n\n";
 
 #include <petscmat.h>
 
 int main(int argc, char **argv)
 {
-  Mat                A;
-  Vec                v;
+  Mat                A, C, S;
+  Vec                v, w;
   char               vtype[64] = VECSTANDARD;
+  VecType            avtype, cvtype;
+  PetscBool          same;
   PetscInt           M = 9, N = 3, lda, rstart, rend, i, j;
   PetscReal          norm;
   PetscScalar        sum;
@@ -48,6 +50,27 @@ int main(int argc, char **argv)
   }
   PetscCall(MatDenseRestoreArrayRead(A, &array));
 
+  /* The Mat a MatProduct creates must have the VecType of the Mat it is built from */
+  PetscCall(MatCreateConstantDiagonal(PETSC_COMM_WORLD, rend - rstart, rend - rstart, M, M, 3.0, &S));
+  PetscCall(MatMatMult(S, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &C));
+  PetscCall(MatGetVecType(A, &avtype));
+  PetscCall(MatGetVecType(C, &cvtype));
+  PetscCall(PetscStrcmp(avtype, cvtype, &same));
+  PetscCheck(same, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "The Mat the product created has VecType %s, expected %s", cvtype, avtype);
+
+  /* C is 3 A, so the columns cancel, which needs both column Vecs to be of the same type */
+  for (j = 0; j < N; j++) {
+    PetscCall(MatDenseGetColumnVec(C, j, &v));
+    PetscCall(MatDenseGetColumnVecRead(A, j, &w));
+    PetscCall(VecAXPY(v, -3.0, w));
+    PetscCall(VecNorm(v, NORM_INFINITY, &norm));
+    PetscCall(MatDenseRestoreColumnVecRead(A, j, &w));
+    PetscCall(MatDenseRestoreColumnVec(C, j, &v));
+    PetscCheck(norm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Column %" PetscInt_FMT " of the product differs from three times the column it was built from by %g", j, (double)norm);
+  }
+
+  PetscCall(MatDestroy(&C));
+  PetscCall(MatDestroy(&S));
   PetscCall(MatDestroy(&A));
   PetscCall(PetscFinalize());
   return 0;

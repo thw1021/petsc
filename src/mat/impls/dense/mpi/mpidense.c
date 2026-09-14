@@ -2205,7 +2205,7 @@ static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 #if PetscDefined(HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
 #endif
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+  if (!cisdense) PetscCall(MatSetTypesFromMat_Private(C, A));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse C */

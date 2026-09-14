@@ -2759,7 +2759,8 @@ PetscErrorCode MatMatMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, PetscReal fill
     PetscBool flg;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)B, ((PetscObject)A)->type_name, &flg));
-    PetscCall(MatSetType(C, flg ? ((PetscObject)A)->type_name : MATDENSE));
+    if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+    else PetscCall(MatSetType(C, MATDENSE));
   }
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2809,7 +2810,8 @@ PetscErrorCode MatMatTransposeMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, Petsc
     PetscBool flg;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)B, ((PetscObject)A)->type_name, &flg));
-    PetscCall(MatSetType(C, flg ? ((PetscObject)A)->type_name : MATDENSE));
+    if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+    else PetscCall(MatSetType(C, MATDENSE));
   }
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2859,7 +2861,8 @@ PetscErrorCode MatTransposeMatMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, Petsc
     PetscBool flg;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)B, ((PetscObject)A)->type_name, &flg));
-    PetscCall(MatSetType(C, flg ? ((PetscObject)A)->type_name : MATDENSE));
+    if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+    else PetscCall(MatSetType(C, MATDENSE));
   }
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -332,7 +332,7 @@ static PetscErrorCode MatProductSymbolic_Normal_Dense(Mat C)
   PetscCall(MatGetLocalSize(A, &m, NULL));
   PetscCall(MatGetSize(A, &M, NULL));
   PetscCall(MatSetSizes(C, m, n, M, N));
-  PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  PetscCall(MatSetTypesFromMat_Private(C, B));
   PetscCall(MatSetUp(C));
   PetscCall(PetscNew(&contents));
   C->product->data    = contents;
