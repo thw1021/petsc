@@ -1633,7 +1633,7 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
   pcend   = PetscMin(A->cmap->n, PetscMax(0, cend - A->cmap->rstart));
   if (!a->cmat) {
     PetscCall(MatCreate(comm, &a->cmat));
-    PetscCall(MatSetType(a->cmat, ((PetscObject)A)->type_name));
+    PetscCall(MatSetTypesFromMat_Private(a->cmat, A));
     if (rend - rbegin == A->rmap->N) PetscCall(PetscLayoutReference(A->rmap, &a->cmat->rmap));
     else {
       PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, prend - prbegin));
