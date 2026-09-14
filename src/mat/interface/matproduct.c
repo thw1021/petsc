@@ -764,8 +764,11 @@ PetscErrorCode MatProductSymbolic_ABC(Mat mat)
 
   Level: intermediate
 
-  Note:
+  Notes:
   `MatProductSetFromOptions()` must have been called on `mat` before calling this function
+
+  `mat` is given the `MatType` of one of the operands of the product when the caller has not set one, and then takes the
+  `VecType` of that operand as well; a `mat` whose `MatType` the caller has set keeps the `VecType` it already has.
 
 .seealso: [](ch_matrices), `MatProduct`, `Mat`, `MatProductCreate()`, `MatProductCreateWithMat()`, `MatProductSetFromOptions()`, `MatProductNumeric()`, `MatProductSetType()`, `MatProductSetAlgorithm()`
 @*/
@@ -773,6 +776,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 {
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
+  PetscBool     untyped   = (PetscBool)(!((PetscObject)mat)->type_name);
   Mat_Product  *product   = mat->product;
   Mat           A         = product->A;
   Mat           B         = product->B;
@@ -821,6 +825,19 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscCheck(mat->product->setfromoptionscalled, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Unspecified symbolic phase for product %s. Call MatProductSetFromOptions() first", errstr);
     PetscCheck(!missing, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Unspecified symbolic phase for product %s. The product is not supported", errstr);
     PetscCheck(mat->product, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Missing struct after symbolic phase for product %s", errstr);
+  }
+  /* A symbolic phase that creates the result gives it the MatType of one of its operands, so, as MatDuplicate() does, give it that operand's VecType too */
+  if (untyped) {
+    VecType   vtype = NULL;
+    PetscBool flg;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)mat, ((PetscObject)A)->type_name, &flg));
+    if (flg) PetscCall(MatGetVecType(A, &vtype));
+    else {
+      PetscCall(PetscObjectTypeCompare((PetscObject)mat, ((PetscObject)B)->type_name, &flg));
+      if (flg) PetscCall(MatGetVecType(B, &vtype));
+    }
+    if (vtype) PetscCall(MatSetVecType(mat, vtype));
   }
 #if PetscDefined(HAVE_DEVICE)
   PetscBool bindingpropagates;
