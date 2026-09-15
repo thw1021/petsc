@@ -52,7 +52,7 @@ website-deploy: docs-source
 
 # use this rule to build the documentation on your machine when working on PETSc documentation
 docs: docs-env clean
-	. "$(DOCS_VENV)/bin/activate" && $(MAKE) SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j 8" html
+	. "$(DOCS_VENV)/bin/activate" && $(MAKE) SPHINXOPTS_EXTRA="--fail-on-warning --keep-going -j auto" html
 
 # use this rule AFTER make docs to build the users manual as a PDF file
 docspdf: docs-env
