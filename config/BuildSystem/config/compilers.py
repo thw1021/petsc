@@ -165,6 +165,25 @@ class Configure(config.base.Configure):
       os.remove(obj1)
     return found
 
+  @staticmethod
+  def isCudaStubLibDir(dirname):
+    '''Is dirname a CUDA "stubs" directory? It holds link-time stubs with no runtime counterpart.'''
+    normpath = os.path.normpath(dirname).lower()
+    return os.path.basename(normpath) == 'stubs' and 'cuda' in normpath
+
+  def addRpathsToLibs(self, libs, slflag):
+    '''Add an RPATH for each -L in the libraries harvested from the compiler link line. A CUDA stubs
+       directory gets none - an RPATH there resolves the stub libcuda.so at run time and GPU-aware MPI
+       then cannot register device memory - and is registered with addRpathSkipDir() so that
+       getLibArgumentList() does not recreate the RPATH from the -L that is kept for link time.'''
+    newlibs = []
+    for lib in libs:
+      if lib.startswith('-L') and self.isCudaStubLibDir(lib[2:]): self.libraries.addRpathSkipDir(lib[2:])
+      elif not self.setCompilers.staticLibraries and lib.startswith('-L') and not slflag == '-L':
+        newlibs.append(slflag+lib[2:])
+      newlibs.append(lib)
+    return newlibs
+
   def checkCLibraries(self):
     '''Determines the libraries needed to link using the C++ or Fortran compiler C source code compiled with C. Result is stored in clibs'''
     skipclibraries = 1
@@ -330,11 +349,7 @@ class Configure(config.base.Configure):
     except StopIteration:
       pass
 
-    self.clibs = []
-    for lib in clibs:
-      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L':
-        self.clibs.append(self.setCompilers.CSharedLinkerFlag+lib[2:])
-      self.clibs.append(lib)
+    self.clibs = self.addRpathsToLibs(clibs, self.setCompilers.CSharedLinkerFlag)
 
     self.logPrint('Libraries needed to link C code with another linker: '+str(self.clibs), 3, 'compilers')
 
@@ -646,11 +661,7 @@ class Configure(config.base.Configure):
     except StopIteration:
       pass
 
-    self.cxxlibs = []
-    for lib in cxxlibs:
-      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L':
-        self.cxxlibs.append(self.setCompilers.CSharedLinkerFlag+lib[2:])
-      self.cxxlibs.append(lib)
+    self.cxxlibs = self.addRpathsToLibs(cxxlibs, self.setCompilers.CSharedLinkerFlag)
 
     self.logPrint('Libraries needed to link Cxx code with another linker: '+str(self.cxxlibs), 3, 'compilers')
 
@@ -1143,11 +1154,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       pass
 
     self.fincs = fincs
-    self.flibs = []
-    for lib in flibs:
-      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.FCSharedLinkerFlag == '-L':
-        self.flibs.append(self.setCompilers.FCSharedLinkerFlag+lib[2:])
-      self.flibs.append(lib)
+    self.flibs = self.addRpathsToLibs(flibs, self.setCompilers.FCSharedLinkerFlag)
     self.fmainlibs = fmainlibs
     # Append run path
     self.flibs = ldRunPath+self.flibs
