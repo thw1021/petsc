@@ -262,6 +262,31 @@ PetscErrorCode MatSetVecType(Mat mat, VecType vtype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* MatSetTypesFromMat_Private - Gives mat the MatType of source and ensures its VecType is set to match
+
+   Collective
+
+   Input Parameters:
++  mat    - the matrix to set the types of
+-  source - the matrix to take the types from
+
+   Level: developer
+
+.seealso: `MatSetType()`, `MatSetVecType()`, `MatType`, `VecType`, `Mat`
+*/
+PetscErrorCode MatSetTypesFromMat_Private(Mat mat, Mat source)
+{
+  VecType vtype;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(source, MAT_CLASSID, 2);
+  PetscCall(MatSetType(mat, ((PetscObject)source)->type_name));
+  PetscCall(MatGetVecType(source, &vtype));
+  PetscCall(MatSetVecType(mat, vtype));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatRegister - Adds a new matrix type implementation that is usable as a `Mat` in PETSc
 

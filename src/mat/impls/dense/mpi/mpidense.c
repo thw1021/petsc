@@ -1633,7 +1633,7 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
   pcend   = PetscMin(A->cmap->n, PetscMax(0, cend - A->cmap->rstart));
   if (!a->cmat) {
     PetscCall(MatCreate(comm, &a->cmat));
-    PetscCall(MatSetType(a->cmat, ((PetscObject)A)->type_name));
+    PetscCall(MatSetTypesFromMat_Private(a->cmat, A));
     if (rend - rbegin == A->rmap->N) PetscCall(PetscLayoutReference(A->rmap, &a->cmat->rmap));
     else {
       PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, prend - prbegin));
@@ -2205,7 +2205,7 @@ static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 #if PetscDefined(HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
 #endif
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+  if (!cisdense) PetscCall(MatSetTypesFromMat_Private(C, A));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse C */
@@ -2242,7 +2242,10 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 
   /* setup matrix product C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->rmap->n, A->rmap->N, B->rmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+  /* C is on the host, so it can only take its types from a host dense A */
+  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSE, &flg));
+  if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+  else PetscCall(MatSetType(C, MATMPIDENSE));
   PetscCall(MatSetUp(C));
   PetscCall(PetscObjectGetNewTag((PetscObject)C, &tag));
 
@@ -2548,7 +2551,10 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
 
   /* setup C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+  /* C is on the host, so it can only take its types from a host dense A */
+  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSE, &flg));
+  if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+  else PetscCall(MatSetType(C, MATMPIDENSE));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse Cdense */

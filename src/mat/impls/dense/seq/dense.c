@@ -2759,7 +2759,13 @@ PetscErrorCode MatMatMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, PetscReal fill
     PetscBool flg;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)B, ((PetscObject)A)->type_name, &flg));
-    PetscCall(MatSetType(C, flg ? ((PetscObject)A)->type_name : MATDENSE));
+    if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+    else {
+      /* C is on the host, so it can only take its types from a host dense B */
+      PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSE, &flg));
+      if (flg) PetscCall(MatSetTypesFromMat_Private(C, B));
+      else PetscCall(MatSetType(C, MATDENSE));
+    }
   }
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2809,7 +2815,13 @@ PetscErrorCode MatMatTransposeMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, Petsc
     PetscBool flg;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)B, ((PetscObject)A)->type_name, &flg));
-    PetscCall(MatSetType(C, flg ? ((PetscObject)A)->type_name : MATDENSE));
+    if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+    else {
+      /* C is on the host, so it can only take its types from a host dense B */
+      PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSE, &flg));
+      if (flg) PetscCall(MatSetTypesFromMat_Private(C, B));
+      else PetscCall(MatSetType(C, MATDENSE));
+    }
   }
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2859,7 +2871,13 @@ PetscErrorCode MatTransposeMatMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, Petsc
     PetscBool flg;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)B, ((PetscObject)A)->type_name, &flg));
-    PetscCall(MatSetType(C, flg ? ((PetscObject)A)->type_name : MATDENSE));
+    if (flg) PetscCall(MatSetTypesFromMat_Private(C, A));
+    else {
+      /* C is on the host, so it can only take its types from a host dense B */
+      PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSE, &flg));
+      if (flg) PetscCall(MatSetTypesFromMat_Private(C, B));
+      else PetscCall(MatSetType(C, MATDENSE));
+    }
   }
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3558,6 +3576,7 @@ PetscErrorCode MatDenseGetSubMatrix_SeqDense(Mat A, PetscInt rbegin, PetscInt re
   if (a->cmat && (cend - cbegin != a->cmat->cmap->N || rend - rbegin != a->cmat->rmap->N)) PetscCall(MatDestroy(&a->cmat));
   if (!a->cmat) {
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)A), rend - rbegin, PETSC_DECIDE, rend - rbegin, cend - cbegin, PetscSafePointerPlusOffset(a->v, rbegin + (size_t)cbegin * a->lda), &a->cmat));
+    PetscCall(MatSetVecType(a->cmat, A->defaultvectype));
   } else {
     PetscCall(MatDensePlaceArray(a->cmat, PetscSafePointerPlusOffset(a->v, rbegin + (size_t)cbegin * a->lda)));
   }
