@@ -4840,6 +4840,7 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
 
   PetscFunctionBegin;
   PetscCheck(A->assembled || cpvalues == MAT_DO_NOT_COPY_VALUES, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cannot duplicate unassembled matrix");
+  PetscCall(MatSetOption(C, MAT_STRUCTURE_ONLY, A->structure_only));
 
   C->factortype = A->factortype;
   c->row        = NULL;
@@ -4860,7 +4861,7 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
 
       /* allocate the matrix space */
       if (mallocmatspace) {
-        PetscCall(PetscShmgetAllocateArray(a->i[m], sizeof(PetscScalar), (void **)&c->a));
+        if (!A->structure_only) PetscCall(PetscShmgetAllocateArray(a->i[m], sizeof(PetscScalar), (void **)&c->a));
         PetscCall(PetscShmgetAllocateArray(a->i[m], sizeof(PetscInt), (void **)&c->j));
         PetscCall(PetscShmgetAllocateArray(m + 1, sizeof(PetscInt), (void **)&c->i));
         PetscCall(PetscArraycpy(c->i, a->i, m + 1));
@@ -4868,13 +4869,15 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
         c->free_ij = PETSC_TRUE;
         if (m > 0) {
           PetscCall(PetscArraycpy(c->j, a->j, a->i[m]));
-          if (cpvalues == MAT_COPY_VALUES) {
-            const PetscScalar *aa;
+          if (!A->structure_only) {
+            if (cpvalues == MAT_COPY_VALUES) {
+              const PetscScalar *aa;
 
-            PetscCall(MatSeqAIJGetArrayRead(A, &aa));
-            PetscCall(PetscArraycpy(c->a, aa, a->i[m]));
-            PetscCall(MatSeqAIJGetArrayRead(A, &aa));
-          } else PetscCall(PetscArrayzero(c->a, a->i[m]));
+              PetscCall(MatSeqAIJGetArrayRead(A, &aa));
+              PetscCall(PetscArraycpy(c->a, aa, a->i[m]));
+              PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
+            } else PetscCall(PetscArrayzero(c->a, a->i[m]));
+          }
         }
       }
       C->preallocated = PETSC_TRUE;
