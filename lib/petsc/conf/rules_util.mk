@@ -86,6 +86,17 @@ vermin:
 	@vermin --violations -t=3.6- ${VERMIN_OPTIONS} ${PETSC_DIR}/config
 	@vermin --violations -t=3.6- --exclude-regex '\.pyi$$' --exclude-regex '-env' --exclude-regex 'docs/source/reference/' ${VERMIN_OPTIONS} ${PETSC_DIR}/src/binding/petsc4py
 
+RUFF ?= ruff
+PYTHON_EXAMPLES = $(wildcard $(addprefix ${PETSC_DIR}/,$(shell git -C ${PETSC_DIR} ls-files -- 'src/**/tests/*.py' 'src/**/tutorials/*.py')))
+
+.PHONY: ruff-format ruff-lint
+ruff-format:
+	${RUFF} format ${PYTHON_EXAMPLES}
+
+ruff-lint:
+	${RUFF} check ${PYTHON_EXAMPLES}
+	${RUFF} format --check ${PYTHON_EXAMPLES}
+
 # Check that source code does not violate basic PETSc coding standards
 .PHONY: checkbadsource
 checkbadsource: checkbadSource
