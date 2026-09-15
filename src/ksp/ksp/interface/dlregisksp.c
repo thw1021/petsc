@@ -77,6 +77,10 @@ PetscErrorCode PCInitializePackage(void)
   PetscCall(PetscLogEventRegister("PCPATCHSolve", PC_CLASSID, &PC_Patch_Solve));
   PetscCall(PetscLogEventRegister("PCPATCHApply", PC_CLASSID, &PC_Patch_Apply));
   PetscCall(PetscLogEventRegister("PCPATCHPrealloc", PC_CLASSID, &PC_Patch_Prealloc));
+  /* Each process begins these once per patch, and processes build different numbers of patches */
+  PetscCall(PetscLogEventSetCollective(PC_Patch_ComputeOp, PETSC_FALSE));
+  PetscCall(PetscLogEventSetCollective(PC_Patch_Solve, PETSC_FALSE));
+  PetscCall(PetscLogEventSetCollective(PC_Patch_Prealloc, PETSC_FALSE));
 
   PetscCall(PetscLogEventRegister("KSPSolve_FS_0", KSP_CLASSID, &KSP_Solve_FS_0));
   PetscCall(PetscLogEventRegister("KSPSolve_FS_1", KSP_CLASSID, &KSP_Solve_FS_1));
