@@ -1,0 +1,5 @@
+extend = "binding/petsc4py/.ruff.toml"
+
+[lint.per-file-ignores]
+"**/tests/*.py" = ["D", "ARG001", "ARG002", "S101"]
+"**/tutorials/*.py" = ["D", "ARG001", "ARG002", "E402", "PLC0415", "S101", "T201"]
