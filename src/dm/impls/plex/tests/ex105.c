@@ -84,6 +84,12 @@ static PetscErrorCode CheckGloballyCurveSorted(MPI_Comm comm, PetscInt spaceDim,
   }
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, lo, 3, MPIU_REAL, MPIU_MIN, comm));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, hi, 3, MPIU_REAL, MPIU_MAX, comm));
+  for (PetscInt d = 0; d < 3; ++d) {
+    if (lo[d] > hi[d]) {
+      lo[d] = 0.;
+      hi[d] = 0.;
+    }
+  }
   for (PetscInt d = 0; d < 3; ++d) span[d] = hi[d] > lo[d] ? hi[d] - lo[d] : 1.;
 
   PetscCall(PetscMalloc1(PetscMax(1, n), &codes));

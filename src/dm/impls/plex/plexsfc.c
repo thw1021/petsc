@@ -1616,7 +1616,8 @@ static int ZKeyCompare(const void *a, const void *b, void *ctx)
 // Find the bounding box of the centroids. `global` reduces the box over the communicator, which the
 // distributed reorder needs so that every rank quantizes onto the same grid. A per-rank box would
 // place each rank on a different grid and the global order would be meaningless. A purely local
-// reorder wants the local box instead, because that spends all 21 bits on the cells it owns.
+// reorder wants the local box instead, because that spends all 21 bits on the cells it owns. On
+// return every dimension satisfies lo[d] <= hi[d], including inactive dimensions and an empty box.
 static PetscErrorCode DMPlexCentroidBoundingBox(MPI_Comm comm, PetscBool global, PetscInt spaceDim, PetscInt numCells, const PetscReal centroids[], PetscReal lo[], PetscReal hi[])
 {
   PetscFunctionBegin;
@@ -1636,6 +1637,15 @@ static PetscErrorCode DMPlexCentroidBoundingBox(MPI_Comm comm, PetscBool global,
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, lo, 3, MPIU_REAL, MPIU_MIN, comm));
     PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, hi, 3, MPIU_REAL, MPIU_MAX, comm));
   }
+  // Inactive dimensions, and every dimension when there are no cells, retain inverted sentinel
+  // bounds. Normalize them before a vectorizing compiler can speculatively evaluate hi[d] - lo[d]
+  // in a discarded branch and overflow under floating-point traps.
+  for (PetscInt d = 0; d < 3; ++d) {
+    if (lo[d] > hi[d]) {
+      lo[d] = 0.;
+      hi[d] = 0.;
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1645,6 +1655,8 @@ static PetscErrorCode DMPlexCentroidsToZCodes(PetscInt spaceDim, PetscInt numCel
   PetscReal span[3];
 
   PetscFunctionBegin;
+  // DMPlexCentroidBoundingBox() normalizes empty and inactive dimensions, so vectorization cannot
+  // speculatively subtract their sentinel bounds.
   for (PetscInt d = 0; d < 3; ++d) span[d] = hi[d] > lo[d] ? hi[d] - lo[d] : 1.;
   for (PetscInt c = 0; c < numCells; ++c) {
     Ijk idx = {0, 0, 0};
