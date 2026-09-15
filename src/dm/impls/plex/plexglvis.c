@@ -666,6 +666,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
           case 4: /* TODO: still need to understand L2 ordering for tets */
             vpc = 4;
             dof = tetv;
+            break;
           case 6:
             PetscCheck(!cellvertex, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unhandled case: vertices per cell %" PetscInt_FMT, fpc);
             vpc = 8;

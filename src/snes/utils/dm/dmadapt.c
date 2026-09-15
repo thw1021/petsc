@@ -965,7 +965,7 @@ static PetscErrorCode DMAdaptorComputeErrorIndicator_Gradient(DMAdaptor adaptor,
         for (PetscInt q = 0; q < Nq; ++q) {
           PetscCall(PetscFEInterpolateFieldAndGradient_Static((PetscFE)obj, 1, x, &fegeom, q, interpolant, interpolantGrad));
           for (PetscInt fc = 0; fc < Nc; ++fc) {
-            const PetscReal wt = quadWeights[q * qNc + qc + fc];
+            const PetscReal wt = quadWeights[q * qNc + (qNc > 1 ? qc + fc : 0)];
 
             field[fc] += interpolant[fc] * wt * fegeom.detJ[q];
             for (PetscInt d = 0; d < cdim; ++d) gradient[fc * cdim + d] += interpolantGrad[fc * dim + d] * wt * fegeom.detJ[q];
