@@ -165,6 +165,24 @@ class Configure(config.base.Configure):
       os.remove(obj1)
     return found
 
+  @staticmethod
+  def isCudaStubLibDir(dirname):
+    '''A CUDA "stubs" directory holds link-time stub libraries (libcuda.so, libnvidia-ml.so, ...) with no runtime
+       counterpart; an RPATH to it must never be emitted.  On Cray systems the ftn/cc/CC wrappers put
+       -L<cuda>/lib64/stubs on their own link lines, so it reaches the harvested clibs/cxxlibs/flibs here.
+       With that RPATH the process resolves the stub libraries at run time and GPU-aware MPI (libfabric CXI)
+       cannot register device memory across nodes ("cxil_map: write error", EFAULT).  See config.packages.cuda,
+       which skips the same directory for the CUDA package libraries via libraries.addRpathSkipDir().
+       This check requires both "stubs" and "cuda" in the normalized path to avoid false positives.
+       Suppressing the RPATH here is not enough on its own: the -L entry is retained, and every later
+       conversion of clibs/cxxlibs/flibs through config.libraries.getLibArgumentList() turns a -L<dir>
+       back into [rpath<dir>, -L<dir>] unless <dir> is in libraries.rpathSkipDirs.  Each of the three
+       call sites therefore also registers the directory there, so that the one decision holds
+       everywhere; config.compilers runs before any package, so config.packages.cuda has not yet
+       registered anything (and does not register a stubs directory at all when CUDA is not used).'''
+    normpath = os.path.normpath(dirname).lower()
+    return os.path.basename(normpath) == 'stubs' and 'cuda' in normpath
+
   def checkCLibraries(self):
     '''Determines the libraries needed to link using the C++ or Fortran compiler C source code compiled with C. Result is stored in clibs'''
     skipclibraries = 1
@@ -332,7 +350,9 @@ class Configure(config.base.Configure):
 
     self.clibs = []
     for lib in clibs:
-      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L':
+      # also tell config.libraries, or getLibArgumentList() re-creates the RPATH from the retained -L
+      if lib.startswith('-L') and self.isCudaStubLibDir(lib[2:]): self.libraries.addRpathSkipDir(lib[2:])
+      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L' and not self.isCudaStubLibDir(lib[2:]):
         self.clibs.append(self.setCompilers.CSharedLinkerFlag+lib[2:])
       self.clibs.append(lib)
 
@@ -648,7 +668,9 @@ class Configure(config.base.Configure):
 
     self.cxxlibs = []
     for lib in cxxlibs:
-      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L':
+      # also tell config.libraries, or getLibArgumentList() re-creates the RPATH from the retained -L
+      if lib.startswith('-L') and self.isCudaStubLibDir(lib[2:]): self.libraries.addRpathSkipDir(lib[2:])
+      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L' and not self.isCudaStubLibDir(lib[2:]):
         self.cxxlibs.append(self.setCompilers.CSharedLinkerFlag+lib[2:])
       self.cxxlibs.append(lib)
 
@@ -1145,7 +1167,9 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     self.fincs = fincs
     self.flibs = []
     for lib in flibs:
-      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.FCSharedLinkerFlag == '-L':
+      # also tell config.libraries, or getLibArgumentList() re-creates the RPATH from the retained -L
+      if lib.startswith('-L') and self.isCudaStubLibDir(lib[2:]): self.libraries.addRpathSkipDir(lib[2:])
+      if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.FCSharedLinkerFlag == '-L' and not self.isCudaStubLibDir(lib[2:]):
         self.flibs.append(self.setCompilers.FCSharedLinkerFlag+lib[2:])
       self.flibs.append(lib)
     self.fmainlibs = fmainlibs
