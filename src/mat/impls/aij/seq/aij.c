@@ -4211,14 +4211,19 @@ PetscErrorCode MatMatMultNumeric_SeqDense_SeqAIJ(Mat A, Mat B, Mat C)
 PetscErrorCode MatMatMultSymbolic_SeqDense_SeqAIJ(Mat A, Mat B, PetscReal fill, Mat C)
 {
   PetscInt  m = A->rmap->n, n = B->cmap->n;
-  PetscBool cisdense;
+  PetscBool cisdense, flg;
 
   PetscFunctionBegin;
   PetscCheck(A->cmap->n == B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "A->cmap->n %" PetscInt_FMT " != B->rmap->n %" PetscInt_FMT, A->cmap->n, B->rmap->n);
   PetscCall(MatSetSizes(C, m, n, m, n));
   PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSECUDA, MATSEQDENSEHIP, ""));
-  if (!cisdense) PetscCall(MatSetType(C, MATDENSE));
+  if (!cisdense) {
+    PetscCall(MatSetType(C, MATDENSE));
+    /* keep the VecType of A, which need not be the default of its MatType (see MatCreateDenseFromVecType()), but only if A is a host MATSEQDENSE like C, since a host C must not get the device VecType of a MATSEQDENSECUDA or MATSEQDENSEHIP A */
+    PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQDENSE, &flg));
+    if (flg) PetscCall(MatSetVecType(C, A->defaultvectype));
+  }
   PetscCall(MatSetUp(C));
 
   C->ops->matmultnumeric = MatMatMultNumeric_SeqDense_SeqAIJ;

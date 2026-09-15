@@ -70,6 +70,7 @@ static PetscErrorCode MatProductSymbolic_SeqBAIJLIBXSMM_SeqDense(Mat C)
   PetscBLASInt             bn, bbs, bldb, bldc;
   libxsmm_gemm_shape       shape;
   libxsmm_datatype         datatype = PetscDefined(USE_REAL_SINGLE) ? LIBXSMM_DATATYPE_F32 : LIBXSMM_DATATYPE_F64;
+  PetscBool                flg;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
@@ -77,6 +78,9 @@ static PetscErrorCode MatProductSymbolic_SeqBAIJLIBXSMM_SeqDense(Mat C)
   PetscCall(MatSetSizes(C, m, n, m, n));
   PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscCall(MatSetType(C, MATSEQDENSE));
+  /* keep the VecType of B, which need not be the default of its MatType (see MatCreateDenseFromVecType()), but only if B is a host MATSEQDENSE like C, since a host C must not get the device VecType of a MATSEQDENSECUDA or MATSEQDENSEHIP B */
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSE, &flg));
+  if (flg) PetscCall(MatSetVecType(C, B->defaultvectype));
   PetscCall(MatSetUp(C));
   PetscCall(MatDenseGetLDA(B, &ldb));
   PetscCall(MatDenseGetLDA(C, &ldc));

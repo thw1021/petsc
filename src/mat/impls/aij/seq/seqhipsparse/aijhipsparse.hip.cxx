@@ -1862,6 +1862,9 @@ static PetscErrorCode MatProductSymbolic_SeqAIJHIPSPARSE_SeqDENSEHIP(Mat C)
   /* if C is of type MATSEQDENSE (CPU), perform the operation on the GPU and then copy on the CPU */
   PetscCall(PetscObjectTypeCompare((PetscObject)C, MATSEQDENSE, &cisdense));
   PetscCall(MatSetType(C, MATSEQDENSEHIP));
+  /* keep the VecType of B, which need not be the default of its MatType (see MatCreateDenseFromVecType()), but only if B is a MATSEQDENSEHIP like C, since the device C must not get the host VecType of a MATSEQDENSE B */
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATSEQDENSEHIP, &flg));
+  if (flg) PetscCall(MatSetVecType(C, B->defaultvectype));
 
   /* product data */
   PetscCall(PetscNew(&mmdata));
