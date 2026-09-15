@@ -315,6 +315,10 @@ cdef extern from * nogil:
     PetscErrorCode PCPatchSetComputeFunction(PetscPC, PetscPCPatchComputeFunction, void*)
     PetscErrorCode PCPatchSetComputeFunctionInteriorFacets(PetscPC, PetscPCPatchComputeFunction, void*)
     PetscErrorCode PCPatchSetConstructType(PetscPC, PetscPCPatchConstructType, PetscPCPatchConstructOperator, void*)
+    PetscErrorCode PCPatchSetConstructLabel(PetscPC, PetscDMLabel, PetscInt)
+    PetscErrorCode PCPatchGetConstructLabel(PetscPC, PetscDMLabel*, PetscInt*)
+    PetscErrorCode PCPatchSetPatchLabel(PetscPC, PetscDMLabel)
+    PetscErrorCode PCPatchGetPatchLabel(PetscPC, PetscDMLabel*)
 
     # --- HPDDM ---
     ctypedef PetscErrorCode (*PetscPCHPDDMAuxiliaryMat)(PetscMat,
