@@ -680,7 +680,11 @@ PetscErrorCode PCPatchGetConstructLabel(PC pc, DMLabel *label, PetscInt *value)
   so their stars must be disjoint for the patch operator to be block diagonal; that is what a coloring of the points
   guarantees, and it is the caller's responsibility here.
 
-.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetPatchLabel()`, `PCPatchSetConstructLabel()`, `DMPlexCreateColoringLabel()`, `DMLabel`
+  A label set this way says which points each patch solves for but not which points it was built around, so
+  `-pc_patch_exclude_subspaces` has nothing to key on and is ignored. Supply the base points with
+  `PCPatchSetPatchSeedLabel()` to get that behavior.
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchGetPatchLabel()`, `PCPatchSetPatchSeedLabel()`, `PCPatchSetConstructLabel()`, `DMPlexCreateColoringLabel()`, `DMLabel`
 @*/
 PetscErrorCode PCPatchSetPatchLabel(PC pc, DMLabel label)
 {
@@ -718,6 +722,64 @@ PetscErrorCode PCPatchGetPatchLabel(PC pc, DMLabel *label)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscAssertPointer(label, 2);
   *label = patch->userPatchLabel;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCPatchSetPatchSeedLabel - Set the mesh points that each patch of a `PCPATCH` preconditioner is built around
+
+  Logically Collective
+
+  Input Parameters:
++ pc    - the `PCPATCH` preconditioner
+- label - a `DMLabel` marking the base points of each patch under the stratum values of the label given to
+          `PCPatchSetPatchLabel()`, or `NULL` for none
+
+  Level: advanced
+
+  Note:
+  This accompanies `PCPatchSetPatchLabel()`, which says which points a patch solves for but not which points it grew
+  from. `-pc_patch_exclude_subspaces` needs the latter: it keeps the excluded subspaces only at the base points, which
+  is what makes a Vanka patch carry one constraint degree of freedom per point it was built around.
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchSetPatchLabel()`, `PCPatchGetPatchSeedLabel()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchSetPatchSeedLabel(PC pc, DMLabel label)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  PetscCall(PetscObjectReference((PetscObject)label));
+  PetscCall(DMLabelDestroy(&patch->userSeedLabel));
+  patch->userSeedLabel = label;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCPatchGetPatchSeedLabel - Return the `DMLabel` marking the points each patch of a `PCPATCH` preconditioner is built around
+
+  Not Collective
+
+  Input Parameter:
+. pc - the `PCPATCH` preconditioner
+
+  Output Parameter:
+. label - the `DMLabel` set with `PCPatchSetPatchSeedLabel()`, or `NULL` if none was set
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `PCPATCH`, `PCPatchSetPatchSeedLabel()`, `DMLabel`
+@*/
+PetscErrorCode PCPatchGetPatchSeedLabel(PC pc, DMLabel *label)
+{
+  PC_PATCH *patch = (PC_PATCH *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(label, 2);
+  *label = patch->userSeedLabel;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1326,9 +1388,10 @@ static PetscErrorCode PCPatchGetGlobalDofs(PC pc, PetscSection dofSection[], Pet
 /* Given a hash table with a set of topological entities (pts), compute the degrees of
    freedom in global concatenated numbering on those entities.
    For Vanka smoothing, this needs to do something special: ignore dofs of the
-   constraint subspace on entities that aren't the base entity we're building the patch
-   around. */
-static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs, PetscInt base, PetscHSetI *subspaces_to_exclude)
+   constraint subspace on entities that aren't one of the base entities we're building the
+   patch around. A colored patch is built around every point of its color, so `base` holds
+   as many entities as that color has points. */
+static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs, PetscHSetI base, PetscHSetI *subspaces_to_exclude)
 {
   PC_PATCH     *patch = (PC_PATCH *)pc->data;
   PetscHashIter hi;
@@ -1345,13 +1408,18 @@ static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs
       PetscBool should_exclude_k = PETSC_FALSE;
       PetscCall(PetscHSetIHas(*subspaces_to_exclude, k, &should_exclude_k));
       if (should_exclude_k) {
-        /* only get this subspace dofs at the base entity, not any others */
-        PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, k, patch->combined, base, &ldof, &loff));
-        if (0 == ldof) continue;
-        for (PetscInt j = loff; j < ldof + loff; ++j) {
-          for (PetscInt l = 0; l < bs; ++l) {
-            PetscInt dof = bs * j + l + subspaceOffset;
-            PetscCall(PetscHSetIAdd(dofs, dof));
+        /* only get this subspace dofs at the base entities, not any others */
+        PetscHashIterBegin(base, hi);
+        while (!PetscHashIterAtEnd(base, hi)) {
+          PetscHashIterGetKey(base, hi, p);
+          PetscHashIterNext(base, hi);
+          PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, k, patch->combined, p, &ldof, &loff));
+          if (0 == ldof) continue;
+          for (PetscInt j = loff; j < ldof + loff; ++j) {
+            for (PetscInt l = 0; l < bs; ++l) {
+              PetscInt dof = bs * j + l + subspaceOffset;
+              PetscCall(PetscHSetIAdd(dofs, dof));
+            }
           }
         }
         continue; /* skip the other dofs of this subspace */
@@ -1408,48 +1476,58 @@ static PetscErrorCode PCPatchComputeSetDifference_Private(PetscHSetI A, PetscHSe
   - point       - IS of the cell point indices of cells in each patch
  */
 /*
-  Returns the points that patch v solves for, or NULL when the patch is empty. The order of the points is preserved
-  from the patch label, since it sets the order of the patch local degrees of freedom. The caller destroys the IS.
+  Returns the points that `label` gives patch v, or NULL when that stratum is empty. Pass the patch label for the
+  points the patch solves for, or the seed label for the ones it was built around; both carry the same stratum values.
+  The order of the points is preserved from the label, since it sets the order of the patch local degrees of freedom.
+  The caller destroys the IS.
 */
-static PetscErrorCode PCPatchGetPatchPointIS_Private(PC pc, PetscInt v, IS *pointIS)
+static PetscErrorCode PCPatchGetPatchPointIS_Private(PC pc, DMLabel label, PetscInt v, IS *pointIS)
 {
   PC_PATCH       *patch = (PC_PATCH *)pc->data;
   const PetscInt *values;
 
   PetscFunctionBegin;
   PetscCall(ISGetIndices(patch->patchValues, &values));
-  PetscCall(DMLabelGetStratumIS(patch->patchLabel, values[v], pointIS));
+  PetscCall(DMLabelGetStratumIS(label, values[v], pointIS));
   PetscCall(ISRestoreIndices(patch->patchValues, &values));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
   Builds a patch label with one stratum per color of the points the patches are built around, each holding the union of
-  the stars of the owned points of that color.
+  the patches of the owned points of that color.
 
-  Points of one color are pairwise non-adjacent, so their stars share no cell and the operator of the resulting patch
-  is block diagonal with one block per star, which is what makes solving a whole color at once equivalent to solving
-  its patches separately. That holds only for the finite-element adjacency, where two points are adjacent exactly when
-  they share a cell, so we impose it for the coloring rather than letting the setting on the DM decide it.
+  Points of one color lie outside one another's reach, so no cell assembles into two of their patches and the operator
+  of the resulting patch is block diagonal with one block per point, which is what makes solving a whole color at once
+  equivalent to solving its patches separately. That reach is set by the cells a patch is assembled on, not by the
+  points it solves for: a star patch is assembled on the star of its point, so two of them collide only when the
+  points share a cell, one application of the adjacency. A Vanka patch spans the closure of that star, and every cell
+  holding one of those points assembles into it, which pushes the collision out to three applications; two Vanka
+  patches whose point sets are disjoint are still coupled by a cell straddling them. Both hold only for the
+  finite-element adjacency, where two points are adjacent exactly when they share a cell, so we impose it for the
+  coloring rather than letting the setting on the DM decide it.
+
+  `seedLabel` returns the points each patch was built around, under the same stratum values, which is what the Vanka
+  exclusion rule is indexed by.
 */
-static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt colorDepth, DMLabel ghost, PetscInt nleaves, const PetscInt leaves[], DMLabel *patchLabel)
+static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt colorDepth, DMLabel ghost, PetscInt nleaves, const PetscInt leaves[], DMLabel *patchLabel, DMLabel *seedLabel)
 {
   PC_PATCH  *patch = (PC_PATCH *)pc->data;
   ISColoring coloring;
   IS        *iscolors;
   PetscBool  useCone, useClosure;
-  PetscInt   ncolors, npatch;
+  PetscInt   ncolors, npatch, radius = patch->ctype == PC_PATCH_VANKA ? 3 : 1;
 
   PetscFunctionBegin;
   PetscCall(DMGetBasicAdjacency(dm, &useCone, &useClosure));
   PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
-  PetscCall(DMPlexCreateColoringLabel(dm, colorDepth, 1, patch->constructLabel, patch->constructValue, &coloring));
+  PetscCall(DMPlexCreateColoringLabel(dm, colorDepth, radius, patch->constructLabel, patch->constructValue, &coloring));
   PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
   PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
   /* With -dm_plex_coloring_local each process colors its own points, so it gets its own number of colors. Take the
      largest, since the label's values must agree everywhere for the completion below to stay collective. */
   PetscCallMPI(MPIU_Allreduce(&ncolors, &npatch, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
-  PetscCall(DMLabelCreate(PETSC_COMM_SELF, "PCPatch color star", patchLabel));
+  PetscCall(DMLabelCreate(PETSC_COMM_SELF, "PCPatch color patch", patchLabel));
   for (PetscInt c = 0; c < npatch; ++c) {
     IS              ownedIS;
     const PetscInt *colorPoints;
@@ -1482,7 +1560,25 @@ static PetscErrorCode PCPatchCreateColorLabel_Private(PC pc, DM dm, PetscInt col
   }
   PetscCall(ISColoringRestoreIS(coloring, PETSC_USE_POINTER, &iscolors));
   PetscCall(ISColoringDestroy(&coloring));
+  /* Keep the points themselves before growing them into patches */
+  PetscCall(DMLabelDuplicate(*patchLabel, seedLabel));
+  PetscCall(PetscObjectSetName((PetscObject)*seedLabel, "PCPatch color seed"));
   PetscCall(DMPlexLabelCompleteStar(dm, *patchLabel));
+  if (patch->ctype == PC_PATCH_VANKA) {
+    /* A Vanka patch spans the closure of the star, less the entities it was told to leave out */
+    PetscCall(DMPlexLabelComplete(dm, *patchLabel));
+    if (patch->vankadim >= 0) {
+      PetscInt iStart, iEnd;
+
+      PetscCall(DMPlexGetDepthStratum(dm, patch->vankadim, &iStart, &iEnd));
+      for (PetscInt p = iStart; p < iEnd; ++p) {
+        PetscInt val;
+
+        PetscCall(DMLabelGetValue(*patchLabel, p, &val));
+        if (val >= 0) PetscCall(DMLabelClearValue(*patchLabel, p, val));
+      }
+    }
+  }
   PetscCall(ISCreateStride(PETSC_COMM_SELF, npatch, 0, 1, &patch->patchValues));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1520,7 +1616,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
 
-  PetscCheck(!patch->use_coloring || (!patch->user_patches && patch->ctype == PC_PATCH_STAR), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Coloring is only supported with star patch construction");
+  PetscCheck(!patch->use_coloring || (!patch->user_patches && (patch->ctype == PC_PATCH_STAR || patch->ctype == PC_PATCH_VANKA)), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Coloring is only supported with star or Vanka patch construction");
   PetscCheck(!patch->userPatchLabel || !patch->user_patches, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "A patch label cannot be combined with user or Python patch construction, since both define the patches");
   PetscCheck(!patch->constructLabel || !patch->user_patches, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "A construct label cannot be combined with user or Python patch construction, which does not build patches around mesh points");
   if (patch->user_patches) {
@@ -1565,8 +1661,12 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscCall(PetscObjectReference((PetscObject)patch->userPatchLabel));
     patch->patchLabel = patch->userPatchLabel;
     PetscCall(DMLabelGetValueIS(patch->patchLabel, &patch->patchValues));
+    if (patch->userSeedLabel) {
+      PetscCall(PetscObjectReference((PetscObject)patch->userSeedLabel));
+      patch->seedLabel = patch->userSeedLabel;
+    }
   } else if (patch->use_coloring) {
-    PetscCall(PCPatchCreateColorLabel_Private(pc, dm, colorDepth, ghost, nleaves, leaves, &patch->patchLabel));
+    PetscCall(PCPatchCreateColorLabel_Private(pc, dm, colorDepth, ghost, nleaves, leaves, &patch->patchLabel, &patch->seedLabel));
   }
   if (patch->patchLabel) {
     PetscCall(ISGetLocalSize(patch->patchValues, &patch->npatch));
@@ -1585,7 +1685,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       IS       pointIS        = NULL;
       PetscInt numLabelPoints = 0;
 
-      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, patch->patchLabel, v, &pointIS));
       if (pointIS) PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
       PetscCall(PetscSectionSetDof(patch->ownedPointCounts, v, numLabelPoints));
       PetscCall(ISDestroy(&pointIS));
@@ -1598,7 +1698,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       const PetscInt *labelPoints    = NULL;
       PetscInt        numLabelPoints = 0, off;
 
-      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, patch->patchLabel, v, &pointIS));
       if (!pointIS) continue;
       PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
       PetscCall(ISGetIndices(pointIS, &labelPoints));
@@ -1638,7 +1738,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       const PetscInt *labelPoints    = NULL;
       PetscInt        numLabelPoints = 0;
 
-      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, patch->patchLabel, v, &pointIS));
       if (pointIS) {
         PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
         PetscCall(ISGetIndices(pointIS, &labelPoints));
@@ -1748,7 +1848,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
       const PetscInt *labelPoints    = NULL;
       PetscInt        numLabelPoints = 0;
 
-      PetscCall(PCPatchGetPatchPointIS_Private(pc, v, &pointIS));
+      PetscCall(PCPatchGetPatchPointIS_Private(pc, patch->patchLabel, v, &pointIS));
       if (pointIS) {
         PetscCall(ISGetLocalSize(pointIS, &numLabelPoints));
         PetscCall(ISGetIndices(pointIS, &labelPoints));
@@ -1942,7 +2042,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   PetscHMapI      htWithAll;
   PetscHSetI      globalBcs;
   PetscInt        numBcs;
-  PetscHSetI      ownedpts, seenpts, owneddofs, seendofs, artificialbcs;
+  PetscHSetI      ownedpts, seenpts, basepts, owneddofs, seendofs, artificialbcs;
   PetscInt        pStart, pEnd, p, i;
   char            option[PETSC_MAX_PATH_LEN];
   PetscBool       isNonlinear;
@@ -1998,6 +2098,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   /* Hash tables for artificial BC construction */
   PetscCall(PetscHSetICreate(&ownedpts));
   PetscCall(PetscHSetICreate(&seenpts));
+  PetscCall(PetscHSetICreate(&basepts));
   PetscCall(PetscHSetICreate(&owneddofs));
   PetscCall(PetscHSetICreate(&seendofs));
   PetscCall(PetscHSetICreate(&artificialbcs));
@@ -2024,6 +2125,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     /* Calculate the global numbers of the artificial BC dofs here first */
     PetscCall(PetscHSetIClear(ownedpts));
     PetscCall(PetscHSetIClear(seenpts));
+    PetscCall(PetscHSetIClear(basepts));
     if (patch->patchLabel) {
       PetscInt pdof, poff;
 
@@ -2033,13 +2135,28 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
       PetscCall(PetscSectionGetDof(pointCounts, v, &pdof));
       PetscCall(PetscSectionGetOffset(pointCounts, v, &poff));
       for (p = 0; p < pdof; ++p) PetscCall(PetscHSetIAdd(seenpts, pointsArray[poff + p]));
+      /* The Vanka exclusion rule is indexed by the points the patch was built around, which only a seed label gives us */
+      if (patch->seedLabel) {
+        IS              seedIS = NULL;
+        const PetscInt *seeds  = NULL;
+        PetscInt        nseeds = 0;
+
+        PetscCall(PCPatchGetPatchPointIS_Private(pc, patch->seedLabel, v, &seedIS));
+        if (seedIS) {
+          PetscCall(ISGetLocalSize(seedIS, &nseeds));
+          PetscCall(ISGetIndices(seedIS, &seeds));
+          for (p = 0; p < nseeds; ++p) PetscCall(PetscHSetIAdd(basepts, seeds[p]));
+          PetscCall(ISRestoreIndices(seedIS, &seeds));
+          PetscCall(ISDestroy(&seedIS));
+        }
+      }
     } else {
       PetscCall(patch->patchconstructop((void *)patch, dm, v, ownedpts));
       PetscCall(PCPatchCompleteCellPatch(pc, ownedpts, seenpts));
+      PetscCall(PetscHSetIAdd(basepts, v));
     }
-    /* The Vanka exclusion rule is indexed by the mesh point a patch is built around, which a patch label does not give us */
-    PetscCall(PCPatchGetPointDofs(pc, ownedpts, owneddofs, v, patch->patchLabel ? NULL : &patch->subspaces_to_exclude));
-    PetscCall(PCPatchGetPointDofs(pc, seenpts, seendofs, v, NULL));
+    PetscCall(PCPatchGetPointDofs(pc, ownedpts, owneddofs, basepts, patch->patchLabel && !patch->seedLabel ? NULL : &patch->subspaces_to_exclude));
+    PetscCall(PCPatchGetPointDofs(pc, seenpts, seendofs, basepts, NULL));
     PetscCall(PCPatchComputeSetDifference_Private(owneddofs, seendofs, artificialbcs));
     if (patch->viewPatches) {
       PetscHSetI    globalbcdofs;
@@ -2303,6 +2420,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     PetscCall(PetscHSetIDestroy(&globalBcs));
     PetscCall(PetscHSetIDestroy(&ownedpts));
     PetscCall(PetscHSetIDestroy(&seenpts));
+    PetscCall(PetscHSetIDestroy(&basepts));
     PetscCall(PetscHSetIDestroy(&owneddofs));
     PetscCall(PetscHSetIDestroy(&seendofs));
     PetscCall(PetscHSetIDestroy(&artificialbcs));
@@ -3709,6 +3827,7 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(PetscSectionDestroy(&patch->pointCounts));
   PetscCall(PetscSectionDestroy(&patch->ownedPointCounts));
   PetscCall(DMLabelDestroy(&patch->patchLabel));
+  PetscCall(DMLabelDestroy(&patch->seedLabel));
   PetscCall(ISDestroy(&patch->patchValues));
   PetscCall(PetscSectionDestroy(&patch->cellNumbering));
   PetscCall(PetscSectionDestroy(&patch->gtolCounts));
@@ -3819,6 +3938,7 @@ static PetscErrorCode PCDestroy_PATCH(PC pc)
   PetscFunctionBegin;
   PetscCall(PCReset_PATCH(pc));
   PetscCall(DMLabelDestroy(&patch->userPatchLabel));
+  PetscCall(DMLabelDestroy(&patch->userSeedLabel));
   PetscCall(DMLabelDestroy(&patch->constructLabel));
   PetscCall(PetscFree(patch->constructLabelName));
   PetscCall((*patch->destroysolver)(pc));
@@ -3867,7 +3987,7 @@ static PetscErrorCode PCSetFromOptions_PATCH(PC pc, PetscOptionItems PetscOption
   PetscCall(PetscOptionsEnum(option, "How should the patches be constructed?", "PCPatchSetConstructType", PCPatchConstructTypes, (PetscEnum)patchConstructionType, (PetscEnum *)&patchConstructionType, &flg));
   if (flg) PetscCall(PCPatchSetConstructType(pc, patchConstructionType, NULL, NULL));
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_use_coloring", patch->classname));
-  PetscCall(PetscOptionsBool(option, "Group star patches by a coloring of the points they are built around?", "PCPATCH", patch->use_coloring, &patch->use_coloring, &flg));
+  PetscCall(PetscOptionsBool(option, "Group patches by a coloring of the points they are built around?", "PCPATCH", patch->use_coloring, &patch->use_coloring, &flg));
 
   PetscCall(PetscSNPrintf(option, PETSC_MAX_PATH_LEN, "-%s_patch_construct_label", patch->classname));
   PetscCall(PetscOptionsString(option, "Name of a DMLabel on the DM marking the points to build patches around", "PCPatchSetConstructLabel", patch->constructLabelName, label_name, sizeof(label_name), &flg));
@@ -3982,7 +4102,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Saving patch operators (rebuilt every PCSetUp)\n"));
   if (patch->userPatchLabel) PetscCall(PetscViewerASCIIPrintf(viewer, "Patches given by the strata of a label\n"));
   else if (patch->patchconstructop == PCPatchConstruct_Star) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: star%s\n", patch->use_coloring ? " with coloring" : ""));
-  else if (patch->patchconstructop == PCPatchConstruct_Vanka) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: Vanka\n"));
+  else if (patch->patchconstructop == PCPatchConstruct_Vanka) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: Vanka%s\n", patch->use_coloring ? " with coloring" : ""));
   else if (patch->patchconstructop == PCPatchConstruct_User) PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: user-specified\n"));
   else PetscCall(PetscViewerASCIIPrintf(viewer, "Patch construction operator: unknown\n"));
 
@@ -4022,7 +4142,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
 . -pc_patch_points_view                 - Views the process local mesh point numbers for each patch
 . -pc_patch_g2l_view                    - Views the map between global dofs and patch local dofs for each patch
 . -pc_patch_patches_view                - Views the global dofs associated with each patch and its boundary
-. -pc_patch_use_coloring                - Groups star patches by a coloring of the points they are built around, so that each solve handles a whole color at once
+. -pc_patch_use_coloring                - Groups star or Vanka patches by a coloring of the points they are built around, so that each solve handles a whole color at once
 . -pc_patch_construct_label name        - Builds patches only around the points marked by the named `DMLabel` on the `DM`
 . -pc_patch_construct_label_value value - The stratum value of that label marking the points
 - -pc_patch_sub_mat_view                - Views the matrix associated with each patch
@@ -4075,7 +4195,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->constructLabelName       = NULL;
   patch->constructValue           = 1;
   patch->userPatchLabel           = NULL;
+  patch->userSeedLabel            = NULL;
   patch->patchLabel               = NULL;
+  patch->seedLabel                = NULL;
   patch->patchValues              = NULL;
   PetscCall(PetscStrallocpy(MATDENSE, (char **)&patch->sub_mat_type));
   patch->viewPatches                       = PETSC_FALSE;
