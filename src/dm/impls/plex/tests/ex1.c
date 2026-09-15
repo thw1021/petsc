@@ -521,6 +521,13 @@ int main(int argc, char **argv)
     suffix: exodus_17_hyb3d_interp_ascii
     requires: exodusii
     args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/hybrid_hexwedge.exo -dm_view -dm_plex_check_all
+  # hybrid_hexwedge.exo is stored in the HDF5 flavor of ExodusII, for which ex_open_par() sets collective
+  # access on the coordinates and connectivity, so all ranks must participate in the reads
+  test:
+    suffix: exodus_17_hyb3d_interp_ascii_par
+    requires: exodusii
+    nsize: 2
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/hybrid_hexwedge.exo -dm_view -dm_plex_check_all
 
   # Legacy Gmsh v22/v40 ascii/binary reader tests
   testset:

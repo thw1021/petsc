@@ -123,18 +123,15 @@ PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], 
 {
   PetscFunctionBegin;
 #if PetscDefined(HAVE_EXODUSII)
-  PetscMPIInt        rank;
   PetscExodusIIInt   CPU_word_size = sizeof(PetscReal), IO_word_size = 0, exoid = -1;
   PetscExodusIIFloat version;
 
   PetscAssertPointer(filename, 2);
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  if (rank == 0) {
-    exoid = ex_open(filename, EX_READ, &CPU_word_size, &IO_word_size, &version);
-    PetscCheck(exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
-  }
+  /* The file is opened by all ranks so that each of them can read its own part of the mesh */
+  exoid = ex_open_par(filename, EX_READ, &CPU_word_size, &IO_word_size, &version, comm, MPI_INFO_NULL);
+  PetscCheck(exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par(\"%s\",...) did not return a valid file ID", filename);
   PetscCall(DMPlexCreateExodus(comm, exoid, interpolate, dm));
-  if (rank == 0) PetscCallExternal(ex_close, exoid);
+  PetscCallExternal(ex_close, exoid);
   PetscFunctionReturn(PETSC_SUCCESS);
 #else
   SETERRQ(comm, PETSC_ERR_SUP, "Loading meshes requires EXODUSII support. Reconfigure using --with-exodusii-dir or -download-exodusii");
