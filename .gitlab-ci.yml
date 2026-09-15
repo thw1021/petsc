@@ -331,29 +331,33 @@ pause-for-approval:
     - date
     - hostname
   script:
-    - claude --version || { echo "claude not installed"; exit 1; }
+    - $AI_CLI --version || { echo "$AI_CLI not installed"; exit 1; }
     - glab --version || { echo "glab not installed"; exit 1; }
     - python3 --version || { echo "python3 not installed"; exit 1; }
     - echo "$CI_MERGE_REQUEST_IID" | grep -qE '^[0-9]+$' || { echo "invalid MR IID"; exit 1; }
     - |
-      if [ -z "$GRAFANA_CLOUD_OTLP_ENDPOINT" ] || [ -z "$GRAFANA_CLOUD_OTLP_TOKEN" ]; then
-        echo "Grafana OTLP variables not set; disabling telemetry"
+      if [ "$AI_CLI" != "claude" ] || [ -z "$GRAFANA_CLOUD_OTLP_ENDPOINT" ] || [ -z "$GRAFANA_CLOUD_OTLP_TOKEN" ]; then
+        echo "Disabling Claude telemetry"
         unset CLAUDE_CODE_ENABLE_TELEMETRY OTEL_METRICS_EXPORTER OTEL_EXPORTER_OTLP_ENDPOINT OTEL_EXPORTER_OTLP_HEADERS
       fi
       if echo "$CI_MERGE_REQUEST_LABELS" | grep -qF 'Post AI review'; then
         test -n "$GITLAB_TOKEN" || { echo "GITLAB_TOKEN not set"; exit 1; }
-        REVIEW_CMD="/review-mr-post"
+        REVIEW_SKILL="review-mr-post"
       else
         unset GITLAB_TOKEN
-        REVIEW_CMD="/review-mr"
+        REVIEW_SKILL="review-mr"
       fi
-      # --max-turns 200: raised from the 30-turn default, then again from 100, because large MRs hit the cap before the review finished.
-      claude -p "${REVIEW_CMD} ${CI_MERGE_REQUEST_IID}" --model "${ANTHROPIC_MODEL}" --dangerously-skip-permissions --max-turns 200
+      if [ "$AI_CLI" = "opencode" ]; then
+        opencode run --model "$AI_MODEL" --auto "Review MR $CI_MERGE_REQUEST_IID using the skill $REVIEW_SKILL, using xhigh effort if available" 2> /dev/null
+      else
+        # --max-turns 200: raised from the 30-turn default, then again from 100, because large MRs hit the cap before the review finished.
+        claude -p "/${REVIEW_SKILL} ${CI_MERGE_REQUEST_IID}" --model "$AI_MODEL" --dangerously-skip-permissions --max-turns 200
+      fi
   timeout: 1h
   allow_failure: true
   interruptible: true
   environment:
-    name: AI-Review/$ANTHROPIC_MODEL/$CI_COMMIT_REF_SLUG
+    name: AI-Review/$AI_MODEL/$CI_COMMIT_REF_SLUG
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/ai-review.html
     auto_stop_in: one week
     deployment_tier: development
@@ -370,7 +374,10 @@ ai-review:
   extends: .ai-review
   parallel:
     matrix:
-      - ANTHROPIC_MODEL: [haiku, sonnet, opus]
+      - AI_CLI: claude
+        AI_MODEL: [sonnet, opus]
+      - AI_CLI: opencode
+        AI_MODEL: [argo/gpt56sol, opencode/muse-spark-1.3-contributor-free]
 
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
