@@ -1352,7 +1352,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
   PetscCall(MatSetSizes(C, m, n, M, N));
   PetscCall(PetscLayoutSetUp(C->rmap));
   PetscCall(PetscLayoutSetUp(C->cmap));
-  PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+  PetscCall(MatSetTypesFromMat_Private(C, A));
 
   pdata           = new MatProductCtx_MPIAIJKokkos();
   pdata->reusesym = product->api_user;

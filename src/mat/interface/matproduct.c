@@ -376,7 +376,7 @@ static PetscErrorCode MatProductSymbolic_X_Dense(Mat C)
   }
   PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)C, &isdense, MATSEQDENSE, MATMPIDENSE, ""));
   if (!isdense) {
-    PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+    PetscCall(MatSetTypesFromMat_Private(C, B));
     /* If matrix type of C was not set or not dense, we need to reset the pointer */
     C->ops->productsymbolic = MatProductSymbolic_X_Dense;
   }

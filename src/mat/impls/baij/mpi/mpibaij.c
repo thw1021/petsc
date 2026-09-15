@@ -2897,7 +2897,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIBAIJ_MPIDense(Mat A, Mat B, PetscRea
   MatCheckProduct(C, 4);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)C, MATMPIDENSE, &cisdense));
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  if (!cisdense) PetscCall(MatSetTypesFromMat_Private(C, B));
   PetscCall(MatSetSizes(C, Am, B->cmap->n, A->rmap->N, BN));
   PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscCall(MatSetUp(C));

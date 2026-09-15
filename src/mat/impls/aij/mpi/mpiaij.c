@@ -6035,7 +6035,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIAIJ(Mat A, Mat B, PetscReal
   PetscCall(MatSetSizes(C, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
   PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSECUDA, MATMPIDENSEHIP, ""));
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+  if (!cisdense) PetscCall(MatSetTypesFromMat_Private(C, A));
   PetscCall(MatSetUp(C));
 
   C->ops->matmultnumeric = MatMatMultNumeric_MPIDense_MPIAIJ;
@@ -7190,7 +7190,7 @@ PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat C)
   PetscCall(MatSetSizes(C, m, n, M, N));
   PetscCall(PetscLayoutSetUp(C->rmap));
   PetscCall(PetscLayoutSetUp(C->cmap));
-  PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+  PetscCall(MatSetTypesFromMat_Private(C, A));
   PetscCall(MatGetOptionsPrefix(C, &prefix));
 
   cp = 0;
