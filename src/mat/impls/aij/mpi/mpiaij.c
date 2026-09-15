@@ -2955,6 +2955,7 @@ PetscErrorCode MatDuplicate_MPIAIJ(Mat matin, MatDuplicateOption cpvalues, Mat *
   PetscCall(MatSetSizes(mat, matin->rmap->n, matin->cmap->n, matin->rmap->N, matin->cmap->N));
   PetscCall(MatSetBlockSizesFromMats(mat, matin, matin));
   PetscCall(MatSetType(mat, ((PetscObject)matin)->type_name));
+  PetscCall(MatSetOption(mat, MAT_STRUCTURE_ONLY, matin->structure_only));
   a = (Mat_MPIAIJ *)mat->data;
 
   mat->factortype = matin->factortype;

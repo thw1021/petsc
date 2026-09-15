@@ -3533,6 +3533,7 @@ PETSC_INTERN PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplic
   PetscFunctionBegin;
   PetscCheck(A->assembled, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Cannot duplicate unassembled matrix");
   PetscCheck(a->i[mbs] == nz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Corrupt matrix");
+  PetscCall(MatSetOption(C, MAT_STRUCTURE_ONLY, A->structure_only));
 
   if (cpvalues == MAT_SHARE_NONZERO_PATTERN) {
     c->imax           = a->imax;
@@ -3550,8 +3551,10 @@ PETSC_INTERN PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplic
   /* allocate the matrix space */
   if (mallocmatspace) {
     if (cpvalues == MAT_SHARE_NONZERO_PATTERN) {
-      PetscCall(PetscShmgetAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
-      PetscCall(PetscArrayzero(c->a, bs2 * nz));
+      if (!A->structure_only) {
+        PetscCall(PetscShmgetAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
+        PetscCall(PetscArrayzero(c->a, bs2 * nz));
+      }
       c->free_a       = PETSC_TRUE;
       c->i            = a->i;
       c->j            = a->j;
@@ -3564,7 +3567,7 @@ PETSC_INTERN PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplic
       PetscCall(MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
       PetscCall(MatSetOption(C, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
     } else {
-      PetscCall(PetscShmgetAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
+      if (!A->structure_only) PetscCall(PetscShmgetAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
       PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscInt), (void **)&c->j));
       PetscCall(PetscShmgetAllocateArray(mbs + 1, sizeof(PetscInt), (void **)&c->i));
       c->free_a  = PETSC_TRUE;
@@ -3573,10 +3576,9 @@ PETSC_INTERN PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplic
       PetscCall(PetscArraycpy(c->i, a->i, mbs + 1));
       if (mbs > 0) {
         PetscCall(PetscArraycpy(c->j, a->j, nz));
-        if (cpvalues == MAT_COPY_VALUES) {
-          PetscCall(PetscArraycpy(c->a, a->a, bs2 * nz));
-        } else {
-          PetscCall(PetscArrayzero(c->a, bs2 * nz));
+        if (!A->structure_only) {
+          if (cpvalues == MAT_COPY_VALUES) PetscCall(PetscArraycpy(c->a, a->a, bs2 * nz));
+          else PetscCall(PetscArrayzero(c->a, bs2 * nz));
         }
       }
       C->preallocated = PETSC_TRUE;

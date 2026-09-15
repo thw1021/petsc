@@ -6717,6 +6717,7 @@ PetscErrorCode MatGetOption(Mat mat, MatOption op, PetscBool *flg)
   Note:
   If the matrix was not preallocated then a default, likely poor preallocation will be set in the matrix, so this should be called after the preallocation phase.
   See the Performance chapter of the users manual for information on preallocating matrices.
+  For matrices with the `MAT_STRUCTURE_ONLY` option set to true, this routine leaves the structure and object state unchanged because no numerical values are stored.
 
 .seealso: [](ch_matrices), `Mat`, `MatZeroRows()`, `MatZeroRowsColumns()`
 @*/

@@ -2627,6 +2627,7 @@ static PetscErrorCode MatDuplicate_MPISBAIJ(Mat matin, MatDuplicateOption cpvalu
   PetscCall(MatCreate(PetscObjectComm((PetscObject)matin), &mat));
   PetscCall(MatSetSizes(mat, matin->rmap->n, matin->cmap->n, matin->rmap->N, matin->cmap->N));
   PetscCall(MatSetType(mat, ((PetscObject)matin)->type_name));
+  PetscCall(MatSetOption(mat, MAT_STRUCTURE_ONLY, matin->structure_only));
   PetscCall(PetscLayoutReference(matin->rmap, &mat->rmap));
   PetscCall(PetscLayoutReference(matin->cmap, &mat->cmap));
 
