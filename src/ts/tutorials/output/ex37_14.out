@@ -1,0 +1,165 @@
+>> Schedule '   user' after first TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule 'default' after first TSEvaluationTimesSetUp(): 11 point(s)
+>> Schedule '  range' after first TSEvaluationTimesSetUp(): 11 point(s)
+>> Schedule ' dummy1' after first TSEvaluationTimesSetUp(): 1 point(s)
+>> Schedule ' dummy2' after first TSEvaluationTimesSetUp(): 2 point(s)
+>> Schedule ' dummy3' after first TSEvaluationTimesSetUp(): 3 point(s)
+>> Schedule ' dummy4' after first TSEvaluationTimesSetUp(): 4 point(s)
+>> Schedule ' dummy5' after first TSEvaluationTimesSetUp(): 5 point(s)
+>> Schedule '   user' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule 'default' before second TSEvaluationTimesSetUp(): 11 point(s)
+>> Schedule '  range' before second TSEvaluationTimesSetUp(): 11 point(s)
+>> Schedule ' dummy1' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy2' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy3' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy4' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy5' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+### Check 'user' before second TSEvaluationTimesSetUp(): not found
+>> Schedule '   user' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule 'default' before 1st TSSolve: 11 point(s)
+>> Schedule '  range' before 1st TSSolve: 11 point(s)
+>> Schedule ' dummy1' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy2' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy3' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy4' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy5' before 1st TSSolve: 0 point(s) <empty>
+### Check 'user' before 1st TSSolve: not found
+ETS 'Range' point 1.05, union index    1, private index    0
+### Check 'user' after 1st TSSolve: not found
+---
+Evaluation times schedule 'user' not found
+ETS 'Range' point 1.25, union index    3, private index    1
+ETS 'Range' point 1.45, union index    4, private index    2
+ETS 'Range' point 1.65, union index    5, private index    3
+ETS 'Range' point 1.85, union index    6, private index    4
+ETS 'Range' point 2.05, union index    7, private index    5
+ETS 'Range' point 2.25, union index    9, private index    6
+ETS 'Range' point 2.45, union index   10, private index    7
+ETS 'Range' point 2.65, union index   11, private index    8
+ETS 'Range' point 2.85, union index   12, private index    9
+ETS 'Range' point 3.05, union index   13, private index   10
+>> Schedule '   user' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule 'default' after 2nd TSSolve: 11 point(s)
+>> Schedule '  range' after 2nd TSSolve: 11 point(s)
+>> Schedule ' dummy1' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy2' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy3' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy4' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy5' after 2nd TSSolve: 0 point(s) <empty>
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default': 11 point(s), visited subrange: [0, 3)
+0.	0.	pass
+1.1	1.1	pass
+2.2	2.2	pass
+10.	0.	***
+10.04	0.	***
+10.5	0.	***
+10.8	0.	***
+11.1	0.	***
+11.5	0.	***
+11.8	0.	***
+12.	0.	***
+---
+Evaluation times schedule 'range': 11 point(s), visited subrange: [0, 11)
+1.05	0.	***
+1.25	0.	***
+1.45	0.	***
+1.65	0.	***
+1.85	0.	***
+2.05	0.	***
+2.25	0.	***
+2.45	0.	***
+2.65	0.	***
+2.85	0.	***
+3.05	0.	***
+>> Schedule '   user' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule 'default' after TSEvaluationTimesReset: 11 point(s)
+>> Schedule '  range' after TSEvaluationTimesReset: 11 point(s)
+>> Schedule ' dummy1' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy2' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy3' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy4' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy5' after TSEvaluationTimesReset: 0 point(s) <empty>
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default': 11 point(s), visited subrange: [-1, -1)
+0.	0.	***
+1.1	0.	***
+2.2	0.	***
+10.	0.	***
+10.04	0.	***
+10.5	0.	***
+10.8	0.	***
+11.1	0.	***
+11.5	0.	***
+11.8	0.	***
+12.	0.	***
+---
+Evaluation times schedule 'range': 11 point(s), visited subrange: [-1, -1)
+1.05	0.	***
+1.25	0.	***
+1.45	0.	***
+1.65	0.	***
+1.85	0.	***
+2.05	0.	***
+2.25	0.	***
+2.45	0.	***
+2.65	0.	***
+2.85	0.	***
+3.05	0.	***
+### Check 'user' after 3rd TSSolve: not found
+Schedule 'user' is absent, no need to remove
+Shift time: 10.055 -> 10.01
+### Check 'user' after 4th TSSolve: not found
+== CONVERGED_TIME ==
+0	1.	7.39777e-08	pass
+0	1.05	0.	pass
+0	2.	0.	pass
+0	3.	0.	pass
+0	4.	6.43929e-14	pass
+0	5.	1.43443e-07	pass
+0	6.	3.09267e-10	pass
+0	7.	5.9508e-14	pass
+0	8.	1.86517e-13	pass
+0	9.	5.68434e-14	pass
+0	9.05	1.60636e-08	pass
+0	10.	0.	pass
+0	11.	2.06992e-08	pass
+0	12.	0.	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default': 11 point(s), visited subrange: [3, 11)
+0.	0.	***
+1.1	0.	***
+2.2	0.	***
+10.	-2.86887e-07	pass
+10.04	0.0849997	pass
+10.5	0.545	pass
+10.8	0.845	pass
+11.1	1.145	pass
+11.5	1.545	pass
+11.8	1.845	pass
+12.	2.045	pass
+---
+Evaluation times schedule 'range': 11 point(s), visited subrange: [-1, -1)
+1.05	0.	***
+1.25	0.	***
+1.45	0.	***
+1.65	0.	***
+1.85	0.	***
+2.05	0.	***
+2.25	0.	***
+2.45	0.	***
+2.65	0.	***
+2.85	0.	***
+3.05	0.	***
+(1) Initial time = 0., final time reached = 12., max time = 12., pass
+(2) Initial dt = 0.123, final dt = 0.123, pass
+(1) or (2): pass
+========================
+Note, event handling is not designed for shifting the time between TSSolves, and may not function properly (Jul 2026); see ts.c code: TSSolve() -> TSEventInitialize()
+========================

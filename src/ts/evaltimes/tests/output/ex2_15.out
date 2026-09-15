@@ -1,0 +1,22 @@
+### Check 'user' before SetUp: not found
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 4 point(s)
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+### Check 'user' after Solve: not found
+== CONVERGED_TIME ==
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default': 4 point(s), visited subrange: [0, 4)
+1.	1.	pass
+1.0001	1.	pass
+1.0005	1.	pass
+1.0009	1.	pass
+---
+Evaluation times schedule 'range' not found
+Initial time = 1., final time reached = 1.0009, max time = 1.0009, pass
+Initial time step = 0.099, final time step = 0.099, adapt == none, match
+========================
+The time span points are merged into one point, but the time span sets distinct t0 and tmax. Only one time step is made
+========================

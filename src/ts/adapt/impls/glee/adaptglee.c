@@ -9,13 +9,14 @@ static PetscErrorCode TSAdaptChoose_GLEE(TSAdapt adapt, TS ts, PetscReal h, Pets
 {
   TSAdapt_GLEE *glee = (TSAdapt_GLEE *)adapt->data;
   Vec           X, Y, E;
-  PetscReal     enorm, enorma, enormr, hfac_lte, hfac_ltea, hfac_lter, h_lte, safety;
+  PetscReal     enorm, enorma, enormr, hfac_lte, hfac_ltea, hfac_lter, h_lte, safety, adapt_dt_min;
   PetscInt      order;
   PetscBool     bGTEMethod;
 
   PetscFunctionBegin;
-  *next_sc = 0; /* Reuse the same order scheme */
-  safety   = adapt->safety;
+  *next_sc     = 0; /* Reuse the same order scheme */
+  safety       = adapt->safety;
+  adapt_dt_min = PetscMax(adapt->dt_min_abs, adapt->dt_min_rel * PetscAbsReal(ts->ptime));
   PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSGLEE, &bGTEMethod));
   order = adapt->candidates.order[0];
 
@@ -53,7 +54,7 @@ static PetscErrorCode TSAdaptChoose_GLEE(TSAdapt adapt, TS ts, PetscReal h, Pets
 
   if (enorm > 1. || enorma > 1. || enormr > 1.) {
     if (!*accept) safety *= adapt->reject_safety; /* The last attempt also failed, shorten more aggressively */
-    if (h < (1 + PETSC_SQRT_MACHINE_EPSILON) * adapt->dt_min) {
+    if (h < (1 + PETSC_SQRT_MACHINE_EPSILON) * adapt_dt_min) {
       PetscCall(PetscInfo(adapt, "Estimated scaled truncation error [combined, absolute, relative]] [%g, %g, %g], accepting because step size %g is at minimum\n", (double)enorm, (double)enorma, (double)enormr, (double)h));
       *accept = PETSC_TRUE;
     } else if (adapt->always_accept) {
@@ -87,7 +88,7 @@ static PetscErrorCode TSAdaptChoose_GLEE(TSAdapt adapt, TS ts, PetscReal h, Pets
       hfac_lte = safety * PETSC_INFINITY;
     }
     h_lte   = h * PetscClipInterval(hfac_lte, adapt->clip[0], adapt->clip[1]);
-    *next_h = PetscClipInterval(h_lte, adapt->dt_min, adapt->dt_max);
+    *next_h = PetscClipInterval(h_lte, adapt_dt_min, adapt->dt_max);
   } else {
     /* The optimal new step based purely on local truncation error for this step. */
     if (enorm > 0) {
@@ -101,7 +102,7 @@ static PetscErrorCode TSAdaptChoose_GLEE(TSAdapt adapt, TS ts, PetscReal h, Pets
       hfac_lte = safety * PETSC_INFINITY;
     }
     h_lte   = h * PetscClipInterval(hfac_lte, adapt->clip[0], adapt->clip[1]);
-    *next_h = PetscClipInterval(h_lte, adapt->dt_min, adapt->dt_max);
+    *next_h = PetscClipInterval(h_lte, adapt_dt_min, adapt->dt_max);
   }
   *wlte  = enorm;
   *wltea = enorma;

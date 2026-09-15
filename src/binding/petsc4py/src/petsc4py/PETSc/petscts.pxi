@@ -584,6 +584,27 @@ cdef PetscErrorCode TS_PostEvent(
     postevent(Ts, events_zero_array, toReal(time), Vu, toBool(forward), *args, **kargs)
     return PETSC_SUCCESS
 
+cdef PetscErrorCode TS_EvaluationTimesHandler(
+    PetscTS   ts,
+    PetscInt  iunion,
+    PetscInt  iprivate,
+    PetscReal t,
+    PetscVec  full,
+    PetscVec  *sub,
+    void      *ctx,
+   ) except PETSC_ERR_PYTHON with gil:
+    cdef TS  Ts   = ref_TS(ts)
+    cdef Vec Full = ref_Vec(full)
+    cdef Vec Sub  = None
+    cdef object Context = Ts.get_attr('__evaluationtimeshandler__')
+    if Context is None and ctx != NULL: Context = <object>ctx
+    assert Context is not None and type(Context) is tuple # sanity check
+    (Rec, args, kargs) = Context
+    Sub = Rec(Ts, toInt(iunion), toInt(iprivate), toReal(t), Full, *args, **kargs)
+    if Sub is None: sub[0] = NULL
+    else: sub[0] = Sub.vec
+    return PETSC_SUCCESS
+
 cdef PetscErrorCode TS_PreStep(
     PetscTS ts,
    ) except PETSC_ERR_PYTHON with gil:

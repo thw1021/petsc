@@ -1,0 +1,14 @@
+### Check 'user' before SetUp: start -1, end -1
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Corrupted PETSc object
+[0]PETSC ERROR: Time points not sorted in TSEvaluationTimesSchedule 'default'
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimesSetUp() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 TSEvaluationTimesSetDefaultSchedule() at tsevaltimes.c:0
+[0]PETSC ERROR: #3 TSEvaluationTimesSetFromOptions() at tsevaltimes.c:0
+[0]PETSC ERROR: #4 TSSetFromOptions() at ts.c:0
+[0]PETSC ERROR: #5 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -msg Points not sorted (source: command line)
+[0]PETSC ERROR: -ts_eval_times 1,3,4,5,2,6 (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

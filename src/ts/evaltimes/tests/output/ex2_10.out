@@ -1,0 +1,67 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 1 point(s)
+>> Schedule '  range' before Solve: 9 point(s)
+ETS 'user ' point 4.01, union index   10, private index   11
+ETS 'user ' point 4.21, union index   11, private index   12
+ETS 'user ' point 5., union index   12, private index   13
+ETS 'user ' point 5., union index   12, private index   14
+ETS 'user ' point 5.01, union index   13, private index   15
+ETS 'user ' point 5.21, union index   14, private index   16
+ETS 'user ' point 6., union index   15, private index   17
+ETS 'user ' point 6., union index   15, private index   18
+ETS 'user ' point 6., union index   15, private index   19
+### Check 'user' after Solve: start 9, end 20
+== CONVERGED_TIME ==
+0	5.	1.00009e-12	pass
+0	6.	0.	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [9, 20)
+0.01	0.	***
+0.21	0.	***
+1.01	0.	***
+1.21	0.	***
+2.01	0.	***
+2.21	0.	***
+3.	0.	***
+3.01	0.	***
+3.21	0.	***
+4.	0.	***
+4.	0.	***
+4.01	0.999998	pass
+4.21	0.9997	pass
+5.	0.998142	pass
+5.	0.998142	pass
+5.01	0.99814	pass
+5.21	0.997842	pass
+6.	0.996287	pass
+6.	0.996287	pass
+6.	0.996287	pass
+6.01	0.	***
+6.21	0.	***
+6.99	0.	***
+7.21	0.	***
+8.01	0.	***
+8.21	0.	***
+9.01	0.	***
+9.21	0.	***
+---
+Evaluation times schedule 'default': 1 point(s), visited subrange: [-1, -1)
+10.	0.	***
+---
+Evaluation times schedule 'range': 9 point(s), visited subrange: [-1, -1)
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+Initial time = 4., final time reached = 6., max time = 6., pass
+Initial time step = 0.099, final time step = 0.01, adapt == none, NO-match
+========================
+Merging points near t0 (4), near tmax (6), at the end (10)
+========================

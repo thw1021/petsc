@@ -1,0 +1,11 @@
+### Check 'user' before SetUp: start -1, end -1
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Corrupted PETSc object
+[0]PETSC ERROR: Need to set up TSEvaluationTimes first; use TSEvaluationTimesSetUp()
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSSolve() at ts.c:0
+[0]PETSC ERROR: #2 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 1 (source: command line)
+[0]PETSC ERROR: -msg TSSolve for not assembled TSEvaluationTimes (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

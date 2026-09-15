@@ -1,0 +1,43 @@
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 10 point(s)
+>> Schedule '  range' before Solve: 5 point(s)
+ETS 'Range' point 5., union index    0, private index    0
+ETS 'Range' point 6., union index    3, private index    1
+ETS 'Range' point 7., union index    4, private index    2
+ETS 'Range' point 8., union index    5, private index    3
+ETS 'Range' point 9., union index    6, private index    4
+### Check 'user' after Solve: not found
+== CONVERGED_EVENT ==
+0	5.04723	4.67352e-06	pass
+0	5.2625	1.19164e-05	pass
+0	5.50503	1.84064e-05	pass
+0	5.8208	2.4912e-05	pass
+0	6.39814	3.16448e-05	pass
+1	9.05	8.69547e-09	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default': 10 point(s), visited subrange: [0, 9)
+5.	0.650288	pass
+5.5	0.0591637	pass
+5.5	0.0591637	pass
+5.5	0.0591637	pass
+5.5	0.0591637	pass
+6.	0.960971	pass
+7.	-0.926692	pass
+8.	-0.996468	pass
+9.	-0.989208	pass
+10.	0.	***
+---
+Evaluation times schedule 'range': 5 point(s), visited subrange: [0, 5)
+5.	0.	***
+6.	0.	***
+7.	0.	***
+8.	0.	***
+9.	0.	***
+Initial time = 5., final time reached = 9.05, max time = 10., pass
+Initial time step = 0.099, final time step = 0.0871125
+========================
+Note, some evaluation time points are merged
+========================

@@ -14,14 +14,16 @@ static char help[] = "Simple linear problem with events\n"
                      "Options:\n"
                      "-dir    d : zero-crossing direction for events\n"
                      "-flg      : additional output in Postevent\n"
-                     "-errtol e : error tolerance, for printing 'pass/fail' for located events (1e-5 by default)\n"
+                     "-errtol e : error tolerance, for printing 'pass/fail' for located events\n"
                      "-restart  : flag for TSRestartStep() in PostEvent\n"
                      "-dtpost x : if x > 0, then on even PostEvent calls 1st-post-event-step = x is set,\n"
                      "                            on odd PostEvent calls 1st-post-event-step = PETSC_DECIDE is set,\n"
                      "            if x == 0, nothing happens\n";
 
-#define MAX_NFUNC 100  // max event functions per rank
-#define MAX_NEV   5000 // max zero crossings for each rank
+#define MAX_NFUNC 20                     // max event functions per rank
+#define MAX_NEV   1000                   // max zero crossings for each rank
+#define EV_TOL    PETSC_SMALL * 10.0     // tolerance for event zero crossing
+#define EV_TOL3   EV_TOL *EV_TOL *EV_TOL // tight tolerance for event zero crossing
 
 typedef struct {
   PetscMPIInt rank, size;
@@ -32,7 +34,7 @@ typedef struct {
   PetscInt    cnt;              // counter
   PetscInt    cntref;           // actual length of 'ref' on the given rank
   PetscBool   flg;              // flag for additional print in PostEvent
-  PetscReal   errtol;           // error tolerance, for printing 'pass/fail' for located events (1e-5 by default)
+  PetscReal   errtol;           // error tolerance, for printing 'pass/fail' for located events
   PetscBool   restart;          // flag for TSRestartStep() in PostEvent
   PetscReal   dtpost;           // post-event step
   PetscInt    postcnt;          // counter for PostEvent calls
@@ -54,6 +56,7 @@ int main(int argc, char **argv)
   PetscBool    term[MAX_NFUNC];
   PetscScalar *x, vals[4];
   PetscReal    aux;
+  TSAdapt      adapt;
   AppCtx       ctx;
 
   PetscFunctionBeginUser;
@@ -65,7 +68,7 @@ int main(int argc, char **argv)
   ctx.cnt     = 0;
   ctx.cntref  = 0;
   ctx.flg     = PETSC_FALSE;
-  ctx.errtol  = 1e-5;
+  ctx.errtol  = PetscSqrtReal(0.005 * PETSC_SMALL);
   ctx.restart = PETSC_FALSE;
   ctx.dtpost  = 0;
   ctx.postcnt = 0;
@@ -103,7 +106,8 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxSteps(ts, 10000));
   PetscCall(TSSetMaxTime(ts, 10.0));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
-  PetscCall(TSSetFromOptions(ts));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, 0.99));
 
   // Set the event handling
   ctx.dir0 = 0;
@@ -150,8 +154,9 @@ int main(int argc, char **argv)
   }
   if (ctx.cntref > 0) PetscCall(PetscSortReal(ctx.cntref, ctx.ref));
   PetscCall(TSSetEventHandler(ts, n, dir, term, EventFunction, Postevent, &ctx));
-  SetVtols(ctx.rank, ctx.size, 1e-8, 1e-8, ctx.vtol);
-  PetscCall(TSSetEventTolerances(ts, PETSC_DECIDE, ctx.vtol));
+  SetVtols(ctx.rank, ctx.size, EV_TOL, EV_TOL, ctx.vtol);
+  PetscCall(TSSetEventTolerances(ts, PETSC_CURRENT, ctx.vtol));
+  PetscCall(TSSetFromOptions(ts));
 
   // Solution
   PetscCall(TSSolve(ts, sol));
@@ -230,12 +235,12 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 #endif
 
   if ((Ctx->dir0 == 0 && PetscAbsReal(t - (PetscReal)4.0) < 0.01) || (Ctx->dir0 == -1 && PetscAbsReal(t - (PetscReal)3.0) < 0.01)) {
-    SetVtols(Ctx->rank, Ctx->size, 1e-8, 1e-26, Ctx->vtol); // for better resolution of sin-event at t=5.0
-    PetscCall(TSSetEventTolerances(ts, PETSC_DECIDE, Ctx->vtol));
+    SetVtols(Ctx->rank, Ctx->size, EV_TOL, EV_TOL3, Ctx->vtol); // for better resolution of sin-event at t=5.0
+    PetscCall(TSSetEventTolerances(ts, PETSC_CURRENT, Ctx->vtol));
   }
   if (PetscAbsReal(t - (PetscReal)5.0) < 0.01) {
-    SetVtols(Ctx->rank, Ctx->size, 1e-8, 1e-8, Ctx->vtol); // back to normal
-    PetscCall(TSSetEventTolerances(ts, PETSC_DECIDE, Ctx->vtol));
+    SetVtols(Ctx->rank, Ctx->size, EV_TOL, EV_TOL, Ctx->vtol); // back to normal
+    PetscCall(TSSetEventTolerances(ts, PETSC_CURRENT, Ctx->vtol));
   }
 
   if (Ctx->restart) PetscCall(TSRestartStep(ts));
@@ -246,6 +251,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, PetscReal tolsin, PetscReal *vtol)
 {
   PetscInt n = 0;
+
   for (PetscInt i = -3; i <= 3; i++)
     if (rank == (i + 3) % size) vtol[n++] = tol0; // pos-polynomials
   for (PetscInt i = -3; i <= 3; i++)
@@ -265,7 +271,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: pos1
     output_file: output/ex5_pos1.out
-    args: -dir 1 -ts_event_dt_min 1e-6
+    args: -dir 1
     args: -restart 1
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step 0.31
@@ -276,23 +282,19 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: pos4
     output_file: output/ex5_pos4.out
-    args: -dir 1 -ts_event_dt_min 1e-6 -ts_time_step 0.25
+    args: -dir 1 -ts_time_step 0.25
     args: -restart 0
     args: -dtpost 0
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
     nsize: 4
-    filter: sort
-    filter_output: sort
 
   test:
     suffix: neu1
     output_file: output/ex5_neu1.out
-    args: -dir 0 -ts_event_dt_min 1e-6
+    args: -dir 0
     args: -restart 0
     args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step -1
     args: -ts_type rk
     args: -ts_adapt_type {{none basic}}
     nsize: 1
@@ -300,40 +302,32 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: neu4
     output_file: output/ex5_neu4.out
-    args: -dir 0 -ts_event_dt_min 1e-6 -ts_time_step 0.25
+    args: -dir 0 -ts_time_step 0.25
     args: -dtpost 0
     args: -ts_event_post_event_step {{-1 0.29}}
     args: -ts_event_post_event_second_step {{-1 0.31}}
     args: -ts_type rk
     args: -ts_adapt_type {{none basic}}
     nsize: 4
-    filter: sort
-    filter_output: sort
 
   test:
     suffix: neg2
     output_file: output/ex5_neg2.out
-    args: -dir -1 -ts_event_dt_min 1e-6
+    args: -dir -1
     args: -restart 1
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step 0.31
     args: -ts_type beuler
     args: -ts_adapt_type {{none basic}}
     nsize: 2
-    filter: sort
-    filter_output: sort
 
   test:
     suffix: neg4
     output_file: output/ex5_neg4.out
-    args: -dir -1 -ts_event_dt_min 1e-6 -ts_time_step 0.25
+    args: -dir -1 -ts_time_step 0.25
     args: -restart 0
     args: -dtpost 0
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
     nsize: 4
-    filter: sort
-    filter_output: sort
-
 TEST*/
