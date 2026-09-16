@@ -233,6 +233,28 @@ which fans them out — but the visualization arm of that fan-out is conditional
 **Cost accepted:** the orchestrator must judge "did the user ask to see results?"
 rather than always rendering; ambiguous cases are resolved at HITL gate 4.
 
+## D21 — Task triage: a `programming` lane beside `simulation`
+**Status:** Accepted — extends D1/D3
+**Decision:** The orchestrator first classifies each request into
+`task_kind: simulation | programming` (a routing decision, like autonomy, not a
+contract field). `simulation` (default) runs the full modeling → discretization →
+MMS-verify pipeline. `programming` — a direct PETSc coding task with no governing
+equation (e.g. `VecScatter`, data-structure/API exercises) — skips pde-modeling,
+numerical-analysis, and MMS, and instead has code-generation implement to a short
+brief and verify by a clean run that produces the exact requested output. Both
+lanes emit the same `results-manifest.json` (`convergence_study` is optional).
+**Why:** Not every "PETSc in C" task is a PDE. Forcing a programming task through
+pde-modeling (governing equations, geometry, BCs — all required by
+`problem-spec.json`) is a category error, and MMS is meaningless without a
+manufactured solution. A second lightweight lane reuses code-generation and the
+existing manifest without distorting the PDE path.
+**Naming:** `simulation`/`programming` (positive, by verification style), not
+`pde`/`non_pde` — the space is not binary (ODE and optimization are non-PDE yet
+still "simulation"-shaped) and negation names age badly.
+**Deferred:** a formal `task-spec.json` contract for the programming brief — kept
+as skill-level prose for now; formalize once exercised. Non-PDE tasks are NOT
+promoted into the MMS-gated case index (D18): they lack convergence ground truth.
+
 ---
 
 ## Open questions (for David / the team)
