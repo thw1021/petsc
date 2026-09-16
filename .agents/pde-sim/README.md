@@ -5,6 +5,13 @@ and drives it through modeling → discretization → code generation →
 verification → simulation → analysis, producing verified and analyzed numerical
 solutions — visualized too when the user asks to see them.
 
+The orchestrator first triages the request into a `task_kind` (see D21): the
+default **`simulation`** lane runs the full PDE/ODE pipeline above; a lightweight
+**`programming`** lane handles direct PETSc coding tasks that have no governing
+equation (e.g. `VecScatter`, data-structure/API exercises), skipping modeling,
+discretization, and MMS and verifying by a clean run that produces the requested
+output. Both lanes emit the same `results-manifest.json`.
+
 The design is split into a framework-neutral **core** (contracts, agent role
 prompts, domain-knowledge skills, example components, tests) and a thin per-tool
 **binding**. Inside PETSc the core lives under `.agents/`: the domain **skills**
