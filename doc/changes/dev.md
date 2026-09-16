@@ -40,6 +40,7 @@
 - Change `-help 0`, `-help no`, `-help false` and `-help off` to turn the help output off; they previously turned it on
 - Add `-help mansec` to restrict the options help output to the options blocks in the given manual section; a comma-separated list may be given, for example `-help ksp,snes`
 - Add `Viewer` and `Bag` as the manual sections of, respectively, the viewer options an object creates, such as `-ksp_monitor` and `-ksp_view`, and the options registered by `PetscBagRegisterInt()` and the other `PetscBagRegister` routines; these are listed by `-help viewer` and `-help bag`, and not by the section of the object that creates them, so `-help ksp` does not list `-ksp_monitor`
+- Deprecate `PetscVoidFunction` and `PetscVoidStarFunction` in favor of `PetscVoidFn *` and `PetscVoidFn **`
 
 ## Event Logging
 
@@ -52,6 +53,7 @@
 
 ## PetscDraw
 
+- Deprecate `PetscXIOErrorHandler` in favor of `PetscXIOErrorHandlerFn *`
 
 ## AO
 
@@ -109,6 +111,7 @@
 - Change `MatSetValues()` for `MATMPISELL` to skip, rather than error on, a new off-diagonal location when `MatSetOption(mat, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE)` was called, matching `MATMPIAIJ`
 - Fix `MatSetValues()` for `MATMPIAIJ` to decide the `MAT_IGNORE_ZERO_ENTRIES` diagonal exemption from the global row and column, not from the indices local to the diagonal block. The two differ only when the row and column layouts differ, where a zero off the diagonal could wrongly create a location and a zero on the diagonal could wrongly be dropped
 - Add device support for `MATPRODUCT_AB` with a `MATMPIAIJCUSPARSE`, `MATMPIAIJHIPSPARSE`, or `MATMPIAIJKOKKOS` matrix and a `MATMPIDENSECUDA` or `MATMPIDENSEHIP` matrix; the off-process rows of the dense matrix are communicated with a `PetscSF` directly from device memory and the off-diagonal contribution uses the device sparse-dense product, also with `-matproduct_batch_size`
+- Deprecate `MatSolverFunction`, `MatHtoolKernel` and `MatH2OpusKernel` in favor of `MatSolverFn *`, `MatHtoolKernelFn *` and `MatH2OpusKernelFn *`
 
 ## MatCoarsen
 
@@ -167,6 +170,8 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
+- Deprecate `TSRHSFunction`, `TSRHSJacobian`, `TSRHSJacobianP`, `TSSolutionFunction`, `TSForcingFunction`, `TSIFunction`, `TSIJacobian`, `TSI2Function`, `TSI2Jacobian`, `TSTransientVariable`, `TSGLLEAcceptFunction` and `TSAlpha2Predictor` in favor of a pointer to the corresponding `Fn` typedef, for example `TSRHSFunctionFn *`
+- Deprecate `DMDATSRHSFunctionLocal`, `DMDATSRHSJacobianLocal`, `DMDATSIFunctionLocal` and `DMDATSIJacobianLocal` in favor of `DMDATSRHSFunctionLocalFn *`, `DMDATSRHSJacobianLocalFn *`, `DMDATSIFunctionLocalFn *` and `DMDATSIJacobianLocalFn *`
 
 ## TAO
 
