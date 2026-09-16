@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {
+      "id": "poisson2d",
+      "title": "2-D Poisson, unit square, homogeneous Dirichlet",
+      "problem_class": ["elliptic"],
+      "dimension": 2,
+      "geometry_class": "structured_dmda",
+      "discretization": "finite_difference, order 2 (5-point Laplacian)",
+      "solver": "cg + gamg",
+      "confirmed_orders": [
+        { "field": "u", "norm": "L2", "order": 2.0 },
+        { "field": "u", "norm": "Linf", "order": 2.0 }
+      ],
+      "verified": true,
+      "component": "components/poisson2d-dmda",
+      "artifacts_dir": "examples/poisson2d",
+      "problem_spec_id": "poisson2d",
+      "numerical_plan_id": "poisson2d-plan",
+      "notes": "Verified against MMS on 4 MPI ranks; observed order ~2.00 in L2 and Linf. Starting point for related elliptic problems on structured grids."
+    }
+  ]
+}

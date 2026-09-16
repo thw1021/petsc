@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "id": "poisson2d-plan",
+  "problem_spec_id": "poisson2d",
+  "geometry_class": {
+    "kind": "structured_dmda",
+    "dimension": 2,
+    "resolution_strategy": "Uniform Cartesian grid; refine 16x16 -> 32x32 -> 64x64 -> 128x128 for the convergence study."
+  },
+  "discretization": {
+    "method": "finite_difference",
+    "order": 2,
+    "details": "Standard 5-point Laplacian stencil on DMDA; Dirichlet nodes eliminated into the RHS."
+  },
+  "coefficient_functions": [
+    {
+      "name": "forcing_f",
+      "role": "manufactured_forcing",
+      "applies_to_term": "-\\Delta u",
+      "signature": "f(x,y) -> PetscScalar",
+      "is_field": true,
+      "description": "2*pi^2*sin(pi*x)*sin(pi*y)"
+    },
+    {
+      "name": "exact_u",
+      "role": "diagnostic",
+      "applies_to_term": "solution",
+      "signature": "u_exact(x,y) -> PetscScalar",
+      "is_field": true,
+      "description": "sin(pi*x)*sin(pi*y); used for error norms."
+    },
+    {
+      "name": "bc_dirichlet",
+      "role": "boundary",
+      "applies_to_term": "boundary",
+      "signature": "g(x,y) -> PetscScalar",
+      "is_field": false,
+      "description": "Homogeneous Dirichlet value 0 on all edges."
+    }
+  ],
+  "solver_stack": {
+    "ksp": "cg",
+    "pc": "gamg",
+    "tolerances": { "rtol": 1e-10, "atol": 1e-12 },
+    "rationale": "The discrete Laplacian is SPD, so CG is optimal; GAMG gives mesh-independent iteration counts."
+  },
+  "mms": {
+    "manufactured_solutions": [
+      { "field": "u", "expression_latex": "\\sin(\\pi x)\\sin(\\pi y)" }
+    ],
+    "forcing_functions": [
+      { "name": "f", "expression_latex": "2\\pi^2 \\sin(\\pi x)\\sin(\\pi y)" }
+    ],
+    "expected_rates": [
+      { "field": "u", "norm": "L2", "expected_order": 2 },
+      { "field": "u", "norm": "Linf", "expected_order": 2 }
+    ]
+  },
+  "verification_plan": {
+    "refinement_sequence": ["16x16", "32x32", "64x64", "128x128"],
+    "norms": ["L2", "Linf"],
+    "conservation_checks": []
+  },
+  "notes": "Linear problem, so no SNES; steady, so no TS."
+}
