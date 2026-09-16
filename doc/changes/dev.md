@@ -112,6 +112,7 @@
 - Fix `MatSetValues()` for `MATMPIAIJ` to decide the `MAT_IGNORE_ZERO_ENTRIES` diagonal exemption from the global row and column, not from the indices local to the diagonal block. The two differ only when the row and column layouts differ, where a zero off the diagonal could wrongly create a location and a zero on the diagonal could wrongly be dropped
 - Add device support for `MATPRODUCT_AB` with a `MATMPIAIJCUSPARSE`, `MATMPIAIJHIPSPARSE`, or `MATMPIAIJKOKKOS` matrix and a `MATMPIDENSECUDA` or `MATMPIDENSEHIP` matrix; the off-process rows of the dense matrix are communicated with a `PetscSF` directly from device memory and the off-diagonal contribution uses the device sparse-dense product, also with `-matproduct_batch_size`
 - Deprecate `MatSolverFunction`, `MatHtoolKernel` and `MatH2OpusKernel` in favor of `MatSolverFn *`, `MatHtoolKernelFn *` and `MatH2OpusKernelFn *`
+- Change the application context argument of `MatCreateH2OpusFromKernel()` and of the `MatH2OpusKernelFn` callback from `void *` to `PetscCtx`; no user source changes are required
 
 ## MatCoarsen
 
