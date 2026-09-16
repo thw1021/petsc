@@ -1,0 +1,16 @@
+{
+  "name": "poisson2d-dmda",
+  "summary": "Verified 2-D Poisson solver on a structured DMDA (second-order 5-point FD) with a method-of-manufactured-solutions convergence harness.",
+  "problem_class": ["elliptic"],
+  "geometry_class": "structured_dmda",
+  "provides": [
+    "main() simulation with a built-in refinement/convergence study",
+    "manufactured forcing + exact solution + Dirichlet data",
+    "L2 and Linf error norms and observed-order reporting",
+    "PETSc makefile (build + run targets)"
+  ],
+  "reuse": "Adapt forcing(), uExact(), gBC(), and the 5-point stencil for related elliptic problems on structured grids; keep the MMS harness and error/convergence reporting.",
+  "verification": "make run  ->  observed order ~2.00 in L2 and Linf; CG + GAMG give mesh-independent iteration counts (verified on 4 MPI ranks).",
+  "provenance": "Promoted from examples/poisson2d (numerical plan poisson2d-plan).",
+  "files": ["poisson.c", "makefile"]
+}
