@@ -346,8 +346,8 @@ pause-for-approval:
     - python3 --version || { echo "python3 not installed"; exit 1; }
     - echo "$CI_MERGE_REQUEST_IID" | grep -qE '^[0-9]+$' || { echo "invalid MR IID"; exit 1; }
     - |
-      if [ -z "$GRAFANA_CLOUD_OTLP_ENDPOINT" ] || [ -z "$GRAFANA_CLOUD_OTLP_TOKEN" ]; then
-        echo "Grafana OTLP variables not set; disabling telemetry"
+      if [ "$AI_TIER" = free ] || [ -z "$GRAFANA_CLOUD_OTLP_ENDPOINT" ] || [ -z "$GRAFANA_CLOUD_OTLP_TOKEN" ]; then
+        echo "Disabling telemetry: free model, or Grafana OTLP variables not set"
         unset CLAUDE_CODE_ENABLE_TELEMETRY OTEL_METRICS_EXPORTER OTEL_EXPORTER_OTLP_ENDPOINT OTEL_EXPORTER_OTLP_HEADERS
         unset OPENCODE_ENABLE_TELEMETRY OPENCODE_OTLP_ENDPOINT OPENCODE_OTLP_HEADERS
       fi
@@ -386,10 +386,18 @@ ai-review:
   extends: .ai-review
   parallel:
     matrix:
+      # GitLab names a matrix job after its values, so AI_TIER labels the manual button.
+      # Free models also skip the telemetry export, having no spend to track.
+      # An opencode AI_MODEL is provider/model as the runner's opencode.json defines it.
       - AI_CLI: claude
+        AI_TIER: paid
         AI_MODEL: [sonnet, opus]
       - AI_CLI: opencode
-        AI_MODEL: [argo/gpt56sol, opencode/muse-spark-1.3-contributor-free]
+        AI_TIER: paid
+        AI_MODEL: [argo/gpt56sol]
+      - AI_CLI: opencode
+        AI_TIER: free
+        AI_MODEL: [alcf-minerva/nemotron-3-ultra, alcf-minerva/inkling-bf16]
 
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
