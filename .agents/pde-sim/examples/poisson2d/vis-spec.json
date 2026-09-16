@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "id": "poisson2d-vis",
+  "problem_spec_id": "poisson2d",
+  "numerical_plan_id": "poisson2d-plan",
+  "visualizations": [
+    {
+      "type": "warp",
+      "fields": ["u"],
+      "tool": "paraview",
+      "params": { "warp_scale": 0.3, "colormap": "viridis" },
+      "execution": "post_hoc"
+    },
+    {
+      "type": "out_of_range_highlight",
+      "fields": ["u"],
+      "tool": "paraview",
+      "params": { "nominal_range": [0.0, 1.0] },
+      "execution": "post_hoc"
+    },
+    {
+      "type": "mesh_render",
+      "fields": [],
+      "tool": "paraview",
+      "execution": "post_hoc"
+    }
+  ],
+  "auxiliary_computations": [
+    { "name": "pointwise_error", "description": "Compute |u_h - u_exact| as a field for visualization of error distribution." }
+  ],
+  "analytics": [
+    { "type": "mesh_convergence_plot", "fields": ["u"], "params": { "norms": ["L2", "Linf"], "reference_slopes": [2] }, "execution": "post_hoc" },
+    { "type": "nan_inf_detection", "fields": ["u"], "execution": "in_situ" },
+    { "type": "solver_convergence_plot", "params": { "quantity": "residual" }, "execution": "post_hoc" }
+  ],
+  "output_formats": ["hdf5", "xdmf", "png", "csv"],
+  "notes": "Solution output (HDF5/XDMF) is written in-binary by code-generation; the warp/range/mesh renders and the convergence plots are post_hoc scripts the visualization agent writes and runs. NaN/Inf detection is cheap enough to do in-situ."
+}
