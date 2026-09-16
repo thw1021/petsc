@@ -359,12 +359,25 @@ pause-for-approval:
         REVIEW_SKILL="review-mr"
       fi
       if [ "$AI_CLI" = "opencode" ]; then
-        opencode run --model "$AI_MODEL" --auto "Review MR $CI_MERGE_REQUEST_IID using the skill $REVIEW_SKILL, using xhigh effort if available"
+        # ALCF loads a non-resident model on demand, rejecting requests for 10-15 minutes
+        # while it starts. Retry only that message, so other failures still exit at once.
+        spinup_deadline=$(( $(date +%s) + 1500 ))
+        while true; do
+          rc=0
+          opencode run --model "$AI_MODEL" --auto "Review MR $CI_MERGE_REQUEST_IID using the skill $REVIEW_SKILL, using xhigh effort if available" 2> ai-review.stderr || rc=$?
+          cat ai-review.stderr >&2
+          test "$rc" -ne 0 || break
+          grep -qF 'not ready to receive tasks' ai-review.stderr || exit "$rc"
+          test "$(date +%s)" -lt "$spinup_deadline" || { echo "$AI_MODEL still loading after 25 minutes; giving up"; exit "$rc"; }
+          echo "$AI_MODEL is loading on demand; retrying in 60s"
+          sleep 60
+        done
       else
         # --max-turns 200: raised from the 30-turn default, then again from 100, because large MRs hit the cap before the review finished.
         claude -p "/${REVIEW_SKILL} ${CI_MERGE_REQUEST_IID}" --model "$AI_MODEL" --dangerously-skip-permissions --max-turns 200
       fi
-  timeout: 1h
+  # 1h30m: an on-demand ALCF model can spend 25 minutes loading before the review starts.
+  timeout: 1h30m
   allow_failure: true
   interruptible: true
   environment:
