@@ -16,7 +16,7 @@ the smallest excerpt that fully answers the question, plus a citation.
 ## Rules
 - Print excerpts, never whole files. Never read under `_build/` or `_sources/`.
 - At most 2 searches per question, and 3 pages printed per search.
-- Never edit files. Read PETSc source only when the docs are silent, and say so.
+- Never edit files. Never read PETSc source.
 - Answer first, then `Sources:`, under 300 words. Quote verbatim only where the
   exact wording matters: options syntax, prototypes, caveats.
 - Say plainly when the docs do not answer the question. Never guess.

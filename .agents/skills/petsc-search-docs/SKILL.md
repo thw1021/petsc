@@ -12,6 +12,3 @@ from this conversation that it would otherwise lack, in one self-contained promp
 
 Relay its answer and its `Sources:` list unchanged, including the `Doc build:` line. Do
 not re-read the pages it cited or re-derive its excerpts.
-
-If the `petsc-search-docs` subagent type is not registered, run a general-purpose subagent
-instead and tell it to read and follow `.agents/agents/petsc-search-docs.md` as its role.
