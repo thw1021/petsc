@@ -395,7 +395,7 @@ ai-review:
         AI_MODEL: [argo/gpt56sol]
       - AI_CLI: opencode
         AI_TIER: free
-        AI_MODEL: [openai/gpt-oss-120b, nvidia/nemotron-3-super-120b, opencode/muse-spark-1.3-contributor-free]
+        AI_MODEL: [alcf-inference-service-sophia/openai/gpt-oss-120b, alcf-inference-service-sophia/nvidia/nemotron-3-super-120b]
 
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
