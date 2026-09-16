@@ -1672,18 +1672,19 @@ done:
 @*/
 PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBool interpolate, DM *dm)
 {
-  PetscMPIInt  num_proc, rank;
-  DMLabel      cellSets = NULL, faceSets = NULL, vertSets = NULL;
-  PetscSection coordSection;
-  Vec          coordinates;
-  PetscScalar *coords;
-  PetscInt     coordSize, v;
+  PetscMPIInt      num_proc, rank;
+  PetscExodusIIInt int64_api;
+  DMLabel          cellSets = NULL, faceSets = NULL, vertSets = NULL;
+  PetscSection     coordSection;
+  Vec              coordinates;
+  PetscScalar     *coords;
+  PetscInt         coordSize, v;
   /* Read from ex_get_init() */
-  char title[PETSC_MAX_PATH_LEN + 1];
-  int  dim = 0, dimEmbed = 0, numVertices = 0, numCells = 0;
+  char     title[PETSC_MAX_PATH_LEN + 1];
+  PetscInt dim = 0, dimEmbed = 0, numVertices = 0, numCells = 0;
+  PetscInt num_cs = 0, num_vs = 0, num_fs = 0;
   /* Portion of the mesh read and inserted in the DM by this rank */
-  int numLocalVertices = 0, numLocalCells = 0;
-  int num_cs = 0, num_vs = 0, num_fs = 0;
+  PetscInt numLocalVertices = 0, numLocalCells = 0;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
@@ -1696,7 +1697,11 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
     vertex and face sets, and the ex_get_XXX() calls are collective. Ranks that do not own any part of a
     given entity simply read zero entries using the ex_get_partial_XXX() interface.
     For now, all points of the DM are owned by rank 0, so only rank 0 inserts points in the DM.
+    Integers are exchanged with ExodusII as PetscInt, independently of the mode the caller opened the file with,
+    which is restored before returning.
   */
+  int64_api = ex_int64_status(exoid) & EX_ALL_INT64_API;
+  ex_set_int64_status(exoid, PetscDefined(USE_64BIT_INDICES) ? EX_ALL_INT64_API : 0);
   PetscCall(PetscMemzero(title, PETSC_MAX_PATH_LEN + 1));
   PetscCallExternal(ex_get_init, exoid, title, &dimEmbed, &numVertices, &numCells, &num_cs, &num_vs, &num_fs);
   PetscCheck(num_cs, comm, PETSC_ERR_SUP, "Exodus file does not contain any cell set");
@@ -1710,14 +1715,14 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
   /* Read cell sets information */
   {
     PetscInt *cone;
-    int       c, cs, ncs, c_loc, v, v_loc;
+    PetscInt  c, cs, ncs, c_loc, v, v_loc;
     /* Read from ex_get_elem_blk_ids() */
-    int *cs_id, *cs_order;
+    PetscInt *cs_id, *cs_order;
     /* Read from ex_get_elem_block() */
-    char buffer[PETSC_MAX_PATH_LEN + 1];
-    int  num_cell_in_set, num_local_cell_in_set, num_vertex_per_cell, num_hybrid, num_attr;
+    char     buffer[PETSC_MAX_PATH_LEN + 1];
+    PetscInt num_cell_in_set, num_local_cell_in_set, num_vertex_per_cell, num_hybrid, num_attr;
     /* Read from ex_get_partial_conn() */
-    int *cs_connect;
+    PetscInt *cs_connect;
 
     /* Get cell sets IDs */
     PetscCall(PetscMalloc2(num_cs, &cs_id, num_cs, &cs_order));
@@ -1796,13 +1801,13 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
 
   /* Create vertex set label */
   if (num_vs > 0) {
-    int vs, v;
+    PetscInt vs, v;
     /* Read from ex_get_node_set_ids() */
-    int *vs_id;
+    PetscInt *vs_id;
     /* Read from ex_get_node_set_param() */
-    int num_vertex_in_set, num_local_vertex_in_set;
+    PetscInt num_vertex_in_set, num_local_vertex_in_set;
     /* Read from ex_get_partial_set() */
-    int *vs_vertex_list;
+    PetscInt *vs_vertex_list;
 
     /* Get vertex set ids */
     PetscCall(PetscMalloc1(num_vs, &vs_id));
@@ -1857,13 +1862,13 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
 
   /* Create side set label */
   if (interpolate && (num_fs > 0)) {
-    int fs, f, voff;
+    PetscInt fs, f, voff;
     /* Read from ex_get_side_set_ids() */
-    int *fs_id;
+    PetscInt *fs_id;
     /* Read from ex_get_side_set_param() */
-    int num_side_in_set;
+    PetscInt num_side_in_set;
     /* Read from ex_get_side_set_node_list() */
-    int *fs_vertex_count_list, *fs_vertex_list, *fs_side_list;
+    PetscInt *fs_vertex_count_list, *fs_vertex_list, *fs_side_list;
     /* Read side set labels */
     char   fs_name[MAX_STR_LENGTH + 1];
     size_t fs_name_len;
@@ -1899,8 +1904,8 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
         /* Only the ranks owning these vertices can look up the face they bound */
         if (!numLocalVertices) continue;
         PetscCall(DMPlexGetFullJoin(*dm, faceSize, faceVertices, &numFaces, &faces));
-        PetscCheck(numFaces == 1, comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %" PetscInt_FMT " faces", f, fs, numFaces);
-        PetscCheck(dim == 1 || faces[0] >= numLocalCells + numLocalVertices, comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to point %" PetscInt_FMT " which is not a face", f, fs, faces[0]);
+        PetscCheck(numFaces == 1, comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %" PetscInt_FMT " in set %" PetscInt_FMT " maps to %" PetscInt_FMT " faces", f, fs, numFaces);
+        PetscCheck(dim == 1 || faces[0] >= numLocalCells + numLocalVertices, comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %" PetscInt_FMT " in set %" PetscInt_FMT " maps to point %" PetscInt_FMT " which is not a face", f, fs, faces[0]);
         PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", faces[0], fs_id[fs]));
         /* Only add the label if one has been detected for this side set. */
         if (!fs_name_err) PetscCall(DMSetLabelValue(*dm, fs_name, faces[0], fs_id[fs]));
@@ -1925,5 +1930,6 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscExodusIIInt exoid, PetscBo
     if (flag[1]) PetscCall(DMCreateLabel(*dm, "Face Sets"));
     if (flag[2]) PetscCall(DMCreateLabel(*dm, "Vertex Sets"));
   }
+  ex_set_int64_status(exoid, int64_api);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
