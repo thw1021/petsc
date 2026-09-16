@@ -128,7 +128,7 @@ if __name__ ==  '__main__':
 
     browser = False
     if len(argv) > 1 and argv[0] == '--md':
-      files = searchDocsIndex(' '.join(sys.argv[2:]), cnt = cnt, md = True)
+      files = searchDocsIndex(' '.join(argv[1:]), cnt = cnt, md = True)
     elif len(argv) > 1 and argv[0] == '--browser':
       files = searchDocsIndex(' '.join(argv[1:]), cnt = cnt)
       browser = True
