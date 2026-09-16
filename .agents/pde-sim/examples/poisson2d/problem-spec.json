@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "id": "poisson2d",
+  "phenomenon": "Steady-state heat conduction (equivalently electrostatic potential) on a unit square with fixed zero temperature on all edges and a prescribed interior heat source.",
+  "pde_class": ["elliptic"],
+  "unknowns": [
+    { "symbol": "u", "description": "temperature (or potential) field", "tensor_rank": 0, "units": "K" }
+  ],
+  "governing_equations": [
+    {
+      "name": "Poisson",
+      "strong_form_latex": "-\\Delta u = f \\quad \\text{in } \\Omega",
+      "weak_form_latex": "\\int_\\Omega \\nabla u \\cdot \\nabla v \\, dx = \\int_\\Omega f v \\, dx \\quad \\forall v \\in H_0^1(\\Omega)",
+      "notes": "Constant unit conductivity absorbed into f."
+    }
+  ],
+  "geometry": {
+    "dimension": 2,
+    "description": "Unit square domain with a single connected boundary.",
+    "extent": "[0,1] x [0,1]",
+    "boundary_tags": ["boundary"]
+  },
+  "boundary_conditions": [
+    { "applies_to": "u", "location": "boundary", "type": "dirichlet", "value_latex": "0" }
+  ],
+  "parameters": [
+    {
+      "symbol": "k",
+      "description": "thermal conductivity",
+      "kind": "constant",
+      "value": 1.0,
+      "units": "W/(m*K)",
+      "scale_dependent": false,
+      "notes": "Homogeneous isotropic medium; set to 1 for the canonical Poisson form."
+    }
+  ],
+  "time_dependent": false,
+  "scale_considerations": {
+    "unresolved_scales": false,
+    "notes": "Single-scale, smooth solution; no closure/subgrid model required."
+  },
+  "assumptions": [
+    "Homogeneous, isotropic medium",
+    "Constant conductivity",
+    "Steady state (no time dependence)"
+  ],
+  "open_questions": []
+}
