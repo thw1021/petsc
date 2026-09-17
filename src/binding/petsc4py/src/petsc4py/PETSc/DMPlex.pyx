@@ -319,7 +319,8 @@ cdef class DMPlex(DM):
         Parameters
         ----------
         exoid
-            The ExodusII id associated with a file obtained using ``ex_open``.
+            The ExodusII id of a file opened with ``ex_open_par`` on all
+            processes of ``comm``.
         interpolate
             Create faces and edges in the mesh,
         comm

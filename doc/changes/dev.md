@@ -236,6 +236,8 @@
 - Add `DM_COORD_MAP_ROTATE`
 - Add `DM_SHAPE_DIIID`
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
+- Change `DMPlexCreateExodus()` to require an ExodusII file id that is valid on every rank, as obtained with `ex_open_par()`; all ranks now take part in reading the mesh, which still ends up entirely on rank 0. `DMPlexCreateExodusFromFile()` opens the file on all ranks accordingly
+- Fix `DMPlexCreateExodus()` with 64-bit indices when given the file id of a `PETSCVIEWEREXODUSII` viewer, whose integers were read into 32-bit buffers
 
 ## FE/FV
 
