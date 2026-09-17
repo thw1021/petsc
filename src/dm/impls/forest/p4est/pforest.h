@@ -507,9 +507,9 @@ static int pforest_refine_flag(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 
 static PetscErrorCode DMPforestComputeLocalCellTransferSF_loop(p4est_t *p4estFrom, PetscInt FromOffset, p4est_t *p4estTo, PetscInt ToOffset, p4est_topidx_t flt, p4est_topidx_t llt, PetscInt *toFineLeavesCount, PetscInt *toLeaves, PetscSFNode *fromRoots, PetscInt *fromFineLeavesCount, PetscInt *fromLeaves, PetscSFNode *toRoots)
 {
-  PetscMPIInt    rank = p4estFrom->mpirank;
-  p4est_topidx_t t;
-  PetscInt       toFineLeaves = 0, fromFineLeaves = 0;
+  PetscMPIInt             rank = p4estFrom->mpirank;
+  volatile p4est_topidx_t t;
+  volatile PetscInt       toFineLeaves = 0, fromFineLeaves = 0;
 
   PetscFunctionBegin;
   /* -Wmaybe-uninitialized */
@@ -524,7 +524,8 @@ static PetscErrorCode DMPforestComputeLocalCellTransferSF_loop(p4est_t *p4estFro
     PetscInt          numTo     = (PetscInt)treeTo->quadrants.elem_count;
     p4est_quadrant_t *quadsFrom = (p4est_quadrant_t *)treeFrom->quadrants.array;
     p4est_quadrant_t *quadsTo   = (p4est_quadrant_t *)treeTo->quadrants.array;
-    PetscInt          currentFrom, currentTo;
+    PetscInt          currentFrom;
+    volatile PetscInt currentTo;
     PetscInt          treeOffsetFrom = (PetscInt)treeFrom->quadrants_offset;
     PetscInt          treeOffsetTo   = (PetscInt)treeTo->quadrants_offset;
     int               comp;
@@ -655,7 +656,7 @@ static PetscErrorCode DMPforestComputeOverlappingRanks(PetscMPIInt size, PetscMP
   *startB = -1;
   *endB   = -1;
   if (p4estA->local_num_quadrants) {
-    PetscInt lo, hi, guess;
+    volatile PetscInt lo, hi, guess;
     /* binary search to find interval containing myCoarseStart */
     lo    = 0;
     hi    = size;
@@ -1105,9 +1106,9 @@ static PetscErrorCode DMSetUp_pforest(DM dm)
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size));
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
     if (size > 1 && (pforest->partition_for_coarsening || forest->cellWeights || forest->weightCapacity != 1. || forest->weightsFactor != 1.)) {
-      PetscBool      copyForest  = PETSC_FALSE;
-      p4est_t       *forest_copy = NULL;
-      p4est_gloidx_t shipped     = 0;
+      PetscBool copyForest          = PETSC_FALSE;
+      p4est_t *volatile forest_copy = NULL;
+      p4est_gloidx_t shipped        = 0;
 
       if (preCoarseToFine || coarseToPreFine) copyForest = PETSC_TRUE;
       if (copyForest) PetscCallP4estReturn(forest_copy, p4est_copy, pforest->forest, 0);
@@ -1190,9 +1191,10 @@ static PetscErrorCode DMSetUp_pforest(DM dm)
       }
 
       if (overlap > 0) {
-        PetscInt i, cLocalStart;
-        PetscInt cEnd;
-        PetscSF  preCellSF = NULL, cellSF = NULL;
+        volatile PetscInt i;
+        PetscInt          cLocalStart;
+        PetscInt          cEnd;
+        PetscSF           preCellSF = NULL, cellSF = NULL;
 
         PetscCallP4estReturn(pforest->ghost, p4est_ghost_new, pforest->forest, P4EST_CONNECT_FULL);
         PetscCallP4estReturn(pforest->lnodes, p4est_lnodes_new, pforest->forest, pforest->ghost, -P4EST_DIM);
@@ -2348,9 +2350,9 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
   p4est_topidx_t     fltF, lltF, t;
   DM                 plexC, plexF;
   PetscInt           pStartF, pEndF, pStartC, pEndC;
-  PetscBool          saveInCoarse = PETSC_FALSE;
-  PetscBool          saveInFine   = PETSC_FALSE;
-  PetscBool          formCids     = (childIds != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  volatile PetscBool saveInCoarse = PETSC_FALSE;
+  volatile PetscBool saveInFine   = PETSC_FALSE;
+  volatile PetscBool formCids     = (childIds != NULL) ? PETSC_TRUE : PETSC_FALSE;
   PetscInt          *cids         = NULL;
 
   PetscFunctionBegin;
@@ -2496,17 +2498,17 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
   }
 
   {
-    PetscInt     p;
-    PetscInt     cLocalStartF;
-    PetscSF      pointSF;
-    PetscSFNode *roots;
-    PetscInt    *rootType;
-    DM           refTree = NULL;
-    DMLabel      canonical;
-    PetscInt    *childClosures[P4EST_CHILDREN] = {NULL};
-    PetscInt    *rootClosure                   = NULL;
-    PetscInt     coarseOffset;
-    PetscInt     numCoarseQuads;
+    PetscInt          p;
+    PetscInt          cLocalStartF;
+    PetscSF           pointSF;
+    PetscSFNode      *roots;
+    PetscInt         *rootType;
+    DM                refTree = NULL;
+    DMLabel           canonical;
+    PetscInt         *childClosures[P4EST_CHILDREN] = {NULL};
+    PetscInt         *rootClosure                   = NULL;
+    volatile PetscInt coarseOffset;
+    PetscInt          numCoarseQuads;
 
     PetscCall(PetscMalloc1(pEndF - pStartF, &roots));
     PetscCall(PetscMalloc1(pEndF - pStartF, &rootType));
@@ -2534,17 +2536,18 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
       PetscInt          numFineQuads = (PetscInt)tree->quadrants.elem_count;
       p4est_quadrant_t *coarseQuads  = treeQuads[t - fltF];
       p4est_quadrant_t *fineQuads    = (p4est_quadrant_t *)tree->quadrants.array;
-      PetscInt          i, coarseCount = 0;
-      PetscInt          offset = tree->quadrants_offset;
+      PetscInt          i;
+      volatile PetscInt coarseCount = 0;
+      PetscInt          offset      = tree->quadrants_offset;
       sc_array_t        coarseQuadsArray;
 
       numCoarseQuads = treeQuadCounts[t - fltF];
       PetscCallP4est(sc_array_init_data, &coarseQuadsArray, coarseQuads, sizeof(p4est_quadrant_t), (size_t)numCoarseQuads);
       for (i = 0; i < numFineQuads; i++) {
-        PetscInt          c          = i + offset;
-        p4est_quadrant_t *quad       = &fineQuads[i];
-        p4est_quadrant_t *quadCoarse = NULL;
-        ssize_t           disjoint   = -1;
+        PetscInt          c                   = i + offset;
+        p4est_quadrant_t *quad                = &fineQuads[i];
+        p4est_quadrant_t *volatile quadCoarse = NULL;
+        ssize_t disjoint                      = -1;
 
         while (disjoint < 0 && coarseCount < numCoarseQuads) {
           quadCoarse = &coarseQuads[coarseCount];
@@ -2554,7 +2557,7 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
         PetscCheck(disjoint == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "did not find overlapping coarse quad");
         if (quadCoarse->level > quad->level || (quadCoarse->level == quad->level && !transferIdent)) { /* the "coarse" mesh is finer than the fine mesh at the point: continue */
           if (transferIdent) {                                                                         /* find corners */
-            PetscInt j = 0;
+            volatile PetscInt j = 0;
 
             do {
               if (j < P4EST_CHILDREN) {
@@ -3033,16 +3036,17 @@ static PetscErrorCode DMPforestGetTransferSF(DM dmA, DM dmB, const PetscInt dofP
 
 static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
 {
-  DM_Forest         *forest  = (DM_Forest *)dm->data;
-  DM_Forest_pforest *pforest = (DM_Forest_pforest *)forest->data;
-  PetscInt           cLocalStart, cLocalEnd, cStart, cEnd, fStart, fEnd, eStart, eEnd, vStart, vEnd;
-  PetscInt           cStartBase, cEndBase, fStartBase, fEndBase, vStartBase, vEndBase, eStartBase, eEndBase;
-  PetscInt           pStart, pEnd, pStartBase, pEndBase, p;
-  DM                 base;
-  PetscInt          *star      = NULL, starSize;
-  DMLabelLink        next      = dm->labels;
-  PetscInt           guess     = 0;
-  p4est_topidx_t     num_trees = pforest->topo->conn->num_trees;
+  DM_Forest           *forest  = (DM_Forest *)dm->data;
+  DM_Forest_pforest   *pforest = (DM_Forest_pforest *)forest->data;
+  PetscInt             cLocalStart, cLocalEnd, cStart, cEnd, fStart, fEnd, eStart, eEnd, vStart, vEnd;
+  PetscInt             cStartBase, cEndBase, fStartBase, fEndBase, vStartBase, vEndBase, eStartBase, eEndBase;
+  PetscInt             pStart, pEnd, pStartBase, pEndBase;
+  volatile PetscInt    p;
+  DM                   base;
+  PetscInt            *star      = NULL, starSize;
+  volatile DMLabelLink next      = dm->labels;
+  PetscInt             guess     = 0;
+  p4est_topidx_t       num_trees = pforest->topo->conn->num_trees;
 
   PetscFunctionBegin;
   pforest->labelsFinalized = PETSC_TRUE;
@@ -3051,13 +3055,14 @@ static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
   PetscCall(DMForestGetBaseDM(dm, &base));
   if (!base) {
     if (pforest->ghostName) { /* insert a label to make the boundaries, with stratum values denoting which face of the element touches the boundary */
-      p4est_connectivity_t *conn  = pforest->topo->conn;
-      p4est_t              *p4est = pforest->forest;
-      p4est_tree_t         *trees = (p4est_tree_t *)p4est->trees->array;
-      p4est_topidx_t        t, flt = p4est->first_local_tree;
-      p4est_topidx_t        llt = pforest->forest->last_local_tree;
-      DMLabel               ghostLabel;
-      PetscInt              c;
+      p4est_connectivity_t   *conn  = pforest->topo->conn;
+      p4est_t                *p4est = pforest->forest;
+      p4est_tree_t           *trees = (p4est_tree_t *)p4est->trees->array;
+      volatile p4est_topidx_t t;
+      p4est_topidx_t          flt = p4est->first_local_tree;
+      p4est_topidx_t          llt = pforest->forest->last_local_tree;
+      DMLabel                 ghostLabel;
+      volatile PetscInt       c;
 
       PetscCall(DMCreateLabel(plex, pforest->ghostName));
       PetscCall(DMGetLabel(plex, pforest->ghostName, &ghostLabel));
@@ -3065,11 +3070,11 @@ static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
         p4est_tree_t     *tree     = &trees[t];
         p4est_quadrant_t *quads    = (p4est_quadrant_t *)tree->quadrants.array;
         PetscInt          numQuads = (PetscInt)tree->quadrants.elem_count;
-        PetscInt          q;
+        volatile PetscInt q;
 
         for (q = 0; q < numQuads; q++, c++) {
           p4est_quadrant_t *quad = &quads[q];
-          PetscInt          f;
+          volatile PetscInt f;
 
           for (f = 0; f < P4EST_FACES; f++) {
             p4est_quadrant_t neigh;
@@ -3114,10 +3119,10 @@ static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
    * orientation of the quadrant relative to that point.  Use that to relate the point to the numbering in the base
    * mesh, and extract a label value (since the base mesh is redundantly distributed, can be found locally). */
   while (next) {
-    DMLabel     baseLabel;
-    DMLabel     label = next->label;
-    PetscBool   isDepth, isCellType, isGhost, isVTK, isSpmap;
-    const char *name;
+    DMLabel          baseLabel;
+    volatile DMLabel label = next->label;
+    PetscBool        isDepth, isCellType, isGhost, isVTK, isSpmap;
+    const char      *name;
 
     PetscCall(PetscObjectGetName((PetscObject)label, &name));
     PetscCall(PetscStrcmp(name, "depth", &isDepth));
@@ -3151,12 +3156,14 @@ static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
     } else baseLabel = NULL;
 
     for (p = pStart; p < pEnd; p++) {
-      PetscInt          s, c = -1, l;
+      PetscInt          s, c = -1;
+      volatile PetscInt l;
       PetscInt         *closure = NULL, closureSize;
       p4est_quadrant_t *ghosts  = (p4est_quadrant_t *)pforest->ghost->ghosts.array;
       p4est_tree_t     *trees   = (p4est_tree_t *)pforest->forest->trees->array;
-      p4est_quadrant_t *q;
-      PetscInt          t, val;
+      p4est_quadrant_t *volatile q;
+      volatile PetscInt t;
+      PetscInt          val;
       PetscBool         zerosupportpoint = PETSC_FALSE;
 
       PetscCall(DMPlexGetTransitiveClosure(plex, p, PETSC_FALSE, &starSize, &star));
