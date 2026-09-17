@@ -149,7 +149,9 @@ class Configure(config.base.Configure):
         frame = 1
       else:
         newlibs += self.getLibArgumentList(lib, with_rpath)
-    libs = newlibs
+    # compilers.py adds RPATHs for the compiler's own -L dirs before any package can register them in rpathSkipDirs
+    skipRpaths = [flag+d for d in self.rpathSkipDirs for flag in {getattr(self.setCompilers, lang+'SharedLinkerFlag', None) for lang in ['C', 'Cxx', 'FC']} if flag and not flag == '-L']
+    libs = [lib for lib in newlibs if lib not in skipRpaths]
     newldflags = []
     newlibs = []
     frame = 0
