@@ -403,14 +403,14 @@ ai-review:
       # first: it stays readable where the UI truncates the manual button's label.
       # Free models also skip the telemetry export, having no spend to track.
       # An opencode AI_MODEL is provider/model as the runner's opencode.json defines it.
-      - AI_MODEL: [sonnet, opus]
-        AI_CLI: claude
+      - AI_CLI: claude
+        AI_MODEL: [sonnet, opus]
         AI_TIER: paid
-      - AI_MODEL: [argo/gpt56sol]
-        AI_CLI: opencode
+      - AI_CLI: opencode
+        AI_MODEL: [argo/gpt56sol]
         AI_TIER: paid
-      - AI_MODEL: [alcf/nemotron-3u, oc/spark-1.3]
-        AI_CLI: opencode
+      - AI_CLI: opencode
+        AI_MODEL: [alcf/nemotron-3u, oc/spark-1.3]
         AI_TIER: free
 
 #
