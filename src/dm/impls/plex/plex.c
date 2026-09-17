@@ -7603,7 +7603,7 @@ static inline PetscErrorCode updatePointFields_private(PetscSection section, Pet
         }
       } else {
         for (b = 0; b < fdof; b++) {
-          if (comps[ci] == b) {
+          if (comps[ci] == b && ci < Ncc) {
             fuse(&a[b], values[foffset + b] * (flip ? flip[b] : 1.));
             ++ci;
           }
