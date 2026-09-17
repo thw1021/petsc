@@ -399,18 +399,19 @@ ai-review:
   extends: .ai-review
   parallel:
     matrix:
-      # GitLab names a matrix job after its values, so AI_TIER labels the manual button.
+      # GitLab names a matrix job from its values in declaration order, so AI_MODEL comes
+      # first: it stays readable where the UI truncates the manual button's label.
       # Free models also skip the telemetry export, having no spend to track.
       # An opencode AI_MODEL is provider/model as the runner's opencode.json defines it.
-      - AI_TIER: paid
+      - AI_MODEL: [sonnet, opus]
         AI_CLI: claude
-        AI_MODEL: [sonnet, opus]
-      - AI_TIER: paid
+        AI_TIER: paid
+      - AI_MODEL: [argo/gpt56sol]
         AI_CLI: opencode
-        AI_MODEL: [argo/gpt56sol]
-      - AI_TIER: free
+        AI_TIER: paid
+      - AI_MODEL: [alcf-m/nemotron-3-ultra, opencode/muse-spark-1.3]
         AI_CLI: opencode
-        AI_MODEL: [alcf-m/nemotron-3-ultra, opencode/muse-spark-1.3]
+        AI_TIER: free
 
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
