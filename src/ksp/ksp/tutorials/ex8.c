@@ -345,7 +345,7 @@ int main(int argc, char **args)
    test:
       suffix: weighted
       nsize: 2
-      args: -ksp_converged_reason -pc_asm_blocks 4 -pc_asm_type {{basic weighted}shared output}
+      args: -ksp_converged_reason -mat_partitioning_type current -pc_asm_blocks 4 -pc_asm_type {{basic weighted}shared output}
 
    test:
       suffix: weighted_zero
