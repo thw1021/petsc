@@ -48,6 +48,10 @@ Development
   - ``Viewer.FileMode``/``DrawSize`` instead of ``Mode``/``Size``, and
     ``Log.logFlops()`` instead of ``addFlops()``.
 
+- Add ``Mat.createComposite()``, ``Mat.addCompositeMat()``,
+  ``Mat.setCompositeType()``, ``Mat.getCompositeType()``,
+  ``Mat.getCompositeMats()``, and ``Mat.CompositeType``.
+
 
 Release 3.25.0
 ==============
