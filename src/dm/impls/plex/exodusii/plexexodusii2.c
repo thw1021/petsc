@@ -777,34 +777,33 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   /* Connectivity Variables */
   PetscInt cellsNotInConnectivity;
   /* Cell Sets */
-  DMLabel         csLabel;
-  IS              csIS;
-  const PetscInt *csIdx;
+  DMLabel         csLabel = NULL;
+  IS              csIS    = NULL;
+  const PetscInt *csIdx   = NULL;
   PetscInt        num_cs;
-  enum ElemType  *type;
-  PetscBool       hasLabel;
+  PetscBool       distributed;
   /* Coordinate Variables */
-  DM                 cdm;
-  PetscSection       coordSection;
-  Vec                coord;
-  PetscInt         **nodes;
-  PetscInt           depth, d, dim, skipCells = 0;
-  PetscInt           pStart, pEnd, p, cStart, cEnd, numCells, vStart, vEnd, numVertices, eStart, eEnd, numEdges, fStart, fEnd, numFaces, numNodes;
-  PetscInt           num_vs, num_fs;
-  PetscMPIInt        rank, size;
-  const char        *dmName;
-  PetscInt           nodesLineP1[4] = {2, 0, 0, 0};
-  PetscInt           nodesLineP2[4] = {2, 0, 0, 1};
-  PetscInt           nodesTriP1[4]  = {3, 0, 0, 0};
-  PetscInt           nodesTriP2[4]  = {3, 3, 0, 0};
-  PetscInt           nodesQuadP1[4] = {4, 0, 0, 0};
-  PetscInt           nodesQuadP2[4] = {4, 4, 0, 1};
-  PetscInt           nodesTetP1[4]  = {4, 0, 0, 0};
-  PetscInt           nodesTetP2[4]  = {4, 6, 0, 0};
-  PetscInt           nodesHexP1[4]  = {8, 0, 0, 0};
-  PetscInt           nodesHexP2[4]  = {8, 12, 6, 1};
-  PetscExodusIIInt   CPU_word_size, IO_word_size, EXO_mode;
-  PetscExodusIIFloat EXO_version;
+  DM               cdm = NULL;
+  PetscSection     coordSection;
+  Vec              coord = NULL;
+  PetscInt       **nodes;
+  PetscInt         depth = 0, d, dim, skipCells = 0;
+  PetscInt         pStart, pEnd, p, cStart, cEnd, numCells, vStart, vEnd, numVertices, eStart, eEnd, numEdges, fStart, fEnd, numFaces = 0, numNodes = 0;
+  PetscInt         num_vs = 0, num_fs = 0, numSets[3], infoSize;
+  PetscInt        *info, *csInfo, *vsInfo, *fsInfo;
+  PetscMPIInt      rank, size, infoSizeMPI;
+  const char      *dmName;
+  PetscInt         nodesLineP1[4] = {2, 0, 0, 0};
+  PetscInt         nodesLineP2[4] = {2, 0, 0, 1};
+  PetscInt         nodesTriP1[4]  = {3, 0, 0, 0};
+  PetscInt         nodesTriP2[4]  = {3, 3, 0, 0};
+  PetscInt         nodesQuadP1[4] = {4, 0, 0, 0};
+  PetscInt         nodesQuadP2[4] = {4, 4, 0, 1};
+  PetscInt         nodesTetP1[4]  = {4, 0, 0, 0};
+  PetscInt         nodesTetP2[4]  = {4, 6, 0, 0};
+  PetscInt         nodesHexP1[4]  = {8, 0, 0, 0};
+  PetscInt         nodesHexP2[4]  = {8, 12, 6, 1};
+  PetscExodusIIInt CPU_word_size, IO_word_size, EXO_mode;
 
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -828,42 +827,71 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   numCells    = cEnd - cStart;
   numEdges    = eEnd - eStart;
   numVertices = vEnd - vStart;
-  PetscCheck(!(rank && (numCells || numEdges || numVertices)), PETSC_COMM_SELF, PETSC_ERR_SUP, "Writing distributed DM in ExodusII format not supported");
+  distributed = rank && (numCells || numEdges || numVertices) ? PETSC_TRUE : PETSC_FALSE;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &distributed, 1, MPI_C_BOOL, MPI_LOR, comm));
+  PetscCheck(!distributed, comm, PETSC_ERR_SUP, "Writing distributed DM in ExodusII format not supported");
+  /*
+    The file is created by all ranks with ex_create_par(), so that they can all take part in writing the fields.
+    ExodusII requires all ranks to make the same calls defining the file structure, and the same calls writing
+    the variables it defines, which are collective. Rank 0 holds the whole mesh: it computes the mesh metadata
+    and broadcasts it, then all ranks make the same sequence of ExodusII calls, the other ranks writing zero
+    entries through the ex_put_partial_XXX() interface.
+  */
+  switch (exo->btype) {
+  case FILE_MODE_READ:
+  case FILE_MODE_APPEND:
+  case FILE_MODE_UPDATE:
+  case FILE_MODE_APPEND_UPDATE:
+    /* ExodusII does not allow writing geometry to an existing file */
+    SETERRQ(comm, PETSC_ERR_LIB, "cannot add geometry to existing file %s", exo->filename);
+  case FILE_MODE_WRITE:
+    /* Create an empty file if one already exists*/
+    EXO_mode = EX_CLOBBER;
+    if (PetscDefined(USE_64BIT_INDICES)) EXO_mode += EX_ALL_INT64_API;
+    CPU_word_size = sizeof(PetscReal);
+    IO_word_size  = sizeof(PetscReal);
+    exo->exoid    = ex_create_par(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size, comm, MPI_INFO_NULL);
+    PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create_par failed for %s", exo->filename);
+    break;
+  default:
+    SETERRQ(comm, PETSC_ERR_ORDER, "Must call PetscViewerFileSetMode() before PetscViewerFileSetName()");
+  }
+
+  /* --- Get DM info --- */
+  PetscCall(PetscObjectGetName((PetscObject)dm, &dmName));
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(PetscViewerExodusIIGetOrder(viewer, &degree));
+  PetscCheck(degree == 1 || degree == 2, comm, PETSC_ERR_SUP, "ExodusII viewer only supports mesh order 1 or 2, not %" PetscInt_FMT, degree);
+  /*
+    Mesh metadata broadcast by rank 0, stored in info as
+      numNodes, numCells,
+      (id, element type, size) for each cell set,
+      (id, size) for each vertex set and for each face set
+  */
   if (rank == 0) {
-    switch (exo->btype) {
-    case FILE_MODE_READ:
-    case FILE_MODE_APPEND:
-    case FILE_MODE_UPDATE:
-    case FILE_MODE_APPEND_UPDATE:
-      /* ExodusII does not allow writing geometry to an existing file */
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "cannot add geometry to existing file %s", exo->filename);
-    case FILE_MODE_WRITE:
-      /* Create an empty file if one already exists*/
-      EXO_mode = EX_CLOBBER;
-      if (PetscDefined(USE_64BIT_INDICES)) EXO_mode += EX_ALL_INT64_API;
-      CPU_word_size = sizeof(PetscReal);
-      IO_word_size  = sizeof(PetscReal);
-      exo->exoid    = ex_create(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size);
-      PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
-
-      break;
-    default:
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ORDER, "Must call PetscViewerFileSetMode() before PetscViewerFileSetName()");
-    }
-
-    /* --- Get DM info --- */
-    PetscCall(PetscObjectGetName((PetscObject)dm, &dmName));
-    PetscCall(DMPlexGetDepth(dm, &depth));
-    PetscCall(DMGetDimension(dm, &dim));
-    PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
-    if (depth == 3) {
-      numFaces = fEnd - fStart;
-    } else {
-      numFaces = 0;
-    }
     PetscCall(DMGetLabelSize(dm, "Cell Sets", &num_cs));
     PetscCall(DMGetLabelSize(dm, "Vertex Sets", &num_vs));
     PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
+    numSets[0] = num_cs;
+    numSets[1] = num_vs;
+    numSets[2] = num_fs;
+  }
+  PetscCallMPI(MPI_Bcast(numSets, 3, MPIU_INT, 0, comm));
+  num_cs   = numSets[0];
+  num_vs   = numSets[1];
+  num_fs   = numSets[2];
+  infoSize = 2 + 3 * num_cs + 2 * num_vs + 2 * num_fs;
+  PetscCall(PetscMalloc1(infoSize, &info));
+  csInfo = info + 2;
+  vsInfo = csInfo + 3 * num_cs;
+  fsInfo = vsInfo + 2 * num_vs;
+  if (rank == 0) {
+    DMLabel         label;
+    IS              valueIS;
+    const PetscInt *values;
+
+    PetscCall(DMPlexGetDepth(dm, &depth));
+    if (depth == 3) numFaces = fEnd - fStart;
     PetscCall(DMGetCoordinatesLocal(dm, &coord));
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     if (num_cs > 0) {
@@ -871,20 +899,14 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       PetscCall(DMLabelGetValueIS(csLabel, &csIS));
       PetscCall(ISGetIndices(csIS, &csIdx));
     }
-    PetscCall(PetscMalloc1(num_cs, &nodes));
     /* Set element type for each block and compute total number of nodes */
-    PetscCall(PetscMalloc1(num_cs, &type));
     numNodes = numVertices;
-
-    PetscCall(PetscViewerExodusIIGetOrder(viewer, &degree));
-    PetscCheck(degree == 1 || degree == 2, PETSC_COMM_SELF, PETSC_ERR_SUP, "ExodusII viewer only supports mesh order 1 or 2, not %" PetscInt_FMT, degree);
     if (degree == 2) numNodes += numEdges;
-    cellsNotInConnectivity = numCells;
     for (PetscInt cs = 0; cs < num_cs; ++cs) {
       IS              stratumIS;
       const PetscInt *cells;
       PetscScalar    *xyz = NULL;
-      PetscInt        csSize, closureSize;
+      PetscInt        csSize, closureSize, type;
 
       PetscCall(DMLabelGetStratumIS(csLabel, csIdx[cs], &stratumIS));
       PetscCall(ISGetIndices(stratumIS, &cells));
@@ -893,93 +915,129 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       switch (dim) {
       case 1:
         PetscCheck(closureSize == 2 * dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize / dim, dim);
-        type[cs] = SEGMENT;
+        type = SEGMENT;
         break;
       case 2:
         if (closureSize == 3 * dim) {
-          type[cs] = TRI;
+          type = TRI;
         } else if (closureSize == 4 * dim) {
-          type[cs] = QUAD;
+          type = QUAD;
         } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize / dim, dim);
         break;
       case 3:
         if (closureSize == 4 * dim) {
-          type[cs] = TET;
+          type = TET;
         } else if (closureSize == 8 * dim) {
-          type[cs] = HEX;
+          type = HEX;
         } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize / dim, dim);
         break;
       default:
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %" PetscInt_FMT " not handled by ExodusII viewer", dim);
       }
-      if ((degree == 2) && (type[cs] == SEGMENT)) numNodes += csSize;
-      if ((degree == 2) && (type[cs] == QUAD)) numNodes += csSize;
-      if ((degree == 2) && (type[cs] == HEX)) {
+      if ((degree == 2) && (type == SEGMENT)) numNodes += csSize;
+      if ((degree == 2) && (type == QUAD)) numNodes += csSize;
+      if ((degree == 2) && (type == HEX)) {
         numNodes += csSize;
         numNodes += numFaces;
       }
       PetscCall(DMPlexVecRestoreClosure(cdm, NULL, coord, cells[0], &closureSize, &xyz));
-      /* Set nodes and Element type */
-      if (type[cs] == SEGMENT) {
-        if (degree == 1) nodes[cs] = nodesLineP1;
-        else if (degree == 2) nodes[cs] = nodesLineP2;
-      } else if (type[cs] == TRI) {
-        if (degree == 1) nodes[cs] = nodesTriP1;
-        else if (degree == 2) nodes[cs] = nodesTriP2;
-      } else if (type[cs] == QUAD) {
-        if (degree == 1) nodes[cs] = nodesQuadP1;
-        else if (degree == 2) nodes[cs] = nodesQuadP2;
-      } else if (type[cs] == TET) {
-        if (degree == 1) nodes[cs] = nodesTetP1;
-        else if (degree == 2) nodes[cs] = nodesTetP2;
-      } else if (type[cs] == HEX) {
-        if (degree == 1) nodes[cs] = nodesHexP1;
-        else if (degree == 2) nodes[cs] = nodesHexP2;
-      }
-      /* Compute the number of cells not in the connectivity table */
-      cellsNotInConnectivity -= nodes[cs][3] * csSize;
-
+      csInfo[3 * cs]     = csIdx[cs];
+      csInfo[3 * cs + 1] = type;
+      csInfo[3 * cs + 2] = csSize;
       PetscCall(ISRestoreIndices(stratumIS, &cells));
       PetscCall(ISDestroy(&stratumIS));
     }
-    if (num_cs) PetscCallExternal(ex_put_init, exo->exoid, dmName, dim, numNodes, numCells, num_cs, num_vs, num_fs);
-    /* --- Connectivity --- */
-    for (PetscInt cs = 0; cs < num_cs; ++cs) {
-      IS              stratumIS;
-      const PetscInt *cells;
-      PetscInt       *connect, off = 0;
-      PetscInt        edgesInClosure = 0, facesInClosure = 0, verticesInClosure = 0;
-      PetscInt        csSize, c, connectSize, closureSize;
-      char           *elem_type        = NULL;
-      char            elem_type_bar2[] = "BAR2", elem_type_bar3[] = "BAR3";
-      char            elem_type_tri3[] = "TRI3", elem_type_quad4[] = "QUAD4";
-      char            elem_type_tri6[] = "TRI6", elem_type_quad9[] = "QUAD9";
-      char            elem_type_tet4[] = "TET4", elem_type_hex8[] = "HEX8";
-      char            elem_type_tet10[] = "TET10", elem_type_hex27[] = "HEX27";
+    if (num_vs > 0) {
+      PetscCall(DMGetLabel(dm, "Vertex Sets", &label));
+      PetscCall(DMLabelGetValueIS(label, &valueIS));
+      PetscCall(ISGetIndices(valueIS, &values));
+      for (PetscInt vs = 0; vs < num_vs; ++vs) {
+        vsInfo[2 * vs] = values[vs];
+        PetscCall(DMLabelGetStratumSize(label, values[vs], &vsInfo[2 * vs + 1]));
+      }
+      PetscCall(ISRestoreIndices(valueIS, &values));
+      PetscCall(ISDestroy(&valueIS));
+    }
+    if (num_fs > 0) {
+      PetscCall(DMGetLabel(dm, "Face Sets", &label));
+      PetscCall(DMLabelGetValueIS(label, &valueIS));
+      PetscCall(ISGetIndices(valueIS, &values));
+      for (PetscInt fs = 0; fs < num_fs; ++fs) {
+        fsInfo[2 * fs] = values[fs];
+        PetscCall(DMLabelGetStratumSize(label, values[fs], &fsInfo[2 * fs + 1]));
+      }
+      PetscCall(ISRestoreIndices(valueIS, &values));
+      PetscCall(ISDestroy(&valueIS));
+    }
+    info[0] = numNodes;
+    info[1] = numCells;
+  }
+  PetscCall(PetscMPIIntCast(infoSize, &infoSizeMPI));
+  PetscCallMPI(MPI_Bcast(info, infoSizeMPI, MPIU_INT, 0, comm));
+  numNodes = info[0];
+  numCells = info[1];
+  /* Set the nodes of each block, and compute the number of cells not in the connectivity table */
+  PetscCall(PetscMalloc1(num_cs, &nodes));
+  cellsNotInConnectivity = numCells;
+  for (PetscInt cs = 0; cs < num_cs; ++cs) {
+    const PetscInt type = csInfo[3 * cs + 1];
 
+    if (type == SEGMENT) {
+      if (degree == 1) nodes[cs] = nodesLineP1;
+      else if (degree == 2) nodes[cs] = nodesLineP2;
+    } else if (type == TRI) {
+      if (degree == 1) nodes[cs] = nodesTriP1;
+      else if (degree == 2) nodes[cs] = nodesTriP2;
+    } else if (type == QUAD) {
+      if (degree == 1) nodes[cs] = nodesQuadP1;
+      else if (degree == 2) nodes[cs] = nodesQuadP2;
+    } else if (type == TET) {
+      if (degree == 1) nodes[cs] = nodesTetP1;
+      else if (degree == 2) nodes[cs] = nodesTetP2;
+    } else if (type == HEX) {
+      if (degree == 1) nodes[cs] = nodesHexP1;
+      else if (degree == 2) nodes[cs] = nodesHexP2;
+    }
+    cellsNotInConnectivity -= nodes[cs][3] * csInfo[3 * cs + 2];
+  }
+  if (num_cs) PetscCallExternal(ex_put_init, exo->exoid, dmName, dim, numNodes, numCells, num_cs, num_vs, num_fs);
+  /* --- Connectivity --- */
+  for (PetscInt cs = 0; cs < num_cs; ++cs) {
+    IS              stratumIS = NULL;
+    const PetscInt *cells     = NULL;
+    PetscInt       *connect = NULL, off = 0;
+    PetscInt        edgesInClosure = 0, facesInClosure = 0, verticesInClosure = 0;
+    PetscInt        csSize = csInfo[3 * cs + 2], type = csInfo[3 * cs + 1], c, connectSize, closureSize;
+    char           *elem_type        = NULL;
+    char            elem_type_bar2[] = "BAR2", elem_type_bar3[] = "BAR3";
+    char            elem_type_tri3[] = "TRI3", elem_type_quad4[] = "QUAD4";
+    char            elem_type_tri6[] = "TRI6", elem_type_quad9[] = "QUAD9";
+    char            elem_type_tet4[] = "TET4", elem_type_hex8[] = "HEX8";
+    char            elem_type_tet10[] = "TET10", elem_type_hex27[] = "HEX27";
+
+    /* Set Element type */
+    if (type == SEGMENT) {
+      if (degree == 1) elem_type = elem_type_bar2;
+      else if (degree == 2) elem_type = elem_type_bar3;
+    } else if (type == TRI) {
+      if (degree == 1) elem_type = elem_type_tri3;
+      else if (degree == 2) elem_type = elem_type_tri6;
+    } else if (type == QUAD) {
+      if (degree == 1) elem_type = elem_type_quad4;
+      else if (degree == 2) elem_type = elem_type_quad9;
+    } else if (type == TET) {
+      if (degree == 1) elem_type = elem_type_tet4;
+      else if (degree == 2) elem_type = elem_type_tet10;
+    } else if (type == HEX) {
+      if (degree == 1) elem_type = elem_type_hex8;
+      else if (degree == 2) elem_type = elem_type_hex27;
+    }
+    connectSize = nodes[cs][0] + nodes[cs][1] + nodes[cs][2] + nodes[cs][3];
+    PetscCallExternal(ex_put_block, exo->exoid, EX_ELEM_BLOCK, csInfo[3 * cs], elem_type, csSize, connectSize, 0, 0, 0);
+    if (rank == 0) {
       PetscCall(DMLabelGetStratumIS(csLabel, csIdx[cs], &stratumIS));
       PetscCall(ISGetIndices(stratumIS, &cells));
-      PetscCall(ISGetSize(stratumIS, &csSize));
-      /* Set Element type */
-      if (type[cs] == SEGMENT) {
-        if (degree == 1) elem_type = elem_type_bar2;
-        else if (degree == 2) elem_type = elem_type_bar3;
-      } else if (type[cs] == TRI) {
-        if (degree == 1) elem_type = elem_type_tri3;
-        else if (degree == 2) elem_type = elem_type_tri6;
-      } else if (type[cs] == QUAD) {
-        if (degree == 1) elem_type = elem_type_quad4;
-        else if (degree == 2) elem_type = elem_type_quad9;
-      } else if (type[cs] == TET) {
-        if (degree == 1) elem_type = elem_type_tet4;
-        else if (degree == 2) elem_type = elem_type_tet10;
-      } else if (type[cs] == HEX) {
-        if (degree == 1) elem_type = elem_type_hex8;
-        else if (degree == 2) elem_type = elem_type_hex27;
-      }
-      connectSize = nodes[cs][0] + nodes[cs][1] + nodes[cs][2] + nodes[cs][3];
       PetscCall(PetscMalloc1(PetscMax(27, connectSize) * csSize, &connect));
-      PetscCallExternal(ex_put_block, exo->exoid, EX_ELEM_BLOCK, csIdx[cs], elem_type, csSize, connectSize, 0, 0, 0);
       /* Find number of vertices, edges, and faces in the closure */
       verticesInClosure = nodes[cs][0];
       if (depth > 1) {
@@ -1019,7 +1077,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
           }
         }
         /* Tetrahedra are inverted */
-        if (type[cs] == TET) {
+        if (type == TET) {
           temp             = connect[0 + off];
           connect[0 + off] = connect[1 + off];
           connect[1 + off] = temp;
@@ -1033,7 +1091,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
           }
         }
         /* Hexahedra are inverted */
-        if (type[cs] == HEX) {
+        if (type == HEX) {
           temp             = connect[1 + off];
           connect[1 + off] = connect[3 + off];
           connect[3 + off] = temp;
@@ -1078,14 +1136,18 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         off += connectSize;
         PetscCall(DMPlexRestoreTransitiveClosure(dm, cells[c], PETSC_TRUE, &closureSize, &closure));
       }
-      PetscCallExternal(ex_put_conn, exo->exoid, EX_ELEM_BLOCK, csIdx[cs], connect, 0, 0);
-      skipCells += (nodes[cs][3] == 0) * csSize;
-      PetscCall(PetscFree(connect));
+    }
+    PetscCallExternal(ex_put_partial_conn, exo->exoid, EX_ELEM_BLOCK, csInfo[3 * cs], 1, rank == 0 ? csSize : 0, connect, NULL, NULL);
+    skipCells += (nodes[cs][3] == 0) * csSize;
+    PetscCall(PetscFree(connect));
+    if (rank == 0) {
       PetscCall(ISRestoreIndices(stratumIS, &cells));
       PetscCall(ISDestroy(&stratumIS));
     }
-    PetscCall(PetscFree(type));
-    /* --- Coordinates --- */
+  }
+  /* --- Coordinates --- */
+  if (rank == 0) {
+    PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
     PetscCall(PetscSectionSetChart(coordSection, pStart, pEnd));
     if (num_cs) {
       for (d = 0; d < depth; ++d) {
@@ -1109,14 +1171,18 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       PetscCall(ISRestoreIndices(csIS, &csIdx));
       PetscCall(ISDestroy(&csIS));
     }
-    PetscCall(PetscFree(nodes));
     PetscCall(PetscSectionSetUp(coordSection));
-    if (numNodes) {
-      const char  *coordNames[3] = {"x", "y", "z"};
-      PetscScalar *closure, *cval;
-      PetscReal   *coords;
-      PetscInt     hasDof, n = 0;
+  }
+  PetscCall(PetscFree(nodes));
+  if (numNodes) {
+    const char  *coordNames[3] = {"x", "y", "z"};
+    PetscScalar *closure = NULL, *cval = NULL;
+    PetscReal   *coords;
+    PetscInt     hasDof, n = 0, numLocalNodes = rank == 0 ? numNodes : 0, stride;
 
+    /* ex_put_partial_coord() skips the write when passed a NULL array, which would break collective access, so always allocate at least one entry */
+    stride = PetscMax(numLocalNodes, 1);
+    if (rank == 0) {
       /* There can't be more than 24 values in the closure of a point for the coord coordSection */
       PetscCall(PetscCalloc3(numNodes * 3, &coords, dim, &cval, 24, &closure));
       PetscCall(DMGetCoordinatesLocalNoncollective(dm, &coord));
@@ -1135,135 +1201,113 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
           ++n;
         }
       }
-      PetscCallExternal(ex_put_coord, exo->exoid, &coords[0 * numNodes], &coords[1 * numNodes], &coords[2 * numNodes]);
-      PetscCall(PetscFree3(coords, cval, closure));
-      PetscCallExternal(ex_put_coord_names, exo->exoid, (char **)coordNames);
-    }
+    } else PetscCall(PetscCalloc1(stride * 3, &coords));
+    PetscCallExternal(ex_put_partial_coord, exo->exoid, 1, numLocalNodes, &coords[0 * stride], &coords[1 * stride], &coords[2 * stride]);
+    if (rank == 0) PetscCall(PetscFree3(coords, cval, closure));
+    else PetscCall(PetscFree(coords));
+    PetscCallExternal(ex_put_coord_names, exo->exoid, (char **)coordNames);
+  }
 
-    /* --- Node Sets/Vertex Sets --- */
-    PetscCall(DMHasLabel(dm, "Vertex Sets", &hasLabel));
-    if (hasLabel) {
-      PetscInt        i, vs, vsSize;
-      const PetscInt *vsIdx, *vertices;
-      PetscInt       *nodeList;
-      IS              vsIS, stratumIS;
-      DMLabel         vsLabel;
-      PetscCall(DMGetLabel(dm, "Vertex Sets", &vsLabel));
-      PetscCall(DMLabelGetValueIS(vsLabel, &vsIS));
-      PetscCall(ISGetIndices(vsIS, &vsIdx));
-      for (vs = 0; vs < num_vs; ++vs) {
-        PetscCall(DMLabelGetStratumIS(vsLabel, vsIdx[vs], &stratumIS));
+  /* --- Node Sets/Vertex Sets --- */
+  if (num_vs > 0) {
+    PetscInt        i, vs, vsSize;
+    const PetscInt *vertices;
+    PetscInt       *nodeList;
+    IS              stratumIS;
+    DMLabel         vsLabel = NULL;
+
+    if (rank == 0) PetscCall(DMGetLabel(dm, "Vertex Sets", &vsLabel));
+    for (vs = 0; vs < num_vs; ++vs) {
+      vsSize   = vsInfo[2 * vs + 1];
+      nodeList = NULL;
+      if (rank == 0) {
+        PetscCall(DMLabelGetStratumIS(vsLabel, vsInfo[2 * vs], &stratumIS));
         PetscCall(ISGetIndices(stratumIS, &vertices));
-        PetscCall(ISGetSize(stratumIS, &vsSize));
         PetscCall(PetscMalloc1(vsSize, &nodeList));
         for (i = 0; i < vsSize; ++i) nodeList[i] = vertices[i] - skipCells + 1;
-        PetscCallExternal(ex_put_set_param, exo->exoid, EX_NODE_SET, vsIdx[vs], vsSize, 0);
-        PetscCallExternal(ex_put_set, exo->exoid, EX_NODE_SET, vsIdx[vs], nodeList, NULL);
         PetscCall(ISRestoreIndices(stratumIS, &vertices));
         PetscCall(ISDestroy(&stratumIS));
-        PetscCall(PetscFree(nodeList));
       }
-      PetscCall(ISRestoreIndices(vsIS, &vsIdx));
-      PetscCall(ISDestroy(&vsIS));
+      PetscCallExternal(ex_put_set_param, exo->exoid, EX_NODE_SET, vsInfo[2 * vs], vsSize, 0);
+      PetscCallExternal(ex_put_partial_set, exo->exoid, EX_NODE_SET, vsInfo[2 * vs], 1, rank == 0 ? vsSize : 0, nodeList, NULL);
+      PetscCall(PetscFree(nodeList));
     }
-    /* --- Side Sets/Face Sets --- */
-    PetscCall(DMHasLabel(dm, "Face Sets", &hasLabel));
-    if (hasLabel) {
-      PetscInt        i, j, fs, fsSize;
-      const PetscInt *fsIdx, *faces;
-      IS              fsIS, stratumIS;
-      DMLabel         fsLabel;
-      PetscInt        numPoints, *points;
-      PetscInt        elem_list_size = 0;
-      PetscInt       *elem_list, *elem_ind, *side_list;
+  }
+  /* --- Side Sets/Face Sets --- */
+  if (num_fs > 0) {
+    PetscInt        i, j, fs, fsSize;
+    const PetscInt *faces;
+    IS              stratumIS;
+    DMLabel         fsLabel = NULL;
+    PetscInt        numPoints, *points;
+    PetscInt        elem_list_size = 0;
+    PetscInt       *elem_list = NULL, *elem_ind = NULL, *side_list = NULL;
 
+    if (rank == 0) {
       PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
       /* Compute size of Node List and Element List */
-      PetscCall(DMLabelGetValueIS(fsLabel, &fsIS));
-      PetscCall(ISGetIndices(fsIS, &fsIdx));
+      for (fs = 0; fs < num_fs; ++fs) elem_list_size += fsInfo[2 * fs + 1];
+      PetscCall(PetscMalloc3(num_fs, &elem_ind, elem_list_size, &elem_list, elem_list_size, &side_list));
+      elem_ind[0] = 0;
       for (fs = 0; fs < num_fs; ++fs) {
-        PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
-        PetscCall(ISGetSize(stratumIS, &fsSize));
-        elem_list_size += fsSize;
+        PetscCall(DMLabelGetStratumIS(fsLabel, fsInfo[2 * fs], &stratumIS));
+        PetscCall(ISGetIndices(stratumIS, &faces));
+        fsSize = fsInfo[2 * fs + 1];
+        /* Indices */
+        if (fs < num_fs - 1) elem_ind[fs + 1] = elem_ind[fs] + fsSize;
+
+        for (i = 0; i < fsSize; ++i) {
+          /* Element List */
+          points = NULL;
+          PetscCall(DMPlexGetTransitiveClosure(dm, faces[i], PETSC_FALSE, &numPoints, &points));
+          elem_list[elem_ind[fs] + i] = points[2] + 1;
+          PetscCall(DMPlexRestoreTransitiveClosure(dm, faces[i], PETSC_FALSE, &numPoints, &points));
+
+          /* Side List */
+          points = NULL;
+          PetscCall(DMPlexGetTransitiveClosure(dm, elem_list[elem_ind[fs] + i] - 1, PETSC_TRUE, &numPoints, &points));
+          for (j = 1; j < numPoints; ++j) {
+            if (points[j * 2] == faces[i]) break;
+          }
+          /* Convert HEX sides */
+          if (numPoints == 27) {
+            if (j == 1) {
+              j = 5;
+            } else if (j == 2) {
+              j = 6;
+            } else if (j == 3) {
+              j = 1;
+            } else if (j == 4) {
+              j = 3;
+            } else if (j == 5) {
+              j = 2;
+            } else if (j == 6) {
+              j = 4;
+            }
+          }
+          /* Convert TET sides */
+          if (numPoints == 15) {
+            --j;
+            if (j == 0) j = 4;
+          }
+          side_list[elem_ind[fs] + i] = j;
+          PetscCall(DMPlexRestoreTransitiveClosure(dm, elem_list[elem_ind[fs] + i] - 1, PETSC_TRUE, &numPoints, &points));
+        }
+        PetscCall(ISRestoreIndices(stratumIS, &faces));
         PetscCall(ISDestroy(&stratumIS));
       }
-      if (num_fs) {
-        PetscCall(PetscMalloc3(num_fs, &elem_ind, elem_list_size, &elem_list, elem_list_size, &side_list));
-        elem_ind[0] = 0;
-        for (fs = 0; fs < num_fs; ++fs) {
-          PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
-          PetscCall(ISGetIndices(stratumIS, &faces));
-          PetscCall(ISGetSize(stratumIS, &fsSize));
-          /* Set Parameters */
-          PetscCallExternal(ex_put_set_param, exo->exoid, EX_SIDE_SET, fsIdx[fs], fsSize, 0);
-          /* Indices */
-          if (fs < num_fs - 1) elem_ind[fs + 1] = elem_ind[fs] + fsSize;
-
-          for (i = 0; i < fsSize; ++i) {
-            /* Element List */
-            points = NULL;
-            PetscCall(DMPlexGetTransitiveClosure(dm, faces[i], PETSC_FALSE, &numPoints, &points));
-            elem_list[elem_ind[fs] + i] = points[2] + 1;
-            PetscCall(DMPlexRestoreTransitiveClosure(dm, faces[i], PETSC_FALSE, &numPoints, &points));
-
-            /* Side List */
-            points = NULL;
-            PetscCall(DMPlexGetTransitiveClosure(dm, elem_list[elem_ind[fs] + i] - 1, PETSC_TRUE, &numPoints, &points));
-            for (j = 1; j < numPoints; ++j) {
-              if (points[j * 2] == faces[i]) break;
-            }
-            /* Convert HEX sides */
-            if (numPoints == 27) {
-              if (j == 1) {
-                j = 5;
-              } else if (j == 2) {
-                j = 6;
-              } else if (j == 3) {
-                j = 1;
-              } else if (j == 4) {
-                j = 3;
-              } else if (j == 5) {
-                j = 2;
-              } else if (j == 6) {
-                j = 4;
-              }
-            }
-            /* Convert TET sides */
-            if (numPoints == 15) {
-              --j;
-              if (j == 0) j = 4;
-            }
-            side_list[elem_ind[fs] + i] = j;
-            PetscCall(DMPlexRestoreTransitiveClosure(dm, elem_list[elem_ind[fs] + i] - 1, PETSC_TRUE, &numPoints, &points));
-          }
-          PetscCall(ISRestoreIndices(stratumIS, &faces));
-          PetscCall(ISDestroy(&stratumIS));
-        }
-        PetscCall(ISRestoreIndices(fsIS, &fsIdx));
-        PetscCall(ISDestroy(&fsIS));
-
-        /* Put side sets */
-        for (fs = 0; fs < num_fs; ++fs) PetscCallExternal(ex_put_set, exo->exoid, EX_SIDE_SET, fsIdx[fs], &elem_list[elem_ind[fs]], &side_list[elem_ind[fs]]);
-        PetscCall(PetscFree3(elem_ind, elem_list, side_list));
-      }
     }
-    /*
-      close the exodus file
-    */
-    PetscCallExternal(ex_close, exo->exoid);
-    exo->exoid = -1;
+    /* Set Parameters */
+    for (fs = 0; fs < num_fs; ++fs) PetscCallExternal(ex_put_set_param, exo->exoid, EX_SIDE_SET, fsInfo[2 * fs], fsInfo[2 * fs + 1], 0);
+    /* Put side sets */
+    for (fs = 0; fs < num_fs; ++fs) {
+      if (rank == 0) PetscCallExternal(ex_put_partial_set, exo->exoid, EX_SIDE_SET, fsInfo[2 * fs], 1, fsInfo[2 * fs + 1], &elem_list[elem_ind[fs]], &side_list[elem_ind[fs]]);
+      else PetscCallExternal(ex_put_partial_set, exo->exoid, EX_SIDE_SET, fsInfo[2 * fs], 1, 0, NULL, NULL);
+    }
+    PetscCall(PetscFree3(elem_ind, elem_list, side_list));
   }
+  PetscCall(PetscFree(info));
   PetscCall(PetscSectionDestroy(&coordSection));
-
-  /*
-    reopen the file in parallel
-  */
-  EXO_mode = EX_WRITE;
-  if (PetscDefined(USE_64BIT_INDICES)) EXO_mode += EX_ALL_INT64_API;
-  CPU_word_size = sizeof(PetscReal);
-  IO_word_size  = sizeof(PetscReal);
-  exo->exoid    = ex_open_par(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version, comm, MPI_INFO_NULL);
-  PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
