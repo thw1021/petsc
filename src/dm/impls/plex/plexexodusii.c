@@ -35,6 +35,9 @@ PetscErrorCode PetscViewerExodusIIGetId(PetscViewer viewer, PetscExodusIIInt *ex
 
   Level: beginner
 
+  Note:
+  The order defaults to 1, and only orders 1 and 2 are supported by `DMView()`.
+
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerExodusIIGetId()`, `PetscViewerExodusIIGetOrder()`
 @*/
 PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer viewer, PetscInt order)

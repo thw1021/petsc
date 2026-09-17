@@ -49,6 +49,7 @@
 
 - Add support for writing CGNS descriptors on the base node: `PetscViewerCGNSGetDescriptors()`, `PetscViewerCGNSRestoreDescriptors()`, `PetscViewerCGNSSetDescriptor()`
 - Add `PetscViewerVTKWriteFn` as the typedef prototype for the `write()` function passed to `PetscViewerVTKAddField()`. This addition requires no changes to user source code
+- Change the default mesh order of `PETSCVIEWEREXODUSII` from 0 to 1, so that a viewer that did not call `PetscViewerExodusIISetOrder()`, such as one created with `-dm_view exodusii:filename`, can be used with `DMView()`
 
 ## PetscDraw
 

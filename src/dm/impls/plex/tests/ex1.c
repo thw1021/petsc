@@ -528,6 +528,15 @@ int main(int argc, char **argv)
     requires: exodusii
     nsize: 2
     args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/hybrid_hexwedge.exo -dm_view -dm_plex_check_all
+  # Write a mesh held on rank 0 to a file created on all ranks in the HDF5 flavor of ExodusII, where all ranks must take part in every write
+  test:
+    suffix: exodus_write_hdf5_par
+    requires: exodusii
+    nsize: 2
+    env: EXODUS_NETCDF4=quiet
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -dm_view exodusii:blockcylinder-50_out.exo
+    output_file: output/empty.out
+    temporaries: blockcylinder-50_out.exo
 
   # Legacy Gmsh v22/v40 ascii/binary reader tests
   testset:

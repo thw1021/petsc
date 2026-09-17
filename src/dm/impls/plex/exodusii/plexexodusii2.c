@@ -637,6 +637,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   exo->btype              = FILE_MODE_UNDEFINED;
   exo->filename           = NULL;
   exo->exoid              = -1;
+  exo->order              = 1;
   exo->numNodalVariables  = -1;
   exo->numZonalVariables  = -1;
   exo->nodalVariableNames = NULL;
