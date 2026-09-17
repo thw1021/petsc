@@ -979,7 +979,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       }
       connectSize = nodes[cs][0] + nodes[cs][1] + nodes[cs][2] + nodes[cs][3];
       PetscCall(PetscMalloc1(PetscMax(27, connectSize) * csSize, &connect));
-      PetscCallExternal(ex_put_block, exo->exoid, EX_ELEM_BLOCK, csIdx[cs], elem_type, csSize, connectSize, 0, 0, 1);
+      PetscCallExternal(ex_put_block, exo->exoid, EX_ELEM_BLOCK, csIdx[cs], elem_type, csSize, connectSize, 0, 0, 0);
       /* Find number of vertices, edges, and faces in the closure */
       verticesInClosure = nodes[cs][0];
       if (depth > 1) {
