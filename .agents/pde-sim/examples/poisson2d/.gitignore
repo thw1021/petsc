@@ -1,0 +1,9 @@
+# Compiled binary + generated simulation outputs (reproducible by rebuilding/running)
+poisson
+*.o
+*.png
+*.bin
+*.vts
+*.vtu
+*.xdmf
+build.log
