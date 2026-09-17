@@ -89,6 +89,7 @@
 
 ## Mat
 
+- Fix an invalid free in `MatColoringDestroy()` for weights supplied with `MatColoringSetWeights()`
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
 - Add `MATPRODUCT_AB` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL` with any matrix type
 - Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
@@ -234,6 +235,11 @@
 - Add `DMPlexSetClosurePermutationLexicographic()`
 - Add `DMPlexDrawCell()`
 - Add `DMPlexLabelCompleteStar()`
+- Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum, and add `-dm_plex_coloring_ordering_type` to reorder the points before coloring them
+- Add `-dm_plex_coloring_local` to color the points each process owns by themselves, without communicating
+- Change `DMPlexCreateColoring()` to weight the points lexically rather than randomly, which uses the optimal four colors for the vertices of a structured quadrilateral grid instead of seven
+- Change the `distance` argument of `DMPlexCreateColoring()` to count applications of the adjacency through the mesh rather than hops in the graph of the stratum; the two agree at depth zero but differ elsewhere, most visibly at the cell stratum with finite-element adjacency
+- Fix `DMPlexCreateColoring()` in parallel to return the points a process owns, and to no longer write past the end of its row-offset array, when the mesh has a nonzero overlap
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Add `DMPlexCopyFlags()`
