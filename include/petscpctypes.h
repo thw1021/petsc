@@ -142,25 +142,25 @@ typedef enum {
     PCASMType - Determines the type of additive Schwarz method, `PCASM`, to use
 
    Values:
-+  `PC_ASM_BASIC`        - Symmetric version where residuals from the ghost points are used
-                           and computed values in ghost regions are added together.
-                           Classical standard additive Schwarz as introduced in {cite}`dryja1987additive`.
++  `PC_ASM_NONE`         - Residuals from ghost points are not used, computed ghost values are
+                           discarded. Not very good.
 .  `PC_ASM_RESTRICT`     - Residuals from ghost points are used but computed values in ghost
                            region are discarded {cite}`cs99`. Default.
 .  `PC_ASM_INTERPOLATE`  - Residuals from ghost points are not used, computed values in ghost
                            region are added back in.
--  `PC_ASM_NONE`         - Residuals from ghost points are not used, computed ghost values are
-                           discarded. Not very good.
+-  `PC_ASM_BASIC`        - Symmetric version where residuals from the ghost points are used
+                           and computed values in ghost regions are added together.
+                           Classical standard additive Schwarz as introduced in {cite}`dryja1987additive`.
 
    Level: beginner
 
 .seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCGASMType`
 E*/
 typedef enum {
-  PC_ASM_BASIC       = 3,
+  PC_ASM_NONE        = 0,
   PC_ASM_RESTRICT    = 1,
   PC_ASM_INTERPOLATE = 2,
-  PC_ASM_NONE        = 0
+  PC_ASM_BASIC       = 3
 } PCASMType;
 
 /*E
