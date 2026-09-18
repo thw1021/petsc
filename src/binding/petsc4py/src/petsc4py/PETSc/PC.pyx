@@ -2572,6 +2572,98 @@ cdef class PC(Object):
         self.set_attr("__patch_construction_operator__", context)
         CHKERR(PCPatchSetConstructType(self.pc, typ, PCPatch_UserConstructOperator, <void*>context))
 
+    def setPatchConstructLabel(self, label: DMLabel | None, value: int = 0) -> None:
+        """Restrict the mesh points that patches are built around.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        label
+            Marks the points to build patches around, `None` to use every
+            point of the stratum selected by ``-pc_patch_construct_dim``
+            or ``-pc_patch_construct_codim``.
+        value
+            The stratum of ``label`` holding those points.
+
+        See Also
+        --------
+        getPatchConstructLabel, setPatchLabel, petsc.PCPatchSetConstructLabel
+
+        """
+        cdef PetscDMLabel clbl = NULL
+        cdef PetscInt cvalue = asInt(value)
+        if label is not None:
+            clbl = (<DMLabel?>label).dmlabel
+        CHKERR(PCPatchSetConstructLabel(self.pc, clbl, cvalue))
+
+    def getPatchConstructLabel(self) -> tuple[DMLabel | None, int]:
+        """Return the label restricting the points patches are built around.
+
+        Not collective.
+
+        See Also
+        --------
+        setPatchConstructLabel, petsc.PCPatchGetConstructLabel
+
+        """
+        cdef PetscInt     cvalue = 0
+        cdef PetscDMLabel clbl   = NULL
+        CHKERR(PCPatchGetConstructLabel(self.pc, &clbl, &cvalue))
+        cdef DMLabel label = None
+        if clbl != NULL:
+            label = DMLabel()
+            label.dmlabel = clbl
+            CHKERR(PetscINCREF(label.obj))
+        return (label, toInt(cvalue))
+
+    def setPatchLabel(self, label: DMLabel | None) -> None:
+        """Set the patches directly, as the strata of a label.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        label
+            Holds one stratum per patch, each marking the mesh points that
+            patch solves for, `None` to construct the patches instead.
+
+        Notes
+        -----
+        The patches of a stratum are solved simultaneously, so their stars
+        must be disjoint for the patch operator to stay block diagonal. That
+        is what `DMPlex.createColoringLabel` guarantees, and it is the
+        caller's responsibility here.
+
+        See Also
+        --------
+        getPatchLabel, setPatchConstructLabel, petsc.PCPatchSetPatchLabel
+
+        """
+        cdef PetscDMLabel clbl = NULL
+        if label is not None:
+            clbl = (<DMLabel?>label).dmlabel
+        CHKERR(PCPatchSetPatchLabel(self.pc, clbl))
+
+    def getPatchLabel(self) -> DMLabel | None:
+        """Return the label whose strata are the patches.
+
+        Not collective.
+
+        See Also
+        --------
+        setPatchLabel, petsc.PCPatchGetPatchLabel
+
+        """
+        cdef PetscDMLabel clbl = NULL
+        CHKERR(PCPatchGetPatchLabel(self.pc, &clbl))
+        cdef DMLabel label = None
+        if clbl != NULL:
+            label = DMLabel()
+            label.dmlabel = clbl
+            CHKERR(PetscINCREF(label.obj))
+        return label
+
     # --- HPDDM ---
 
     def setHPDDMAuxiliaryMat(self, IS uis, Mat uaux,
