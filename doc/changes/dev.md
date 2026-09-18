@@ -126,6 +126,9 @@
 
 ## PC
 
+- Add `PCPatchSetConstructLabel()` and `PCPatchGetConstructLabel()` to build patches around only the mesh points a `DMLabel` marks
+- Add `PCPatchSetPatchLabel()` and `PCPatchGetPatchLabel()` to supply the patches directly as the strata of a `DMLabel`
+- Add `-pc_patch_use_coloring` to group `PCPATCH` star patches by a coloring of the points they are built around, so that each solve handles a whole color at once
 - Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering the prolongator in `PCGAMG`. The threshold is relative, applies to whole fine-node/coarse-node coupling blocks while preserving the near-null space, and must be in [0,1)
 - Add `PCGAMGSetProlongatorFilterScale()` and `PCGAMGGetProlongatorFilterScale()` to set/get the per-level scaling of the prolongator filter threshold in `PCGAMG`; the scale must be in [0,1]
 - `PCGAMGSetThresholdScale()` now requires its argument to be in [0,1]
@@ -237,6 +240,7 @@
 - Add `DMPlexLabelCompleteStar()`
 - Add `DMPlexTransformCreateSplitCellLabel()` to mark the cells of a transformed mesh whose source cell was genuinely split
 - Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum
+- Change `DMPlexLabelCompleteStar()` to add the star of each marked point in a deterministic order rather than in hash order
 - Add `-dm_plex_coloring_ordering_type` to order the points with `MatGetOrdering()` before coloring them
 - Add `-dm_plex_coloring_local` to color the points each process owns by themselves, without communicating
 - Change the `distance` argument of `DMPlexCreateColoring()` to count applications of the adjacency through the mesh rather than hops in the graph of the stratum; the two agree at depth zero but differ elsewhere, most visibly at the cell stratum with finite-element adjacency
