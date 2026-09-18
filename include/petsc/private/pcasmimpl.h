@@ -22,8 +22,9 @@ typedef struct {
   PetscBool       dm_subdomains; /* whether DM is allowed to define subdomains */
   PCCompositeType loctype;       /* the type of composition for local solves */
   MatType         sub_mat_type;  /* the type of Mat used for subdomain solves (can be MATSAME or NULL) */
+  /* For PC_ASM_WEIGHTED */
+  PCASMWeightedComputeScalingFn *computescaling;    /* callback filling scaling[] during PCSetUp() */
+  PetscCtx                       computescalingctx; /* user context passed to computescaling */
   /* For multiplicative solve */
-  Mat                           *lmats; /* submatrices for overlapping multiplicative (process) subdomain */
-  PCASMWeightedComputeScalingFn *computescaling;
-  PetscCtx                       computescalingctx;
+  Mat *lmats; /* submatrices for overlapping multiplicative (process) subdomain */
 } PC_ASM;
