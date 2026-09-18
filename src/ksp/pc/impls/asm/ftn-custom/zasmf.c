@@ -6,6 +6,7 @@
   #define pcasmrestoresubksp_       PCASMRESTORESUBKSP
   #define pcasmgetlocalsubmatrices_ PCASMGETLOCALSUBMATRICES
   #define pcasmgetlocalsubdomains_  PCASMGETLOCALSUBDOMAINS
+  #define pcasmweightedgetscaling_  PCASMWEIGHTEDGETSCALING
   #define pcasmcreatesubdomains_    PCASMCREATESUBDOMAINS
   #define pcasmdestroysubdomains_   PCASMDESTROYSUBDOMAINS
   #define pcasmcreatesubdomains2d_  PCASMCREATESUBDOMAINS2D
@@ -14,6 +15,7 @@
   #define pcasmrestoresubksp_       pcasmrestoresubksp
   #define pcasmgetlocalsubmatrices_ pcasmgetlocalsubmatrices
   #define pcasmgetlocalsubdomains_  pcasmgetlocalsubdomains
+  #define pcasmweightedgetscaling_  pcasmweightedgetscaling
   #define pcasmcreatesubdomains_    pcasmcreatesubdomains
   #define pcasmdestroysubdomains_   pcasmdestroysubdomains
   #define pcasmcreatesubdomains2d_  pcasmcreatesubdomains2d
@@ -39,6 +41,19 @@ PETSC_EXTERN void pcasmgetlocalsubmatrices_(PC *pc, PetscInt *n, F90Array1d *mat
   *ierr = PCASMGetLocalSubmatrices(*pc, &nloc, &tmat);
   if (n) *n = nloc;
   if (mat) *ierr = F90Array1dCreate(tmat, MPIU_FORTRANADDR, 1, nloc, mat PETSC_F90_2PTR_PARAM(ptrd));
+}
+
+PETSC_EXTERN void pcasmweightedgetscaling_(PC *pc, PetscInt *n, F90Array1d *scaling, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
+{
+  PetscInt nloc;
+  Vec     *tscaling;
+
+  CHKFORTRANNULLOBJECT(scaling);
+  CHKFORTRANNULLINTEGER(n);
+  *ierr = PCASMWeightedGetScaling(*pc, &nloc, &tscaling);
+  if (*ierr) return;
+  if (n) *n = nloc;
+  if (scaling) *ierr = F90Array1dCreate(tscaling, MPIU_FORTRANADDR, 1, nloc, scaling PETSC_F90_2PTR_PARAM(ptrd));
 }
 
 PETSC_EXTERN void pcasmgetlocalsubdomains_(PC *pc, PetscInt *n, F90Array1d *is, F90Array1d *is_local, int *ierr PETSC_F90_2PTR_PROTO(ptrd1) PETSC_F90_2PTR_PROTO(ptrd2))
