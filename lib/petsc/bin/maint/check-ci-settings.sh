@@ -5,7 +5,7 @@ if [ ! -z "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME+x}" ] && [ "${CI_MERGE_REQUEST_
   exit 0
 fi
 
-if [ ! -z "${CI_MERGE_REQUEST_DIFF_BASE_SHA}" ]; then
+if [ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]; then
   # GitLab already computed the merge base, so fetch only it and the target tip; comparing two
   # known commits needs no connecting history, which keeps the clone shallow.
   dest=origin/"${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
