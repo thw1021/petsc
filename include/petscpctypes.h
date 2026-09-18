@@ -148,19 +148,22 @@ typedef enum {
                            region are discarded {cite}`cs99`. Default.
 .  `PC_ASM_INTERPOLATE`  - Residuals from ghost points are not used, computed values in ghost
                            region are added back in.
--  `PC_ASM_BASIC`        - Symmetric version where residuals from the ghost points are used
+.  `PC_ASM_BASIC`        - Symmetric version where residuals from the ghost points are used
                            and computed values in ghost regions are added together.
                            Classical standard additive Schwarz as introduced in {cite}`dryja1987additive`.
+-  `PC_ASM_WEIGHTED`     - Full restriction and interpolation, with local corrections scaled by
+                           user-provided diagonal weights from `PCASMWeightedSetScaling()`.
 
    Level: beginner
 
-.seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCGASMType`
+.seealso: [](sec_pc), `PC`, `PCASM`, `PCASMSetType()`, `PCASMWeightedSetScaling()`, `PCGASMType`
 E*/
 typedef enum {
   PC_ASM_NONE        = 0,
   PC_ASM_RESTRICT    = 1,
   PC_ASM_INTERPOLATE = 2,
-  PC_ASM_BASIC       = 3
+  PC_ASM_BASIC       = 3,
+  PC_ASM_WEIGHTED    = 4
 } PCASMType;
 
 /*E
