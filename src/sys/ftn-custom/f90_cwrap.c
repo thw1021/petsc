@@ -150,6 +150,7 @@ PetscErrorCode F90Array1dCreate(void *array, MPI_Datatype type, PetscInt start, 
     if (!len) array = PETSC_NULL_INTEGER_Fortran;
     f90array1dcreatempiint_(array, &start, &len, ptr PETSC_F90_2PTR_PARAM(ptrd));
   } else if (type == MPIU_FORTRANADDR) {
+    if (!len) array = PETSC_NULL_INTEGER_Fortran;
     f90array1dcreatefortranaddr_(array, &start, &len, ptr PETSC_F90_2PTR_PARAM(ptrd));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported MPI_Datatype");
   PetscFunctionReturn(PETSC_SUCCESS);
