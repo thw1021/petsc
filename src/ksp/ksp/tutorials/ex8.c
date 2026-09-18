@@ -271,6 +271,11 @@ int main(int argc, char **args)
     PetscInt nsub, nstored;
 
     PetscCall(KSPSetUp(ksp));
+
+    /* the PC is set up but no weights have been supplied, so the getter must report an empty array */
+    PetscCall(PCASMWeightedGetScaling(pc, &nstored, &stored));
+    PetscCheck(!nstored && !stored, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCASMWeightedGetScaling() reported weights before any were supplied");
+
     PetscCall(PCASMGetLocalSubmatrices(pc, &nsub, &submat));
     PetscCall(PetscMalloc1(nsub, &scaling));
     for (i = 0; i < nsub; i++) PetscCall(MatCreateVecs(submat[i], &scaling[i], NULL));

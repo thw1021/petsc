@@ -1273,7 +1273,7 @@ PetscErrorCode PCASMWeightedSetScaling(PC pc, PetscInt n, Vec scaling[])
 . pc - the `PCASM` preconditioner
 
   Output Parameters:
-+ n       - if requested, the number of local subdomains for this processor
++ n       - if requested, the number of local subdomains for this processor, or zero if no weights have been supplied
 - scaling - if requested, the local scaling `Vec`, or `NULL` if none have been supplied
 
   Level: intermediate
@@ -1296,7 +1296,7 @@ PetscErrorCode PCASMWeightedGetScaling(PC pc, PetscInt *n, Vec *scaling[])
   if (scaling) PetscAssertPointer(scaling, 3);
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCASM, &match));
   PetscCheck(match, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC is not a PCASM");
-  if (n) *n = osm->n_local_true;
+  if (n) *n = osm->scaling ? osm->n_local_true : 0;
   if (scaling) *scaling = osm->scaling;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
