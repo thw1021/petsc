@@ -1,0 +1,53 @@
+>> Schedule '   user' before 1st TSSolve: 30 point(s)
+>> Schedule 'default' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule '  range' before 1st TSSolve: 0 point(s) <empty>
+### Check 'user' before 1st TSSolve: start -1, end -1
+ETS 'user ' point 10.01, union index   28, private index   28
+### Check 'user' after 1st TSSolve: start 28, end 29
+### Check 'user' after 2nd TSSolve: start 28, end 29
+### Check 'user' after 3rd TSSolve: start 28, end 29
+ETS 'user ' point 10.21, union index   29, private index   29
+### Check 'user' after 4th TSSolve: start 28, end 30
+== CONVERGED_TIME ==
+0	10.	8.25368e-09	pass
+0	11.	1.75859e-12	pass
+0	12.	0.	pass
+---
+Evaluation times schedule 'user': 30 point(s), visited subrange: [28, 30)
+0.01	0.	***
+0.21	0.	***
+1.01	0.	***
+1.21	0.	***
+2.01	0.	***
+2.21	0.	***
+3.	0.	***
+3.01	0.	***
+3.21	0.	***
+4.	0.	***
+4.01	0.	***
+4.02	0.	***
+4.21	0.	***
+4.98	0.	***
+5.	0.	***
+5.01	0.	***
+5.21	0.	***
+5.98	0.	***
+6.	0.	***
+6.01	0.	***
+6.02	0.	***
+6.21	0.	***
+6.99	0.	***
+7.21	0.	***
+8.01	0.	***
+8.21	0.	***
+9.01	0.	***
+9.21	0.	***
+10.01	1.	pass
+10.21	1.	pass
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+(1) Initial time = 9.5, final time reached = 12., max time = 12., pass
+(2) Initial dt = 0.123, final dt = 0.151, pass
+(1) or (2): pass

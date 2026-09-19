@@ -1,0 +1,99 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 3 point(s)
+>> Schedule '  range' before Solve: 9 point(s)
+ETS 'user ' point 0.01, union index    1, private index    0
+ETS 'user ' point 0.21, union index    2, private index    1
+ETS 'user ' point 1.01, union index    3, private index    2
+ETS 'user ' point 1.21, union index    4, private index    3
+ETS 'user ' point 2.01, union index    5, private index    4
+ETS 'user ' point 2.21, union index    6, private index    5
+ETS 'user ' point 3., union index    7, private index    6
+ETS 'user ' point 3.01, union index    8, private index    7
+ETS 'user ' point 3.21, union index    9, private index    8
+ETS 'user ' point 4.01, union index   11, private index   11
+ETS 'user ' point 4.21, union index   12, private index   12
+ETS 'user ' point 5., union index   13, private index   13
+ETS 'user ' point 5., union index   13, private index   14
+ETS 'user ' point 5.01, union index   14, private index   15
+ETS 'user ' point 5.21, union index   15, private index   16
+ETS 'user ' point 6., union index   16, private index   17
+ETS 'user ' point 6., union index   16, private index   18
+ETS 'user ' point 6., union index   16, private index   19
+ETS 'user ' point 6.01, union index   17, private index   20
+ETS 'user ' point 6.21, union index   18, private index   21
+ETS 'user ' point 6.99, union index   19, private index   22
+ETS 'user ' point 7.21, union index   20, private index   23
+ETS 'user ' point 8.01, union index   21, private index   24
+ETS 'user ' point 8.21, union index   22, private index   25
+ETS 'user ' point 9.01, union index   23, private index   26
+ETS 'user ' point 9.21, union index   24, private index   27
+ETS 'Range' point 10., union index   25, private index    0
+ETS 'Range' point 10., union index   25, private index    1
+ETS 'Range' point 10., union index   25, private index    2
+ETS 'Range' point 10., union index   25, private index    3
+ETS 'Range' point 10., union index   25, private index    4
+ETS 'Range' point 10., union index   25, private index    5
+ETS 'Range' point 10., union index   25, private index    6
+ETS 'Range' point 10., union index   25, private index    7
+ETS 'Range' point 10., union index   25, private index    8
+### Check 'user' after Solve: start 0, end 28
+== CONVERGED_TIME ==
+0	1.05	5.7237e-08	pass
+0	2.	3.94024e-09	pass
+0	4.	0.	pass
+0	6.	1.00009e-12	pass
+0	8.	3.94024e-09	pass
+0	10.	0.	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [0, 28)
+0.01	0.999998	pass
+0.21	0.9997	pass
+1.01	0.998215	pass
+1.21	0.998013	pass
+2.01	0.996548	pass
+2.21	0.996251	pass
+3.	0.994698	pass
+3.01	0.994696	pass
+3.21	0.9944	pass
+4.	0.	***
+4.	0.	***
+4.01	0.992847	pass
+4.21	0.992552	pass
+5.	0.991005	pass
+5.	0.991005	pass
+5.01	0.991003	pass
+5.21	0.990707	pass
+6.	0.989163	pass
+6.	0.989163	pass
+6.	0.989163	pass
+6.01	0.989161	pass
+6.21	0.988866	pass
+6.99	0.987363	pass
+7.21	0.987025	pass
+8.01	0.985576	pass
+8.21	0.985282	pass
+9.01	0.983819	pass
+9.21	0.983526	pass
+---
+Evaluation times schedule 'default': 3 point(s), visited subrange: [0, 3)
+0.	0.	pass
+1e-12	0.	pass
+2e-12	0.	pass
+---
+Evaluation times schedule 'range': 9 point(s), visited subrange: [0, 9)
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+10.	0.	***
+Initial time = 0., final time reached = 10., max time = 10., pass
+Initial time step = 0.099, final time step = 0.099, adapt == none, match
+========================
+Event(t==5) is skipped, so no solution change there; event(t==9.05) is skipped, so no termination there
+========================

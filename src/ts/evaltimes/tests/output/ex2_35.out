@@ -1,0 +1,68 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+ETS 'user ' point 0.01, union index    0, private index    0
+ETS 'user ' point 0.21, union index    1, private index    1
+ETS 'user ' point 1.01, union index    2, private index    2
+ETS 'user ' point 1.21, union index    3, private index    3
+ETS 'user ' point 2.01, union index    4, private index    4
+ETS 'user ' point 2.21, union index    5, private index    5
+ETS 'user ' point 3., union index    6, private index    6
+ETS 'user ' point 3.01, union index    7, private index    7
+ETS 'user ' point 3.21, union index    8, private index    8
+ETS 'user ' point 4.0015, union index   10, private index   10
+ETS 'user ' point 4.01, union index   11, private index   11
+ETS 'user ' point 4.21, union index   12, private index   12
+ETS 'user ' point 4.9985, union index   13, private index   13
+ETS 'user ' point 5., union index   14, private index   14
+ETS 'user ' point 5.01, union index   15, private index   15
+ETS 'user ' point 5.21, union index   16, private index   16
+### Check 'user' after Solve: start 0, end 17
+== CONVERGED_TIME ==
+0	1.	0.	pass
+0	1.05	1.19209e-07	pass
+0	2.	1.19209e-07	pass
+0	3.	0.	pass
+0	4.	0.	pass
+0	5.	0.	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [0, 17)
+0.01	0.999998	pass
+0.21	0.999598	pass
+1.01	0.997944	pass
+1.21	0.997641	pass
+2.01	0.99599	pass
+2.21	0.995592	pass
+3.	0.993819	pass
+3.01	0.993817	pass
+3.21	0.99342	pass
+4.	0.	***
+4.0015	0.99165	pass
+4.01	0.991649	pass
+4.21	0.991252	pass
+4.9985	0.989493	pass
+5.	0.989493	pass
+5.01	0.989491	pass
+5.21	0.989096	pass
+5.9985	0.	***
+6.	0.	***
+6.0015	0.	***
+6.01	0.	***
+6.21	0.	***
+6.99	0.	***
+7.21	0.	***
+8.01	0.	***
+8.21	0.	***
+9.01	0.	***
+9.21	0.	***
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+Initial time = 0., final time reached = 5.5, max time = 5.5, pass
+Initial time step = 0.1127, final time step = 0.1127, adapt == none, match
+========================
+Step size is increased to 0.1138 before evaltimes t = 3.0 and 4.0 (check with -ts_monitor)
+========================

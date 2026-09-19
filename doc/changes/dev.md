@@ -192,12 +192,14 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
-- Add `TSAdaptSetMinStep()` and `TSAdaptGetMinStep()` to set the relative and absolute parts of the minimum time step; the minimum step used at time `t` is `max(dt_min_abs, dt_min_rel * |t|)`
-- Deprecate `-ts_adapt_dt_min` in favor of `-ts_adapt_dt_min_abs`, and add `-ts_adapt_dt_min_rel`
-- Deprecate `-ts_event_dt_min` in favor of `-ts_event_dt_min_abs`, and add `-ts_event_dt_min_rel`
-- Change the default `TSAdapt` maximum time step from `1e+20` to `PETSC_MAX_REAL`
 - Deprecate `TSRHSFunction`, `TSRHSJacobian`, `TSRHSJacobianP`, `TSSolutionFunction`, `TSForcingFunction`, `TSIFunction`, `TSIJacobian`, `TSI2Function`, `TSI2Jacobian`, `TSTransientVariable`, `TSGLLEAcceptFunction` and `TSAlpha2Predictor` in favor of a pointer to the corresponding `Fn` typedef, for example `TSRHSFunctionFn *`
 - Deprecate `DMDATSRHSFunctionLocal`, `DMDATSRHSJacobianLocal`, `DMDATSIFunctionLocal` and `DMDATSIJacobianLocal` in favor of `DMDATSRHSFunctionLocalFn *`, `DMDATSRHSJacobianLocalFn *`, `DMDATSIFunctionLocalFn *` and `DMDATSIJacobianLocalFn *`
+- Add `TSEvaluationTimesAddArray()`, `TSEvaluationTimesAddUniform()` for setting the evaluation time points and the associated callbacks
+- Add the default handler/callback for evaluation time points `TSEvaluationTimesDefaultHandler()`, that saves the whole solution vectors
+- Add `TSEvaluationTimesSetUp()`, a set-up routine to be called after all evaluation times schedules have been added
+- Add `TSEvaluationTimesReset()`, `TSEvaluationTimesDestroy()` for resetting or deleting the evaluation times object
+- Add `TSEvaluationTimesGetSolutions()`, `TSEvaluationTimesRestoreSolutions()` for accessing the solutions saved by the different evaluation times schedules
+- Deprecate `TSSetTimeSpan()`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimes()`, `TSGetEvaluationSolutions()`
 
 ## TAO
 

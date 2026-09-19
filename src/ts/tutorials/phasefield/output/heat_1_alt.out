@@ -159,4 +159,9 @@
     2 SNES Function norm 2.799337089527e-04
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
 32 TS dt 0.000625 time 0.02
-Interpolated solution at time 0.02 between steps 31 and 32
+    0 SNES Function norm 1.035886611938e+02
+    1 SNES Function norm 5.401240661740e-03
+    2 SNES Function norm 3.676839987747e-04
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+33 TS dt 0.000625 time 0.020625
+Interpolated solution at time 0.02 between steps 32 and 33
