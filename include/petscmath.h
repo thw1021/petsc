@@ -504,23 +504,23 @@
 .seealso: `PetscReal`, `PetscScalar`, `PetscComplex`
   M*/
   #define PetscTGamma(a) tgammaf(a)
-  #if PetscDefined(HAVE_LGAMMA_IS_GAMMA)
-    /*MC
-      PetscLGamma - Returns the natural logarithm of the absolute value of the gamma function in the configured `PetscReal` precision
+  /*MC
+    PetscLGamma - Returns the natural logarithm of the absolute value of the gamma function in the configured `PetscReal` precision
 
-      Synopsis:
-      #include <petscmath.h>
-      PetscReal PetscLGamma(PetscReal a)
+    Synopsis:
+    #include <petscmath.h>
+    PetscReal PetscLGamma(PetscReal a)
 
-      Not Collective; No Fortran Support
+    Not Collective; No Fortran Support
 
-      Input Parameter:
-    . a - the value
+    Input Parameter:
+  . a - the value
 
-      Level: beginner
+    Level: beginner
 
 .seealso: `PetscReal`, `PetscScalar`, `PetscComplex`
-    M*/
+  M*/
+  #if PetscDefined(HAVE_LGAMMA_IS_GAMMA)
     #define PetscLGamma(a) gammaf(a)
   #else
     #define PetscLGamma(a) lgammaf(a)
