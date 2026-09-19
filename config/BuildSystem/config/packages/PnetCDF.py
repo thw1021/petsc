@@ -4,7 +4,7 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '1.14.1'
+    self.version          = '1.15.1'
     self.versionname      = 'PNETCDF_VERSION'
     self.download         = ['https://parallel-netcdf.github.io/Release/pnetcdf-'+self.version+'.tar.gz',
                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/pnetcdf-'+self.version+'.tar.gz']
