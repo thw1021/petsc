@@ -145,9 +145,12 @@ struct MatMatStruct {
 };
 
 struct MatMatStruct_AB : public MatMatStruct {
-  PetscIntKokkosView F_NzLeft; // plans to split F (in leafbuf) into Fd, Fo
-  PetscIntKokkosView irootloc; // plans to put E (i.e., Bd, Bo) into rootBuf
-  PetscIntKokkosView rowoffset;
+  PetscIntKokkosView  F_NzLeft; // plans to split F (in leafbuf) into Fd, Fo
+  PetscIntKokkosView  irootloc; // plans to put E (i.e., Bd, Bo) into rootBuf
+  PetscIntKokkosView  rowoffset;
+  PetscIntKokkosView  Ao_rows;  // nonempty rows of A's off-diag block Ao
+  MatRowMapKokkosView Ao_i;     // row map of Ao restricted to Ao_rows
+  KokkosCsrMatrix     C3c, C4c; // C3, C4 restricted to Ao_rows; C3, C4 share their a[], j[]
 };
 
 struct MatMatStruct_AtB : public MatMatStruct {
@@ -1158,6 +1161,46 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AtB(Mat_Product *, Mat A, M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Get the nonempty rows of A and the row map of A restricted to them; A's a[] and j[] serve as is for the restricted matrix
+static PetscErrorCode KokkosCsrMatrixGetNonemptyRows_Private(const KokkosCsrMatrix &A, PetscIntKokkosView &rows, MatRowMapKokkosView &ri)
+{
+  const auto &Ai = A.graph.row_map;
+  PetscInt    m = A.numRows(), nrows = 0;
+
+  PetscFunctionBegin;
+  PetscCallCXX(Kokkos::parallel_reduce(Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, m), KOKKOS_LAMBDA(const PetscInt r, PetscInt &cnt) { cnt += (Ai(r + 1) > Ai(r)); }, nrows));
+  PetscCallCXX(rows = PetscIntKokkosView(NoInit("rows"), nrows));
+  PetscCallCXX(ri = MatRowMapKokkosView("ri", nrows + 1)); // ri(0) = 0
+  PetscCallCXX(Kokkos::parallel_scan(
+    Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, m), KOKKOS_LAMBDA(const PetscInt r, PetscInt &k, const bool final) {
+      if (Ai(r + 1) > Ai(r)) {
+        if (final) {
+          rows(k)   = r;
+          ri(k + 1) = Ai(r + 1);
+        }
+        k++;
+      }
+    }));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Get C with m rows from Cc, whose rows are rows[] of C (all other rows of C are empty). C shares Cc's a[] and j[]
+static PetscErrorCode KokkosCsrMatrixExpandRows_Private(const KokkosCsrMatrix &Cc, const PetscIntKokkosView &rows, PetscInt m, KokkosCsrMatrix &C)
+{
+  const auto         &Cci = Cc.graph.row_map;
+  MatRowMapKokkosView Ci("Ci", m + 1);
+
+  PetscFunctionBegin;
+  PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, rows.extent(0)), KOKKOS_LAMBDA(const PetscInt k) { Ci(rows(k) + 1) = Cci(k + 1) - Cci(k); }));
+  PetscCallCXX(Kokkos::parallel_scan(
+    Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, m + 1), KOKKOS_LAMBDA(const PetscInt r, PetscInt &sum, const bool final) {
+      sum += Ci(r);
+      if (final) Ci(r) = sum;
+    }));
+  PetscCallCXX(C = KokkosCsrMatrix("C", m, Cc.numCols(), Cc.nnz(), Cc.values, Ci, Cc.graph.entries));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* MatProductSymbolic_MPIAIJKokkos_AB - AB flavor of MatProductSymbolic_MPIAIJKokkos
 
   Input Parameters:
@@ -1170,7 +1213,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *, Mat A, M
 {
   Mat_MPIAIJ     *ampi = static_cast<Mat_MPIAIJ *>(A->data);
   Mat_MPIAIJ     *bmpi = static_cast<Mat_MPIAIJ *>(B->data);
-  KokkosCsrMatrix Ad, Ao, Bd, Bo;
+  KokkosCsrMatrix Ad, Ao, Bd, Bo, Aoc;
 
   PetscFunctionBegin;
   PetscCall(MatSeqAIJKokkosGetKokkosCsrMatrix(ampi->A, &Ad));
@@ -1211,15 +1254,19 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *, Mat A, M
 
   PetscCall(MatMPIAIJKokkosBcastEnd(B, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm));
 
-  // A's off-diag * (F's diag + F's off-diag)
-  PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh3, Ao, false, mm->Fd, false, mm->C3));
-  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, Ao, false, mm->Fd, false, mm->C3));
-  PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh4, Ao, false, mm->Fo, false, mm->C4));
-  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, Ao, false, mm->Fo, false, mm->C4));
+  // A's off-diag * (F's diag + F's off-diag), on the nonempty rows of Ao only, since cuSPARSE SpGEMM can fail on the many scattered empty rows of Ao
+  PetscCall(KokkosCsrMatrixGetNonemptyRows_Private(Ao, mm->Ao_rows, mm->Ao_i));
+  PetscCallCXX(Aoc = KokkosCsrMatrix("Aoc", mm->Ao_rows.extent(0), Ao.numCols(), Ao.nnz(), Ao.values, mm->Ao_i, Ao.graph.entries));
+  PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh3, Aoc, false, mm->Fd, false, mm->C3c));
+  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, Aoc, false, mm->Fd, false, mm->C3c));
+  PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh4, Aoc, false, mm->Fo, false, mm->C4c));
+  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, Aoc, false, mm->Fo, false, mm->C4c));
 #if PETSC_PKG_KOKKOS_KERNELS_VERSION_LT(4, 0, 0)
-  PetscCallCXX(sort_crs_matrix(mm->C3));
-  PetscCallCXX(sort_crs_matrix(mm->C4));
+  PetscCallCXX(sort_crs_matrix(mm->C3c));
+  PetscCallCXX(sort_crs_matrix(mm->C4c));
 #endif
+  PetscCall(KokkosCsrMatrixExpandRows_Private(mm->C3c, mm->Ao_rows, Ao.numRows(), mm->C3));
+  PetscCall(KokkosCsrMatrixExpandRows_Private(mm->C4c, mm->Ao_rows, Ao.numRows(), mm->C4));
 
   // Create C2, which shares a, i arrays with C2_mid, but with new column indices and potentially larger column size
   MatColIdxKokkosView oldj = mm->C2_mid.graph.entries, newj(NoInit("j"), oldj.extent(0));
@@ -1241,7 +1288,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AB(Mat_Product *, Mat A, Ma
 {
   Mat_MPIAIJ     *ampi = static_cast<Mat_MPIAIJ *>(A->data);
   Mat_MPIAIJ     *bmpi = static_cast<Mat_MPIAIJ *>(B->data);
-  KokkosCsrMatrix Ad, Ao, Bd, Bo;
+  KokkosCsrMatrix Ad, Ao, Bd, Bo, Aoc;
 
   PetscFunctionBegin;
   PetscCall(MatSeqAIJKokkosGetKokkosCsrMatrix(ampi->A, &Ad));
@@ -1258,9 +1305,10 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AB(Mat_Product *, Mat A, Ma
 
   PetscCall(MatMPIAIJKokkosBcastEnd(B, NULL, MAT_REUSE_MATRIX, NULL, mm));
 
-  // A's off-diag * (F's diag + F's off-diag)
-  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, Ao, false, mm->Fd, false, mm->C3));
-  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, Ao, false, mm->Fo, false, mm->C4));
+  // A's off-diag * (F's diag + F's off-diag), on the nonempty rows of Ao. C3, C4 share values with C3c, C4c
+  PetscCallCXX(Aoc = KokkosCsrMatrix("Aoc", mm->Ao_rows.extent(0), Ao.numCols(), Ao.nnz(), Ao.values, mm->Ao_i, Ao.graph.entries));
+  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, Aoc, false, mm->Fd, false, mm->C3c));
+  PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, Aoc, false, mm->Fo, false, mm->C4c));
 
   // C = (Cd, Co) = (C1+C3, C2+C4)
   PetscCallCXX(KokkosSparse::spadd_numeric(&mm->kh1, 1.0, mm->C1, 1.0, mm->C3, mm->Cd));
