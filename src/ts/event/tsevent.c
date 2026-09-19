@@ -208,7 +208,7 @@ PetscErrorCode TSSetPostEventSecondStep(TS ts, PetscReal dt2)
 /*@
   TSSetEventTolerances - Set tolerances for event (indicator function) zero crossings
 
-  Logically Collective
+  Not Collective
 
   Input Parameters:
 + ts   - time integration context
@@ -218,7 +218,7 @@ PetscErrorCode TSSetPostEventSecondStep(TS ts, PetscReal dt2)
   Options Database Key:
 . -ts_event_tol tol - tolerance for event (indicator function) zero crossing
 
-  Level: beginner
+  Level: intermediate
 
   Notes:
   One must call `TSSetEventHandler()` before setting the tolerances.
@@ -319,6 +319,7 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   if (nevents) {
     PetscAssertPointer(direction, 3);
     PetscAssertPointer(terminate, 4);
+    PetscCheck(indicator, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_NULL, "NULL event-indicator callback provided");
   }
   PetscCall(PetscNew(&event));
   PetscCall(PetscMalloc1(nevents, &event->fvalue_prev));
@@ -446,7 +447,7 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
   if (event->postevent) {
     PetscObjectState state_prev, state_post;
     PetscCall(PetscObjectStateGet((PetscObject)U, &state_prev));
-    PetscCallBack("TSEvent post-event processing", (*event->postevent)(ts, event->nevents_zero, event->events_zero, t, U, forwardsolve, event->ctx)); // TODO update 'restart' here?
+    PetscCallBack("TSEvent post-event processing", (*event->postevent)(ts, event->nevents_zero, event->events_zero, t, U, forwardsolve, event->ctx)); // TODO consider requesting this callback to update 'restart' (?)
     PetscCall(PetscObjectStateGet((PetscObject)U, &state_post));
     if (state_prev != state_post) {
       restart      = PETSC_TRUE;
@@ -600,9 +601,12 @@ static inline PetscInt TSEventTestBracket(PetscInt fsign_left, PetscInt fsign, P
   If a user-defined step is cut by this function, the input uncut step is saved to adapt->dt_span_cached.
   Flag 'user_dt' indicates if the step was defined by user.
 */
-static inline PetscReal TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBool user_dt)
+static PetscErrorCode TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBool user_dt, PetscReal *o_dt)
 {
   PetscReal res = dt;
+
+  PetscFunctionBegin;
+  if (o_dt) PetscAssertPointer(o_dt, 5);
   if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
     PetscReal maxdt    = ts->max_time - t; // this may be overridden by eval_times
     PetscBool cut_made = PETSC_FALSE;
@@ -633,7 +637,8 @@ static inline PetscReal TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBo
       else ts->adapt->dt_eval_times_cached = 0;
     }
   }
-  return res;
+  if (o_dt) *o_dt = res;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -806,7 +811,7 @@ PetscErrorCode TSEventHandler(TS ts)
   PetscCall(TSGetSolution(ts, &U)); // if revisiting, this will be the updated U* (see discussion on "Revisiting" in the Developer notes above)
   if (event->revisit_right) {
     PetscReal tr = TSEvent_update_from_right(event);
-    PetscCheck(PetscAbsReal(tr - t) < PETSC_SMALL, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Inconsistent time value when performing 'revisiting' in TSEventHandler()");
+    PetscAssert(PetscIsCloseAtTol(tr, t, 10 * PETSC_MACHINE_EPSILON, PetscSqrtReal(PETSC_REAL_MIN)), PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Found inconsistent time values when performing 'revisiting'. This does not necessarily mean an error, but indicates unforseen loss of accuracy and should be investigated.");
   } else {
     PetscCall(VecLockReadPush(U));
     PetscCallBack("TSEvent indicator", (*event->indicator)(ts, t, U, event->fvalue, event->ctx)); // fill fvalue's at point 't'
@@ -827,7 +832,7 @@ PetscErrorCode TSEventHandler(TS ts)
      0 : t is a zero-crossing for some indicator-function-i
      2 : none of the above
   */
-  PetscCheck(!event->revisit_right || minsideout == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "minsideout != 0 when performing 'revisiting' in TSEventHandler()");
+  PetscCheck(!event->revisit_right || minsideout == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "minsideout != 0 when performing 'revisiting'");
 
   if (minsideout == -1 || minsideout == +1) {                                                           // this if-branch will refine the left/right bracket
     const PetscReal bracket_size = (minsideout == -1) ? t - event->ptime_prev : event->ptime_right - t; // sync on all ranks
@@ -844,14 +849,14 @@ PetscErrorCode TSEventHandler(TS ts)
       // [--------|-------------]
       if (bracket_size <= 2 * event->timestep_min) dt_next = bracket_size / 2; // the bracket is almost small -> bisect it
       else {                                                                   // the bracket is not small -> use Anderson-Bjorck
-        dt_next = PETSC_MAX_REAL;
+        PetscReal dti_min = PETSC_MAX_REAL;
         for (PetscInt i = 0; i < event->nevents; i++) {
           if (event->side[i] == minsideout) { // only refine the appropriate brackets
             PetscReal dti = RefineAndersonBjorck(event->ptime_prev, t, event->ptime_right, event->fvalue_prev[i], event->fvalue[i], event->fvalue_right[i], event->side[i], &event->side_prev[i], event->justrefined_AB[i], &event->gamma_AB[i]);
-            dt_next       = PetscMin(dt_next, dti);
+            dti_min       = PetscMin(dti_min, dti);
           }
         }
-        PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &dt_next, 1, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
+        PetscCallMPI(MPIU_Allreduce(&dti_min, &dt_next, 1, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
         if (dt_next < event->timestep_min) dt_next = event->timestep_min;
         if (bracket_size - dt_next < event->timestep_min) dt_next = bracket_size - event->timestep_min;
       }
@@ -894,27 +899,29 @@ PetscErrorCode TSEventHandler(TS ts)
     event->processing = PETSC_TRUE;
   } else { // minsideout == 2: no brackets, no zero-crossings
     // [----------------------]
-    PetscCheck(event->iterctr == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state (event->iterctr != 0) in TSEventHandler()");
+    PetscCheck(event->iterctr == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state (event->iterctr != 0)");
     if (event->processing) {
-      PetscReal dt2;
-      if (event->timestep_2nd_postevent == PETSC_DECIDE) dt2 = event->timestep_cache;                            // (1)
-      else dt2 = event->timestep_2nd_postevent;                                                                  // (2), (2a), (3)
-      PetscCall(TSSetTimeStep(ts, TSEvent_dt_cap(ts, t, dt2, Not_PETSC_DECIDE(event->timestep_2nd_postevent)))); // set the second post-event step
+      PetscReal dt2, dt2_capped;
+      if (event->timestep_2nd_postevent == PETSC_DECIDE) dt2 = event->timestep_cache; // (1)
+      else dt2 = event->timestep_2nd_postevent;                                       // (2), (2a), (3)
+      PetscCall(TSEvent_dt_cap(ts, t, dt2, Not_PETSC_DECIDE(event->timestep_2nd_postevent), &dt2_capped));
+      PetscCall(TSSetTimeStep(ts, dt2_capped)); // set the second post-event step
     }
     event->processing = PETSC_FALSE;
   }
 
   // if 'revisit_right' was flagged before the current iteration started, the iteration is expected to finish
-  PetscCheck(!revisit_right_cache || finished, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state of 'revisit_right_cache' in TSEventHandler()");
+  PetscCheck(!revisit_right_cache || finished, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state of 'revisit_right_cache'");
 
   if (finished) { // finished handling the current event
-    PetscCall(TSPostEvent(ts, t, U));
+    PetscReal dt1, dt1_capped;
 
-    PetscReal dt1;
+    PetscCall(TSPostEvent(ts, t, U)); // may change solution/equations!
+
     if (event->timestep_postevent == PETSC_DECIDE) { // (1), (2)
       dt1               = event->ptime_cache - t;
       event->processing = PETSC_TRUE;
-      if (PetscAbsReal(dt1) < PETSC_SMALL) { // (1a), (2a): the cached post-event point == event point
+      if (PetscIsCloseAtTol(t, event->ptime_cache, PETSC_SMALL, PetscSqrtReal(PETSC_REAL_MIN))) { // (1a), (2a): the cached post-event point == event point
         dt1               = event->timestep_cache;
         event->processing = Not_PETSC_DECIDE(event->timestep_2nd_postevent);
       }
@@ -922,15 +929,17 @@ PetscErrorCode TSEventHandler(TS ts)
       dt1               = event->timestep_postevent; // 1st post-event dt = user-provided value
       event->processing = Not_PETSC_DECIDE(event->timestep_2nd_postevent);
     }
-
-    PetscCall(TSSetTimeStep(ts, TSEvent_dt_cap(ts, t, dt1, Not_PETSC_DECIDE(event->timestep_postevent)))); // set the first post-event step
+    PetscCall(TSEvent_dt_cap(ts, t, dt1, Not_PETSC_DECIDE(event->timestep_postevent), &dt1_capped));
+    PetscCall(TSSetTimeStep(ts, dt1_capped)); // set the first post-event step
     event->iterctr = 0;
   } // if-finished
 
   if (event->iterctr == 0) TSEvent_update_left(event, t); // not found an event, or finished the event
   else {
-    PetscCall(TSGetTime(ts, &t));                                              // update 't' to account for potential rollback
-    PetscCall(TSSetTimeStep(ts, TSEvent_dt_cap(ts, t, dt_next, PETSC_FALSE))); // continue resolving the event
+    PetscReal dt_next_capped;
+    PetscCall(TSGetTime(ts, &t)); // update 't' to account for potential rollback
+    PetscCall(TSEvent_dt_cap(ts, t, dt_next, PETSC_FALSE, &dt_next_capped));
+    PetscCall(TSSetTimeStep(ts, dt_next_capped)); // continue resolving the event
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -952,7 +961,7 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
   PetscCall(TSGetSolution(ts, &U));
 
   ctr = event->recorder.ctr - 1;
-  if (ctr >= 0 && PetscAbsReal(t - event->recorder.time[ctr]) < PETSC_SMALL) {
+  if (ctr >= 0 && PetscIsCloseAtTol(t, event->recorder.time[ctr], PETSC_SMALL, PetscSqrtReal(PETSC_REAL_MIN))) {
     // Call the user post-event function
     if (event->postevent) {
       PetscCallBack("TSEvent post-event processing", (*event->postevent)(ts, event->recorder.nevents[ctr], event->recorder.eventidx[ctr], t, U, forwardsolve, event->ctx));
@@ -966,7 +975,7 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
 /*@
   TSGetNumEvents - Get the number of events defined on the given MPI process
 
-  Logically Collective
+  Not Collective
 
   Input Parameter:
 . ts - the `TS` context
