@@ -319,7 +319,7 @@ PetscErrorCode Fill_mat(PetscReal coeff, PetscInt m, Mat A)
     suffix: 1single
     requires: single
     output_file: output/ex3span_1single.out
-    args: -ts_monitor -ts_adapt_type none -restart
+    args: -ts_monitor -ts_adapt_type none -restart -ts_event_tol 1e-5
     args: -dtpost 0.1127 -D 0.0015 -dir 0 -ts_max_time 9.8 -ts_time_step 0.18
     nsize: 1
 

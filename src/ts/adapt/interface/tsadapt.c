@@ -1089,46 +1089,42 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
   if (next_sc) *next_sc = scheme;
 
   if (*accept && ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-    /* Increase/reduce step size if end time of next step is close to or overshoots max time */
-    PetscReal t = ts->ptime + ts->time_step, tend, tmax, h1, hmax;
-    PetscReal a = (PetscReal)(1.0 + adapt->matchstepfac[0]);
-    PetscReal b = adapt->matchstepfac[1];
-
+    // Increase/reduce the *next* step size -- if it ends close to, or overshoots, max_time or evaltimes_i
+    PetscReal t = ts->ptime + ts->time_step, h1, tmax, hmax;
     /*
-      Logic in using 'dt_span_cached':
-      1. It always overrides *next_h, except (any of):
-         a) the current step was rejected,
-         b) the adaptor proposed to decrease the next step,
-         c) the adaptor proposed *next_h > dt_span_cached.
-      2. If *next_h was adjusted by eval_times points (or the final point):
-           -- when dt_span_cached is filled (>0), it keeps its value,
-           -- when dt_span_cached is clear (==0), it gets the unadjusted version of *next_h.
-      3. If *next_h was not adjusted as in (2), dt_span_cached is cleared.
-      Note, if a combination (1.b || 1.c) && (3) takes place, this means that
-      dt_span_cached remains unused at the moment of clearing.
-      If (1.a) takes place, dt_span_cached keeps its value.
-      Also, dt_span_cached can be updated by the event handler, see tsevent.c.
+      Logic in using 'next_h_cache':
+      => next_h_cache > 0 indicates the step has been cut/adjusted previously to get the current 'h'.
+         In this case the overall code design should result in that next_h_cache >= 'h', or they approximately equal.
+      => next_h_cache is engaged via the APPLY-CLEAR-SAVE sequence listed below (except the rejected-step case).
+      => next_h_cache can be also updated/used by the event handler, see tsevent.c, and in TSSolve(), see ts.c
+
+      APPLY. Nonzero next_h_cache overrides or caps *next_h as follows:
+             [---] When *next_h < h, use *next_h (adaptor's proposal) to ensure convergence.
+             [USE] When *next_h == h (to within rounding), use next_h_cache.
+             [CAP] When *next_h > h, use 2*next_h_cache to cap *next_h proposed by adaptor.
+                   E.g. in case the cut step 'h' is very small, the adaptor could have proposed to increase
+                   it significantly in *next_h. A time step after a large decrease + large increase
+                   may carry less information than the cached step, so use 2*next_h_cache as an extra cap.
+      CLEAR. After 'APPLY', next_h_cache is always cleared, whether it has changed *next_h or not.
+      SAVE.  The step *next_h may be adjusted by the evaluation time points, or the final point.
+             In this case, next_h_cache saves the original version of *next_h.
+
+      If the current step is rejected, the APPLY-CLEAR-SAVE sequence is skipped, nothing happens with next_h_cache.
     */
-    if (h <= *next_h && *next_h <= adapt->dt_eval_times_cached) *next_h = adapt->dt_eval_times_cached; /* try employing the cache */
-    h1   = *next_h;
-    tend = t + h1;
-
+    if (adapt->next_h_cache > 0) { // engage the cache
+      if (PetscIsCloseAtTol(h, *next_h, 10 * PETSC_MACHINE_EPSILON, 0.0)) *next_h = adapt->next_h_cache;
+      else if (*next_h > h) *next_h = PetscMin(*next_h, 2 * adapt->next_h_cache); // the factor 2 is somewhat arbitrary and may be reconsidered
+    }
+    h1                  = *next_h;
+    adapt->next_h_cache = 0; // clear the cache
     if (ts->eval_times && ts->eval_times->time_point_idx < ts->eval_times->num_time_points) {
-      PetscCheck(ts->eval_times->worktol == 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "Unexpected state (tspan->worktol != 0) in TSAdaptChoose()");
+      PetscCheck(ts->eval_times->worktol == 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "Unexpected state (eval_times->worktol != 0) in TSAdaptChoose()");
       ts->eval_times->worktol = ts->eval_times->reltol * h1 + ts->eval_times->abstol;
-      if (PetscIsCloseAtTol(t, ts->eval_times->time_points[ts->eval_times->time_point_idx], ts->eval_times->worktol, 0)) /* hit a span time point */
-        if (ts->eval_times->time_point_idx + 1 < ts->eval_times->num_time_points) tmax = ts->eval_times->time_points[ts->eval_times->time_point_idx + 1];
-        else tmax = ts->max_time; /* hit the last span time point */
-      else tmax = ts->eval_times->time_points[ts->eval_times->time_point_idx];
-    } else tmax = ts->max_time;
-    tmax = PetscMin(tmax, ts->max_time);
-    hmax = tmax - t;
-
-    if (t < tmax && tend > tmax) *next_h = hmax;
-    if (t < tmax && tend < tmax && h1 * b > hmax) *next_h = hmax / 2;
-    if (t < tmax && tend < tmax && h1 * a > hmax) *next_h = hmax;
-    if (ts->eval_times && h1 != *next_h && !adapt->dt_eval_times_cached) adapt->dt_eval_times_cached = h1; /* cache the step size if it is to be changed    */
-    if (ts->eval_times && h1 == *next_h && adapt->dt_eval_times_cached) adapt->dt_eval_times_cached = 0;   /* clear the cache if the step size is unchanged */
+    }
+    PetscCall(TSEvaluationTimesNext(ts, t, &tmax, &hmax));
+    PetscCheck(hmax > 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "hmax == %g, but should be > 0", (double)hmax);
+    PetscCall(TSAdaptCapNextStep(adapt, t + h1, h1, tmax, hmax, next_h));
+    if (h1 != *next_h) adapt->next_h_cache = h1; // cache the step size if it is to be changed
   }
   if (adapt->monitor) {
     const char *sc_name = (scheme < ncandidates) ? adapt->candidates.name[scheme] : "";
@@ -1141,6 +1137,29 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
                                        (double)ts->ptime, (double)h, (double)*next_h, (double)wlte, (double)wltea, (double)wlter));
     }
     PetscCall(PetscViewerASCIISubtractTab(adapt->monitor, ((PetscObject)adapt)->tablevel));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  A helper function which may adjust (in most cases, cap) the next step 'next_dt', as required by evaltimes/max_time, or leave it intact.
+  tplan, dtplan should be consistent,
+  tmax, dtmax should be consistent.
+  The resulting step *next_dt will be either smaller than dtplan, or approximately equal to it (or exactly equal).
+*/
+PetscErrorCode TSAdaptCapNextStep(TSAdapt adapt, PetscReal tplan, PetscReal dtplan, PetscReal tmax, PetscReal dtmax, PetscReal *next_dt)
+{
+  PetscFunctionBegin;
+  if (adapt) {
+    PetscReal a, b;
+
+    PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
+    PetscAssertPointer(next_dt, 6);
+    a = 1.0 + adapt->matchstepfac[0];
+    b = adapt->matchstepfac[1];
+    if (tplan > tmax) *next_dt = dtmax;
+    if (tplan < tmax && dtplan * b > dtmax) *next_dt = dtmax / 2;
+    if (tplan < tmax && dtplan * a > dtmax) *next_dt = dtmax;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

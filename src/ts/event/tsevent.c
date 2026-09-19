@@ -130,7 +130,7 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
   the event handler to follow the originally planned trajectory, and is assumed by default.
 
   Developer Notes:
-  In notation of the `TSEvent` man page, the event processing starts after visiting point t3, which means ts->adapt->dt_eval_times_cached
+  In notation of the `TSEvent` man page, the event processing starts after visiting point t3, which means ts->adapt->next_h_cache
   has been set to whatever value is required when planning the step t3 -> t4.
 
 .seealso: [](ch_ts), [](sec_ts_event), `TS`, `TSEvent`, `TSSetEventHandler()`, `TSSetPostEventSecondStep()`
@@ -545,11 +545,8 @@ static inline PetscInt TSEventTestBracket(PetscInt fsign_left, PetscInt fsign, P
 }
 
 /*
-  Caps the time steps, accounting for evaluation time points.
-  It uses 'event->timestep_cache' as a time step to calculate the tolerance for eval_times points detection. This
-  is done since the event resolution may result in significant time step refinement, and we don't use these small steps for tolerances.
-  To enhance the consistency of eval_times points detection, tolerance 'eval_times->worktol' is reused later in the TSSolve iteration.
-  If a user-defined step is cut by this function, the input uncut step is saved to adapt->dt_span_cached.
+  TSEvent_dt_cap - caps the time steps, accounting for the evaltimes points.
+  If a user-defined step is cut by this function, the input uncut step is saved to adapt->next_h_cache.
   Flag 'user_dt' indicates if the step was defined by user.
 */
 static PetscErrorCode TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBool user_dt, PetscReal *o_dt)
@@ -559,33 +556,19 @@ static PetscErrorCode TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBool
   PetscFunctionBegin;
   if (o_dt) PetscAssertPointer(o_dt, 5);
   if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-    PetscReal maxdt    = ts->max_time - t; // this may be overridden by eval_times
     PetscBool cut_made = PETSC_FALSE;
-    PetscReal eps      = 10 * PETSC_MACHINE_EPSILON;
-    if (ts->eval_times) {
-      PetscInt   idx = ts->eval_times->time_point_idx;
-      PetscInt   Ns  = ts->eval_times->num_time_points;
-      PetscReal *st  = ts->eval_times->time_points;
+    PetscReal maxdt;
 
-      if (ts->eval_times->worktol == 0) ts->eval_times->worktol = ts->eval_times->reltol * ts->event->timestep_cache + ts->eval_times->abstol; // in case TSAdaptChoose() has not defined it
-      if (idx < Ns && PetscIsCloseAtTol(t, st[idx], ts->eval_times->worktol, 0)) {                                                             // just hit a evaluation time point
-        if (idx + 1 < Ns) maxdt = st[idx + 1] - t;                                                                                             // ok to use the next evaluation time point
-        else maxdt = ts->max_time - t;                                                                                                         // can't use the next evaluation time point: they have finished
-      } else if (idx < Ns) maxdt = st[idx] - t;                                                                                                // haven't hit a evaluation time point, use the nearest one
-    }
-    maxdt = PetscMin(maxdt, ts->max_time - t);
-    PetscCheck((maxdt > eps) || (PetscAbsReal(maxdt) <= eps && PetscIsCloseAtTol(t, ts->max_time, eps, 0)), PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state: bad maxdt (%g) in TSEvent_dt_cap()", (double)maxdt);
+    PetscCall(TSEvaluationTimesNext(ts, t, NULL, &maxdt));
+    PetscCheck(maxdt > 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Failed to get maxdt > 0");
+    if (dt > maxdt) {
+      res      = maxdt; // yes cut
+      cut_made = PETSC_TRUE;
+    } else res = dt; // no cut
 
-    if (PetscIsCloseAtTol(dt, maxdt, eps, 0)) res = maxdt; // no cut
-    else {
-      if (dt > maxdt) {
-        res      = maxdt; // yes cut
-        cut_made = PETSC_TRUE;
-      } else res = dt; // no cut
-    }
-    if (ts->adapt && user_dt) { // only update dt_span_cached for the user-defined step
-      if (cut_made) ts->adapt->dt_eval_times_cached = dt;
-      else ts->adapt->dt_eval_times_cached = 0;
+    if (ts->adapt && user_dt) { // only update next_h_cache for the user-defined step
+      if (cut_made) ts->adapt->next_h_cache = dt;
+      else ts->adapt->next_h_cache = 0;
     }
   }
   if (o_dt) *o_dt = res;
