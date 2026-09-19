@@ -1114,15 +1114,103 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscRe
 PETSC_EXTERN PetscErrorCode       TSMonitorHGCtxDestroy(TSMonitorHGCtx *);
 PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscReal, Vec, void *);
 
-/*M
-   TSEvent - Abstract object to handle event detection in `TS` time integrator
+/*MC
+  TSEvent - Abstract object that handles the `TS` events
 
-   Level: intermediate
+  Options Database Keys:
++ -ts_event_tol tol                       - tolerance for event (indicator function) zero crossing
+. -ts_event_post_event_step dt1           - first time step after the event
+. -ts_event_post_event_second_step dt2    - second time step after the event
+. -ts_event_monitor                       - print choices made by event handler
+. -ts_event_recorder_initial_size recsize - initial size of event recorder
+- -ts_event_dt_min dt                     - minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min)
 
-   Note:
-   See `TSSetEventHandler()` for the management of events.
+  Level: intermediate
 
-.seealso: [](sec_ts_event), `TS`, `TSSetEventHandler()`, `TSSetPostEventStep()`, `TSSetPostEventSecondStep()`, `TSSetEventTolerances()`, `TSGetNumEvents()`
+  Notes:
+  The `TSEvent` functionality allows defining the events - special time points
+  (usually unknown in advance) where the user may, for example, introduce a discontinuity,
+  by changing the solution vector or the equations, or simply perform some monitoring.
+
+  The exact locations of the event time points are defined by zero-crossings of a real-valued
+  indicator function. Several indicator functions may be used at a time, all of them should be evaluated
+  in the user `indicator()` callback based on the current time t and the current solution vector.
+  The indicator functions are assumed to be continuous (as functions of time).
+
+  Under the hood, resolution of the event locations (the zeros) engages an iterative bracket refinement process,
+  and involves time step refinement and occasionally step rollbacks, one can examine the details of these with `-ts_monitor`,
+  `-ts_event_monitor`. Two criteria are used for finishing the iteration, i.e. accepting a point as a zero crossing\:
+
+  1. Function zero value criterion, as defined by the function tolerances. The tolerances can be adjusted individually for each
+  indicator function, via `TSSetEventTolerances()`. Make sure the tolerances are not too large. Otherwise, too many time points will
+  be seen as zeros of the indicator function. If the time stepper makes a direct move from one such zero (t1) to another zero (t2),
+  the point t2 is not treated as an event location. In fact, at point t2 the event handler still thinks it has not left
+  the vicinity of the first zero t1.
+
+  2. Minimum time step criterion (`-ts_event_dt_min`). This criterion is triggered when the interval (bracket) with the
+  indicator function sign change (i.e. containing a zero crossing) becomes too small. Note that `-ts_event_dt_min`
+  is actually not the precise minimum step allowed during the event resolution. Algorithmically, the minimum step
+  may become as small as half of that value, to finalize the current iteration.
+  If the initial bracket size happens to be smaller than `-ts_event_dt_min`, an event is triggered immediately.
+
+  The user may also specify to trigger events only at those zeros of the indicator function where the function
+  is increasing (zero-crossing in positive direction), or decreasing (zero-crossing in negative direction), by supplying
+  the appropriate argument `direction` in `TSSetEventHandler()`.
+
+  The [optional] `postevent()` callback defines the user actions taking place after hitting an event.
+  Note that the full set of events is distributed (by the user design) across MPI processes, with each process
+  defining its own local sub-set of events. However, the event (zero crossing) resolution  and `postevent()` callback invocation
+  is performed synchronously on all processes, including those processes which have not currently triggered any events.
+  If the `postevent()` involves the change of equations, the user must call `TSRestartStep()`.
+
+  The basic procedure for using the `TS` events is as follows\:
+.vb
+  Define the indicator() and postevent() callbacks, set them with TSSetEventHandler().
+  [Optionally] adjust the definition of the post-event step sizes, by TSSetPostEventStep(), TSSetPostEventSecondStep().
+  [Optionally] adjust the tolerances for the indicator functions zero crossing, by TSSetEventTolerances().
+  [Optionally] engage the events-related runtime options via TSSetFromOptions().
+.ve
+
+  The post-event time steps set with `TSSetPostEventStep()`, `TSSetPostEventSecondStep()` should be selected
+  based on the post-event dynamics. If the dynamics are stiff, or a significant jump in the equations or the state vector
+  has taken place at the event, conservative (small) steps should be employed. If not, then larger time steps may be appropriate.
+
+  Both post-event-step functions can be called not only in the initial setup, but also inside the `postevent()` callback set with
+  `TSSetEventHandler()`, affecting the post-event steps for the current event, and the subsequent ones.
+  Thus, the definition of the post-event time steps can be adjusted on the fly.
+  In case several events are triggered in the given time point, only a single postevent handler is invoked,
+  and the user is to determine what post-event time steps are more appropriate in this situation.
+
+  Both post-event-step functions accept either a plain numerical value, or `PETSC_DECIDE`. The special value `PETSC_DECIDE`
+  signals the event handler to follow the originally planned trajectory, and is assumed by default.
+
+  To describe the way `PETSC_DECIDE` affects the post-event steps, consider a trajectory of time points t1 -> t2 -> t3 -> t4.
+  Suppose the `TS` has reached and calculated the solution at point t3, and has planned the next move: t3 -> t4.
+  At this moment, an event between t2 and t3 is detected, and after a few iterations it is resolved at point te, t2 < te < t3.
+  After event te, two post-event steps can be specified: the first one dt1 (`TSSetPostEventStep()`),
+  and the second one dt2 (`TSSetPostEventSecondStep()`). Four different combinations are possible\:
+.vb
+  1. dt1 = PETSC_DECIDE,   dt2 = PETSC_DECIDE.   Then, after te TS goes to t3, and then to t4. This is the all-default behaviour.
+  2. dt1 = PETSC_DECIDE,   dt2 = x2 (numerical). Then, after te TS goes to t3, and then to t3+x2.
+  3. dt1 = x1 (numerical), dt2 = x2 (numerical). Then, after te TS goes to te+x1, and then to te+x1+x2.
+  4. dt1 = x1 (numerical), dt2 = PETSC_DECIDE.   Then, after te TS goes to te+x1, and event handler does not interfere to the subsequent steps.
+.ve
+
+  In the special case when te == t3 with a good precision, the post-event step te -> t3 is not performed, so behaviour of (1) and (2) becomes\:
+.vb
+  1a. After te TS goes to t4, and event handler does not interfere to the subsequent steps.
+  2a. After te TS goes to t4, and then to t4+x2.
+.ve
+
+  Warning! When the second post-event step (either `PETSC_DECIDE` or a numerical value) is managed by the event handler
+  (i.e. in cases 1, 2, 3 and 2a), `TSAdapt` will never analyse (and never do a reasonable rejection of) the first post-event step.
+  The first post-event step will always be accepted. In this situation, it is the user's responsibility to make sure the step size
+  is appropriate! In cases 4 and 1a, however, `TSAdapt` will analyse the first post-event step, and is allowed to reject/truncate it.
+
+  If the first/second post-event steps are given numerical values, these values are allowed to be less than dt_min imposed by `TSAdapt`.
+  In this case the time stepper will adhere to the small post-event steps.
+
+.seealso: [](ch_ts), `TS`, `TSSetEventHandler()`, `TSSetPostEventStep()`, `TSSetPostEventSecondStep()`, `TSSetEventTolerances()`, `TSRestartStep()`
 M*/
 typedef struct _n_TSEvent *TSEvent;
 

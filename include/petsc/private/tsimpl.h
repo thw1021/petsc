@@ -482,12 +482,13 @@ struct _n_TSEvent {
   PetscReal *gamma_AB;                                                                      /* cumulative scaling factor for the Anderson-Bjorck iteration */
   PetscErrorCode (*indicator)(TS, PetscReal, Vec, PetscReal *, void *);                     /* this callback defines the user function(s) whose sign changes indicate events */
   PetscErrorCode (*postevent)(TS, PetscInt, PetscInt[], PetscReal, Vec, PetscBool, void *); /* user post-event callback */
-  void       *ctx;                                                                          /* user context for indicator and postevent callbacks */
-  PetscInt   *direction;                                                                    /* zero crossing direction to trigger the event: +1 -> going positive, -1 -> going negative, 0 -> any */
-  PetscBool  *terminate;                                                                    /* 1 -> terminate time stepping on event location, 0 -> continue */
-  PetscInt    nevents;                                                                      /* number of events (indicator functions) to handle on the current MPI process */
-  PetscInt    nevents_zero;                                                                 /* number of events triggered */
-  PetscInt   *events_zero;                                                                  /* list of the events triggered */
+  void      *ctx;                                                                           /* user context for indicator and postevent callbacks */
+  PetscInt  *direction;                                                                     /* zero crossing direction to trigger the event: +1 -> going positive, -1 -> going negative, 0 -> any */
+  PetscBool *terminate;                                                                     /* 1 -> terminate time stepping on event location, 0 -> continue */
+  PetscInt   nevents;                                                                       /* number of events (indicator functions) to handle on the current MPI process */
+  PetscInt   nevents_zero;                                                                  /* number of events triggered */
+  PetscInt  *events_zero;                                                                   /* list of the events triggered */
+  PetscObjectParameterDeclare(PetscReal, tol);                                              /* tolerance for the indicator function zero check; this one is only used to report the current value */
   PetscReal  *vtol;                                                                         /* array of tolerances for the indicator function zero check */
   PetscInt    iterctr;                                                                      /* iteration counter: used both for reporting and as a status indicator */
   PetscBool   processing;                                                                   /* this flag shows if the event-resolving iterations are in progress, or the post-event dt handling is in progress */
@@ -507,6 +508,7 @@ struct _n_TSEvent {
 
 PETSC_EXTERN PetscErrorCode TSEventInitialize(TSEvent, TS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TSEventDestroy(TSEvent *);
+PETSC_EXTERN PetscErrorCode TSEventSetFromOptions(PetscObject, PetscOptionItems, void *);
 PETSC_EXTERN PetscErrorCode TSEventHandler(TS);
 PETSC_EXTERN PetscErrorCode TSAdjointEventHandler(TS);
 

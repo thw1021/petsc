@@ -138,6 +138,6 @@ CONVERGED REASON: 4 (TS_CONVERGED_EVENT == 4)
 0	8.	0.	pass
 0	9.	0.	pass
 0	9.05	0.	pass
-Final time = 9.05, max time = 9.8, pass
+Final time = 9.05, max time = 9.8, tol = 1.0e-04, pass
 Adapt = none
 Last dt = 0.0600004
