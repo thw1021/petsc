@@ -155,7 +155,7 @@ static PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
 
   PetscFunctionBegin;
   /* Creates upper and lower bounds vectors on x, if not created already */
-  PetscCheck((tao->XL && tao->XU) || tao->ops->computebounds, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "IPM requires that bounds be set for Tao\n"));
+  PetscCheck((tao->XL && tao->XU) || tao->ops->computebounds, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "IPM requires that bounds be set for Tao"));
   PetscCall(TaoComputeVariableBounds(tao));
 
   PetscCall(VecGetLocalSize(tao->XL, &n));
