@@ -1,0 +1,65 @@
+### Check 'user' before SetUp: not found
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 21 point(s)
+ETS 'Range' point 0.55, union index    1, private index    1
+ETS 'Range' point 1.05, union index    2, private index    2
+ETS 'Range' point 1.55, union index    3, private index    3
+ETS 'Range' point 2.05, union index    4, private index    4
+ETS 'Range' point 2.55, union index    5, private index    5
+ETS 'Range' point 3.05, union index    6, private index    6
+ETS 'Range' point 3.55, union index    7, private index    7
+ETS 'Range' point 4.05, union index    8, private index    8
+ETS 'Range' point 4.55, union index    9, private index    9
+ETS 'Range' point 5.05, union index   10, private index   10
+ETS 'Range' point 5.55, union index   11, private index   11
+ETS 'Range' point 6.05, union index   12, private index   12
+ETS 'Range' point 6.55, union index   13, private index   13
+ETS 'Range' point 7.05, union index   14, private index   14
+ETS 'Range' point 7.55, union index   15, private index   15
+ETS 'Range' point 8.05, union index   16, private index   16
+ETS 'Range' point 8.55, union index   17, private index   17
+ETS 'Range' point 9.05, union index   18, private index   18
+### Check 'user' after Solve: not found
+== CONVERGED_EVENT ==
+0	1.	5.2515e-08	pass
+0	1.05	0.	pass
+0	2.	5.2515e-08	pass
+0	3.	5.2515e-08	pass
+0	4.	5.2515e-08	pass
+0	5.	5.2515e-08	pass
+0	6.	5.2515e-08	pass
+0	7.	5.2515e-08	pass
+0	8.	5.2515e-08	pass
+0	9.	5.2515e-08	pass
+0	9.05	0.	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range': 21 point(s), visited subrange: [1, 19)
+0.05	0.	***
+0.55	0.	***
+1.05	0.	***
+1.55	0.	***
+2.05	0.	***
+2.55	0.	***
+3.05	0.	***
+3.55	0.	***
+4.05	0.	***
+4.55	0.	***
+5.05	0.	***
+5.55	0.	***
+6.05	0.	***
+6.55	0.	***
+7.05	0.	***
+7.55	0.	***
+8.05	0.	***
+8.55	0.	***
+9.05	0.	***
+9.55	0.	***
+10.05	0.	***
+Initial time = 0.1, final time reached = 9.05, max time = 10.01, pass
+Initial time step = 0.12345, final time step = 0.12345, adapt == none, match

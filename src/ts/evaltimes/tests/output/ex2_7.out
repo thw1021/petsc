@@ -1,0 +1,93 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 5 point(s)
+ETS 'user ' point 0.01, union index    0, private index    0
+ETS 'user ' point 0.21, union index    1, private index    1
+ETS 'user ' point 1.01, union index    2, private index    2
+ETS 'user ' point 1.21, union index    3, private index    3
+ETS 'user ' point 2.01, union index    4, private index    4
+ETS 'user ' point 2.21, union index    5, private index    5
+ETS 'Range' point 2.5, union index    6, private index    0
+ETS 'Range' point 2.50025, union index    7, private index    1
+ETS 'Range' point 2.5005, union index    8, private index    2
+ETS 'Range' point 2.50075, union index    9, private index    3
+ETS 'Range' point 2.501, union index   10, private index    4
+ETS 'user ' point 3., union index   11, private index    6
+ETS 'user ' point 3.01, union index   12, private index    7
+ETS 'user ' point 3.21, union index   13, private index    8
+ETS 'user ' point 4.0001, union index   15, private index   10
+ETS 'user ' point 4.01, union index   16, private index   11
+ETS 'user ' point 4.21, union index   17, private index   12
+ETS 'user ' point 4.9999, union index   18, private index   13
+ETS 'user ' point 5., union index   19, private index   14
+ETS 'user ' point 5.01, union index   20, private index   15
+ETS 'user ' point 5.21, union index   21, private index   16
+ETS 'user ' point 5.9999, union index   22, private index   17
+ETS 'user ' point 6., union index   23, private index   18
+ETS 'user ' point 6.0001, union index   24, private index   19
+ETS 'user ' point 6.01, union index   25, private index   20
+ETS 'user ' point 6.21, union index   26, private index   21
+ETS 'user ' point 6.99, union index   27, private index   22
+ETS 'user ' point 7.21, union index   28, private index   23
+ETS 'user ' point 8.01, union index   29, private index   24
+ETS 'user ' point 8.21, union index   30, private index   25
+ETS 'user ' point 9.01, union index   31, private index   26
+### Check 'user' after Solve: start 0, end 27
+== CONVERGED_EVENT ==
+0	1.	2.31318e-08	pass
+0	1.05	6.26396e-08	pass
+0	2.	5.87172e-09	pass
+0	3.	0.	pass
+0	4.	0.	pass
+0	5.	0.	pass
+0	6.	0.	pass
+0	7.	2.48584e-07	pass
+0	8.	6.14706e-09	pass
+0	9.	2.29177e-08	pass
+0	9.05	1.07386e-10	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [0, 27)
+0.01	0.999998	pass
+0.21	0.999598	pass
+1.01	0.99781	pass
+1.21	0.997526	pass
+2.01	0.995874	pass
+2.21	0.995476	pass
+3.	0.993917	pass
+3.01	0.993915	pass
+3.21	0.993518	pass
+4.	0.	***
+4.0001	0.991915	pass
+4.01	0.991913	pass
+4.21	0.991517	pass
+4.9999	0.989916	pass
+5.	0.989916	pass
+5.01	0.989914	pass
+5.21	0.989519	pass
+5.9999	0.987902	pass
+6.	0.987902	pass
+6.0001	0.987902	pass
+6.01	0.987901	pass
+6.21	0.987506	pass
+6.99	0.985788	pass
+7.21	0.985472	pass
+8.01	0.98384	pass
+8.21	0.983446	pass
+9.01	0.981686	pass
+9.21	0.	***
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range': 5 point(s), visited subrange: [0, 5)
+2.5	0.	***
+2.50025	0.	***
+2.5005	0.	***
+2.50075	0.	***
+2.501	0.	***
+Initial time = 0., final time reached = 9.05, max time = 1.79769e+308, pass
+Initial time step = 0.099, final time step = 0.001, adapt != none, ***
+========================
+Check that -ts_adapt_dt_min_abs does not prevent smaller steps: the postevent step (check via -ts_monitor), and small steps from the evaluation times
+========================

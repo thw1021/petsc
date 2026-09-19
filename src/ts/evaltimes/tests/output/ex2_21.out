@@ -1,0 +1,58 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+ETS 'user ' point 6., union index   15, private index   17
+ETS 'user ' point 6., union index   15, private index   18
+ETS 'user ' point 6., union index   15, private index   19
+ETS 'user ' point 6.01, union index   16, private index   20
+ETS 'user ' point 6.21, union index   17, private index   21
+ETS 'user ' point 6.99, union index   18, private index   22
+ETS 'user ' point 7.21, union index   19, private index   23
+ETS 'user ' point 8.01, union index   20, private index   24
+ETS 'user ' point 8.21, union index   21, private index   25
+ETS 'user ' point 9.01, union index   22, private index   26
+### Check 'user' after Solve: start 17, end 27
+== CONVERGED_EVENT ==
+1	6.	0.	pass
+1	7.	2.48584e-07	pass
+1	8.	1.61319e-08	pass
+1	9.	1.61319e-08	pass
+2	9.05	1.07386e-10	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [17, 27)
+0.01	0.	***
+0.21	0.	***
+1.01	0.	***
+1.21	0.	***
+2.01	0.	***
+2.21	0.	***
+3.	0.	***
+3.01	0.	***
+3.21	0.	***
+4.	0.	***
+4.	0.	***
+4.01	0.	***
+4.21	0.	***
+5.	0.	***
+5.	0.	***
+5.01	0.	***
+5.21	0.	***
+6.	1.	pass
+6.	1.	pass
+6.	1.	pass
+6.01	1.	pass
+6.21	1.	pass
+6.99	1.	pass
+7.21	1.	pass
+8.01	1.	pass
+8.21	1.	pass
+9.01	1.	pass
+9.21	0.	***
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+Initial time = 5.95, final time reached = 9.05, max time = 1.79769e+308, pass
+Initial time step = 0.123, final time step = 0.06, adapt == none, NO-match

@@ -1,0 +1,12 @@
+### Check 'user' before SetUp: start -1, end -1
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Invalid argument
+[0]PETSC ERROR: Non-matching argument 'sols' between get/restore calls for schedule 'range'
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimesRestoreSolutions() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 14 (source: command line)
+[0]PETSC ERROR: -msg Non-matching sols in get-restore. Skip the test to save time by marking it as a TODO (source: command line)
+[0]PETSC ERROR: -range 0,10,11 (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

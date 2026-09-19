@@ -1,0 +1,12 @@
+### Check 'user' before SetUp: not found
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Invalid argument
+[0]PETSC ERROR: Cannot override t0 and tmax using empty TSEvaluationTimes
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimesSetUp() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 5 (source: command line)
+[0]PETSC ERROR: -msg Overriding t0, tmax with empty TSEvaluationTimes (source: command line)
+[0]PETSC ERROR: -nouser (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

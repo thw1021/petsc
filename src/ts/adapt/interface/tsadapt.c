@@ -1110,10 +1110,6 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
     if (h <= *next_h && *next_h <= adapt->next_h_cache) *next_h = adapt->next_h_cache; // engage the cache
     h1                  = *next_h;
     adapt->next_h_cache = 0; // clear the cache
-    if (ts->eval_times && ts->eval_times->time_point_idx < ts->eval_times->num_time_points) {
-      PetscCheck(ts->eval_times->worktol == 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "Unexpected state (eval_times->worktol != 0) in TSAdaptChoose()");
-      ts->eval_times->worktol = ts->eval_times->reltol * h1 + ts->eval_times->abstol;
-    }
     PetscCall(TSEvaluationTimesNext(ts, t, &tmax, &hmax));
     PetscCheck(hmax > 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "hmax == %g, but should be > 0", (double)hmax);
     PetscCall(TSAdaptCapNextStep(adapt, t + h1, h1, tmax, hmax, next_h));

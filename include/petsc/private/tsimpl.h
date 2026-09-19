@@ -139,31 +139,19 @@ struct _TS_RHSSplitLink {
   PetscLogEvent   event;
 };
 
-typedef struct _TS_EvaluationTimes *TSEvaluationTimes;
-struct _TS_EvaluationTimes {
-  PetscInt   num_time_points; /* number of time points */
-  PetscReal *time_points;     /* array of the time span */
-  PetscReal  reltol;          /* relative tolerance for span point detection */
-  PetscReal  abstol;          /* absolute tolerance for span point detection */
-  PetscReal  worktol;         /* the ultimate tolerance (variable), maintained within a single TS time step for consistency */
-  PetscInt   time_point_idx;  /* index of the time_point to be reached next */
-  PetscInt   sol_idx;         /* index into sol_vecs and sol_times */
-  Vec       *sol_vecs;        /* array of the solutions at the specified time points */
-  PetscReal *sol_times;       /* array of times that sol_vecs was taken at */
-};
-
 struct _p_TS {
   PETSCHEADER(struct _TSOps);
   TSProblemType  problem_type;
   TSEquationType equation_type;
 
-  DM          dm;
-  Vec         vec_sol;  /* solution vector in first and second order equations */
-  Vec         vec_sol0; /* solution vector at the beginning of the step */
-  Vec         vec_dot;  /* time derivative vector in second order equations */
-  TSAdapt     adapt;
-  TSAdaptType default_adapt_type;
-  TSEvent     event;
+  DM                dm;
+  Vec               vec_sol;  /* solution vector in first and second order equations */
+  Vec               vec_sol0; /* solution vector at the beginning of the step */
+  Vec               vec_dot;  /* time derivative vector in second order equations */
+  TSAdapt           adapt;
+  TSAdaptType       default_adapt_type;
+  TSEvent           event;     /* events (discontinuities) */
+  TSEvaluationTimes evaltimes; /* evaluation times */
 
   /* ---------------- Resize ---------------------*/
   PetscBool       resizerollback;
@@ -319,7 +307,7 @@ struct _p_TS {
   PetscInt nwork;
   Vec     *work;
 
-  /* ---------------------- RHS splitting support ---------------------------------*/
+  /* ---------------------- RHS splitting support -----------------------*/
   PetscInt        num_rhs_splits;
   TS_RHSSplitLink tsrhssplit;
   PetscBool       use_splitrhsfunction;
@@ -327,9 +315,6 @@ struct _p_TS {
 
   /* ---------------------- Quadrature integration support ---------------------------------*/
   TS quadraturets;
-
-  /* ---------------------- Time span support ---------------------------------*/
-  TSEvaluationTimes eval_times;
 };
 
 struct _TSAdaptOps {
@@ -472,6 +457,9 @@ PETSC_EXTERN PetscErrorCode DMTSView(DMTS, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMTSLoad(DMTS, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMTSCopy(DMTS, DMTS);
 
+/*
+  TSEvent - handles the TS events
+*/
 struct _n_TSEvent {
   PetscReal *fvalue_prev;                                                                   /* value of indicator function at the left end-point of the event interval */
   PetscReal *fvalue;                                                                        /* value of indicator function at the current point */
@@ -523,6 +511,45 @@ PETSC_EXTERN PetscErrorCode TSEventSetFromOptions(PetscObject, PetscOptionItems,
 PETSC_EXTERN PetscErrorCode TSEventHandler(TS);
 PETSC_EXTERN PetscErrorCode TSAdjointEventHandler(TS);
 
+/*
+  TSEvaluationTimes - manages the evaluation time points
+    'ctr_global' is used in finding the next point;
+    its initial value is set according to the TS initial time; then, it is incremented on hitting each evaluation time point.
+*/
+struct _n_TSEvaluationTimes {
+  PetscInt        len_global;   // capacity of array 'times_global'
+  PetscReal      *times_global; // global array of the evaluation time points, strictly increasing
+  PetscInt        ctr_global;   // work counter (in 'times_global') for the time point reached
+  PetscBool       assembled;    // PETSC_TRUE => ready for use in TSSolve()
+  PetscObjectList schedlist;    // list containing the private TSEvaluationTimesSchedule's, which contribute to the global array of points, and store the results
+  PetscInt        refct;        // reference count, for managing shared ownership
+};
+
+/*
+  TSEvaluationTimesSchedule - manages a private list of evaluation time points, and stores the resulting vectors
+    'times' should be increasing, but may contain repeating values;
+    'inds_global' should be increasing, but may contain repeating values;
+    'ctr' is used (and incremented) when saving the vectors.
+*/
+struct _n_TSEvaluationTimesSchedule {
+  char       name[256];                                                             // schedule's name, only used for reporting
+  PetscInt   len;                                                                   // length of the arrays below
+  PetscReal *times;                                                                 // private array of the evaluation time points (sorted)
+  PetscInt  *inds_global;                                                           // indices of 'times' in 'times_global'
+  Vec       *vecs;                                                                  // the vectors saved (result)
+  PetscReal *c_times;                                                               // cached 'times' pointer, for Get/Restore
+  Vec       *c_vecs;                                                                // cached 'vecs' pointer, for Get/Restore
+  PetscBool  c_locked;                                                              // PETSC_TRUE after Get, PETSC_FALSE after Restore
+  PetscInt   ctr;                                                                   // work counter, [0, len)
+  PetscInt   start, end;                                                            // two indices showing the actual sub-range in [0, len) filled in the current run
+  void      *ctx;                                                                   // optional user context for the 'handler' callback
+  PetscErrorCode (*handler)(TS, PetscInt, PetscInt, PetscReal, Vec, Vec *, void *); // user callback - e.g. to transform the vectors before saving
+};
+
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetFromOptions(TS, PetscOptionItems);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetDefaultSchedule(TS, PetscInt, PetscReal, PetscReal, const PetscReal *, PetscBool);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSaveVecs(TS, Vec);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetUpCounters(TS);
 PETSC_EXTERN PetscErrorCode TSEvaluationTimesNext(TS, PetscReal, PetscReal *, PetscReal *);
 
 PETSC_EXTERN PetscLogEvent TS_AdjointStep;

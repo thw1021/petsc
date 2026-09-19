@@ -1,0 +1,44 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+ETS 'user ' point 0.01, union index    0, private index    0
+ETS 'user ' point 0.21, union index    1, private index    1
+ETS 'user ' point 1.01, union index    2, private index    2
+ETS 'user ' point 1.21, union index    3, private index    3
+ETS 'user ' point 2.01, union index    4, private index    4
+ETS 'user ' point 2.21, union index    5, private index    5
+ETS 'user ' point 3., union index    6, private index    6
+ETS 'user ' point 3.01, union index    7, private index    7
+ETS 'user ' point 3.21, union index    8, private index    8
+ETS 'user ' point 4.01, union index   10, private index   10
+ETS 'user ' point 4.02, union index   11, private index   11
+ETS 'user ' point 4.21, union index   12, private index   12
+ETS 'user ' point 4.98, union index   13, private index   13
+ETS 'user ' point 5., union index   14, private index   14
+ETS 'user ' point 5.01, union index   15, private index   15
+ETS 'user ' point 5.21, union index   16, private index   16
+ETS 'user ' point 5.98, union index   17, private index   17
+ETS 'user ' point 6., union index   18, private index   18
+ETS 'user ' point 6.01, union index   19, private index   19
+ETS 'user ' point 6.02, union index   20, private index   20
+ETS 'user ' point 6.21, union index   21, private index   21
+ETS 'user ' point 6.99, union index   22, private index   22
+ETS 'user ' point 7.21, union index   23, private index   23
+ETS 'user ' point 8.01, union index   24, private index   24
+ETS 'user ' point 8.21, union index   25, private index   25
+ETS 'user ' point 9.01, union index   26, private index   26
+### Check 'user' after Solve: start 0, end 27
+== CONVERGED_EVENT ==
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Object is in wrong state
+[0]PETSC ERROR: Vector 'Subvec_user_0' (argument #1) was locked for read-only access in TSEvaluationTimesSchedule_LockVecs() at src/ts/evaltimes/tsevaltimes.c:0 (line numbers only accurate to function begin)
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 VecSetErrorIfLocked() at petscvec.h:0
+[0]PETSC ERROR: #2 VecGetArray() at rvector.c:0
+[0]PETSC ERROR: #3 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 18 (source: command line)
+[0]PETSC ERROR: -msg For the locked schedule, the vectors become read-only (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

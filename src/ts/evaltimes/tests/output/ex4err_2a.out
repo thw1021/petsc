@@ -1,0 +1,13 @@
+### Check 'user' before SetUp: not found
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Argument out of range
+[0]PETSC ERROR: TSEvaluationTimesSchedule with name 'user' is absent in the list, cannot delete it
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimes_Add() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 TSEvaluationTimesAddArray() at tsevaltimes.c:0
+[0]PETSC ERROR: #3 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 2 (source: command line)
+[0]PETSC ERROR: -msg Trying to destroy an absent schedule (source: command line)
+[0]PETSC ERROR: -nouser (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

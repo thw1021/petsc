@@ -1,5 +1,7 @@
 static char help[] = "Tests TS time span \n\n";
 
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+
 #include <petscts.h>
 
 static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec X, Vec F, PetscCtx ctx)
