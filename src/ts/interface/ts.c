@@ -4131,6 +4131,72 @@ PetscErrorCode TSResize(TS ts)
 
 .seealso: [](ch_ts), `TS`, `TSCreate()`, `TSSetSolution()`, `TSStep()`, `TSGetTime()`, `TSGetSolveTime()`
 @*/
+/*
+  Delta_with_overshoot - returns dt = t1 - t0, possibly with a "minimal" (machine epsilon) floating point correction
+  towards +inf, ensuring t0 + dt >= t1, i.e. excluding undershoots in adding dt to t0.
+  For instance, 0.1 + (0.45 - 0.1) < 0.45, but 0.1 + Delta_with_overshoot(0.1, 0.45) > 0.45 by machine epsilon.
+  In this example, there is no floating point number 'dt' to exactly hit 0.45.
+
+  For presicion == __fp16, this function returns the plain difference t1 - t0, since the current
+  PetscNextafter implementation for __fp16 outputs the unchanged input.
+
+  Note. The while-loop is safeguarded from infinite spinning with a counter.
+  Normally the counter should not cause the loop to exit, however if it does, the "no-undershoot" guarantee may be void.
+*/
+static PetscReal Delta_with_overshoot(const PetscReal t0, const PetscReal t1)
+{
+  PetscReal       dt              = t1 - t0;
+  PetscReal       t1_mutable      = t1;
+  const PetscBool t1_dominates_dt = (PetscAbsReal(t1) >= PetscAbsReal(dt) ? PETSC_TRUE : PETSC_FALSE);
+  PetscInt        count           = 0; // safeguard counter
+  while (t0 + dt < t1 && count < 5) {
+    if (t1_dominates_dt) {
+      t1_mutable = PetscNextafter(t1_mutable, PETSC_MAX_REAL); // slightly increase t1_mutable to recalculate/increase dt
+      dt         = t1_mutable - t0;
+    } else dt = PetscNextafter(dt, PETSC_MAX_REAL); // slightly increase dt
+    count++;
+  }
+  return dt;
+}
+
+/*
+  TSEvaluationTimesNext - finds the next point in the (global) evaluation times.
+  t       - current point reached by TS.
+  next_t  - [output] next point in the evaluation times (next_t > t),
+                     or max_time, or PETSC_MAX_REAL.
+  next_dt - [output] step size to reach 'next_t' with "no undershoot" guarantee, i.e.
+                     ensuring t + next_dt >= next_t, where possible overshoot ~ machine epsilon.
+*/
+PetscErrorCode TSEvaluationTimesNext(TS ts, PetscReal t, PetscReal *next_t, PetscReal *next_dt)
+{
+  PetscReal o_next_t = PETSC_MAX_REAL; // next point
+  PetscReal o_next_dt;                 // next step size
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  if (next_t) PetscAssertPointer(next_t, 3);
+  if (next_dt) PetscAssertPointer(next_dt, 4);
+
+  if (ts->eval_times) {
+    const PetscReal *e = ts->eval_times->time_points;
+    const PetscInt   N = ts->eval_times->num_time_points;
+    const PetscInt   c = ts->eval_times->time_point_idx;
+
+    // the tolerance is based on the step the stepper was following before any event-driven refinement
+    if (ts->eval_times->worktol == 0) ts->eval_times->worktol = ts->eval_times->reltol * (ts->event ? ts->event->timestep_cache : ts->time_step) + ts->eval_times->abstol;
+    if (c < N) {
+      if (PetscIsCloseAtTol(t, e[c], ts->eval_times->worktol, 0)) o_next_t = (c + 1 < N ? e[c + 1] : PETSC_MAX_REAL); // hit state
+      else o_next_t = e[c];                                                                                           // clean state
+    }
+  }
+  if (t < ts->max_time) o_next_t = PetscMin(o_next_t, ts->max_time);
+  o_next_dt = (o_next_t < PETSC_MAX_REAL ? Delta_with_overshoot(t, o_next_t) : PETSC_MAX_REAL);
+
+  if (next_t) *next_t = o_next_t;
+  if (next_dt) *next_dt = o_next_dt;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode TSSolve(TS ts, Vec u)
 {
   Vec solution;
@@ -4179,6 +4245,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
   }
 
   if (ts->forward_solve) PetscCall(TSForwardSetUp(ts));
+  ts->reason = TS_CONVERGED_ITERATING;
 
   /* reset number of steps only when the step is not restarted. ARKIMEX
      restarts the step after an event. Resetting these counters in such case causes
@@ -4196,17 +4263,28 @@ PetscErrorCode TSSolve(TS ts, Vec u)
     ts->rhsjacobian.time  = PETSC_MIN_REAL;
   }
 
-  /* make sure initial time step does not overshoot final time or the next point in evaluation times */
+  // Initial handling of the evaltimes and max_time
   if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-    PetscReal maxdt;
-    PetscReal dt = ts->time_step;
+    PetscReal maxt0, maxdt0, h1;
+    PetscBool step_adjust = (ts->adapt && !(ts->event && ts->event->processing) ? PETSC_TRUE : PETSC_FALSE); // event->processing may pass over from the previous TSSolve()
 
-    if (ts->eval_times) maxdt = ts->eval_times->time_points[ts->eval_times->time_point_idx] - ts->ptime;
-    else maxdt = ts->max_time - ts->ptime;
-    ts->time_step = dt >= maxdt ? maxdt : (PetscIsCloseAtTol(dt, maxdt, 10 * PETSC_MACHINE_EPSILON, 0) ? maxdt : dt);
+    if (step_adjust) {
+      if (ts->adapt->next_h_cache > ts->time_step) ts->time_step = ts->adapt->next_h_cache; // engage the cache
+      ts->adapt->next_h_cache = 0;                                                          // clear the cache
+    }
+    h1 = ts->time_step;
+
+    PetscCall(TSEvaluationTimesNext(ts, ts->ptime, &maxt0, &maxdt0));
+    PetscCheck(maxdt0 > 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "maxdt0 == %g, but should be > 0", (double)maxdt0);
+
+    // Adjust the first step size -- if it ends close to, or overshoots, max_time or evaltimes_i
+    if (step_adjust) {
+      PetscCall(TSAdaptCapNextStep(ts->adapt, ts->ptime + h1, h1, maxt0, maxdt0, &ts->time_step));
+      if (h1 != ts->time_step) ts->adapt->next_h_cache = h1; // cache the step size if it is to be changed
+    }
   }
-  ts->reason = TS_CONVERGED_ITERATING;
 
+  // Estimate the convergence rate of the time discretization
   {
     PetscViewer       viewer;
     PetscViewerFormat format;
@@ -4214,7 +4292,6 @@ PetscErrorCode TSSolve(TS ts, Vec u)
     static PetscBool  incall = PETSC_FALSE;
 
     if (!incall) {
-      /* Estimate the convergence rate of the time discretization */
       PetscCall(PetscOptionsCreateViewer(PetscObjectComm((PetscObject)ts), ((PetscObject)ts)->options, ((PetscObject)ts)->prefix, "-ts_convergence_estimate", &viewer, &format, &flg));
       if (flg) {
         PetscConvEst conv;

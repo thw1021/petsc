@@ -368,7 +368,7 @@ struct _p_TSAdapt {
   PetscViewer monitor;
   PetscInt    timestepjustdecreased_delay; /* number of timesteps after a decrease in the timestep before the timestep can be increased */
   PetscInt    timestepjustdecreased;
-  PetscReal   dt_eval_times_cached; /* time step before hitting a TS evaluation time point */
+  PetscReal   next_h_cache; /* next time step before hitting an evaluation time point */
 };
 
 /* The minimum time step allowed at time t, from the relative and absolute components */
@@ -378,6 +378,7 @@ static inline PetscReal TSMinStepAtTime(PetscReal dt_min_rel, PetscReal dt_min_a
 }
 
 PETSC_EXTERN PetscErrorCode TSAdaptCheckStepLimits(TSAdapt, TS);
+PETSC_EXTERN PetscErrorCode TSAdaptCapNextStep(TSAdapt, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal *);
 
 /*S
    DMTS - Object held by a `DM` that contains all the callback functions and their contexts needed by a `TS`
@@ -521,6 +522,8 @@ PETSC_EXTERN PetscErrorCode TSEventDestroy(TSEvent *);
 PETSC_EXTERN PetscErrorCode TSEventSetFromOptions(PetscObject, PetscOptionItems, void *);
 PETSC_EXTERN PetscErrorCode TSEventHandler(TS);
 PETSC_EXTERN PetscErrorCode TSAdjointEventHandler(TS);
+
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesNext(TS, PetscReal, PetscReal *, PetscReal *);
 
 PETSC_EXTERN PetscLogEvent TS_AdjointStep;
 PETSC_EXTERN PetscLogEvent TS_Step;
