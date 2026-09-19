@@ -40,35 +40,35 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_run_steps steps                                                - maximum number of time steps for `TSSolve()` to take on each call
 . -ts_init_time time                                                 - initial time to start computation
 . -ts_final_time time                                                - final time to compute to (deprecated: use `-ts_max_time`)
-. -ts_time_step dt                                                   - initial time step (only a suggestion, the actual initial time step used differ)
+. -ts_time_step dt                                                   - initial time step (only a suggestion, the actual initial time step used may differ)
 . -ts_exact_final_time (stepover,interpolate,matchstep)              - whether to stop at the exact given final time and how to compute the solution at that time
-. -ts_max_snes_failures maxfailures                                  - Maximum number of nonlinear solve failures allowed
-. -ts_max_step_rejections maxrejects                                 - Maximum number of step rejections before step fails
-. -ts_error_if_step_fails (true|false)                               - Error if no step succeeds
+. -ts_max_snes_failures maxfailures                                  - maximum number of nonlinear solve failures allowed
+. -ts_max_step_rejections maxrejects                                 - maximum number of step rejections before step fails
+. -ts_error_if_step_fails (true|false)                               - error if no step succeeds
 . -ts_rtol rtol                                                      - relative tolerance for local truncation error
-. -ts_atol atol                                                      - Absolute tolerance for local truncation error
+. -ts_atol atol                                                      - absolute tolerance for local truncation error
 . -ts_rhs_jacobian_test_mult -mat_shell_test_mult_view               - test the Jacobian at each iteration against finite difference with RHS function
 . -ts_rhs_jacobian_test_mult_transpose                               - test the Jacobian at each iteration against finite difference with RHS function
-. -ts_adjoint_solve (true|false)                                     - After solving the ODE/DAE solve the adjoint problem (requires `-ts_save_trajectory`)
-. -ts_fd_color                                                       - Use finite differences with coloring to compute IJacobian
+. -ts_adjoint_solve (true|false)                                     - after solving the ODE/DAE solve the adjoint problem (requires `-ts_save_trajectory`)
+. -ts_fd_color                                                       - use finite differences with coloring to compute IJacobian
 . -ts_monitor                                                        - print information at each timestep
-. -ts_monitor_cancel                                                 - Cancel all monitors
-. -ts_monitor_wall_clock_time                                        - Monitor wall-clock time, `KSP` iterations, and `SNES` iterations per step
-. -ts_monitor_lg_solution                                            - Monitor solution graphically
-. -ts_monitor_lg_error                                               - Monitor error graphically
-. -ts_monitor_error                                                  - Monitors norm of error
-. -ts_monitor_lg_timestep                                            - Monitor timestep size graphically
-. -ts_monitor_lg_timestep_log                                        - Monitor log timestep size graphically
-. -ts_monitor_lg_snes_iterations                                     - Monitor number nonlinear iterations for each timestep graphically
-. -ts_monitor_lg_ksp_iterations                                      - Monitor number nonlinear iterations for each timestep graphically
-. -ts_monitor_sp_eig                                                 - Monitor eigenvalues of linearized operator graphically
-. -ts_monitor_draw_solution                                          - Monitor solution graphically
-. -ts_monitor_draw_solution_phase  xleft,yleft,xright,yright         - Monitor solution graphically with phase diagram, requires problem with exactly 2 degrees of freedom
-. -ts_monitor_draw_error                                             - Monitor error graphically, requires use to have provided TSSetSolutionFunction()
+. -ts_monitor_cancel                                                 - cancel all monitors
+. -ts_monitor_wall_clock_time                                        - monitor wall-clock time, `KSP` iterations, and `SNES` iterations per step
+. -ts_monitor_lg_solution                                            - monitor solution graphically
+. -ts_monitor_lg_error                                               - monitor error graphically
+. -ts_monitor_error                                                  - monitors norm of error
+. -ts_monitor_lg_timestep                                            - monitor timestep size graphically
+. -ts_monitor_lg_timestep_log                                        - monitor log timestep size graphically
+. -ts_monitor_lg_snes_iterations                                     - monitor number nonlinear iterations for each timestep graphically
+. -ts_monitor_lg_ksp_iterations                                      - monitor number nonlinear iterations for each timestep graphically
+. -ts_monitor_sp_eig                                                 - monitor eigenvalues of linearized operator graphically
+. -ts_monitor_draw_solution                                          - monitor solution graphically
+. -ts_monitor_draw_solution_phase  xleft,yleft,xright,yright         - monitor solution graphically with phase diagram, requires problem with exactly 2 degrees of freedom
+. -ts_monitor_draw_error                                             - monitor error graphically, requires use to have provided TSSetSolutionFunction()
 . -ts_monitor_solution [ascii binary draw][:filename][:viewerformat] - monitors the solution at each timestep
 . -ts_monitor_solution_interval interval                             - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 . -ts_monitor_solution_skip_initial                                  - skip writing of initial condition
-. -ts_monitor_solution_vtk filename.vts,filename.vtu                 - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
+. -ts_monitor_solution_vtk filename.vts,filename.vtu                 - save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval interval                         - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
 
@@ -4277,7 +4277,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
         if (ts->reason >= 0) ts->steps++;
       }
       PetscCall(TSPostEvaluate(ts));
-      PetscCall(TSEventHandler(ts)); /* The right-hand side may be changed due to event. Be careful with Any computation using the RHS information after this point. */
+      PetscCall(TSEventHandler(ts)); /* The right-hand side may be changed due to event. Be careful with any computation using the RHS information after this point. */
       if (ts->steprollback) PetscCall(TSPostEvaluate(ts));
       if (!ts->steprollback && ts->resizerollback) PetscCall(TSResize(ts));
       /* check convergence */
@@ -6008,7 +6008,7 @@ PetscErrorCode TSGetUseSplitRHSFunction(TS ts, PetscBool *use_splitrhsfunction)
   When the relationship between the nonzero structures is known and supplied the solution process can be much faster
 
 .seealso: [](ch_ts), `TS`, `MatAXPY()`, `MatStructure`
- @*/
+@*/
 PetscErrorCode TSSetMatStructure(TS ts, MatStructure str)
 {
   PetscFunctionBegin;
