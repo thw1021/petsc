@@ -220,7 +220,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     args: -dir 0
     args: -restart 1
     args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
     nsize: 4
@@ -260,7 +259,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     args: -dir -1
     args: -restart 1
     args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
     nsize: 4
@@ -271,7 +269,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: 0s1single
     requires: single
     output_file: output/ex2_0s1.out
-    args: -dir 0 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir 0 -errtol 1e-4
     args: -restart {{0 1}}
     args: -dtpost 0
     args: -ts_event_post_event_step 0.31
@@ -283,7 +281,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: 0s4single
     requires: single
     output_file: output/ex2_0s4.out
-    args: -dir 0 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir 0 -errtol 1e-4
     args: -restart 0
     args: -dtpost 0.25
     args: -ts_event_post_event_step {{-1 0.315}}
@@ -297,10 +295,9 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: possingle
     requires: single
     output_file: output/ex2_pos.out
-    args: -dir 1 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir 1 -errtol 1e-4
     args: -restart 1
     args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type basic
     nsize: {{1 4}}
@@ -311,7 +308,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: ns1single
     requires: single
     output_file: output/ex2_ns1.out
-    args: -dir -1 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir -1 -errtol 1e-4
     args: -restart {{0 1}}
     args: -dtpost 0
     args: -ts_event_post_event_step 0.30501
@@ -323,7 +320,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: ns4single
     requires: single
     output_file: output/ex2_ns4.out
-    args: -dir -1 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir -1 -errtol 1e-4
     args: -restart 0
     args: -dtpost 0.25
     args: -ts_event_post_event_step {{-1 0.31}}

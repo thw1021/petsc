@@ -414,7 +414,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
   /* Handle specific TS options */
   PetscTryTypeMethod(ts, setfromoptions, PetscOptionsObject);
 
-  /* Handle TSAdapt options */
+  /* Handle TSAdapt options; TSAdapt is created here if it was absent */
   PetscCall(TSGetAdapt(ts, &ts->adapt));
   PetscCall(TSAdaptSetDefaultType(ts->adapt, ts->default_adapt_type));
   PetscCall(TSAdaptSetFromOptions(ts->adapt, PetscOptionsObject));
@@ -3588,6 +3588,7 @@ PetscErrorCode TSStep(TS ts)
   PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime(), TSSetMaxSteps(), or TSSetRunSteps() or use -ts_max_time <time>, -ts_max_steps <steps>, -ts_run_steps <steps>");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSStep()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
+  if (ts->adapt) PetscCall(TSAdaptCheckStepLimits(ts->adapt, ts));
 
   if (!ts->vec_sol0) PetscCall(VecDuplicate(ts->vec_sol, &ts->vec_sol0));
   PetscCall(VecCopy(ts->vec_sol, ts->vec_sol0));
@@ -4155,6 +4156,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSSolve()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
   PetscCheck(!(ts->eval_times && ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP), PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "You must use TS_EXACTFINALTIME_MATCHSTEP when using time span or evaluation times");
+  if (ts->adapt) PetscCall(TSAdaptCheckStepLimits(ts->adapt, ts));
 
   if (ts->eval_times) {
     if (!ts->eval_times->sol_vecs) PetscCall(VecDuplicateVecs(ts->vec_sol, ts->eval_times->num_time_points, &ts->eval_times->sol_vecs));

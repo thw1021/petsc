@@ -355,20 +355,29 @@ struct _p_TSAdapt {
     PetscReal   cost[16];       /* relative measure of the amount of work required for each scheme */
   } candidates;
   PetscBool   always_accept;
-  PetscReal   safety;             /* safety factor relative to target error/stability goal */
-  PetscReal   reject_safety;      /* extra safety factor if the last step was rejected */
-  PetscReal   clip[2];            /* admissible time step decrease/increase factors */
-  PetscReal   dt_min, dt_max;     /* admissible minimum and maximum time step */
-  PetscReal   ignore_max;         /* minimum value of the solution to be considered by the adaptor */
-  PetscBool   glee_use_local;     /* GLEE adaptor uses global or local error */
-  PetscReal   scale_solve_failed; /* scale step by this factor if solver (linear or nonlinear) fails. */
-  PetscReal   matchstepfac[2];    /* factors to control the behaviour of matchstep */
+  PetscReal   safety;                 /* safety factor relative to target error/stability goal */
+  PetscReal   reject_safety;          /* extra safety factor if the last step was rejected */
+  PetscReal   clip[2];                /* admissible time step decrease/increase factors */
+  PetscReal   dt_min_rel, dt_min_abs; /* relative and absolute components of admissible minimum time step */
+  PetscReal   dt_max;                 /* admissible maximum time step */
+  PetscReal   ignore_max;             /* minimum value of the solution to be considered by the adaptor */
+  PetscBool   glee_use_local;         /* GLEE adaptor uses global or local error */
+  PetscReal   scale_solve_failed;     /* scale step by this factor if solver (linear or nonlinear) fails. */
+  PetscReal   matchstepfac[2];        /* factors to control the behaviour of matchstep */
   NormType    wnormtype;
   PetscViewer monitor;
   PetscInt    timestepjustdecreased_delay; /* number of timesteps after a decrease in the timestep before the timestep can be increased */
   PetscInt    timestepjustdecreased;
   PetscReal   dt_eval_times_cached; /* time step before hitting a TS evaluation time point */
 };
+
+/* The minimum time step allowed at time t, from the relative and absolute components */
+static inline PetscReal TSMinStepAtTime(PetscReal dt_min_rel, PetscReal dt_min_abs, PetscReal t)
+{
+  return PetscMax(dt_min_abs, dt_min_rel * PetscAbsReal(t));
+}
+
+PETSC_EXTERN PetscErrorCode TSAdaptCheckStepLimits(TSAdapt, TS);
 
 /*S
    DMTS - Object held by a `DM` that contains all the callback functions and their contexts needed by a `TS`
@@ -477,7 +486,8 @@ struct _n_TSEvent {
   PetscInt  *side_prev;                                                                     /* counts the repeating previous side's (with values: -n <=> '-1'*n; +n <=> '+1'*n); used in the Anderson-Bjorck iteration */
   PetscReal  timestep_postevent;                                                            /* first time step after the event; can be PETSC_DECIDE */
   PetscReal  timestep_2nd_postevent;                                                        /* second time step after the event; can be PETSC_DECIDE */
-  PetscReal  timestep_min;                                                                  /* minimum time step */
+  PetscReal  dt_min_rel;                                                                    /* relative minimum time step */
+  PetscReal  dt_min_abs;                                                                    /* absolute minimum time step */
   PetscBool *justrefined_AB;                                                                /* this flag shows if the given indicator function i = [0..nevents) participated in Anderson-Bjorck process in the last iteration of TSEventHandler() */
   PetscReal *gamma_AB;                                                                      /* cumulative scaling factor for the Anderson-Bjorck iteration */
   PetscErrorCode (*indicator)(TS, PetscReal, Vec, PetscReal *, void *);                     /* this callback defines the user function(s) whose sign changes indicate events */

@@ -368,7 +368,7 @@ int main(int argc, char **argv)
     test:
       suffix: l
       args: -rhs-form -ts_type rk -ts_rk_type 2a -ts_trajectory_dirname ex40_l_dir
-      args: -ts_adapt_type dsp -ts_adapt_always_accept {{false true}} -ts_adapt_dt_min 0.01
+      args: -ts_adapt_type dsp -ts_adapt_always_accept {{false true}} -ts_adapt_dt_min_abs 0.01
       output_file: output/ex40.out
 
     test:
