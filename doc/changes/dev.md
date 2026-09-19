@@ -192,6 +192,10 @@
 - Add `TSDiscGradSetImplicitFormulation()`
 - Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
+- Add `TSAdaptSetMinStep()` and `TSAdaptGetMinStep()` to set the relative and absolute parts of the minimum time step; the minimum step used at time `t` is `max(dt_min_abs, dt_min_rel * |t|)`
+- Deprecate `-ts_adapt_dt_min` in favor of `-ts_adapt_dt_min_abs`, and add `-ts_adapt_dt_min_rel`
+- Deprecate `-ts_event_dt_min` in favor of `-ts_event_dt_min_abs`, and add `-ts_event_dt_min_rel`
+- Change the default `TSAdapt` maximum time step from `1e+20` to `PETSC_MAX_REAL`
 - Deprecate `TSRHSFunction`, `TSRHSJacobian`, `TSRHSJacobianP`, `TSSolutionFunction`, `TSForcingFunction`, `TSIFunction`, `TSIJacobian`, `TSI2Function`, `TSI2Jacobian`, `TSTransientVariable`, `TSGLLEAcceptFunction` and `TSAlpha2Predictor` in favor of a pointer to the corresponding `Fn` typedef, for example `TSRHSFunctionFn *`
 - Deprecate `DMDATSRHSFunctionLocal`, `DMDATSRHSJacobianLocal`, `DMDATSIFunctionLocal` and `DMDATSIJacobianLocal` in favor of `DMDATSRHSFunctionLocalFn *`, `DMDATSRHSJacobianLocalFn *`, `DMDATSIFunctionLocalFn *` and `DMDATSIJacobianLocalFn *`
 

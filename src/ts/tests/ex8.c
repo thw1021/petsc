@@ -65,21 +65,25 @@ extern PetscErrorCode TSFunctionI(TS, PetscReal, Vec, Vec, Vec, void *);
 
 int main(int argc, char **argv)
 {
-  AppCtx ctx;
-  TS     ts;
-  Vec    tsrhs, UV;
+  AppCtx  ctx;
+  TS      ts;
+  TSAdapt adapt;
+  Vec     tsrhs, UV;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
   PetscCall(TSSetProblemType(ts, TS_NONLINEAR));
   PetscCall(TSSetType(ts, TSROSW));
-  PetscCall(TSSetFromOptions(ts));
   PetscCall(VecCreateMPI(PETSC_COMM_WORLD, 2, PETSC_DETERMINE, &tsrhs));
   PetscCall(VecDuplicate(tsrhs, &UV));
   PetscCall(TSSetRHSFunction(ts, tsrhs, TSFunctionRHS, &ctx));
   PetscCall(TSSetIFunction(ts, NULL, TSFunctionI, &ctx));
   PetscCall(TSSetMaxTime(ts, 1.0));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, 1.0));
+  PetscCall(TSSetFromOptions(ts));
+
   ctx.f = f;
   ctx.F = F;
 

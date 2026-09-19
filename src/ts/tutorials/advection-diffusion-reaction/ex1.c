@@ -170,8 +170,9 @@ static PetscErrorCode Solution(TS ts, PetscReal t, Vec U, AppCtx *ctx)
 int main(int argc, char **argv)
 {
   TS                ts; /* ODE integrator */
-  Vec               U;  /* solution will be stored here */
-  Mat               A;  /* Jacobian matrix */
+  TSAdapt           adapt;
+  Vec               U; /* solution will be stored here */
+  Mat               A; /* Jacobian matrix */
   PetscMPIInt       size;
   PetscInt          n = 3;
   AppCtx            ctx;
@@ -245,6 +246,8 @@ int main(int argc, char **argv)
   PetscCall(TSSetTimeStep(ts, .001));
   PetscCall(TSSetMaxSteps(ts, 1000));
   PetscCall(TSSetMaxTime(ts, 20.0));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, 20.0));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSMonitorLGSetVariableNames(ts, names));

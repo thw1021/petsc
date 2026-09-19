@@ -224,7 +224,7 @@ PetscErrorCode TSEventSetFromOptions(PetscObject ts_object, PetscOptionItems Pet
   TSEvent   event;
   TSAdapt   adapt;
   PetscInt  new_recsize;
-  PetscReal hmin;
+  PetscReal hmin_rel, hmin_abs;
 
   PetscFunctionBegin;
   ts = (TS)ts_object;
@@ -234,8 +234,9 @@ PetscErrorCode TSEventSetFromOptions(PetscObject ts_object, PetscOptionItems Pet
   new_recsize = event->recsize;
 
   PetscCall(TSGetAdapt(ts, &adapt));
-  PetscCall(TSAdaptGetStepLimits(adapt, &hmin, NULL));
-  event->timestep_min = 2 * hmin;
+  PetscCall(TSAdaptGetMinStep(adapt, &hmin_rel, &hmin_abs));
+  event->dt_min_rel = 2 * hmin_rel;
+  event->dt_min_abs = 2 * hmin_abs;
 
   PetscOptionsHeadBegin(PetscOptionsObject, "TS Event options");
   PetscCall(PetscOptionsReal("-ts_event_tol", "Tolerance for zero crossing check of event indicator functions", "TSSetEventTolerances", event->tol, &event->tol, &flgtol));
@@ -244,7 +245,9 @@ PetscErrorCode TSEventSetFromOptions(PetscObject ts_object, PetscOptionItems Pet
   PetscCall(PetscOptionsDeprecated("-ts_event_post_eventinterval_step", "-ts_event_post_event_second_step", "3.21", NULL));
   PetscCall(PetscOptionsReal("-ts_event_post_event_step", "First time step after event", "TSSetPostEventStep", event->timestep_postevent, &event->timestep_postevent, NULL));
   PetscCall(PetscOptionsReal("-ts_event_post_event_second_step", "Second time step after event", "TSSetPostEventSecondStep", event->timestep_2nd_postevent, &event->timestep_2nd_postevent, NULL));
-  PetscCall(PetscOptionsReal("-ts_event_dt_min", "Minimum time step considered for TSEvent", "", event->timestep_min, &event->timestep_min, NULL));
+  PetscCall(PetscOptionsDeprecated("-ts_event_dt_min", "-ts_event_dt_min_abs", "3.26", NULL));
+  PetscCall(PetscOptionsReal("-ts_event_dt_min_rel", "Relative minimum time step considered for TSEvent", "", event->dt_min_rel, &event->dt_min_rel, NULL));
+  PetscCall(PetscOptionsReal("-ts_event_dt_min_abs", "Absolute minimum time step considered for TSEvent", "", event->dt_min_abs, &event->dt_min_abs, NULL));
   PetscOptionsHeadEnd();
 
   if (flgtol) for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = event->tol;
@@ -295,7 +298,8 @@ PetscErrorCode TSEventSetFromOptions(PetscObject ts_object, PetscOptionItems Pet
 . -ts_event_recorder_initial_size recsize - initial size of event recorder
 . -ts_event_post_event_step dt1           - first time step after event
 . -ts_event_post_event_second_step dt2    - second time step after event
-- -ts_event_dt_min dt                     - minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min)
+. -ts_event_dt_min_rel dt_rel             - relative minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min_rel)
+- -ts_event_dt_min_abs dt_abs             - absolute minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min_abs)
 
   Level: intermediate
 
@@ -361,9 +365,9 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   event->ctx                    = ctx;
   event->timestep_postevent     = PETSC_DECIDE;
   event->timestep_2nd_postevent = PETSC_DECIDE;
-  PetscCall(TSGetAdapt(ts, &adapt));
-  PetscCall(TSAdaptGetStepLimits(adapt, &hmin, NULL));
-  event->timestep_min = 2 * hmin;
+  if (ts->adapt) PetscCall(TSAdaptGetMinStep(ts->adapt, &hmin_rel, &hmin_abs));
+  event->dt_min_rel = 2 * hmin_rel;
+  event->dt_min_abs = 2 * hmin_abs;
 
   PetscCall(TSEventRecorderResize(event, 8)); // initialise the event recorder; its size can be changed later from options
   event->recorder.ctr = 0;
@@ -518,8 +522,9 @@ static PetscErrorCode TSEventTestZero(TS ts, PetscReal t)
   PetscFunctionBegin;
   for (PetscInt i = 0; i < event->nevents; i++) {
     const PetscBool bracket_is_left = (event->fsign_prev[i] * event->fsign[i] < 0 && event->fsign[i] * event->direction[i] >= 0) ? PETSC_TRUE : PETSC_FALSE;
+    const PetscReal timestep_min    = TSMinStepAtTime(event->dt_min_rel, event->dt_min_abs, t);
 
-    if (bracket_is_left && ((t - event->ptime_prev <= event->timestep_min) || event->revisit_right)) event->side[i] = 0;          // mark zero-crossing from dt_min; 'bracket_is_left' accounts for direction
+    if (bracket_is_left && ((t - event->ptime_prev <= timestep_min) || event->revisit_right)) event->side[i] = 0;                 // mark zero-crossing from dt_min; 'bracket_is_left' accounts for direction
     if (event->fsign[i] == 0 && event->fsign_prev[i] != 0 && event->fsign_prev[i] * event->direction[i] <= 0) event->side[i] = 0; // mark zero-crossing from vtol
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -782,8 +787,9 @@ PetscErrorCode TSEventHandler(TS ts)
 
   if (minsideout == -1 || minsideout == +1) {                                                           // this if-branch will refine the left/right bracket
     const PetscReal bracket_size = (minsideout == -1) ? t - event->ptime_prev : event->ptime_right - t; // sync on all ranks
+    PetscReal       timestep_min = TSMinStepAtTime(event->dt_min_rel, event->dt_min_abs, t);
 
-    if (minsideout == +1 && bracket_size <= event->timestep_min) { // check if the bracket (right) is small
+    if (minsideout == +1 && bracket_size <= timestep_min) { // check if the bracket (right) is small
       // [--------------------|-]
       dt_next              = bracket_size; // need one more step to get to event->ptime_right
       event->revisit_right = PETSC_TRUE;
@@ -793,8 +799,8 @@ PetscErrorCode TSEventHandler(TS ts)
                                          (double)event->ptime_right, (double)(event->ptime_prev + dt_next)));
     } else { // the bracket is not very small -> refine it
       // [--------|-------------]
-      if (bracket_size <= 2 * event->timestep_min) dt_next = bracket_size / 2; // the bracket is almost small -> bisect it
-      else {                                                                   // the bracket is not small -> use Anderson-Bjorck
+      if (bracket_size <= 2 * timestep_min) dt_next = bracket_size / 2; // the bracket is almost small -> bisect it
+      else {                                                            // the bracket is not small -> use Anderson-Bjorck
         PetscReal dti_min = PETSC_MAX_REAL;
         for (PetscInt i = 0; i < event->nevents; i++) {
           if (event->side[i] == minsideout) { // only refine the appropriate brackets
@@ -803,8 +809,8 @@ PetscErrorCode TSEventHandler(TS ts)
           }
         }
         PetscCallMPI(MPIU_Allreduce(&dti_min, &dt_next, 1, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
-        if (dt_next < event->timestep_min) dt_next = event->timestep_min;
-        if (bracket_size - dt_next < event->timestep_min) dt_next = bracket_size - event->timestep_min;
+        if (dt_next < timestep_min) dt_next = timestep_min;
+        if (bracket_size - dt_next < timestep_min) dt_next = bracket_size - timestep_min;
       }
 
       if (minsideout == -1) { // minsideout == -1, update the right-end values, retain the left-end values

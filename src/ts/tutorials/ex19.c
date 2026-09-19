@@ -151,9 +151,10 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec X, PetscCtx
 
 int main(int argc, char **argv)
 {
-  TS             ts; /* nonlinear solver */
-  Vec            x;  /* solution, residual vectors */
-  Mat            A;  /* Jacobian matrix */
+  TS             ts;    /* ODE/PDE solver */
+  TSAdapt        adapt; /* step size adaptor */
+  Vec            x;     /* solution, residual vectors */
+  Mat            A;     /* Jacobian matrix */
   PetscInt       steps;
   PetscReal      ftime   = 0.5;
   PetscBool      monitor = PETSC_FALSE;
@@ -206,6 +207,8 @@ int main(int argc, char **argv)
   x_ptr[1] = -2.355301397608119909925287735864250951918;
   PetscCall(VecRestoreArray(x, &x_ptr));
   PetscCall(TSSetTimeStep(ts, .001));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, ftime));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set runtime options

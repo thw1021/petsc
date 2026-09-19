@@ -1123,7 +1123,8 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscRe
 . -ts_event_post_event_second_step dt2    - second time step after the event
 . -ts_event_monitor                       - print choices made by event handler
 . -ts_event_recorder_initial_size recsize - initial size of event recorder
-- -ts_event_dt_min dt                     - minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min)
+. -ts_event_dt_min_rel dt_rel             - (relative) minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min_rel)
+- -ts_event_dt_min_abs dt_abs             - (absolute) minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min_abs)
 
   Level: intermediate
 
@@ -1147,11 +1148,16 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscRe
   the point t2 is not treated as an event location. In fact, at point t2 the event handler still thinks it has not left
   the vicinity of the first zero t1.
 
-  2. Minimum time step criterion (`-ts_event_dt_min`). This criterion is triggered when the interval (bracket) with the
-  indicator function sign change (i.e. containing a zero crossing) becomes too small. Note that `-ts_event_dt_min`
-  is actually not the precise minimum step allowed during the event resolution. Algorithmically, the minimum step
+  2. Minimum time step criterion, as defined by the time step tolerance dt_min
+  (ultimately, by `-ts_event_dt_min_abs`, `-ts_event_dt_min_rel` and current time t)\:
+.vb
+  dt_min = Max {ts_event_dt_min_abs, ts_event_dt_min_rel * |t|}
+.ve
+  This criterion is triggered when the interval (bracket) with the indicator function
+  sign change (i.e. containing a zero crossing) becomes too small. Note that dt_min is actually
+  not the precise minimum step allowed during the event resolution. Algorithmically, the minimum step
   may become as small as half of that value, to finalize the current iteration.
-  If the initial bracket size happens to be smaller than `-ts_event_dt_min`, an event is triggered immediately.
+  If the initial bracket size happens to be smaller than dt_min, an event is triggered immediately.
 
   The user may also specify to trigger events only at those zeros of the indicator function where the function
   is increasing (zero-crossing in positive direction), or decreasing (zero-crossing in negative direction), by supplying
@@ -1298,6 +1304,8 @@ PETSC_EXTERN PetscErrorCode TSAdaptSetScaleSolveFailed(TSAdapt, PetscReal);
 PETSC_EXTERN PetscErrorCode TSAdaptGetScaleSolveFailed(TSAdapt, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSAdaptSetStepLimits(TSAdapt, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode TSAdaptGetStepLimits(TSAdapt, PetscReal *, PetscReal *);
+PETSC_EXTERN PetscErrorCode TSAdaptSetMinStep(TSAdapt, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TSAdaptGetMinStep(TSAdapt, PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSAdaptSetCheckStage(TSAdapt, PetscErrorCode (*)(TSAdapt, TS, PetscReal, Vec, PetscBool *));
 PETSC_EXTERN PetscErrorCode TSAdaptHistorySetHistory(TSAdapt, PetscInt, PetscReal[], PetscBool);
 PETSC_EXTERN PetscErrorCode TSAdaptHistorySetTrajectory(TSAdapt, TSTrajectory, PetscBool);
