@@ -1335,6 +1335,12 @@ PetscErrorCode MatSetOption_SeqAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_FORM_EXPLICIT_TRANSPOSE:
     A->form_explicit_transpose = flg;
     break;
+  case MAT_STRUCTURE_ONLY:
+    if (flg) {
+      PetscCall(MatXAIJDeallocatea(A, &a->a));
+      a->a = NULL;
+    }
+    break;
   default:
     break;
   }
