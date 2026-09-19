@@ -1190,6 +1190,10 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *, Mat A, M
 
   mm->kh1.create_spgemm_handle(spgemm_alg);
   mm->kh2.create_spgemm_handle(spgemm_alg);
+  // cuSPARSE SpGEMM can fail on A's off-diag block, whose few nonempty rows are scattered among many empty ones
+#if defined(KOKKOSKERNELS_ENABLE_TPL_CUSPARSE)
+  spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_KK;
+#endif
   mm->kh3.create_spgemm_handle(spgemm_alg);
   mm->kh4.create_spgemm_handle(spgemm_alg);
 
