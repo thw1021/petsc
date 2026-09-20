@@ -1273,7 +1273,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     self.generateDependencies       = {}
     self.dependenciesGenerationFlag = {}
     if not self.argDB['with-dependencies'] :
-      self.logPrint("Skip checking dependency compiler options on user request")
+      self.logPrint('Skip checking dependency compiler options on user request')
       return
     languages = ['C']
     if hasattr(self, 'CXX'):
@@ -1377,6 +1377,13 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       else:
         self.addDefine('HAVE_STDATOMIC_H', 1)
 
+  def checkIsoFortranBindingHeader(self):
+    '''Check whether the C compiler provides the ISO_Fortran_binding.h header'''
+    with self.Language('C'):
+      if self.checkCompile('#include <ISO_Fortran_binding.h>\n', 'CFI_cdesc_t desc;\n(void)desc'):
+        self.addDefine('HAVE_ISO_FORTRAN_BINDING', 1)
+        self.logPrint('C compiler provides ISO_Fortran_binding.h')
+
   def configure(self):
     import config.setCompilers
     if hasattr(self.setCompilers, 'CC'):
@@ -1385,6 +1392,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       self.executeTest(self.checkC99Flag)
       self.executeTest(self.checkDynamicLoadFlag)
       self.executeTest(self.checkStdAtomic)
+      self.executeTest(self.checkIsoFortranBindingHeader)
       if self.argDB['with-clib-autodetect']:
         self.executeTest(self.checkCLibraries)
       self.executeTest(self.checkDependencyGenerationFlag)
