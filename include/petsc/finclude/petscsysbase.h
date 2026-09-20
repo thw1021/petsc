@@ -16,14 +16,8 @@
 #define integer2 integer(kind=C_INT16_T)
 #define integer1 integer(kind=C_INT8_T)
 #define PetscBool logical(kind=C_BOOL)
-
-#if (PETSC_SIZEOF_VOID_P == 8)
-#define PetscOffset integer8
-#define PetscFortranAddr integer8
-#else
-#define PetscOffset integer4
-#define PetscFortranAddr integer4
-#endif
+#define PetscOffset integer(kind=C_INTPTR_T)
+#define PetscFortranAddr integer(kind=C_INTPTR_T)
 
 #if defined(PETSC_USE_64BIT_INDICES)
 #define PetscInt integer8
