@@ -4,8 +4,8 @@ PetscErrorCode SolKxData5(PetscReal x[], PetscReal z[], PetscReal *kn, PetscReal
 {
   PetscFunctionBeginUser;
   *B  = 100.0;
-  *kn = 100 * M_PI;
-  *km = 100 * M_PI;
+  *kn = 100 * PETSC_PI;
+  *km = 100 * PETSC_PI;
   /* *sigma = 1.0; */
   /* #include "outsolkx9040_5.c" */
   x[0]        = 0.00e+00;

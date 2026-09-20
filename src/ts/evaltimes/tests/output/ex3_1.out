@@ -1,0 +1,35 @@
+>> Schedule '   user' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule 'default' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule '  range' before 1st TSSolve: 0 point(s) <empty>
+### Check 'user' before 1st TSSolve: not found
+### Check 'user' after 1st TSSolve: not found
+### Check 'user' after 2nd TSSolve: not found
+### Check 'user' after 3rd TSSolve: not found
+### Check 'user' after 4th TSSolve: not found
+== CONVERGED_TIME ==
+0	1.	8.12683e-14	pass
+0	1.05	1.33513e-07	pass
+0	2.	1.81632e-13	pass
+0	3.	3.9968e-14	pass
+0	4.	1.789e-07	pass
+0	5.	4.61853e-14	pass
+0	6.	5.06262e-14	pass
+0	7.	4.04847e-08	pass
+0	8.	1.0975e-07	pass
+0	9.	1.38556e-13	pass
+0	9.05	1.01661e-10	pass
+0	10.	1.47438e-13	pass
+0	11.	1.06581e-14	pass
+0	12.	7.10543e-15	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+(1) Initial time = 0., final time reached = 12.054, max time = 12., ****
+(2) Initial dt = 0.123, final dt = 0.123, ****
+(1) or (2): pass
+========================
+The 3rd TSSolve exits in the middle of the event handler iterations, the 4th TSSolve resumes these iterations (check -ts_monitor, -ts_event_monitor)
+========================

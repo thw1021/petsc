@@ -1,0 +1,93 @@
+>> Schedule '   user' before 1st TSSolve: 30 point(s)
+>> Schedule 'default' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule '  range' before 1st TSSolve: 1 point(s)
+### Check 'user' before 1st TSSolve: start -1, end -1
+ETS 'user ' point 0.01, union index    0, private index    0
+ETS 'user ' point 0.21, union index    1, private index    1
+ETS 'user ' point 1.01, union index    2, private index    2
+### Check 'user' after 1st TSSolve: start 0, end 3
+ETS 'user ' point 1.21, union index    3, private index    3
+ETS 'user ' point 2.01, union index    4, private index    4
+ETS 'user ' point 2.21, union index    5, private index    5
+ETS 'user ' point 3., union index    6, private index    6
+ETS 'user ' point 3.01, union index    7, private index    7
+ETS 'user ' point 3.21, union index    8, private index    8
+ETS 'user ' point 4.01, union index   10, private index   10
+ETS 'user ' point 4.02, union index   11, private index   11
+ETS 'user ' point 4.21, union index   12, private index   12
+ETS 'user ' point 4.98, union index   13, private index   13
+ETS 'user ' point 5., union index   14, private index   14
+ETS 'user ' point 5.01, union index   15, private index   15
+ETS 'user ' point 5.21, union index   16, private index   16
+ETS 'user ' point 5.98, union index   17, private index   17
+ETS 'user ' point 6., union index   18, private index   18
+ETS 'user ' point 6.01, union index   19, private index   19
+ETS 'user ' point 6.02, union index   20, private index   20
+ETS 'user ' point 6.21, union index   21, private index   21
+ETS 'user ' point 6.99, union index   22, private index   22
+ETS 'user ' point 7.21, union index   23, private index   23
+ETS 'user ' point 8.01, union index   24, private index   24
+ETS 'user ' point 8.21, union index   25, private index   25
+ETS 'user ' point 9.01, union index   26, private index   26
+### Check 'user' after 2nd TSSolve: start 0, end 27
+ETS 'user ' point 9.21, union index   27, private index   27
+ETS 'user ' point 10.01, union index   28, private index   28
+ETS 'user ' point 10.21, union index   29, private index   29
+### Check 'user' after 3rd TSSolve: start 0, end 30
+ETS 'Range' point 10.25, union index   30, private index    0
+### Check 'user' after 4th TSSolve: start 0, end 30
+== CONVERGED_TIME ==
+0	1.	1.61319e-08	pass
+0	1.05	6.26396e-08	pass
+0	2.	1.61319e-08	pass
+0	3.	0.	pass
+0	4.	0.	pass
+0	5.	0.	pass
+0	6.	0.	pass
+0	7.	2.48584e-07	pass
+0	8.	1.61319e-08	pass
+0	9.	1.61319e-08	pass
+0	9.05	1.07386e-10	pass
+0	10.	1.61319e-08	pass
+0	11.	3.90799e-14	pass
+0	12.	0.	pass
+---
+Evaluation times schedule 'user': 30 point(s), visited subrange: [0, 30)
+0.01	1.	pass
+0.21	1.	pass
+1.01	1.	pass
+1.21	1.	pass
+2.01	1.	pass
+2.21	1.	pass
+3.	1.	pass
+3.01	1.	pass
+3.21	1.	pass
+4.	0.	***
+4.01	1.	pass
+4.02	1.	pass
+4.21	1.	pass
+4.98	1.	pass
+5.	1.	pass
+5.01	1.	pass
+5.21	1.	pass
+5.98	1.	pass
+6.	1.	pass
+6.01	1.	pass
+6.02	1.	pass
+6.21	1.	pass
+6.99	1.	pass
+7.21	1.	pass
+8.01	1.	pass
+8.21	1.	pass
+9.01	1.	pass
+9.21	1.	pass
+10.01	1.	pass
+10.21	1.	pass
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range': 1 point(s), visited subrange: [0, 1)
+10.25	0.	***
+(1) Initial time = 0., final time reached = 12., max time = 12., pass
+(2) Initial dt = 0.123, final dt = 0.123, pass
+(1) or (2): pass

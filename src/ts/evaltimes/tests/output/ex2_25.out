@@ -1,0 +1,40 @@
+### Check 'user' before SetUp: not found
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 21 point(s)
+ETS 'Range' point 0.54, union index    1, private index    1
+ETS 'Range' point 1.04, union index    2, private index    2
+### Check 'user' after Solve: not found
+== CONVERGED_TIME ==
+0	1.05	0.	pass
+1	1.	4.05822e-08	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range': 21 point(s), visited subrange: [1, 3)
+0.04	0.	***
+0.54	0.	***
+1.04	0.	***
+1.54	0.	***
+2.04	0.	***
+2.54	0.	***
+3.04	0.	***
+3.54	0.	***
+4.04	0.	***
+4.54	0.	***
+5.04	0.	***
+5.54	0.	***
+6.04	0.	***
+6.54	0.	***
+7.04	0.	***
+7.54	0.	***
+8.04	0.	***
+8.54	0.	***
+9.04	0.	***
+9.54	0.	***
+10.04	0.	***
+Initial time = 0.1, final time reached = 1.05, max time = 1.05, pass
+Initial time step = 0.12345, final time step = 0.12345, adapt == none, match

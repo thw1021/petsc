@@ -23,7 +23,8 @@ TS Object: 1 MPI process
     clip fastest increase 10.
     clip fastest decrease 0.1
     maximum allowed timestep 0.5
-    minimum allowed timestep 0.
+    (relative) minimum allowed timestep 2.22045e-15
+    (absolute) minimum allowed timestep 0.
     maximum solution absolute value to be ignored -1.
   SNES Object: 1 MPI process
     type: newtonls

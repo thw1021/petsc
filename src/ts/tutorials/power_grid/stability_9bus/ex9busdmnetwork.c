@@ -1150,5 +1150,6 @@ int main(int argc, char **argv)
       nsize: 2
       args: -ts_monitor -snes_converged_reason -alg_snes_converged_reason
       localrunfiles: X.bin Ybus.bin ex9busnetworkops
+      output_file: output/ex9busdmnetwork_1.out
 
 TEST*/

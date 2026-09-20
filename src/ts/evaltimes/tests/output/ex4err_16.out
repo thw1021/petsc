@@ -1,0 +1,11 @@
+### Check 'user' before SetUp: start -1, end -1
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Invalid argument
+[0]PETSC ERROR: Schedule 'dummy' is not found -> the restore call expects *idxend == -1
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimesRestoreSolutions() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 16 (source: command line)
+[0]PETSC ERROR: -msg Absent schedule, wrong idxend in restore. Skip the test to save time by marking it as a TODO (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

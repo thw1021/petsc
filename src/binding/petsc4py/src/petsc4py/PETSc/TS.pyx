@@ -1486,54 +1486,54 @@ cdef class TS(Object):
 
     # --- evaluation times ---
 
-    def setEvaluationTimes(self, tspan: Sequence[float]) -> None:
-        """Sets evaluation points where solution will be computed and stored.
+    def setEvaluationTimes(self, times: Sequence[float]) -> None:
+        """Set the evaluation time points where solution will be saved.
 
-        Collective.
+        Logically collective.
 
-        The solution will be computed and stored for each time
-        requested. The times must be all increasing and correspond
-        to the intermediate points for time integration.
-        `ExactFinalTime.MATCHSTEP` must be used to make the last time step in
-        each sub-interval match the intermediate points specified. The
-        intermediate solutions are saved in a vector array that can be accessed
-        with `getEvaluationSolutions`.
+        Sets the evaluation time points. The time stepper will visit these
+        points during the solution, saving the corresponding solution vectors
+        to an array.
+        To employ this facility, `ExactFinalTime.MATCHSTEP` should be used.
+        The saved vectors can then be accessed with `getEvaluationSolutions`.
 
         Parameters
         ----------
-        tspan
-            The sequence of time points. The first element and the last element
-            are the initial time and the final time respectively.
+        times
+            The sequence of time points, sorted in increasing order.
 
         Notes
         -----
-        ``-ts_eval_times <t0, ..., tn>`` sets the time span from the commandline
+        ``-ts_eval_times <t1, ..., tn>`` sets the evaluation times from
+        the sequence
+        ``-ts_eval_times_uniform <x,y,n>`` sets the evaluation times from n
+        evenly spaced points in [x,y]
 
         See Also
         --------
-        getEvaluationTimes, petsc.TSGetEvaluationTimes
+        getEvaluationTimes, petsc.TSSetEvaluationTimes
 
         """
-        cdef PetscInt  nt = 0
-        cdef PetscReal *rtspan = NULL
-        cdef unused = oarray_r(tspan, &nt, &rtspan)
-        CHKERR(TSSetEvaluationTimes(self.ts, nt, rtspan))
+        cdef PetscInt nt = 0
+        cdef PetscReal *rtimes = NULL
+        cdef unused = oarray_r(times, &nt, &rtimes)
+        CHKERR(TSSetEvaluationTimes(self.ts, nt, rtimes))
 
     def getEvaluationTimes(self) -> ArrayReal:
-        """Return the evaluation points.
+        """Return the evaluation time points.
 
         Not collective.
 
         See Also
         --------
-        setEvaluationTimes
+        setEvaluationTimes, petsc.TSGetEvaluationTimes
 
         """
-        cdef const PetscReal *rtspan = NULL
-        cdef PetscInt   nt = 0
-        CHKERR(TSGetEvaluationTimes(self.ts, &nt, &rtspan))
-        cdef object tspan = array_r(nt, rtspan)
-        return tspan
+        cdef PetscInt nt = 0
+        cdef const PetscReal *rtimes = NULL
+        CHKERR(TSGetEvaluationTimes(self.ts, &nt, &rtimes))
+        cdef object times = array_r(nt, rtimes)
+        return times
 
     def getEvaluationSolutions(self) -> tuple[ArrayReal, list[Vec]]:
         """Return the solutions and the times they were recorded at.
@@ -1542,50 +1542,48 @@ cdef class TS(Object):
 
         See Also
         --------
-        setEvaluationTimes
+        setEvaluationTimes, petsc.TSGetEvaluationSolutions
 
         """
         cdef PetscInt nt = 0
+        cdef const PetscReal *rtimes = NULL
         cdef PetscVec *sols = NULL
-        cdef const PetscReal *rtspan = NULL
-        CHKERR(TSGetEvaluationSolutions(self.ts, &nt, &rtspan, &sols))
+        CHKERR(TSGetEvaluationSolutions(self.ts, &nt, &rtimes, &sols))
         cdef object sollist = None
         if sols != NULL:
             sollist = [ref_Vec(sols[i]) for i from 0 <= i < nt]
-        cdef object tspan = array_r(nt, rtspan)
-        return tspan, sollist
+        cdef object times = array_r(nt, rtimes)
+        return times, sollist
 
     # --- time span ---
 
     def setTimeSpan(self, tspan: Sequence[float]) -> None:
-        """Set the time span and time points to evaluate solution at.
+        """Set the time span points to evaluate solution at.
 
-        Collective.
+        Logically collective.
 
-        The solution will be computed and stored for each time
-        requested in the span. The times must be all increasing and correspond
-        to the intermediate points for time integration.
-        `ExactFinalTime.MATCHSTEP` must be used to make the last time step in
-        each sub-interval match the intermediate points specified. The
-        intermediate solutions are saved in a vector array that can be accessed
-        with `getEvaluationSolutions`.
+        Sets the time span points. The time stepper will visit these points
+        during the solution, saving the corresponding solution vectors
+        to an array. The initial and final solution times tinit, tmax are
+        updated from the min/max of tspan.
+        To employ this facility, `ExactFinalTime.MATCHSTEP` should be used.
+        The saved vectors can then be accessed with `getEvaluationSolutions`.
 
         Parameters
         ----------
         tspan
-            The sequence of time points. The first element and the last element
-            are the initial time and the final time respectively.
+            The sequence of time points, sorted in increasing order.
 
         Notes
         -----
-        ``-ts_time_span <t0, ..., tf>`` sets the time span from the commandline
+        ``-ts_time_span <t1, ..., tn>`` sets the time span from the sequence
 
         See Also
         --------
         setEvaluationTimes, petsc.TSSetTimeSpan
 
         """
-        cdef PetscInt  nt = 0
+        cdef PetscInt nt = 0
         cdef PetscReal *rtspan = NULL
         cdef unused = oarray_r(tspan, &nt, &rtspan)
         CHKERR(TSSetTimeSpan(self.ts, nt, rtspan))
@@ -2341,7 +2339,7 @@ cdef class TS(Object):
     def getNumEvents(self) -> int:
         """Return the number of events.
 
-        Logically collective.
+        Not collective.
 
         See Also
         --------

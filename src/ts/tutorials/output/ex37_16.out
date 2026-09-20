@@ -1,0 +1,87 @@
+>> Schedule '   user' after first TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule 'default' after first TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule '  range' after first TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy1' after first TSEvaluationTimesSetUp(): 1 point(s)
+>> Schedule ' dummy2' after first TSEvaluationTimesSetUp(): 2 point(s)
+>> Schedule ' dummy3' after first TSEvaluationTimesSetUp(): 3 point(s)
+>> Schedule ' dummy4' after first TSEvaluationTimesSetUp(): 4 point(s)
+>> Schedule ' dummy5' after first TSEvaluationTimesSetUp(): 5 point(s)
+>> Schedule '   user' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule 'default' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule '  range' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy1' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy2' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy3' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy4' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+>> Schedule ' dummy5' before second TSEvaluationTimesSetUp(): 0 point(s) <empty>
+### Check 'user' before second TSEvaluationTimesSetUp(): not found
+>> Schedule '   user' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule 'default' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule '  range' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy1' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy2' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy3' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy4' before 1st TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy5' before 1st TSSolve: 0 point(s) <empty>
+### Check 'user' before 1st TSSolve: not found
+### Check 'user' after 1st TSSolve: not found
+---
+Evaluation times schedule 'user' not found
+>> Schedule '   user' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule 'default' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule '  range' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy1' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy2' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy3' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy4' after 2nd TSSolve: 0 point(s) <empty>
+>> Schedule ' dummy5' after 2nd TSSolve: 0 point(s) <empty>
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+>> Schedule '   user' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule 'default' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule '  range' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy1' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy2' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy3' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy4' after TSEvaluationTimesReset: 0 point(s) <empty>
+>> Schedule ' dummy5' after TSEvaluationTimesReset: 0 point(s) <empty>
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+### Check 'user' after 3rd TSSolve: not found
+Schedule 'user' is absent, no need to remove
+### Check 'user' after 4th TSSolve: not found
+== CONVERGED_TIME ==
+0	1.	8.12683e-14	pass
+0	1.05	1.33513e-07	pass
+0	2.	1.81632e-13	pass
+0	3.	3.9968e-14	pass
+0	4.	1.789e-07	pass
+0	5.	4.61853e-14	pass
+0	6.	5.06262e-14	pass
+0	7.	4.04847e-08	pass
+0	8.	1.0975e-07	pass
+0	9.	1.38556e-13	pass
+0	9.05	1.01661e-10	pass
+0	10.	5.6697e-08	pass
+0	11.	5.86198e-14	pass
+0	12.	0.	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+(1) Initial time = 0., final time reached = 12., max time = 12., pass
+(2) Initial dt = 0.123, final dt = 0.123, pass
+(1) or (2): pass
+========================
+Empty evaluation times
+========================

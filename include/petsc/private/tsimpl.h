@@ -139,31 +139,19 @@ struct _TS_RHSSplitLink {
   PetscLogEvent   event;
 };
 
-typedef struct _TS_EvaluationTimes *TSEvaluationTimes;
-struct _TS_EvaluationTimes {
-  PetscInt   num_time_points; /* number of time points */
-  PetscReal *time_points;     /* array of the time span */
-  PetscReal  reltol;          /* relative tolerance for span point detection */
-  PetscReal  abstol;          /* absolute tolerance for span point detection */
-  PetscReal  worktol;         /* the ultimate tolerance (variable), maintained within a single TS time step for consistency */
-  PetscInt   time_point_idx;  /* index of the time_point to be reached next */
-  PetscInt   sol_idx;         /* index into sol_vecs and sol_times */
-  Vec       *sol_vecs;        /* array of the solutions at the specified time points */
-  PetscReal *sol_times;       /* array of times that sol_vecs was taken at */
-};
-
 struct _p_TS {
   PETSCHEADER(struct _TSOps);
   TSProblemType  problem_type;
   TSEquationType equation_type;
 
-  DM          dm;
-  Vec         vec_sol;  /* solution vector in first and second order equations */
-  Vec         vec_sol0; /* solution vector at the beginning of the step */
-  Vec         vec_dot;  /* time derivative vector in second order equations */
-  TSAdapt     adapt;
-  TSAdaptType default_adapt_type;
-  TSEvent     event;
+  DM                dm;
+  Vec               vec_sol;  /* solution vector in first and second order equations */
+  Vec               vec_sol0; /* solution vector at the beginning of the step */
+  Vec               vec_dot;  /* time derivative vector in second order equations */
+  TSAdapt           adapt;
+  TSAdaptType       default_adapt_type;
+  TSEvent           event;     /* events (discontinuities) */
+  TSEvaluationTimes evaltimes; /* evaluation times */
 
   /* ---------------- Resize ---------------------*/
   PetscBool       resizerollback;
@@ -319,7 +307,7 @@ struct _p_TS {
   PetscInt nwork;
   Vec     *work;
 
-  /* ---------------------- RHS splitting support ---------------------------------*/
+  /* ---------------------- RHS splitting support -----------------------*/
   PetscInt        num_rhs_splits;
   TS_RHSSplitLink tsrhssplit;
   PetscBool       use_splitrhsfunction;
@@ -327,9 +315,6 @@ struct _p_TS {
 
   /* ---------------------- Quadrature integration support ---------------------------------*/
   TS quadraturets;
-
-  /* ---------------------- Time span support ---------------------------------*/
-  TSEvaluationTimes eval_times;
 };
 
 struct _TSAdaptOps {
@@ -355,20 +340,30 @@ struct _p_TSAdapt {
     PetscReal   cost[16];       /* relative measure of the amount of work required for each scheme */
   } candidates;
   PetscBool   always_accept;
-  PetscReal   safety;             /* safety factor relative to target error/stability goal */
-  PetscReal   reject_safety;      /* extra safety factor if the last step was rejected */
-  PetscReal   clip[2];            /* admissible time step decrease/increase factors */
-  PetscReal   dt_min, dt_max;     /* admissible minimum and maximum time step */
-  PetscReal   ignore_max;         /* minimum value of the solution to be considered by the adaptor */
-  PetscBool   glee_use_local;     /* GLEE adaptor uses global or local error */
-  PetscReal   scale_solve_failed; /* scale step by this factor if solver (linear or nonlinear) fails. */
-  PetscReal   matchstepfac[2];    /* factors to control the behaviour of matchstep */
+  PetscReal   safety;                 /* safety factor relative to target error/stability goal */
+  PetscReal   reject_safety;          /* extra safety factor if the last step was rejected */
+  PetscReal   clip[2];                /* admissible time step decrease/increase factors */
+  PetscReal   dt_min_rel, dt_min_abs; /* relative and absolute components of admissible minimum time step */
+  PetscReal   dt_max;                 /* admissible maximum time step */
+  PetscReal   ignore_max;             /* minimum value of the solution to be considered by the adaptor */
+  PetscBool   glee_use_local;         /* GLEE adaptor uses global or local error */
+  PetscReal   scale_solve_failed;     /* scale step by this factor if solver (linear or nonlinear) fails. */
+  PetscReal   matchstepfac[2];        /* factors to control the behaviour of matchstep */
   NormType    wnormtype;
   PetscViewer monitor;
   PetscInt    timestepjustdecreased_delay; /* number of timesteps after a decrease in the timestep before the timestep can be increased */
   PetscInt    timestepjustdecreased;
-  PetscReal   dt_eval_times_cached; /* time step before hitting a TS evaluation time point */
+  PetscReal   next_h_cache; /* next time step before hitting an evaluation time point */
 };
+
+/* The minimum time step allowed at time t, from the relative and absolute components */
+static inline PetscReal TSMinStepAtTime(PetscReal dt_min_rel, PetscReal dt_min_abs, PetscReal t)
+{
+  return PetscMax(dt_min_abs, dt_min_rel * PetscAbsReal(t));
+}
+
+PETSC_EXTERN PetscErrorCode TSAdaptCheckStepLimits(TSAdapt, TS);
+PETSC_EXTERN PetscErrorCode TSAdaptCapNextStep(TSAdapt, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal *);
 
 /*S
    DMTS - Object held by a `DM` that contains all the callback functions and their contexts needed by a `TS`
@@ -462,6 +457,9 @@ PETSC_EXTERN PetscErrorCode DMTSView(DMTS, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMTSLoad(DMTS, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMTSCopy(DMTS, DMTS);
 
+/*
+  TSEvent - handles the TS events
+*/
 struct _n_TSEvent {
   PetscReal *fvalue_prev;                                                                   /* value of indicator function at the left end-point of the event interval */
   PetscReal *fvalue;                                                                        /* value of indicator function at the current point */
@@ -477,17 +475,19 @@ struct _n_TSEvent {
   PetscInt  *side_prev;                                                                     /* counts the repeating previous side's (with values: -n <=> '-1'*n; +n <=> '+1'*n); used in the Anderson-Bjorck iteration */
   PetscReal  timestep_postevent;                                                            /* first time step after the event; can be PETSC_DECIDE */
   PetscReal  timestep_2nd_postevent;                                                        /* second time step after the event; can be PETSC_DECIDE */
-  PetscReal  timestep_min;                                                                  /* minimum time step */
+  PetscReal  dt_min_rel;                                                                    /* relative minimum time step */
+  PetscReal  dt_min_abs;                                                                    /* absolute minimum time step */
   PetscBool *justrefined_AB;                                                                /* this flag shows if the given indicator function i = [0..nevents) participated in Anderson-Bjorck process in the last iteration of TSEventHandler() */
   PetscReal *gamma_AB;                                                                      /* cumulative scaling factor for the Anderson-Bjorck iteration */
   PetscErrorCode (*indicator)(TS, PetscReal, Vec, PetscReal *, void *);                     /* this callback defines the user function(s) whose sign changes indicate events */
   PetscErrorCode (*postevent)(TS, PetscInt, PetscInt[], PetscReal, Vec, PetscBool, void *); /* user post-event callback */
-  void       *ctx;                                                                          /* user context for indicator and postevent callbacks */
-  PetscInt   *direction;                                                                    /* zero crossing direction to trigger the event: +1 -> going positive, -1 -> going negative, 0 -> any */
-  PetscBool  *terminate;                                                                    /* 1 -> terminate time stepping on event location, 0 -> continue */
-  PetscInt    nevents;                                                                      /* number of events (indicator functions) to handle on the current MPI process */
-  PetscInt    nevents_zero;                                                                 /* number of events triggered */
-  PetscInt   *events_zero;                                                                  /* list of the events triggered */
+  void      *ctx;                                                                           /* user context for indicator and postevent callbacks */
+  PetscInt  *direction;                                                                     /* zero crossing direction to trigger the event: +1 -> going positive, -1 -> going negative, 0 -> any */
+  PetscBool *terminate;                                                                     /* 1 -> terminate time stepping on event location, 0 -> continue */
+  PetscInt   nevents;                                                                       /* number of events (indicator functions) to handle on the current MPI process */
+  PetscInt   nevents_zero;                                                                  /* number of events triggered */
+  PetscInt  *events_zero;                                                                   /* list of the events triggered */
+  PetscObjectParameterDeclare(PetscReal, tol);                                              /* tolerance for the indicator function zero check; this one is only used to report the current value */
   PetscReal  *vtol;                                                                         /* array of tolerances for the indicator function zero check */
   PetscInt    iterctr;                                                                      /* iteration counter: used both for reporting and as a status indicator */
   PetscBool   processing;                                                                   /* this flag shows if the event-resolving iterations are in progress, or the post-event dt handling is in progress */
@@ -507,8 +507,50 @@ struct _n_TSEvent {
 
 PETSC_EXTERN PetscErrorCode TSEventInitialize(TSEvent, TS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TSEventDestroy(TSEvent *);
+PETSC_EXTERN PetscErrorCode TSEventSetFromOptions(PetscObject, PetscOptionItems, void *);
 PETSC_EXTERN PetscErrorCode TSEventHandler(TS);
 PETSC_EXTERN PetscErrorCode TSAdjointEventHandler(TS);
+
+/*
+  TSEvaluationTimes - manages the evaluation time points
+    'ctr_global' is used in finding the next point;
+    its initial value is set according to the TS initial time; then, it is incremented on hitting each evaluation time point.
+*/
+struct _n_TSEvaluationTimes {
+  PetscInt        len_global;   // capacity of array 'times_global'
+  PetscReal      *times_global; // global array of the evaluation time points, strictly increasing
+  PetscInt        ctr_global;   // work counter (in 'times_global') for the time point reached
+  PetscBool       assembled;    // PETSC_TRUE => ready for use in TSSolve()
+  PetscObjectList schedlist;    // list containing the private TSEvaluationTimesSchedule's, which contribute to the global array of points, and store the results
+  PetscInt        refct;        // reference count, for managing shared ownership
+};
+
+/*
+  TSEvaluationTimesSchedule - manages a private list of evaluation time points, and stores the resulting vectors
+    'times' should be increasing, but may contain repeating values;
+    'inds_global' should be increasing, but may contain repeating values;
+    'ctr' is used (and incremented) when saving the vectors.
+*/
+struct _n_TSEvaluationTimesSchedule {
+  char       name[256];                                                             // schedule's name, only used for reporting
+  PetscInt   len;                                                                   // length of the arrays below
+  PetscReal *times;                                                                 // private array of the evaluation time points (sorted)
+  PetscInt  *inds_global;                                                           // indices of 'times' in 'times_global'
+  Vec       *vecs;                                                                  // the vectors saved (result)
+  PetscReal *c_times;                                                               // cached 'times' pointer, for Get/Restore
+  Vec       *c_vecs;                                                                // cached 'vecs' pointer, for Get/Restore
+  PetscBool  c_locked;                                                              // PETSC_TRUE after Get, PETSC_FALSE after Restore
+  PetscInt   ctr;                                                                   // work counter, [0, len)
+  PetscInt   start, end;                                                            // two indices showing the actual sub-range in [0, len) filled in the current run
+  void      *ctx;                                                                   // optional user context for the 'handler' callback
+  PetscErrorCode (*handler)(TS, PetscInt, PetscInt, PetscReal, Vec, Vec *, void *); // user callback - e.g. to transform the vectors before saving
+};
+
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetFromOptions(TS, PetscOptionItems);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetDefaultSchedule(TS, PetscInt, PetscReal, PetscReal, const PetscReal *, PetscBool);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSaveVecs(TS, Vec);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetUpCounters(TS);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesNext(TS, PetscReal, PetscReal *, PetscReal *);
 
 PETSC_EXTERN PetscLogEvent TS_AdjointStep;
 PETSC_EXTERN PetscLogEvent TS_Step;
