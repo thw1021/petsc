@@ -9,6 +9,8 @@
   #define pcasmcreatesubdomains_    PCASMCREATESUBDOMAINS
   #define pcasmdestroysubdomains_   PCASMDESTROYSUBDOMAINS
   #define pcasmcreatesubdomains2d_  PCASMCREATESUBDOMAINS2D
+
+  #define f90array1ddestroyfortranaddr_ F90ARRAY1DDESTROYFORTRANADDR
 #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define pcasmgetsubksp_           pcasmgetsubksp
   #define pcasmrestoresubksp_       pcasmrestoresubksp
@@ -17,7 +19,11 @@
   #define pcasmcreatesubdomains_    pcasmcreatesubdomains
   #define pcasmdestroysubdomains_   pcasmdestroysubdomains
   #define pcasmcreatesubdomains2d_  pcasmcreatesubdomains2d
+
+  #define f90array1ddestroyfortranaddr_ f90array1ddestroyfortranaddr
 #endif
+
+PETSC_EXTERN void f90array1ddestroyfortranaddr_(F90Array1d *PETSC_F90_2PTR_PROTO_NOVAR);
 
 PETSC_EXTERN void pcasmcreatesubdomains_(Mat *mat, PetscInt *n, F90Array1d *is, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd1))
 {
@@ -49,16 +55,19 @@ PETSC_EXTERN void pcasmgetlocalsubdomains_(PC *pc, PetscInt *n, F90Array1d *is, 
   PetscInt nloc;
   IS      *tis, *tis_local;
 
-  CHKFORTRANNULLOBJECT(is);
-  CHKFORTRANNULLOBJECT(is_local);
   CHKFORTRANNULLINTEGER(n);
   *ierr = PCASMGetLocalSubdomains(*pc, &nloc, &tis, &tis_local);
   if (*ierr) return;
   if (n) *n = nloc;
-  if (is) *ierr = F90Array1dCreate(tis, MPIU_FORTRANADDR, 1, nloc, is PETSC_F90_2PTR_PARAM(ptrd1));
+  if (is != PetscGetFortranNullISPointer_Private()) {
+    if (tis) *ierr = F90Array1dCreate(tis, MPIU_FORTRANADDR, 1, nloc, is PETSC_F90_2PTR_PARAM(ptrd1));
+    else f90array1ddestroyfortranaddr_(is PETSC_F90_2PTR_PARAM(ptrd1));
+  }
   if (*ierr) return;
-  if (is_local) *ierr = F90Array1dCreate(tis_local, MPIU_FORTRANADDR, 1, nloc, is_local PETSC_F90_2PTR_PARAM(ptrd2));
-  if (*ierr) return;
+  if (is_local != PetscGetFortranNullISPointer_Private()) {
+    if (tis_local) *ierr = F90Array1dCreate(tis_local, MPIU_FORTRANADDR, 1, nloc, is_local PETSC_F90_2PTR_PARAM(ptrd2));
+    else f90array1ddestroyfortranaddr_(is_local PETSC_F90_2PTR_PARAM(ptrd2));
+  }
 }
 
 PETSC_EXTERN void pcasmdestroysubdomains_(PetscInt *n, F90Array1d *is1, F90Array1d *is2, int *ierr PETSC_F90_2PTR_PROTO(ptrd1) PETSC_F90_2PTR_PROTO(ptrd2))
