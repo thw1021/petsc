@@ -114,6 +114,7 @@ PETSC_EXTERN void pcasmgetsubksp_(PC *pc, PetscInt *n_local, PetscInt *first_loc
   CHKFORTRANNULLINTEGER(n_local);
   CHKFORTRANNULLINTEGER(first_local);
   *ierr = PCASMGetSubKSP(*pc, &nloc, &flocal, &tksp);
+  if (*ierr) return;
   if (n_local) *n_local = nloc;
   if (first_local) *first_local = flocal;
   *ierr = F90Array1dCreate(tksp, MPIU_FORTRANADDR, 1, nloc, ksp PETSC_F90_2PTR_PARAM(ptrd));

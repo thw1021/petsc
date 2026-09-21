@@ -1,4 +1,4 @@
-! Tests ordinary disassociated array outputs in three PCASM Fortran bindings.
+! Tests array outputs, omitted arguments and error returns in the PCASM Fortran bindings.
 #include <petsc/finclude/petscksp.h>
 program main
   use petscksp
@@ -10,8 +10,9 @@ program main
   IS, pointer :: subdomains(:) => null(), inner(:) => null(), saved_is_pointer(:)
   IS saved_null_is
   IS, target :: explicit_outer(1), explicit_inner(1)
+  KSP, pointer :: ksps(:) => null()
   PC pc
-  PetscInt i, nsub, m, n, imin, imax, saved_null_integer
+  PetscInt i, nsub, first_sub, m, n, imin, imax, saved_null_integer
   PetscInt, parameter :: nrows = 4
   PetscScalar, parameter :: one = 1
   PetscScalar value(1)
@@ -91,7 +92,21 @@ program main
     PetscCheckA(nsub == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Omitting matrices lost the count')
     PetscCallA(PCASMGetLocalSubmatrices(pc, PETSC_NULL_INTEGER, PETSC_NULL_MAT_POINTER, ierr))
     call CheckNullOutputs()
+    ! Before setup, both getters must return the C error and leave their outputs untouched.
     nullify (submatrices)
+    PetscCallA(PCSetType(pc, PCNONE, ierr))
+    PetscCallA(PCSetType(pc, PCASM, ierr))
+    nsub = -1
+    first_sub = -1
+    PetscCallA(PetscPushErrorHandler(ReturnError, PETSC_NULL_INTEGER, ierr))
+    call PCASMGetLocalSubmatrices(pc, nsub, submatrices, expected_error)
+    call PCASMGetSubKSP(pc, nsub, first_sub, ksps, second_error)
+    PetscCallA(PetscPopErrorHandler(ierr))
+    PetscCheckA(expected_error == PETSC_ERR_ARG_WRONGSTATE, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'PCASMGetLocalSubmatrices() lost the error before setup')
+    PetscCheckA(second_error == PETSC_ERR_ORDER, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'PCASMGetSubKSP() lost the error before setup')
+    PetscCheckA(nsub == -1 .and. first_sub == -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'A failed getter changed its counts')
+    PetscCheckA(.not. associated(submatrices) .and. .not. associated(ksps), PETSC_COMM_SELF, PETSC_ERR_PLIB, 'A failed getter associated its output')
+    call CheckNullOutputs()
     PetscCallA(PCSetType(pc, PCNONE, ierr))
     PetscCallA(PCSetUp(pc, ierr))
     submatrices => matrix_target
