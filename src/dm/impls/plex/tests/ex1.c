@@ -746,7 +746,6 @@ int main(int argc, char **argv)
       args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/mesh-3d-box-innersphere_bin.msh -dm_view glvis: -viewer_glvis_dm_plex_enable_boundary
     test:
       suffix: glvis_3d_tet_per_mfem
-      TODO: broken
       args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/mesh-3d-box-innersphere_bin.msh -viewer_glvis_dm_plex_enable_mfem -dm_view glvis:
     test:
       suffix: glvis_3d_hex
