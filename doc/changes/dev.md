@@ -188,9 +188,15 @@
 - Deprecate `TaoMonitorDefaultShort()`, `-tao_monitor_short`, and `-tao_monitor_short_interval`
 - Change the deprecated `TaoSMonitor()` and `-tao_smonitor` to use the full-precision default monitor
 - Add `TaoGetConvergedReasonString()` to retrieve a human readable string describing the `TaoConvergedReason`
+- Add `TaoSetHessianMult()`, `TaoGetHessianMult()`, and `TaoComputeHessianMult()` to provide the Hessian-vector product as a callback
+- Add `TaoSetHessianMatrices()` to set the Hessian matrices without setting a Hessian routine
+- Add function typedefs `TaoObjectiveFn`, `TaoGradientFn`, `TaoObjectiveAndGradientFn`, `TaoHessianFn`, and `TaoHessianMultFn`
 
 ## TaoTerm
 
+- Add `TaoTermComputeHessianMult()` and `TaoTermIsHessianMultDefined()`
+- Add `TaoTermShellSetHessianMult()` and the function typedef `TaoTermHessianMultFn` to provide the Hessian-vector product of a `TAOTERMSHELL`
+- Add `TaoTermCreateHessianShell()` and `TaoTermUpdateHessianShell()` for a matrix-free `MATSHELL` Hessian, selected with `-tao_term_hessian_mat_type shell`
 
 ## PetscRegressor
 
