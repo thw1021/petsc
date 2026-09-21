@@ -4791,9 +4791,8 @@ static PetscErrorCode MatSetValuesCOOCompact_SeqAIJ(Mat A, const PetscScalar v[]
   if (imode == INSERT_VALUES) {
     if (v) PetscCall(PetscArraycpy(Aa, v, aseq->nz));
     else PetscCall(PetscArrayzero(Aa, aseq->nz));
-  } else if (v) {
+  } else if (v)
     for (PetscInt i = 0; i < aseq->nz; i++) Aa[i] += v[i];
-  }
   PetscCall(MatSeqAIJRestoreArray(A, &Aa));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

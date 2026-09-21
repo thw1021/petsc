@@ -510,7 +510,7 @@ int main(int argc, char **argv)
       ncoo = 0;
       if (!empty_stream && N) {
         if (receive_only) {
-          if (!rank) {
+          if (!rank)
             for (PetscInt row = 0; row < N; row++) {
               for (PetscInt j = 0; j < repeats; j++) {
                 rows[ncoo]   = row;
@@ -519,8 +519,7 @@ int main(int argc, char **argv)
                 cols[ncoo++] = (row + pass + 1) % N;
               }
             }
-          }
-        } else if (m) {
+        } else if (m)
           for (PetscInt j = 0; j < repeats; j++) {
             rows[ncoo]   = start;
             cols[ncoo++] = start;
@@ -533,7 +532,6 @@ int main(int argc, char **argv)
             rows[ncoo]   = 0;
             cols[ncoo++] = 0;
           }
-        }
         if (ncoo) {
           rows[ncoo]   = -1;
           cols[ncoo++] = 0;
