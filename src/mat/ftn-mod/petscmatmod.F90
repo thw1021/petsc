@@ -176,7 +176,7 @@ contains
 
 end module
 
-! Return the omission marker's descriptor address to C.
+! Return the address of the PETSC_NULL_MAT_POINTER descriptor, so C stubs can recognize an omitted array argument.
 function PetscGetFortranNullMatPointer_Private() bind(C, name="PetscGetFortranNullMatPointer_Private") result(ptr)
   use, intrinsic :: ISO_C_binding
   use petscmatdef, only: tMat, PETSC_NULL_MAT_POINTER
@@ -188,7 +188,8 @@ function PetscGetFortranNullMatPointer_Private() bind(C, name="PetscGetFortranNu
 #endif
   interface
     subroutine F90Array1dGetDescriptor(array, address)
-      import tMat, c_ptr
+      use, intrinsic :: ISO_C_binding
+      import tMat
       Mat, pointer :: array(:)
       type(c_ptr) address
     end subroutine

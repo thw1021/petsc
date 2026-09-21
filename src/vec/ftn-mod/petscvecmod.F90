@@ -108,7 +108,7 @@ contains
 #include <../ftn/vec/petscpf.hf90>
 end module
 
-! Expose the omission descriptor to C bindings without depending on module symbol names or descriptor layout.
+! Return the address of the PETSC_NULL_IS_POINTER descriptor, so C stubs can recognize an omitted array argument.
 function PetscGetFortranNullISPointer_Private() bind(C, name="PetscGetFortranNullISPointer_Private") result(ptr)
   use, intrinsic :: ISO_C_binding
   use petscisdef, only: tIS, PETSC_NULL_IS_POINTER
