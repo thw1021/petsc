@@ -417,6 +417,8 @@ Even with the use of `clang-format` there are still many decisions about code fo
     provide the Fortran bindings automatically for functions that take contexts. In Fortran,
     the context must be a Fortran derived type, `type(xxx)`.
 
+12. In the body of a function-like macro, always wrap each macro argument in parentheses.
+
 (usage_of_petsc_functions_and_macros)=
 
 ### Usage of PETSc Functions and Macros
