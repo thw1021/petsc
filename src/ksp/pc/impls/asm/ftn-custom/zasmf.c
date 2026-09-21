@@ -43,11 +43,13 @@ PETSC_EXTERN void pcasmgetlocalsubmatrices_(PC *pc, PetscInt *n, F90Array1d *mat
   PetscInt nloc;
   Mat     *tmat;
 
-  CHKFORTRANNULLOBJECT(mat);
   CHKFORTRANNULLINTEGER(n);
   *ierr = PCASMGetLocalSubmatrices(*pc, &nloc, &tmat);
+  if (*ierr) return;
   if (n) *n = nloc;
-  if (mat) *ierr = F90Array1dCreate(tmat, MPIU_FORTRANADDR, 1, nloc, mat PETSC_F90_2PTR_PARAM(ptrd));
+  if (mat == PetscGetFortranNullMatPointer_Private()) return;
+  if (tmat) *ierr = F90Array1dCreate(tmat, MPIU_FORTRANADDR, 1, nloc, mat PETSC_F90_2PTR_PARAM(ptrd));
+  else f90array1ddestroyfortranaddr_(mat PETSC_F90_2PTR_PARAM(ptrd));
 }
 
 PETSC_EXTERN void pcasmgetlocalsubdomains_(PC *pc, PetscInt *n, F90Array1d *is, F90Array1d *is_local, int *ierr PETSC_F90_2PTR_PROTO(ptrd1) PETSC_F90_2PTR_PROTO(ptrd2))
