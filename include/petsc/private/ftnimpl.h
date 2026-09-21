@@ -3,6 +3,8 @@
 #include <petsc/private/petscimpl.h>
 PETSC_INTERN PetscErrorCode PETScParseFortranArgs_Private(int *, char ***);
 PETSC_EXTERN PetscErrorCode PetscMPIFortranDatatypeToC(MPI_Fint, MPI_Datatype *);
+PETSC_EXTERN void          *PetscGetFortranNullMatPointer_Private(void);
+PETSC_EXTERN void          *PetscGetFortranNullISPointer_Private(void);
 
 PETSC_EXTERN PetscErrorCode          PetscScalarAddressToFortran(PetscObject, PetscInt, PetscScalar *, PetscScalar *, PetscInt, size_t *);
 PETSC_EXTERN PetscErrorCode          PetscScalarAddressFromFortran(PetscObject, PetscScalar *, size_t, PetscInt, PetscScalar **);
