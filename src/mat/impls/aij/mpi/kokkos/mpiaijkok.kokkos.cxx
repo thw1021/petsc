@@ -1753,7 +1753,10 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType, MatRe
   PetscCall(PetscStrallocpy(VECKOKKOS, &B->defaultvectype));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPIAIJKOKKOS));
 
-  a = static_cast<Mat_MPIAIJ *>(A->data);
+  /* the sub-blocks to convert are the OUTPUT's: for MAT_INITIAL_MATRIX and MAT_REUSE_MATRIX
+     B is a different matrix from A, and leaving its blocks MATSEQAIJ gives a matrix whose type
+     says Kokkos while its Mat_SeqAIJKokkos is NULL */
+  a = static_cast<Mat_MPIAIJ *>(B->data);
   if (a->A) PetscCall(MatSetType(a->A, MATSEQAIJKOKKOS));
   if (a->B) PetscCall(MatSetType(a->B, MATSEQAIJKOKKOS));
   if (a->lvec) PetscCall(VecSetType(a->lvec, VECSEQKOKKOS));
