@@ -107,3 +107,25 @@ module petscpf
 contains
 #include <../ftn/vec/petscpf.hf90>
 end module
+
+! Expose the omission descriptor to C bindings without depending on module symbol names or descriptor layout.
+function PetscGetFortranNullISPointer_Private() bind(C, name="PetscGetFortranNullISPointer_Private") result(ptr)
+  use, intrinsic :: ISO_C_binding
+  use petscisdef, only: tIS, PETSC_NULL_IS_POINTER
+  implicit none
+  type(c_ptr) ptr
+
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PetscGetFortranNullISPointer_Private
+#endif
+  interface
+    subroutine F90Array1dGetDescriptor(array, address)
+      use, intrinsic :: ISO_C_binding
+      import tIS
+      IS, pointer :: array(:)
+      type(c_ptr) address
+    end subroutine
+  end interface
+
+  call F90Array1dGetDescriptor(PETSC_NULL_IS_POINTER, ptr)
+end function

@@ -545,6 +545,18 @@ PetscErrorCode F90Array4dDestroy(F90Array4d *ptr, MPI_Datatype type PETSC_F90_2P
 }
 
 #if PetscDefined(HAVE_FORTRAN_CAPS)
+  #define f90array1dgetdescriptor_ F90ARRAY1DGETDESCRIPTOR
+#elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
+  #define f90array1dgetdescriptor_ f90array1dgetdescriptor
+#endif
+
+// Return the descriptor address, rather than the address of its array target.
+PETSC_EXTERN void f90array1dgetdescriptor_(F90Array1d *array, void **address PETSC_F90_2PTR_PROTO(ptrd))
+{
+  *address = array;
+}
+
+#if PetscDefined(HAVE_FORTRAN_CAPS)
   #define f90array1dgetaddrscalar_      F90ARRAY1DGETADDRSCALAR
   #define f90array1dgetaddrreal_        F90ARRAY1DGETADDRREAL
   #define f90array1dgetaddrint_         F90ARRAY1DGETADDRINT

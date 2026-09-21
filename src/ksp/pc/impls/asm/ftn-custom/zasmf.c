@@ -19,14 +19,17 @@
   #define pcasmcreatesubdomains2d_  pcasmcreatesubdomains2d
 #endif
 
-PETSC_EXTERN void pcasmcreatesubdomains_(Mat *mat, PetscInt n, F90Array1d *is, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd1))
+PETSC_EXTERN void pcasmcreatesubdomains_(Mat *mat, PetscInt *n, F90Array1d *is, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd1))
 {
   IS *insubs;
 
-  CHKFORTRANNULLOBJECT(is);
-  *ierr = PCASMCreateSubdomains(*mat, n, &insubs);
+  if (is == PetscGetFortranNullISPointer_Private()) {
+    *ierr = PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONG, PETSC_ERROR_INITIAL, "PCASMCreateSubdomains() requires an output array; do not use PETSC_NULL_IS_POINTER");
+    return;
+  }
+  *ierr = PCASMCreateSubdomains(*mat, *n, &insubs);
   if (*ierr) return;
-  if (insubs) *ierr = F90Array1dCreate(insubs, MPIU_FORTRANADDR, 1, n, is PETSC_F90_2PTR_PARAM(ptrd1));
+  *ierr = F90Array1dCreate(insubs, MPIU_FORTRANADDR, 1, *n, is PETSC_F90_2PTR_PARAM(ptrd1));
 }
 
 PETSC_EXTERN void pcasmgetlocalsubmatrices_(PC *pc, PetscInt *n, F90Array1d *mat, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
