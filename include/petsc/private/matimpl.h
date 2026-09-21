@@ -262,10 +262,10 @@ PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], Inse
 #define MatIndexSpaceGet_Private(buf, nrow, ncol, irowm, icolm) \
   do { \
     if (nrow + ncol > (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) { \
-      PetscCall(PetscMalloc2(nrow, &irowm, ncol, &icolm)); \
+      PetscCall(PetscMalloc2(nrow, &(irowm), ncol, &(icolm))); \
     } else { \
-      irowm = &buf[0]; \
-      icolm = &buf[nrow]; \
+      irowm = &(buf)[0]; \
+      icolm = &(buf)[nrow]; \
     } \
   } while (0)
 
@@ -325,7 +325,7 @@ extern void MatCheckProduct(Tm, int);
   #if PetscDefined(USE_DEBUG)
     #define MatCheckProduct(A, arg) \
       do { \
-        PetscCheck((A)->product, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Argument %d \"%s\" is not a matrix obtained from MatProductCreate()", (arg), #A); \
+        PetscCheck((A)->product, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Argument %d \"%s\" is not a matrix obtained from MatProductCreate()", arg, #A); \
       } while (0)
   #else
     #define MatCheckProduct(A, arg) \
@@ -821,7 +821,7 @@ static inline PetscErrorCode MatPivotCheck_nz(PETSC_UNUSED Mat mat, const MatFac
     if (!sctx->nshift) sctx->shift_amount = info->shiftamount;
     else sctx->shift_amount *= 2.0;
     sctx->newshift = PETSC_TRUE;
-    (sctx->nshift)++;
+    sctx->nshift++;
   } else {
     sctx->newshift = PETSC_FALSE;
   }
@@ -903,9 +903,9 @@ static inline PetscErrorCode MatPivotCheck(Mat fact, Mat mat, const MatFactorInf
     bt        - PetscBT (bitarray) with all bits set to false
     lnk_empty - flg indicating the list is empty
 */
-#define PetscLLCreate(idx_start, lnk_max, nlnk, lnk, bt) ((PetscErrorCode)(PetscMalloc1(nlnk, &lnk) || PetscBTCreate(nlnk, &(bt)) || (lnk[idx_start] = lnk_max, PETSC_SUCCESS)))
+#define PetscLLCreate(idx_start, lnk_max, nlnk, lnk, bt) ((PetscErrorCode)(PetscMalloc1(nlnk, &lnk) || PetscBTCreate(nlnk, &(bt)) || ((lnk)[idx_start] = lnk_max, PETSC_SUCCESS)))
 
-#define PetscLLCreate_new(idx_start, lnk_max, nlnk, lnk, bt, lnk_empty) ((PetscErrorCode)(PetscMalloc1(nlnk, &lnk) || PetscBTCreate(nlnk, &(bt)) || (lnk_empty = PETSC_TRUE, 0) || (lnk[idx_start] = lnk_max, PETSC_SUCCESS)))
+#define PetscLLCreate_new(idx_start, lnk_max, nlnk, lnk, bt, lnk_empty) ((PetscErrorCode)(PetscMalloc1(nlnk, &lnk) || PetscBTCreate(nlnk, &(bt)) || (lnk_empty = PETSC_TRUE, 0) || ((lnk)[idx_start] = lnk_max, PETSC_SUCCESS)))
 
 static inline PetscErrorCode PetscLLInsertLocation_Private(PetscBool assume_sorted, PetscInt k, PetscInt idx_start, PetscInt entry, PetscInt *PETSC_RESTRICT nlnk, PetscInt *PETSC_RESTRICT lnkdata, PetscInt *PETSC_RESTRICT lnk)
 {
@@ -1123,7 +1123,7 @@ static inline PetscErrorCode PetscLLClean(PetscInt idx_start, PetscInt lnk_max, 
     bt        - PetscBT (bitarray) with all bits set to false
 */
 #define PetscIncompleteLLCreate(idx_start, lnk_max, nlnk, lnk, lnk_lvl, bt) \
-  ((PetscErrorCode)(PetscIntMultError(2, nlnk, NULL) || PetscMalloc1(2 * nlnk, &lnk) || PetscBTCreate(nlnk, &(bt)) || (lnk[idx_start] = lnk_max, lnk_lvl = lnk + nlnk, PETSC_SUCCESS)))
+  ((PetscErrorCode)(PetscIntMultError(2, nlnk, NULL) || PetscMalloc1(2 * nlnk, &(lnk)) || PetscBTCreate(nlnk, &(bt)) || ((lnk)[idx_start] = lnk_max, lnk_lvl = lnk + nlnk, PETSC_SUCCESS)))
 
 static inline PetscErrorCode PetscIncompleteLLInsertLocation_Private(PetscBool assume_sorted, PetscInt k, PetscInt idx_start, PetscInt entry, PetscInt *PETSC_RESTRICT nlnk, PetscInt *PETSC_RESTRICT lnkdata, PetscInt *PETSC_RESTRICT lnk, PetscInt *PETSC_RESTRICT lnklvl, PetscInt newval)
 {
@@ -1610,7 +1610,6 @@ static inline PetscErrorCode PetscLLCondensedAddSorted_fast(PetscInt nidx, const
       if (lnk[next] == entry + 1) { /* combine two contiguous strings */
         lnk[prev + 1] += lnk[next + 1];
         lnk[prev + 2] = lnk[next + 2];
-        next          = lnk[next + 2];
         lnk[0]--;
       }
       continue;
@@ -1620,7 +1619,6 @@ static inline PetscErrorCode PetscLLCondensedAddSorted_fast(PetscInt nidx, const
       lnk[next]--;
       lnk[next + 1]++;
       prev = next;
-      next = lnk[prev + 2];
       continue;
     }
     /*  add entry into lnk */
@@ -1848,21 +1846,21 @@ PETSC_EXTERN PetscLogEvent MAT_HIPCopyToGPU;
    Uses the C preprocessor as a template mechanism to produce MatGetDiagonal_Seq[SB]AIJ() to avoid duplicate code
 */
   #define MatGetDiagonalMarkers(SeqXXX, bs) \
-    PetscErrorCode MatGetDiagonalMarkers_##SeqXXX(Mat A, const PetscInt **diag, PetscBool *diagDense) \
+    PetscErrorCode MatGetDiagonalMarkers_##SeqXXX(Mat A, const PetscInt *diag[], PetscBool *diagDense) \
     { \
-      Mat_##SeqXXX *a = (Mat_##SeqXXX *)A->data; \
+      Mat_##SeqXXX *a = (Mat_##SeqXXX *)(A)->data; \
 \
       PetscFunctionBegin; \
-      if (A->factortype != MAT_FACTOR_NONE) { \
-        if (diagDense) *diagDense = PETSC_TRUE; \
-        if (diag) *diag = a->diag; \
+      if ((A)->factortype != MAT_FACTOR_NONE) { \
+        if (diagDense) *(diagDense) = PETSC_TRUE; \
+        if (diag) *(diag) = a->diag; \
         PetscFunctionReturn(PETSC_SUCCESS); \
       } \
-      PetscCheck(diag || diagDense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "At least one of diag or diagDense must be requested"); \
-      if (a->diagNonzeroState != A->nonzerostate || (diag && !a->diag)) { \
-        const PetscInt m = A->rmap->n / bs; \
+      PetscCheck(diag != NULL || diagDense != NULL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "At least one of diag or diagDense must be requested"); \
+      if (a->diagNonzeroState != (A)->nonzerostate || (diag != NULL && a->diag == NULL)) { \
+        const PetscInt m = (A)->rmap->n / bs; \
 \
-        if (!diag && !a->diag) { \
+        if (diag == NULL && a->diag == NULL) { \
           a->diagDense = PETSC_TRUE; \
           for (PetscInt i = 0; i < m; i++) { \
             PetscBool found = PETSC_FALSE; \
@@ -1875,13 +1873,13 @@ PETSC_EXTERN PetscLogEvent MAT_HIPCopyToGPU;
             } \
             if (!found) { \
               a->diagDense        = PETSC_FALSE; \
-              *diagDense          = a->diagDense; \
-              a->diagNonzeroState = A->nonzerostate; \
+              *(diagDense)        = a->diagDense; \
+              a->diagNonzeroState = (A)->nonzerostate; \
               PetscFunctionReturn(PETSC_SUCCESS); \
             } \
           } \
         } else { \
-          if (!a->diag) PetscCall(PetscMalloc1(m, &a->diag)); \
+          if (a->diag == NULL) PetscCall(PetscMalloc1(m, &a->diag)); \
           a->diagDense = PETSC_TRUE; \
           for (PetscInt i = 0; i < m; i++) { \
             PetscBool found = PETSC_FALSE; \
@@ -1897,10 +1895,10 @@ PETSC_EXTERN PetscLogEvent MAT_HIPCopyToGPU;
             if (!found) a->diagDense = PETSC_FALSE; \
           } \
         } \
-        a->diagNonzeroState = A->nonzerostate; \
+        a->diagNonzeroState = (A)->nonzerostate; \
       } \
-      if (diag) *diag = a->diag; \
-      if (diagDense) *diagDense = a->diagDense; \
+      if (diag) *(diag) = a->diag; \
+      if (diagDense) *(diagDense) = a->diagDense; \
       PetscFunctionReturn(PETSC_SUCCESS); \
     }
 #endif
