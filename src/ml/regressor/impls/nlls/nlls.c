@@ -93,6 +93,10 @@ static PetscErrorCode PetscRegressorNLLSSetFunction_NLLS(PetscRegressor regresso
   }
   if (fn) nlls->modelfn = fn;
   if (ctx) nlls->modelctx = ctx;
+  if (!f && !fn && !ctx) {
+    nlls->modelfn  = NULL;
+    nlls->modelctx = NULL;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -124,6 +128,10 @@ static PetscErrorCode PetscRegressorNLLSSetJacobian_NLLS(PetscRegressor regresso
   }
   if (fn) nlls->jacfn = fn;
   if (ctx) nlls->jacctx = ctx;
+  if (!J && !Jpre && !fn && !ctx) {
+    nlls->jacfn  = NULL;
+    nlls->jacctx = NULL;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -305,6 +313,10 @@ static PetscErrorCode PetscRegressorView_NLLS(PetscRegressor regressor, PetscVie
   values $f(X, p)$ rather than the residual $f(X, p) - y$; the implementation forms the
   residual internally. This matches the convention of `scipy.optimize.curve_fit`.
 
+  Passing `NULL` for `f`, `fn`, and `ctx` together clears the model function and its
+  context, as `SNESSetFunction()` does; passing `NULL` for only some of them leaves the
+  corresponding settings unchanged.
+
 .seealso: `PetscRegressor`, `PETSCREGRESSORNLLS`, `PetscRegressorNLLSGetFunction()`, `PetscRegressorNLLSSetJacobian()`, `PetscRegressorNLLSFunctionFn`
 @*/
 PetscErrorCode PetscRegressorNLLSSetFunction(PetscRegressor regressor, Vec f, PetscRegressorNLLSFunctionFn *fn, void *ctx)
@@ -363,9 +375,13 @@ PetscErrorCode PetscRegressorNLLSGetFunction(PetscRegressor regressor, Vec *f, P
 
   Level: intermediate
 
-  Note:
+  Notes:
   The default dense Jacobian storage is convenient for small numbers of parameters.
   For large parameter counts, pre-allocate a sparse `J` and pass it to this routine.
+
+  Passing `NULL` for `J`, `Jpre`, `fn`, and `ctx` together clears the Jacobian routine and
+  its context, restoring the finite-difference approximation; passing `NULL` for only some
+  of them leaves the corresponding settings unchanged.
 
 .seealso: `PetscRegressor`, `PETSCREGRESSORNLLS`, `PetscRegressorNLLSGetJacobian()`, `PetscRegressorNLLSSetFunction()`, `PetscRegressorNLLSJacobianFn`
 @*/
