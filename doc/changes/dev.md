@@ -257,6 +257,7 @@
 - Add `DM_SHAPE_DIIID`
 - Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
 - Remove `DMPlex_Surface_Grad()`, superseded by `DMPlexGeomDataAndGrads()`
+- Add GLVis/MFEM output for periodic tetrahedral meshes
 
 ## FE/FV
 
