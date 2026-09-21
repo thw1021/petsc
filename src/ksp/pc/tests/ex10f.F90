@@ -15,7 +15,7 @@ program main
   PetscInt, parameter :: nrows = 4
   PetscScalar, parameter :: one = 1
   PetscScalar value(1)
-  PetscErrorCode ierr, expected_error
+  PetscErrorCode ierr, expected_error, second_error
   character(len=16) :: test_case = 'create'
 
   PetscCallA(PetscInitialize(ierr))
@@ -47,8 +47,14 @@ program main
     nsub = 1
     PetscCallA(PetscPushErrorHandler(ReturnError, PETSC_NULL_INTEGER, ierr))
     call PCASMCreateSubdomains(A, nsub, PETSC_NULL_IS_POINTER, expected_error)
+    call PCASMDestroySubdomains(nsub, PETSC_NULL_IS_POINTER, PETSC_NULL_IS_POINTER, second_error)
     PetscCallA(PetscPopErrorHandler(ierr))
-    PetscCheckA(expected_error == PETSC_ERR_ARG_WRONG, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Creation accepted an omitted required output')
+    PetscCheckA(expected_error == PETSC_ERR_ARG_NULL, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Creation accepted an omitted required output')
+    PetscCheckA(second_error == PETSC_ERR_ARG_NULL, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Destruction accepted an omitted required array')
+    call CheckNullOutputs()
+    ! Creation returns no inner IS array, so omit it when destroying.
+    PetscCallA(PCASMCreateSubdomains(A, nsub, subdomains, ierr))
+    PetscCallA(PCASMDestroySubdomains(nsub, subdomains, PETSC_NULL_IS_POINTER, ierr))
     call CheckNullOutputs()
   case ('subdomains')
     PetscCallA(PCASMGetLocalSubdomains(pc, nsub, subdomains, inner, ierr))
