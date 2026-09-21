@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "id": "poisson2d-assess",
+  "results_manifest_id": "poisson2d-run2",
+  "convergence": [
+    { "field": "u", "norm": "L2",   "observed_order": 2.00, "expected_order": 2, "verdict": "pass" },
+    { "field": "u", "norm": "Linf", "observed_order": 2.00, "expected_order": 2, "verdict": "pass" }
+  ],
+  "conservation": [],
+  "diagnosis": "Convergence: log-log slopes of error vs h over the four-level sequence (h = 1/16, 1/32, 1/64, 1/128) give pairwise orders of 2.002, 2.001, 2.000 in both L2 and L-infinity, with least-squares slopes of 2.00 in each norm. Errors quarter under every h-halving (L2: 1.609e-3 -> 4.018e-4 -> 1.004e-4 -> 2.510e-5; Linf exactly 2x the L2 values), which is the clean signature of the second-order 5-point Laplacian. Observed orders match the expected order 2 to within ~0.002, far inside any reasonable tolerance (0.1). Iteration error is not polluting the study: the CG rtol of 1e-10 drives the solver residual well below the discretization error at every level. Solver behavior: CG+GAMG iteration counts are 10, 10, 11, 12 as the DOF grow 225 -> 961 -> 3969 -> 16129 (a ~72x growth, ~64x in the interior). Growth of only two iterations across this range is effectively mesh-independent and is exactly the expected optimal-multigrid behavior for an SPD Laplacian; the mild +2 drift is normal GAMG coarsening/smoother overhead and is acceptable. Conservation: this is a steady Dirichlet Poisson problem; the plan's verification_plan.conservation_checks is empty and no mass/energy/momentum invariant applies, so there is nothing to check and the conservation array is intentionally empty. The auxiliary 129x129 solution-output run also passed its in-situ NaN/Inf check (boundary residual ~1e-11, center value 1.00005 vs exact 1.0, max pointwise error 5.02e-5), consistent with the convergence data. The code is behaving as designed.",
+  "recommended_changes": [],
+  "verdict": "accept"
+}
