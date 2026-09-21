@@ -1401,7 +1401,7 @@ M*/
 .seealso: [](ch_matrices), `MatPreallocateBegin()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`, `MatPreallocateSetLocal()`,
           `MatPreallocateSymmetricSetLocalBlock()`
 M*/
-#define MatPreallocateLocation(A, row, ncols, cols, dnz, onz) ((A) ? MatSetValues(A, 1, &(row), (ncols), (cols), NULL, INSERT_VALUES) : MatPreallocateSet(row, ncols, cols, dnz, onz))
+#define MatPreallocateLocation(A, row, ncols, cols, dnz, onz) ((A) ? MatSetValues(A, 1, &(row), ncols, cols, NULL, INSERT_VALUES) : MatPreallocateSet(row, ncols, cols, dnz, onz))
 
 /*MC
    MatPreallocateEnd - Ends the block of code that will count the number of nonzeros per
