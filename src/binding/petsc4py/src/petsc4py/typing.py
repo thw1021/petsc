@@ -495,7 +495,32 @@ TAOLSObjectiveGradientFunction = Callable[[TAOLineSearch, Vec, Vec], float]
 # --- Regressor ---
 
 RegressorNLLSFunction = Callable[[Regressor, Mat, Vec, Vec], None]
-"""`Regressor` nonlinear least squares model callback."""
+"""`Regressor` nonlinear least squares model callback.
+
+Callable with signature ``function(regressor, X, p, f)``:
+
+- ``regressor`` — the `Regressor` context
+- ``X`` — data matrix of independent variables
+- ``p`` — vector of model parameters
+- ``f`` — output vector of model evaluations, to be filled by the callable
+
+The callable writes the model values ``f(X, p)``, not the residual; the target
+values are subtracted internally to form the least-squares residual.
+
+"""
 
 RegressorNLLSJacobianFunction = Callable[[Regressor, Mat, Vec, Mat, Mat], None]
-"""`Regressor` nonlinear least squares model Jacobian callback."""
+"""`Regressor` nonlinear least squares model Jacobian callback.
+
+Callable with signature ``jacobian(regressor, X, p, J, P)``:
+
+- ``regressor`` — the `Regressor` context
+- ``X`` — data matrix of independent variables
+- ``p`` — vector of model parameters
+- ``J`` — Jacobian matrix of the model with respect to ``p``, to be filled by the callable
+- ``P`` — matrix used to construct the preconditioner, often the same as ``J``
+
+Setting this callback is optional; without it the Jacobian is approximated by
+finite differences.
+
+"""

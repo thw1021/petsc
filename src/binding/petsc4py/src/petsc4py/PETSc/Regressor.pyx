@@ -319,7 +319,7 @@ cdef class Regressor(Object):
 
     def setNLLSFunction(
         self,
-        function: RegressorNLLSFunction,
+        function: RegressorNLLSFunction | None,
         Vec f=None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None,
@@ -335,7 +335,8 @@ cdef class Regressor(Object):
         Parameters
         ----------
         function
-            The model callback.
+            The model callback. If `None`, and no vector is given either, the
+            model callback currently set is cleared.
         f
             Optional vector to store the model values. If `None`, a vector
             matching the layout of the target passed to `fit` is created.
@@ -351,11 +352,16 @@ cdef class Regressor(Object):
         """
         cdef PetscVec fvec = NULL
         if f is not None: fvec = f.vec
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (function, args, kargs)
-        self.set_attr("__nlls_function__", context)
-        CHKERR(PetscRegressorNLLSSetFunction(self.regressor, fvec, Regressor_NLLSFunction, <void*>context))
+        if function is not None:
+            if args is None: args = ()
+            if kargs is None: kargs = {}
+            context = (function, args, kargs)
+            self.set_attr("__nlls_function__", context)
+            CHKERR(PetscRegressorNLLSSetFunction(self.regressor, fvec, Regressor_NLLSFunction, <void*>context))
+        else:
+            if f is None:
+                self.set_attr("__nlls_function__", None)
+            CHKERR(PetscRegressorNLLSSetFunction(self.regressor, fvec, NULL, NULL))
 
     def getNLLSFunction(self) -> tuple[Vec, RegressorNLLSFunction]:
         """Return the vector and callback used to evaluate the nonlinear model.
@@ -375,7 +381,7 @@ cdef class Regressor(Object):
 
     def setNLLSJacobian(
         self,
-        jacobian: RegressorNLLSJacobianFunction,
+        jacobian: RegressorNLLSJacobianFunction | None,
         Mat J=None,
         Mat P=None,
         args: tuple[Any, ...] | None = None,
@@ -392,7 +398,9 @@ cdef class Regressor(Object):
         Parameters
         ----------
         jacobian
-            The Jacobian callback.
+            The Jacobian callback. If `None`, and no matrices are given either,
+            the Jacobian callback currently set is cleared, restoring the
+            finite-difference approximation.
         J
             Optional matrix to store the Jacobian. If `None`, a dense matrix of
             the appropriate size is created.
@@ -412,11 +420,16 @@ cdef class Regressor(Object):
         if J is not None: Jmat = J.mat
         cdef PetscMat Pmat = Jmat
         if P is not None: Pmat = P.mat
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (jacobian, args, kargs)
-        self.set_attr("__nlls_jacobian__", context)
-        CHKERR(PetscRegressorNLLSSetJacobian(self.regressor, Jmat, Pmat, Regressor_NLLSJacobian, <void*>context))
+        if jacobian is not None:
+            if args is None: args = ()
+            if kargs is None: kargs = {}
+            context = (jacobian, args, kargs)
+            self.set_attr("__nlls_jacobian__", context)
+            CHKERR(PetscRegressorNLLSSetJacobian(self.regressor, Jmat, Pmat, Regressor_NLLSJacobian, <void*>context))
+        else:
+            if J is None and P is None:
+                self.set_attr("__nlls_jacobian__", None)
+            CHKERR(PetscRegressorNLLSSetJacobian(self.regressor, Jmat, Pmat, NULL, NULL))
 
     def getNLLSJacobian(self) -> tuple[Mat, Mat, RegressorNLLSJacobianFunction]:
         """Return the matrices and callback used to evaluate the Jacobian.
