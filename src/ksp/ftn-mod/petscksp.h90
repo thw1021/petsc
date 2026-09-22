@@ -1,5 +1,5 @@
 interface
-  subroutine KSPRestoreConvergenceHistory(ksp, r, na, ierr)
+  subroutine KSPRestoreResidualHistory(ksp, r, na, ierr)
     use, intrinsic :: ISO_C_binding
     import tKSP
     KSP ksp
