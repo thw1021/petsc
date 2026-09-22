@@ -458,7 +458,7 @@ static PetscErrorCode MatSetValuesBlocked_MPIBAIJ(Mat mat, PetscInt m, const Pet
       for (j = 0; j < n; j++) {
         if (!mat->structure_only) {
           /* If NumCol = 1 then a copy is not required */
-          if ((roworiented) && (n == 1)) {
+          if (roworiented && (n == 1)) {
             barray = (MatScalar *)v + i * bs2;
           } else if ((!roworiented) && (m == 1)) {
             barray = (MatScalar *)v + j * bs2;
@@ -1756,7 +1756,7 @@ static PetscErrorCode MatCopy_MPIBAIJ(Mat A, Mat B, MatStructure str)
 
   PetscFunctionBegin;
   /* If the two matrices don't have the same copy implementation, they aren't compatible for fast copy. */
-  if ((str != SAME_NONZERO_PATTERN) || (A->ops->copy != B->ops->copy)) {
+  if (str != SAME_NONZERO_PATTERN || A->ops->copy != B->ops->copy) {
     PetscCall(MatCopy_Basic(A, B, str));
   } else {
     PetscCall(MatCopy(a->A, b->A, str));
@@ -2924,7 +2924,10 @@ static PetscErrorCode MatMatMultSymbolic_MPIBAIJ_MPIDense(Mat A, Mat B, PetscRea
   MatCheckProduct(C, 4);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)C, MATMPIDENSE, &cisdense));
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  if (!cisdense) {
+    PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+    PetscCall(MatSetVecType(C, B->defaultvectype));
+  }
   PetscCall(MatSetSizes(C, Am, B->cmap->n, A->rmap->N, BN));
   PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscCall(MatSetUp(C));
@@ -3630,7 +3633,7 @@ PETSC_EXTERN PetscErrorCode matmpibaijsetvaluesblocked_(Mat *matin, PetscInt *mi
       row = im[i] - rstart;
       for (j = 0; j < n; j++) {
         /* If NumCol = 1 then a copy is not required */
-        if ((roworiented) && (n == 1)) {
+        if (roworiented && (n == 1)) {
           barray = (MatScalar *)v + i * bs2;
         } else if ((!roworiented) && (m == 1)) {
           barray = (MatScalar *)v + j * bs2;

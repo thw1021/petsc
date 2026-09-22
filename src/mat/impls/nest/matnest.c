@@ -189,7 +189,10 @@ static PetscErrorCode MatProductSymbolic_Nest_Dense(Mat C)
   PetscCall(MatGetSize(A, &M, NULL));
   PetscCall(MatSetSizes(C, m, n, M, N));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATMPIDENSE, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  if (!cisdense) {
+    PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+    PetscCall(MatSetVecType(C, B->defaultvectype));
+  }
   PetscCall(MatSetUp(C));
   if (!N) {
     C->ops->productnumeric = MatProductNumeric_Nest_Dense;
@@ -2014,7 +2017,7 @@ static PetscErrorCode MatConvert_Nest_SeqAIJ_fast(Mat A, MatType newtype, MatReu
   PetscCall(MatAssemblyBegin(*newmat, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*newmat, MAT_FINAL_ASSEMBLY));
   {
-    Mat_SeqAIJ *a = (Mat_SeqAIJ *)((*newmat)->data);
+    Mat_SeqAIJ *a = (Mat_SeqAIJ *)(*newmat)->data;
     a->free_a     = PETSC_TRUE;
     a->free_ij    = PETSC_TRUE;
   }

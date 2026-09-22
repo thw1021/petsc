@@ -1274,8 +1274,8 @@ static PetscErrorCode solve_stokes_2d_coupled(PetscInt mx, PetscInt my)
           element_props[j][i].fx[p]  = 0.0;
           element_props[j][i].fy[p]  = 0.0;
 
-          if ((coord_x > -0.5 * opts_dx + 0.5) && (coord_x < 0.5 * opts_dx + 0.5)) {
-            if ((coord_y > -0.5 * opts_dy + 0.5) && (coord_y < 0.5 * opts_dy + 0.5)) {
+          if (coord_x > -0.5 * opts_dx + 0.5 && coord_x < 0.5 * opts_dx + 0.5) {
+            if (coord_y > -0.5 * opts_dy + 0.5 && coord_y < 0.5 * opts_dy + 0.5) {
               element_props[j][i].eta[p] = opts_eta1;
               element_props[j][i].fx[p]  = 0.0;
               element_props[j][i].fy[p]  = -1.0;
@@ -1934,6 +1934,11 @@ static PetscErrorCode DMDABCApplyFreeSlip(DM da_Stokes, Mat A, Vec f)
       suffix: fetidp_unsym
       nsize: 8
       args: -dm_mat_type is -stokes_ksp_type fetidp -stokes_ksp_monitor_true_residual -stokes_ksp_converged_reason -stokes_fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd
+
+   test:
+      suffix: fetidp_nonetflux
+      nsize: 8
+      args: -dm_mat_type is -stokes_ksp_type fetidp -stokes_ksp_fetidp_saddlepoint -stokes_fetidp_ksp_type cg -stokes_ksp_converged_reason -stokes_fetidp_pc_fieldsplit_schur_fact_type diag -stokes_fetidp_fieldsplit_p_pc_type bjacobi -stokes_fetidp_fieldsplit_lag_ksp_type preonly -stokes_fetidp_fieldsplit_p_ksp_type preonly -stokes_ksp_fetidp_pressure_field 2 -stokes_fetidp_pc_fieldsplit_schur_scale -1 -stokes_fetidp_bddc_pc_bddc_nonetflux -stokes_ksp_error_if_not_converged
 
    test:
       suffix: bddc_stokes_deluxe

@@ -1909,7 +1909,7 @@ PetscErrorCode MatSOR_SeqAIJ(Mat A, Vec bb, PetscReal omega, MatSORType flag, Pe
 
     /*  t = b - (2*E - D)x */
     v = aa;
-    for (i = 0; i < m; i++) t[i] = b[i] - scale * (v[*diag++]) * x[i];
+    for (i = 0; i < m; i++) t[i] = b[i] - scale * v[*diag++] * x[i];
 
     /*  t = (E + L)^{-1}t */
     ts   = t;
@@ -2481,7 +2481,7 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
     if (scall == MAT_REUSE_MATRIX) {
       PetscBool equal;
 
-      c = (Mat_SeqAIJ *)((*B)->data);
+      c = (Mat_SeqAIJ *)(*B)->data;
       PetscCheck((*B)->rmap->n == nrows && (*B)->cmap->n == ncols, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot reuse matrix. wrong size");
       PetscCall(PetscArraycmp(c->ilen, lens, (*B)->rmap->n, &equal));
       PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot reuse matrix. wrong number of nonzeros");
@@ -2641,6 +2641,8 @@ PetscErrorCode MatDestroySubMatrix_Private(Mat_SubSppt *submatj)
     for (i = 0; i < submatj->nrqs; ++i) PetscCall(PetscFree(submatj->rbuf3[i]));
     PetscCall(PetscFree3(submatj->req_source2, submatj->rbuf2, submatj->rbuf3));
     PetscCall(PetscFree(submatj->pa));
+    PetscCall(PetscFree2(submatj->local_a_parent, submatj->local_a_sub));
+    PetscCall(PetscFree2(submatj->local_b_parent, submatj->local_b_sub));
   }
 
 #if PetscDefined(USE_CTABLE)
@@ -4224,7 +4226,10 @@ PetscErrorCode MatMatMultSymbolic_SeqDense_SeqAIJ(Mat A, Mat B, PetscReal fill, 
   PetscCall(MatSetSizes(C, m, n, m, n));
   PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSECUDA, MATSEQDENSEHIP, ""));
-  if (!cisdense) PetscCall(MatSetType(C, MATDENSE));
+  if (!cisdense) {
+    PetscCall(MatSetType(C, MATDENSE));
+    PetscCall(MatSetVecType(C, A->defaultvectype));
+  }
   PetscCall(MatSetUp(C));
 
   C->ops->matmultnumeric = MatMatMultNumeric_SeqDense_SeqAIJ;

@@ -21,6 +21,7 @@
   `PetscCallP4estReturn()` to be variadic and take the function arguments directly without requiring the parentheses that previously wrapped the function
   arguments. For functions that take no arguments, a trailing comma after the function name is required per previous C standards
 - Change all use of Metis in the PETSc API to use METIS
+- Change `make clang-tidy` to require `--with-mpi=0`; add `PETSC_CLANG_TIDY_FIX=--fix` to apply fixits
 
 ## Configure/Build
 
@@ -91,6 +92,7 @@
 ## Mat
 
 - Fix an invalid free in `MatColoringDestroy()` for weights supplied with `MatColoringSetWeights()`
+- Speed up single-index-set `MatCreateSubMatrices()` reuse for `MATMPIAIJ` with sorted column subsets and unchanged structure
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
 - Add `MATPRODUCT_AB` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL` with any matrix type
 - Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
@@ -121,6 +123,9 @@
   `MatPartitioningParMETISSetRepartition()`, `MatPartitioningParMETISSetCoarseSequential()`, and `MatPartitioningParMETISGetEdgeCut()`
 - Deprecate `MatSolverFunction`, `MatHtoolKernel` and `MatH2OpusKernel` in favor of `MatSolverFn *`, `MatHtoolKernelFn *` and `MatH2OpusKernelFn *`
 - Change the application context argument of `MatCreateH2OpusFromKernel()` and of the `MatH2OpusKernelFn` callback from `void *` to `PetscCtx`; no user source changes are required
+- Add `MatNullSpaceLoad()` to load a `MatNullSpace` object dump in binary with `MatNullSpaceView()`
+- Fix the symbolic phase of a `MatProduct` with a dense result to propagate the `VecType` of the dense operand to the `Mat` it creates
+- Fix `MatDenseGetSubMatrix()` to propagate the `VecType` to the submatrix
 
 ## MatCoarsen
 
@@ -138,6 +143,7 @@
 - Add `PCMatApplyRichardson()`, `PCMatApplyRichardsonExists()`, and `PCShellSetMatApplyRichardson()`, the block analogs of `PCApplyRichardson()`, `PCApplyRichardsonExists()`, and `PCShellSetApplyRichardson()`
 - Add the missing Fortran binding for `PCShellSetMatApply()`
 - Remove `PCSetDiagonalScale()`, `PCGetDiagonalScale()`, `PCDiagonalScaleLeft()`, and `PCDiagonalScaleRight()`
+- Add `PCBDDCLoadCustomization()` and `PCBDDCSaveCustomization()` to ease debugging of `PCBDDC`
 
 ## KSP
 
@@ -259,6 +265,7 @@
 - Remove `DMPlex_Surface_Grad()`, superseded by `DMPlexGeomDataAndGrads()`
 - Add `DMPlexReorderCellListByCurve()` and `DMPlexReorderCellListByCurveFromCentroids()` to sort and equidistribute a cell list along a space-filling curve before `DMPlexCreateFromCellListParallelPetsc()`; add `DMPlexCurveType` and `DMPLEXCURVEMORTON`
 - Add `DMPLEXCURVEMORTON` as an accepted ordering in `DMPlexGetOrdering()`, which orders cells along a space-filling curve without building an adjacency graph
+- Fix quadrature component indexing in `DMPlexComputeGradientClementInterpolant()` for multi-component fields
 
 ## FE/FV
 

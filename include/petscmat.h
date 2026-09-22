@@ -347,6 +347,7 @@ PETSC_EXTERN PetscClassId MAT_FDCOLORING_CLASSID;
 PETSC_EXTERN PetscClassId MAT_TRANSPOSECOLORING_CLASSID;
 PETSC_EXTERN PetscClassId MAT_PARTITIONING_CLASSID;
 PETSC_EXTERN PetscClassId MAT_COARSEN_CLASSID;
+#define MAT_NULLSPACE_FILE_CLASSID 1211220
 PETSC_EXTERN PetscClassId MAT_NULLSPACE_CLASSID;
 PETSC_EXTERN PetscClassId MATMFFD_CLASSID;
 
@@ -1192,7 +1193,7 @@ M*/
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocalRemoveDups()`
 M*/
 #define MatPreallocateSetLocal(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
-  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApply(rmap, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApply(cmap, ncols, cols, cols)); for (PetscInt __l = 0; __l < nrows; __l++) PetscCall(MatPreallocateSet((rows)[__l], ncols, cols, dnz, onz));)
+  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApply(rmap, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApply(cmap, ncols, cols, cols)); for (PetscInt __l = 0; __l < (nrows); __l++) PetscCall(MatPreallocateSet((rows)[__l], ncols, cols, dnz, onz));)
 
 /*MC
    MatPreallocateSetLocalRemoveDups - Indicates the locations (rows and columns) in the matrix where nonzeros will be
@@ -1226,7 +1227,7 @@ M*/
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSetLocalRemoveDups(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
-  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApply(rmap, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApply(cmap, ncols, cols, cols)); PetscCall(PetscSortRemoveDupsInt(&ncols, cols)); for (PetscInt __l = 0; __l < nrows; __l++) PetscCall(MatPreallocateSet((rows)[__l], ncols, cols, dnz, onz));)
+  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApply(rmap, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApply(cmap, ncols, cols, cols)); PetscCall(PetscSortRemoveDupsInt(&(ncols), cols)); for (PetscInt __l = 0; __l < (nrows); __l++) PetscCall(MatPreallocateSet((rows)[__l], ncols, cols, dnz, onz));)
 
 /*MC
    MatPreallocateSetLocalBlock - Indicates the locations (rows and columns) in the matrix where nonzeros will be
@@ -1260,7 +1261,7 @@ M*/
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`
 M*/
 #define MatPreallocateSetLocalBlock(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
-  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApplyBlock(rmap, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApplyBlock(cmap, ncols, cols, cols)); for (PetscInt __l = 0; __l < nrows; __l++) PetscCall(MatPreallocateSet((rows)[__l], ncols, cols, dnz, onz));)
+  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApplyBlock(rmap, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApplyBlock(cmap, ncols, cols, cols)); for (PetscInt __l = 0; __l < (nrows); __l++) PetscCall(MatPreallocateSet((rows)[__l], ncols, cols, dnz, onz));)
 
 /*MC
    MatPreallocateSymmetricSetLocalBlock - Indicates the locations (rows and columns) in the matrix where nonzeros will be
@@ -1293,7 +1294,7 @@ M*/
           `MatPreallocateBegin()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSymmetricSetLocalBlock(map, nrows, rows, ncols, cols, dnz, onz) \
-  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApplyBlock(map, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApplyBlock(map, ncols, cols, cols)); for (PetscInt __l = 0; __l < nrows; __l++) PetscCall(MatPreallocateSymmetricSetBlock((rows)[__l], ncols, cols, dnz, onz));)
+  PetscMacroReturnStandard(PetscCall(ISLocalToGlobalMappingApplyBlock(map, nrows, rows, rows)); PetscCall(ISLocalToGlobalMappingApplyBlock(map, ncols, cols, cols)); for (PetscInt __l = 0; __l < (nrows); __l++) PetscCall(MatPreallocateSymmetricSetBlock((rows)[__l], ncols, cols, dnz, onz));)
 
 /*MC
    MatPreallocateSet - Indicates the locations (rows and columns) in the matrix where nonzeros will be
@@ -1328,9 +1329,9 @@ M*/
           `MatPreallocateBegin()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSet(row, nc, cols, dnz, onz) \
-  PetscMacroReturnStandard(PetscCheck(row >= __rstart, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Trying to set preallocation for row %" PetscInt_FMT " less than first local row %" PetscInt_FMT, row, __rstart); PetscCheck(row < __rstart + __nrows, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Trying to set preallocation for row %" PetscInt_FMT " greater than last local row %" PetscInt_FMT, row, __rstart + __nrows - 1); for (PetscInt __i = 0; __i < nc; ++__i) { \
-    if ((cols)[__i] < __start || (cols)[__i] >= __end) onz[row - __rstart]++; \
-    else if (dnz[row - __rstart] < __ncols) dnz[row - __rstart]++; \
+  PetscMacroReturnStandard(PetscCheck((row) >= __rstart, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Trying to set preallocation for row %" PetscInt_FMT " less than first local row %" PetscInt_FMT, row, __rstart); PetscCheck((row) < __rstart + __nrows, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Trying to set preallocation for row %" PetscInt_FMT " greater than last local row %" PetscInt_FMT, row, __rstart + __nrows - 1); for (PetscInt __i = 0; __i < (nc); ++__i) { \
+      if ((cols)[__i] < __start || (cols)[__i] >= __end) (onz)[(row) - __rstart]++; \
+      else if ((dnz)[(row) - __rstart] < __ncols) (dnz)[(row) - __rstart]++; \
   })
 
 /*MC
@@ -1365,9 +1366,9 @@ M*/
           `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSymmetricSetBlock(row, nc, cols, dnz, onz) \
-  PetscMacroReturnStandard(for (PetscInt __i = 0; __i < nc; __i++) { \
-    if (cols[__i] >= __end) onz[row - __rstart]++; \
-    else if (cols[__i] >= row && dnz[row - __rstart] < __ncols) dnz[row - __rstart]++; \
+  PetscMacroReturnStandard(for (PetscInt __i = 0; __i < (nc); __i++) {  \
+      if ((cols)[__i] >= __end) (onz)[(row) - __rstart]++;              \
+      else if ((cols)[__i] >= (row) && (dnz)[(row) - __rstart] < __ncols) (dnz)[(row) - __rstart]++; \
   })
 
 /*MC
@@ -1401,7 +1402,7 @@ M*/
 .seealso: [](ch_matrices), `MatPreallocateBegin()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`, `MatPreallocateSetLocal()`,
           `MatPreallocateSymmetricSetLocalBlock()`
 M*/
-#define MatPreallocateLocation(A, row, ncols, cols, dnz, onz) (A ? MatSetValues(A, 1, &row, ncols, cols, NULL, INSERT_VALUES) : MatPreallocateSet(row, ncols, cols, dnz, onz))
+#define MatPreallocateLocation(A, row, ncols, cols, dnz, onz) ((A) ? MatSetValues(A, 1, &(row), ncols, cols, NULL, INSERT_VALUES) : MatPreallocateSet(row, ncols, cols, dnz, onz))
 
 /*MC
    MatPreallocateEnd - Ends the block of code that will count the number of nonzeros per
@@ -2303,6 +2304,7 @@ PETSC_EXTERN PetscErrorCode MatGetNullSpaces(PetscInt, Mat[], MatNullSpace *[]);
 PETSC_EXTERN PetscErrorCode MatRestoreNullSpaces(PetscInt, Mat[], MatNullSpace *[]);
 PETSC_EXTERN PetscErrorCode MatNullSpaceTest(MatNullSpace, Mat, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatNullSpaceView(MatNullSpace, PetscViewer);
+PETSC_EXTERN PetscErrorCode MatNullSpaceLoad(PetscViewer, MatNullSpace *);
 PETSC_EXTERN PetscErrorCode MatNullSpaceGetVecs(MatNullSpace, PetscBool *, PetscInt *, const Vec **);
 PETSC_EXTERN PetscErrorCode MatNullSpaceCreateRigidBody(Vec, MatNullSpace *);
 
