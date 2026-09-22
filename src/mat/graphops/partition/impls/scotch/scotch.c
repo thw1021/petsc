@@ -356,6 +356,27 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
       SCOTCH_Dgraph   grafdat;
       SCOTCH_Dmapping mappdat;
       SCOTCH_Strat    stradat;
+      SCOTCH_Num     *veloloctabdummy = NULL, *edloloctabdummy = NULL;
+      PetscBool       hasvelo, hasvelo_g, hasedlo, hasedlo_g;
+
+      hasvelo = veloloctab ? PETSC_TRUE : PETSC_FALSE;
+      hasedlo = edloloctab ? PETSC_TRUE : PETSC_FALSE;
+      /* SCOTCH_dgraphBuild() requires every process to agree on whether each optional array is
+         null (see its "Note" in the PT-Scotch user's guide). A process that owns no local
+         vertices/edges can end up with a null veloloctab/edloloctab purely because a zero-size
+         allocation is not guaranteed to return a non-null pointer, even when other processes
+         legitimately supply weights. Detect that mismatch here and substitute a harmless dummy
+         buffer, which is the workaround the PT-Scotch documentation itself recommends. */
+      PetscCallMPI(MPIU_Allreduce(&hasvelo, &hasvelo_g, 1, MPI_C_BOOL, MPI_LOR, comm));
+      PetscCallMPI(MPIU_Allreduce(&hasedlo, &hasedlo_g, 1, MPI_C_BOOL, MPI_LOR, comm));
+      if (hasvelo_g && !veloloctab) {
+        PetscCall(PetscCalloc1(PetscMax(vertlocnbr, 1), &veloloctabdummy));
+        veloloctab = veloloctabdummy;
+      }
+      if (hasedlo_g && !edloloctab) {
+        PetscCall(PetscCalloc1(PetscMax(edgelocnbr, 1), &edloloctabdummy));
+        edloloctab = edloloctabdummy;
+      }
 
       PetscCallExternal(SCOTCH_dgraphInit, &grafdat, comm);
       PetscCallExternal(SCOTCH_dgraphBuild, &grafdat, 0, vertlocnbr, vertlocnbr, adj->i, adj->i + 1, veloloctab, NULL, edgelocnbr, edgelocnbr, adj->j, NULL, edloloctab);
@@ -378,6 +399,9 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
       SCOTCH_archExit(&archdat);
       SCOTCH_stratExit(&stradat);
       SCOTCH_dgraphExit(&grafdat);
+
+      PetscCall(PetscFree(veloloctabdummy));
+      PetscCall(PetscFree(edloloctabdummy));
 
     } else if (rank == p) {
       SCOTCH_Graph grafdat;
