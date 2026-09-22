@@ -114,7 +114,7 @@ static struct {
   {FPE_FLTINEX_TRAP,  "inexact floating point result"},
   {0,                 "unknown error"                }
 };
-  #define SIGPC(scp) (scp->sc_pc)
+  #define SIGPC(scp) ((scp)->sc_pc)
 
 /* this function gets called if a trap has occurred and been caught */
 sigfpe_handler_type PetscDefaultFPTrap(int sig, int code, struct sigcontext *scp, char *addr)
@@ -237,7 +237,7 @@ static struct {
   {FPE_FLTOVF, "floating point overflow"       },
   {0,          "unknown error"                 }
 };
-  #define SIGPC(scp) (scp->si_addr)
+  #define SIGPC(scp) ((scp)->si_addr)
 
 void PetscDefaultFPTrap(int sig, siginfo_t *scp, ucontext_t *uap)
 {
@@ -346,7 +346,7 @@ static struct {
   {FPE_FLTINEX_TRAP,  "inexact floating point result"},
   < {0,                 "unknown error"                }
 };
-  #define SIGPC(scp)        (0) /* Info MIGHT be in scp->sc_jmpbuf.jmp_context.iar */
+  #define SIGPC(scp)        (0) /* Info MIGHT be in (scp)->sc_jmpbuf.jmp_context.iar */
 /*
    For some reason, scp->sc_jmpbuf does not work on the RS6000, even though
    it looks like it should from the include definitions.  It is probably
