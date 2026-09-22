@@ -27,7 +27,7 @@ static const char citation[] = "@inproceedings{ZhangELLPACK2018,\n"
    vec_vals = _mm512_loadunpackhi_pd(vec_vals,aval);
   */
     #define AVX512_Mult_Private(vec_idx, vec_x, vec_vals, vec_y) \
-      /* if the mask bit is set, copy from acolidx, otherwise from vec_idx */ \
+      /* if the mask bit is set, copy from acolidx, otherwise from (vec_idx) */ \
       vec_idx  = _mm256_loadu_si256((__m256i const *)acolidx); \
       vec_vals = _mm512_loadu_pd(aval); \
       vec_x    = _mm512_i32gather_pd(vec_idx, x, _MM_SCALE_8); \

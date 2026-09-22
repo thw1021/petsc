@@ -202,14 +202,14 @@ static PetscErrorCode MatRetrieveValues_MPISBAIJ(Mat mat)
 
 #define MatSetValues_SeqSBAIJ_A_Private(row, col, value, addv, orow, ocol) \
   do { \
-    brow = row / bs; \
+    brow = (row) / bs; \
     rp   = aj + ai[brow]; \
     if (!A->structure_only) ap = aa + bs2 * ai[brow]; \
     rmax = aimax[brow]; \
     nrow = ailen[brow]; \
-    bcol = col / bs; \
-    ridx = row % bs; \
-    cidx = col % bs; \
+    bcol = (col) / bs; \
+    ridx = (row) % bs; \
+    cidx = (col) % bs; \
     low  = 0; \
     high = nrow; \
     while (high - low > 3) { \
@@ -228,11 +228,11 @@ static PetscErrorCode MatRetrieveValues_MPISBAIJ(Mat mat)
       } \
     } \
     if (a->nonew == 1) goto a_noinsert; \
-    PetscCheck(a->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(a->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global (row)/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     if (A->structure_only) MatSeqXAIJReallocateAIJ_structure_only(A, a->mbs, bs2, nrow, brow, bcol, rmax, ai, aj, rp, aimax, a->nonew, MatScalar); \
     else MatSeqXAIJReallocateAIJ(A, a->mbs, bs2, nrow, brow, bcol, rmax, aa, ai, aj, rp, ap, aimax, a->nonew, MatScalar); \
     N = nrow++ - 1; \
-    /* shift up all the later entries in this row */ \
+    /* shift up all the later entries in this (row) */ \
     PetscCall(PetscArraymove(rp + _i + 1, rp + _i, N - _i + 1)); \
     rp[_i] = bcol; \
     if (!A->structure_only) { \
@@ -246,14 +246,14 @@ static PetscErrorCode MatRetrieveValues_MPISBAIJ(Mat mat)
 
 #define MatSetValues_SeqSBAIJ_B_Private(row, col, value, addv, orow, ocol) \
   do { \
-    brow = row / bs; \
+    brow = (row) / bs; \
     rp   = bj + bi[brow]; \
     if (!B->structure_only) ap = ba + bs2 * bi[brow]; \
     rmax = bimax[brow]; \
     nrow = bilen[brow]; \
-    bcol = col / bs; \
-    ridx = row % bs; \
-    cidx = col % bs; \
+    bcol = (col) / bs; \
+    ridx = (row) % bs; \
+    cidx = (col) % bs; \
     low  = 0; \
     high = nrow; \
     while (high - low > 3) { \
@@ -272,11 +272,11 @@ static PetscErrorCode MatRetrieveValues_MPISBAIJ(Mat mat)
       } \
     } \
     if (b->nonew == 1) goto b_noinsert; \
-    PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global (row)/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     if (B->structure_only) MatSeqXAIJReallocateAIJ_structure_only(B, b->mbs, bs2, nrow, brow, bcol, rmax, bi, bj, rp, bimax, b->nonew, MatScalar); \
     else MatSeqXAIJReallocateAIJ(B, b->mbs, bs2, nrow, brow, bcol, rmax, ba, bi, bj, rp, ap, bimax, b->nonew, MatScalar); \
     N = nrow++ - 1; \
-    /* shift up all the later entries in this row */ \
+    /* shift up all the later entries in this (row) */ \
     PetscCall(PetscArraymove(rp + _i + 1, rp + _i, N - _i + 1)); \
     rp[_i] = bcol; \
     if (!B->structure_only) { \
