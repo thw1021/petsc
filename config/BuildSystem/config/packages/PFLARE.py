@@ -3,8 +3,8 @@ import config.package
 class Configure(config.package.Package):
     def __init__(self, framework):
         config.package.Package.__init__(self, framework)
-        self.version                = '1.26.0'
-        self.gitcommit              = '1faebf6106d65bdda021043db663652788534793' # main branch as of 2026-07-12
+        self.version                = '1.27.0'
+        self.gitcommit              = '3b7afa22ff3ced0b7760a303d12d789118287660' # v1.27.0 tag, main branch as of 2026-09-22
         self.download               = ['git://https://github.com/PFLAREProject/PFLARE','https://github.com/PFLAREProject/PFLARE/archive/'+self.gitcommit+'.tar.gz']
         self.functions              = ['PCRegister_PFLARE']
         self.includes               = ['pflare.h']
@@ -12,7 +12,7 @@ class Configure(config.package.Package):
         self.docsDirs               = ['src','include'] # subdirs that contain the manual pages - /*MC*/, /*@ @*/, /*E*/ blocks
         self.liblist                = [['libpflare.a']]
         self.complex                = 0
-        self.precisions             = ['double']
+        self.precisions             = ['single','double']
         self.linkedbypetsc          = 0
         self.builtafterpetsc        = 1
         return
