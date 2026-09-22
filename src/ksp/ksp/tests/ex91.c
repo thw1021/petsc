@@ -90,6 +90,6 @@ int main(int argc, char **argv)
     suffix: 2
     nsize: 2
     args: -ksp_type richardson -ksp_max_it 1 -pc_type lu -pc_factor_mat_solver_type superlu_dist
-    output_file: output/ex89_1.out
+    output_file: output/ex91_1.out
 
 TEST*/
