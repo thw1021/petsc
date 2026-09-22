@@ -507,6 +507,109 @@ class TestSNESAL(BaseTestSNES, unittest.TestCase):
 # --------------------------------------------------------------------
 
 
+class TestSNESVI(unittest.TestCase):
+    """Bound-constrained 1D obstacle problem F(u) = A u - f, 0 <= u <= ub."""
+
+    N = 15
+    UB = 0.08
+
+    def setUp(self):
+        n, h = self.N, 1.0 / (self.N + 1)
+        A = PETSc.Mat().createAIJ([n, n], nnz=3, comm=PETSc.COMM_SELF)
+        for i in range(n):
+            A[i, i] = 2.0 / h**2
+            if i > 0:
+                A[i, i - 1] = -1.0 / h**2
+            if i < n - 1:
+                A[i, i + 1] = -1.0 / h**2
+        A.assemble()
+        f = A.createVecRight()
+        f.set(1.0)
+
+        def residual(snes, x, F):
+            A.mult(x, F)
+            F.axpy(-1.0, f)
+
+        def jacobian(snes, x, J, P):
+            A.copy(P, structure=PETSc.Mat.Structure.SAME_NONZERO_PATTERN)
+            if J != P:
+                A.copy(J, structure=PETSc.Mat.Structure.SAME_NONZERO_PATTERN)
+
+        self.xl = A.createVecRight()
+        self.xl.set(0.0)
+        self.xu = A.createVecRight()
+        self.xu.set(self.UB)
+        self.snes = PETSc.SNES().create(PETSc.COMM_SELF)
+        self.snes.setType(PETSc.SNES.Type.VINEWTONRSLS)
+        self.snes.setFunction(residual, A.createVecLeft())
+        self.snes.setJacobian(jacobian, A.duplicate())
+        self.snes.setVariableBounds(self.xl, self.xu)
+        self.snes.setTolerances(rtol=1e-10)
+        self.snes.getKSP().setTolerances(rtol=1e-12)
+        self.x = A.createVecRight()
+
+    def tearDown(self):
+        self.snes = None
+        self.x = self.xl = self.xu = None
+        PETSc.garbage_cleanup()
+
+    def referenceInactiveSet(self):
+        # rule of SNESVIGetActiveSetIS() with the default -snes_vi_zero_tolerance
+        tol = 1.0e-8
+        x = self.snes.getSolution().getArray(readonly=True)
+        F = self.snes.getFunction()[0].getArray(readonly=True)
+        xl = self.xl.getArray(readonly=True)
+        xu = self.xu.getArray(readonly=True)
+        inactive = ((x > xl + tol) | (F <= 0.0)) & ((x < xu - tol) | (F >= 0.0))
+        return np.arange(self.N)[inactive]
+
+    def checkInactiveSet(self):
+        iset = self.snes.getVIInactiveSet()
+        self.assertTrue(iset)
+        self.assertEqual(iset.getClassName(), 'IS')
+        self.assertTrue(np.array_equal(iset.getIndices(), self.referenceInactiveSet()))
+        return iset
+
+    def testGetVIInactiveSet(self):
+        calls = {'ksp': 0, 'snes': 0}
+
+        def ksp_monitor(ksp, its, rnorm):
+            self.checkInactiveSet()
+            calls['ksp'] += 1
+
+        def snes_monitor(snes, its, fnorm):
+            self.checkInactiveSet()
+            calls['snes'] += 1
+
+        self.snes.getKSP().setMonitor(ksp_monitor)
+        self.snes.setMonitor(snes_monitor)
+        self.x.set(0.0)
+        self.snes.solve(None, self.x)
+        self.assertTrue(self.snes.getConvergedReason() > 0)
+        self.assertTrue(calls['ksp'] > 0 and calls['snes'] > 0)
+        # after the solve the upper bound is active in the middle of the domain
+        inact = self.checkInactiveSet()
+        self.assertTrue(0 < inact.getSize() < self.N)
+        # repeated calls return the cached index set
+        self.assertEqual(self.snes.getVIInactiveSet().handle, inact.handle)
+        # the cached index set is recomputed after another solve with different bounds
+        self.xu.set(2.0 * self.UB)
+        self.x.set(0.0)
+        self.snes.solve(None, self.x)
+        inact2 = self.checkInactiveSet()
+        self.assertTrue(inact.getSize() < inact2.getSize())
+        # the index set is still usable after SNES.reset() since a reference is held
+        self.snes.reset()
+        self.assertEqual(inact2.getSize(), len(inact2.getIndices()))
+
+    def testGetVIInactiveSetOtherType(self):
+        self.snes.setType(PETSc.SNES.Type.VINEWTONSSLS)
+        self.snes.setVariableBounds(self.xl, self.xu)
+        self.x.set(0.0)
+        self.snes.solve(None, self.x)
+        self.assertIsNone(self.snes.getVIInactiveSet())
+
+
 class TestSNESLineSearchAPI(unittest.TestCase):
     def test_create_destroy(self):
         ls = PETSc.SNESLineSearch()
