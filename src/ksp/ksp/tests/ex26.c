@@ -46,10 +46,10 @@ int main(int argc, char **argv)
 {
   PetscInt    i, its, Nx = PETSC_DECIDE, Ny = PETSC_DECIDE, nlocal, nrhs = 1;
   PetscScalar one = 1.0;
-  Mat         A, B, X;
+  Mat         A, P = NULL, B, X;
   GridCtx     fine_ctx;
   KSP         ksp;
-  PetscBool   Brand = PETSC_FALSE, transpose = PETSC_FALSE, flg;
+  PetscBool   Brand = PETSC_FALSE, transpose = PETSC_FALSE, product = PETSC_FALSE, new_pattern = PETSC_FALSE, flg;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -63,6 +63,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-Ny", &Ny, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-rand", &Brand, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-transpose", &transpose, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-product_into_solution", &product, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-new_pattern", &new_pattern, NULL));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Fine grid size %" PetscInt_FMT " by %" PetscInt_FMT "\n", fine_ctx.mx, fine_ctx.my));
 
   /* Set up distributed array for fine grid */
@@ -87,7 +89,9 @@ int main(int argc, char **argv)
 
   /* set options, then solve system */
   PetscCall(KSPSetFromOptions(ksp)); /* calls PCSetFromOptions_ML if 'pc_type=ml' */
-  PetscCall(KSPSetOperators(ksp, A, A));
+  /* with -new_pattern the nonzero pattern of A changes after the first solve, while the preconditioner is built from an unchanged copy, so that PCSetUp() is not run again */
+  if (new_pattern) PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &P));
+  PetscCall(KSPSetOperators(ksp, A, P ? P : A));
   PetscCall(KSPSolve(ksp, fine_ctx.b, fine_ctx.x));
   PetscCall(VecViewFromOptions(fine_ctx.x, NULL, "-debug"));
   PetscCall(KSPGetIterationNumber(ksp, &its));
@@ -133,6 +137,41 @@ int main(int argc, char **argv)
     PetscCall(VecRestoreArrayRead(fine_ctx.x, &xx));
   }
 
+  if (new_pattern) { /* solve again after storing an explicit zero at a new location of A, which changes its nonzero pattern and the columns its rows couple to on other processes, but not the solution */
+    Mat       X2;
+    PetscInt  rstart, M;
+    PetscReal norm, err;
+
+    PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
+    PetscCall(MatGetSize(A, &M, NULL));
+    PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+    PetscCall(MatSetValue(A, rstart, (rstart + M / 2) % M, 0.0, ADD_VALUES));
+    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatDuplicate(X, MAT_DO_NOT_COPY_VALUES, &X2));
+    PetscCall(MatZeroEntries(X2));
+    if (transpose) PetscCall(KSPMatSolveTranspose(ksp, B, X2));
+    else PetscCall(KSPMatSolve(ksp, B, X2));
+    PetscCall(MatNorm(X, NORM_FROBENIUS, &norm));
+    PetscCall(MatAXPY(X2, -1.0, X, SAME_NONZERO_PATTERN));
+    PetscCall(MatNorm(X2, NORM_FROBENIUS, &err));
+    PetscCheck(err <= PETSC_SMALL * norm, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Solution after the change of nonzero pattern has error %g relative to %g", (double)err, (double)norm);
+    PetscCall(MatDestroy(&X2));
+  }
+
+  if (product) { /* a dense matrix created by the caller can be the result of MatMatMult() with MAT_REUSE_MATRIX, so the solve must not leave state in the block of solutions */
+    Mat       C;
+    PetscReal norm, err;
+
+    PetscCall(MatMatMult(A, B, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &C));
+    PetscCall(MatMatMult(A, B, MAT_REUSE_MATRIX, PETSC_DETERMINE, &X));
+    PetscCall(MatNorm(C, NORM_FROBENIUS, &norm));
+    PetscCall(MatAXPY(C, -1.0, X, SAME_NONZERO_PATTERN));
+    PetscCall(MatNorm(C, NORM_FROBENIUS, &err));
+    PetscCheck(err <= PETSC_SMALL * norm, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Product into the block of solutions has error %g relative to %g", (double)err, (double)norm);
+    PetscCall(MatDestroy(&C));
+  }
+
   /* free data structures */
   PetscCall(VecDestroy(&fine_ctx.x));
   PetscCall(VecDestroy(&fine_ctx.b));
@@ -140,6 +179,7 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&fine_ctx.localX));
   PetscCall(VecDestroy(&fine_ctx.localF));
   PetscCall(MatDestroy(&A));
+  PetscCall(MatDestroy(&P));
   PetscCall(MatDestroy(&B));
   PetscCall(MatDestroy(&X));
   PetscCall(KSPDestroy(&ksp));
@@ -239,7 +279,7 @@ PetscErrorCode FormJacobian_Grid(GridCtx *grid, Mat jac)
     test:
       suffix: matcycles
       nsize: {{1 2}}
-      args: -ksp_view_final_residual -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -ksp_monitor -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}separate output} -nrhs 7 -ksp_matsolve_batch_size {{4 7}separate output}
+      args: -ksp_view_final_residual -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -ksp_monitor -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}separate output} -nrhs 7 -ksp_matsolve_batch_size {{4 7}separate output} -product_into_solution
 
     test:
       suffix: matcycles_richardson
@@ -250,6 +290,20 @@ PetscErrorCode FormJacobian_Grid(GridCtx *grid, Mat jac)
       suffix: matcycles_richardson_guess
       nsize: {{1 2}}
       args: -ksp_view_final_residual -ksp_type richardson -ksp_initial_guess_nonzero -ksp_norm_type unpreconditioned -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -nrhs 7 -ksp_matsolve_batch_size {{4 7}separate output}
+
+    test:
+      # the products interpolating and restricting the blocks, and the block residual, are set up once per level and reused by the following applications
+      suffix: matcycles_product_reuse
+      nsize: 2
+      requires: defined(PETSC_USE_INFO)
+      args: -ksp_type richardson -ksp_max_it 3 -ksp_richardson_scale 0.9 -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -nrhs 7 -pc_mg_type {{additive multiplicative full kaskade}separate output} -info ex26info:mat
+      filter: grep -h "MatProduct API\|the supplied dense matrix" "ex26info.0" | sed -e "s/^\[0\] <[^>]*> [A-Za-z_]*(): //" | sort -b | uniq -c | sed -e "s/^ \{1,\}//"
+
+    test:
+      # a second solve after the nonzero pattern of the operator changes, the coarse operators are built from an unchanged copy
+      suffix: matcycles_new_pattern
+      nsize: 2
+      args: -ksp_type preonly -pc_type mg -pc_use_amat -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin both -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -new_pattern
 
     test:
       suffix: matcycles_richardson_transpose

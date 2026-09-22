@@ -58,6 +58,8 @@
 ```{rubric} PC:
 ```
 
+- Change `PCMG` applied with `PCMatApply()` to keep the `MatProduct` of each block residual, restriction, and interpolation between applications, so that their symbolic phase, which for `MATMPIAIJ` times `MATMPIDENSE` allocates work matrices and a `PetscSF`, is not redone on every application; `PCMGMatResidualDefault()` and `PCMGMatResidualTransposeDefault()` keep the product attached to the residual block
+
 ```{rubric} KSP:
 ```
 

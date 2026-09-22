@@ -2,6 +2,7 @@
      Additive Multigrid V Cycle routine
 */
 #include <petsc/private/pcmgimpl.h>
+#include <petsc/private/matimpl.h>
 
 PetscErrorCode PCMGACycle_Private(PC pc, PC_MG_Levels **mglevels, PetscBool transpose, PetscBool matapp)
 {
@@ -12,10 +13,10 @@ PetscErrorCode PCMGACycle_Private(PC pc, PC_MG_Levels **mglevels, PetscBool tran
   for (i = l - 1; i > 0; i--) {
     if (mglevels[i]->eventinterprestrict) PetscCall(PetscLogEventBegin(mglevels[i]->eventinterprestrict, 0, 0, 0, 0));
     if (!transpose) {
-      if (matapp) PetscCall(MatMatRestrict(mglevels[i]->restrct, mglevels[i]->B, &mglevels[i - 1]->B));
+      if (matapp) PetscCall(MatMatInterpolateAdd_Private(mglevels[i]->restrct, mglevels[i]->B, NULL, &mglevels[i - 1]->B, PETSC_TRUE));
       else PetscCall(MatRestrict(mglevels[i]->restrct, mglevels[i]->b, mglevels[i - 1]->b));
     } else {
-      if (matapp) PetscCall(MatMatRestrict(mglevels[i]->interpolate, mglevels[i]->B, &mglevels[i - 1]->B));
+      if (matapp) PetscCall(MatMatInterpolateAdd_Private(mglevels[i]->interpolate, mglevels[i]->B, NULL, &mglevels[i - 1]->B, PETSC_TRUE));
       else PetscCall(MatRestrict(mglevels[i]->interpolate, mglevels[i]->b, mglevels[i - 1]->b));
     }
     if (mglevels[i]->eventinterprestrict) PetscCall(PetscLogEventEnd(mglevels[i]->eventinterprestrict, 0, 0, 0, 0));
@@ -45,10 +46,10 @@ PetscErrorCode PCMGACycle_Private(PC pc, PC_MG_Levels **mglevels, PetscBool tran
   for (i = 1; i < l; i++) {
     if (mglevels[i]->eventinterprestrict) PetscCall(PetscLogEventBegin(mglevels[i]->eventinterprestrict, 0, 0, 0, 0));
     if (!transpose) {
-      if (matapp) PetscCall(MatMatInterpolateAdd(mglevels[i]->interpolate, mglevels[i - 1]->X, mglevels[i]->X, &mglevels[i]->X));
+      if (matapp) PetscCall(PCMGMatInterpolate_Private(mglevels[i], mglevels[i]->interpolate, mglevels[i - 1]->X, PETSC_TRUE));
       else PetscCall(MatInterpolateAdd(mglevels[i]->interpolate, mglevels[i - 1]->x, mglevels[i]->x, mglevels[i]->x));
     } else {
-      if (matapp) PetscCall(MatMatInterpolateAdd(mglevels[i]->restrct, mglevels[i - 1]->X, mglevels[i]->X, &mglevels[i]->X));
+      if (matapp) PetscCall(PCMGMatInterpolate_Private(mglevels[i], mglevels[i]->restrct, mglevels[i - 1]->X, PETSC_TRUE));
       else PetscCall(MatInterpolateAdd(mglevels[i]->restrct, mglevels[i - 1]->x, mglevels[i]->x, mglevels[i]->x));
     }
     if (mglevels[i]->eventinterprestrict) PetscCall(PetscLogEventEnd(mglevels[i]->eventinterprestrict, 0, 0, 0, 0));

@@ -9298,6 +9298,18 @@ PetscErrorCode MatRestrict(Mat A, Vec x, Vec y)
 @*/
 PetscErrorCode MatMatInterpolateAdd(Mat A, Mat x, Mat w, Mat *y)
 {
+  PetscFunctionBegin;
+  PetscCall(MatMatInterpolateAdd_Private(A, x, w, y, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   MatMatInterpolateAdd() that, when keep is PETSC_TRUE, keeps the MatProduct computing an existing y attached to it, so that a later
+   call with the same A and an x of the same shape only runs the numeric phase of the product; for a y that only the caller uses,
+   since a product left on y would be reused by a later MatMatMult() with MAT_REUSE_MATRIX into y
+*/
+PetscErrorCode MatMatInterpolateAdd_Private(Mat A, Mat x, Mat w, Mat *y, PetscBool keep)
+{
   PetscInt  M, N, Mx, Nx, Mo, My = 0, Ny = 0;
   PetscBool trans = PETSC_TRUE;
   MatReuse  reuse = MAT_INITIAL_MATRIX;
@@ -9340,7 +9352,8 @@ PetscErrorCode MatMatInterpolateAdd(Mat A, Mat x, Mat w, Mat *y)
       PetscCall(PetscObjectDereference((PetscObject)w));
     } else PetscCall(MatCopy(*y, w, UNKNOWN_NONZERO_PATTERN));
   }
-  if (!trans) PetscCall(MatMatMult(A, x, reuse, PETSC_DETERMINE, y));
+  if (keep && reuse == MAT_REUSE_MATRIX) PetscCall(MatProductComputeWithMat_Private(A, x, trans ? MATPRODUCT_AtB : MATPRODUCT_AB, *y));
+  else if (!trans) PetscCall(MatMatMult(A, x, reuse, PETSC_DETERMINE, y));
   else PetscCall(MatTransposeMatMult(A, x, reuse, PETSC_DETERMINE, y));
   if (w) PetscCall(MatAXPY(*y, 1.0, w, UNKNOWN_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -10678,6 +10691,41 @@ PetscErrorCode MatRARt(Mat A, Mat R, MatReuse scall, PetscReal fill, Mat *C)
 
   PetscCall(MatProductNumeric(*C));
   if (A->symmetric == PETSC_BOOL3_TRUE) PetscCall(MatSetOption(*C, MAT_SYMMETRIC, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   Computes D = A * B or A^T * B into an existing dense D that only the caller uses, keeping the product attached to D so that only its numeric
+   phase is run by the following calls. MatMatMult() and MatTransposeMatMult() with MAT_REUSE_MATRIX on a dense D
+   that has no product instead clear the product after the numeric phase, so each call repeats the symbolic phase,
+   which for MATMPIAIJ times MATMPIDENSE allocates the work matrices and the PetscSF of the scatter again
+
+   The symbolic phase depends on the nonzero structure of A, so a product bound to a different A, or to an A whose nonzero
+   pattern changed since, is set up again, while a different B of the same shape is only bound to the product. The nonzero
+   state of a parallel matrix is the same on all processes, so all of them take the same branch
+*/
+PetscErrorCode MatProductComputeWithMat_Private(Mat A, Mat B, MatProductType ptype, Mat D)
+{
+  Mat_Product     *product = D->product;
+  PetscObjectState state;
+  PetscBool        flg;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)D, &flg, MATSEQDENSE, MATMPIDENSE, ""));
+  PetscCheck(flg, PetscObjectComm((PetscObject)D), PETSC_ERR_SUP, "The result must be dense, not %s", ((PetscObject)D)->type_name);
+  PetscCall(MatGetNonzeroState(A, &state));
+  if (!product || product->type != ptype || product->A != A || product->Anonzerostate != state) {
+    PetscCall(PetscInfo(D, "Setting up the %s product into the supplied dense matrix\n", MatProductTypes[ptype]));
+    PetscCall(MatProductCreateWithMat(A, B, NULL, D));
+    D->product->api_user = PETSC_TRUE;
+    PetscCall(MatProductSetType(D, ptype));
+    PetscCall(MatProductSetFromOptions(D));
+    PetscCall(MatProductSymbolic(D));
+  } else {
+    PetscCall(PetscInfo(D, "Reusing the %s product attached to the supplied dense matrix\n", MatProductTypes[ptype]));
+    if (product->B != B) PetscCall(MatProductReplaceMats(NULL, B, NULL, D));
+  }
+  PetscCall(MatProductNumeric(D));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
