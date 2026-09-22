@@ -126,6 +126,7 @@
 - Add `MatNullSpaceLoad()` to load a `MatNullSpace` object dump in binary with `MatNullSpaceView()`
 - Fix the symbolic phase of a `MatProduct` with a dense result to propagate the `VecType` of the dense operand to the `Mat` it creates
 - Fix `MatDenseGetSubMatrix()` to propagate the `VecType` to the submatrix
+- Change `MatMatSolve()`, `MatMatSolveTranspose()` and `MatMatTransposeSolve()` to flag every entry of `X` with `MatSetInf()` and skip the solve when the factorization failed, as `MatSolve()` already did for `x`
 
 ## MatCoarsen
 
