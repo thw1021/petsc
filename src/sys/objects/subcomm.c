@@ -1,7 +1,7 @@
 /*
      Provides utility routines for split MPI communicator.
 */
-#include <petscsys.h> /*I   "petscsys.h"    I*/
+#include <petsc/private/petscimpl.h> /*I   "petscsys.h"    I*/
 #include <petscviewer.h>
 
 const char *const PetscSubcommTypes[] = {"GENERAL", "CONTIGUOUS", "INTERLACED", "PetscSubcommType", "PETSC_SUBCOMM_", NULL};
@@ -488,5 +488,50 @@ static PetscErrorCode PetscSubcommCreate_interlaced(PetscSubcomm psubcomm)
   psubcomm->color   = color;
   psubcomm->subsize = subsize;
   psubcomm->type    = PETSC_SUBCOMM_INTERLACED;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscCommCreateNonempty - Creates a sub-communicator of the processes of `comm` that own data
+
+  Collective
+
+  Input Parameters:
++ comm    - the communicator to split
+- isempty - `PETSC_TRUE` if the calling process owns no data
+
+  Output Parameter:
+. subcomm - a new communicator containing the processes that pass `isempty` as `PETSC_FALSE`, and
+            `MPI_COMM_NULL` on the processes that pass it as `PETSC_TRUE`
+
+  Notes:
+  Graph partitioning and ordering libraries such as ParMETIS and PT-SCOTCH require every process of
+  the communicator they are given to own at least one vertex. Building the distributed graph on the
+  communicator returned here, and doing nothing where it is `MPI_COMM_NULL`, meets that requirement
+  without altering the graph itself.
+
+  `subcomm` is `MPI_COMM_NULL` exactly where `isempty` is `PETSC_TRUE`, so it is `MPI_COMM_NULL` on
+  every process when no process owns data. The processes of `subcomm` keep their relative order in
+  `comm`, so a contiguous layout over `comm` stays contiguous, and ascending, over `subcomm`.
+
+  `subcomm` is always a new communicator, including when no process is empty, so callers needing a
+  private communicator for an external library do not have to duplicate it again. Free it with
+  `MPI_Comm_free()` where it is not `MPI_COMM_NULL`.
+
+  Level: developer
+
+.seealso: `PetscSubcommCreate()`, `MatMPIAdjCreateNonemptySubcommMat()`
+*/
+PetscErrorCode PetscCommCreateNonempty(MPI_Comm comm, PetscBool isempty, MPI_Comm *subcomm)
+{
+  PetscMPIInt rank;
+
+  PetscFunctionBegin;
+  PetscAssertPointer(subcomm, 3);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_split(comm, isempty ? MPI_UNDEFINED : 0, rank, subcomm));
+  /* The MPI standard returns MPI_COMM_NULL for the color MPI_UNDEFINED, but MPIUNI's
+     MPI_Comm_split() ignores the color, so release the communicator it hands back instead. */
+  if (isempty && *subcomm != MPI_COMM_NULL) PetscCallMPI(MPI_Comm_free(subcomm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
