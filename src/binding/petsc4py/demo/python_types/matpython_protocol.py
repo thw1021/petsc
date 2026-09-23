@@ -1,4 +1,5 @@
 from petsc4py.typing import Scalar
+from petsc4py.typing import ArrayInt
 from petsc4py.PETSc import Mat
 from petsc4py.PETSc import Vec
 from petsc4py.PETSc import IS
@@ -11,6 +12,14 @@ from petsc4py.PETSc import Viewer
 
 
 class MatPythonProtocol:
+    def create(self, A: Mat) -> None:
+        """Initialize resources when the context is attached to the matrix."""
+        ...
+
+    def destroy(self, A: Mat) -> None:
+        """Release resources when the context is detached from the matrix."""
+        ...
+
     def mult(self, A: Mat, x: Vec, y: Vec) -> None:
         """Matrix vector multiplication: y = A @ x."""
         ...
@@ -40,7 +49,7 @@ class MatPythonProtocol:
         ...
 
     def setFromOptions(self, A: Mat) -> None:
-        """Process command line for customization."""
+        """Process options from the options database."""
         ...
 
     def multDiagonalBlock(self, A: Mat, x: Vec, y: Vec) -> None:
@@ -48,7 +57,7 @@ class MatPythonProtocol:
         ...
 
     def createVecs(self, A: Mat) -> tuple[Vec, Vec]:
-        """Return tuple of vectors (x,y) suitable for A @ x = y."""
+        """Return vectors (x, y) suitable for A @ x = y."""
         ...
 
     def scale(self, A: Mat, s: Scalar) -> None:
@@ -56,10 +65,10 @@ class MatPythonProtocol:
         ...
 
     def shift(self, A: Mat, s: Scalar) -> None:
-        """Shift the matrix by a scalar."""
+        """Add s to each diagonal entry of the matrix."""
         ...
 
-    def createSubMatrix(self, A: Mat, r: IS, c: IS, out: Mat) -> Mat:
+    def createSubMatrix(self, A: Mat, r: IS, c: IS, out: Mat | None) -> Mat:
         """Return the submatrix corresponding to r rows and c columns.
 
         Matrix out must be reused if not None.
@@ -67,10 +76,28 @@ class MatPythonProtocol:
         """
         ...
 
-    def zeroRowsColumns(self, A: Mat, r: IS, diag: Scalar, x: Vec, b: Vec) -> None:
-        """Zero rows and columns of the matrix corresponding to the index set r.
+    def zeroRows(self, A: Mat, r: ArrayInt, diag: Scalar, x: Vec, b: Vec) -> None:
+        """Zero the rows indexed by the NumPy integer array r.
 
-        Insert diag on the diagonal and modify vectors x and b accordingly if not None.
+        The array owns a copy of this process's global row indices and may
+        be retained after the callback returns.
+
+        Insert diag on the diagonal. If x and b are provided, use the known
+        solution values in x to adjust b.
+
+        """
+        ...
+
+    def zeroRowsColumns(
+        self, A: Mat, r: ArrayInt, diag: Scalar, x: Vec, b: Vec
+    ) -> None:
+        """Zero the rows and columns indexed by the NumPy integer array r.
+
+        The array owns a copy of this process's global row indices and may
+        be retained after the callback returns.
+
+        Insert diag on the diagonal. If x and b are provided, use the known
+        solution values in x to adjust b.
 
         """
         ...
@@ -84,9 +111,10 @@ class MatPythonProtocol:
         ...
 
     def diagonalScale(self, A: Mat, L: Vec, R: Vec) -> None:
-        """Perform left and right diagonal scaling if vectors are not None.
+        """Scale the matrix on the left by L and on the right by R.
 
-        A = diag(L)@A@diag(R).
+        A = diag(L) @ A @ diag(R). Omit scaling on a side if its vector
+        is null.
 
         """
         ...
@@ -110,7 +138,7 @@ class MatPythonProtocol:
     def productSetFromOptions(
         self, A: Mat, prodtype: str, X: Mat, Y: Mat, Z: Mat
     ) -> bool:
-        """The boolean flag indicating if the matrix supports prodtype."""
+        """Return whether the matrix supports the requested product type."""
         ...
 
     def productSymbolic(
@@ -168,9 +196,9 @@ class MatPythonProtocol:
         ...
 
     def imagPart(self, A: Mat) -> None:
-        """Set real part to zero. A = imag(A)."""
+        """Replace each entry by its imaginary part: A = imag(A)."""
         ...
 
     def realPart(self, A: Mat) -> None:
-        """Set imaginary part to zero. A = real(A)."""
+        """Replace each entry by its real part: A = real(A)."""
         ...
