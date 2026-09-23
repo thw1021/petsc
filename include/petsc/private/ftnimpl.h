@@ -75,8 +75,8 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(const char *, PetscInt);
     will not complain about these comparisons. It is not know if this works for all compilers
 */
 #define FORTRANNULLINTEGERPOINTER(a) (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_INTEGER_POINTER_Fortran)
-#define FORTRANNULLSCALARPOINTER(a)  (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_SCALAR_POINTER_Fortran)
-#define FORTRANNULLREALPOINTER(a)    (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_REAL_POINTER_Fortran)
+#define FORTRANNULLSCALARPOINTER(a)  (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_POINTER_Fortran)
+#define FORTRANNULLREALPOINTER(a)    (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_POINTER_Fortran)
 #define FORTRANNULLISPOINTER(a)      (((void *)(PETSC_UINTPTR_T)(a)) == PetscGetFortranNullISPointer_Private())
 #define FORTRANNULLMATPOINTER(a)     (((void *)(PETSC_UINTPTR_T)(a)) == PetscGetFortranNullMatPointer_Private())
 #define FORTRANNULLINTEGER(a)        (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_INTEGER_Fortran || ((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_INTEGER_ARRAY_Fortran)
