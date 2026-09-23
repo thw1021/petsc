@@ -170,14 +170,14 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
 
 #define MatSetValues_SeqBAIJ_A_Private(row, col, value, addv, orow, ocol) \
   do { \
-    brow = row / bs; \
+    brow = (row) / bs; \
     rp   = PetscSafePointerPlusOffset(aj, ai[brow]); \
     if (!A->structure_only) ap = PetscSafePointerPlusOffset(aa, bs2 * ai[brow]); \
     rmax = aimax[brow]; \
     nrow = ailen[brow]; \
-    bcol = col / bs; \
-    ridx = row % bs; \
-    cidx = col % bs; \
+    bcol = (col) / bs; \
+    ridx = (row) % bs; \
+    cidx = (col) % bs; \
     low  = 0; \
     high = nrow; \
     while (high - low > 3) { \
@@ -196,11 +196,11 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
       } \
     } \
     if (a->nonew == 1) goto a_noinsert; \
-    PetscCheck(a->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(a->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global (row)/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     if (A->structure_only) MatSeqXAIJReallocateAIJ_structure_only(A, a->mbs, bs2, nrow, brow, bcol, rmax, ai, aj, rp, aimax, a->nonew, MatScalar); \
     else MatSeqXAIJReallocateAIJ(A, a->mbs, bs2, nrow, brow, bcol, rmax, aa, ai, aj, rp, ap, aimax, a->nonew, MatScalar); \
     N = nrow++ - 1; \
-    /* shift up all the later entries in this row */ \
+    /* shift up all the later entries in this (row) */ \
     PetscCall(PetscArraymove(rp + _i + 1, rp + _i, N - _i + 1)); \
     rp[_i] = bcol; \
     if (!A->structure_only) { \
@@ -214,14 +214,14 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
 
 #define MatSetValues_SeqBAIJ_B_Private(row, col, value, addv, orow, ocol) \
   do { \
-    brow = row / bs; \
+    brow = (row) / bs; \
     rp   = PetscSafePointerPlusOffset(bj, bi[brow]); \
     if (!B->structure_only) ap = PetscSafePointerPlusOffset(ba, bs2 * bi[brow]); \
     rmax = bimax[brow]; \
     nrow = bilen[brow]; \
-    bcol = col / bs; \
-    ridx = row % bs; \
-    cidx = col % bs; \
+    bcol = (col) / bs; \
+    ridx = (row) % bs; \
+    cidx = (col) % bs; \
     low  = 0; \
     high = nrow; \
     while (high - low > 3) { \
@@ -240,11 +240,11 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
       } \
     } \
     if (b->nonew == 1) goto b_noinsert; \
-    PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(b->nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global (row)/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     if (B->structure_only) MatSeqXAIJReallocateAIJ_structure_only(B, b->mbs, bs2, nrow, brow, bcol, rmax, bi, bj, rp, bimax, b->nonew, MatScalar); \
     else MatSeqXAIJReallocateAIJ(B, b->mbs, bs2, nrow, brow, bcol, rmax, ba, bi, bj, rp, ap, bimax, b->nonew, MatScalar); \
     N = nrow++ - 1; \
-    /* shift up all the later entries in this row */ \
+    /* shift up all the later entries in this (row) */ \
     PetscCall(PetscArraymove(rp + _i + 1, rp + _i, N - _i + 1)); \
     rp[_i] = bcol; \
     if (!B->structure_only) { \
@@ -515,7 +515,7 @@ static PetscErrorCode MatSetValuesBlocked_MPIBAIJ(Mat mat, PetscInt m, const Pet
 }
 
 #define HASH_KEY             0.6180339887
-#define HASH(size, key, tmp) (tmp = (key) * HASH_KEY, (PetscInt)((size) * (tmp - (PetscInt)tmp)))
+#define HASH(size, key, tmp) (tmp = (key) * HASH_KEY, (PetscInt)((size) * ((tmp) - (PetscInt)(tmp))))
 /* #define HASH(size,key) ((PetscInt)((size)*fmod(((key)*HASH_KEY),1))) */
 /* #define HASH(size,key,tmp) ((PetscInt)((size)*fmod(((key)*HASH_KEY),1))) */
 static PetscErrorCode MatSetValues_MPIBAIJ_HT(Mat mat, PetscInt m, const PetscInt im[], PetscInt n, const PetscInt in[], const PetscScalar v[], InsertMode addv)

@@ -373,16 +373,16 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
 
 #define MatSetValues_SeqAIJ_A_Private(row, col, value, addv, orow, ocol) \
   do { \
-    if (col <= lastcol1) low1 = 0; \
+    if ((col) <= lastcol1) low1 = 0; \
     else high1 = nrow1; \
     lastcol1 = col; \
     while (high1 - low1 > 5) { \
       t = (low1 + high1) / 2; \
-      if (rp1[t] > col) high1 = t; \
+      if (rp1[t] > (col)) high1 = t; \
       else low1 = t; \
     } \
     for (_i = low1; _i < high1; _i++) { \
-      if (rp1[_i] > col) break; \
+      if (rp1[_i] > (col)) break; \
       if (rp1[_i] == col) { \
         if (A->structure_only) goto a_noinsert; \
         if (addv == ADD_VALUES) { \
@@ -393,7 +393,7 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
         goto a_noinsert; \
       } \
     } \
-    if (!A->structure_only && value == 0.0 && ignorezeroentries && orow != ocol) { \
+    if (!A->structure_only && (value) == 0.0 && ignorezeroentries && (orow) != ocol) { \
       low1  = 0; \
       high1 = nrow1; \
       goto a_noinsert; \
@@ -403,13 +403,13 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
       high1 = nrow1; \
       goto a_noinsert; \
     } \
-    PetscCheck(nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global (row)/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     if (A->structure_only) MatSeqXAIJReallocateAIJ_structure_only(A, am, 1, nrow1, row, col, rmax1, ai, aj, rp1, aimax, nonew, MatScalar); \
     else MatSeqXAIJReallocateAIJ(A, am, 1, nrow1, row, col, rmax1, aa, ai, aj, rp1, ap1, aimax, nonew, MatScalar); \
     N = nrow1++ - 1; \
     a->nz++; \
     high1++; \
-    /* shift up all the later entries in this row */ \
+    /* shift up all the later entries in this (row) */ \
     PetscCall(PetscArraymove(rp1 + _i + 1, rp1 + _i, N - _i + 1)); \
     rp1[_i] = col; \
     if (!A->structure_only) { \
@@ -422,16 +422,16 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
 
 #define MatSetValues_SeqAIJ_B_Private(row, col, value, addv, orow, ocol) \
   do { \
-    if (col <= lastcol2) low2 = 0; \
+    if ((col) <= lastcol2) low2 = 0; \
     else high2 = nrow2; \
     lastcol2 = col; \
     while (high2 - low2 > 5) { \
       t = (low2 + high2) / 2; \
-      if (rp2[t] > col) high2 = t; \
+      if (rp2[t] > (col)) high2 = t; \
       else low2 = t; \
     } \
     for (_i = low2; _i < high2; _i++) { \
-      if (rp2[_i] > col) break; \
+      if (rp2[_i] > (col)) break; \
       if (rp2[_i] == col) { \
         if (B->structure_only) goto b_noinsert; \
         if (addv == ADD_VALUES) { \
@@ -441,7 +441,7 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
         goto b_noinsert; \
       } \
     } \
-    if (!B->structure_only && value == 0.0 && ignorezeroentries) { \
+    if (!B->structure_only && (value) == 0.0 && ignorezeroentries) { \
       low2  = 0; \
       high2 = nrow2; \
       goto b_noinsert; \
@@ -451,13 +451,13 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
       high2 = nrow2; \
       goto b_noinsert; \
     } \
-    PetscCheck(nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(nonew != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Inserting a new nonzero at global (row)/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     if (B->structure_only) MatSeqXAIJReallocateAIJ_structure_only(B, bm, 1, nrow2, row, col, rmax2, bi, bj, rp2, bimax, nonew, MatScalar); \
     else MatSeqXAIJReallocateAIJ(B, bm, 1, nrow2, row, col, rmax2, ba, bi, bj, rp2, ap2, bimax, nonew, MatScalar); \
     N = nrow2++ - 1; \
     b->nz++; \
     high2++; \
-    /* shift up all the later entries in this row */ \
+    /* shift up all the later entries in this (row) */ \
     PetscCall(PetscArraymove(rp2 + _i + 1, rp2 + _i, N - _i + 1)); \
     rp2[_i] = col; \
     if (!B->structure_only) { \
