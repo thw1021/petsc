@@ -260,23 +260,20 @@ static PetscErrorCode MatPartitioningSetFromOptions_PTScotch(MatPartitioning par
 
 static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part, PetscBool useND, IS *partitioning)
 {
-  MPI_Comm                  pcomm, comm;
+  MPI_Comm                  pcomm;
   MatPartitioning_PTScotch *scotch = (MatPartitioning_PTScotch *)part->data;
   PetscMPIInt               rank;
   Mat                       mat = part->adj;
   Mat_MPIAdj               *adj = (Mat_MPIAdj *)mat->data;
-  PetscBool                 flg, distributed;
-  PetscBool                 proc_weight_flg;
-  PetscInt                  i, j, p, bs = 1, nold;
+  PetscBool                 flg, proc_weight_flg;
+  PetscInt                  i, j, bs = 1, nold, vertlocnbr, nparts = part->n;
   PetscInt                 *NDorder = NULL;
+  PetscInt                 *locals, *velotab, *veloloctab, *edloloctab;
   PetscReal                *vwgttab, deltval;
-  SCOTCH_Num               *locals, *velotab, *veloloctab, *edloloctab, vertlocnbr, edgelocnbr, nparts = part->n;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)part, &pcomm));
-  /* Duplicate the communicator to be sure that PTSCOTCH attribute caching does not interfere with PETSc. */
-  PetscCallMPI(MPI_Comm_dup(pcomm, &comm));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(pcomm, &rank));
   PetscCall(PetscObjectTypeCompare((PetscObject)mat, MATMPIADJ, &flg));
   if (!flg) {
     /* bs indicates if the converted matrix is "reduced" from the original and hence the
@@ -294,9 +291,12 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
 
   if (useND) {
 #if PetscDefined(HAVE_SCOTCH_PARMETIS_V3_NODEND)
+    MPI_Comm    comm;
     PetscInt   *sizes, *seps, log2size, subd, *level, base = 0;
     PetscMPIInt size;
 
+    /* Duplicate the communicator to be sure that PTSCOTCH attribute caching does not interfere with PETSc. */
+    PetscCallMPI(MPI_Comm_dup(pcomm, &comm));
     PetscCallMPI(MPI_Comm_size(comm, &size));
     log2size = PetscLog2Real(size);
     subd     = PetscPowInt(2, log2size);
@@ -321,6 +321,7 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
       } else locals[i] = loc / 2;
     }
     PetscCall(PetscFree3(sizes, seps, level));
+    PetscCallMPI(MPI_Comm_free(&comm));
 #else
     SETERRQ(pcomm, PETSC_ERR_SUP, "Need libptscotchparmetis.a compiled with -DSCOTCH_METIS_PREFIX");
 #endif
@@ -339,71 +340,16 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
           for (j = 0; j < nparts; j++) vwgttab[j] /= deltval;
         }
       }
-      for (i = 0; i < nparts; i++) velotab[i] = (SCOTCH_Num)(vwgttab[i] + 0.5);
+      for (i = 0; i < nparts; i++) velotab[i] = (PetscInt)(vwgttab[i] + 0.5);
       PetscCall(PetscFree(vwgttab));
     }
 
     vertlocnbr = mat->rmap->range[rank + 1] - mat->rmap->range[rank];
-    edgelocnbr = adj->i[vertlocnbr];
     veloloctab = part->vertex_weights;
     edloloctab = part->use_edge_weights ? adj->values : NULL;
-
-    /* detect whether all vertices are located at the same process in original graph */
-    for (p = 0; !mat->rmap->range[p + 1] && p < nparts; ++p);
-    distributed = (mat->rmap->range[p + 1] == mat->rmap->N) ? PETSC_FALSE : PETSC_TRUE;
-    if (distributed) {
-      SCOTCH_Arch     archdat;
-      SCOTCH_Dgraph   grafdat;
-      SCOTCH_Dmapping mappdat;
-      SCOTCH_Strat    stradat;
-
-      PetscCallExternal(SCOTCH_dgraphInit, &grafdat, comm);
-      PetscCallExternal(SCOTCH_dgraphBuild, &grafdat, 0, vertlocnbr, vertlocnbr, adj->i, adj->i + 1, veloloctab, NULL, edgelocnbr, edgelocnbr, adj->j, NULL, edloloctab);
-
-      if (PetscDefined(USE_DEBUG)) PetscCallExternal(SCOTCH_dgraphCheck, &grafdat);
-
-      PetscCallExternal(SCOTCH_archInit, &archdat);
-      PetscCallExternal(SCOTCH_stratInit, &stradat);
-      PetscCallExternal(SCOTCH_stratDgraphMapBuild, &stradat, scotch->strategy, nparts, nparts, scotch->imbalance);
-
-      if (velotab) {
-        PetscCallExternal(SCOTCH_archCmpltw, &archdat, nparts, velotab);
-      } else {
-        PetscCallExternal(SCOTCH_archCmplt, &archdat, nparts);
-      }
-      PetscCallExternal(SCOTCH_dgraphMapInit, &grafdat, &mappdat, &archdat, locals);
-      PetscCallExternal(SCOTCH_dgraphMapCompute, &grafdat, &mappdat, &stradat);
-
-      SCOTCH_dgraphMapExit(&grafdat, &mappdat);
-      SCOTCH_archExit(&archdat);
-      SCOTCH_stratExit(&stradat);
-      SCOTCH_dgraphExit(&grafdat);
-
-    } else if (rank == p) {
-      SCOTCH_Graph grafdat;
-      SCOTCH_Strat stradat;
-
-      PetscCallExternal(SCOTCH_graphInit, &grafdat);
-      PetscCallExternal(SCOTCH_graphBuild, &grafdat, 0, vertlocnbr, adj->i, adj->i + 1, veloloctab, NULL, edgelocnbr, adj->j, edloloctab);
-      if (PetscDefined(USE_DEBUG)) PetscCallExternal(SCOTCH_graphCheck, &grafdat);
-      PetscCallExternal(SCOTCH_stratInit, &stradat);
-      PetscCallExternal(SCOTCH_stratGraphMapBuild, &stradat, scotch->strategy, nparts, scotch->imbalance);
-      if (velotab) {
-        SCOTCH_Arch archdat;
-        PetscCallExternal(SCOTCH_archInit, &archdat);
-        PetscCallExternal(SCOTCH_archCmpltw, &archdat, nparts, velotab);
-        PetscCallExternal(SCOTCH_graphMap, &grafdat, &archdat, &stradat, locals);
-        SCOTCH_archExit(&archdat);
-      } else {
-        PetscCallExternal(SCOTCH_graphPart, &grafdat, nparts, &stradat, locals);
-      }
-      SCOTCH_stratExit(&stradat);
-      SCOTCH_graphExit(&grafdat);
-    }
-
+    PetscCall(PetscPTScotchPartitionGraph_Private(pcomm, vertlocnbr, adj->i, adj->j, veloloctab, edloloctab, nparts, velotab, scotch->strategy, scotch->imbalance, locals));
     PetscCall(PetscFree(velotab));
   }
-  PetscCallMPI(MPI_Comm_free(&comm));
 
   if (bs > 1) {
     PetscInt *newlocals;
