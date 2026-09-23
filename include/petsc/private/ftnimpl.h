@@ -3,6 +3,8 @@
 #include <petsc/private/petscimpl.h>
 PETSC_INTERN PetscErrorCode PETScParseFortranArgs_Private(int *, char ***);
 PETSC_EXTERN PetscErrorCode PetscMPIFortranDatatypeToC(MPI_Fint, MPI_Datatype *);
+PETSC_EXTERN void          *PetscGetFortranNullMatPointer_Private(void);
+PETSC_EXTERN void          *PetscGetFortranNullISPointer_Private(void);
 
 PETSC_EXTERN PetscErrorCode          PetscScalarAddressToFortran(PetscObject, PetscInt, PetscScalar *, PetscScalar *, PetscInt, size_t *);
 PETSC_EXTERN PetscErrorCode          PetscScalarAddressFromFortran(PetscObject, PetscScalar *, size_t, PetscInt, PetscScalar **);
@@ -75,6 +77,8 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(const char *, PetscInt);
 #define FORTRANNULLINTEGERPOINTER(a) (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_INTEGER_POINTER_Fortran)
 #define FORTRANNULLSCALARPOINTER(a)  (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_POINTER_Fortran)
 #define FORTRANNULLREALPOINTER(a)    (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_POINTER_Fortran)
+#define FORTRANNULLISPOINTER(a)      (((void *)(PETSC_UINTPTR_T)(a)) == PetscGetFortranNullISPointer_Private())
+#define FORTRANNULLMATPOINTER(a)     (((void *)(PETSC_UINTPTR_T)(a)) == PetscGetFortranNullMatPointer_Private())
 #define FORTRANNULLINTEGER(a)        (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_INTEGER_Fortran || ((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_INTEGER_ARRAY_Fortran)
 #define FORTRANNULLSCALAR(a)         (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_Fortran || ((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_ARRAY_Fortran)
 #define FORTRANNULLREAL(a)           (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_Fortran || ((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_ARRAY_Fortran)
@@ -83,7 +87,7 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(const char *, PetscInt);
 #define FORTRANNULLENUM(a)           ((((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_ENUM_Fortran) || (((void *)(PETSC_UINTPTR_T)(a)) == (void *)-50))
 #define FORTRANNULLCHARACTER(a)      (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_CHARACTER_Fortran)
 #define FORTRANNULLFUNCTION(a)       (((PetscFortranCallbackFn *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_FUNCTION_Fortran)
-#define FORTRANNULLOBJECT(a)         (*(void **)(PETSC_UINTPTR_T)(a) == (void *)0)
+#define FORTRANNULLOBJECT(a)         (*(void **)(PETSC_UINTPTR_T)a == (void *)0)
 #define FORTRANNULLMPICOMM(a)        (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_MPI_COMM_Fortran)
 
 /*
