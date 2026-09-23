@@ -96,7 +96,6 @@ static PetscErrorCode PetscPartitionerPartition_ParMETIS(PetscPartitioner part, 
   PetscInt                   options[64];             /* Options */
   PetscInt                   v, i, *assignment, *points;
   PetscMPIInt                p, size, rank;
-  PetscBool                  hasempty = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)part, &comm));
@@ -106,10 +105,7 @@ static PetscErrorCode PetscPartitionerPartition_ParMETIS(PetscPartitioner part, 
   PetscCall(PetscMalloc4(size + 1, &vtxdist, nparts * ncon, &tpwgts, ncon, &ubvec, nvtxs, &assignment));
   vtxdist[0] = 0;
   PetscCallMPI(MPI_Allgather(&nvtxs, 1, MPIU_INT, &vtxdist[1], 1, MPIU_INT, comm));
-  for (p = 2; p <= size; ++p) {
-    hasempty = (PetscBool)(hasempty || !vtxdist[p - 1] || !vtxdist[p]);
-    vtxdist[p] += vtxdist[p - 1];
-  }
+  for (p = 2; p <= size; ++p) vtxdist[p] += vtxdist[p - 1];
   /* null graph */
   if (vtxdist[size] == 0) {
     PetscCall(PetscFree4(vtxdist, tpwgts, ubvec, assignment));
@@ -172,25 +168,25 @@ static PetscErrorCode PetscPartitionerPartition_ParMETIS(PetscPartitioner part, 
       else PetscCallMETIS(METIS_PartGraphKway, &nvtxs, &ncon, xadj, adjncy, vwgt, NULL, adjwgt, &nparts, tpwgts, ubvec, options, &part->edgeCut, assignment);
     }
   } else {
-    MPI_Comm pcomm = pm->pcomm;
+    MPI_Comm pcomm;
 
     options[0] = 1; /*use options */
     options[1] = pm->debugFlag;
     options[2] = (pm->randomSeed == -1) ? 15 : pm->randomSeed; /* default is GLOBAL_SEED=15 from `libparmetis/defs.h` */
 
-    if (hasempty) { /* ParMETIS does not support empty graphs on some of the processes */
-      PetscInt cnt;
+    /* ParMETIS does not support empty graphs on some of the processes, so partition on the
+       processes that own vertices and rebuild the distribution over those processes alone. */
+    PetscCall(PetscCommCreateNonempty(pm->pcomm, (PetscBool)(nvtxs == 0), &pcomm));
+    if (pcomm != MPI_COMM_NULL) {
+      PetscMPIInt psize;
 
-      PetscCallMPI(MPI_Comm_split(pm->pcomm, !!nvtxs, rank, &pcomm));
-      for (p = 0, cnt = 0; p < size; p++) {
-        if (vtxdist[p + 1] != vtxdist[p]) {
-          vtxdist[cnt + 1] = vtxdist[p + 1];
-          cnt++;
-        }
-      }
+      PetscCallMPI(MPI_Comm_size(pcomm, &psize));
+      vtxdist[0] = 0;
+      PetscCallMPI(MPI_Allgather(&nvtxs, 1, MPIU_INT, &vtxdist[1], 1, MPIU_INT, pcomm));
+      for (p = 2; p <= psize; ++p) vtxdist[p] += vtxdist[p - 1];
+      PetscCallParMETIS(ParMETIS_V3_PartKway, vtxdist, xadj, adjncy, vwgt, adjwgt, &wgtflag, &numflag, &ncon, &nparts, tpwgts, ubvec, options, &part->edgeCut, assignment, &pcomm);
+      PetscCallMPI(MPI_Comm_free(&pcomm));
     }
-    if (nvtxs) PetscCallParMETIS(ParMETIS_V3_PartKway, vtxdist, xadj, adjncy, vwgt, adjwgt, &wgtflag, &numflag, &ncon, &nparts, tpwgts, ubvec, options, &part->edgeCut, assignment, &pcomm);
-    if (hasempty) PetscCallMPI(MPI_Comm_free(&pcomm));
   }
 
   /* Convert to PetscSection+IS */
