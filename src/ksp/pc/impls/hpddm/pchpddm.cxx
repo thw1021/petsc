@@ -2735,7 +2735,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         PetscCall(PCSetFromOptions(s));
         PetscCall(PCFactorGetMatSolverType(s, &type));
         PetscCall(PetscStrcmp(type, MATSOLVERMUMPS, &flg));
-        PetscCall(MatGetLocalSize(A11, &n, nullptr));
+        PetscCall(MatGetLocalSize(P, &n, nullptr));
         if (flg || n == 0) {
           PetscCall(PCSetOperators(s, N, N));
           if (n) {
