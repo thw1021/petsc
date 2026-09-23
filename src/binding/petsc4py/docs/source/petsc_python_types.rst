@@ -3,13 +3,24 @@
 PETSc Python types
 ==================
 
-Here we discuss details about Python-aware PETSc types that can be used within the library.
-
-In particular, we discuss matrices, preconditioners, Krylov solvers, nonlinear solvers, ODE integrators and viewers.
+PETSc supports Python implementations of matrices, preconditioners, Krylov
+solvers, nonlinear solvers, ODE integrators, optimizers, and viewers.
 
 The low-level, Cython implementation exposing the Python methods is in `src/petsc4py/PETSc/libpetsc4py.pyx <https://gitlab.com/petsc/petsc/-/tree/release/src/binding/petsc4py/src/petsc4py/PETSc/libpetsc4py.pyx>`_.
 
 The scripts used here can be found at `demo/python_types <https://gitlab.com/petsc/petsc/-/tree/release/src/binding/petsc4py/demo/python_types>`_.
+
+Each implementation is a Python object, called a *context*, whose methods PETSc
+calls to perform the supported operations. The protocol classes below describe
+the callback signatures; they are not base classes to inherit from. Implement
+only the callbacks your context needs, and omit unused methods. An empty method
+still counts as an implementation and can override PETSc's default behavior.
+
+The optional ``create(obj)`` callback runs when the context is attached to a
+PETSc object. The optional ``destroy(obj)`` callback releases resources before
+the context is replaced or removed, including when the PETSc object is
+destroyed. These callbacks are distinct from ``setUp(obj)`` and, where
+supported, ``reset(obj)``, which prepare and reset an object for reuse.
 
 .. _petsc_python_mat:
 
@@ -118,40 +129,20 @@ PETSc Python optimization solver type
 
 The protocol for the `petsc4py.PETSc.TAO.Type.PYTHON` TAO optimizer is:
 
-.. literalinclude:: ../../demo/python_types/tao.py
+.. literalinclude:: ../../demo/python_types/taopython_protocol.py
 
-In the example below, we create a simple gradient based (first order)
-optimization solver. A `petsc4py.PETSc.TAOLineSearch.Type.UNIT` line search
-with step size :math:`0.2` is used. Therefore the update becomes
+The following example implements a gradient descent solver to minimize
+:math:`f(x) = (x_0 - 1)^2 + (x_1 - 2)^2` on one process, starting from
+:math:`x = (0.5, 0.5)`.
+
+It uses a `petsc4py.PETSc.TAOLineSearch.Type.UNIT` line search with step size
+:math:`0.2`, giving the update
 
 .. math::
 
-  x^{k+1} = x^k + 0.2 \nabla f(x^k).
+  x^{k+1} = x^k - 0.2 \nabla f(x^k).
 
-
-.. note::
-
-  This setup is also well suited for non-linesearch-based quasi-Newton
-  optimization algorithms. It provides a general interface for using the TAO
-  provided state and functionality on a custom algorithm.
-
-The optimizer can be used from Python as
-
-.. code-block:: python
-
-  PETSc.TAO().createPython(myGradientDescent())
-
-or selected through the PETSc options as 
-
-.. code-block:: console
-
-  python tao.py -tao_type python -tao_python_type tao.myGradientDescent
-
-.. tip::
-
-  The prefix **tao** to **tao_python_type** is dependant on the Python module in
-  which the optimizer is located. It aligns with the fully qualified Python
-  module name.
+.. literalinclude:: ../../demo/python_types/tao.py
 
 .. _petsc_python_viewer:
 
