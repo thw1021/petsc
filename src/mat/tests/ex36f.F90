@@ -20,29 +20,30 @@ contains
   subroutine Demo1(m, n)
 
     PetscInt, intent(in) :: m, n
-    Mat A
-    PetscScalar, pointer :: aa(:, :)
-    PetscErrorCode ierr
+    call Demo2(m, n)
+    !Mat A
+    !PetscScalar, pointer :: aa(:, :)
+    !PetscErrorCode ierr
 
-    ! Create matrix
-    PetscCall(MatCreate(PETSC_COMM_SELF, A, ierr))
-    PetscCall(MatSetSizes(A, m, n, m, n, ierr))
-    PetscCall(MatSetType(A, MATSEQDENSE, ierr))
-    PetscCall(MatSetUp(A, ierr))
+    !! Create matrix
+    !PetscCall(MatCreate(PETSC_COMM_SELF, A, ierr))
+    !PetscCall(MatSetSizes(A, m, n, m, n, ierr))
+    !PetscCall(MatSetType(A, MATSEQDENSE, ierr))
+    !PetscCall(MatSetUp(A, ierr))
 
-    ! Access array storage
-    PetscCall(MatDenseGetArray(A, aa, ierr))
+    !! Access array storage
+    !PetscCall(MatDenseGetArray(A, aa, ierr))
 
-    ! Set matrix values directly
-    PetscCall(FillUpMatrix(m, n, aa))
+    !! Set matrix values directly
+    !PetscCall(FillUpMatrix(m, n, aa))
 
-    PetscCall(MatDenseRestoreArray(A, aa, ierr))
+    !PetscCall(MatDenseRestoreArray(A, aa, ierr))
 
-    ! View matrix
-    PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
+    !! View matrix
+    !PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 
-    ! Clean up
-    PetscCall(MatDestroy(A, ierr))
+    !! Clean up
+    !PetscCall(MatDestroy(A, ierr))
   end subroutine Demo1
 
 ! -----------------------------------------------------------------

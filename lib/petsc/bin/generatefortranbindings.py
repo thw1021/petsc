@@ -633,13 +633,9 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   for i in classes.keys():
     if i in ['PetscIntStack', 'PetscTabulation']: continue
     with open(os.path.join(petscarch,'ftn', getAPI.mansecpath(classes[i].mansec),classes[i].includefile),"a") as fd:
-      if not classes[i].petscobject:
-        fd.write('  type t' + i + '\n')
-        fd.write('    PetscFortranAddr:: v = PETSC_FORTRAN_TYPE_INITIALIZE\n')
-        fd.write('  end type t' + i + '\n')
-      else:
-        fd.write('  type, extends(tPetscObject) ::  t' + i + '\n')
-        fd.write('  end type t' + i + '\n')
+      fd.write('  type, bind(c) ::  t' + i + '\n')
+      fd.write('    PetscFortranAddr :: v = PETSC_FORTRAN_TYPE_INITIALIZE\n')
+      fd.write('  end type t' + i + '\n')
       v = (pkgname.upper() + '_NULL_' + i.upper().replace(pkgname.upper(),'').strip('_')).replace('_NULL_NULL','_NULL')
       fd.write('  ' + i + ', parameter :: ' + v + ' = t' + i + '(0)\n')
       fd.write('  ' + i + ', target :: ' + v + '_ARRAY(1) = [t' + i + '(0)]\n')

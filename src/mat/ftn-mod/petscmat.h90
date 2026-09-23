@@ -24,39 +24,56 @@ end interface
 !DEC$ ATTRIBUTES DLLEXPORT::MatNullSpaceRestoreVecs
 #endif
 
+#if defined(PETSC_HAVE_ISO_FORTRAN_BINDING)
+#define MATDENSEGETARRAY1D_BIND     bind(C, name="matdensegetarray1d_")
+#define MATDENSEGETARRAY2D_BIND     bind(C, name="matdensegetarray2d_")
+#define MATDENSERESTOREARRAY1D_BIND bind(C, name="matdenserestorearray1d_")
+#define MATDENSERESTOREARRAY2D_BIND bind(C, name="matdenserestorearray2d_")
+#else
+#define MATDENSEGETARRAY1D_BIND
+#define MATDENSEGETARRAY2D_BIND
+#define MATDENSERESTOREARRAY1D_BIND
+#define MATDENSERESTOREARRAY2D_BIND
+#endif
+
 interface MatDenseGetArray
-  subroutine MatDenseGetArray1d(A, array, ierr)
-    use, intrinsic :: ISO_C_binding
-    import tMat
-    PetscScalar, pointer :: array(:)
-    PetscErrorCode, intent(out) :: ierr
-    Mat A
+  subroutine MatDenseGetArray1d(A, array, ierr) MATDENSEGETARRAY1D_BIND
+  use, intrinsic :: ISO_C_binding
+  import tMat
+  PetscScalar, pointer :: array(:)
+  PetscErrorCode, intent(out) :: ierr
+  Mat A
   end subroutine
-  subroutine MatDenseGetArray2d(A, array, ierr)
-    use, intrinsic :: ISO_C_binding
-    import tMat
-    PetscScalar, pointer :: array(:, :)
-    PetscErrorCode, intent(out) :: ierr
-    Mat A
-  end subroutine
+  subroutine MatDenseGetArray2d(A, array, ierr) MATDENSEGETARRAY2D_BIND
+  use, intrinsic :: ISO_C_binding
+  import tMat
+  PetscScalar, pointer :: array(:, :)
+  PetscErrorCode, intent(out) :: ierr
+  Mat A
+end subroutine
 end interface MatDenseGetArray
 
 interface MatDenseRestoreArray
-  subroutine MatDenseRestoreArray1d(A, array, ierr)
-    use, intrinsic :: ISO_C_binding
-    import tMat
-    PetscScalar, pointer :: array(:)
-    PetscErrorCode, intent(out) :: ierr
-    Mat A
+  subroutine MatDenseRestoreArray1d(A, array, ierr) MATDENSERESTOREARRAY1D_BIND
+  use, intrinsic :: ISO_C_binding
+  import tMat
+  PetscScalar, pointer :: array(:)
+  PetscErrorCode, intent(out) :: ierr
+  Mat A
   end subroutine
-  subroutine MatDenseRestoreArray2d(A, array, ierr)
-    use, intrinsic :: ISO_C_binding
-    import tMat
-    PetscScalar, pointer :: array(:, :)
-    PetscErrorCode, intent(out) :: ierr
-    Mat A
-  end subroutine
+  subroutine MatDenseRestoreArray2d(A, array, ierr) MATDENSERESTOREARRAY2D_BIND
+  use, intrinsic :: ISO_C_binding
+  import tMat
+  PetscScalar, pointer :: array(:, :)
+  PetscErrorCode, intent(out) :: ierr
+  Mat A
+end subroutine
 end interface MatDenseRestoreArray
+
+#undef MATDENSEGETARRAY1D_BIND
+#undef MATDENSEGETARRAY2D_BIND
+#undef MATDENSERESTOREARRAY1D_BIND
+#undef MATDENSERESTOREARRAY2D_BIND
 
 interface MatDenseGetArrayRead
   subroutine MatDenseGetArrayRead1d(A, array, ierr)

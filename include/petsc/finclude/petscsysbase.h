@@ -16,14 +16,7 @@
 #define integer2 integer(kind=C_INT16_T)
 #define integer1 integer(kind=C_INT8_T)
 #define PetscBool logical(kind=C_BOOL)
-
-#if (PETSC_SIZEOF_VOID_P == 8)
-#define PetscOffset integer8
-#define PetscFortranAddr integer8
-#else
-#define PetscOffset integer4
-#define PetscFortranAddr integer4
-#endif
+#define PetscFortranAddr integer(kind=C_INTPTR_T)
 
 #if defined(PETSC_USE_64BIT_INDICES)
 #define PetscInt integer8
@@ -129,7 +122,7 @@
 #define PetscReal2d type(tPetscReal2d)
 
 #define PETSC_FORTRAN_TYPE_INITIALIZE -2
-#define PetscObjectIsNull(obj) (obj%v == 0 .or. obj%v ==  PETSC_FORTRAN_TYPE_INITIALIZE .or. obj%v == -3)
+#define PetscObjectIsNull(obj) (obj%v == 0 .or. obj%v == PETSC_FORTRAN_TYPE_INITIALIZE .or. obj%v == -3)
 #define PetscObjectNullify(obj) obj%v = PETSC_FORTRAN_TYPE_INITIALIZE
 !
 !     Macros for error checking
