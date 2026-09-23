@@ -407,6 +407,9 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscOptionsHelpPrintable_Internal(Pe
 /* Code shared between C and Fortran */
 PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *, const char *, const char *, PetscBool, PetscInt);
 
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscCommCreateNonempty(MPI_Comm, const PetscInt[], MPI_Comm *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscCommDestroyNonempty(MPI_Comm, MPI_Comm *);
+
 #if PetscDefined(HAVE_SETJMP_H)
 PETSC_EXTERN PetscBool PetscCheckPointer(const void *, PetscDataType);
 #else

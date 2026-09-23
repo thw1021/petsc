@@ -1,7 +1,7 @@
 /*
      Provides utility routines for split MPI communicator.
 */
-#include <petscsys.h> /*I   "petscsys.h"    I*/
+#include <petsc/private/petscimpl.h> /*I   "petscsys.h"    I*/
 #include <petscviewer.h>
 
 const char *const PetscSubcommTypes[] = {"GENERAL", "CONTIGUOUS", "INTERLACED", "PetscSubcommType", "PETSC_SUBCOMM_", NULL};
@@ -488,5 +488,68 @@ static PetscErrorCode PetscSubcommCreate_interlaced(PetscSubcomm psubcomm)
   psubcomm->color   = color;
   psubcomm->subsize = subsize;
   psubcomm->type    = PETSC_SUBCOMM_INTERLACED;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscCommCreateNonempty - Creates a sub-communicator of the processes of comm that own data.
+  Collective on comm.
+
+  ranges holds the offset of the first datum owned by each process, has one more entry than comm has
+  processes, and is the same on every process. subcomm is returned as comm itself when every process
+  owns data, as MPI_COMM_NULL on a process that owns none, and otherwise as a new communicator of
+  the processes that do. Release it with PetscCommDestroyNonempty(), which frees it only when it is
+  a new communicator.
+
+  Graph partitioning and ordering libraries such as ParMETIS and PT-SCOTCH require every process of
+  the communicator they are given to own at least one vertex. Building the distributed graph on the
+  communicator returned here, and doing nothing where it is MPI_COMM_NULL, meets that requirement
+  without altering the graph itself.
+
+  Because ranges is already known to every process, whether a split is needed is decided without
+  communicating, and no communicator is created when every process owns data. The processes of a new
+  subcomm keep their relative order in comm, so a contiguous layout stays contiguous, and ascending,
+  over subcomm.
+*/
+PetscErrorCode PetscCommCreateNonempty(MPI_Comm comm, const PetscInt ranges[], MPI_Comm *subcomm)
+{
+  PetscMPIInt p, rank, size;
+  PetscBool   hasempty = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscAssertPointer(ranges, 2);
+  PetscAssertPointer(subcomm, 3);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  for (p = 0; p < size; ++p) {
+    if (ranges[p + 1] == ranges[p]) {
+      hasempty = PETSC_TRUE;
+      break;
+    }
+  }
+  if (!hasempty) {
+    *subcomm = comm;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCallMPI(MPI_Comm_split(comm, ranges[rank + 1] == ranges[rank] ? MPI_UNDEFINED : 0, rank, subcomm));
+  /* The MPI standard returns MPI_COMM_NULL for the color MPI_UNDEFINED, but MPIUNI's
+     MPI_Comm_split() ignores the color, so release the communicator it hands back instead. */
+  if (ranges[rank + 1] == ranges[rank] && *subcomm != MPI_COMM_NULL) PetscCallMPI(MPI_Comm_free(subcomm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscCommDestroyNonempty - Releases a communicator obtained from PetscCommCreateNonempty() and sets
+  it to MPI_COMM_NULL. Collective on comm.
+
+  PetscCommCreateNonempty() returns comm itself when every process owns data, so subcomm is freed
+  only when it is a different communicator.
+*/
+PetscErrorCode PetscCommDestroyNonempty(MPI_Comm comm, MPI_Comm *subcomm)
+{
+  PetscFunctionBegin;
+  PetscAssertPointer(subcomm, 2);
+  if (*subcomm != comm && *subcomm != MPI_COMM_NULL) PetscCallMPI(MPI_Comm_free(subcomm));
+  *subcomm = MPI_COMM_NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
