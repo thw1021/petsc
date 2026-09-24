@@ -133,7 +133,7 @@ int main(int argc, char **args)
     requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
   testset:
-    output_file: output/ex_nlls.out
+    output_file: output/ex4.out
 
     test:
       suffix: analytic_jac

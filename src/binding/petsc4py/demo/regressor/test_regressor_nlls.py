@@ -3,7 +3,7 @@
 #
 # Use the petsc4py interface to PetscRegressor to fit the exponential model
 # y = p0 * exp(p1 * x) + p2, the same problem solved in
-# src/ml/regressor/tests/ex_nlls.c.
+# src/ml/regressor/tests/ex4.c.
 
 import sys
 import petsc4py
