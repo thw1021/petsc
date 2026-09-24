@@ -1197,6 +1197,9 @@ PetscErrorCode PCASMSetType(PC pc, PCASMType type)
   The callback and context survive `PCReset()`. The caller owns `ctx` and must keep it valid
   until the callback is replaced or disabled, or the preconditioner is destroyed.
 
+  Fortran Note:
+  `fn` is a subroutine with arguments `(pc, local, scaling, ctx, ierr)`. Pass `PETSC_NULL_FUNCTION` to disable the callback.
+
 .seealso: [](ch_ksp), `PCASM`, `PCASMWeightedComputeScalingFn`, `PCASMWeightedSetScaling()`, `PCASMWeightedGetScaling()`, `PCASMSetType()`
 @*/
 PetscErrorCode PCASMWeightedSetComputeScaling(PC pc, PCASMWeightedComputeScalingFn *fn, PetscCtx ctx)
