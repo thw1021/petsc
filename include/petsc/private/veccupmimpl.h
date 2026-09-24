@@ -362,6 +362,20 @@ template <device::cupm::DeviceType T, typename D>
 inline PetscErrorCode Vec_CUPMBase<T, D>::VecCUPMAllocateCheck_(Vec v) noexcept
 {
   PetscFunctionBegin;
+  if (!v->spptr) {
+    /*
+      Every route to a device array reaches this allocation, and it is the point where a vector of
+      a host type would acquire one: its own operations then never consult that array, so the
+      result of a device operation on it is silently dropped. PetscCheckTypeNames() catches the
+      misuse only in a debug build, and the price of dropped results is paid in the optimized ones,
+      so check here as well. The check costs one comparison per vector because the surrounding
+      branch is taken only once.
+    */
+    PetscBool iscupm;
+
+    PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(v), &iscupm, VECSEQCUPM(), VECMPICUPM(), ""));
+    PetscCheck(iscupm, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Vec type %s cannot hold a device array, it must be %s or %s. Obtain vectors for a device operation from MatCreateVecs(), or set their type with VecSetType()", PetscObjectCast(v)->type_name, VECSEQCUPM(), VECMPICUPM());
+  }
   PetscCall(VecAllocateCheck_(v, v->spptr, VecCUPMCast));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
