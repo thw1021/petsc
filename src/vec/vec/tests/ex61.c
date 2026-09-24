@@ -3,12 +3,13 @@ static char help[] = "Test VecSetValuesCOO\n\n";
 #include <petscmat.h>
 int main(int argc, char **args)
 {
-  Vec            x, y;
-  const PetscInt M = 18;
-  PetscMPIInt    rank, size;
-  PetscBool      equal;
-  PetscScalar   *vals;
-  PetscBool      ignoreRemote = PETSC_FALSE;
+  Vec          x, y;
+  PetscInt     M = 18;
+  PetscMPIInt  rank, size;
+  PetscBool    equal;
+  PetscScalar *vals;
+  PetscBool    ignoreRemote = PETSC_FALSE;
+  PetscBool    sparse       = PETSC_FALSE;
 
   PetscInt i0[] = {3, 4, 1, 10, 0, 1, 1, 2, 1, 1, 2, 2, 3, 3, 4, 4, 1, 2, 5, 5, 6, 4, 17, 0, 1, 1, 8, 5, 5, 6, 4, 7, 8, 5};
   PetscInt i1[] = {8, 5, 15, 16, 6, 13, 4, 17, 8, 9, 9, 10, 6, 12, 7, 3, 4, 1, 1, 2, 5, 5, 6, 14, 17, 8, 9, 9, 10, 4, 5, 10, 11, 1, 2};
@@ -26,6 +27,9 @@ int main(int argc, char **args)
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-ignore_remote", &ignoreRemote, NULL));
+  /* Leave the pattern alone and lengthen the vector, so that most entries receive no contribution */
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-sparse", &sparse, NULL));
+  if (sparse) M = 10000;
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
 
@@ -63,6 +67,18 @@ int main(int argc, char **args)
     SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "VecSetValuesCOO() failed");
   }
 
+  /* Prefilling y with a nonzero value first makes the check fail if INSERT_VALUES leaves an entry
+     the pattern does not name holding its old value */
+  PetscCall(VecSet(y, 1.0));
+  PetscCall(VecSetValuesCOO(y, vals, INSERT_VALUES));
+  PetscCall(VecEqual(x, y, &equal));
+
+  if (!equal) {
+    PetscCall(VecView(x, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "VecSetValuesCOO() with INSERT_VALUES failed");
+  }
+
   PetscCall(PetscFree(vals));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
@@ -90,5 +106,19 @@ int main(int argc, char **args)
     test:
       suffix: std
       args: -vec_type standard
+
+    test:
+      suffix: std_sparse
+      args: -vec_type standard -sparse
+
+    test:
+      suffix: kokkos_sparse
+      requires: kokkos_kernels
+      args: -vec_type kokkos -sparse
+
+    test:
+      suffix: cuda_sparse
+      requires: cuda
+      args: -vec_type cuda -sparse
 
 TEST*/

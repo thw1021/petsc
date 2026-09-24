@@ -15,7 +15,9 @@ typedef struct {
   /* VecSetValuesCOO() related fields on host. m is the vector's local size */
   PetscCount  coo_n; /* Number of entries in VecSetPreallocationCOO() */
   PetscCount  tot1;  /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
-  PetscCount *jmap1; /* [m+1]: perm1[jmap1[i]..jmap1[i+1]) give indices of entries in v[] associated with i-th nonzero of the vector */
+  PetscCount  nnz1;  /* Number of entries of the vector that receive a local contribution */
+  PetscCount *imap1; /* [nnz1]: i-th such entry is imap1[i]-th entry in the vector */
+  PetscCount *jmap1; /* [nnz1+1]: perm1[jmap1[i]..jmap1[i+1]) give indices of entries in v[] associated with imap1[i] */
   PetscCount *perm1; /* [tot1]: The permutation array in sorting coo_i[] */
 } Vec_Seq;
 

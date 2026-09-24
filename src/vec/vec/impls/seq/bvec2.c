@@ -543,7 +543,8 @@ static PetscErrorCode VecResetPreallocationCOO_Seq(Vec x)
 
   PetscFunctionBegin;
   if (vs) {
-    PetscCall(PetscFree(vs->jmap1)); /* Destroy old stuff */
+    PetscCall(PetscFree(vs->imap1)); /* Destroy old stuff */
+    PetscCall(PetscFree(vs->jmap1));
     PetscCall(PetscFree(vs->perm1));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -552,8 +553,8 @@ static PetscErrorCode VecResetPreallocationCOO_Seq(Vec x)
 PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscInt coo_i[])
 {
   PetscInt    m, *i;
-  PetscCount  k, nneg;
-  PetscCount *perm1, *jmap1;
+  PetscCount  k, nneg, nnz1;
+  PetscCount *perm1, *jmap1, *imap1;
   Vec_Seq    *vs = (Vec_Seq *)x->data;
 
   PetscFunctionBegin;
@@ -572,9 +573,26 @@ PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscIn
   PetscCheck(!nneg || x->stash.ignorenegidx, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Found a negative index in VecSetPreallocateCOO() but VEC_IGNORE_NEGATIVE_INDICES was not set");
   PetscCheck(!coo_n || i[coo_n - 1] < m, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Found index (%" PetscInt_FMT ") greater than the size of the vector (%" PetscInt_FMT ") in VecSetPreallocateCOO()", i[coo_n - 1], m);
 
-  PetscCall(PetscCalloc1(m + 1, &jmap1));
-  for (; k < coo_n; k++) jmap1[i[k] + 1]++;         /* Count repeats of each entry */
-  for (k = 0; k < m; k++) jmap1[k + 1] += jmap1[k]; /* Transform jmap[] to CSR-like data structure */
+  /* i[nneg..coo_n) is sorted, so one pass over it counts the entries of the vector that receive a
+     contribution, and a second records each one and how many contributions it gets. Neither pass
+     costs anything in the vector's local size, which a jmap indexed by every entry would. */
+  nnz1 = 0;
+  for (k = nneg; k < coo_n; k++) {
+    if (k == nneg || i[k] != i[k - 1]) nnz1++;
+  }
+  PetscCall(PetscMalloc1(nnz1, &imap1));
+  PetscCall(PetscMalloc1(nnz1 + 1, &jmap1));
+  jmap1[0] = 0;
+  for (PetscCount p = nneg, j = 0; p < coo_n; p++) {
+    if (p == nneg || i[p] != i[p - 1]) { /* A new index opens the next slot */
+      imap1[j]     = i[p];
+      jmap1[j + 1] = jmap1[j] + 1;
+      j++;
+    } else { /* A repeat extends the slot just opened, whose end is jmap1[j] */
+      jmap1[j]++;
+    }
+  }
+  PetscAssert(jmap1[nnz1] == coo_n - nneg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected errors in VecSetPreallocationCOO_Seq");
   PetscCall(PetscFree(i));
 
   if (nneg) { /* Discard leading negative indices */
@@ -588,7 +606,9 @@ PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscIn
   /* Record COO fields */
   vs->coo_n = coo_n;
   vs->tot1  = coo_n - nneg;
-  vs->jmap1 = jmap1; /* [m+1] */
+  vs->nnz1  = nnz1;
+  vs->imap1 = imap1; /* [nnz1] */
+  vs->jmap1 = jmap1; /* [nnz1+1] */
   vs->perm1 = perm1; /* [tot] */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -596,17 +616,21 @@ PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscIn
 PetscErrorCode VecSetValuesCOO_Seq(Vec x, const PetscScalar coo_v[], InsertMode imode)
 {
   Vec_Seq          *vs    = (Vec_Seq *)x->data;
-  const PetscCount *perm1 = vs->perm1, *jmap1 = vs->jmap1;
+  const PetscCount *perm1 = vs->perm1, *jmap1 = vs->jmap1, *imap1 = vs->imap1;
+  const PetscCount  nnz1  = vs->nnz1;
   PetscScalar      *xv;
   PetscInt          m;
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(x, &m));
   PetscCall(VecGetArray(x, &xv));
-  for (PetscInt i = 0; i < m; i++) {
-    PetscScalar sum = 0.0;
+  /* Under INSERT_VALUES an entry the pattern does not name is left at zero, which is the only part
+     of this that has to touch the whole array */
+  if (imode == INSERT_VALUES) PetscCall(PetscArrayzero(xv, m));
+  for (PetscCount i = 0; i < nnz1; i++) {
+    PetscScalar sum = 0.0; /* Do partial summation first to improve numerical stability */
     for (PetscCount j = jmap1[i]; j < jmap1[i + 1]; j++) sum += coo_v[perm1[j]];
-    xv[i] = (imode == INSERT_VALUES ? 0.0 : xv[i]) + sum;
+    xv[imap1[i]] += sum;
   }
   PetscCall(VecRestoreArray(x, &xv));
   PetscFunctionReturn(PETSC_SUCCESS);

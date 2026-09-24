@@ -45,7 +45,9 @@ typedef struct {
   /* COO fields, assuming m is the vector's local size */
   PetscCount  coo_n;
   PetscCount  tot1;  /* Total local entries in COO arrays */
-  PetscCount *jmap1; /* [m+1]: i-th entry of the vector has jmap1[i+1]-jmap1[i] repeats in COO arrays */
+  PetscCount  nnz1;  /* Unique local entries, i.e. entries of the vector receiving a local contribution */
+  PetscCount *imap1; /* [nnz1]: i-th unique local entry is imap1[i]-th entry in the vector */
+  PetscCount *jmap1; /* [nnz1+1]: i-th unique local entry has jmap1[i+1]-jmap1[i] repeats in COO arrays */
   PetscCount *perm1; /* [tot1]: permutation array for local entries */
 
   PetscCount  nnz2;  /* Unique entries in recvbuf */

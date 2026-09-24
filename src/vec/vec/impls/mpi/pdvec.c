@@ -13,6 +13,7 @@ static PetscErrorCode VecResetPreallocationCOO_MPI(Vec v)
 
   PetscFunctionBegin;
   if (vmpi) {
+    PetscCall(PetscFree(vmpi->imap1));
     PetscCall(PetscFree(vmpi->jmap1));
     PetscCall(PetscFree(vmpi->perm1));
     PetscCall(PetscFree(vmpi->Cperm));
@@ -911,11 +912,25 @@ PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscIn
   for (k = nneg; k < rem; k++) i1[k] += PETSC_INT_MAX;                               /* Revert indices of local entries */
 
   /*           Build stuff for local entries                                    */
-  PetscCount tot1, *jmap1, *perm1;
-  PetscCall(PetscCalloc1(m + 1, &jmap1));
-  for (k = nneg; k < rem; k++) jmap1[i1[k] - rstart + 1]++; /* Count repeats of each local entry */
-  for (k = 0; k < m; k++) jmap1[k + 1] += jmap1[k];         /* Transform jmap1[] to CSR-like data structure */
-  tot1 = jmap1[m];
+  /* i1[nneg..rem) is sorted, so the local entries receiving a contribution and their repeat counts
+     come from two passes over the contributions, neither costing anything in the local size */
+  PetscCount tot1, nnz1 = 0, *jmap1, *perm1, *imap1;
+  for (k = nneg; k < rem; k++) {
+    if (k == nneg || i1[k] != i1[k - 1]) nnz1++;
+  }
+  PetscCall(PetscMalloc1(nnz1, &imap1));
+  PetscCall(PetscMalloc1(nnz1 + 1, &jmap1));
+  jmap1[0] = 0;
+  for (PetscCount p = nneg, j = 0; p < rem; p++) {
+    if (p == nneg || i1[p] != i1[p - 1]) { /* A new index opens the next slot */
+      imap1[j]     = i1[p] - rstart;
+      jmap1[j + 1] = jmap1[j] + 1;
+      j++;
+    } else { /* A repeat extends the slot just opened, whose end is jmap1[j] */
+      jmap1[j]++;
+    }
+  }
+  tot1 = jmap1[nnz1];
   PetscAssert(tot1 == rem - nneg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected errors in VecSetPreallocationCOO_MPI");
   PetscCall(PetscMalloc1(tot1, &perm1));
   PetscCall(PetscArraycpy(perm1, perm + nneg, tot1));
@@ -1058,6 +1073,8 @@ PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscIn
 
   vmpi->coo_n = coo_n;
   vmpi->tot1  = tot1;
+  vmpi->nnz1  = nnz1;
+  vmpi->imap1 = imap1;
   vmpi->jmap1 = jmap1;
   vmpi->perm1 = perm1;
   vmpi->nnz2  = nnz2;
@@ -1079,12 +1096,14 @@ PetscErrorCode VecSetValuesCOO_MPI(Vec x, const PetscScalar v[], InsertMode imod
   Vec_MPI          *vmpi = (Vec_MPI *)x->data;
   PetscInt          m;
   PetscScalar      *a, *sendbuf = vmpi->sendbuf, *recvbuf = vmpi->recvbuf;
+  const PetscCount *imap1 = vmpi->imap1;
   const PetscCount *jmap1 = vmpi->jmap1;
   const PetscCount *perm1 = vmpi->perm1;
   const PetscCount *imap2 = vmpi->imap2;
   const PetscCount *jmap2 = vmpi->jmap2;
   const PetscCount *perm2 = vmpi->perm2;
   const PetscCount *Cperm = vmpi->Cperm;
+  const PetscCount  nnz1  = vmpi->nnz1;
   const PetscCount  nnz2  = vmpi->nnz2;
 
   PetscFunctionBegin;
@@ -1096,11 +1115,14 @@ PetscErrorCode VecSetValuesCOO_MPI(Vec x, const PetscScalar v[], InsertMode imod
 
   /* Send remote entries to their owner and overlap the communication with local computation */
   PetscCall(PetscSFReduceWithMemTypeBegin(vmpi->coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_HOST, sendbuf, PETSC_MEMTYPE_HOST, recvbuf, MPI_REPLACE));
+  /* Under INSERT_VALUES an entry that neither the local nor the remote pattern names is left at
+     zero, so the whole array is zeroed up front; the two accumulations below then both add. */
+  if (imode == INSERT_VALUES) PetscCall(PetscArrayzero(a, m));
   /* Add local entries to A and B */
-  for (PetscInt i = 0; i < m; i++) { /* All entries in a[] are either zero'ed or added with a value (i.e., initialized) */
-    PetscScalar sum = 0.0;           /* Do partial summation first to improve numerical stability */
+  for (PetscCount i = 0; i < nnz1; i++) {
+    PetscScalar sum = 0.0; /* Do partial summation first to improve numerical stability */
     for (PetscCount k = jmap1[i]; k < jmap1[i + 1]; k++) sum += v[perm1[k]];
-    a[i] = (imode == INSERT_VALUES ? 0.0 : a[i]) + sum;
+    a[imap1[i]] += sum;
   }
   PetscCall(PetscSFReduceEnd(vmpi->coo_sf, MPIU_SCALAR, sendbuf, recvbuf, MPI_REPLACE));
 
