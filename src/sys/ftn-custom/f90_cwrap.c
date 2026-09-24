@@ -551,6 +551,7 @@ PetscErrorCode F90Array4dDestroy(F90Array4d *ptr, MPI_Datatype type PETSC_F90_2P
   #define f90array1dgetaddrbool_        F90ARRAY1DGETADDRBOOL
   #define f90array1dgetaddrmpiint_      F90ARRAY1DGETADDRMPIINT
   #define f90array1dgetaddrfortranaddr_ F90ARRAY1DGETADDRFORTRANADDR
+  #define f90array1dgetdescriptor_      F90ARRAY1DGETDESCRIPTOR
 #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define f90array1dgetaddrscalar_      f90array1dgetaddrscalar
   #define f90array1dgetaddrreal_        f90array1dgetaddrreal
@@ -558,6 +559,7 @@ PetscErrorCode F90Array4dDestroy(F90Array4d *ptr, MPI_Datatype type PETSC_F90_2P
   #define f90array1dgetaddrbool_        f90array1dgetaddrbool
   #define f90array1dgetaddrmpiint_      f90array1dgetaddrmpiint
   #define f90array1dgetaddrfortranaddr_ f90array1dgetaddrfortranaddr
+  #define f90array1dgetdescriptor_      f90array1dgetdescriptor
 #endif
 
 PETSC_EXTERN void f90array1dgetaddrscalar_(void *array, PetscFortranAddr *address)
@@ -583,6 +585,10 @@ PETSC_EXTERN void f90array1dgetaddrmpiint_(void *array, PetscFortranAddr *addres
 PETSC_EXTERN void f90array1dgetaddrfortranaddr_(void *array, PetscFortranAddr *address)
 {
   *address = (PetscFortranAddr)array;
+}
+PETSC_EXTERN void f90array1dgetdescriptor_(F90Array1d *array, void **address PETSC_F90_2PTR_PROTO(ptrd))
+{
+  *address = array;
 }
 
 #if PetscDefined(HAVE_FORTRAN_CAPS)

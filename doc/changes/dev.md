@@ -132,6 +132,7 @@
 
 ## PC
 
+- Add `PC_ASM_WEIGHTED`, `PCASMWeightedSetScaling()`, `PCASMWeightedGetScaling()`, and `PCASMWeightedSetComputeScaling()` for user-supplied diagonal interpolation weights on overlapping subdomains
 - Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering the prolongator in `PCGAMG`. The threshold is relative, applies to whole fine-node/coarse-node coupling blocks while preserving the near-null space, and must be in [0,1)
 - Add `PCGAMGSetProlongatorFilterScale()` and `PCGAMGGetProlongatorFilterScale()` to set/get the per-level scaling of the prolongator filter threshold in `PCGAMG`; the scale must be in [0,1]
 - `PCGAMGSetThresholdScale()` now requires its argument to be in [0,1]
@@ -279,3 +280,7 @@
 - Add `PetscWeakFormGetKeys()`
 
 ## Fortran
+
+- `PCASMGetLocalSubdomains()` and `PCASMGetLocalSubmatrices()` now fill disassociated pointer outputs and return arrays that are absent in C as disassociated pointers. Pass `PETSC_NULL_IS_POINTER` or `PETSC_NULL_MAT_POINTER` to omit an array
+- Fix `PCASMCreateSubdomains()`, which misread the number of blocks. It now errors if given `PETSC_NULL_IS_POINTER`
+- `PCASMDestroySubdomains()` accepts `PETSC_NULL_IS_POINTER` for `is_local`, and `PCASMGetSubKSP()` and `PCASMGetLocalSubmatrices()` now return their errors instead of discarding them
