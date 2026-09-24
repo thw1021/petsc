@@ -93,6 +93,7 @@
 
 - Fix an invalid free in `MatColoringDestroy()` for weights supplied with `MatColoringSetWeights()`
 - Speed up single-index-set `MatCreateSubMatrices()` reuse for `MATMPIAIJ` with sorted column subsets and unchanged structure
+- Add `MatGetValuesCOOCompactMap()` and `MatSetValuesCOOCompact()` so applications can accumulate directly into a compact host value stream for AIJ COO assembly
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
 - Add `MATPRODUCT_AB` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL` with any matrix type
 - Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
