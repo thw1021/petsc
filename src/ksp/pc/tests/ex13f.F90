@@ -1,8 +1,25 @@
 !
-!   Tests PCASMWeightedGetScaling() from Fortran with an output pointer that starts disassociated
+!   Tests PCASMWeightedGetScaling() from Fortran with an output pointer that starts disassociated,
+!   and PCASMWeightedSetComputeScaling() with a Fortran callback and context
 !
 ! -----------------------------------------------------------------------
 #include <petsc/finclude/petscksp.h>
+
+! Fills the weights of the only local subdomain with the value passed as context
+subroutine FillScaling(pc, local, scaling, value, ierr)
+  use petscksp
+  implicit none
+
+  PC pc
+  PetscInt local
+  Vec scaling
+  PetscScalar value
+  PetscErrorCode ierr
+
+  PetscCheck(local == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Expected a single local subdomain')
+  PetscCall(VecSet(scaling, value, ierr))
+end subroutine
+
 program main
   use petscksp
   implicit none
@@ -14,9 +31,10 @@ program main
   PetscInt n, m, i, istart, iend
   PetscInt, parameter :: nlocal = 4
   PetscReal norm
-  PetscScalar total
+  PetscScalar total, three
   PetscScalar, parameter :: one = 1.0, two = 2.0
   PetscErrorCode ierr
+  external FillScaling
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallA(PCCreate(PETSC_COMM_WORLD, pc, ierr))
@@ -72,6 +90,23 @@ program main
   PetscCallA(PCASMWeightedGetScaling(pc, n, scaling, ierr))
   PetscCheckA(n == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Expected no scaling vectors after PCReset()')
   PetscCheckA(.not. associated(scaling), PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Expected a disassociated pointer after PCReset()')
+
+  ! A callback registered before setup computes the weights, with its context passed through
+  three = 3.0
+  PetscCallA(PCASMWeightedSetComputeScaling(pc, FillScaling, three, ierr))
+  PetscCallA(PCSetOperators(pc, A, A, ierr))
+  PetscCallA(PCSetUp(pc, ierr))
+  PetscCallA(PCASMWeightedGetScaling(pc, n, scaling, ierr))
+  PetscCheckA(n == 1 .and. associated(scaling), PETSC_COMM_SELF, PETSC_ERR_PLIB, 'PCASMWeightedSetComputeScaling() did not create the weights')
+  PetscCallA(PCApply(pc, x, y, ierr))
+  PetscCallA(VecAXPY(y, -three, x, ierr))
+  PetscCallA(VecNorm(y, NORM_INFINITY, norm, ierr))
+  PetscCheckA(norm < PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_PLIB, 'PCApply() did not use the computed weights')
+
+  ! PETSC_NULL_FUNCTION disables the callback and keeps the computed weights
+  PetscCallA(PCASMWeightedSetComputeScaling(pc, PETSC_NULL_FUNCTION, 0, ierr))
+  PetscCallA(PCASMWeightedGetScaling(pc, n, scaling, ierr))
+  PetscCheckA(n == 1 .and. associated(scaling), PETSC_COMM_SELF, PETSC_ERR_PLIB, 'Disabling the callback discarded the weights')
 
   PetscCallA(VecDestroy(x, ierr))
   PetscCallA(VecDestroy(y, ierr))

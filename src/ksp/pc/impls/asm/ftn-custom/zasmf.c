@@ -2,25 +2,27 @@
 #include <petscksp.h>
 
 #if PetscDefined(HAVE_FORTRAN_CAPS)
-  #define pcasmgetsubksp_           PCASMGETSUBKSP
-  #define pcasmrestoresubksp_       PCASMRESTORESUBKSP
-  #define pcasmgetlocalsubmatrices_ PCASMGETLOCALSUBMATRICES
-  #define pcasmgetlocalsubdomains_  PCASMGETLOCALSUBDOMAINS
-  #define pcasmweightedgetscaling_  PCASMWEIGHTEDGETSCALING
-  #define pcasmcreatesubdomains_    PCASMCREATESUBDOMAINS
-  #define pcasmdestroysubdomains_   PCASMDESTROYSUBDOMAINS
-  #define pcasmcreatesubdomains2d_  PCASMCREATESUBDOMAINS2D
+  #define pcasmgetsubksp_                 PCASMGETSUBKSP
+  #define pcasmrestoresubksp_             PCASMRESTORESUBKSP
+  #define pcasmgetlocalsubmatrices_       PCASMGETLOCALSUBMATRICES
+  #define pcasmgetlocalsubdomains_        PCASMGETLOCALSUBDOMAINS
+  #define pcasmweightedgetscaling_        PCASMWEIGHTEDGETSCALING
+  #define pcasmweightedsetcomputescaling_ PCASMWEIGHTEDSETCOMPUTESCALING
+  #define pcasmcreatesubdomains_          PCASMCREATESUBDOMAINS
+  #define pcasmdestroysubdomains_         PCASMDESTROYSUBDOMAINS
+  #define pcasmcreatesubdomains2d_        PCASMCREATESUBDOMAINS2D
 
   #define f90array1ddestroyfortranaddr_ F90ARRAY1DDESTROYFORTRANADDR
 #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
-  #define pcasmgetsubksp_           pcasmgetsubksp
-  #define pcasmrestoresubksp_       pcasmrestoresubksp
-  #define pcasmgetlocalsubmatrices_ pcasmgetlocalsubmatrices
-  #define pcasmgetlocalsubdomains_  pcasmgetlocalsubdomains
-  #define pcasmweightedgetscaling_  pcasmweightedgetscaling
-  #define pcasmcreatesubdomains_    pcasmcreatesubdomains
-  #define pcasmdestroysubdomains_   pcasmdestroysubdomains
-  #define pcasmcreatesubdomains2d_  pcasmcreatesubdomains2d
+  #define pcasmgetsubksp_                 pcasmgetsubksp
+  #define pcasmrestoresubksp_             pcasmrestoresubksp
+  #define pcasmgetlocalsubmatrices_       pcasmgetlocalsubmatrices
+  #define pcasmgetlocalsubdomains_        pcasmgetlocalsubdomains
+  #define pcasmweightedgetscaling_        pcasmweightedgetscaling
+  #define pcasmweightedsetcomputescaling_ pcasmweightedsetcomputescaling
+  #define pcasmcreatesubdomains_          pcasmcreatesubdomains
+  #define pcasmdestroysubdomains_         pcasmdestroysubdomains
+  #define pcasmcreatesubdomains2d_        pcasmcreatesubdomains2d
 
   #define f90array1ddestroyfortranaddr_ f90array1ddestroyfortranaddr
 #endif
@@ -65,6 +67,27 @@ PETSC_EXTERN void pcasmweightedgetscaling_(PC *pc, PetscInt *n, F90Array1d *scal
   if (n) *n = nloc;
   if (tscaling) *ierr = F90Array1dCreate(tscaling, MPIU_FORTRANADDR, 1, nloc, scaling PETSC_F90_2PTR_PARAM(ptrd));
   else f90array1ddestroyfortranaddr_(scaling PETSC_F90_2PTR_PARAM(ptrd));
+}
+
+static struct {
+  PetscFortranCallbackId computescaling;
+} _cb;
+
+static PetscErrorCode ourcomputescaling(PC pc, PetscInt local, Vec scaling, PETSC_UNUSED PetscCtx ctx)
+{
+  PetscObjectUseFortranCallbackSubType(pc, _cb.computescaling, (PC *, PetscInt *, Vec *, void *, PetscErrorCode *), (&pc, &local, &scaling, _ctx, &ierr));
+}
+
+PETSC_EXTERN void pcasmweightedsetcomputescaling_(PC *pc, void (*fn)(PC *, PetscInt *, Vec *, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr)
+{
+  CHKFORTRANNULLFUNCTION(fn);
+  if (!fn) {
+    *ierr = PCASMWeightedSetComputeScaling(*pc, NULL, NULL);
+    return;
+  }
+  *ierr = PetscObjectSetFortranCallback((PetscObject)*pc, PETSC_FORTRAN_CALLBACK_SUBTYPE, &_cb.computescaling, (PetscFortranCallbackFn *)fn, ctx);
+  if (*ierr) return;
+  *ierr = PCASMWeightedSetComputeScaling(*pc, ourcomputescaling, NULL);
 }
 
 PETSC_EXTERN void pcasmgetlocalsubdomains_(PC *pc, PetscInt *n, F90Array1d *is, F90Array1d *is_local, int *ierr PETSC_F90_2PTR_PROTO(ptrd1) PETSC_F90_2PTR_PROTO(ptrd2))
