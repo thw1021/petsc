@@ -833,7 +833,7 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
 }
 
 /*@C
-  MatGetValuesCOOCompactMap - get a map from the original COO value stream to compact storage
+  MatGetValuesCOOCompactMap - get the array indices for accumulating COO contributions into compact storage
 
   Collective
 
@@ -841,38 +841,38 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
 . A - matrix preallocated using `MatSetPreallocationCOO()` or `MatSetPreallocationCOOLocal()`
 
   Output Parameters:
-+ ncompact - local number of scalar entries required by `MatSetValuesCOOCompact()`
-- coo_map  - newly allocated array of length `ncoo`, the local count passed to COO preallocation
++ ncompact - required length of the compact value array on this rank
+- coo_map  - newly allocated array mapping each original COO contribution to a compact index; its length is `ncoo`, the local count passed to COO preallocation
 
   Level: developer
 
   Notes:
-  The caller owns `coo_map` and must free it with `PetscFree()`. Its indices lie in `[0, ncompact)` and correspond to the original
-  order of the COO indices, before preallocation modified those indices. The map can be reused for successive value updates
-  with this COO preallocation while the matrix's nonzero-structure state is unchanged. Operations that may change the structure
-  can invalidate the map even when the final pattern is unchanged. After such operations or matrix type conversion, repeat COO
-  preallocation before obtaining a new map. Querying this routine alone does not rebuild COO metadata. `MatDuplicate()` preserves
-  COO preallocation, so an unchanged duplicate can reuse the map. Discard the old map whenever COO preallocation is repeated.
+  Add the kth original COO contribution to `compact_v[coo_map[k]]`. Repeated entries in locally owned rows share an index,
+  so a producer can sum directly into compact storage without first creating an `ncoo`-entry value array. The map follows
+  the original input order, before COO preallocation modifies the indices.
 
-  Initialize all `ncompact` values to zero and accumulate each original contribution into `compact_v[coo_map[k]]`.
-  Repeated entries for locally owned rows share a slot. Off-process entries retain separate slots for communication;
-  they are summed on the owning rank by `MatSetValuesCOOCompact()`. Entries ignored during preallocation map to the final,
-  discarded slot. This extra slot is included in `ncompact`, even for an empty matrix, and its value is never read.
+  Free `coo_map` with `PetscFree()`. Reuse it for value updates and unchanged `MatDuplicate()` results; discard it on
+  re-preallocation. After changes to the matrix type or nonzero-structure state, repeat COO preallocation and obtain a new map,
+  even if the final nonzero pattern is unchanged.
 
-  The compact stream contains the locally stored nonzeros, the outgoing COO entries, and the discarded slot. Its size need not
-  be smaller than `ncoo`, especially on ranks receiving many remote contributions. The map requires an additional `ncoo`
-  integers, so fewer scalar slots alone do not imply lower total memory usage. Compact indices must fit in `PetscInt`.
-  The current implementations use the host COO paths of `MATSEQAIJ` and `MATMPIAIJ`; accelerator-specific COO paths are unsupported.
+  Host `MATSEQAIJ` and `MATMPIAIJ` are supported. Slots hold local nonzeros, separate outgoing COO contributions, and one
+  unread discard slot, even for empty input. Ignored entries map to `ncompact - 1`; remote-row duplicates are summed on
+  the owner by `MatSetValuesCOOCompact()`. `ncompact` need not be smaller than `ncoo`, and the map costs `ncoo` additional
+  integers. Compact indices must fit in `PetscInt`.
 
   Example Usage:
+  On one rank, assemble a 4-by-4 `MATSEQAIJ` matrix from triangles with vertices (0,1,2) and (1,2,3). Each full 3-by-3
+  element matrix contributes nine COO entries. Let the first element contribute ones and the second twos.
 .vb
-  PetscCall(MatGetValuesCOOCompactMap(A, &ncompact, &coo_map));
-  PetscCall(PetscCalloc1(ncompact, &compact_v));
-  for (PetscCount k = 0; k < ncoo; ++k) compact_v[coo_map[k]] += coo_v[k];
-  PetscCall(MatSetValuesCOOCompact(A, compact_v, INSERT_VALUES));
-  PetscCall(PetscFree(compact_v));
-  PetscCall(PetscFree(coo_map));
+               triangle (0,1,2)            triangle (1,2,3)
+  coo_i   = {0,0,0,1,1,1,2,2,2,           1,1,1,2,2,2,3,3,3}
+  coo_j   = {0,1,2,0,1,2,0,1,2,           1,2,3,1,2,3,1,2,3}
+  coo_v   = {1,1,1,1,1,1,1,1,1,           2,2,2,2,2,2,2,2,2}
+  coo_map = {0,1,2,3,4,5,7,8,9,           4,5,6,8,9,10,11,12,13}
 .ve
+  After `MatSetPreallocationCOO(A, 18, coo_i, coo_j)`, this routine returns the map shown above and `ncompact = 15` for
+  fourteen distinct matrix entries plus the discard slot. For example, `coo_map[4] = coo_map[9] = 4`, since both
+  contributions describe (1,1). `MatSetValuesCOOCompact()` shows how to sum these values and assemble the matrix.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetPreallocationCOO()`, `MatSetPreallocationCOOLocal()`, `MatSetValuesCOO()`, `MatSetValuesCOOCompact()`
 @*/
@@ -890,30 +890,42 @@ PetscErrorCode MatGetValuesCOOCompactMap(Mat A, PetscCount *ncompact, PetscInt *
 }
 
 /*@
-  MatSetValuesCOOCompact - set matrix values reduced according to `MatGetValuesCOOCompactMap()`
+  MatSetValuesCOOCompact - set matrix values from COO contributions summed by the caller
 
   Collective
 
   Input Parameters:
 + A         - matrix preallocated using `MatSetPreallocationCOO()` or `MatSetPreallocationCOOLocal()`
-. compact_v - compact values in host memory, or `NULL` for zero contributions from this rank
+. compact_v - array of `ncompact` values in host memory, or `NULL` for zero contributions from this rank
 - imode     - `INSERT_VALUES` or `ADD_VALUES`
 
   Level: developer
 
   Notes:
-  Sum local contributions using the map from `MatGetValuesCOOCompactMap()` before calling this routine, regardless of `imode`.
-  Initialize all compact slots, including slots with no local contribution, to zero before accumulating a new value stream.
-  The final discarded slot is not read. Incoming off-process contributions are summed by this routine.
-  The caller's accumulation order can differ from `MatSetValuesCOO()`, so floating-point roundoff can differ.
+  Zero all compact slots before every update, including those with no local contribution. For either insert mode, sum
+  duplicates using the map from `MatGetValuesCOOCompactMap()`. Remote contributions are summed on the owner; the discard
+  slot is ignored. Floating-point roundoff can differ from `MatSetValuesCOO()`.
 
-  `INSERT_VALUES` replaces the matrix values with the summed contributions from all ranks; `ADD_VALUES` adds these contributions
-  to the existing matrix values. A `NULL` array contributes zeros but still participates in communication.
-  The array can be freed or reused immediately after this routine returns. It must not alias the matrix's own value arrays.
-  With `MAT_STRUCTURE_ONLY`, values are ignored and assembly still completes. Factored matrices are unsupported.
+  The sum from all ranks replaces matrix values with `INSERT_VALUES` or is added to them with `ADD_VALUES`.
+  A `NULL` array contributes zeros but still participates in communication. The array must not alias the matrix's values
+  and can be freed or reused on return. With `MAT_STRUCTURE_ONLY`, values are ignored. Factored matrices are unsupported.
+  Assembly completes automatically; no `MatAssemblyBegin()` or `MatAssemblyEnd()` is needed.
 
-  `MatAssemblyBegin()` and `MatAssemblyEnd()` do not need to be called afterward. This routine completes assembly and updates
-  the matrix state. The map must still describe the current nonzero structure; see `MatGetValuesCOOCompactMap()`.
+  Example Usage:
+  Assemble the two triangles from `MatGetValuesCOOCompactMap()` as follows.
+.vb
+  PetscCall(MatGetValuesCOOCompactMap(A, &ncompact, &coo_map));
+  PetscCall(PetscCalloc1(ncompact, &compact_v));
+  for (PetscCount k = 0; k < 18; ++k) compact_v[coo_map[k]] += coo_v[k];
+  PetscCall(MatSetValuesCOOCompact(A, compact_v, INSERT_VALUES));
+  PetscCall(PetscFree(compact_v));
+  PetscCall(PetscFree(coo_map));
+.ve
+  The array passed to the setter is shown below.
+.vb
+  compact_v = {1,1,1,1,3,3,2,1,3,3,2,2,2,2,0}
+.ve
+  Slots 4, 5, 8, and 9 contain 1 + 2 = 3 for shared positions (1,1), (1,2), (2,1), and (2,2). The final slot is ignored.
 
 .seealso: [](ch_matrices), `Mat`, `MatGetValuesCOOCompactMap()`, `MatSetValuesCOO()`, `MatSetPreallocationCOO()`, `MatSetPreallocationCOOLocal()`, `InsertMode`
 @*/
