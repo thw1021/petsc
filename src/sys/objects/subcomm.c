@@ -491,26 +491,38 @@ static PetscErrorCode PetscSubcommCreate_interlaced(PetscSubcomm psubcomm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  PetscCommCreateNonempty - Creates a sub-communicator of the processes of comm that own data.
-  Collective on comm.
+/*@
+  PetscCommCreateNonempty - Creates a sub-communicator of the processes of a communicator that own data
 
-  ranges holds the offset of the first datum owned by each process, has one more entry than comm has
-  processes, and is the same on every process. subcomm is returned as comm itself when every process
-  owns data, as MPI_COMM_NULL on a process that owns none, and otherwise as a new communicator of
-  the processes that do. Release it with PetscCommDestroyNonempty(), which frees it only when it is
-  a new communicator.
+  Collective
 
+  Input Parameters:
++ comm   - the communicator to split
+- ranges - the offset of the first datum owned by each process, of length one more than the size of
+           `comm`, and the same on every process
+
+  Output Parameter:
+. subcomm - `comm` itself when every process owns data, `MPI_COMM_NULL` on a process that owns none,
+            and otherwise a new communicator of the processes that do
+
+  Level: developer
+
+  Notes:
   Graph partitioning and ordering libraries such as ParMETIS and PT-SCOTCH require every process of
   the communicator they are given to own at least one vertex. Building the distributed graph on the
-  communicator returned here, and doing nothing where it is MPI_COMM_NULL, meets that requirement
+  communicator returned here, and doing nothing where it is `MPI_COMM_NULL`, meets that requirement
   without altering the graph itself.
 
-  Because ranges is already known to every process, whether a split is needed is decided without
+  Release `subcomm` with `PetscCommDestroyNonempty()`, which frees it only when it is a new
+  communicator.
+
+  Because `ranges` is already known to every process, whether a split is needed is decided without
   communicating, and no communicator is created when every process owns data. The processes of a new
-  subcomm keep their relative order in comm, so a contiguous layout stays contiguous, and ascending,
-  over subcomm.
-*/
+  `subcomm` keep their relative order in `comm`, so a contiguous layout stays contiguous, and
+  ascending, over `subcomm`.
+
+.seealso: `PetscCommDestroyNonempty()`, `PetscCommDuplicate()`, `PetscSubcommCreate()`
+@*/
 PetscErrorCode PetscCommCreateNonempty(MPI_Comm comm, const PetscInt ranges[], MPI_Comm *subcomm)
 {
   PetscMPIInt p, rank, size;
@@ -538,13 +550,30 @@ PetscErrorCode PetscCommCreateNonempty(MPI_Comm comm, const PetscInt ranges[], M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  PetscCommDestroyNonempty - Releases a communicator obtained from PetscCommCreateNonempty() and sets
-  it to MPI_COMM_NULL. Collective on comm.
+/*@
+  PetscCommDestroyNonempty - Releases a communicator obtained from `PetscCommCreateNonempty()`
 
-  PetscCommCreateNonempty() returns comm itself when every process owns data, so subcomm is freed
-  only when it is a different communicator.
-*/
+  Collective
+
+  Input Parameter:
+. comm - the communicator that was split
+
+  Input/Output Parameter:
+. subcomm - the communicator to release, set to `MPI_COMM_NULL`
+
+  Level: developer
+
+  Notes:
+  `PetscCommCreateNonempty()` returns `comm` itself when every process owns data, so `subcomm` is
+  freed only when it is a different communicator.
+
+  The only communication this performs is the `MPI_Comm_free()` of `subcomm`, so it is collective
+  over `subcomm`; `comm` serves only to recognize the case where no new communicator was created.
+  Every process of `subcomm` must call this. On a process where `subcomm` is `MPI_COMM_NULL` the call
+  does nothing, so it may be omitted there.
+
+.seealso: `PetscCommCreateNonempty()`, `PetscCommDestroy()`
+@*/
 PetscErrorCode PetscCommDestroyNonempty(MPI_Comm comm, MPI_Comm *subcomm)
 {
   PetscFunctionBegin;
