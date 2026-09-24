@@ -7,6 +7,7 @@ machine learning tasks at a higher level of abstraction than a purely algebraic 
 Methods are currently available for
 
 - {any}`sec_regressor_linear`
+- {any}`sec_regressor_nlls`
 
 Note that by "regressor" we mean an algorithm or implementation used to fit and apply a regression
 model, following standard parlance in the machine-learning community.
@@ -46,6 +47,8 @@ PETSc's default method for solving regression problems is ordinary least squares
 `PETSCREGRESSORLINEAR`.
 By "linear" we mean that the model $f(x, \theta)$ is linear in its coefficients $\theta$
 but not necessarily linear in its features $x$.
+Models that depend nonlinearly on their parameters are handled by `PETSCREGRESSORNLLS`,
+described in {any}`sec_regressor_nlls`.
 
 Note that data creation, option parsing, and cleaning stages are omitted here for
 clarity. The complete code is available in {ref}`ex3.c <regressor-ex3>`.
@@ -116,8 +119,10 @@ PetscRegressorDestroy(PetscRegressor *regressor);
 ## Regression Solvers
 
 One can see the list of regressor types in Table
-{any}`tab-regressordefaults`. Currently, we only support one type,
-`PETSCREGRESSORLINEAR`, although we plan to add several others in the near future.
+{any}`tab-regressordefaults`. Currently, we support two types, `PETSCREGRESSORLINEAR`
+for models that are linear in their coefficients and `PETSCREGRESSORNLLS` for nonlinear
+least squares curve fitting, although we plan to add several others in the near future.
+`PETSCREGRESSORNLLS` is built only when PETSc is configured for real scalars.
 
 ```{eval-rst}
 .. list-table:: PETSc Regressor
@@ -130,6 +135,9 @@ One can see the list of regressor types in Table
    * - Linear
      - ``PETSCREGRESSORLINEAR``
      - ``linear``
+   * - Nonlinear least squares
+     - ``PETSCREGRESSORNLLS``
+     - ``nlls``
 ```
 
 If the particular method being employed is one that supports regularization,
@@ -139,7 +147,12 @@ the user can set regularizer's weight via
 PetscRegressorSetRegularizerWeight(PetscRegressor regressor, PetscReal weight);
 ```
 
-or with the option `-regressor_regularizer_weight <weight>`.
+or with the option `-regressor_regularizer_weight weight`.
+The weight defaults to 1.0, which is usually the default in scikit-learn, and both
+`PETSCREGRESSORLINEAR` and `PETSCREGRESSORNLLS` pass it on to the underlying `TAOBRGN`
+solver. `REGRESSOR_LINEAR_OLS` overrides this with a weight of 0.0, since ordinary least
+squares is by definition unregularized, but `PETSCREGRESSORNLLS` does not; see
+{any}`sec_regressor_nlls`.
 
 (sec_regressor_linear)=
 
@@ -202,3 +215,105 @@ a vector of the model coefficients from a linear regression model via
 PetscRegressorLinearGetCoefficients(PetscRegressor regressor, Vec *coefficients);
 PetscRegressorLinearGetIntercept(PetscRegressor regressor, PetscScalar *intercept);
 ```
+
+(sec_regressor_nlls)=
+
+## Nonlinear least squares regressor
+
+The `PETSCREGRESSORNLLS` (`-regressor_type nlls`) implementation fits a user-supplied model
+$f(X, p)$ to the observed target values $y$ by minimizing
+
+$$
+\min_p \| f(X, p) - y \|_2^2
+$$
+
+over the vector of model parameters $p$.
+Unlike `PETSCREGRESSORLINEAR`, which requires the model to be linear in its coefficients,
+the model may depend on its parameters in an arbitrary nonlinear fashion; this is the
+"curve fitting" task performed by, for instance, `scipy.optimize.curve_fit`.
+Because the underlying solvers operate on real residuals, `PETSCREGRESSORNLLS` is available
+only when PETSc is configured for real scalars.
+
+The model is supplied as a callback registered with
+
+```
+PetscRegressorNLLSSetFunction(PetscRegressor regressor, Vec f, PetscRegressorNLLSFunctionFn *fn, void *ctx);
+```
+
+where `fn` has the calling sequence
+
+```
+PetscErrorCode fn(PetscRegressor regressor, Mat X, Vec p, Vec f, void *ctx);
+```
+
+Two conventions here differ from what one might expect based on the rest of PETSc.
+First, the callback computes the model values $f(X, p)$ rather than the residual
+$f(X, p) - y$, and the implementation forms the residual internally; this follows the
+convention of `scipy.optimize.curve_fit` instead of that of `SNESSetFunction()` or
+`TaoSetResidualRoutine()`.
+Second, the data matrix `X` is passed to the callback as an argument, mirroring
+`PetscRegressorFit(regressor, X, y)` and `PetscRegressorPredict(regressor, X, y)`, so there
+is no need to stash it in the user context; while fitting, `X` is the training matrix given
+to `PetscRegressorFit()`, and while predicting it is the matrix given to
+`PetscRegressorPredict()`.
+The `f` argument is an optional template for the model output, which must have the same
+layout as the target vector; if it is `NULL`, a vector is duplicated from the target during
+`PetscRegressorSetUp()`.
+
+An initial guess for the parameters is required, and must be set before fitting with
+
+```
+PetscRegressorNLLSSetInitialParameters(PetscRegressor regressor, Vec p0);
+```
+
+The length of `p0` determines the number of model parameters.
+
+The Jacobian of the model with respect to the parameters, $\partial f/\partial p$, can
+optionally be provided using
+
+```
+PetscRegressorNLLSSetJacobian(PetscRegressor regressor, Mat J, Mat Jpre, PetscRegressorNLLSJacobianFn *fn, void *ctx);
+```
+
+If no Jacobian function is set, the Jacobian is approximated by finite differences, at a
+cost of one additional model evaluation per parameter.
+If `J` is `NULL`, a dense matrix of the appropriate size is allocated during
+`PetscRegressorSetUp()`, which is convenient for the small parameter counts typical of curve
+fitting; for large numbers of parameters, preallocate a sparse matrix and pass it to this
+routine.
+
+Once `PetscRegressorFit()` has been called, the fitted parameters can be obtained from
+
+```
+PetscRegressorNLLSGetParameters(PetscRegressor regressor, Vec *p);
+```
+
+This vector is owned by the regressor and must not be destroyed by the user.
+Calling `PetscRegressorPredict()` evaluates the model function at the fitted parameters for
+a new set of observations.
+
+The optimization problem is solved with `TAOBRGN`, whose options are reached using the
+`-regressor_nlls_` prefix, appended to any options prefix set on the regressor itself;
+for example, `-regressor_nlls_tao_monitor` or `-regressor_nlls_tao_max_it 100`.
+As noted in {any}`sec_regressor_solvers`, the regularizer weight defaults to 1.0 and is
+handed to `TAOBRGN`, so a fit performed without setting it is regularized.
+An unregularized nonlinear least squares fit is obtained by setting the weight to zero:
+
+```
+PetscRegressorSetRegularizerWeight(regressor, 0.0);
+```
+
+The example {ref}`below <regressor-ex4>` fits the three-parameter exponential model
+$f(x; p) = p_0 e^{p_1 x} + p_2$ to data generated from known parameter values, supplying an
+analytic Jacobian. Running it with `-use_analytic_jacobian false` instead exercises the
+finite-difference Jacobian.
+
+(regressor-ex4)=
+:::{admonition} Listing: `src/ml/regressor/tests/ex4.c`
+```{literalinclude} /../src/ml/regressor/tests/ex4.c
+:prepend: '#include <petscregressor.h>'
+:start-at: static PetscErrorCode Model
+:end-at: PetscFinalize
+:append: return 0;}
+```
+:::

@@ -156,6 +156,11 @@
 
 ## PetscRegressor
 
+- Add the `PETSCREGRESSORNLLS` regressor type, which fits a user-supplied model $f(X, p)$ to observations by nonlinear least squares using `TAOBRGN`; built only for real scalars
+- Add `PetscRegressorNLLSSetFunction()` and `PetscRegressorNLLSGetFunction()` along with the `PetscRegressorNLLSFunctionFn` callback prototype; the callback returns the model values $f(X, p)$, not the residual
+- Add `PetscRegressorNLLSSetJacobian()` and `PetscRegressorNLLSGetJacobian()` along with the `PetscRegressorNLLSJacobianFn` callback prototype; a finite-difference Jacobian is used if none is set
+- Add `PetscRegressorNLLSSetInitialParameters()` and `PetscRegressorNLLSGetParameters()`
+- Add petsc4py bindings for the above as `Regressor.Type.NLLS`, `setNLLSFunction()`, `getNLLSFunction()`, `setNLLSJacobian()`, `getNLLSJacobian()`, `setNLLSInitialParameters()`, and `getNLLSParameters()`
 
 ## PetscDA
 

@@ -13,6 +13,8 @@
    Notes:
    For linear problems `PetscRegressor` supports ordinary least squares, lasso, and ridge regression using the `PetscRegressorType` of `PETSCREGRESSORLINEAR`
    and `PetscRegressorLinearType` of `REGRESSOR_LINEAR_OLS`, `REGRESSOR_LINEAR_LASSO`, and `REGRESSOR_LINEAR_RIDGE`.
+   For models that depend nonlinearly on their parameters, `PetscRegressor` supports nonlinear least squares curve fitting
+   using the `PetscRegressorType` of `PETSCREGRESSORNLLS`.
 
    We have slightly abused the term "regressor" in the naming of this component of PETSc.
    Statisticians would say that we are doing "regression", and a "regressor", in this context, strictly means an
@@ -23,7 +25,7 @@
    `LinearRegression` component instead of a `LinearRegressor` component).
 
 .seealso: `PetscRegressorCreate()`, `PetscRegressorLinearType`, `PetscRegressorSetType()`, `PetscRegressorType`, `PetscRegressorDestroy()`,
-          `PETSCREGRESSORLINEAR`, `REGRESSOR_LINEAR_OLS`, `REGRESSOR_LINEAR_LASSO`, `REGRESSOR_LINEAR_RIDGE`
+          `PETSCREGRESSORLINEAR`, `PETSCREGRESSORNLLS`, `REGRESSOR_LINEAR_OLS`, `REGRESSOR_LINEAR_LASSO`, `REGRESSOR_LINEAR_RIDGE`
 S*/
 typedef struct _p_PetscRegressor *PetscRegressor;
 
@@ -33,7 +35,7 @@ typedef struct _p_PetscRegressor *PetscRegressor;
   Level: beginner
 
 .seealso: [](ch_regressor), `PetscRegressorSetType()`, `PetscRegressor`, `PetscRegressorRegister()`, `PetscRegressorCreate()`, `PetscRegressorSetFromOptions()`,
-          `PETSCREGRESSORLINEAR`
+          `PETSCREGRESSORLINEAR`, `PETSCREGRESSORNLLS`
 J*/
 typedef const char *PetscRegressorType;
 #define PETSCREGRESSORLINEAR "linear"
