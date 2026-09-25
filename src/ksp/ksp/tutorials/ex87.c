@@ -4,6 +4,7 @@ static char help[] = "Solves a saddle-point linear system using PCHPDDM.\n\n";
 #include <petsc/private/petscimpl.h>
 
 static PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, IS is, Mat N, PetscMPIInt size);
+static PetscErrorCode ResetA11(KSP ksp);
 
 int main(int argc, char **args)
 {
@@ -96,6 +97,9 @@ int main(int argc, char **args)
     PetscCall(PetscViewerDestroy(&viewer));
     PetscCall(MatConvert(A[0], MATBAIJ, MAT_INPLACE_MATRIX, A));
   }
+  flg[3] = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-NULL_A11", flg + 3, NULL));
+  PetscCheck(!flg[3] || flg[0], PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "-NULL_A11 requires -system stokes -empty_A11");
   if (flg[0]) PetscCall(MatDestroy(A + 3));
   else {
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-diagonal_A11", flg, NULL));
@@ -129,6 +133,7 @@ int main(int argc, char **args)
   if (flg[1]) {
     PetscCall(PCSetUp(pc));
     PetscCall(PCFieldSplitGetSubKSP(pc, &n, &subksp));
+    if (flg[3]) PetscCall(ResetA11(subksp[1]));
     PetscCall(KSPGetPC(subksp[0], &pc));
     /* inner preconditioner associated to top-left block */
 #if PetscDefined(HAVE_HPDDM) && PetscDefined(HAVE_DYNAMIC_LIBRARIES) && PetscDefined(USE_SHARED_LIBRARIES)
@@ -170,6 +175,7 @@ int main(int argc, char **args)
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetUp(pc)); /* update PCFIELDSPLIT submatrices */
     PetscCall(PCFieldSplitGetSubKSP(pc, &n, &subksp));
+    if (flg[3]) PetscCall(ResetA11(subksp[1]));
     PetscCall(KSPGetPC(subksp[0], &pc));
 #if PetscDefined(HAVE_HPDDM) && PetscDefined(HAVE_DYNAMIC_LIBRARIES) && PetscDefined(USE_SHARED_LIBRARIES)
     PetscCall(PCHPDDMSetAuxiliaryMat(pc, is[0], aux[0], NULL, NULL));
@@ -259,6 +265,17 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode ResetA11(KSP ksp)
+{
+  Mat S, A00, Ap00, A01, A10;
+
+  PetscFunctionBeginUser;
+  PetscCall(KSPGetOperators(ksp, &S, NULL));
+  PetscCall(MatSchurComplementGetSubMatrices(S, &A00, &Ap00, &A01, &A10, NULL));
+  PetscCall(MatSchurComplementUpdateSubMatrices(S, A00, Ap00, A01, A10, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*TEST
 
    testset:
@@ -282,7 +299,7 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
       test:
         suffix: 2_petsc
         output_file: output/ex87_1_petsc_system-stokes.out
-        args: -system stokes -empty_A11 -transpose -fieldsplit_1_pc_hpddm_ksp_pc_side right -fieldsplit_1_pc_hpddm_levels_1_sub_pc_factor_mat_solver_type petsc -fieldsplit_1_pc_hpddm_coarse_mat_type baij -fieldsplit_1_pc_hpddm_levels_1_eps_threshold_absolute 0.3 -fieldsplit_1_pc_hpddm_levels_1_sub_pc_factor_shift_type inblocks -successive_solves
+        args: -system stokes -empty_A11 -NULL_A11 {{false true}shared output} -transpose -fieldsplit_1_pc_hpddm_ksp_pc_side right -fieldsplit_1_pc_hpddm_levels_1_sub_pc_factor_mat_solver_type petsc -fieldsplit_1_pc_hpddm_coarse_mat_type baij -fieldsplit_1_pc_hpddm_levels_1_eps_threshold_absolute 0.3 -fieldsplit_1_pc_hpddm_levels_1_sub_pc_factor_shift_type inblocks -successive_solves
         filter: sed -e "s/type: transpose/type: hermitiantranspose/g"
       test:
         suffix: threshold
