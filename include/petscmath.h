@@ -2064,28 +2064,93 @@ M*/
 M*/
 #define PETSC_NINFINITY (-PETSC_INFINITY)
 
-PETSC_EXTERN PetscBool  PetscIsInfReal(PetscReal);
-PETSC_EXTERN PetscBool  PetscIsNanReal(PetscReal);
-PETSC_EXTERN PetscBool  PetscIsNormalReal(PetscReal);
+PETSC_EXTERN PetscBool PetscIsInfReal(PetscReal);
+PETSC_EXTERN PetscBool PetscIsNanReal(PetscReal);
+PETSC_EXTERN PetscBool PetscIsNormalReal(PetscReal);
+
+/*@
+  PetscIsInfOrNanReal - Returns `PETSC_TRUE` if the input argument is infinity or NaN
+
+  Not Collective
+
+  Input Parameter:
+. v - a `PetscReal` value
+
+  Level: developer
+
+.seealso: `PetscReal`, `PetscIsInfScalar()`, `PetscIsNanScalar()`, `PetscIsInfOrNanScalar()`, `PetscIsNormalReal()`
+@*/
 static inline PetscBool PetscIsInfOrNanReal(PetscReal v)
 {
   return PetscIsInfReal(v) || PetscIsNanReal(v) ? PETSC_TRUE : PETSC_FALSE;
 }
+
+/*@
+  PetscIsInfScalar - Returns `PETSC_TRUE` if the input argument is infinity
+
+  Not Collective
+
+  Input Parameter:
+. v - a `PetscScalar` value
+
+  Level: developer
+
+.seealso: `PetscScalar`, `PetscIsInfOrNanReal()`, `PetscIsNanScalar()`, `PetscIsInfOrNanScalar()`, `PetscIsNormalScalar()`
+@*/
 static inline PetscBool PetscIsInfScalar(PetscScalar v)
 {
-  return PetscIsInfReal(PetscAbsScalar(v));
+  return (PetscBool)(PetscIsInfReal(PetscRealPart(v)) || PetscIsInfReal(PetscImaginaryPart(v)));
 }
+
+/*@
+  PetscIsNanScalar - Returns `PETSC_TRUE` if the input argument is NaN
+
+  Not Collective
+
+  Input Parameter:
+. v - a `PetscScalar` value
+
+  Level: developer
+
+.seealso: `PetscScalar`, `PetscIsInfOrNanReal()`, `PetscIsInfScalar()`, `PetscIsInfOrNanScalar()`, `PetscIsNormalScalar()`
+@*/
 static inline PetscBool PetscIsNanScalar(PetscScalar v)
 {
-  return PetscIsNanReal(PetscAbsScalar(v));
+  return (PetscBool)(PetscIsNanReal(PetscRealPart(v)) || PetscIsNanReal(PetscImaginaryPart(v)));
 }
+
+/*@
+  PetscIsInfOrNanScalar - Returns `PETSC_TRUE` if the input argument is infinity or NaN
+
+  Not Collective
+
+  Input Parameter:
+. v - a `PetscScalar` value
+
+  Level: developer
+
+.seealso: `PetscReal`, `PetscIsInfScalar()`, `PetscIsNanScalar()`, `PetscIsInfOrNanReal()`, `PetscIsNormalScalar()`
+@*/
 static inline PetscBool PetscIsInfOrNanScalar(PetscScalar v)
 {
-  return PetscIsInfOrNanReal(PetscAbsScalar(v));
+  return (PetscBool)(PetscIsInfOrNanReal(PetscRealPart(v)) || PetscIsInfOrNanReal(PetscImaginaryPart(v)));
 }
+
+/*@
+  PetscIsNormalScalar - Returns `PETSC_TRUE` if the input argument is normal
+
+  Not Collective
+
+  Input Parameter:
+. v - a `PetscScalar` value
+
+  Level: developer
+
+.seealso: `PetscReal`, `PetscIsInfScalar()`, `PetscIsNanScalar()`, `PetscIsInfOrNanReal()`, `PetscIsNormalReal()`
+@*/
 static inline PetscBool PetscIsNormalScalar(PetscScalar v)
 {
-  return PetscIsNormalReal(PetscAbsScalar(v));
+  return (PetscBool)(PetscIsNormalReal(PetscRealPart(v)) || PetscIsNormalReal(PetscImaginaryPart(v)));
 }
 
 PETSC_EXTERN PetscBool PetscIsCloseAtTol(PetscReal, PetscReal, PetscReal, PetscReal);
