@@ -1507,7 +1507,7 @@ PetscErrorCode PCASMCreateSubdomains(Mat A, PetscInt n, IS *outis[])
 
 /*@
   PCASMDestroySubdomains - Destroys the index sets created with
-  `PCASMCreateSubdomains()`. Should be called after setting subdomains with `PCASMSetLocalSubdomains()`.
+  `PCASMCreateSubdomains()` or `PCASMCreateSubdomains2D()`. Should be called after setting subdomains with `PCASMSetLocalSubdomains()`.
 
   Collective
 
@@ -1518,13 +1518,18 @@ PetscErrorCode PCASMCreateSubdomains(Mat A, PetscInt n, IS *outis[])
 
   Level: advanced
 
+  Note:
+  `PCASMCreateSubdomains2D()` also creates an array of non-overlapping local index sets, which must be passed as `is_local`.
+  `PCASMCreateSubdomains()` creates no local index sets, so pass `NULL` for `is_local`.
+
   Fortran Note:
-  Pass `PETSC_NULL_IS_POINTER` for `is_local` if it was not created
+  `is` cannot be `PETSC_NULL_IS_POINTER`. For arrays from `PCASMCreateSubdomains2D()`, pass the returned `is_local`;
+  for arrays from `PCASMCreateSubdomains()`, pass `PETSC_NULL_IS_POINTER` for `is_local`.
 
   Developer Note:
   The `IS` arguments should be a *[]
 
-.seealso: [](ch_ksp), `PCASM`, `PCASMCreateSubdomains()`, `PCASMSetLocalSubdomains()`
+.seealso: [](ch_ksp), `PCASM`, `PCASMCreateSubdomains()`, `PCASMCreateSubdomains2D()`, `PCASMSetLocalSubdomains()`
 @*/
 PetscErrorCode PCASMDestroySubdomains(PetscInt n, IS *is[], IS *is_local[])
 {
