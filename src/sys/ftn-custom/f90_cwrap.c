@@ -121,6 +121,8 @@ PETSC_EXTERN void f90array1daccessfortranaddr_(F90Array1d *, void **PETSC_F90_2P
 
    This doesn't actually create the `F90Array1d()`, it just associates a C pointer with it.
 
+   For `MPIU_FORTRANADDR`, a `NULL` array disassociates the Fortran pointer, regardless of `len`.
+
    There are equivalent routines for 2, 3, and 4 dimensional Fortran arrays.
 
 .seealso: `F90Array1d`, `F90Array1dAccess()`, `F90Array1dDestroy()`, `F90Array2dCreate()`, `F90Array2dAccess()`, `F90Array2dDestroy()`
@@ -147,7 +149,8 @@ PetscErrorCode F90Array1dCreate(void *array, MPI_Datatype type, PetscInt start, 
     if (!len) array = PETSC_NULL_INTEGER_Fortran;
     f90array1dcreatempiint_(array, &start, &len, ptr PETSC_F90_2PTR_PARAM(ptrd));
   } else if (type == MPIU_FORTRANADDR) {
-    f90array1dcreatefortranaddr_(array, &start, &len, ptr PETSC_F90_2PTR_PARAM(ptrd));
+    if (array) f90array1dcreatefortranaddr_(array, &start, &len, ptr PETSC_F90_2PTR_PARAM(ptrd));
+    else f90array1ddestroyfortranaddr_(ptr PETSC_F90_2PTR_PARAM(ptrd));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported MPI_Datatype");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
