@@ -226,7 +226,7 @@ static inline PetscErrorCode MatXAIJAllocatea(Mat A, PetscInt nz, PetscScalar **
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscScalar), (void **)array));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscScalar), (void **)array));
   a->free_a = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -267,9 +267,9 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA, MatScalar **a, PetscInt *
 \
       PetscCheck(NONEW != -2, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc. Use MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check", ROW, COL); \
       /* malloc new storage space */ \
-      PetscCall(PetscShmgetAllocateArray(BS2 * new_nz, sizeof(PetscScalar), (void **)&new_a)); \
-      PetscCall(PetscShmgetAllocateArray(new_nz, sizeof(PetscInt), (void **)&new_j)); \
-      PetscCall(PetscShmgetAllocateArray(AM + 1, sizeof(PetscInt), (void **)&new_i)); \
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), BS2 * new_nz, sizeof(PetscScalar), (void **)&new_a)); \
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), new_nz, sizeof(PetscInt), (void **)&new_j)); \
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), AM + 1, sizeof(PetscInt), (void **)&new_i)); \
       Ain->free_a  = PETSC_TRUE; \
       Ain->free_ij = PETSC_TRUE; \
       /* copy over old data into new slots */ \
@@ -306,8 +306,8 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA, MatScalar **a, PetscInt *
 \
       PetscCheck(NONEW != -2, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc. Use MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check", ROW, COL); \
       /* malloc new storage space */ \
-      PetscCall(PetscShmgetAllocateArray(new_nz, sizeof(PetscInt), (void **)&new_j)); \
-      PetscCall(PetscShmgetAllocateArray(AM + 1, sizeof(PetscInt), (void **)&new_i)); \
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), new_nz, sizeof(PetscInt), (void **)&new_j)); \
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), AM + 1, sizeof(PetscInt), (void **)&new_i)); \
       Ain->free_a  = PETSC_FALSE; \
       Ain->free_ij = PETSC_TRUE; \
 \

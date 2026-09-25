@@ -435,12 +435,13 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     if not skipbody:
       shutil.copy(os.path.join(fun.dir,'makefile'), os.path.join(dir,'makefile'))
     else:
-      with open(os.path.join(fun.dir,'makefile')) as fin:
-        with open(os.path.join(dir,'makefile'),'w') as fout:
-          fout.write(fin.read().replace('petscdir.mk','../petscdir.mk'))
-        output = check_output('git add ' + os.path.join(dir,'makefile'), shell=True).decode('utf-8')
-      print('Fix the manual stub for ' + fun.name + ' in ' + stubfile)
-      output = check_output('git add ' + stubfile, shell=True).decode('utf-8')
+      #with open(os.path.join(fun.dir,'makefile')) as fin:
+      #  with open(os.path.join(dir,'makefile'),'w') as fout:
+      #    fout.write(fin.read().replace('petscdir.mk','../petscdir.mk'))
+      #  output = check_output('git add ' + os.path.join(dir,'makefile'), shell=True).decode('utf-8')
+      #print('Fix the manual stub for ' + fun.name + ' in ' + stubfile)
+      #output = check_output('git add ' + stubfile, shell=True).decode('utf-8')
+      pass
 
 def generateFortranStub(senums, funname, fun, fd, opts):
   '''For functions with optional arguments generate the Fortran stub that calls the C stub'''
