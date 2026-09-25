@@ -177,14 +177,14 @@ contains
 end module
 
 ! Return the address of the PETSC_NULL_MAT_POINTER descriptor, so C stubs can recognize an omitted array argument.
-function PetscGetFortranNullMatPointer_Private() bind(C, name="PetscGetFortranNullMatPointer_Private") result(ptr)
+function PETSC_NULL_MAT_POINTER_Fortran() bind(C, name="PETSC_NULL_MAT_POINTER_Fortran") result(ptr)
   use, intrinsic :: ISO_C_binding
   use petscmatdef, only: tMat, PETSC_NULL_MAT_POINTER
   implicit none
   type(c_ptr) ptr
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
-!DEC$ ATTRIBUTES DLLEXPORT::PetscGetFortranNullMatPointer_Private
+!DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_MAT_POINTER_Fortran
 #endif
   interface
     subroutine F90Array1dGetDescriptor(array, address)
