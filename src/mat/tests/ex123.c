@@ -90,6 +90,30 @@ int main(int argc, char **args)
     PetscCall(PetscArraycpy(jt, j1, n1));
     PetscCall(MatSetPreallocationCOOLocal(A, n1, it, jt));
   }
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &ismpiaij, MATSEQAIJ, MATMPIAIJ, ""));
+  if (ismpiaij) {
+    Mat          Acompact;
+    PetscCount   ncompact;
+    PetscInt    *coo_map;
+    PetscScalar *compact_v;
+    PetscReal    norm;
+
+    PetscCall(MatGetValuesCOOCompactMap(A, &ncompact, &coo_map));
+    PetscCall(PetscCalloc1(ncompact, &compact_v));
+    // Summing ignored contributions can overflow before the setter discards them.
+    for (i = 0; i < n1; i++)
+      if (coo_map[i] != ncompact - 1) compact_v[coo_map[i]] += v1[i];
+    PetscCall(MatSetValuesCOOCompact(A, compact_v, INSERT_VALUES));
+    PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &Acompact));
+    PetscCall(MatSetValuesCOO(A, v1, INSERT_VALUES));
+    PetscCall(MatAXPY(Acompact, -1.0, A, SAME_NONZERO_PATTERN));
+    PetscCall(MatNorm(Acompact, NORM_INFINITY, &norm));
+    PetscCheck(norm <= PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Compact COO assembly mismatch: %g", (double)norm);
+    PetscCall(MatDestroy(&Acompact));
+    PetscCall(PetscFree(coo_map));
+    PetscCall(PetscFree(compact_v));
+    PetscCall(MatZeroEntries(A));
+  }
   PetscCall(MatSetValuesCOO(A, v1, ADD_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
