@@ -847,7 +847,7 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
   Level: developer
 
   Notes:
-  Add the kth original COO contribution to `compact_v[coo_map[k]]`. Repeated entries in locally owned rows share an index,
+  Add each nonignored COO contribution to `compact_v[coo_map[k]]`. Repeated entries in locally owned rows share an index,
   so a producer can sum directly into compact storage without first creating an `ncoo`-entry value array. The map follows
   the original input order, before COO preallocation modifies the indices.
 
@@ -856,9 +856,9 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
   even if the final nonzero pattern is unchanged.
 
   Host `MATSEQAIJ` and `MATMPIAIJ` are supported. Slots hold local nonzeros, separate outgoing COO contributions, and one
-  unread discard slot, even for empty input. Ignored entries map to `ncompact - 1`; remote-row duplicates are summed on
-  the owner by `MatSetValuesCOOCompact()`. `ncompact` need not be smaller than `ncoo`, and the map costs `ncoo` additional
-  integers. Compact indices must fit in `PetscInt`.
+  unread discard slot, even for empty input. Ignored entries map to `ncompact - 1`; skip them during accumulation to avoid
+  overflow in the discarded sum. Remote-row duplicates are summed on the owner by `MatSetValuesCOOCompact()`. `ncompact`
+  need not be smaller than `ncoo`, and the map costs `ncoo` additional integers. Compact indices must fit in `PetscInt`.
 
   Example Usage:
   On one rank, assemble a 4-by-4 `MATSEQAIJ` matrix from triangles with vertices (0,1,2) and (1,2,3). Each full 3-by-3
@@ -903,7 +903,7 @@ PetscErrorCode MatGetValuesCOOCompactMap(Mat A, PetscCount *ncompact, PetscInt *
 
   Notes:
   Zero all compact slots before every update, including those with no local contribution. For either insert mode, sum
-  duplicates using the map from `MatGetValuesCOOCompactMap()`. Remote contributions are summed on the owner; the discard
+  nonignored duplicates using the map from `MatGetValuesCOOCompactMap()`. Remote contributions are summed on the owner; the discard
   slot is ignored. Floating-point roundoff can differ from `MatSetValuesCOO()`.
 
   The sum from all ranks replaces matrix values with `INSERT_VALUES` or is added to them with `ADD_VALUES`.
@@ -916,7 +916,8 @@ PetscErrorCode MatGetValuesCOOCompactMap(Mat A, PetscCount *ncompact, PetscInt *
 .vb
   PetscCall(MatGetValuesCOOCompactMap(A, &ncompact, &coo_map));
   PetscCall(PetscCalloc1(ncompact, &compact_v));
-  for (PetscCount k = 0; k < 18; ++k) compact_v[coo_map[k]] += coo_v[k];
+  for (PetscCount k = 0; k < 18; ++k)
+    if (coo_map[k] != ncompact - 1) compact_v[coo_map[k]] += coo_v[k];
   PetscCall(MatSetValuesCOOCompact(A, compact_v, INSERT_VALUES));
   PetscCall(PetscFree(compact_v));
   PetscCall(PetscFree(coo_map));

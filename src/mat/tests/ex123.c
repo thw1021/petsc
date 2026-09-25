@@ -100,7 +100,9 @@ int main(int argc, char **args)
 
     PetscCall(MatGetValuesCOOCompactMap(A, &ncompact, &coo_map));
     PetscCall(PetscCalloc1(ncompact, &compact_v));
-    for (i = 0; i < n1; i++) compact_v[coo_map[i]] += v1[i];
+    // Summing ignored contributions can overflow before the setter discards them.
+    for (i = 0; i < n1; i++)
+      if (coo_map[i] != ncompact - 1) compact_v[coo_map[i]] += v1[i];
     PetscCall(MatSetValuesCOOCompact(A, compact_v, INSERT_VALUES));
     PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &Acompact));
     PetscCall(MatSetValuesCOO(A, v1, INSERT_VALUES));

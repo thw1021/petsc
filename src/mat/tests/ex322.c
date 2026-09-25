@@ -64,7 +64,7 @@ static PetscErrorCode CheckInterleavedValues(Mat A, Mat B, PetscCount ncoo, Pets
 #if PetscDefined(USE_COMPLEX)
       if (!zero) values[k] += PETSC_i * (0.25 * (step + 1));
 #endif
-      compact[map[k]] += values[k];
+      if (map[k] != ncompact - 1) compact[map[k]] += values[k];
     }
     compact[ncompact - 1] = PETSC_MAX_REAL;
     PetscCall(MatGetState(A, &before));
@@ -467,7 +467,9 @@ int main(int argc, char **argv)
 #if PetscDefined(USE_COMPLEX)
         if (!zero) values[k] += PETSC_i * (0.125 * (step + 1));
 #endif
-        compact[map[k]] += values[k];
+        // Ignored input must not overflow while the producer accumulates values.
+        if (rows[k] < 0 || cols[k] < 0 || (ignore_offproc && (rows[k] < start || rows[k] >= end))) values[k] = PETSC_MAX_REAL;
+        if (map[k] != ncompact - 1) compact[map[k]] += values[k];
       }
       // Poison the discarded slot to ensure ignored values never enter the matrix.
       compact[ncompact - 1] = PETSC_MAX_REAL;
