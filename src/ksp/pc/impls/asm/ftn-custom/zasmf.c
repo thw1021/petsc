@@ -9,8 +9,6 @@
   #define pcasmcreatesubdomains_    PCASMCREATESUBDOMAINS
   #define pcasmdestroysubdomains_   PCASMDESTROYSUBDOMAINS
   #define pcasmcreatesubdomains2d_  PCASMCREATESUBDOMAINS2D
-
-  #define f90array1ddestroyfortranaddr_ F90ARRAY1DDESTROYFORTRANADDR
 #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
   #define pcasmgetsubksp_           pcasmgetsubksp
   #define pcasmrestoresubksp_       pcasmrestoresubksp
@@ -19,11 +17,7 @@
   #define pcasmcreatesubdomains_    pcasmcreatesubdomains
   #define pcasmdestroysubdomains_   pcasmdestroysubdomains
   #define pcasmcreatesubdomains2d_  pcasmcreatesubdomains2d
-
-  #define f90array1ddestroyfortranaddr_ f90array1ddestroyfortranaddr
 #endif
-
-PETSC_EXTERN void f90array1ddestroyfortranaddr_(F90Array1d *PETSC_F90_2PTR_PROTO_NOVAR);
 
 PETSC_EXTERN void pcasmcreatesubdomains_(Mat *A, PetscInt *n, F90Array1d *outis, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd1))
 {

@@ -3,8 +3,8 @@
 #include <petsc/private/petscimpl.h>
 PETSC_INTERN PetscErrorCode PETScParseFortranArgs_Private(int *, char ***);
 PETSC_EXTERN PetscErrorCode PetscMPIFortranDatatypeToC(MPI_Fint, MPI_Datatype *);
-PETSC_EXTERN void          *PetscGetFortranNullMatPointer_Private(void);
-PETSC_EXTERN void          *PetscGetFortranNullISPointer_Private(void);
+PETSC_EXTERN void          *PETSC_NULL_MAT_POINTER_Fortran(void);
+PETSC_EXTERN void          *PETSC_NULL_IS_POINTER_Fortran(void);
 
 PETSC_EXTERN PetscErrorCode          PetscScalarAddressToFortran(PetscObject, PetscInt, PetscScalar *, PetscScalar *, PetscInt, size_t *);
 PETSC_EXTERN PetscErrorCode          PetscScalarAddressFromFortran(PetscObject, PetscScalar *, size_t, PetscInt, PetscScalar **);
@@ -77,8 +77,8 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(const char *, PetscInt);
 #define FORTRANNULLINTEGERPOINTER(a) (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_INTEGER_POINTER_Fortran)
 #define FORTRANNULLSCALARPOINTER(a)  (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_POINTER_Fortran)
 #define FORTRANNULLREALPOINTER(a)    (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_POINTER_Fortran)
-#define FORTRANNULLISPOINTER(a)      (((void *)(PETSC_UINTPTR_T)(a)) == PetscGetFortranNullISPointer_Private())
-#define FORTRANNULLMATPOINTER(a)     (((void *)(PETSC_UINTPTR_T)(a)) == PetscGetFortranNullMatPointer_Private())
+#define FORTRANNULLISPOINTER(a)      (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_IS_POINTER_Fortran())
+#define FORTRANNULLMATPOINTER(a)     (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_MAT_POINTER_Fortran())
 #define FORTRANNULLINTEGER(a)        (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_INTEGER_Fortran || ((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_INTEGER_ARRAY_Fortran)
 #define FORTRANNULLSCALAR(a)         (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_Fortran || ((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_SCALAR_ARRAY_Fortran)
 #define FORTRANNULLREAL(a)           (((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_Fortran || ((void *)(PETSC_UINTPTR_T)(a)) == PETSC_NULL_REAL_ARRAY_Fortran)
@@ -423,6 +423,14 @@ typedef struct {
 PETSC_EXTERN PetscErrorCode F90Array1dCreate(void *, MPI_Datatype, PetscInt, PetscInt, F90Array1d *PETSC_F90_2PTR_PROTO_NOVAR);
 PETSC_EXTERN PetscErrorCode F90Array1dAccess(F90Array1d *, MPI_Datatype, void **PETSC_F90_2PTR_PROTO_NOVAR);
 PETSC_EXTERN PetscErrorCode F90Array1dDestroy(F90Array1d *, MPI_Datatype PETSC_F90_2PTR_PROTO_NOVAR);
+
+/* Fortran routine that nullifies a Fortran pointer array of addresses, for stubs that must return an unassociated array */
+#if PetscDefined(HAVE_FORTRAN_CAPS)
+  #define f90array1ddestroyfortranaddr_ F90ARRAY1DDESTROYFORTRANADDR
+#elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
+  #define f90array1ddestroyfortranaddr_ f90array1ddestroyfortranaddr
+#endif
+PETSC_EXTERN void f90array1ddestroyfortranaddr_(F90Array1d *PETSC_F90_2PTR_PROTO_NOVAR);
 
 PETSC_EXTERN PetscErrorCode F90Array2dCreate(void *, MPI_Datatype, PetscInt, PetscInt, PetscInt, PetscInt, F90Array2d *PETSC_F90_2PTR_PROTO_NOVAR);
 PETSC_EXTERN PetscErrorCode F90Array2dAccess(F90Array2d *, MPI_Datatype, void **PETSC_F90_2PTR_PROTO_NOVAR);
