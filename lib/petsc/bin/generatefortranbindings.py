@@ -303,12 +303,13 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     fd.write(')\n{\n')
 
     if skipbody:
-      fd.write('  PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_SUP, PETSC_ERROR_INITIAL, "Add Fortran stub body here!");\n')
-      fd.write('  *ierr = PETSC_ERR_SUP;\n')
-      fd.write('  // You may need the code fragments below\n');
-      fd.write('  // *ierr = F90Array1dCreate(C array, MPIU_XXX, 1, length, Fortran array\n');
-      fd.write('  // *ierr = F90Array1dAccess(Fortran array , MPIU_XXX, (void **)&C array\n');
-      fd.write('  // *ierr = F90Array1dDestroy(Fortran array, MPIU_XXX\n');
+      #fd.write('  PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_SUP, PETSC_ERROR_INITIAL, "Add Fortran stub body here!");\n')
+      #fd.write('  *ierr = PETSC_ERR_SUP;\n')
+      #fd.write('  // You may need the code fragments below\n');
+      #fd.write('  // *ierr = F90Array1dCreate(C array, MPIU_XXX, 1, length, Fortran array\n');
+      #fd.write('  // *ierr = F90Array1dAccess(Fortran array , MPIU_XXX, (void **)&C array\n');
+      #fd.write('  // *ierr = F90Array1dDestroy(Fortran array, MPIU_XXX\n');
+      pass
     else:
       # functions that destroy objects should return immediately if null, -2, -3
       if fun.arguments and fun.arguments[0].typename in classes and fun.name.endswith('Destroy'):
@@ -435,12 +436,13 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     if not skipbody:
       shutil.copy(os.path.join(fun.dir,'makefile'), os.path.join(dir,'makefile'))
     else:
-      with open(os.path.join(fun.dir,'makefile')) as fin:
-        with open(os.path.join(dir,'makefile'),'w') as fout:
-          fout.write(fin.read().replace('petscdir.mk','../petscdir.mk'))
-        output = check_output('git add ' + os.path.join(dir,'makefile'), shell=True).decode('utf-8')
-      print('Fix the manual stub for ' + fun.name + ' in ' + stubfile)
-      output = check_output('git add ' + stubfile, shell=True).decode('utf-8')
+      #with open(os.path.join(fun.dir,'makefile')) as fin:
+      #  with open(os.path.join(dir,'makefile'),'w') as fout:
+      #    fout.write(fin.read().replace('petscdir.mk','../petscdir.mk'))
+      #  output = check_output('git add ' + os.path.join(dir,'makefile'), shell=True).decode('utf-8')
+      #print('Fix the manual stub for ' + fun.name + ' in ' + stubfile)
+      #output = check_output('git add ' + stubfile, shell=True).decode('utf-8')
+      pass
 
 def generateFortranStub(senums, funname, fun, fd, opts):
   '''For functions with optional arguments generate the Fortran stub that calls the C stub'''
