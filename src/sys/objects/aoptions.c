@@ -1106,7 +1106,8 @@ PetscErrorCode PetscOptionsIntArray_Private(PetscOptionItems PetscOptionsObject,
     const PetscInt nv   = *n;
     const MPI_Comm comm = PetscOptionsObject->comm;
 
-    PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%" PetscInt_FMT, Prefix(prefix), opt + 1, value[0]));
+    if (nv) PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%" PetscInt_FMT, Prefix(prefix), opt + 1, value[0]));
+    else PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <null", Prefix(prefix), opt + 1));
     for (PetscInt i = 1; i < nv; ++i) PetscCall((*PetscHelpPrintf)(comm, ",%" PetscInt_FMT, value[i]));
     PetscCall((*PetscHelpPrintf)(comm, ">: %s (%s)\n", text, ManSection(man)));
   }
