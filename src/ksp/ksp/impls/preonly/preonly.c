@@ -59,7 +59,7 @@ static PetscErrorCode KSPMatSolve_PREONLY(KSP ksp, Mat B, Mat X)
   PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
   /* Note: only some ranks may have this set; this may lead to problems if the caller assumes ksp->reason is set on all processes or just uses the result */
   if (pcreason) {
-    PetscCall(MatSetInf(X));
+    PetscCall(MatFlag(X, 1));
     ksp->reason = KSP_DIVERGED_PC_FAILED;
   } else {
     ksp->its    = 1;
