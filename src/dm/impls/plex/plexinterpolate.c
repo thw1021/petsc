@@ -225,7 +225,7 @@ PetscErrorCode DMPlexGetRawFaces_Internal(DM dm, DMPolytopeType ct, const PetscI
     }
     break;
   case DM_POLYTOPE_HEXAHEDRON:
-    /*  7--------6
+    /*    7--------6
          /|       /|
         / |      / |
        4--------5  |
@@ -284,6 +284,17 @@ PetscErrorCode DMPlexGetRawFaces_Internal(DM dm, DMPolytopeType ct, const PetscI
     }
     break;
   case DM_POLYTOPE_TRI_PRISM:
+    /*  5
+       /|\
+      / | \
+     3-----4
+     |  |  |
+     |  |  |
+     |  1  |
+     | / \ |
+     |/   \|
+     0-----2
+    */
     if (numFaces) *numFaces = 5;
     if (faceTypes) {
       typesTmp[0] = DM_POLYTOPE_TRIANGLE;
@@ -324,6 +335,17 @@ PetscErrorCode DMPlexGetRawFaces_Internal(DM dm, DMPolytopeType ct, const PetscI
     }
     break;
   case DM_POLYTOPE_TRI_PRISM_TENSOR:
+    /*  5
+       /|\
+      / | \
+     3-----4
+     |  |  |
+     |  |  |
+     |  2  |
+     | / \ |
+     |/   \|
+     0-----1
+     */
     if (numFaces) *numFaces = 5;
     if (faceTypes) {
       typesTmp[0] = DM_POLYTOPE_TRIANGLE;
@@ -364,7 +386,7 @@ PetscErrorCode DMPlexGetRawFaces_Internal(DM dm, DMPolytopeType ct, const PetscI
     }
     break;
   case DM_POLYTOPE_QUAD_PRISM_TENSOR:
-    /*  7--------6
+    /*    7--------6
          /|       /|
         / |      / |
        4--------5  |
