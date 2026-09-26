@@ -875,9 +875,9 @@ static PetscErrorCode MatBlockMatSetPreallocation_BlockMat(Mat A, PetscInt bs, P
 
   /* allocate the matrix space */
   PetscCall(MatSeqXAIJFreeAIJ(A, (PetscScalar **)&bmat->a, &bmat->j, &bmat->i));
-  PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscScalar), (void **)&bmat->a));
-  PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscInt), (void **)&bmat->j));
-  PetscCall(PetscShmgetAllocateArray(A->rmap->n + 1, sizeof(PetscInt), (void **)&bmat->i));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscScalar), (void **)&bmat->a));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscInt), (void **)&bmat->j));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), A->rmap->n + 1, sizeof(PetscInt), (void **)&bmat->i));
   bmat->free_a  = PETSC_TRUE;
   bmat->free_ij = PETSC_TRUE;
 
