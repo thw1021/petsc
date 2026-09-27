@@ -3087,8 +3087,10 @@ PETSC_EXTERN PetscErrorCode PetscShmgetDeallocateArray(void **);
 
 #if PetscDefined(HAVE_SHMGET)
 PETSC_EXTERN PetscBool PCMPIActive(void);
+PETSC_EXTERN PetscBool MatMPISeqBAIJActive(void);
 #else
-  #define PCMPIActive() PETSC_FALSE
+  #define PCMPIActive()         PETSC_FALSE
+  #define MatMPISeqBAIJActive() PETSC_FALSE
 #endif
 PETSC_EXTERN PetscErrorCode PetscShmgetMapAddresses(MPI_Comm, PetscInt, const void **, void **);
 PETSC_EXTERN PetscErrorCode PetscShmgetUnmapAddresses(PetscInt, void **);
