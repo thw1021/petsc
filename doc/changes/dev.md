@@ -291,3 +291,4 @@
 - `PCASMGetLocalSubdomains()` and `PCASMGetLocalSubmatrices()` now fill disassociated pointer outputs and return arrays that are absent in C as disassociated pointers. Pass `PETSC_NULL_IS_POINTER` or `PETSC_NULL_MAT_POINTER` to omit an array
 - Fix `PCASMCreateSubdomains()`, which misread the number of blocks. It now errors if given `PETSC_NULL_IS_POINTER`
 - `PCASMDestroySubdomains()` accepts `PETSC_NULL_IS_POINTER` for `is_local`, and `PCASMGetSubKSP()` and `PCASMGetLocalSubmatrices()` now return their errors instead of discarding them
+- `PCASMGetSubKSP()` and `PCASMRestoreSubKSP()` accept `PETSC_NULL_KSP_POINTER` to omit the `KSP` array. `PCASMCreateSubdomains2D()` now errors if given `PETSC_NULL_IS_POINTER`
