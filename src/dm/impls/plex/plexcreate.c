@@ -300,12 +300,47 @@ static PetscErrorCode DMPlexSwap_Static(DM dmA, DM dmB)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexInterpolate_Transform(DM dm, DM *idm)
+{
+  DMPlexTransform        tr;
+  const char            *prefix;
+  PetscOptions           options;
+  DMPlexInterpolatedFlag interp;
+
+  PetscFunctionBegin;
+  PetscCall(DMPlexIsInterpolatedCollective(dm, &interp));
+  if (interp == DMPLEX_INTERPOLATED_FULL) {
+    PetscCall(PetscObjectReference((PetscObject)dm));
+    *idm = dm;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(DMPlexTransformCreate(PetscObjectComm((PetscObject)dm), &tr));
+  PetscCall(DMPlexTransformSetDM(tr, dm));
+  PetscCall(DMPlexTransformSetType(tr, DMPLEXTRANSFORMINTERPOLATE));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &prefix));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tr, prefix));
+  PetscCall(PetscObjectGetOptions((PetscObject)dm, &options));
+  PetscCall(PetscObjectSetOptions((PetscObject)tr, options));
+  PetscCall(DMPlexTransformSetFromOptions(tr));
+  PetscCall(PetscObjectSetOptions((PetscObject)tr, NULL));
+  PetscCall(DMPlexTransformInterpolateSetFaceDim(tr, 1));
+  PetscCall(DMPlexTransformSetUp(tr));
+  PetscCall(PetscObjectViewFromOptions((PetscObject)tr, NULL, "-dm_plex_transform_view"));
+  PetscCall(DMPlexTransformApply(tr, dm, idm));
+  PetscCall(DMPlexTransformDestroy(&tr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMPlexInterpolateInPlace_Internal(DM dm)
 {
   DM idm;
 
   PetscFunctionBegin;
+#if 0
   PetscCall(DMPlexInterpolate(dm, &idm));
+#else
+  PetscCall(DMPlexInterpolate_Transform(dm, &idm));
+#endif
   PetscCall(DMPlexCopyCoordinates(dm, idm));
   PetscCall(DMPlexReplace_Internal(dm, &idm));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -548,13 +583,7 @@ PetscErrorCode DMPlexCreateDoublet(MPI_Comm comm, PetscInt dim, PetscBool simple
     PetscCall(DMDestroy(newdm));
     *newdm = rdm;
   }
-  if (interpolate) {
-    DM idm;
-
-    PetscCall(DMPlexInterpolate(*newdm, &idm));
-    PetscCall(DMDestroy(newdm));
-    *newdm = idm;
-  }
+  if (interpolate) PetscCall(DMPlexInterpolateInPlace_Internal(*newdm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

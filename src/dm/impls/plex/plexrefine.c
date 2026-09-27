@@ -414,14 +414,17 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
   PetscCall(DMPlexGetRefinementUniform(dm, &isUniform));
   PetscCall(DMViewFromOptions(dm, NULL, "-initref_dm_view"));
   if (isUniform) {
-    DMPlexTransform     tr;
-    DM                  cdm, rcdm;
-    DMPlexTransformType trType;
-    const char         *prefix;
-    PetscOptions        options;
-    PetscInt            cDegree;
-    PetscBool           useCeed, save;
+    DMPlexTransform        tr;
+    DM                     cdm, rcdm;
+    DMPlexTransformType    trType;
+    const char            *prefix;
+    PetscOptions           options;
+    PetscInt               cDegree;
+    PetscBool              useCeed, save;
+    DMPlexInterpolatedFlag interp;
 
+    PetscCall(DMPlexIsInterpolatedCollective(dm, &interp));
+    PetscCheck(interp == DMPLEX_INTERPOLATED_FULL, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh must be fully interpolated for regular refinement");
     PetscCall(DMPlexTransformCreate(PetscObjectComm((PetscObject)dm), &tr));
     PetscCall(DMPlexTransformSetDM(tr, dm));
     PetscCall(DMPlexGetTransformType(dm, &trType));

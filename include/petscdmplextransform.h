@@ -18,17 +18,18 @@ PETSC_EXTERN PetscClassId DMPLEXTRANSFORM_CLASSID;
 .seealso: [](plex_transform_table), [](ch_unstructured), `DMPlexTransformCreate()`, `DMPlexTransform`, `DMPlexTransformRegister()`
 J*/
 typedef const char *DMPlexTransformType;
-#define DMPLEXREFINEREGULAR       "refine_regular"
-#define DMPLEXREFINEALFELD        "refine_alfeld"
-#define DMPLEXREFINEPOWELLSABIN   "refine_powell_sabin"
-#define DMPLEXREFINEBOUNDARYLAYER "refine_boundary_layer"
-#define DMPLEXREFINESBR           "refine_sbr"
-#define DMPLEXREFINETOBOX         "refine_tobox"
-#define DMPLEXREFINETOSIMPLEX     "refine_tosimplex"
-#define DMPLEXREFINE1D            "refine_1d"
-#define DMPLEXEXTRUDETYPE         "extrude"
-#define DMPLEXCOHESIVEEXTRUDE     "cohesive_extrude"
-#define DMPLEXTRANSFORMFILTER     "transform_filter"
+#define DMPLEXREFINEREGULAR        "refine_regular"
+#define DMPLEXREFINEALFELD         "refine_alfeld"
+#define DMPLEXREFINEPOWELLSABIN    "refine_powell_sabin"
+#define DMPLEXREFINEBOUNDARYLAYER  "refine_boundary_layer"
+#define DMPLEXREFINESBR            "refine_sbr"
+#define DMPLEXREFINETOBOX          "refine_tobox"
+#define DMPLEXREFINETOSIMPLEX      "refine_tosimplex"
+#define DMPLEXREFINE1D             "refine_1d"
+#define DMPLEXEXTRUDETYPE          "extrude"
+#define DMPLEXCOHESIVEEXTRUDE      "cohesive_extrude"
+#define DMPLEXTRANSFORMFILTER      "transform_filter"
+#define DMPLEXTRANSFORMINTERPOLATE "transform_interpolate"
 
 PETSC_EXTERN PetscFunctionList DMPlexTransformList;
 PETSC_EXTERN PetscErrorCode    DMPlexTransformCreate(MPI_Comm, DMPlexTransform *);
@@ -110,5 +111,8 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformCohesiveExtrudeSetTensor(DMPlexTransf
 PETSC_EXTERN PetscErrorCode DMPlexTransformCohesiveExtrudeGetWidth(DMPlexTransform, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCohesiveExtrudeSetWidth(DMPlexTransform, PetscReal);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCohesiveExtrudeGetUnsplit(DMPlexTransform, DMLabel *);
+
+PETSC_EXTERN PetscErrorCode DMPlexTransformInterpolateGetFaceDim(DMPlexTransform, PetscInt *);
+PETSC_EXTERN PetscErrorCode DMPlexTransformInterpolateSetFaceDim(DMPlexTransform, PetscInt);
 
 PETSC_EXTERN PetscErrorCode DMPlexCreateEphemeral(DMPlexTransform, const char[], DM *);

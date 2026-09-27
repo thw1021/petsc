@@ -394,9 +394,18 @@ int main(int argc, char **argv)
 
     # Reference cells
     test:
+      suffix: refcell
+      args: -use_generator -dm_plex_reference_cell_domain -dm_plex_cell {triangle,} -dm_plex_check_all
+      output_file: output/empty.out
+    test:
       suffix: 12
       args: -use_generator -dm_plex_reference_cell_domain -dm_plex_cell pyramid -dm_plex_check_all
       output_file: output/empty.out
+    # Box meshes
+    test:
+      suffix: box_tri
+      requires: triangle
+      args: -use_generator -dm_plex_shape doublet -dm_view ascii::ascii_info_detail
     # TetGen meshes 9-10
     test:
       suffix: 9
