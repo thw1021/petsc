@@ -1521,7 +1521,10 @@ PetscErrorCode MatDestroy_SeqBAIJ(Mat A)
   PetscCall(ISDestroy(&a->col));
   PetscCall(PetscFree(a->diag));
   PetscCall(PetscFree(a->idiag));
-  if (a->free_imax_ilen) PetscCall(PetscFree2(a->imax, a->ilen));
+  if (a->free_imax_ilen) {
+    PetscCall(PetscShmgetDeallocateArray((void **)&a->imax));
+    PetscCall(PetscShmgetDeallocateArray((void **)&a->ilen));
+  }
   PetscCall(PetscFree(a->solve_work));
   PetscCall(PetscFree(a->mult_work));
   PetscCall(PetscFree(a->sor_workt));
@@ -3325,8 +3328,8 @@ PetscErrorCode MatSeqBAIJSetPreallocation_SeqBAIJ(Mat B, PetscInt bs, PetscInt n
   b->nbs      = nbs;
   if (!skipallocation) {
     if (!b->imax) {
-      PetscCall(PetscMalloc2(mbs, &b->imax, mbs, &b->ilen));
-
+      PetscCall(PetscShmgetAllocateArray(MatMPISeqBAIJActive(), mbs, sizeof(PetscInt), (void **)&b->imax));
+      PetscCall(PetscShmgetAllocateArray(MatMPISeqBAIJActive(), mbs, sizeof(PetscInt), (void **)&b->ilen));
       b->free_imax_ilen = PETSC_TRUE;
     }
     /* b->ilen will count nonzeros in each block row so far. */
@@ -3348,14 +3351,14 @@ PetscErrorCode MatSeqBAIJSetPreallocation_SeqBAIJ(Mat B, PetscInt bs, PetscInt n
 
     /* allocate the matrix space */
     PetscCall(MatSeqXAIJFreeAIJ(B, &b->a, &b->j, &b->i));
-    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscInt), (void **)&b->j));
-    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), B->rmap->N + 1, sizeof(PetscInt), (void **)&b->i));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive() || MatMPISeqBAIJActive(), nz, sizeof(PetscInt), (void **)&b->j));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive() || MatMPISeqBAIJActive(), B->rmap->N + 1, sizeof(PetscInt), (void **)&b->i));
     if (B->structure_only) {
       b->free_a = PETSC_FALSE;
     } else {
       PetscInt nzbs2 = 0;
       PetscCall(PetscIntMultError(nz, bs2, &nzbs2));
-      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nzbs2, sizeof(PetscScalar), (void **)&b->a));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive() || MatMPISeqBAIJActive(), nzbs2, sizeof(PetscScalar), (void **)&b->a));
       b->free_a = PETSC_TRUE;
       PetscCall(PetscArrayzero(b->a, nzbs2));
     }
@@ -3553,7 +3556,8 @@ PETSC_INTERN PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplic
     c->ilen           = a->ilen;
     c->free_imax_ilen = PETSC_FALSE;
   } else {
-    PetscCall(PetscMalloc2(mbs, &c->imax, mbs, &c->ilen));
+    PetscCall(PetscShmgetAllocateArray(MatMPISeqBAIJActive(), mbs, sizeof(PetscInt), (void **)&c->imax));
+    PetscCall(PetscShmgetAllocateArray(MatMPISeqBAIJActive(), mbs, sizeof(PetscInt), (void **)&c->ilen));
     for (i = 0; i < mbs; i++) {
       c->imax[i] = a->imax[i];
       c->ilen[i] = a->ilen[i];
@@ -3939,7 +3943,8 @@ PetscErrorCode MatCreateSeqBAIJWithArrays(MPI_Comm comm, PetscInt bs, PetscInt m
   PetscCall(MatSetType(*mat, MATSEQBAIJ));
   PetscCall(MatSeqBAIJSetPreallocation(*mat, bs, MAT_SKIP_ALLOCATION, NULL));
   baij = (Mat_SeqBAIJ *)(*mat)->data;
-  PetscCall(PetscMalloc2(m, &baij->imax, m, &baij->ilen));
+  PetscCall(PetscShmgetAllocateArray(MatMPISeqBAIJActive(), m / bs, sizeof(PetscInt), (void **)&baij->imax));
+  PetscCall(PetscShmgetAllocateArray(MatMPISeqBAIJActive(), m / bs, sizeof(PetscInt), (void **)&baij->ilen));
 
   baij->i = i;
   baij->j = j;

@@ -26,8 +26,8 @@ struct _PetscShmgetAllocation {
 static PetscShmgetAllocation allocations = NULL;
 
 typedef struct {
-  size_t shmkey[3];
-  size_t sz[3];
+  size_t shmkey[6];
+  size_t sz[6];
 } BcastInfo;
 
 #endif
@@ -108,7 +108,7 @@ PetscErrorCode PCMPIServerAddressesDestroy(PetscCtxRt ctx)
 - baseaddres - the addresses on the first MPI process, ignored on all but first process
 
   Output Parameter:
-. addres - the addresses on each MPI process, the array of void * must already be allocated
+. addres - the addresses on each MPI process, the array of `void *` must already be allocated
 
   Level: developer
 
@@ -123,9 +123,11 @@ PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **b
 #if PetscDefined(HAVE_SHMGET)
   if (PetscGlobalRank == 0) {
     BcastInfo bcastinfo = {
-      {0, 0, 0},
-      {0, 0, 0}
+      {0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0}
     };
+
+    PetscCheck(n < 7, PETSC_COMM_SELF, PETSC_ERR_SUP, "Can map at most 6 addresses at a time");
     for (PetscInt i = 0; i < n; i++) {
       PetscShmgetAllocation allocation = allocations;
 
@@ -138,7 +140,7 @@ PetscErrorCode PetscShmgetMapAddresses(MPI_Comm comm, PetscInt n, const void **b
         }
         allocation = allocation->next;
       }
-      PetscCheck(allocation, comm, PETSC_ERR_PLIB, "Unable to locate PCMPI allocated shared address %p, see PetscShmgetAllocateArray()", baseaddres[i]);
+      PetscCheck(allocation, comm, PETSC_ERR_PLIB, "Unable to locate PetscShmgetAllocateArray() shared address %p", baseaddres[i]);
     }
     PetscCall(PetscInfo(NULL, "Mapping PCMPI Server array %p\n", addres[0]));
     PetscCallMPI(MPI_Bcast(&bcastinfo, 12, MPIU_SIZE_T, 0, comm));

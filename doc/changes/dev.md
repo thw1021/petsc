@@ -50,6 +50,7 @@
 
 ```{rubric} Mat:
 ```
+- Add `MATMPISEQBAIJ`, `MatCreateMPISeqBAIJ()`, and `MatMPISeqBAIJActive()` to allow creating and filling with MPI parallelism a `MATSEQBAIJ` matrix intending to be solved in a single GPU
 
 ```{rubric} MatCoarsen:
 ```
