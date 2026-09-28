@@ -935,7 +935,6 @@ static PetscErrorCode PetscDualSpaceSetFromOptions_Lagrange(PetscDualSpace sp, P
   PetscCall(PetscDualSpaceLagrangeGetTensor(sp, &tensor));
   PetscCall(PetscDualSpaceLagrangeGetTrimmed(sp, &trimmed));
   PetscCall(PetscDualSpaceLagrangeGetNodeType(sp, &nodeType, &nodeEndpoints, &nodeExponent));
-  if (nodeType == PETSCDTNODES_DEFAULT) nodeType = PETSCDTNODES_GAUSSJACOBI;
   PetscCall(PetscDualSpaceLagrangeGetUseMoments(sp, &useMoments));
   PetscCall(PetscDualSpaceLagrangeGetMomentOrder(sp, &momentOrder));
   PetscOptionsHeadBegin(PetscOptionsObject, "PetscDualSpace Lagrange Options");
@@ -945,6 +944,14 @@ static PetscErrorCode PetscDualSpaceSetFromOptions_Lagrange(PetscDualSpace sp, P
   if (flg) PetscCall(PetscDualSpaceLagrangeSetTensor(sp, tensor));
   PetscCall(PetscOptionsBool("-petscdualspace_lagrange_trimmed", "Flag for trimmed dual space", "PetscDualSpaceLagrangeSetTrimmed", trimmed, &trimmed, &flg));
   if (flg) PetscCall(PetscDualSpaceLagrangeSetTrimmed(sp, trimmed));
+  if (nodeType == PETSCDTNODES_DEFAULT) {
+    PetscInt formDegree;
+ 
+    PetscCall(PetscDualSpaceGetFormDegree(sp, &formDegree));
+    nodeType      = PETSCDTNODES_GAUSSJACOBI;
+    nodeExponent  = 0;
+    nodeEndpoints = (!formDegree ? PETSC_FALSE : trimmed) ? PETSC_FALSE : PETSC_TRUE;
+  }
   PetscCall(PetscOptionsEnum("-petscdualspace_lagrange_node_type", "Lagrange node location type", "PetscDualSpaceLagrangeSetNodeType", PetscDTNodeTypes, (PetscEnum)nodeType, (PetscEnum *)&nodeType, &flg));
   PetscCall(PetscOptionsBool("-petscdualspace_lagrange_node_endpoints", "Flag for nodes that include endpoints", "PetscDualSpaceLagrangeSetNodeType", nodeEndpoints, &nodeEndpoints, &flg2));
   flg3 = PETSC_FALSE;
