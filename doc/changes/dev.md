@@ -39,6 +39,8 @@
 ```{rubric} Vec:
 ```
 
+- Add `VecGetArrayAndMemTypeAsync()` to acquire vector storage by access mode, queuing CUDA and HIP transfers on the current device context without waiting
+
 ```{rubric} PetscSection:
 ```
 

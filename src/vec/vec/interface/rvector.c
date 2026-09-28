@@ -2382,6 +2382,62 @@ PetscErrorCode VecGetArrayAndMemType(Vec x, PetscScalar *a[], PetscMemType *mtyp
 }
 
 /*@
+  VecGetArrayAndMemTypeAsync - Accesses local vector storage with an access mode, queuing CUDA or HIP transfers on the current device context.
+
+  Logically Collective; No Fortran Support
+
+  Input Parameters:
++ x      - the vector
+- access - `PETSC_MEMORY_ACCESS_READ`, `PETSC_MEMORY_ACCESS_WRITE`, or `PETSC_MEMORY_ACCESS_READ_WRITE`
+
+  Output Parameters:
++ a     - pointer to an array of the local vector size, borrowed from the vector
+- mtype - memory type of the array, or `NULL` if not needed
+
+  Level: advanced
+
+  Notes:
+  For CUDA and HIP vectors that are not bound to the CPU, this routine queues any required
+  host-to-device copy on the current `PetscDeviceContext` without waiting for it. The caller
+  must order subsequent accesses after that context's work, for example with
+  `PetscDeviceContextSynchronize()`. Do not modify host storage while its copy is pending.
+  Device allocation and runtime staging of pageable host memory may still block.
+
+  Other vector types, including vectors bound to the CPU, use the corresponding
+  `VecGetArrayReadAndMemType()`, `VecGetArrayWriteAndMemType()`, or `VecGetArrayAndMemType()`
+  operation and retain its synchronization behavior.
+
+  Read access must not modify the array. Write access does not preserve its old contents
+  and must initialize every entry that will subsequently be read. Read/write access
+  preserves the existing entries and permits modification.
+
+  The pointer is borrowed until the matching restore call. Complete external asynchronous
+  work before restoring the array. Use `VecRestoreArrayReadAndMemType()` for read access,
+  `VecRestoreArrayWriteAndMemType()` for write access, and `VecRestoreArrayAndMemType()` for
+  read/write access. Do not replace the vector's storage or change its type or CPU binding
+  while the array is acquired.
+
+.seealso: [](ch_vectors), `Vec`, `PetscMemoryAccessMode`, `VecGetLocalSize()`, `VecGetArrayAndMemType()`,
+          `VecRestoreArrayReadAndMemType()`, `VecRestoreArrayWriteAndMemType()`, `VecRestoreArrayAndMemType()`,
+          `PetscDeviceContextGetCurrentContext()`, `PetscDeviceContextSynchronize()`
+@*/
+PetscErrorCode VecGetArrayAndMemTypeAsync(Vec x, PetscMemoryAccessMode access, PetscScalar *a[], PetscMemType *mtype)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
+  PetscValidType(x, 1);
+  PetscAssertPointer(a, 3);
+  if (mtype) PetscAssertPointer(mtype, 4);
+  PetscCheck(access == PETSC_MEMORY_ACCESS_READ || access == PETSC_MEMORY_ACCESS_WRITE || access == PETSC_MEMORY_ACCESS_READ_WRITE, PetscObjectComm((PetscObject)x), PETSC_ERR_ARG_OUTOFRANGE, "Invalid memory access mode %d", (int)access);
+  if (PetscMemoryAccessWrite(access)) PetscCall(VecSetErrorIfLocked(x, 1));
+  if (x->ops->getarrayandmemtypeasync) PetscUseTypeMethod(x, getarrayandmemtypeasync, access, a, mtype);
+  else if (access == PETSC_MEMORY_ACCESS_READ) PetscCall(VecGetArrayReadAndMemType(x, (const PetscScalar **)a, mtype));
+  else if (access == PETSC_MEMORY_ACCESS_WRITE) PetscCall(VecGetArrayWriteAndMemType(x, a, mtype));
+  else PetscCall(VecGetArrayAndMemType(x, a, mtype));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   VecRestoreArrayAndMemType - Restores a vector after `VecGetArrayAndMemType()` has been called.
 
   Logically Collective; No Fortran Support

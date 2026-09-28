@@ -81,6 +81,7 @@ cdef extern from * nogil:
     PetscErrorCode VecGetArrayReadAndMemType(PetscVec, const PetscScalar*[], PetscMemType*)
     PetscErrorCode VecRestoreArrayReadAndMemType(PetscVec, const PetscScalar*[])
     PetscErrorCode VecGetArrayAndMemType(PetscVec, PetscScalar*[], PetscMemType*)
+    PetscErrorCode VecGetArrayAndMemTypeAsync(PetscVec, PetscMemoryAccessMode, PetscScalar*[], PetscMemType*)
     PetscErrorCode VecRestoreArrayAndMemType(PetscVec, PetscScalar*[])
 
     PetscErrorCode VecEqual(PetscVec, PetscVec, PetscBool*)
