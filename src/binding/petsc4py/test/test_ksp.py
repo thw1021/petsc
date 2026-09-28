@@ -122,6 +122,48 @@ class BaseTestKSP:
             vec.destroy()
         A.destroy()
 
+    def testComputeOperator(self):
+        ksp = self.ksp
+        A = PETSc.Mat().createAIJ([3, 3], nnz=3, comm=ksp.comm)
+        A.setValues([0, 1, 2], [0, 1, 2], [[2, -1, 0], [-1, 3, -1], [0, -1, 4]])
+        A.assemble()
+        ksp.setOperators(A)
+        ksp.setUp()
+        pc = ksp.getPC()
+        x, expected = A.createVecs()
+        x.setRandom()
+        work = x.duplicate()
+        actual = x.duplicate()
+        side = ksp.getPCSide()
+        if side == PETSc.PC.Side.LEFT:
+            A.mult(x, work)
+            pc.apply(work, expected)
+        elif side == PETSc.PC.Side.RIGHT:
+            pc.apply(x, work)
+            A.mult(work, expected)
+        else:
+            pc.applySymmetricRight(x, work)
+            A.mult(work, actual)
+            pc.applySymmetricLeft(actual, expected)
+        for mat_type in (None, PETSc.Mat.Type.DENSE, PETSc.Mat.Type.AIJ):
+            with self.subTest(mat=mat_type):
+                op = ksp.computeOperator(mat_type)
+                self.assertEqual(op.getSize(), A.getSize())
+                expected_type = mat_type or 'dense'
+                self.assertTrue(op.getType().endswith(expected_type))
+                self.assertEqual(op.getRefCount(), 1)
+                op.mult(x, actual)
+                actual.axpy(-1, expected)
+                relative_error = actual.norm() / expected.norm()
+                self.assertAlmostEqual(relative_error, 0)
+                op.destroy()
+        actual.destroy()
+        work.destroy()
+        expected.destroy()
+        x.destroy()
+        pc.destroy()
+        A.destroy()
+
     def testSolve(self, solve_only=False):
         A = PETSc.Mat().create(PETSc.COMM_SELF)
         A.setSizes([3, 3])
