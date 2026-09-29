@@ -1,0 +1,46 @@
+== CONVERGED_TIME ==
+0	1.	4.32965e-09	pass
+0	1.05	4.11981e-10	pass
+0	2.	4.32965e-09	pass
+0	3.	0.	pass
+0	4.	0.	pass
+0	5.	0.	pass
+0	6.	0.	pass
+0	7.	2.26841e-12	pass
+0	8.	4.32965e-09	pass
+0	9.	4.32965e-09	pass
+0	9.05	1.33227e-13	pass
+0	10.	1.10134e-13	pass
+0	11.	3.21106e-09	pass
+0	12.	0.	pass
+----------------------
+Time span: 28 point(s)
+0.01	0.01	pass
+0.21	0.21	pass
+1.01	1.01	pass
+1.21	1.21	pass
+2.01	2.01	pass
+2.21	2.21	pass
+3.	3.	pass
+3.01	3.01	pass
+3.21	3.21	pass
+4.	4.	pass
+4.001	4.001	pass
+4.01	4.01	pass
+4.21	4.21	pass
+4.999	4.999	pass
+5.	-5.	pass
+5.01	-4.99	pass
+5.21	-4.79	pass
+5.999	-4.001	pass
+6.	-4.	pass
+6.001	-3.999	pass
+6.01	-3.99	pass
+6.21	-3.79	pass
+6.99	-3.01	pass
+7.21	-2.79	pass
+8.01	-1.99	pass
+8.21	-1.79	pass
+9.01	-0.99	pass
+9.21	-0.79	pass
+Final time = 12., max time = 12., pass

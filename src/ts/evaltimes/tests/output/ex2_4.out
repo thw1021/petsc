@@ -1,0 +1,21 @@
+### Check 'user' before SetUp: not found
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+### Check 'user' after Solve: not found
+== CONVERGED_TIME ==
+0	1.	1.72058e-07	pass
+0	1.05	1.78531e-08	pass
+0	2.	1.55431e-14	pass
+0	3.	1.33227e-14	pass
+0	4.	2.87802e-07	pass
+0	5.	1.59854e-08	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+Initial time = 0., final time reached = 5.247, max time = 5.2, fail
+Initial time step = 0.099, final time step = 0.099, adapt == none, match

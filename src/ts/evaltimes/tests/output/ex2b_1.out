@@ -1,0 +1,80 @@
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+ETS 'user ' point 0.01, union index    0, private index    0
+ETS 'user ' point 0.21, union index    1, private index    1
+ETS 'user ' point 1.01, union index    2, private index    2
+ETS 'user ' point 1.21, union index    3, private index    3
+ETS 'user ' point 2.01, union index    4, private index    4
+ETS 'user ' point 2.21, union index    5, private index    5
+ETS 'user ' point 3., union index    6, private index    6
+ETS 'user ' point 3.01, union index    7, private index    7
+ETS 'user ' point 3.21, union index    8, private index    8
+ETS 'user ' point 4., union index    9, private index    9
+ETS 'user ' point 4.01, union index   10, private index   10
+ETS 'user ' point 4.02, union index   11, private index   11
+ETS 'user ' point 4.21, union index   12, private index   12
+ETS 'user ' point 4.98, union index   13, private index   13
+ETS 'user ' point 5., union index   14, private index   14
+ETS 'user ' point 5.01, union index   15, private index   15
+ETS 'user ' point 5.21, union index   16, private index   16
+ETS 'user ' point 5.98, union index   17, private index   17
+ETS 'user ' point 6., union index   18, private index   18
+ETS 'user ' point 6.01, union index   19, private index   19
+ETS 'user ' point 6.02, union index   20, private index   20
+ETS 'user ' point 6.21, union index   21, private index   21
+ETS 'user ' point 6.99, union index   22, private index   22
+ETS 'user ' point 7.21, union index   23, private index   23
+ETS 'user ' point 8.01, union index   24, private index   24
+ETS 'user ' point 8.21, union index   25, private index   25
+ETS 'user ' point 9.01, union index   26, private index   26
+### Check 'user' after Solve: start 0, end 27
+== CONVERGED_EVENT ==
+0	3.91942	0.00766386	pass
+0	4.32823	0.00762254	pass
+0	4.60196	0.00766809	pass
+0	4.8286	0.00771484	pass
+0	5.03947	0.00775969	pass
+0	5.25466	0.00784713	pass
+0	5.49708	0.00797458	pass
+0	5.81264	0.00818475	pass
+0	6.38931	0.00886039	pass
+1	1.05	4.11981e-10	pass
+3	9.05	2.47957e-07	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [0, 27)
+0.01	1.	pass
+0.21	1.	pass
+1.01	0.999985	pass
+1.21	0.999987	pass
+2.01	0.999668	pass
+2.21	0.999362	pass
+3.	0.994508	pass
+3.01	0.994506	pass
+3.21	0.994413	pass
+4.	0.993852	pass
+4.01	0.993856	pass
+4.02	0.993858	pass
+4.21	0.994165	pass
+4.98	0.997368	pass
+5.	0.997384	pass
+5.01	0.997389	pass
+5.21	0.997628	pass
+5.98	0.99607	pass
+6.	0.996065	pass
+6.01	0.996064	pass
+6.02	0.996063	pass
+6.21	0.995722	pass
+6.99	0.99605	pass
+7.21	0.996082	pass
+8.01	0.996328	pass
+8.21	0.996347	pass
+9.01	0.997258	pass
+9.21	0.	***
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+Initial time = 0., final time reached = 9.05, max time = 10., pass
+Initial time step = 0.099, final time step = 0.16

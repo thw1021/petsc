@@ -1,0 +1,12 @@
+### Check 'user' before SetUp: start -1, end -1
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Object is in wrong state
+[0]PETSC ERROR: TSEvaluationTimesGetSolutions() should be called before trying to TSEvaluationTimesRestoreSolutions() for schedule 'range'
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimesRestoreSolutions() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 8 (source: command line)
+[0]PETSC ERROR: -msg Restore for a non-locked schedule (source: command line)
+[0]PETSC ERROR: -range 0,10,11 (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------

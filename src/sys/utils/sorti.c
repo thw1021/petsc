@@ -530,6 +530,10 @@ PetscErrorCode PetscSortRemoveDupsInt(PetscInt *n, PetscInt X[])
 
   Level: intermediate
 
+  Note:
+  If repeating values are allowed in X, and X[p] = X[p+1] = ... = X[q] = key, then *loc = q,
+  i.e. the maximum index in the series of repeating values.
+
 .seealso: `PetscIntSortSemiOrdered()`, `PetscSortInt()`, `PetscSortIntWithArray()`, `PetscSortRemoveDupsInt()`
 @*/
 PetscErrorCode PetscFindInt(PetscInt key, PetscCount n, const PetscInt X[], PetscInt *loc)

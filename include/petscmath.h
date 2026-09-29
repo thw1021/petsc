@@ -504,27 +504,45 @@
 .seealso: `PetscReal`, `PetscScalar`, `PetscComplex`
   M*/
   #define PetscTGamma(a) tgammaf(a)
-  #if PetscDefined(HAVE_LGAMMA_IS_GAMMA)
-    /*MC
-      PetscLGamma - Returns the natural logarithm of the absolute value of the gamma function in the configured `PetscReal` precision
+  /*MC
+    PetscLGamma - Returns the natural logarithm of the absolute value of the gamma function in the configured `PetscReal` precision
 
-      Synopsis:
-      #include <petscmath.h>
-      PetscReal PetscLGamma(PetscReal a)
+    Synopsis:
+    #include <petscmath.h>
+    PetscReal PetscLGamma(PetscReal a)
 
-      Not Collective; No Fortran Support
+    Not Collective; No Fortran Support
 
-      Input Parameter:
-    . a - the value
+    Input Parameter:
+  . a - the value
 
-      Level: beginner
+    Level: beginner
 
 .seealso: `PetscReal`, `PetscScalar`, `PetscComplex`
-    M*/
+  M*/
+  #if PetscDefined(HAVE_LGAMMA_IS_GAMMA)
     #define PetscLGamma(a) gammaf(a)
   #else
     #define PetscLGamma(a) lgammaf(a)
   #endif
+  /*MC
+    PetscNextafter - Returns the next representable floating-point value after a given number in the direction of another number, in the configured `PetscReal` precision
+
+    Synopsis:
+    #include <petscmath.h>
+    PetscReal PetscNextafter(PetscReal a, PetscReal b)
+
+    Not Collective; No Fortran Support
+
+    Input Parameters:
+  + a - the starting value
+  - b - the direction value
+
+    Level: intermediate
+
+.seealso: `PetscReal`, `PetscScalar`, `PetscComplex`
+  M*/
+  #define PetscNextafter(a, b) nextafterf(a, b)
 
 #elif PetscDefined(USE_REAL_DOUBLE)
   #define PetscSqrtReal(a)        sqrt(a)
@@ -560,6 +578,7 @@
   #else
     #define PetscLGamma(a) lgamma(a)
   #endif
+  #define PetscNextafter(a, b) nextafter(a, b)
 
 #elif PetscDefined(USE_REAL___FLOAT128)
   #define PetscSqrtReal(a)        sqrtq(a)
@@ -595,6 +614,7 @@
   #else
     #define PetscLGamma(a) lgammaq(a)
   #endif
+  #define PetscNextafter(a, b) nextafterq(a, b)
 
 #elif PetscDefined(USE_REAL___FP16)
   #define PetscSqrtReal(a)        sqrtf(a)
@@ -630,8 +650,8 @@
   #else
     #define PetscLGamma(a) lgammaf(a)
   #endif
-
-#endif /* PETSC_USE_REAL_* */
+  #define PetscNextafter(a, b) (a) // Currently does nothing. TODO engage a portable implementation once available.
+#endif                             /* PETSC_USE_REAL_* */
 
 static inline PetscReal PetscSignReal(PetscReal a)
 {

@@ -278,7 +278,8 @@ PetscErrorCode TSAdaptView(TSAdapt adapt, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "  clip fastest increase %g\n", (double)adapt->clip[1]));
       PetscCall(PetscViewerASCIIPrintf(viewer, "  clip fastest decrease %g\n", (double)adapt->clip[0]));
       PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum allowed timestep %g\n", (double)adapt->dt_max));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  minimum allowed timestep %g\n", (double)adapt->dt_min));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  (relative) minimum allowed timestep %g\n", (double)adapt->dt_min_rel));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  (absolute) minimum allowed timestep %g\n", (double)adapt->dt_min_abs));
       PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum solution absolute value to be ignored %g\n", (double)adapt->ignore_max));
     }
     if (isglee) {
@@ -666,43 +667,67 @@ PetscErrorCode TSAdaptGetScaleSolveFailed(TSAdapt adapt, PetscReal *scale)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// A helper function for consistency checks for dt_min, dt_max
+PetscErrorCode TSAdaptCheckStepLimits(TSAdapt adapt, TS ts)
+{
+  PetscReal   dt_min;
+  const char *msg = "Maximum time step %g must be greater than the minimum time step %g (for t = %g)";
+
+  PetscFunctionBegin;
+  dt_min = TSMinStepAtTime(adapt->dt_min_rel, adapt->dt_min_abs, ts->ptime); // check for current time t = ts->ptime
+  PetscCheck(adapt->dt_max > dt_min, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, msg, (double)adapt->dt_max, (double)dt_min, (double)ts->ptime);
+
+  if (ts->max_time < PETSC_INFINITY && ts->max_time < PETSC_MAX_REAL) {
+    dt_min = TSMinStepAtTime(adapt->dt_min_rel, adapt->dt_min_abs, ts->max_time); // check for maximum time t = ts->max_time
+    PetscCheck(adapt->dt_max > dt_min, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, msg, (double)adapt->dt_max, (double)dt_min, (double)ts->max_time);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TSAdaptSetStepLimits - Set the minimum and maximum step sizes to be considered by the time step controller
 
   Logically Collective
 
   Input Parameters:
-+ adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
-. hmin  - minimum time step
-- hmax  - maximum time step
++ adapt    - time step adaptivity context, usually gotten with `TSGetAdapt()`
+. hmin_abs - (absolute) minimum time step
+- hmax     - maximum time step
 
   Options Database Keys:
-+ -ts_adapt_dt_min min - to set minimum time step
-- -ts_adapt_dt_max max - to set maximum time step
++ -ts_adapt_dt_min_abs min_abs - set the (absolute) minimum time step
+- -ts_adapt_dt_max max         - set the maximum time step
 
   Level: intermediate
 
   Note:
-  Use `PETSC_CURRENT` to keep the current value for either parameter
+  Use `PETSC_CURRENT` to keep the current value for either parameter.
+
+  During the TS run, the actual minimum step size depends on the current time `t`
+.vb
+  dt_min = Max {dt_min_abs, dt_min_rel * |t|}
+.ve
+  where `dt_min_abs` and `dt_min_rel` are set by this function and/or `TSAdaptSetMinStep()`.
+  The maximum step size `dt_max` is a fixed number.
 
   Fortran Note:
   Use `PETSC_CURRENT_REAL`
 
-.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptGetStepLimits()`, `TSAdaptChoose()`
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptGetStepLimits()`, `TSAdaptSetMinStep()`, `TSAdaptChoose()`
 @*/
-PetscErrorCode TSAdaptSetStepLimits(TSAdapt adapt, PetscReal hmin, PetscReal hmax)
+PetscErrorCode TSAdaptSetStepLimits(TSAdapt adapt, PetscReal hmin_abs, PetscReal hmax)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  PetscValidLogicalCollectiveReal(adapt, hmin, 2);
+  PetscValidLogicalCollectiveReal(adapt, hmin_abs, 2);
   PetscValidLogicalCollectiveReal(adapt, hmax, 3);
-  PetscCheck(hmin == (PetscReal)PETSC_CURRENT || hmin >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Minimum time step %g must be non negative", (double)hmin);
-  PetscCheck(hmax == (PetscReal)PETSC_CURRENT || hmax >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Minimum time step %g must be non negative", (double)hmax);
-  if (hmin != (PetscReal)PETSC_CURRENT) adapt->dt_min = hmin;
+  PetscCheck(hmin_abs == (PetscReal)PETSC_CURRENT || hmin_abs >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "(Absolute) minimum time step %g must be non negative", (double)hmin_abs);
+  PetscCheck(hmax == (PetscReal)PETSC_CURRENT || hmax >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Maximum time step %g must be non negative", (double)hmax);
+  if (hmin_abs != (PetscReal)PETSC_CURRENT) adapt->dt_min_abs = hmin_abs;
   if (hmax != (PetscReal)PETSC_CURRENT) adapt->dt_max = hmax;
-  hmin = adapt->dt_min;
-  hmax = adapt->dt_max;
-  PetscCheck(hmax > hmin, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Maximum time step %g must greater than minimum time step %g", (double)hmax, (double)hmin);
+  hmin_abs = adapt->dt_min_abs;
+  hmax     = adapt->dt_max;
+  PetscCheck(hmax > hmin_abs, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Maximum time step %g must be greater than the (absolute) minimum time step %g", (double)hmax, (double)hmin_abs);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -715,25 +740,102 @@ PetscErrorCode TSAdaptSetStepLimits(TSAdapt adapt, PetscReal hmin, PetscReal hma
 . adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
 
   Output Parameters:
-+ hmin - minimum time step
-- hmax - maximum time step
++ hmin_abs - (absolute) minimum time step
+- hmax     - maximum time step
 
   Level: intermediate
 
-.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetStepLimits()`, `TSAdaptChoose()`
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetStepLimits()`, `TSAdaptGetMinStep()`, `TSAdaptChoose()`
 @*/
-PetscErrorCode TSAdaptGetStepLimits(TSAdapt adapt, PetscReal *hmin, PetscReal *hmax)
+PetscErrorCode TSAdaptGetStepLimits(TSAdapt adapt, PetscReal *hmin_abs, PetscReal *hmax)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  if (hmin) PetscAssertPointer(hmin, 2);
+  if (hmin_abs) PetscAssertPointer(hmin_abs, 2);
   if (hmax) PetscAssertPointer(hmax, 3);
-  if (hmin) *hmin = adapt->dt_min;
+  if (hmin_abs) *hmin_abs = adapt->dt_min_abs;
   if (hmax) *hmax = adapt->dt_max;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
+  TSAdaptSetMinStep - Set the relative/absolute minimum step sizes for the time step controller
+
+  Logically Collective
+
+  Input Parameters:
++ adapt    - time step adaptivity context, usually gotten with `TSGetAdapt()`
+. hmin_rel - (relative) minimum time step
+- hmin_abs - (absolute) minimum time step
+
+  Options Database Keys:
++ -ts_adapt_dt_min_rel min_rel - set the (relative) minimum time step
+- -ts_adapt_dt_min_abs min_abs - set the (absolute) minimum time step
+
+  Level: intermediate
+
+  Note:
+  Use `PETSC_CURRENT` to keep the current value for either parameter.
+
+  During the TS run, the minimum step size `dt_min` considered by the time step controller depends
+  on the relative and absolute minimum step sizes set by this function, and the current time `t`
+.vb
+  dt_min = Max {dt_min_abs, dt_min_rel * |t|}
+.ve
+  When `t` is far from zero, the relative contribution may become dominant in the definition above,
+  ensuring proper work of the floating point arithmetic during the time increment
+.vb
+  t_next = t + dt
+.ve
+  When `t` is close to zero, the absolute contribution kicks in.
+
+  Fortran Note:
+  Use `PETSC_CURRENT_REAL`
+
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetStepLimits()`, `TSAdaptGetMinStep()`, `TSAdaptChoose()`
+@*/
+PetscErrorCode TSAdaptSetMinStep(TSAdapt adapt, PetscReal hmin_rel, PetscReal hmin_abs)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(adapt, hmin_rel, 2);
+  PetscValidLogicalCollectiveReal(adapt, hmin_abs, 3);
+  PetscCheck(hmin_rel == (PetscReal)PETSC_CURRENT || hmin_rel >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "(Relative) minimum time step %g must be non negative", (double)hmin_rel);
+  PetscCheck(hmin_abs == (PetscReal)PETSC_CURRENT || hmin_abs >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "(Absolute) minimum time step %g must be non negative", (double)hmin_abs);
+
+  if (hmin_rel != (PetscReal)PETSC_CURRENT) adapt->dt_min_rel = hmin_rel;
+  if (hmin_abs != (PetscReal)PETSC_CURRENT) adapt->dt_min_abs = hmin_abs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSAdaptGetMinStep - Get the relative/absolute minimum step sizes for the time step controller
+
+  Not Collective
+
+  Input Parameter:
+. adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
+
+  Output Parameters:
++ hmin_rel - (relative) minimum time step
+- hmin_abs - (absolute) minimum time step
+
+  Level: intermediate
+
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptGetStepLimits()`, `TSAdaptSetMinStep()`, `TSAdaptChoose()`
+@*/
+PetscErrorCode TSAdaptGetMinStep(TSAdapt adapt, PetscReal *hmin_rel, PetscReal *hmin_abs)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
+  if (hmin_rel) PetscAssertPointer(hmin_rel, 2);
+  if (hmin_abs) PetscAssertPointer(hmin_abs, 3);
+  if (hmin_rel) *hmin_rel = adapt->dt_min_rel;
+  if (hmin_abs) *hmin_abs = adapt->dt_min_abs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   TSAdaptSetFromOptions - Sets various `TSAdapt` parameters from user options.
 
   Collective
@@ -748,7 +850,8 @@ PetscErrorCode TSAdaptGetStepLimits(TSAdapt adapt, PetscReal *hmin, PetscReal *h
 . -ts_adapt_safety safety                          - safety factor relative to target error/stability goal
 . -ts_adapt_reject_safety safety                   - extra safety factor to apply if the last step was rejected
 . -ts_adapt_clip low,high                          - admissible time step decrease and increase factors
-. -ts_adapt_dt_min min                             - minimum timestep to use
+. -ts_adapt_dt_min_rel min_rel                     - relative minimum timestep to use
+. -ts_adapt_dt_min_abs min_abs                     - absolute minimum timestep to use
 . -ts_adapt_dt_max max                             - maximum timestep to use
 . -ts_adapt_scale_solve_failed scale               - scale timestep by this factor if a solve fails
 . -ts_adapt_wnormtype (2|infinity)                 - type of norm for computing error estimates
@@ -760,12 +863,12 @@ PetscErrorCode TSAdaptGetStepLimits(TSAdapt adapt, PetscReal *hmin, PetscReal *h
   This function is automatically called by `TSSetFromOptions()`
 
 .seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSGetAdapt()`, `TSAdaptSetType()`, `TSAdaptSetAlwaysAccept()`, `TSAdaptSetSafety()`,
-          `TSAdaptSetClip()`, `TSAdaptSetScaleSolveFailed()`, `TSAdaptSetStepLimits()`, `TSAdaptSetMonitor()`
+          `TSAdaptSetClip()`, `TSAdaptSetScaleSolveFailed()`, `TSAdaptSetMinStep()`, `TSAdaptSetStepLimits()`, `TSAdaptSetMonitor()`
 @*/
 PetscErrorCode TSAdaptSetFromOptions(TSAdapt adapt, PetscOptionItems PetscOptionsObject)
 {
   char      type[256] = TSADAPTBASIC;
-  PetscReal safety, reject_safety, clip[2], scale, hmin, hmax;
+  PetscReal safety, reject_safety, clip[2], scale, hmin_rel, hmin_abs, hmax;
   PetscBool set, flg;
   PetscInt  two;
 
@@ -793,11 +896,16 @@ PetscErrorCode TSAdaptSetFromOptions(TSAdapt adapt, PetscOptionItems PetscOption
   PetscCheck(!set || (two == 2), PetscObjectComm((PetscObject)adapt), PETSC_ERR_ARG_OUTOFRANGE, "Must give exactly two values to -ts_adapt_clip");
   if (set) PetscCall(TSAdaptSetClip(adapt, clip[0], clip[1]));
 
-  hmin = adapt->dt_min;
-  hmax = adapt->dt_max;
-  PetscCall(PetscOptionsReal("-ts_adapt_dt_min", "Minimum time step considered", "TSAdaptSetStepLimits", hmin, &hmin, &set));
+  hmin_rel = adapt->dt_min_rel;
+  hmin_abs = adapt->dt_min_abs;
+  hmax     = adapt->dt_max;
+  PetscCall(PetscOptionsDeprecated("-ts_adapt_dt_min", "-ts_adapt_dt_min_abs", "3.26", NULL));
+  PetscCall(PetscOptionsReal("-ts_adapt_dt_min_rel", "(Relative) minimum time step considered", "TSAdaptSetMinStep", hmin_rel, &hmin_rel, &set));
+  PetscCall(PetscOptionsReal("-ts_adapt_dt_min_abs", "(Absolute) minimum time step considered", "TSAdaptSetMinStep", hmin_abs, &hmin_abs, &flg));
+  if (set || flg) PetscCall(TSAdaptSetMinStep(adapt, hmin_rel, hmin_abs));
+
   PetscCall(PetscOptionsReal("-ts_adapt_dt_max", "Maximum time step considered", "TSAdaptSetStepLimits", hmax, &hmax, &flg));
-  if (set || flg) PetscCall(TSAdaptSetStepLimits(adapt, hmin, hmax));
+  if (flg) PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, hmax));
 
   PetscCall(PetscOptionsReal("-ts_adapt_max_ignore", "Adaptor ignores (absolute) solution values smaller than this value", "", adapt->ignore_max, &adapt->ignore_max, &set));
   PetscCall(PetscOptionsBool("-ts_adapt_glee_use_local", "GLEE adaptor uses local error estimation for step control", "", adapt->glee_use_local, &adapt->glee_use_local, &set));
@@ -981,46 +1089,38 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
   if (next_sc) *next_sc = scheme;
 
   if (*accept && ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-    /* Increase/reduce step size if end time of next step is close to or overshoots max time */
-    PetscReal t = ts->ptime + ts->time_step, tend, tmax, h1, hmax;
-    PetscReal a = (PetscReal)(1.0 + adapt->matchstepfac[0]);
-    PetscReal b = adapt->matchstepfac[1];
-
+    // Increase/reduce the *next* step size -- if it ends close to, or overshoots, max_time or evaltimes_i
+    PetscReal t = ts->ptime + ts->time_step, h1, tmax, hmax;
     /*
-      Logic in using 'dt_span_cached':
-      1. It always overrides *next_h, except (any of):
-         a) the current step was rejected,
-         b) the adaptor proposed to decrease the next step,
-         c) the adaptor proposed *next_h > dt_span_cached.
-      2. If *next_h was adjusted by eval_times points (or the final point):
-           -- when dt_span_cached is filled (>0), it keeps its value,
-           -- when dt_span_cached is clear (==0), it gets the unadjusted version of *next_h.
-      3. If *next_h was not adjusted as in (2), dt_span_cached is cleared.
-      Note, if a combination (1.b || 1.c) && (3) takes place, this means that
-      dt_span_cached remains unused at the moment of clearing.
-      If (1.a) takes place, dt_span_cached keeps its value.
-      Also, dt_span_cached can be updated by the event handler, see tsevent.c.
+      Logic in using 'next_h_cache':
+      => next_h_cache > 0 indicates the step has been cut/adjusted previously to get the current 'h'.
+         In this case the overall code design should result in that next_h_cache >= 'h', or they approximately equal.
+      => next_h_cache is engaged via the APPLY-CLEAR-SAVE sequence listed below (except the rejected-step case).
+      => next_h_cache can be also updated/used by the event handler, see tsevent.c, and in TSSolve(), see ts.c
+
+      APPLY. Nonzero next_h_cache overrides or caps *next_h as follows:
+             [---] When *next_h < h, use *next_h (adaptor's proposal) to ensure convergence.
+             [USE] When *next_h == h (to within rounding), use next_h_cache.
+             [CAP] When *next_h > h, use 2*next_h_cache to cap *next_h proposed by adaptor.
+                   E.g. in case the cut step 'h' is very small, the adaptor could have proposed to increase
+                   it significantly in *next_h. A time step after a large decrease + large increase
+                   may carry less information than the cached step, so use 2*next_h_cache as an extra cap.
+      CLEAR. After 'APPLY', next_h_cache is always cleared, whether it has changed *next_h or not.
+      SAVE.  The step *next_h may be adjusted by the evaluation time points, or the final point.
+             In this case, next_h_cache saves the original version of *next_h.
+
+      If the current step is rejected, the APPLY-CLEAR-SAVE sequence is skipped, nothing happens with next_h_cache.
     */
-    if (h <= *next_h && *next_h <= adapt->dt_eval_times_cached) *next_h = adapt->dt_eval_times_cached; /* try employing the cache */
-    h1   = *next_h;
-    tend = t + h1;
-
-    if (ts->eval_times && ts->eval_times->time_point_idx < ts->eval_times->num_time_points) {
-      PetscCheck(ts->eval_times->worktol == 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "Unexpected state (tspan->worktol != 0) in TSAdaptChoose()");
-      ts->eval_times->worktol = ts->eval_times->reltol * h1 + ts->eval_times->abstol;
-      if (PetscIsCloseAtTol(t, ts->eval_times->time_points[ts->eval_times->time_point_idx], ts->eval_times->worktol, 0)) /* hit a span time point */
-        if (ts->eval_times->time_point_idx + 1 < ts->eval_times->num_time_points) tmax = ts->eval_times->time_points[ts->eval_times->time_point_idx + 1];
-        else tmax = ts->max_time; /* hit the last span time point */
-      else tmax = ts->eval_times->time_points[ts->eval_times->time_point_idx];
-    } else tmax = ts->max_time;
-    tmax = PetscMin(tmax, ts->max_time);
-    hmax = tmax - t;
-
-    if (t < tmax && tend > tmax) *next_h = hmax;
-    if (t < tmax && tend < tmax && h1 * b > hmax) *next_h = hmax / 2;
-    if (t < tmax && tend < tmax && h1 * a > hmax) *next_h = hmax;
-    if (ts->eval_times && h1 != *next_h && !adapt->dt_eval_times_cached) adapt->dt_eval_times_cached = h1; /* cache the step size if it is to be changed    */
-    if (ts->eval_times && h1 == *next_h && adapt->dt_eval_times_cached) adapt->dt_eval_times_cached = 0;   /* clear the cache if the step size is unchanged */
+    if (adapt->next_h_cache > 0) { // engage the cache
+      if (PetscIsCloseAtTol(h, *next_h, 10 * PETSC_MACHINE_EPSILON, 0.0)) *next_h = adapt->next_h_cache;
+      else if (*next_h > h) *next_h = PetscMin(*next_h, 2 * adapt->next_h_cache); // the factor 2 is somewhat arbitrary and may be reconsidered
+    }
+    h1                  = *next_h;
+    adapt->next_h_cache = 0; // clear the cache
+    PetscCall(TSEvaluationTimesNext(ts, t, &tmax, &hmax));
+    PetscCheck(hmax > 0, PetscObjectComm((PetscObject)adapt), PETSC_ERR_PLIB, "hmax == %g, but should be > 0", (double)hmax);
+    PetscCall(TSAdaptCapNextStep(adapt, t + h1, h1, tmax, hmax, next_h));
+    if (h1 != *next_h) adapt->next_h_cache = h1; // cache the step size if it is to be changed
   }
   if (adapt->monitor) {
     const char *sc_name = (scheme < ncandidates) ? adapt->candidates.name[scheme] : "";
@@ -1033,6 +1133,29 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
                                        (double)ts->ptime, (double)h, (double)*next_h, (double)wlte, (double)wltea, (double)wlter));
     }
     PetscCall(PetscViewerASCIISubtractTab(adapt->monitor, ((PetscObject)adapt)->tablevel));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  A helper function which may adjust (in most cases, cap) the next step 'next_dt', as required by evaltimes/max_time, or leave it intact.
+  tplan, dtplan should be consistent,
+  tmax, dtmax should be consistent.
+  The resulting step *next_dt will be either smaller than dtplan, or approximately equal to it (or exactly equal).
+*/
+PetscErrorCode TSAdaptCapNextStep(TSAdapt adapt, PetscReal tplan, PetscReal dtplan, PetscReal tmax, PetscReal dtmax, PetscReal *next_dt)
+{
+  PetscFunctionBegin;
+  if (adapt) {
+    PetscReal a, b;
+
+    PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
+    PetscAssertPointer(next_dt, 6);
+    a = 1.0 + adapt->matchstepfac[0];
+    b = adapt->matchstepfac[1];
+    if (tplan > tmax) *next_dt = dtmax;
+    if (tplan < tmax && dtplan * b > dtmax) *next_dt = dtmax / 2;
+    if (tplan < tmax && dtplan * a > dtmax) *next_dt = dtmax;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1177,8 +1300,9 @@ PetscErrorCode TSAdaptCreate(MPI_Comm comm, TSAdapt *inadapt)
   adapt->reject_safety      = 0.5;
   adapt->clip[0]            = 0.1;
   adapt->clip[1]            = 10.;
-  adapt->dt_min             = 1e-20;
-  adapt->dt_max             = 1e+20;
+  adapt->dt_min_rel         = 10 * PETSC_MACHINE_EPSILON;
+  adapt->dt_min_abs         = PetscSqrtReal(PETSC_REAL_MIN);
+  adapt->dt_max             = PETSC_MAX_REAL;
   adapt->ignore_max         = -1.0;
   adapt->glee_use_local     = PETSC_TRUE;
   adapt->scale_solve_failed = 0.25;

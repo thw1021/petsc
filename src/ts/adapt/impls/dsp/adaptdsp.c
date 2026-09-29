@@ -73,7 +73,8 @@ static PetscErrorCode TSAdaptChoose_DSP(TSAdapt adapt, TS ts, PetscReal h, Petsc
   PetscReal    enorma, enormr;
   PetscReal    safety = adapt->safety * (PetscReal)0.9;
   PetscReal    hnew, hfac = PETSC_INFINITY;
-  PetscReal    hmin = adapt->dt_min * (1 + PETSC_SQRT_MACHINE_EPSILON);
+  PetscReal    adapt_dt_min = TSMinStepAtTime(adapt->dt_min_rel, adapt->dt_min_abs, ts->ptime);
+  PetscReal    hmin         = adapt_dt_min * (1 + PETSC_SQRT_MACHINE_EPSILON);
 
   PetscFunctionBegin;
   *next_sc = 0;  /* Reuse the same order scheme */
@@ -162,7 +163,7 @@ static PetscErrorCode TSAdaptChoose_DSP(TSAdapt adapt, TS ts, PetscReal h, Petsc
   }
 
   hnew    = h * PetscClipInterval(hfac, adapt->clip[0], adapt->clip[1]);
-  *next_h = PetscClipInterval(hnew, adapt->dt_min, adapt->dt_max);
+  *next_h = PetscClipInterval(hnew, adapt_dt_min, adapt->dt_max);
   *wlte   = enorm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

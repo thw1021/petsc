@@ -1,0 +1,11 @@
+Tests PetscOptionsRealArray(), PetscOptionsScalarArray(), PetscOptionsIntArray()
+----------------------------------------
+...
+----------------------------------------
+Test options:
+  -rarray: <null>: Input a real array (ex14b.c)
+  -sarray: <1.+0.i,-2.-3.i,4.5+6.2i,4.5+0.i,6.8+4.i,0.+1.i,0.-1.i,0.-1.2i>: Input a scalar array (ex14b.c)
+  -iarray: <null>: Input an int array (ex14b.c)
+Real array of length 0
+Scalar array of length 8
+Int array of length 0

@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 {
   AppCtx      appctx;                 /* user-defined application context */
   TS          ts;                     /* timestepping context */
+  TSAdapt     adapt;                  /* step size adaptor */
   Mat         A;                      /* matrix data structure */
   Vec         u;                      /* approximate solution vector */
   PetscReal   time_total_max = 100.0; /* default max total time */
@@ -212,6 +213,8 @@ int main(int argc, char **argv)
 
   PetscCall(TSSetMaxSteps(ts, time_steps_max));
   PetscCall(TSSetMaxTime(ts, time_total_max));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, time_total_max));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
   PetscCall(TSSetFromOptions(ts));
 

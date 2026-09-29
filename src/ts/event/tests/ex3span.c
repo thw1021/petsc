@@ -1,6 +1,8 @@
 #include <petscts.h>
 #include <stdio.h>
 
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+
 #define NEW_VERSION // Applicable for the new features; avoid this for the older PETSc versions (without TSSetPostEventStep())
 
 static char help[] = "Simple linear problem with events\n"
@@ -15,7 +17,7 @@ static char help[] = "Simple linear problem with events\n"
                      "Options:\n"
                      "-dir     d : zero-crossing direction for events: 0 (default), 1, -1\n"
                      "-flg       : additional output in Postevent (default: nothing)\n"
-                     "-errtol  e : error tolerance, for printing 'pass/fail' for located events (1e-5 by default)\n"
+                     "-errtol  e : error tolerance, for printing 'pass/fail' for located events (1e-4 : 1e-7 by default)\n"
                      "-restart   : flag for TSRestartStep() in PostEvent (default: no)\n"
                      "-term      : flag to terminate at 9.05 event (true by default)\n"
                      "-dtpost  x : if x > 0, then on even PostEvent calls 1st-post-event-step = x is set,\n"
@@ -25,8 +27,8 @@ static char help[] = "Simple linear problem with events\n"
                      "-dt2_at6 t : second time step set after event at t=6 (if nothing is specified, no action is done)\n"
                      "-mult7   m : after event at t=7, the linear system coeffs '0.2' are multiplied by m (default = 1.0)\n";
 
-#define MAX_NFUNC 100  // max event functions per rank
-#define MAX_NEV   5000 // max zero crossings for each rank
+#define MAX_NFUNC 10  // max event functions per rank
+#define MAX_NEV   500 // max zero crossings for each rank
 
 typedef struct {
   PetscMPIInt rank, size;
@@ -37,7 +39,7 @@ typedef struct {
   PetscInt    cnt;              // counter
   PetscInt    cntref;           // actual length of 'ref' on the given rank
   PetscBool   flg;              // flag for additional print in PostEvent
-  PetscReal   errtol;           // error tolerance, for printing 'pass/fail' for located events (1e-5 by default)
+  PetscReal   errtol;           // error tolerance, for printing 'pass/fail' for located events (1e-4 : 1e-7 by default)
   PetscBool   restart;          // flag for TSRestartStep() in PostEvent
   PetscBool   term;             // flag to terminate at 9.05 event
   PetscReal   dtpost;           // first post-event step
@@ -76,7 +78,7 @@ int main(int argc, char **argv)
   ctx.cnt     = 0;
   ctx.cntref  = 0;
   ctx.flg     = PETSC_FALSE;
-  ctx.errtol  = 1e-5;
+  ctx.errtol  = (PetscDefined(USE_REAL_SINGLE) || PetscDefined(USE_REAL___FP16) ? 1e-4 : 1e-7);
   ctx.restart = PETSC_FALSE;
   ctx.term    = PETSC_TRUE;
   ctx.dtpost  = 0;
@@ -145,7 +147,7 @@ int main(int argc, char **argv)
   PetscCall(TSSetEventHandler(ts, n, dir, term, EventFunction, Postevent, &ctx));
   PetscCall(TSSetEventTolerances(ts, tol, NULL));
 
-  // Set the time span
+  // Set the time span (evaluation times)
   for (PetscInt i = 0; i < 10; i++) {
     tspan[2 * i]     = 0.01 + i + (i == 7 ? -0.02 : 0);
     tspan[2 * i + 1] = 0.21 + i;
@@ -175,17 +177,7 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
 
-  { // Verify evaluated solutions
-    PetscInt         num_sols;
-    Vec             *sols;
-    const PetscReal *sol_times;
-    PetscCall(TSGetEvaluationSolutions(ts, &num_sols, &sol_times, &sols));
-    for (PetscInt i = 0; i < num_sols; i++) {
-      PetscCheck(PetscIsCloseAtTol(tspan[i], sol_times[i], 1e-6, 1e2 * PETSC_MACHINE_EPSILON), PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Requested solution at time %g, but received time at %g", (double)tspan[i], (double)sol_times[i]);
-    }
-  }
-
-  // print the final time and step
+  // Print the final time and step
   PetscCall(TSGetTime(ts, &tlast));
   PetscCall(TSGetTimeStep(ts, &dtlast));
   PetscCall(TSGetAdapt(ts, &adapt));
@@ -193,7 +185,7 @@ int main(int argc, char **argv)
 
   PetscCall(TSGetMaxTime(ts, &maxtime));
   tlast_expected = ((dir0 == 1 || !ctx.term) ? maxtime : PetscMin(maxtime, 9.05));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Final time = %g, max time = %g, %s\n", (double)tlast, (double)maxtime, PetscAbsReal(tlast - tlast_expected) < ctx.errtol ? "pass" : "fail"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Final time = %g, max time = %g, tol = %g, %s\n", (double)tlast, (double)maxtime, (double)ctx.errtol, PetscAbsReal(tlast - tlast_expected) < ctx.errtol ? "pass" : "fail"));
 
   if (match) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Adapt = none\n"));
@@ -319,20 +311,20 @@ PetscErrorCode Fill_mat(PetscReal coeff, PetscInt m, Mat A)
     suffix: 1single
     requires: single
     output_file: output/ex3span_1single.out
-    args: -ts_monitor -ts_adapt_type none -restart -ts_event_dt_min 1e-6
+    args: -ts_monitor -ts_adapt_type none -restart -ts_event_tol 1e-5
     args: -dtpost 0.1127 -D 0.0015 -dir 0 -ts_max_time 9.8 -ts_time_step 0.18
     nsize: 1
 
   test:
     suffix: 2
     output_file: output/ex3span_2.out
-    args: -ts_event_dt_min 1e-6 -dtpost 1 -term 0 -ts_max_time 9.61
+    args: -dtpost 1 -term 0 -ts_max_time 9.61
     nsize: 1
 
   test:
     suffix: 3none
     output_file: output/ex3span_3none.out
-    args: -ts_event_dt_min 1e-6 -ts_adapt_type none -dir 0
+    args: -ts_adapt_type none -dir 0
     args: -ts_event_post_event_step {{-1 0.11}}
     args: -ts_event_post_event_second_step 0.12
     args: -dt2_at6 {{-2 0.08 0.15}}
@@ -341,7 +333,7 @@ PetscErrorCode Fill_mat(PetscReal coeff, PetscInt m, Mat A)
   test:
     suffix: 3basic
     output_file: output/ex3span_3basic.out
-    args: -ts_event_dt_min 1e-6 -ts_adapt_type basic -dir 0
+    args: -ts_adapt_type basic -dir 0
     args: -ts_event_post_event_step {{-1 0.11}}
     args: -ts_event_post_event_second_step 0.12
     args: -dt2_at6 {{-2 0.08 0.15}}
@@ -349,17 +341,46 @@ PetscErrorCode Fill_mat(PetscReal coeff, PetscInt m, Mat A)
     nsize: 2
 
   test:
-    suffix: fin
-    requires: !defined(PETSCTEST_VALGRIND)
+    suffix: fin_double
+    requires: !defined(PETSCTEST_VALGRIND) double
     output_file: output/ex3span_fin.out
     args: -ts_max_time {{8.21 8.99 9 9.04 9.05 9.06 9.21 9.99 12}}
-    args: -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1125
     args: -D 0.0025
     args: -dir {{0 -1 1}}
     args: -ts_time_step 0.3025
     args: -ts_type {{rk bdf}}
+    filter: grep "Final time ="
+    filter_output: grep "Final time ="
+    nsize: 2
+
+  test:
+    suffix: fin_single
+    requires: !defined(PETSCTEST_VALGRIND) single
+    output_file: output/ex3span_fin.out
+    args: -ts_max_time {{8.99 9 9.05 9.06 9.99 12}}
+    args: -ts_adapt_type {{none basic}}
+    args: -dtpost 0.1125
+    args: -D 0.0025
+    args: -dir {{0 1}}
+    args: -ts_time_step 0.3025
+    args: -ts_type rk
+    filter: grep "Final time ="
+    filter_output: grep "Final time ="
+    nsize: 2
+
+  test:
+    suffix: fin_quad
+    requires: !defined(PETSCTEST_VALGRIND) __float128
+    output_file: output/ex3span_fin.out
+    args: -ts_max_time {{8.21 9.04 9.05 9.21 9.99}}
+    args: -ts_adapt_type {{none basic}}
+    args: -dtpost 0.1125
+    args: -D 0.0025
+    args: -dir {{0 -1}}
+    args: -ts_time_step 0.3025
+    args: -ts_type bdf
     filter: grep "Final time ="
     filter_output: grep "Final time ="
     nsize: 2

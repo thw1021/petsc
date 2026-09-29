@@ -1036,7 +1036,8 @@ PetscErrorCode PetscOptionsRealArray_Private(PetscOptionItems PetscOptionsObject
     const PetscInt nv   = *n;
     const MPI_Comm comm = PetscOptionsObject->comm;
 
-    PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%g", Prefix(prefix), opt + 1, (double)value[0]));
+    if (nv) PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%g", Prefix(prefix), opt + 1, (double)value[0]));
+    else PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <null", Prefix(prefix), opt + 1));
     for (PetscInt i = 1; i < nv; ++i) PetscCall((*PetscHelpPrintf)(comm, ",%g", (double)value[i]));
     PetscCall((*PetscHelpPrintf)(comm, ">: %s (%s)\n", text, ManSection(man)));
   }
@@ -1070,8 +1071,9 @@ PetscErrorCode PetscOptionsScalarArray_Private(PetscOptionItems PetscOptionsObje
     const PetscInt nv   = *n;
     const MPI_Comm comm = PetscOptionsObject->comm;
 
-    PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%g+%gi", Prefix(prefix), opt + 1, (double)PetscRealPart(value[0]), (double)PetscImaginaryPart(value[0])));
-    for (PetscInt i = 1; i < nv; ++i) PetscCall((*PetscHelpPrintf)(comm, ",%g+%gi", (double)PetscRealPart(value[i]), (double)PetscImaginaryPart(value[i])));
+    if (nv) PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%g%s%gi", Prefix(prefix), opt + 1, (double)PetscRealPart(value[0]), PetscImaginaryPart(value[0]) < 0 ? "" : "+", (double)PetscImaginaryPart(value[0])));
+    else PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <null", Prefix(prefix), opt + 1));
+    for (PetscInt i = 1; i < nv; ++i) PetscCall((*PetscHelpPrintf)(comm, ",%g%s%gi", (double)PetscRealPart(value[i]), PetscImaginaryPart(value[i]) < 0 ? "" : "+", (double)PetscImaginaryPart(value[i])));
     PetscCall((*PetscHelpPrintf)(comm, ">: %s (%s)\n", text, ManSection(man)));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1104,7 +1106,8 @@ PetscErrorCode PetscOptionsIntArray_Private(PetscOptionItems PetscOptionsObject,
     const PetscInt nv   = *n;
     const MPI_Comm comm = PetscOptionsObject->comm;
 
-    PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%" PetscInt_FMT, Prefix(prefix), opt + 1, value[0]));
+    if (nv) PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <%" PetscInt_FMT, Prefix(prefix), opt + 1, value[0]));
+    else PetscCall((*PetscHelpPrintf)(comm, "  -%s%s: <null", Prefix(prefix), opt + 1));
     for (PetscInt i = 1; i < nv; ++i) PetscCall((*PetscHelpPrintf)(comm, ",%" PetscInt_FMT, value[i]));
     PetscCall((*PetscHelpPrintf)(comm, ">: %s (%s)\n", text, ManSection(man)));
   }

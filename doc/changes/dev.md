@@ -48,6 +48,7 @@
 - Add `-help mansec` to restrict the options help output to the options blocks in the given manual section; a comma-separated list may be given, for example `-help ksp,snes`
 - Add `Viewer` and `Bag` as the manual sections of, respectively, the viewer options an object creates, such as `-ksp_monitor` and `-ksp_view`, and the options registered by `PetscBagRegisterInt()` and the other `PetscBagRegister` routines; these are listed by `-help viewer` and `-help bag`, and not by the section of the object that creates them, so `-help ksp` does not list `-ksp_monitor`
 - Deprecate `PetscVoidFunction` and `PetscVoidStarFunction` in favor of `PetscVoidFn *` and `PetscVoidFn **`
+- Add `PetscNextafter()` for `PetscReal` numbers
 
 ## Event Logging
 
@@ -197,6 +198,12 @@
 - Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
 - Deprecate `TSRHSFunction`, `TSRHSJacobian`, `TSRHSJacobianP`, `TSSolutionFunction`, `TSForcingFunction`, `TSIFunction`, `TSIJacobian`, `TSI2Function`, `TSI2Jacobian`, `TSTransientVariable`, `TSGLLEAcceptFunction` and `TSAlpha2Predictor` in favor of a pointer to the corresponding `Fn` typedef, for example `TSRHSFunctionFn *`
 - Deprecate `DMDATSRHSFunctionLocal`, `DMDATSRHSJacobianLocal`, `DMDATSIFunctionLocal` and `DMDATSIJacobianLocal` in favor of `DMDATSRHSFunctionLocalFn *`, `DMDATSRHSJacobianLocalFn *`, `DMDATSIFunctionLocalFn *` and `DMDATSIJacobianLocalFn *`
+- Add `TSEvaluationTimesAddArray()`, `TSEvaluationTimesAddUniform()` for setting the evaluation time points and the associated callbacks
+- Add the default handler/callback for evaluation time points `TSEvaluationTimesDefaultHandler()`, that saves the whole solution vectors
+- Add `TSEvaluationTimesSetUp()`, a set-up routine to be called after all evaluation times schedules have been added
+- Add `TSEvaluationTimesReset()`, `TSEvaluationTimesDestroy()` for resetting or deleting the evaluation times object
+- Add `TSEvaluationTimesGetSolutions()`, `TSEvaluationTimesRestoreSolutions()` for accessing the solutions saved by the different evaluation times schedules
+- Deprecate `TSSetTimeSpan()`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimes()`, `TSGetEvaluationSolutions()`
 
 ## TAO
 

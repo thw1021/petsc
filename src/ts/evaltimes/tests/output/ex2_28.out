@@ -1,0 +1,18 @@
+### Check 'user' before SetUp: not found
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+0 TS dt 0.05 time 0.1
+  TSAdapt none beuler 0: step   0 accepted t=0.1        + 5.000e-02 dt=1.235e-01 
+1 TS dt 0.12345 time 0.15
+### Check 'user' after Solve: not found
+== CONVERGED_TIME ==
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+Initial time = 0.1, final time reached = 0.15, max time = 0.15, pass
+Initial time step = 0.12345, final time step = 0.12345, adapt == none, match

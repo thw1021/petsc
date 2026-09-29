@@ -128,6 +128,6 @@ CONVERGED REASON: 1 (TS_CONVERGED_EVENT == 4)
 0	4.	0.	pass
 0	6.	0.	pass
 0	8.	3.94024e-09	pass
-Final time = 9.21, max time = 9.21, pass
+Final time = 9.21, max time = 9.21, tol = 1.0e-07, pass
 Adapt = none
 Last dt = 0.099
