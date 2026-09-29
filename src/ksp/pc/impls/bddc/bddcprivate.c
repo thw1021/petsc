@@ -4224,6 +4224,7 @@ PetscErrorCode PCBDDCResetTopography(PC pc)
   PetscCall(VecDestroy(&pcbddc->work_change));
   PetscCall(MatDestroy(&pcbddc->ConstraintMatrix));
   PetscCall(MatDestroy(&pcbddc->divudotp));
+  PetscCall(MatNullSpaceDestroy(&pcbddc->nonetflux));
   PetscCall(ISDestroy(&pcbddc->divudotp_vl2l));
   PetscCall(PCBDDCGraphDestroy(&pcbddc->mat_graph));
   for (PetscInt i = 0; i < pcbddc->n_local_subs; i++) PetscCall(ISDestroy(&pcbddc->local_subs[i]));
@@ -6777,7 +6778,8 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
   if (!pcbddc->adaptive_selection) {
     IS           ISForVertices, *ISForFaces, *ISForEdges;
     MatNullSpace nearnullsp;
-    const Vec   *nearnullvecs;
+    const Vec   *nearnullvecs = NULL;
+    Vec         *combinedvecs = NULL;
     Vec         *localnearnullsp;
     PetscScalar *array;
     PetscInt     n_ISForFaces, n_ISForEdges, nnsp_size, o_nf, o_ne;
@@ -6817,7 +6819,9 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
     if (!pcbddc->use_edges) n_ISForEdges = 0;
     if (!pcbddc->use_faces) n_ISForFaces = 0;
 
-    /* check if near null space is attached to global mat */
+    /* check if a near null space is attached to global mat or we have a nonetflux condition */
+    nnsp_size     = 0;
+    nnsp_has_cnst = PETSC_FALSE;
     if (pcbddc->use_nnsp) PetscCall(MatGetNearNullSpace(pc->pmat, &nearnullsp));
     else nearnullsp = NULL;
 
@@ -6831,10 +6835,22 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
       pcbddc->onearnullspace = nearnullsp;
       PetscCall(PetscMalloc1(nnsp_size, &pcbddc->onearnullvecs_state));
       for (i = 0; i < nnsp_size; i++) PetscCall(PetscObjectStateGet((PetscObject)nearnullvecs[i], &pcbddc->onearnullvecs_state[i]));
-    } else { /* if near null space is not provided BDDC uses constants by default */
-      nnsp_size     = 0;
-      nnsp_has_cnst = PETSC_TRUE;
     }
+    if (pcbddc->use_nnsp && pcbddc->nonetflux) {
+      const Vec *fluxvecs;
+      PetscInt   nflux;
+      PetscBool  flux_has_cnst;
+
+      PetscCall(MatNullSpaceGetVecs(pcbddc->nonetflux, &flux_has_cnst, &nflux, &fluxvecs));
+      nnsp_has_cnst = (PetscBool)(nnsp_has_cnst || flux_has_cnst);
+      PetscCall(PetscMalloc1(nnsp_size + nflux, &combinedvecs));
+      PetscCall(PetscArraycpy(combinedvecs, nearnullvecs, nnsp_size));
+      PetscCall(PetscArraycpy(combinedvecs + nnsp_size, fluxvecs, nflux));
+      nearnullvecs = combinedvecs;
+      nnsp_size += nflux;
+    }
+    if (!nnsp_size) nnsp_has_cnst = PETSC_TRUE;
+
     /* get max number of constraints on a single cc */
     max_constraints = nnsp_size;
     if (nnsp_has_cnst) max_constraints++;
@@ -6875,6 +6891,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
       PetscCall(VecScatterBegin(matis->rctx, nearnullvecs[k], localnearnullsp[k], INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(matis->rctx, nearnullvecs[k], localnearnullsp[k], INSERT_VALUES, SCATTER_FORWARD));
     }
+    PetscCall(PetscFree(combinedvecs));
 
     /* whether or not to skip lapack calls */
     skip_lapack = PETSC_TRUE;
