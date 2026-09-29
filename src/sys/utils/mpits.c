@@ -204,7 +204,7 @@ static PetscErrorCode PetscCommBuildTwoSided_RedScatter(MPI_Comm comm, PetscMPII
   PetscCall(PetscMalloc(nrecvs * count * unitbytes, &fdata));
   tdata = (char *)todata;
   PetscCall(PetscMalloc2(nto + nrecvs, &reqs, nto + nrecvs, &statuses));
-  sendreqs = reqs + nrecvs;
+  sendreqs = PetscSafePointerPlusOffset(reqs, nrecvs);
   for (i = 0; i < nrecvs; i++) PetscCallMPI(MPIU_Irecv((void *)(fdata + count * unitbytes * i), count, dtype, MPI_ANY_SOURCE, tag, comm, reqs + i));
   for (i = 0; i < nto; i++) PetscCallMPI(MPIU_Isend((void *)(tdata + count * unitbytes * i), count, dtype, toranks[i], tag, comm, sendreqs + i));
   PetscCallMPI(MPI_Waitall(nto + nrecvs, reqs, statuses));
