@@ -205,5 +205,9 @@ int main(int argc, char **args)
       suffix: reset
       nsize: {{1 2 3}}
       args: -reset -constant
+    test:
+      suffix: coarse_resize
+      nsize: {{2 3}}
+      args: -pc_bddc_coarsening_ratio 8 -reset {{0 1}}
 
 TEST*/
