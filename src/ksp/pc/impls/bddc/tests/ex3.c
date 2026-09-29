@@ -33,7 +33,7 @@ int main(int argc, char **args)
   PetscInt               indices[] = {0, 1, 2, 3, 4, 5};
   PetscInt               nlocal, npressure, pressure, start, end, nmodes = 2, nconstraints, expected = 0, offset = 0;
   PetscMPIInt            rank, size, active;
-  PetscBool              constant = PETSC_FALSE, empty_rank = PETSC_FALSE, dependent = PETSC_FALSE, has_const = PETSC_FALSE;
+  PetscBool              constant = PETSC_FALSE, empty_rank = PETSC_FALSE, dependent = PETSC_FALSE, has_const = PETSC_FALSE, reset = PETSC_FALSE;
   PetscReal              error;
 
   PetscFunctionBeginUser;
@@ -43,6 +43,7 @@ int main(int argc, char **args)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-user_modes", &nmodes, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-constant", &constant, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-empty_rank", &empty_rank, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-reset", &reset, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dependent", &dependent, NULL));
   PetscCheck(nmodes >= 0 && nmodes <= 2, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "Use zero, one, or two user modes");
   if (dependent) {
@@ -86,8 +87,12 @@ int main(int argc, char **args)
   PetscCall(VecSet(exact, 1.0));
   PetscCall(VecAXPY(exact, 0.5, modes[1]));
   for (PetscInt step = 0; step < 5; step++) {
-    // Rebuild the interface, replace the user modes, remove them, and recreate the solver.
-    if (step == 0 || step == 4) {
+    // Rebuild the interface, replace the user modes, remove them, and reset or recreate the solver.
+    if (step == 4 && reset) {
+      PetscCall(PCReset(pc));
+      PetscCall(PCBDDCSetDivergenceMat(pc, B, PETSC_FALSE, NULL));
+    }
+    if (step == 0 || (step == 4 && !reset)) {
       PetscCall(KSPDestroy(&ksp));
       PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
       PetscCall(KSPSetType(ksp, KSPCG));
@@ -196,5 +201,9 @@ int main(int argc, char **args)
       suffix: empty
       nsize: 3
       args: -empty_rank -constant {{0 1}}
+    test:
+      suffix: reset
+      nsize: {{1 2 3}}
+      args: -reset -constant
 
 TEST*/
