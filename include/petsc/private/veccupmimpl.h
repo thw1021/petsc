@@ -1080,6 +1080,8 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::BindToCPU_CUPMBase(Vec v, PetscBool us
   VecSetOp_CUPM(errorwnorm, nullptr, D::ErrorWnorm);
   VecSetOp_CUPM(duplicatevecs, VecDuplicateVecs_Default, VecDuplicateVecs_Default);
   VecSetOp_CUPM(setstdbasis, nullptr, VecSeq_T::SetStdBasis);
+  // Finish pending transfers before CPU operations can access the host array.
+  if (usehost) PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
