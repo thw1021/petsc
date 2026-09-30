@@ -1,4 +1,4 @@
-static const char help[] = "Test CUDA/HIP MatZeroEntries() ordering on the current device context.\n";
+static const char help[] = "Test CUDA/HIP MatZeroEntries() ordering and MatScale()/MatAXPY() barrier semantics on the current device context.\n";
 
 #include <petscmat.h>
 #include <petscdevice.h>
@@ -37,7 +37,7 @@ static PetscErrorCode WriteValues(Mat A, PetscDeviceType type, PetscDeviceContex
 
 int main(int argc, char **argv)
 {
-  Mat                   A;
+  Mat                   A, B;
   PetscDeviceContext    saved, current;
   PetscDevice           device;
   PetscDeviceType       type;
@@ -59,6 +59,8 @@ int main(int argc, char **argv)
   PetscCall(MatConvert(A, type == PETSC_DEVICE_CUDA ? MATSEQAIJCUSPARSE : MATSEQAIJHIPSPARSE, MAT_INPLACE_MATRIX, &A));
   PetscCall(WriteValues(A, type, saved, input, PETSC_FALSE));
   PetscCall(PetscDeviceContextSynchronize(saved));
+  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &B));
+  PetscCall(PetscDeviceContextSynchronize(saved));
 
   for (PetscInt k = 0; k < 2; ++k) {
     PetscCall(PetscDeviceContextDuplicate(saved, &current));
@@ -74,10 +76,44 @@ int main(int argc, char **argv)
     PetscCall(MatSeqAIJGetArrayRead(A, &a));
     for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stream type %s: CSR entry %" PetscInt_FMT " is %g instead of zero", PetscStreamTypes[streams[k]], i, (double)PetscRealPart(a[i]));
     PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
+
+    // Warm the BLAS handle and scaling kernel before checking completion on return.
+    PetscCall(MatScale(A, 2));
+    PetscCall(PetscDeviceContextSynchronize(current));
+    PetscCall(WriteValues(A, type, current, input, PETSC_TRUE));
+    PetscCall(MatScale(A, 2));
+    if (streams[k] == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+      PetscBool idle;
+
+      PetscCall(PetscDeviceContextQueryIdle(current, &idle));
+      PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatScale() returned with work pending on a barrier context");
+    }
+    PetscCall(PetscDeviceContextSynchronize(current));
+    PetscCall(MatSeqAIJGetArrayRead(A, &a));
+    for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 2 * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stream type %s: incorrectly scaled CSR entry %" PetscInt_FMT, PetscStreamTypes[streams[k]], i);
+    PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
+
+    // Warm AXPY before delaying the update of its source matrix.
+    PetscCall(MatAXPY(A, 2, B, SAME_NONZERO_PATTERN));
+    PetscCall(PetscDeviceContextSynchronize(current));
+    PetscCall(WriteValues(A, type, current, input, PETSC_FALSE));
+    PetscCall(WriteValues(B, type, current, input, PETSC_TRUE));
+    PetscCall(MatAXPY(A, 2, B, SAME_NONZERO_PATTERN));
+    if (streams[k] == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+      PetscBool idle;
+
+      PetscCall(PetscDeviceContextQueryIdle(current, &idle));
+      PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatAXPY() returned with work pending on a barrier context");
+    }
+    PetscCall(PetscDeviceContextSynchronize(current));
+    PetscCall(MatSeqAIJGetArrayRead(A, &a));
+    for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 3 * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stream type %s: incorrect CSR entry %" PetscInt_FMT " after MatAXPY()", PetscStreamTypes[streams[k]], i);
+    PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }
 
+  PetscCall(MatDestroy(&B));
   PetscCall(MatDestroy(&A));
   PetscCall(PetscDeviceFree(saved, input));
   PetscCall(PetscDeviceContextSynchronize(saved));
