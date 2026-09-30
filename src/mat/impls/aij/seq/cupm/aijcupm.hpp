@@ -469,14 +469,17 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
     const PetscScalar *av = nullptr;
     PetscMemType       mtype;
     PetscBool          dmem;
+    cupmStream_t       stream;
+    PetscDeviceContext dctx;
 
     PetscFunctionBegin;
+    PetscCall(GetHandles_(&dctx, &stream));
     PetscCall(PetscCUPMGetMemType(v, &mtype));
     dmem = PetscMemTypeDevice(mtype);
     PetscCall(GetArrayRead(A, &av));
     if (n && idx) {
       THRUSTINTARRAY widx(n);
-      widx.assign(idx, idx + n);
+      PetscCallCUPM(cupmMemcpyAsync(widx.data().get(), idx, n * sizeof(*idx), cupmMemcpyHostToDevice, stream));
       PetscCall(PetscLogCpuToGpu(n * sizeof(PetscInt)));
 
       THRUSTARRAY                    *w = NULL;
@@ -491,12 +494,16 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
         thrust::device_ptr<const PetscScalar> dav   = thrust::device_pointer_cast(av);
         auto                                  zibit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(dav, widx.begin()), dv));
         auto                                  zieit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(dav, widx.end()), dv + n));
-        PetscCallThrust(thrust::for_each(zibit, zieit, VecCUPMEquals{}));
+        PetscCallThrust(THRUST_CALL(thrust::for_each, stream, zibit, zieit, VecCUPMEquals{}));
       }
-      if (w) PetscCallCUPM(cupmMemcpy(v, w->data().get(), n * sizeof(PetscScalar), cupmMemcpyDeviceToHost));
+      if (w) PetscCallCUPM(cupmMemcpyAsync(v, w->data().get(), n * sizeof(PetscScalar), cupmMemcpyDeviceToHost, stream));
+      // Complete the gather before its temporary device indices are destroyed.
+      PetscCall(PetscDeviceContextSynchronize(dctx));
       delete w;
     } else {
-      PetscCallCUPM(cupmMemcpy(v, av, n * sizeof(PetscScalar), dmem ? cupmMemcpyDeviceToDevice : cupmMemcpyDeviceToHost));
+      PetscCallCUPM(cupmMemcpyAsync(v, av, n * sizeof(PetscScalar), dmem ? cupmMemcpyDeviceToDevice : cupmMemcpyDeviceToHost, stream));
+      if (dmem) PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
+      else PetscCall(PetscDeviceContextSynchronize(dctx));
     }
     if (!dmem) PetscCall(PetscLogCpuToGpu(n * sizeof(PetscScalar)));
     PetscCall(RestoreArrayRead(A, &av));
