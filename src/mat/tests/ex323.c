@@ -148,6 +148,73 @@ static PetscErrorCode TestDiagonalScale(Mat A, PetscDeviceType type, PetscDevice
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestGetIJ(PetscDeviceType type, PetscDeviceContext dctx)
+{
+  Mat             A;
+  const PetscInt *i, *j;
+  PetscInt       *rows, *cols;
+  PetscBool       idle;
+  void           *stream;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, 4, 4, 1, NULL, &A));
+  PetscCall(MatSetValue(A, 1, 2, 7, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatConvert(A, type == PETSC_DEVICE_CUDA ? MATSEQAIJCUSPARSE : MATSEQAIJHIPSPARSE, MAT_INPLACE_MATRIX, &A));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 5, &rows));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 1, &cols));
+  PetscCall(PetscDeviceContextGetStreamHandle(dctx, &stream));
+  // Build the compressed device matrix before testing the full row-offset upload.
+#if PetscDefined(HAVE_CUDA)
+  if (type == PETSC_DEVICE_CUDA) {
+    PetscCall(MatSeqAIJCUSPARSEGetIJ(A, PETSC_TRUE, &i, &j));
+    PetscCall(MatSeqAIJCUSPARSERestoreIJ(A, PETSC_TRUE, &i, &j));
+  }
+#endif
+#if PetscDefined(HAVE_HIP)
+  if (type == PETSC_DEVICE_HIP) {
+    PetscCall(MatSeqAIJHIPSPARSEGetIJ(A, PETSC_TRUE, &i, &j));
+    PetscCall(MatSeqAIJHIPSPARSERestoreIJ(A, PETSC_TRUE, &i, &j));
+  }
+#endif
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(PetscDeviceContextDelay(dctx, 0.2));
+#if PetscDefined(HAVE_CUDA)
+  if (type == PETSC_DEVICE_CUDA) PetscCall(MatSeqAIJCUSPARSEGetIJ(A, PETSC_FALSE, &i, &j));
+#endif
+#if PetscDefined(HAVE_HIP)
+  if (type == PETSC_DEVICE_HIP) PetscCall(MatSeqAIJHIPSPARSEGetIJ(A, PETSC_FALSE, &i, &j));
+#endif
+  PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+  PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatSeqAIJGetIJ() returned before its current-context upload completed");
+#if PetscDefined(HAVE_CUDA)
+  if (type == PETSC_DEVICE_CUDA) {
+    PetscCallCUDA(cudaMemcpyAsync(rows, i, 5 * sizeof(*rows), cudaMemcpyDeviceToHost, *(cudaStream_t *)stream));
+    PetscCallCUDA(cudaMemcpyAsync(cols, j, sizeof(*cols), cudaMemcpyDeviceToHost, *(cudaStream_t *)stream));
+  }
+#endif
+#if PetscDefined(HAVE_HIP)
+  if (type == PETSC_DEVICE_HIP) {
+    PetscCallHIP(hipMemcpyAsync(rows, i, 5 * sizeof(*rows), hipMemcpyDeviceToHost, *(hipStream_t *)stream));
+    PetscCallHIP(hipMemcpyAsync(cols, j, sizeof(*cols), hipMemcpyDeviceToHost, *(hipStream_t *)stream));
+  }
+#endif
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  for (PetscInt k = 0; k < 5; ++k) PetscCheck(rows[k] == (k > 1), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect row offset at entry %" PetscInt_FMT, k);
+  PetscCheck(cols[0] == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect column index");
+#if PetscDefined(HAVE_CUDA)
+  if (type == PETSC_DEVICE_CUDA) PetscCall(MatSeqAIJCUSPARSERestoreIJ(A, PETSC_FALSE, &i, &j));
+#endif
+#if PetscDefined(HAVE_HIP)
+  if (type == PETSC_DEVICE_HIP) PetscCall(MatSeqAIJHIPSPARSERestoreIJ(A, PETSC_FALSE, &i, &j));
+#endif
+  PetscCall(PetscDeviceFree(dctx, cols));
+  PetscCall(PetscDeviceFree(dctx, rows));
+  PetscCall(MatDestroy(&A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   Mat                   A, B;
@@ -225,6 +292,7 @@ int main(int argc, char **argv)
     PetscCall(TestCopies(A, type, current, input));
     PetscCall(TestGetDiagonal(A, type, current, input));
     PetscCall(TestDiagonalScale(A, type, current, input));
+    PetscCall(TestGetIJ(type, current));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }

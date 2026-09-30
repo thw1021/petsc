@@ -330,11 +330,14 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
   /* MatSeqAIJGetIJ: return device CSR row-pointer and column-index arrays */
   static PetscErrorCode GetIJ(Mat A, PetscBool compressed, const PetscInt **i, const PetscInt **j) noexcept
   {
-    MatStructType *cusp = (MatStructType *)A->spptr;
-    Mat_SeqAIJ    *a    = (Mat_SeqAIJ *)A->data;
-    CsrMatrix     *csr;
+    MatStructType     *cusp = (MatStructType *)A->spptr;
+    Mat_SeqAIJ        *a    = (Mat_SeqAIJ *)A->data;
+    CsrMatrix         *csr;
+    cupmStream_t       stream;
+    PetscDeviceContext dctx;
 
     PetscFunctionBegin;
+    PetscCall(GetHandles_(&dctx, &stream));
     PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
     if (!i || !j) PetscFunctionReturn(PETSC_SUCCESS);
     PetscCheckTypeName(A, Policy::mat_type_name);
@@ -346,7 +349,8 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
       if (!compressed && a->compressedrow.use) { /* need full row offset */
         if (!cusp->rowoffsets_gpu) {
           cusp->rowoffsets_gpu = new THRUSTINTARRAY(A->rmap->n + 1);
-          cusp->rowoffsets_gpu->assign(a->i, a->i + A->rmap->n + 1);
+          PetscCallCUPM(cupmMemcpyAsync(cusp->rowoffsets_gpu->data().get(), a->i, (A->rmap->n + 1) * sizeof(*a->i), cupmMemcpyHostToDevice, stream));
+          PetscCall(PetscDeviceContextSynchronize(dctx));
           PetscCall(PetscLogCpuToGpu((A->rmap->n + 1) * sizeof(PetscInt)));
         }
         *i = cusp->rowoffsets_gpu->data().get();
