@@ -624,7 +624,7 @@ PetscErrorCode PetscDeviceInitializeQueryOptions_Private(MPI_Comm comm, PetscDev
   PetscOptionsBegin(comm, nullptr, "PetscDevice Options", "Sys");
   PetscCall(PetscOptionsEList("-device_enable", "How (or whether) to initialize PetscDevices", "PetscDeviceInitialize", PetscDeviceInitTypes, 3, PetscDeviceInitTypes[initIdx], &initIdx, nullptr));
   PetscCall(PetscOptionsEList("-default_device_type", "Set the PetscDeviceType returned by PETSC_DEVICE_DEFAULT()", "PetscDeviceSetDefaultDeviceType", PetscDeviceTypes, PETSC_DEVICE_MAX, PetscDeviceTypes[initDeviceIdx], &initDeviceIdx, defaultDeviceIdSet));
-  PetscCall(PetscOptionsRangeInt("-device_select", PETSC_DEVICE_SELECT_HELP, "PetscDeviceCreate()", *defaultDeviceId, defaultDeviceId, nullptr, PETSC_DEVICE_SELECT_LOWER_BOUND, PETSC_DEVICE_MAX_DEVICES));
+  PetscCall(PetscOptionsRangeInt("-device_select", PETSC_DEVICE_SELECT_HELP, "PetscDeviceCreate", *defaultDeviceId, defaultDeviceId, nullptr, PETSC_DEVICE_SELECT_LOWER_BOUND, PETSC_DEVICE_MAX_DEVICES));
   PetscCall(PetscOptionsBool("-device_view", "Display device information and assignments (forces eager initialization)", "PetscDeviceView", *defaultView, defaultView, &flg));
   PetscOptionsEnd();
 

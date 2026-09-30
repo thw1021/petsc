@@ -180,7 +180,7 @@ template <typename D>
 inline PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(PetscOptionItems PetscOptionsObject, PetscInt *id, PetscBool *flag) noexcept
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionDeviceSelect(PetscOptionsObject, PETSC_DEVICE_SELECT_HELP, "PetscDeviceCreate()", *id, id, flag, PETSC_DEVICE_SELECT_LOWER_BOUND, PETSC_DEVICE_MAX_DEVICES));
+  PetscCall(PetscOptionDeviceSelect(PetscOptionsObject, PETSC_DEVICE_SELECT_HELP, "PetscDeviceCreate", *id, id, flag, PETSC_DEVICE_SELECT_LOWER_BOUND, PETSC_DEVICE_MAX_DEVICES));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
