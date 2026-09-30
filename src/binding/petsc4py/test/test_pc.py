@@ -291,6 +291,110 @@ class TestHPDDMPC(BaseTestPC, unittest.TestCase):
         A.destroy()
         ovl.destroy()
 
+    def testHPDDMSetters(self):
+        pc = self.pc
+        pc.setOptionsPrefix('hpddm_api_')
+        opts = PETSc.Options(pc)
+        for solver in ('eps', 'svd'):
+            for dimension in ('ncv', 'mpd'):
+                self.addCleanup(
+                    opts.delValue, f'pc_hpddm_levels_1_{solver}_{dimension}'
+                )
+
+        pc.setHPDDMHarmonicOverlap(2)
+        pc.setHPDDMEPSThreshold([0.1, 0.2])
+        pc.setHPDDMEPSThreshold([0.5], relative=True)
+        for option in (
+            'pc_hpddm_harmonic_overlap',
+            'pc_hpddm_levels_1_eps_threshold_absolute',
+            'pc_hpddm_levels_1_eps_threshold_relative',
+        ):
+            self.assertFalse(opts.hasName(option))
+
+        for solver, setter, count, ncv, mpd in (
+            ('eps', pc.setHPDDMEPSDimensions, 'nev', 20, 15),
+            ('svd', pc.setHPDDMSVDDimensions, 'nsv', 10, 8),
+        ):
+            prefix = f'pc_hpddm_levels_1_{solver}_'
+            setter([5], [ncv], [mpd])
+            self.assertFalse(opts.hasName(prefix + count))
+            self.assertEqual(opts.getInt(prefix + 'ncv'), ncv)
+            self.assertEqual(opts.getInt(prefix + 'mpd'), mpd)
+            setter([PETSc.CURRENT], [PETSc.CURRENT], [PETSc.CURRENT])
+            self.assertEqual(opts.getInt(prefix + 'ncv'), ncv)
+            self.assertEqual(opts.getInt(prefix + 'mpd'), mpd)
+            setter([PETSc.CURRENT], [PETSc.DETERMINE], [PETSc.DETERMINE])
+            self.assertFalse(opts.hasName(prefix + 'ncv'))
+            self.assertFalse(opts.hasName(prefix + 'mpd'))
+
+    def testHPDDMSubKSP(self):
+        A = PETSc.Mat().createAIJ(((3, None), (3, None)), nnz=1, comm=self.COMM)
+        A.assemble()
+        A.shift(1.0)
+        pc = self.pc
+        pc.setOperators(A)
+        pc.setUp()
+        ksp1 = pc.getHPDDMSubKSP(1)
+        self.assertIsInstance(ksp1, PETSc.KSP)
+        self.assertTrue(ksp1)
+        ksp1.destroy()
+        ksp1 = pc.getHPDDMSubKSP(1)
+        self.assertTrue(ksp1)
+        ksp1.destroy()
+        x, y = A.createVecs()
+        x.set(1.0)
+        pc.apply(x, y)
+        self.assertTrue(y.equal(x))
+        x.destroy()
+        y.destroy()
+        A.destroy()
+
+    def testHPDDMUnchangedHierarchy(self):
+        pc = PETSc.PC().create(PETSc.COMM_SELF)
+        pc.setType(PETSc.PC.Type.HPDDM)
+        pc.setOptionsPrefix('hpddm_unchanged_')
+        A = PETSc.Mat().createAIJ([3, 3], nnz=1, comm=PETSc.COMM_SELF)
+        A.assemble()
+        A.shift(1.0)
+        pc.setOperators(A)
+        pc.setHPDDMEPSThreshold([0.1])
+        pc.setHPDDMEPSDimensions([1], [PETSc.CURRENT], [PETSc.CURRENT])
+        pc.setFromOptions()
+        # COMM_SELF limits the hierarchy to one level despite the requested nev.
+        pc.setHPDDMEPSThreshold([PETSc.CURRENT])
+        pc.setHPDDMEPSThreshold([0.1])
+        pc.setHPDDMEPSDimensions([1], [PETSc.CURRENT], [PETSc.CURRENT])
+        pc.setUp()
+        ksp1 = pc.getHPDDMSubKSP(1)
+        calls = (
+            (pc.setHPDDMEPSThreshold, ([],)),
+            (pc.setHPDDMEPSThreshold, ([PETSc.CURRENT],)),
+            (pc.setHPDDMEPSThreshold, ([0.1],)),
+            (pc.setHPDDMEPSDimensions, ([], [], [])),
+            (pc.setHPDDMEPSDimensions, ([1], [PETSc.CURRENT], [PETSc.CURRENT])),
+            (pc.setHPDDMEPSDimensions, ([PETSc.CURRENT],) * 3),
+            (pc.setHPDDMSVDDimensions, ([], [], [])),
+            (pc.setHPDDMSVDDimensions, ([PETSc.CURRENT],) * 3),
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            saved = Path(tmpdir) / 'hpddm.txt'
+            for setter, args in calls:
+                with self.subTest(setter=setter.__name__, args=args):
+                    setter(*args)
+                    pc.setUp()
+                    same = pc.getHPDDMSubKSP(1)
+                    self.assertEqual(same, ksp1)
+                    same.destroy()
+                    viewer = PETSc.Viewer().createASCII(
+                        str(saved), comm=PETSc.COMM_SELF
+                    )
+                    pc.view(viewer)
+                    viewer.destroy()
+                    self.assertIn('level: 1\n', saved.read_text())
+        ksp1.destroy()
+        pc.destroy()
+        A.destroy()
+
 
 if __name__ == '__main__':
     unittest.main()
