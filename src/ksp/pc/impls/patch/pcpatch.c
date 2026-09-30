@@ -183,12 +183,12 @@ static PetscErrorCode PCPatchConstruct_User(void *vpatch, DM dm, PetscInt point,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const PetscSF *sf, const PetscInt *bs)
+static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const PetscSF *sf)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
 
   PetscFunctionBegin;
-  if (n == 1 && bs[0] == 1) {
+  if (n == 1) {
     patch->sectionSF = sf[0];
     PetscCall(PetscObjectReference((PetscObject)patch->sectionSF));
   } else {
@@ -216,8 +216,8 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const Pe
       PetscInt nroots, nleaves;
 
       PetscCall(PetscSFGetGraph(sf[i], &nroots, &nleaves, NULL, NULL));
-      allRoots += nroots * bs[i];
-      allLeaves += nleaves * bs[i];
+      allRoots += nroots;
+      allLeaves += nleaves;
     }
     PetscCall(PetscMalloc1(allLeaves, &ilocal));
     PetscCall(PetscMalloc1(allLeaves, &iremote));
@@ -257,7 +257,7 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const Pe
       PetscInt nroots;
 
       PetscCall(PetscSFGetGraph(sf[i - 1], &nroots, NULL, NULL, NULL));
-      offsets[i] = offsets[i - 1] + nroots * bs[i - 1];
+      offsets[i] = offsets[i - 1] + nroots;
     }
     /* Offsets are the offsets on the current process of the global dof numbering for the subspaces. */
     PetscCall(PetscMPIIntCast(n, &in));
@@ -281,20 +281,18 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const Pe
       PetscCall(PetscSFGetGraph(sf[i], &nroots, &nleaves, &local, &remote));
       for (j = 0; j < nleaves; ++j) {
         PetscInt rank = remote[j].rank;
-        PetscInt idx, rootOffset, k;
+        PetscInt idx, rootOffset;
 
         PetscCall(PetscHMapIGet(rankToIndex, rank, &idx));
         PetscCheck(idx != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Didn't find rank, huh?");
         /* Offset on given rank for ith subspace */
         rootOffset = remoteOffsets[n * idx + i];
-        for (k = 0; k < bs[i]; ++k) {
-          ilocal[index]        = (local ? local[j] : j) * bs[i] + k + leafOffset;
-          iremote[index].rank  = remote[j].rank;
-          iremote[index].index = remote[j].index * bs[i] + k + rootOffset;
-          ++index;
-        }
+        ilocal[index]        = (local ? local[j] : j) + leafOffset;
+        iremote[index].rank  = remote[j].rank;
+        iremote[index].index = remote[j].index + rootOffset;
+        ++index;
       }
-      leafOffset += nleaves * bs[i];
+      leafOffset += nleaves;
     }
     PetscCall(PetscHMapIDestroy(&rankToIndex));
     PetscCall(PetscFree(remoteOffsets));
@@ -699,20 +697,19 @@ PetscErrorCode PCPatchGetConstructType(PC pc, PCPatchConstructType *ctype, Petsc
 + pc              - the `PCPATCH` preconditioner
 . nsubspaces      - the number of discretisation subspaces (e.g. fields)
 . dms             - array of length `nsubspaces` of `DM`s, one per subspace, from which the local sections and section `PetscSF`s are obtained
-. bs              - array of length `nsubspaces` giving the block size of each subspace
-. nodesPerCell    - array of length `nsubspaces` giving the number of nodes per cell for each subspace
-. cellNodeMap     - array of length `nsubspaces`; entry `i` is a cell-to-node map (array) of length `(cEnd - cStart) * nodesPerCell[i]`
-. subspaceOffsets - array of length `nsubspaces + 1` giving the starting global dof offset of each subspace
+. isets           - array of length `nsubspaces` giving the ISes mapping subspace DoFs to DoFs in the full mixed space
+. dofsPerCell     - array of length `nsubspaces` giving the number of DoFs per cell for each subspace
+. cellDofMap     - array of length `nsubspaces`; entry `i` is a cell-to-DoF map (array) of length `(cEnd - cStart) * dofsPerCell[i]`
 . numGhostBcs     - number of ghost (off-process) boundary-condition dofs
-. ghostBcNodes    - array of length `numGhostBcs` of the ghost boundary-condition dof indices
+. ghostBcDofs     - array of length `numGhostBcs` of the ghost boundary-condition dof indices
 . numGlobalBcs    - number of global boundary-condition dofs
-- globalBcNodes   - array of length `numGlobalBcs` of the global boundary-condition dof indices
+- globalBcDofs    - array of length `numGlobalBcs` of the global boundary-condition dof indices
 
   Level: advanced
 
 .seealso: [](ch_ksp), `PCPATCH`, `PCPatchSetComputeOperator()`, `PCPatchSetComputeFunction()`
 @*/
-PetscErrorCode PCPatchSetDiscretisationInfo(PC pc, PetscInt nsubspaces, DM dms[], PetscInt bs[], PetscInt nodesPerCell[], const PetscInt **cellNodeMap, const PetscInt subspaceOffsets[], PetscInt numGhostBcs, const PetscInt ghostBcNodes[], PetscInt numGlobalBcs, const PetscInt globalBcNodes[])
+PetscErrorCode PCPatchSetDiscretisationInfo(PC pc, PetscInt nsubspaces, DM dms[], const IS isets[], PetscInt dofsPerCell[], const PetscInt **cellDofMap, PetscInt numGhostBcs, const PetscInt ghostBcDofs[], PetscInt numGlobalBcs, const PetscInt globalBcDofs[])
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
   DM        dm, plex;
@@ -726,10 +723,9 @@ PetscErrorCode PCPatchSetDiscretisationInfo(PC pc, PetscInt nsubspaces, DM dms[]
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(PetscMalloc1(nsubspaces, &sfs));
   PetscCall(PetscMalloc1(nsubspaces, &patch->dofSection));
-  PetscCall(PetscMalloc1(nsubspaces, &patch->bs));
-  PetscCall(PetscMalloc1(nsubspaces, &patch->nodesPerCell));
-  PetscCall(PetscMalloc1(nsubspaces, &patch->cellNodeMap));
-  PetscCall(PetscMalloc1(nsubspaces + 1, &patch->subspaceOffsets));
+  PetscCall(PetscMalloc1(nsubspaces, &patch->dofsPerCell));
+  PetscCall(PetscMalloc1(nsubspaces, &patch->cellDofMap));
+  PetscCall(PetscMalloc1(nsubspaces, &patch->isets));
 
   patch->nsubspaces       = nsubspaces;
   patch->totalDofsPerCell = 0;
@@ -737,25 +733,24 @@ PetscErrorCode PCPatchSetDiscretisationInfo(PC pc, PetscInt nsubspaces, DM dms[]
     PetscCall(DMGetLocalSection(dms[i], &patch->dofSection[i]));
     PetscCall(PetscObjectReference((PetscObject)patch->dofSection[i]));
     PetscCall(DMGetSectionSF(dms[i], &sfs[i]));
-    patch->bs[i]           = bs[i];
-    patch->nodesPerCell[i] = nodesPerCell[i];
-    patch->totalDofsPerCell += nodesPerCell[i] * bs[i];
-    PetscCall(PetscMalloc1((cEnd - cStart) * nodesPerCell[i], &patch->cellNodeMap[i]));
-    for (j = 0; j < (cEnd - cStart) * nodesPerCell[i]; ++j) patch->cellNodeMap[i][j] = cellNodeMap[i][j];
-    patch->subspaceOffsets[i] = subspaceOffsets[i];
+    patch->dofsPerCell[i] = dofsPerCell[i];
+    patch->totalDofsPerCell += dofsPerCell[i];
+    PetscCall(PetscMalloc1((cEnd - cStart) * dofsPerCell[i], &patch->cellDofMap[i]));
+    for (j = 0; j < (cEnd - cStart) * dofsPerCell[i]; ++j) patch->cellDofMap[i][j] = cellDofMap[i][j];
+    patch->isets[i] = isets[i];
+    PetscCall(PetscObjectReference((PetscObject)patch->isets[i]));
   }
-  PetscCall(PCPatchCreateDefaultSF_Private(pc, nsubspaces, sfs, patch->bs));
+  PetscCall(PCPatchCreateDefaultSF_Private(pc, nsubspaces, sfs));
   PetscCall(PetscFree(sfs));
 
-  patch->subspaceOffsets[nsubspaces] = subspaceOffsets[nsubspaces];
-  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGhostBcs, ghostBcNodes, PETSC_COPY_VALUES, &patch->ghostBcNodes));
-  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGlobalBcs, globalBcNodes, PETSC_COPY_VALUES, &patch->globalBcNodes));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGhostBcs, ghostBcDofs, PETSC_COPY_VALUES, &patch->ghostBcDofs));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGlobalBcs, globalBcDofs, PETSC_COPY_VALUES, &patch->globalBcDofs));
   PetscCall(DMDestroy(&dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* TODO: Docs */
-static PetscErrorCode PCPatchSetDiscretisationInfoCombined(PC pc, DM dm, PetscInt *nodesPerCell, const PetscInt **cellNodeMap, PetscInt numGhostBcs, const PetscInt *ghostBcNodes, PetscInt numGlobalBcs, const PetscInt *globalBcNodes)
+static PetscErrorCode PCPatchSetDiscretisationInfoCombined(PC pc, DM dm, PetscInt *dofsPerCell, const PetscInt **cellDofMap, PetscInt numGhostBcs, const PetscInt *ghostBcDofs, PetscInt numGlobalBcs, const PetscInt *globalBcDofs)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
   PetscInt  cStart, cEnd, i, j;
@@ -765,25 +760,21 @@ static PetscErrorCode PCPatchSetDiscretisationInfoCombined(PC pc, DM dm, PetscIn
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(DMGetNumFields(dm, &patch->nsubspaces));
   PetscCall(PetscCalloc1(patch->nsubspaces, &patch->dofSection));
-  PetscCall(PetscMalloc1(patch->nsubspaces, &patch->bs));
-  PetscCall(PetscMalloc1(patch->nsubspaces, &patch->nodesPerCell));
-  PetscCall(PetscMalloc1(patch->nsubspaces, &patch->cellNodeMap));
-  PetscCall(PetscCalloc1(patch->nsubspaces + 1, &patch->subspaceOffsets));
+  PetscCall(PetscMalloc1(patch->nsubspaces, &patch->dofsPerCell));
+  PetscCall(PetscMalloc1(patch->nsubspaces, &patch->cellDofMap));
   PetscCall(DMGetLocalSection(dm, &patch->dofSection[0]));
   PetscCall(PetscObjectReference((PetscObject)patch->dofSection[0]));
-  PetscCall(PetscSectionGetStorageSize(patch->dofSection[0], &patch->subspaceOffsets[patch->nsubspaces]));
   patch->totalDofsPerCell = 0;
   for (i = 0; i < patch->nsubspaces; ++i) {
-    patch->bs[i]           = 1;
-    patch->nodesPerCell[i] = nodesPerCell[i];
-    patch->totalDofsPerCell += nodesPerCell[i];
-    PetscCall(PetscMalloc1((cEnd - cStart) * nodesPerCell[i], &patch->cellNodeMap[i]));
-    for (j = 0; j < (cEnd - cStart) * nodesPerCell[i]; ++j) patch->cellNodeMap[i][j] = cellNodeMap[i][j];
+    patch->dofsPerCell[i] = dofsPerCell[i];
+    patch->totalDofsPerCell += dofsPerCell[i];
+    PetscCall(PetscMalloc1((cEnd - cStart) * dofsPerCell[i], &patch->cellDofMap[i]));
+    for (j = 0; j < (cEnd - cStart) * dofsPerCell[i]; ++j) patch->cellDofMap[i][j] = cellDofMap[i][j];
   }
   PetscCall(DMGetSectionSF(dm, &patch->sectionSF));
   PetscCall(PetscObjectReference((PetscObject)patch->sectionSF));
-  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGhostBcs, ghostBcNodes, PETSC_COPY_VALUES, &patch->ghostBcNodes));
-  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGlobalBcs, globalBcNodes, PETSC_COPY_VALUES, &patch->globalBcNodes));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGhostBcs, ghostBcDofs, PETSC_COPY_VALUES, &patch->ghostBcDofs));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGlobalBcs, globalBcDofs, PETSC_COPY_VALUES, &patch->globalBcDofs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1123,16 +1114,16 @@ static PetscErrorCode PCPatchGetGlobalDofs(PC pc, PetscSection dofSection[], Pet
    around. */
 static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs, PetscInt base, PetscHSetI *subspaces_to_exclude)
 {
-  PC_PATCH     *patch = (PC_PATCH *)pc->data;
-  PetscHashIter hi;
-  PetscInt      ldof, loff;
-  PetscInt      p;
+  PC_PATCH       *patch = (PC_PATCH *)pc->data;
+  PetscHashIter   hi;
+  PetscInt        ldof, loff;
+  PetscInt        p;
+  const PetscInt *ifield = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscHSetIClear(dofs));
   for (PetscInt k = 0; k < patch->nsubspaces; ++k) {
-    PetscInt subspaceOffset = patch->subspaceOffsets[k];
-    PetscInt bs             = patch->bs[k];
+    PetscCall(ISGetIndices(patch->isets[k], &ifield));
 
     if (subspaces_to_exclude != NULL) {
       PetscBool should_exclude_k = PETSC_FALSE;
@@ -1140,13 +1131,15 @@ static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs
       if (should_exclude_k) {
         /* only get this subspace dofs at the base entity, not any others */
         PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, k, patch->combined, base, &ldof, &loff));
-        if (0 == ldof) continue;
-        for (PetscInt j = loff; j < ldof + loff; ++j) {
-          for (PetscInt l = 0; l < bs; ++l) {
-            PetscInt dof = bs * j + l + subspaceOffset;
-            PetscCall(PetscHSetIAdd(dofs, dof));
-          }
+        if (0 == ldof) {
+          PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
+          continue;
         }
+        for (PetscInt j = loff; j < ldof + loff; ++j) {
+          PetscInt dof =  ifield[j];
+          PetscCall(PetscHSetIAdd(dofs, dof));
+        }
+        PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
         continue; /* skip the other dofs of this subspace */
       }
     }
@@ -1158,12 +1151,11 @@ static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, k, patch->combined, p, &ldof, &loff));
       if (0 == ldof) continue;
       for (PetscInt j = loff; j < ldof + loff; ++j) {
-        for (PetscInt l = 0; l < bs; ++l) {
-          PetscInt dof = bs * j + l + subspaceOffset;
-          PetscCall(PetscHSetIAdd(dofs, dof));
-        }
+        PetscInt dof = ifield[j];
+        PetscCall(PetscHSetIAdd(dofs, dof));
       }
     }
+    PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1488,8 +1480,8 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   . cellCounts - Section with counts of cells around each vertex
   . cells - IS of the cell point indices of cells in each patch
   . cellNumbering - Section mapping plex cell points to Firedrake cell indices.
-  . nodesPerCell - number of nodes per cell.
-  - cellNodeMap - map from cells to node indices (nodesPerCell * numCells)
+  . dofsPerCell - number of DoFs per cell.
+  - cellDofMap - map from cells to DoF indices (dofsPerCell * numCells)
 
   Output Parameters:
   + dofs - IS of local dof numbers of each cell in the patch, where local is a patch local numbering
@@ -1582,11 +1574,11 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   /* Outside the patch loop, get the dofs that are globally-enforced Dirichlet
    conditions */
   PetscCall(PetscHSetICreate(&globalBcs));
-  PetscCall(ISGetIndices(patch->ghostBcNodes, &bcNodes));
-  PetscCall(ISGetSize(patch->ghostBcNodes, &numBcs));
+  PetscCall(ISGetIndices(patch->ghostBcDofs, &bcNodes));
+  PetscCall(ISGetSize(patch->ghostBcDofs, &numBcs));
   for (i = 0; i < numBcs; ++i) PetscCall(PetscHSetIAdd(globalBcs, bcNodes[i])); /* these are already in concatenated numbering */
-  PetscCall(ISRestoreIndices(patch->ghostBcNodes, &bcNodes));
-  PetscCall(ISDestroy(&patch->ghostBcNodes)); /* memory optimisation */
+  PetscCall(ISRestoreIndices(patch->ghostBcDofs, &bcNodes));
+  PetscCall(ISDestroy(&patch->ghostBcDofs)); /* memory optimisation */
 
   /* Hash tables for artificial BC construction */
   PetscCall(PetscHSetICreate(&ownedpts));
@@ -1604,7 +1596,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     PetscInt localIndex               = 0;
     PetscInt localIndexWithArtificial = 0;
     PetscInt localIndexWithAll        = 0;
-    PetscInt dof, off, i, j, k, l;
+    PetscInt dof, off, i, j, k;
 
     PetscCall(PetscHMapIClear(ht));
     PetscCall(PetscHMapIClear(htWithArtificial));
@@ -1676,11 +1668,11 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
       PetscCall(PetscHSetIDestroy(&globalbcdofs));
     }
     for (k = 0; k < patch->nsubspaces; ++k) {
-      const PetscInt *cellNodeMap    = patch->cellNodeMap[k];
-      PetscInt        nodesPerCell   = patch->nodesPerCell[k];
-      PetscInt        subspaceOffset = patch->subspaceOffsets[k];
-      PetscInt        bs             = patch->bs[k];
+      const PetscInt *ifield        = NULL;
+      const PetscInt *cellDofMap    = patch->cellDofMap[k];
+      PetscInt        dofsPerCell   = patch->dofsPerCell[k];
 
+      PetscCall(ISGetIndices(patch->isets[k], &ifield));
       for (i = off; i < off + dof; ++i) {
         /* Walk over the cells in this patch. */
         const PetscInt c    = cellsArray[i];
@@ -1693,63 +1685,61 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
           PetscCall(PetscSectionGetOffset(cellNumbering, c, &cell));
         }
         newCellsArray[i] = cell;
-        for (j = 0; j < nodesPerCell; ++j) {
+        for (j = 0; j < dofsPerCell; ++j) {
           /* For each global dof, map it into contiguous local storage. */
-          const PetscInt globalDof = cellNodeMap[cell * nodesPerCell + j] * bs + subspaceOffset;
-          /* finally, loop over block size */
-          for (l = 0; l < bs; ++l) {
-            PetscInt  localDof;
-            PetscBool isGlobalBcDof, isArtificialBcDof;
+          const PetscInt globalDof = ifield[cellDofMap[cell * dofsPerCell + j]];
+          PetscInt  localDof;
+          PetscBool isGlobalBcDof, isArtificialBcDof;
 
-            /* first, check if this is either a globally enforced or locally enforced BC dof */
-            PetscCall(PetscHSetIHas(globalBcs, globalDof + l, &isGlobalBcDof));
-            PetscCall(PetscHSetIHas(artificialbcs, globalDof + l, &isArtificialBcDof));
+          /* first, check if this is either a globally enforced or locally enforced BC dof */
+          PetscCall(PetscHSetIHas(globalBcs, globalDof, &isGlobalBcDof));
+          PetscCall(PetscHSetIHas(artificialbcs, globalDof, &isArtificialBcDof));
 
-            /* if it's either, don't ever give it a local dof number */
-            if (isGlobalBcDof || isArtificialBcDof) {
-              dofsArray[globalIndex] = -1; /* don't use this in assembly in this patch */
+          /* if it's either, don't ever give it a local dof number */
+          if (isGlobalBcDof || isArtificialBcDof) {
+            dofsArray[globalIndex] = -1; /* don't use this in assembly in this patch */
+          } else {
+            PetscCall(PetscHMapIGet(ht, globalDof, &localDof));
+            if (localDof == -1) {
+              localDof = localIndex++;
+              PetscCall(PetscHMapISet(ht, globalDof, localDof));
+            }
+            PetscCheck(globalIndex < numDofs, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Found more dofs %" PetscInt_FMT " than expected %" PetscInt_FMT, globalIndex + 1, numDofs);
+            /* And store. */
+            dofsArray[globalIndex] = localDof;
+          }
+
+          if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
+            if (isGlobalBcDof) {
+              dofsArrayWithArtificial[globalIndex] = -1; /* don't use this in assembly in this patch */
             } else {
-              PetscCall(PetscHMapIGet(ht, globalDof + l, &localDof));
+              PetscCall(PetscHMapIGet(htWithArtificial, globalDof, &localDof));
               if (localDof == -1) {
-                localDof = localIndex++;
-                PetscCall(PetscHMapISet(ht, globalDof + l, localDof));
-              }
-              PetscCheck(globalIndex < numDofs, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Found more dofs %" PetscInt_FMT " than expected %" PetscInt_FMT, globalIndex + 1, numDofs);
-              /* And store. */
-              dofsArray[globalIndex] = localDof;
-            }
-
-            if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
-              if (isGlobalBcDof) {
-                dofsArrayWithArtificial[globalIndex] = -1; /* don't use this in assembly in this patch */
-              } else {
-                PetscCall(PetscHMapIGet(htWithArtificial, globalDof + l, &localDof));
-                if (localDof == -1) {
-                  localDof = localIndexWithArtificial++;
-                  PetscCall(PetscHMapISet(htWithArtificial, globalDof + l, localDof));
-                }
-                PetscCheck(globalIndex < numDofs, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Found more dofs %" PetscInt_FMT " than expected %" PetscInt_FMT, globalIndex + 1, numDofs);
-                /* And store.*/
-                dofsArrayWithArtificial[globalIndex] = localDof;
-              }
-            }
-
-            if (isNonlinear) {
-              /* Build the dofmap for the function space with _all_ dofs,
-   including those in any kind of boundary condition */
-              PetscCall(PetscHMapIGet(htWithAll, globalDof + l, &localDof));
-              if (localDof == -1) {
-                localDof = localIndexWithAll++;
-                PetscCall(PetscHMapISet(htWithAll, globalDof + l, localDof));
+                localDof = localIndexWithArtificial++;
+                PetscCall(PetscHMapISet(htWithArtificial, globalDof, localDof));
               }
               PetscCheck(globalIndex < numDofs, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Found more dofs %" PetscInt_FMT " than expected %" PetscInt_FMT, globalIndex + 1, numDofs);
               /* And store.*/
-              dofsArrayWithAll[globalIndex] = localDof;
+              dofsArrayWithArtificial[globalIndex] = localDof;
             }
-            globalIndex++;
           }
+
+          if (isNonlinear) {
+            /* Build the dofmap for the function space with _all_ dofs,
+ including those in any kind of boundary condition */
+            PetscCall(PetscHMapIGet(htWithAll, globalDof, &localDof));
+            if (localDof == -1) {
+              localDof = localIndexWithAll++;
+              PetscCall(PetscHMapISet(htWithAll, globalDof, localDof));
+            }
+            PetscCheck(globalIndex < numDofs, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Found more dofs %" PetscInt_FMT " than expected %" PetscInt_FMT, globalIndex + 1, numDofs);
+            /* And store.*/
+            dofsArrayWithAll[globalIndex] = localDof;
+          }
+          globalIndex++;
         }
       }
+      PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
     }
     /* How many local dofs in this patch? */
     if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
@@ -1783,7 +1773,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   /* Now populate the global to local map.  This could be merged into the above loop if we were willing to deal with reallocs. */
   for (v = vStart; v < vEnd; ++v) {
     PetscHashIter hi;
-    PetscInt      dof, off, Np, ooff, i, j, k, l;
+    PetscInt      dof, off, Np, ooff, i, j, k;
 
     PetscCall(PetscHMapIClear(ht));
     PetscCall(PetscHMapIClear(htWithArtificial));
@@ -1795,35 +1785,34 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     if (dof <= 0) continue;
 
     for (k = 0; k < patch->nsubspaces; ++k) {
-      const PetscInt *cellNodeMap    = patch->cellNodeMap[k];
-      PetscInt        nodesPerCell   = patch->nodesPerCell[k];
-      PetscInt        subspaceOffset = patch->subspaceOffsets[k];
-      PetscInt        bs             = patch->bs[k];
+      const PetscInt *ifield        = NULL;
+      const PetscInt *cellDofMap    = patch->cellDofMap[k];
+      PetscInt        dofsPerCell   = patch->dofsPerCell[k];
       PetscInt        goff;
 
+      PetscCall(ISGetIndices(patch->isets[k], &ifield));
       for (i = off; i < off + dof; ++i) {
         /* Reconstruct mapping of global-to-local on this patch. */
         const PetscInt c    = cellsArray[i];
         PetscInt       cell = c;
 
         if (cellNumbering) PetscCall(PetscSectionGetOffset(cellNumbering, c, &cell));
-        for (j = 0; j < nodesPerCell; ++j) {
-          for (l = 0; l < bs; ++l) {
-            const PetscInt globalDof = cellNodeMap[cell * nodesPerCell + j] * bs + l + subspaceOffset;
-            const PetscInt localDof  = dofsArray[key];
-            if (localDof >= 0) PetscCall(PetscHMapISet(ht, globalDof, localDof));
-            if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
-              const PetscInt localDofWithArtificial = dofsArrayWithArtificial[key];
-              if (localDofWithArtificial >= 0) PetscCall(PetscHMapISet(htWithArtificial, globalDof, localDofWithArtificial));
-            }
-            if (isNonlinear) {
-              const PetscInt localDofWithAll = dofsArrayWithAll[key];
-              if (localDofWithAll >= 0) PetscCall(PetscHMapISet(htWithAll, globalDof, localDofWithAll));
-            }
-            key++;
+        for (j = 0; j < dofsPerCell; ++j) {
+          const PetscInt globalDof = ifield[cellDofMap[cell * dofsPerCell + j]];
+          const PetscInt localDof  = dofsArray[key];
+          if (localDof >= 0) PetscCall(PetscHMapISet(ht, globalDof, localDof));
+          if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
+            const PetscInt localDofWithArtificial = dofsArrayWithArtificial[key];
+            if (localDofWithArtificial >= 0) PetscCall(PetscHMapISet(htWithArtificial, globalDof, localDofWithArtificial));
           }
+          if (isNonlinear) {
+            const PetscInt localDofWithAll = dofsArrayWithAll[key];
+            if (localDofWithAll >= 0) PetscCall(PetscHMapISet(htWithAll, globalDof, localDofWithAll));
+          }
+          key++;
         }
       }
+      PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
 
       /* Shove it in the output data structure. */
       PetscCall(PetscSectionGetOffset(gtolCounts, v, &goff));
@@ -1897,33 +1886,32 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
         if (cellNumbering) PetscCall(PetscSectionGetOffset(cellNumbering, c, &cell));
         for (k = 0; k < patch->nsubspaces; ++k) {
-          const PetscInt *cellNodeMap    = patch->cellNodeMap[k];
-          PetscInt        nodesPerCell   = patch->nodesPerCell[k];
-          PetscInt        subspaceOffset = patch->subspaceOffsets[k];
-          PetscInt        bs             = patch->bs[k];
+          const PetscInt *ifield        = NULL;
+          const PetscInt *cellDofMap    = patch->cellDofMap[k];
+          PetscInt        dofsPerCell   = patch->dofsPerCell[k];
 
-          for (j = 0; j < nodesPerCell; ++j) {
-            for (l = 0; l < bs; ++l) {
-              const PetscInt globalDof = cellNodeMap[cell * nodesPerCell + j] * bs + l + subspaceOffset;
-              PetscInt       localDof;
+          PetscCall(ISGetIndices(patch->isets[k], &ifield));
+          for (j = 0; j < dofsPerCell; ++j) {
+            const PetscInt globalDof = ifield[cellDofMap[cell * dofsPerCell + j]];
+            PetscInt       localDof;
 
-              PetscCall(PetscHMapIGet(ht, globalDof, &localDof));
-              /* If it's not in the hash table, i.e. is a BC dof,
-   then the PetscHSetIMap above gives -1, which matches
-   exactly the convention for PETSc's matrix assembly to
-   ignore the dof. So we don't need to do anything here */
-              asmArray[asmKey] = localDof;
-              if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
-                PetscCall(PetscHMapIGet(htWithArtificial, globalDof, &localDof));
-                asmArrayWithArtificial[asmKey] = localDof;
-              }
-              if (isNonlinear) {
-                PetscCall(PetscHMapIGet(htWithAll, globalDof, &localDof));
-                asmArrayWithAll[asmKey] = localDof;
-              }
-              asmKey++;
+            PetscCall(PetscHMapIGet(ht, globalDof, &localDof));
+            /* If it's not in the hash table, i.e. is a BC dof,
+ then the PetscHSetIMap above gives -1, which matches
+ exactly the convention for PETSc's matrix assembly to
+ ignore the dof. So we don't need to do anything here */
+            asmArray[asmKey] = localDof;
+            if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
+              PetscCall(PetscHMapIGet(htWithArtificial, globalDof, &localDof));
+              asmArrayWithArtificial[asmKey] = localDof;
             }
+            if (isNonlinear) {
+              PetscCall(PetscHMapIGet(htWithAll, globalDof, &localDof));
+              asmArrayWithAll[asmKey] = localDof;
+            }
+            asmKey++;
           }
+          PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
         }
       }
     }
@@ -2908,8 +2896,8 @@ static PetscErrorCode PCSetUp_PATCH(PC pc)
 
   PetscFunctionBegin;
   if (!pc->setupcalled) {
-    PetscInt pStart, pEnd, p;
-    PetscInt localSize;
+    PetscInt pStart, pEnd, p, k;
+    PetscInt localSize, isSize;
 
     PetscCall(PetscLogEventBegin(PC_Patch_CreatePatches, pc, 0, 0, 0));
 
@@ -2980,7 +2968,11 @@ static PetscErrorCode PCSetUp_PATCH(PC pc)
       PetscCall(DMDestroy(&dm));
     }
 
-    localSize = patch->subspaceOffsets[patch->nsubspaces];
+    localSize = 0;
+    for (k = 0; k < patch->nsubspaces; ++k) {
+      PetscCall(ISGetLocalSize(patch->isets[k], &isSize));
+      localSize += isSize;
+    }
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, localSize, &patch->localRHS));
     PetscCall(VecSetUp(patch->localRHS));
     PetscCall(VecDuplicate(patch->localRHS, &patch->localUpdate));
@@ -3283,15 +3275,15 @@ static PetscErrorCode PCApply_PATCH(PC pc, Vec x, Vec y)
 
   /* Now we need to send the global BC values through */
   PetscCall(VecGetArrayRead(x, &globalRHS));
-  PetscCall(ISGetSize(patch->globalBcNodes, &numBcs));
-  PetscCall(ISGetIndices(patch->globalBcNodes, &bcNodes));
+  PetscCall(ISGetSize(patch->globalBcDofs, &numBcs));
+  PetscCall(ISGetIndices(patch->globalBcDofs, &bcNodes));
   PetscCall(VecGetLocalSize(x, &n));
   for (bc = 0; bc < numBcs; ++bc) {
     const PetscInt idx = bcNodes[bc];
     if (idx < n) globalUpdate[idx] = globalRHS[idx];
   }
 
-  PetscCall(ISRestoreIndices(patch->globalBcNodes, &bcNodes));
+  PetscCall(ISRestoreIndices(patch->globalBcDofs, &bcNodes));
   PetscCall(VecRestoreArrayRead(x, &globalRHS));
   PetscCall(VecRestoreArray(y, &globalUpdate));
 
@@ -3328,8 +3320,8 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(ISDestroy(&patch->dofs));
   PetscCall(ISDestroy(&patch->offs));
   PetscCall(PetscSectionDestroy(&patch->patchSection));
-  PetscCall(ISDestroy(&patch->ghostBcNodes));
-  PetscCall(ISDestroy(&patch->globalBcNodes));
+  PetscCall(ISDestroy(&patch->ghostBcDofs));
+  PetscCall(ISDestroy(&patch->globalBcDofs));
   PetscCall(PetscSectionDestroy(&patch->gtolCountsWithArtificial));
   PetscCall(ISDestroy(&patch->gtolWithArtificial));
   PetscCall(ISDestroy(&patch->dofsWithArtificial));
@@ -3351,12 +3343,10 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   if (patch->dofSection)
     for (PetscInt i = 0; i < patch->nsubspaces; i++) PetscCall(PetscSectionDestroy(&patch->dofSection[i]));
   PetscCall(PetscFree(patch->dofSection));
-  PetscCall(PetscFree(patch->bs));
-  PetscCall(PetscFree(patch->nodesPerCell));
-  if (patch->cellNodeMap)
-    for (PetscInt i = 0; i < patch->nsubspaces; i++) PetscCall(PetscFree(patch->cellNodeMap[i]));
-  PetscCall(PetscFree(patch->cellNodeMap));
-  PetscCall(PetscFree(patch->subspaceOffsets));
+  PetscCall(PetscFree(patch->dofsPerCell));
+  if (patch->cellDofMap)
+    for (PetscInt i = 0; i < patch->nsubspaces; i++) PetscCall(PetscFree(patch->cellDofMap[i]));
+  PetscCall(PetscFree(patch->cellDofMap));
 
   PetscCall((*patch->resetsolver)(pc));
 
@@ -3396,8 +3386,7 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(PetscFree(patch->precomputedTensorLocations));
   PetscCall(PetscFree(patch->precomputedIntFacetTensorLocations));
 
-  patch->bs          = NULL;
-  patch->cellNodeMap = NULL;
+  patch->cellDofMap = NULL;
   patch->nsubspaces  = 0;
   PetscCall(ISDestroy(&patch->iterationSet));
 
