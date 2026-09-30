@@ -1,4 +1,4 @@
-static const char help[] = "Test CUDA/HIP MatZeroEntries() ordering and MatScale()/MatAXPY() barrier semantics on the current device context.\n";
+static const char help[] = "Test CUDA/HIP AIJ operations and array copies on the current device context.\n";
 
 #include <petscmat.h>
 #include <petscdevice.h>
@@ -32,6 +32,55 @@ static PetscErrorCode WriteValues(Mat A, PetscDeviceType type, PetscDeviceContex
     PetscCall(MatSeqAIJHIPSPARSERestoreArray(A, &a));
   }
 #endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestCopies(Mat A, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
+{
+  PetscErrorCode (*copy)(Mat, PetscInt, const PetscInt[], PetscScalar[]) = NULL;
+  const PetscInt     idx[]                                               = {3, 1, 0, 2};
+  const PetscScalar *a;
+  PetscScalar       *host, *device;
+  PetscStreamType    streamtype;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSeqAIJCopySubArray_C", &copy));
+  PetscCheck(copy, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing device subarray copy implementation");
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 4, &host));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_DEVICE, 4, &device));
+
+  PetscCall(MatZeroEntries(A));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(WriteValues(A, type, dctx, input, PETSC_TRUE));
+  PetscCall(MatSeqAIJGetArrayRead(A, &a));
+  for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Host readback overtook the device write at entry %" PetscInt_FMT, i);
+  PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
+
+  for (PetscInt d = 0; d < 2; ++d) {
+    for (PetscInt indexed = 0; indexed < 2; ++indexed) {
+      PetscCall(MatZeroEntries(A));
+      PetscCall(PetscDeviceContextSynchronize(dctx));
+      PetscCall(WriteValues(A, type, dctx, input, PETSC_TRUE));
+      PetscCall((*copy)(A, 4, indexed ? idx : NULL, d ? device : host));
+      if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+        PetscBool idle;
+
+        PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+        PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Subarray copy returned with work pending on a barrier context");
+      }
+      if (d) {
+        PetscCall(PetscDeviceArrayCopy(dctx, host, device, 4));
+        PetscCall(PetscDeviceContextSynchronize(dctx));
+      }
+      for (PetscInt i = 0; i < 4; ++i)
+        PetscCheck(host[i] == input[indexed ? idx[i] : i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Subarray copy (device %" PetscInt_FMT ", indexed %" PetscInt_FMT ") overtook the device write at entry %" PetscInt_FMT, d, indexed, i);
+      PetscCall((*copy)(A, 0, NULL, d ? device : host));
+    }
+  }
+  PetscCall(PetscDeviceFree(dctx, device));
+  PetscCall(PetscDeviceFree(dctx, host));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -109,6 +158,7 @@ int main(int argc, char **argv)
     PetscCall(MatSeqAIJGetArrayRead(A, &a));
     for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 3 * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stream type %s: incorrect CSR entry %" PetscInt_FMT " after MatAXPY()", PetscStreamTypes[streams[k]], i);
     PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
+    PetscCall(TestCopies(A, type, current, input));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }
