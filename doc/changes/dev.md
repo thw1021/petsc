@@ -15,6 +15,8 @@
 ```{rubric} Sys:
 ```
 
+- Add `PetscDeviceContextDelay()` to queue a timed host callback for testing CUDA and HIP stream ordering
+
 ```{rubric} Event Logging:
 ```
 
