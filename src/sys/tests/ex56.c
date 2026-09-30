@@ -1,6 +1,6 @@
 static char help[] = "Tests PetscHasExternalPackage().\n\n";
 
-#include <petscsys.h>
+#include <petscoptions.h>
 
 int main(int argc, char **argv)
 {

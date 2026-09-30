@@ -1,5 +1,7 @@
 static char help[] = "Tests MatHYPRE\n";
 
+#include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmathypre.h>
 
 int main(int argc, char **args)
