@@ -3640,6 +3640,144 @@ Once the solver has been registered, the new solver can be selected
 either by using the `TaoSetType()` function or by using the
 `-tao_type` command line option.
 
+(sec_tao_cutest)=
+
+## Unconstrained CUTEst problems with TAO
+
+<a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tao/unconstrained/tutorials/cutest.c.html">
+<code>src/tao/unconstrained/tutorials/cutest.c</code></a> solves continuous,
+unconstrained CUTEst problems with TAO, using
+CUTEst's starting point and callbacks. Finite variable bounds
+and general constraints are not yet supported. PETSc must be
+configured with cutest and sifdecode support, i.e. using
+
+```console
+--download-cutest --download-sifdecode
+```
+
+CUTEst and SIFDecode need a Fortran compiler and Meson to build. Meson requires
+Python 3.
+Preinstalled CUTEst and SIFDecode do not require Meson or Ninja.
+
+`--download-cutest` installs single-, double-, and quadruple-precision libraries
+using 32-bit CUTEst integers for either PETSc index width. Problem sizes and
+CUTEst indices must fit in 32-bit integers. Building all three precisions requires
+a Fortran compiler with quadruple precision support and the quadmath library.
+
+For existing installations, use `--with-cutest-dir=/path/to/cutest` and
+`--with-sifdecode-dir=/path/to/sifdecode`. Alternatively specify
+`--with-sifdecode=1 --with-sifdecode-exec=/path/to/sifdecoder`.
+Configure checks for the selected precision's CUTEst library and required symbols.
+For these examples, an existing CUTEst library must support runtime problem
+loading (2.5.1 or newer), double precision, and 32-bit CUTEst integers. CUTEst is
+linked only into the example. Use a compatible Fortran compiler for decoded problems.
+
+The following commands assume you are in `src/tao/unconstrained/tutorials`,
+with `PETSC_DIR` and `PETSC_ARCH` set for your PETSc build.
+
+### Solve the Rosenbrock example
+
+The file `cutest_data/ROSENBR.SIF` contains the two-variable Rosenbrock problem,
+with starting point $(-1.2, 1)$ and minimum at $(1, 1)$.
+
+1. Build the TAO example:
+
+   ```sh
+   make cutest
+   ```
+
+2. Create a directory for the problem and use the supplied makefile to decode
+   and compile it:
+
+   ```sh
+   mkdir rosenbrock
+   cd rosenbrock
+   make -f ../cutest_data/makefile SIF=../cutest_data/ROSENBR.SIF
+   ```
+
+   The makefile runs SIFDecode in PETSc's configured precision, compiles the generated
+   Fortran routines, and links them into `libcutest_ROSENBR.so`. The library
+   name uses the SIF filename without its directory or extension. It uses
+   PETSc's configured decoder, compiler, and shared-library flags. On platforms
+   with a different shared-library suffix, use the library filename produced
+   by the makefile in the commands below.
+
+   SIFDecode also creates `OUTSDIF.d`, which contains the decoded problem data.
+   Keep this file together with the library.
+
+3. Run the solver from the same `rosenbrock` directory:
+
+   ```sh
+   ../cutest -cutest_lib ./libcutest_ROSENBR.so -cutest_data ./OUTSDIF.d \
+     -tao_type ntr -tao_monitor -tao_converged_reason \
+     -cutest_result result-ntr.csv
+   ```
+
+This runs TAO's Newton trust-region method from CUTEst's starting point.
+`-tao_monitor` prints the iteration history, and `-tao_converged_reason`
+explains why the solver stopped. The objective should approach zero as the
+solution approaches $(1, 1)$. Add `-cutest_solution_view` to print the final
+solution vector. Run this example on one MPI process.
+
+The file `result-ntr.csv` is written in the `rosenbrock` directory. It contains
+the initial and final objective and gradient norm, termination reason,
+iteration count, and evaluation counts. Omit `-cutest_result` to print a readable
+summary on the screen instead, with initial and final values shown side by side.
+
+For another SIF file, create a separate problem directory and repeat the
+makefile command with `SIF` set to the full path of that file. Additional
+unconstrained problems are available from the
+[CUTEst SIF collection](https://github.com/ralna/SIF).
+
+### Try another solver
+
+The decoded problem can be reused without decoding or compiling again.
+While still in `rosenbrock`, run TAO's limited-memory variable-metric method:
+
+```sh
+../cutest -cutest_lib ./libcutest_ROSENBR.so -cutest_data ./OUTSDIF.d \
+  -tao_type lmvm -tao_monitor -tao_converged_reason \
+  -cutest_result result-lmvm.csv
+```
+
+Each invocation starts from CUTEst's starting point. Different result filenames
+keep the output from each solve.
+
+The driver assembles a sparse Hessian by default. Use `-cutest_hessian shell`
+for exact Hessian-vector products without assembling the Hessian. The usual
+TAO, SNES, KSP, and PC options configure the chosen solver.
+
+In the CSV output, `hessian_products` counts multiplications by the supplied
+Hessian during the solve, including trial-step evaluations and linear solves.
+`hessian_evaluations` counts Hessian assemblies separately.
+`cutest_hessian_products` is CUTEst's own product count: it agrees with
+`hessian_products` in shell mode and is zero when the Hessian is assembled.
+
+### Check the problem's Hessians
+
+While still in `rosenbrock`, build and run the Hessian checker using the same
+library and `OUTSDIF.d`:
+
+```sh
+make -C ../../../tests cutest
+../../../tests/cutest -cutest_lib ./libcutest_ROSENBR.so -cutest_data ./OUTSDIF.d \
+  -cutest_check_type matrix -info
+```
+
+The `matrix` check compares full matrices at several points and reports their
+relative differences with `-info`. To compare products with random vectors,
+run:
+
+```sh
+../../../tests/cutest -cutest_lib ./libcutest_ROSENBR.so -cutest_data ./OUTSDIF.d \
+  -cutest_check_type mult -info
+```
+
+`-cutest_check_vectors n` sets the number of vectors (default 8), and
+`-random_seed seed` selects the random seed. Both modes also check the Hessian
+after trial evaluations and matrix shifts. A mismatch stops the checker;
+matrix mode prints the matrices and their difference.
+
 ```{rubric} Footnotes
 ```
 
