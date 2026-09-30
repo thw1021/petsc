@@ -281,15 +281,16 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
   /* MatDiagonalScale: Thrust-based left and right scaling of CSR values */
   static PetscErrorCode DiagonalScale(Mat A, Vec ll, Vec rr) noexcept
   {
-    Mat_SeqAIJ    *aij = (Mat_SeqAIJ *)A->data;
-    MatStructType *devstruct;
-    CsrMatrix     *csr;
-    PetscScalar   *av = nullptr;
-    PetscInt       m, n, nz = aij->nz;
-    cupmStream_t   stream;
+    Mat_SeqAIJ        *aij = (Mat_SeqAIJ *)A->data;
+    MatStructType     *devstruct;
+    CsrMatrix         *csr;
+    PetscScalar       *av = nullptr;
+    PetscInt           m, n, nz = aij->nz;
+    cupmStream_t       stream;
+    PetscDeviceContext dctx;
 
     PetscFunctionBegin;
-    PetscCall(GetHandles_(&stream));
+    PetscCall(GetHandles_(&dctx, &stream));
     PetscCall(PetscLogGpuTimeBegin());
     PetscCall(GetArray(A, &av));
     devstruct = (MatStructType *)A->spptr;
@@ -322,6 +323,7 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
     }
     PetscCall(RestoreArray(A, &av));
     PetscCall(PetscLogGpuTimeEnd());
+    PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -555,11 +557,14 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
 
       PetscCheck(devstruct->format == (decltype(devstruct->format))Policy::storage_format_csr(), PETSC_COMM_SELF, PETSC_ERR_SUP, "Only CSR format supported");
       if (n > 0) {
+        PetscDeviceContext dctx;
+
         PetscCall(Policy::VecGetArrayWrite(diag, &darray));
-        PetscCall(GetHandles_(&stream));
+        PetscCall(GetHandles_(&dctx, &stream));
         PetscCallCUPM(cupmLaunchKernel(GetDiagonal_CSR, (unsigned int)((n + 255) / 256), 256u, (size_t)0, stream, mat->row_offsets->data().get(), mat->column_indices->data().get(), mat->values->data().get(), n, darray));
         PetscCallCUPM(cupmGetLastError());
         PetscCall(Policy::VecRestoreArrayWrite(diag, &darray));
+        PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
       }
     } else {
       PetscCall(MatGetDiagonal_SeqAIJ(A, diag));
