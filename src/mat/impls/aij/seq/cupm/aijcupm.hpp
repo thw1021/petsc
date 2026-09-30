@@ -259,20 +259,22 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
   /* MatScale: cupmBlasXscal on the device CSR values */
   static PetscErrorCode Scale(Mat Y, PetscScalar a) noexcept
   {
-    Mat_SeqAIJ      *y  = (Mat_SeqAIJ *)Y->data;
-    PetscScalar     *ay = nullptr;
-    cupmBlasHandle_t blashandle;
-    PetscBLASInt     one = 1, bnz = 1;
+    Mat_SeqAIJ        *y  = (Mat_SeqAIJ *)Y->data;
+    PetscScalar       *ay = nullptr;
+    cupmBlasHandle_t   blashandle;
+    PetscBLASInt       one = 1, bnz = 1;
+    PetscDeviceContext dctx;
 
     PetscFunctionBegin;
     PetscCall(GetArray(Y, &ay));
-    PetscCall(GetHandles_(&blashandle));
+    PetscCall(GetHandles_(&dctx, &blashandle));
     PetscCall(PetscBLASIntCast(y->nz, &bnz));
     PetscCall(PetscLogGpuTimeBegin());
     PetscCallCUPMBLAS(cupmBlasXscal(blashandle, bnz, cupmScalarPtrCast(&a), cupmScalarPtrCast(ay), one));
     PetscCall(PetscLogGpuFlops(bnz));
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(RestoreArray(Y, &ay));
+    PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -504,11 +506,12 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
     PetscScalar       *ay = nullptr;
     cupmBlasHandle_t   blashandle;
     PetscBLASInt       one = 1, bnz = 1;
+    PetscDeviceContext dctx;
 
     PetscFunctionBegin;
     PetscCall(GetArrayRead(X, &ax));
     PetscCall(GetArray(Y, &ay));
-    PetscCall(GetHandles_(&blashandle));
+    PetscCall(GetHandles_(&dctx, &blashandle));
     PetscCall(PetscBLASIntCast(x->nz, &bnz));
     PetscCall(PetscLogGpuTimeBegin());
     PetscCallCUPMBLAS(cupmBlasXaxpy(blashandle, bnz, cupmScalarPtrCast(&a), cupmScalarPtrCast(ax), one, cupmScalarPtrCast(ay), one));
@@ -516,6 +519,7 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(RestoreArrayRead(X, &ax));
     PetscCall(RestoreArray(Y, &ay));
+    PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
