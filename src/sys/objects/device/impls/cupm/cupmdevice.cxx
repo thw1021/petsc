@@ -311,7 +311,6 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
     PetscInt selected_device = -1;
     PetscInt max_depth       = -1;
     PetscInt max_count       = 1;
-    // Initialise hwloc topology object
     std::vector<hwloc_obj_t> hwloc_devs(ndev);
     std::vector<hwloc_obj_t> common_ancestors(ndev);
     std::vector<PetscInt>    device_depths(ndev);
@@ -343,7 +342,8 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
     }
     topology.reset(raw_topo);
 
-    // Enables some internal optimisations in hwloc
+    // Causes binding functions to call OS-specific system calls - required for determining
+    // current CPU binding
     if (hwloc_topology_set_flags(topology.get(), HWLOC_TOPOLOGY_FLAG_IS_THISSYSTEM) == -1) PetscFunctionReturn(PETSC_ERR_LIB);
     // By default IO devices (i.e. GPUs, storage, etc.) are filtered out. GPUs are considered
     // important. This filter makes sure those are included in the detected topology.
@@ -453,6 +453,8 @@ PetscErrorCode Device<T>::select_device_(MPI_Comm comm, int *dev_id) noexcept
 #endif
   if (*dev_id == PETSC_DECIDE) PetscCall(select_device_petsc_decide_(comm, ndev, dev_id));
   PetscCall(PetscInfo(nullptr, "GPU device id selected: %" PetscInt_FMT "\n", *dev_id));
+  static_assert(std::is_same<PetscMPIInt, decltype(defaultDevice_)>::value, "");
+  defaultDevice_ = *dev_id;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -462,18 +464,25 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   auto initId   = std::make_pair(*defaultDeviceId, PETSC_FALSE);
   auto initView = std::make_pair(*defaultView, PETSC_FALSE);
   auto initType = std::make_pair(*defaultInitType, PETSC_FALSE);
+  int  dev_id;
 
   PetscFunctionBegin;
   if (initialized_) PetscFunctionReturn(PETSC_SUCCESS);
   // Somehow back here after something has already gone wrong, bail immediately
   if (deferredError_ != cupmSuccess) PetscFunctionReturn(PETSC_SUCCESS);
+  static_assert(std::is_same<PetscMPIInt, decltype(dev_id)>::value, "");
   PetscCall(PetscRegisterFinalize(finalize_));
   PetscCall(base_type::PetscOptionDeviceAll(comm, initType, initId, initView));
 
-  if (initType.first != PETSC_DEVICE_INIT_NONE) {
-    PetscCall(select_device_(comm, &initId.first));
+  PetscCall(PetscMPIIntCast(initId.first, &dev_id));
+  if (initType.first == PETSC_DEVICE_INIT_NONE) {
+    // initType overrides initView
+    initView.first = PETSC_FALSE;
+  } else {
+    PetscCall(select_device_(comm, &dev_id));
     if (initView.first) initType.first = PETSC_DEVICE_INIT_EAGER;
   }
+  initId.first = dev_id;
 
   // Something went wrong in device selection
   if (deferredError_ != cupmSuccess) {
@@ -483,9 +492,6 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
     initView.first = PETSC_FALSE;
   }
 
-  static_assert(std::is_same<PetscMPIInt, decltype(defaultDevice_)>::value, "");
-  // initId.first is PetscInt, _defaultDevice is int
-  PetscCall(PetscMPIIntCast(initId.first, &defaultDevice_));
   // record the results of the initialization
   *defaultDeviceId = initId.first;
   *defaultView     = initView.first;
@@ -496,8 +502,7 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
 template <DeviceType T>
 PetscErrorCode Device<T>::init_device_id_(PetscInt *inid) const noexcept
 {
-  auto       id   = *inid == PETSC_DECIDE ? defaultDevice_ : (int)*inid;
-  const auto cerr = deferredError_;
+  auto id = *inid == PETSC_DECIDE ? defaultDevice_ : (int)*inid;
 
   // In this callpath, a negative inid may be passed from PetscDeviceCreate.
   // If this happens, -1 (PETSC_DECIDE) is intercepted above, but any other
@@ -507,12 +512,12 @@ PetscErrorCode Device<T>::init_device_id_(PetscInt *inid) const noexcept
 
   PetscFunctionBegin;
   PetscCheck(defaultDevice_ != PETSC_CUPM_DEVICE_NONE, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Trying to retrieve a %s PetscDevice when it has been disabled", cupmName());
-  PetscCheck(cerr == cupmSuccess, PETSC_COMM_SELF, PETSC_ERR_GPU, "Cannot lazily initialize PetscDevice: %s error %d (%s) : %s", cupmName(), static_cast<PetscErrorCode>(cerr), cupmGetErrorName(cerr), cupmGetErrorString(cerr));
+  PetscCheck(deferredError_ == cupmSuccess, PETSC_COMM_SELF, PETSC_ERR_GPU, "Cannot lazily initialize PetscDevice: %s error %d (%s) : %s", cupmName(), static_cast<PetscErrorCode>(deferredError_), cupmGetErrorName(deferredError_), cupmGetErrorString(deferredError_));
   PetscAssert(static_cast<decltype(devices_.size())>(id) < devices_.size(), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Only supports %zu number of devices but trying to get device with id %d", devices_.size(), id);
 
   if (id < 0) {
     // Safe to pass PETSC_COMM_SELF as the comm argument only required in the
-    // PETSC_DECIDE callpath, which is interceptaed above.
+    // PETSC_DECIDE callpath, which is intercepted above.
     PetscCall(select_device_(PETSC_COMM_SELF, &id));
   }
 
