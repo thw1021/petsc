@@ -3288,6 +3288,17 @@ PetscErrorCode MatCreateBAIJ(MPI_Comm comm, PetscInt bs, PetscInt m, PetscInt n,
   PetscMPIInt size;
 
   PetscFunctionBegin;
+#if PetscDefined(HAVE_SHMGET)
+  {
+    PetscBool flg = PETSC_FALSE;
+
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-mat_mpibaij_use_mpiseqbaij", &flg, NULL));
+    if (flg) {
+      PetscCall(MatCreateMPISeqBAIJ(comm, bs, m, n, M, N, d_nz, d_nnz, o_nz, o_nnz, A));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+#endif
   PetscCall(MatCreate(comm, A));
   PetscCall(MatSetSizes(*A, m, n, M, N));
   PetscCallMPI(MPI_Comm_size(comm, &size));

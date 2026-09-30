@@ -3082,8 +3082,16 @@ PETSC_EXTERN PetscErrorCode PCMPIServerEnd(void);
 PETSC_EXTERN PetscBool      PCMPIServerActive;
 PETSC_EXTERN PetscBool      PCMPIServerInSolve;
 PETSC_EXTERN PetscBool      PCMPIServerUseShmget;
-PETSC_EXTERN PetscErrorCode PetscShmgetAllocateArray(size_t, size_t, void **);
+PETSC_EXTERN PetscErrorCode PetscShmgetAllocateArray(PetscBool, size_t, size_t, void **);
 PETSC_EXTERN PetscErrorCode PetscShmgetDeallocateArray(void **);
+
+#if PetscDefined(HAVE_SHMGET)
+PETSC_EXTERN PetscBool PCMPIActive(void);
+PETSC_EXTERN PetscBool MatMPISeqBAIJActive(void);
+#else
+  #define PCMPIActive()         PETSC_FALSE
+  #define MatMPISeqBAIJActive() PETSC_FALSE
+#endif
 PETSC_EXTERN PetscErrorCode PetscShmgetMapAddresses(MPI_Comm, PetscInt, const void **, void **);
 PETSC_EXTERN PetscErrorCode PetscShmgetUnmapAddresses(PetscInt, void **);
 PETSC_EXTERN PetscErrorCode PetscShmgetAddressesFinalize(void);

@@ -584,7 +584,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ(Mat C, PetscInt ismax, const IS isro
     else if (pos >= ismax) max_no = 0;
     else max_no = ismax - pos;
 
-    PetscCall(MatCreateSubMatrices_MPIBAIJ_local(C, max_no, isrow_block + pos, iscol_block + pos, scall, *submat + pos, sym));
+    PetscCall(MatCreateSubMatrices_MPIBAIJ_local(C, max_no, PetscSafePointerPlusOffset(isrow_block, pos), PetscSafePointerPlusOffset(iscol_block, pos), scall, *submat + pos, sym));
     if (!max_no) {
       if (scall == MAT_INITIAL_MATRIX) { /* submat[pos] is a dummy matrix */
         smat          = (Mat_SubSppt *)(*submat)[pos]->data;
