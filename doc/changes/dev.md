@@ -15,6 +15,8 @@
 ```{rubric} Sys:
 ```
 
+- Add `PetscDeviceContextDelay()` to queue a timed host callback for testing CUDA and HIP stream ordering
+
 ```{rubric} Event Logging:
 ```
 
@@ -38,6 +40,8 @@
 
 ```{rubric} Vec:
 ```
+
+- Add `VecGetArrayAndMemTypeAsync()`, `VecGetArrayReadAndMemTypeAsync()`, and `VecGetArrayWriteAndMemTypeAsync()` to acquire vector storage for read/write, read-only, and write-only access, respectively, without waiting for CUDA and HIP transfers on the current device context
 
 ```{rubric} PetscSection:
 ```
