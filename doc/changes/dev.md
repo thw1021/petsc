@@ -54,6 +54,8 @@
 ```{rubric} PC:
 ```
 
+- Add `PCHPDDMSetHarmonicOverlap()`, `PCHPDDMSetEPSThreshold()`, `PCHPDDMSetEPSDimensions()`, and `PCHPDDMSetSVDDimensions()` to configure `PCHPDDM` coarsening, and `PCHPDDMGetSubKSP()` to access its per-level solvers
+
 ```{rubric} KSP:
 ```
 
