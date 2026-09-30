@@ -298,8 +298,19 @@ static PetscErrorCode TestSparseOperations(Mat A, PetscDeviceType type, PetscDev
   PetscCall(VecGetArrayRead(y, &a));
   for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 2 * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTranspose() returned an incorrect entry %" PetscInt_FMT, i);
   PetscCall(VecRestoreArrayRead(y, &a));
+  PetscCall(WriteValues(A, type, dctx, ones, PETSC_TRUE));
+  PetscCall(MatMultTranspose(A, x, y));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTranspose() returned with a stale transpose update pending on a barrier context");
+  }
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetArrayRead(y, &a));
+  for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTranspose() used stale matrix values at entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(y, &a));
   PetscCall(MatSetOption(A, MAT_FORM_EXPLICIT_TRANSPOSE, PETSC_FALSE));
   PetscCall(VecSet(x, 1));
+  PetscCall(WriteValues(A, type, dctx, input, PETSC_FALSE));
 
   PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &B));
   PetscCall(WriteValues(B, type, dctx, ones, PETSC_FALSE));
