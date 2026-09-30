@@ -2401,7 +2401,7 @@ cdef class SNES(Object):
             `DM`s of each subspace, from which the local sections and section `PetscSF`s are obtained.
         isets
             `IS`es mapping subspace DoFs to DoFs in the full mixed space.
-        cellDofMap
+        cellDofMaps
             Cell to DoF map for each subspace
         ghostBcDofs
             The ghost boundary-condition DoF indices.
