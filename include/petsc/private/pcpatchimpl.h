@@ -32,14 +32,14 @@ typedef struct {
   PetscSection pointCounts;   /* Maps patch -> # points with dofs in patch */
   IS           points;        /* [patch][point in patch]: Point number */
   /* Dof layout */
-  PetscBool     combined;        /* Use a combined space with all fields */
-  PetscInt      nsubspaces;      /* Number of fields */
-  PetscSF       sectionSF;       /* Combined SF mapping process local to global */
-  PetscSection *dofSection;      /* ?? For each field, patch -> # dofs in patch */
-  IS           *isets;           /* Index set mapping unknowns in a subspace to the full local space */
-  PetscInt    **cellDofMap;      /* [field][cell][dof in cell]: global dofs in cell TODO Free this after its use in PCPatchCreateCellPatchDiscretisationInfo() */
-  IS            dofs;            /* [patch][cell in patch][dof in cell]: patch local dof */
-  IS            offs;            /* [patch][point in patch]: patch local offset (same layout as 'points', used for filling up patchSection) */
+  PetscBool     combined;   /* Use a combined space with all fields */
+  PetscInt      nsubspaces; /* Number of fields */
+  PetscSF       sectionSF;  /* Combined SF mapping process local to global */
+  PetscSection *dofSection; /* ?? For each field, patch -> # dofs in patch */
+  IS           *isets;      /* Index set mapping unknowns in a subspace to the full local space */
+  PetscInt    **cellDofMap; /* [field][cell][dof in cell]: global dofs in cell TODO Free this after its use in PCPatchCreateCellPatchDiscretisationInfo() */
+  IS            dofs;       /* [patch][cell in patch][dof in cell]: patch local dof */
+  IS            offs;       /* [patch][point in patch]: patch local offset (same layout as 'points', used for filling up patchSection) */
   IS            dofsWithArtificial;
   IS            offsWithArtificial;
   IS            dofsWithAll;

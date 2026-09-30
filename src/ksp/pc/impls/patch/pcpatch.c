@@ -286,7 +286,7 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const Pe
         PetscCall(PetscHMapIGet(rankToIndex, rank, &idx));
         PetscCheck(idx != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Didn't find rank, huh?");
         /* Offset on given rank for ith subspace */
-        rootOffset = remoteOffsets[n * idx + i];
+        rootOffset           = remoteOffsets[n * idx + i];
         ilocal[index]        = (local ? local[j] : j) + leafOffset;
         iremote[index].rank  = remote[j].rank;
         iremote[index].index = remote[j].index + rootOffset;
@@ -1136,7 +1136,7 @@ static PetscErrorCode PCPatchGetPointDofs(PC pc, PetscHSetI pts, PetscHSetI dofs
           continue;
         }
         for (PetscInt j = loff; j < ldof + loff; ++j) {
-          PetscInt dof =  ifield[j];
+          PetscInt dof = ifield[j];
           PetscCall(PetscHSetIAdd(dofs, dof));
         }
         PetscCall(ISRestoreIndices(patch->isets[k], &ifield));
@@ -1668,9 +1668,9 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
       PetscCall(PetscHSetIDestroy(&globalbcdofs));
     }
     for (k = 0; k < patch->nsubspaces; ++k) {
-      const PetscInt *ifield        = NULL;
-      const PetscInt *cellDofMap    = patch->cellDofMap[k];
-      PetscInt        dofsPerCell   = patch->dofsPerCell[k];
+      const PetscInt *ifield      = NULL;
+      const PetscInt *cellDofMap  = patch->cellDofMap[k];
+      PetscInt        dofsPerCell = patch->dofsPerCell[k];
 
       PetscCall(ISGetIndices(patch->isets[k], &ifield));
       for (i = off; i < off + dof; ++i) {
@@ -1688,8 +1688,8 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
         for (j = 0; j < dofsPerCell; ++j) {
           /* For each global dof, map it into contiguous local storage. */
           const PetscInt globalDof = ifield[cellDofMap[cell * dofsPerCell + j]];
-          PetscInt  localDof;
-          PetscBool isGlobalBcDof, isArtificialBcDof;
+          PetscInt       localDof;
+          PetscBool      isGlobalBcDof, isArtificialBcDof;
 
           /* first, check if this is either a globally enforced or locally enforced BC dof */
           PetscCall(PetscHSetIHas(globalBcs, globalDof, &isGlobalBcDof));
@@ -1785,9 +1785,9 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
     if (dof <= 0) continue;
 
     for (k = 0; k < patch->nsubspaces; ++k) {
-      const PetscInt *ifield        = NULL;
-      const PetscInt *cellDofMap    = patch->cellDofMap[k];
-      PetscInt        dofsPerCell   = patch->dofsPerCell[k];
+      const PetscInt *ifield      = NULL;
+      const PetscInt *cellDofMap  = patch->cellDofMap[k];
+      PetscInt        dofsPerCell = patch->dofsPerCell[k];
       PetscInt        goff;
 
       PetscCall(ISGetIndices(patch->isets[k], &ifield));
@@ -1886,9 +1886,9 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
         if (cellNumbering) PetscCall(PetscSectionGetOffset(cellNumbering, c, &cell));
         for (k = 0; k < patch->nsubspaces; ++k) {
-          const PetscInt *ifield        = NULL;
-          const PetscInt *cellDofMap    = patch->cellDofMap[k];
-          PetscInt        dofsPerCell   = patch->dofsPerCell[k];
+          const PetscInt *ifield      = NULL;
+          const PetscInt *cellDofMap  = patch->cellDofMap[k];
+          PetscInt        dofsPerCell = patch->dofsPerCell[k];
 
           PetscCall(ISGetIndices(patch->isets[k], &ifield));
           for (j = 0; j < dofsPerCell; ++j) {
@@ -3387,7 +3387,7 @@ static PetscErrorCode PCReset_PATCH(PC pc)
   PetscCall(PetscFree(patch->precomputedIntFacetTensorLocations));
 
   patch->cellDofMap = NULL;
-  patch->nsubspaces  = 0;
+  patch->nsubspaces = 0;
   PetscCall(ISDestroy(&patch->iterationSet));
 
   PetscCall(PetscViewerDestroy(&patch->viewerCells));
