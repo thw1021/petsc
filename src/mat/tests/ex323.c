@@ -2,6 +2,7 @@ static const char help[] = "Test CUDA/HIP AIJ operations and array copies on the
 
 #include <petscmat.h>
 #include <petscdevice.h>
+#include <petsc/private/deviceimpl.h>
 #if PetscDefined(HAVE_CUDA)
   #include <petscdevice_cuda.h>
 #endif
@@ -215,6 +216,177 @@ static PetscErrorCode TestGetIJ(PetscDeviceType type, PetscDeviceContext dctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode SparsePointerMode(PetscDeviceType type, PetscDeviceContext dctx, PetscBool set, PetscBool device_mode)
+{
+  PetscFunctionBeginUser;
+#if PetscDefined(HAVE_CUDA)
+  if (type == PETSC_DEVICE_CUDA) {
+    cusparseHandle_t      handle;
+    cusparsePointerMode_t mode = device_mode ? CUSPARSE_POINTER_MODE_DEVICE : CUSPARSE_POINTER_MODE_HOST;
+
+    PetscCall(PetscDeviceContextGetSPARSEHandle_Internal(dctx, &handle));
+    if (set) PetscCallCUSPARSE(cusparseSetPointerMode(handle, mode));
+    else {
+      cusparsePointerMode_t actual;
+
+      PetscCallCUSPARSE(cusparseGetPointerMode(handle, &actual));
+      PetscCheck(actual == mode, PETSC_COMM_SELF, PETSC_ERR_PLIB, "cuSPARSE pointer mode was not restored");
+    }
+  }
+#endif
+#if PetscDefined(HAVE_HIP)
+  if (type == PETSC_DEVICE_HIP) {
+    hipsparseHandle_t      handle;
+    hipsparsePointerMode_t mode = device_mode ? HIPSPARSE_POINTER_MODE_DEVICE : HIPSPARSE_POINTER_MODE_HOST;
+
+    PetscCall(PetscDeviceContextGetSPARSEHandle_Internal(dctx, &handle));
+    if (set) PetscCallHIPSPARSE(hipsparseSetPointerMode(handle, mode));
+    else {
+      hipsparsePointerMode_t actual;
+
+      PetscCallHIPSPARSE(hipsparseGetPointerMode(handle, &actual));
+      PetscCheck(actual == mode, PETSC_COMM_SELF, PETSC_ERR_PLIB, "hipSPARSE pointer mode was not restored");
+    }
+  }
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestSparseOperations(Mat A, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
+{
+  const PetscScalar  ones[] = {1, 1, 1, 1};
+  const PetscScalar *a;
+  PetscStreamType    streamtype;
+  PetscBool          idle;
+  Vec                x, y;
+  Mat                B, C;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  PetscCall(MatCreateVecs(A, &x, &y));
+  PetscCall(VecSet(x, 1));
+  PetscCall(SparsePointerMode(type, dctx, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(WriteValues(A, type, dctx, ones, PETSC_FALSE));
+  PetscCall(MatMult(A, x, y));
+  PetscCall(SparsePointerMode(type, dctx, PETSC_FALSE, PETSC_FALSE));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+
+  PetscCall(WriteValues(A, type, dctx, input, PETSC_TRUE));
+  PetscCall(MatMult(A, x, y));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMult() returned with work pending on a barrier context");
+  }
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetArrayRead(y, &a));
+  for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMult() returned an incorrect entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(y, &a));
+
+  PetscCall(MatSetOption(A, MAT_FORM_EXPLICIT_TRANSPOSE, PETSC_TRUE));
+  PetscCall(MatMultTranspose(A, x, y));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecSet(x, 0));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(PetscDeviceContextDelay(dctx, 0.05));
+  PetscCall(VecSet(x, 2));
+  PetscCall(MatMultTranspose(A, x, y));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTranspose() returned with work pending on a barrier context");
+  }
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetArrayRead(y, &a));
+  for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 2 * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMultTranspose() returned an incorrect entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(y, &a));
+  PetscCall(MatSetOption(A, MAT_FORM_EXPLICIT_TRANSPOSE, PETSC_FALSE));
+  PetscCall(VecSet(x, 1));
+
+  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &B));
+  PetscCall(WriteValues(B, type, dctx, ones, PETSC_FALSE));
+  PetscCall(MatMatMult(A, B, MAT_INITIAL_MATRIX, 1.0, &C));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(WriteValues(B, type, dctx, input, PETSC_TRUE));
+  PetscCall(MatMatMult(A, B, MAT_REUSE_MATRIX, 1.0, &C));
+  PetscCall(SparsePointerMode(type, dctx, PETSC_FALSE, PETSC_FALSE));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMatMult() returned with work pending on a barrier context");
+  }
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(MatSeqAIJGetArrayRead(C, &a));
+  for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == input[i] * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatMatMult() returned an incorrect entry %" PetscInt_FMT, i);
+  PetscCall(MatSeqAIJRestoreArrayRead(C, &a));
+  PetscCall(MatDestroy(&C));
+  PetscCall(MatDestroy(&B));
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestSparseSolve(PetscDeviceType type, PetscDeviceContext saved, PetscDeviceContext dctx)
+{
+  Mat                A, F;
+  IS                 perm;
+  Vec                b, x;
+  MatFactorInfo      info;
+  PetscStreamType    streamtype;
+  PetscBool          idle;
+  const PetscScalar *a;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextSetCurrentContext(saved));
+  PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, 4, 4, 1, NULL, &A));
+  for (PetscInt i = 0; i < 4; ++i) PetscCall(MatSetValue(A, i, i, 2, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatConvert(A, type == PETSC_DEVICE_CUDA ? MATSEQAIJCUSPARSE : MATSEQAIJHIPSPARSE, MAT_INPLACE_MATRIX, &A));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, 4, 0, 1, &perm));
+  PetscCall(MatCreateVecs(A, &b, &x));
+  PetscCall(MatFactorInfoInitialize(&info));
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  for (PetscInt kind = 0; kind < 2; ++kind) {
+    MatFactorType factortype = kind ? MAT_FACTOR_CHOLESKY : MAT_FACTOR_LU;
+
+    PetscCall(PetscDeviceContextSetCurrentContext(saved));
+    PetscCall(MatGetFactor(A, type == PETSC_DEVICE_CUDA ? MATSOLVERCUSPARSE : MATSOLVERHIPSPARSE, factortype, &F));
+    PetscCall(SparsePointerMode(type, saved, PETSC_TRUE, PETSC_TRUE));
+    if (kind) {
+      PetscCall(MatCholeskyFactorSymbolic(F, A, perm, &info));
+      PetscCall(MatCholeskyFactorNumeric(F, A, &info));
+    } else {
+      PetscCall(MatLUFactorSymbolic(F, A, perm, perm, &info));
+      PetscCall(MatLUFactorNumeric(F, A, &info));
+    }
+    PetscCall(SparsePointerMode(type, saved, PETSC_FALSE, PETSC_TRUE));
+    PetscCall(SparsePointerMode(type, saved, PETSC_TRUE, PETSC_FALSE));
+    PetscCall(PetscDeviceContextSynchronize(saved));
+    PetscCall(PetscDeviceContextSetCurrentContext(dctx));
+    PetscCall(VecSet(b, 0));
+    PetscCall(VecSet(x, 0));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceContextDelay(dctx, 0.05));
+    PetscCall(VecSet(b, 2));
+    PetscCall(SparsePointerMode(type, dctx, PETSC_TRUE, PETSC_TRUE));
+    PetscCall(MatSolve(F, b, x));
+    PetscCall(SparsePointerMode(type, dctx, PETSC_FALSE, PETSC_TRUE));
+    PetscCall(SparsePointerMode(type, dctx, PETSC_TRUE, PETSC_FALSE));
+    if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+      PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+      PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatSolve() returned with work pending on a barrier context");
+    }
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(VecGetArrayRead(x, &a));
+    for (PetscInt i = 0; i < 4; ++i) PetscCheck(PetscAbsScalar(a[i] - 1) < 100 * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatSolve() returned an incorrect entry %" PetscInt_FMT, i);
+    PetscCall(VecRestoreArrayRead(x, &a));
+    PetscCall(MatDestroy(&F));
+  }
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
+  PetscCall(ISDestroy(&perm));
+  PetscCall(MatDestroy(&A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   Mat                   A, B;
@@ -293,6 +465,10 @@ int main(int argc, char **argv)
     PetscCall(TestGetDiagonal(A, type, current, input));
     PetscCall(TestDiagonalScale(A, type, current, input));
     PetscCall(TestGetIJ(type, current));
+    if (type == PETSC_DEVICE_CUDA) {
+      PetscCall(TestSparseOperations(A, type, current, input));
+      PetscCall(TestSparseSolve(type, saved, current));
+    }
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }
