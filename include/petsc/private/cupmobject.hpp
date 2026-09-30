@@ -196,8 +196,8 @@ protected:
 private:
   // The final stop in the GetHandles_/GetFromHandles_ chain. This retrieves the various
   // compute handles and ensure the given PetscDeviceContext is of the right type
-  static PetscErrorCode GetFromHandleDispatch_(PetscDeviceContext, cupmBlasHandle_t *, cupmSolverHandle_t *, cupmStream_t *) noexcept;
-  static PetscErrorCode GetHandleDispatch_(PetscDeviceContext *, cupmBlasHandle_t *, cupmSolverHandle_t *, cupmStream_t *) noexcept;
+  static PetscErrorCode GetFromHandleDispatch_(PetscDeviceContext, cupmBlasHandle_t *, cupmSparseHandle_t *, cupmSolverHandle_t *, cupmStream_t *) noexcept;
+  static PetscErrorCode GetHandleDispatch_(PetscDeviceContext *, cupmBlasHandle_t *, cupmSparseHandle_t *, cupmSolverHandle_t *, cupmStream_t *) noexcept;
 
 protected:
   PETSC_NODISCARD static constexpr PetscRandomType PETSCDEVICERAND() noexcept;
@@ -210,18 +210,22 @@ protected:
 
   // triple
   static PetscErrorCode GetHandles_(PetscDeviceContext *, cupmBlasHandle_t *, cupmStream_t *) noexcept;
+  static PetscErrorCode GetHandles_(PetscDeviceContext *, cupmSparseHandle_t *, cupmStream_t *) noexcept;
   static PetscErrorCode GetHandles_(PetscDeviceContext *, cupmSolverHandle_t *, cupmStream_t *) noexcept;
 
   // double
+  static PetscErrorCode GetHandles_(PetscDeviceContext *, cupmSparseHandle_t *) noexcept;
   static PetscErrorCode GetHandles_(PetscDeviceContext *, cupmSolverHandle_t *) noexcept;
   static PetscErrorCode GetHandles_(PetscDeviceContext *, cupmStream_t *) noexcept;
 
   // single
   static PetscErrorCode GetHandles_(cupmBlasHandle_t *) noexcept;
+  static PetscErrorCode GetHandles_(cupmSparseHandle_t *) noexcept;
   static PetscErrorCode GetHandles_(cupmSolverHandle_t *) noexcept;
   static PetscErrorCode GetHandles_(cupmStream_t *) noexcept;
 
   static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmBlasHandle_t *, cupmSolverHandle_t * = nullptr, cupmStream_t * = nullptr) noexcept;
+  static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmSparseHandle_t *, cupmStream_t * = nullptr) noexcept;
   static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmSolverHandle_t *, cupmStream_t * = nullptr) noexcept;
   static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmStream_t *) noexcept;
 
@@ -244,7 +248,7 @@ inline constexpr PetscRandomType CUPMObject<T>::PETSCDEVICERAND() noexcept
 }
 
 template <DeviceType T>
-inline PetscErrorCode CUPMObject<T>::GetFromHandleDispatch_(PetscDeviceContext dctx, cupmBlasHandle_t *blas_handle, cupmSolverHandle_t *solver_handle, cupmStream_t *stream_handle) noexcept
+inline PetscErrorCode CUPMObject<T>::GetFromHandleDispatch_(PetscDeviceContext dctx, cupmBlasHandle_t *blas_handle, cupmSparseHandle_t *sparse_handle, cupmSolverHandle_t *solver_handle, cupmStream_t *stream_handle) noexcept
 {
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx, 1);
@@ -252,12 +256,16 @@ inline PetscErrorCode CUPMObject<T>::GetFromHandleDispatch_(PetscDeviceContext d
     PetscAssertPointer(blas_handle, 2);
     *blas_handle = nullptr;
   }
+  if (sparse_handle) {
+    PetscAssertPointer(sparse_handle, 3);
+    *sparse_handle = nullptr;
+  }
   if (solver_handle) {
-    PetscAssertPointer(solver_handle, 3);
+    PetscAssertPointer(solver_handle, 4);
     *solver_handle = nullptr;
   }
   if (stream_handle) {
-    PetscAssertPointer(stream_handle, 4);
+    PetscAssertPointer(stream_handle, 5);
     *stream_handle = nullptr;
   }
   if (PetscDefined(USE_DEBUG)) {
@@ -267,6 +275,7 @@ inline PetscErrorCode CUPMObject<T>::GetFromHandleDispatch_(PetscDeviceContext d
     PetscCheckCompatibleDeviceTypes(PETSC_DEVICE_CUPM(), -1, dtype, 1);
   }
   if (blas_handle) PetscCall(PetscDeviceContextGetBLASHandle_Internal(dctx, blas_handle));
+  if (sparse_handle) PetscCall(PetscDeviceContextGetSPARSEHandle_Internal(dctx, sparse_handle));
   if (solver_handle) PetscCall(PetscDeviceContextGetSOLVERHandle_Internal(dctx, solver_handle));
   if (stream_handle) {
     cupmStream_t *stream = nullptr;
@@ -278,7 +287,7 @@ inline PetscErrorCode CUPMObject<T>::GetFromHandleDispatch_(PetscDeviceContext d
 }
 
 template <DeviceType T>
-inline PetscErrorCode CUPMObject<T>::GetHandleDispatch_(PetscDeviceContext *dctx, cupmBlasHandle_t *blas_handle, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
+inline PetscErrorCode CUPMObject<T>::GetHandleDispatch_(PetscDeviceContext *dctx, cupmBlasHandle_t *blas_handle, cupmSparseHandle_t *sparse_handle, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
 {
   PetscDeviceContext dctx_loc = nullptr;
 
@@ -286,7 +295,7 @@ inline PetscErrorCode CUPMObject<T>::GetHandleDispatch_(PetscDeviceContext *dctx
   // silence uninitialized variable warnings
   if (dctx) *dctx = nullptr;
   PetscCall(PetscDeviceContextGetCurrentContext(&dctx_loc));
-  PetscCall(GetFromHandleDispatch_(dctx_loc, blas_handle, solver_handle, stream));
+  PetscCall(GetFromHandleDispatch_(dctx_loc, blas_handle, sparse_handle, solver_handle, stream));
   if (dctx) *dctx = dctx_loc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -294,61 +303,85 @@ inline PetscErrorCode CUPMObject<T>::GetHandleDispatch_(PetscDeviceContext *dctx
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(PetscDeviceContext *dctx, cupmBlasHandle_t *blas_handle, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
 {
-  return GetHandleDispatch_(dctx, blas_handle, solver_handle, stream);
+  return GetHandleDispatch_(dctx, blas_handle, nullptr, solver_handle, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(PetscDeviceContext *dctx, cupmBlasHandle_t *blas_handle, cupmStream_t *stream) noexcept
 {
-  return GetHandleDispatch_(dctx, blas_handle, nullptr, stream);
+  return GetHandleDispatch_(dctx, blas_handle, nullptr, nullptr, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(PetscDeviceContext *dctx, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
 {
-  return GetHandleDispatch_(dctx, nullptr, solver_handle, stream);
+  return GetHandleDispatch_(dctx, nullptr, nullptr, solver_handle, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(PetscDeviceContext *dctx, cupmStream_t *stream) noexcept
 {
-  return GetHandleDispatch_(dctx, nullptr, nullptr, stream);
+  return GetHandleDispatch_(dctx, nullptr, nullptr, nullptr, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(cupmBlasHandle_t *handle) noexcept
 {
-  return GetHandleDispatch_(nullptr, handle, nullptr, nullptr);
+  return GetHandleDispatch_(nullptr, handle, nullptr, nullptr, nullptr);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(cupmSolverHandle_t *handle) noexcept
 {
-  return GetHandleDispatch_(nullptr, nullptr, handle, nullptr);
+  return GetHandleDispatch_(nullptr, nullptr, nullptr, handle, nullptr);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandles_(cupmStream_t *stream) noexcept
 {
-  return GetHandleDispatch_(nullptr, nullptr, nullptr, stream);
+  return GetHandleDispatch_(nullptr, nullptr, nullptr, nullptr, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandlesFrom_(PetscDeviceContext dctx, cupmBlasHandle_t *blas_handle, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
 {
-  return GetFromHandleDispatch_(dctx, blas_handle, solver_handle, stream);
+  return GetFromHandleDispatch_(dctx, blas_handle, nullptr, solver_handle, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandlesFrom_(PetscDeviceContext dctx, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
 {
-  return GetFromHandleDispatch_(dctx, nullptr, solver_handle, stream);
+  return GetFromHandleDispatch_(dctx, nullptr, nullptr, solver_handle, stream);
 }
 
 template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandlesFrom_(PetscDeviceContext dctx, cupmStream_t *stream) noexcept
 {
-  return GetFromHandleDispatch_(dctx, nullptr, nullptr, stream);
+  return GetFromHandleDispatch_(dctx, nullptr, nullptr, nullptr, stream);
+}
+
+template <DeviceType T>
+inline PetscErrorCode CUPMObject<T>::GetHandles_(PetscDeviceContext *dctx, cupmSparseHandle_t *handle, cupmStream_t *stream) noexcept
+{
+  return GetHandleDispatch_(dctx, nullptr, handle, nullptr, stream);
+}
+
+template <DeviceType T>
+inline PetscErrorCode CUPMObject<T>::GetHandles_(PetscDeviceContext *dctx, cupmSparseHandle_t *handle) noexcept
+{
+  return GetHandleDispatch_(dctx, nullptr, handle, nullptr, nullptr);
+}
+
+template <DeviceType T>
+inline PetscErrorCode CUPMObject<T>::GetHandles_(cupmSparseHandle_t *handle) noexcept
+{
+  return GetHandleDispatch_(nullptr, nullptr, handle, nullptr, nullptr);
+}
+
+template <DeviceType T>
+inline PetscErrorCode CUPMObject<T>::GetHandlesFrom_(PetscDeviceContext dctx, cupmSparseHandle_t *handle, cupmStream_t *stream) noexcept
+{
+  return GetFromHandleDispatch_(dctx, nullptr, handle, nullptr, stream);
 }
 
 template <DeviceType T>
