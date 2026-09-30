@@ -225,23 +225,26 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
   /* MatZeroEntries: fill device CSR values with zero */
   static PetscErrorCode ZeroEntries(Mat A) noexcept
   {
-    PetscBool      gpu = PETSC_FALSE;
-    Mat_SeqAIJ    *a   = (Mat_SeqAIJ *)A->data;
-    MatStructType *spptr;
+    PetscBool          gpu = PETSC_FALSE;
+    Mat_SeqAIJ        *a   = (Mat_SeqAIJ *)A->data;
+    MatStructType     *spptr;
+    cupmStream_t       stream;
+    PetscDeviceContext dctx;
 
     PetscFunctionBegin;
+    PetscCall(GetHandles_(&dctx, &stream));
     if (A->factortype == MAT_FACTOR_NONE) {
       spptr = (MatStructType *)A->spptr;
       if (spptr->mat) {
         CsrMatrix *matrix = (CsrMatrix *)spptr->mat->mat;
         if (matrix->values) {
           gpu = PETSC_TRUE;
-          PetscCallThrust(thrust::fill(thrust::device, matrix->values->begin(), matrix->values->end(), (PetscScalar)0.));
+          PetscCallThrust(THRUST_CALL(thrust::fill, stream, matrix->values->begin(), matrix->values->end(), (PetscScalar)0.));
         }
       }
       if (spptr->matTranspose) {
         CsrMatrix *matrix = (CsrMatrix *)spptr->matTranspose->mat;
-        if (matrix->values) PetscCallThrust(thrust::fill(thrust::device, matrix->values->begin(), matrix->values->end(), (PetscScalar)0.));
+        if (matrix->values) PetscCallThrust(THRUST_CALL(thrust::fill, stream, matrix->values->begin(), matrix->values->end(), (PetscScalar)0.));
       }
     }
     if (gpu) A->offloadmask = PETSC_OFFLOAD_GPU;
@@ -249,6 +252,7 @@ struct MatSeqAIJCUSPARSE_CUPM : device::cupm::impl::CUPMObject<T> {
       PetscCall(PetscArrayzero(a->a, a->i[A->rmap->n]));
       A->offloadmask = PETSC_OFFLOAD_CPU;
     }
+    PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
