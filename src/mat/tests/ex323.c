@@ -84,6 +84,70 @@ static PetscErrorCode TestCopies(Mat A, PetscDeviceType type, PetscDeviceContext
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestGetDiagonal(Mat A, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
+{
+  Vec                diag;
+  const PetscScalar *a;
+  PetscStreamType    streamtype;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  PetscCall(MatCreateVecs(A, &diag, NULL));
+  // Warm the allocation and kernel before delaying the matrix values.
+  PetscCall(MatGetDiagonal(A, diag));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(WriteValues(A, type, dctx, input, PETSC_TRUE));
+  PetscCall(MatGetDiagonal(A, diag));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscBool idle;
+
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatGetDiagonal() returned with work pending on a barrier context");
+  }
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetArrayRead(diag, &a));
+  for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect diagonal entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(diag, &a));
+  PetscCall(VecDestroy(&diag));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestDiagonalScale(Mat A, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
+{
+  Vec                left, right;
+  const PetscScalar *a;
+  PetscStreamType    streamtype;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  PetscCall(MatCreateVecs(A, &right, &left));
+  PetscCall(VecSet(left, 2));
+  PetscCall(VecSet(right, 3));
+  for (PetscInt mode = 0; mode < 3; ++mode) {
+    PetscScalar factor = mode == 0 ? 2 : (mode == 1 ? 3 : 6);
+    Vec         ll = mode == 1 ? NULL : left, rr = mode == 0 ? NULL : right;
+
+    // Warm the scaling kernels before delaying the matrix values.
+    PetscCall(MatDiagonalScale(A, ll, rr));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(WriteValues(A, type, dctx, input, PETSC_TRUE));
+    PetscCall(MatDiagonalScale(A, ll, rr));
+    if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+      PetscBool idle;
+
+      PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+      PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatDiagonalScale() mode %" PetscInt_FMT " returned with work pending on a barrier context", mode);
+    }
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(MatSeqAIJGetArrayRead(A, &a));
+    for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == factor * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatDiagonalScale() mode %" PetscInt_FMT ": incorrect entry %" PetscInt_FMT, mode, i);
+    PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
+  }
+  PetscCall(VecDestroy(&left));
+  PetscCall(VecDestroy(&right));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   Mat                   A, B;
@@ -159,6 +223,8 @@ int main(int argc, char **argv)
     for (PetscInt i = 0; i < 4; ++i) PetscCheck(a[i] == 3 * input[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stream type %s: incorrect CSR entry %" PetscInt_FMT " after MatAXPY()", PetscStreamTypes[streams[k]], i);
     PetscCall(MatSeqAIJRestoreArrayRead(A, &a));
     PetscCall(TestCopies(A, type, current, input));
+    PetscCall(TestGetDiagonal(A, type, current, input));
+    PetscCall(TestDiagonalScale(A, type, current, input));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }
