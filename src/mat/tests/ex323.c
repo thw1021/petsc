@@ -465,10 +465,8 @@ int main(int argc, char **argv)
     PetscCall(TestGetDiagonal(A, type, current, input));
     PetscCall(TestDiagonalScale(A, type, current, input));
     PetscCall(TestGetIJ(type, current));
-    if (type == PETSC_DEVICE_CUDA) {
-      PetscCall(TestSparseOperations(A, type, current, input));
-      PetscCall(TestSparseSolve(type, saved, current));
-    }
+    PetscCall(TestSparseOperations(A, type, current, input));
+    PetscCall(TestSparseSolve(type, saved, current));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }
