@@ -160,6 +160,7 @@ typedef const char *MatType;
 #define MATDIAGONAL                  "diagonal"
 #define MATHTOOL                     "htool"
 #define MATH2OPUS                    "h2opus"
+#define MATMPISEQBAIJ                "mpiseqbaij"
 
 /*J
    MatSolverType - String with the name of a PETSc factorization-based matrix solver type.
@@ -502,6 +503,12 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm, PetscInt, PetscI
 PETSC_EXTERN PetscErrorCode MatCreateSeqBAIJ(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateBAIJ(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateMPIBAIJWithArrays(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateMPISeqBAIJ(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);
+#if PetscDefined(HAVE_SHMGET)
+PETSC_EXTERN PetscBool MatMPISeqBAIJActive(void);
+#else
+  #define MatMPISeqBAIJActive() PETSC_FALSE
+#endif
 
 PETSC_EXTERN PetscErrorCode MatSetPreallocationCOO(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode MatSetPreallocationCOOLocal(Mat, PetscCount, PetscInt[], PetscInt[]);

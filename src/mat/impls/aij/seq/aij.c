@@ -558,13 +558,13 @@ PetscErrorCode MatSeqAIJSetTotalPreallocation(Mat A, PetscInt nztotal)
   }
 
   /* allocate the matrix space */
-  PetscCall(PetscShmgetAllocateArray(A->rmap->n + 1, sizeof(PetscInt), (void **)&a->i));
-  PetscCall(PetscShmgetAllocateArray(nztotal, sizeof(PetscInt), (void **)&a->j));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), A->rmap->n + 1, sizeof(PetscInt), (void **)&a->i));
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nztotal, sizeof(PetscInt), (void **)&a->j));
   a->free_ij = PETSC_TRUE;
   if (A->structure_only) {
     a->free_a = PETSC_FALSE;
   } else {
-    PetscCall(PetscShmgetAllocateArray(nztotal, sizeof(PetscScalar), (void **)&a->a));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nztotal, sizeof(PetscScalar), (void **)&a->a));
     a->free_a = PETSC_TRUE;
   }
   a->i[0]           = 0;
@@ -3935,13 +3935,13 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
 
     /* allocate the matrix space */
     PetscCall(MatSeqXAIJFreeAIJ(B, &b->a, &b->j, &b->i));
-    PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscInt), (void **)&b->j));
-    PetscCall(PetscShmgetAllocateArray(B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscInt), (void **)&b->j));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
     b->free_ij = PETSC_TRUE;
     if (B->structure_only) {
       b->free_a = PETSC_FALSE;
     } else {
-      PetscCall(PetscShmgetAllocateArray(nz, sizeof(PetscScalar), (void **)&b->a));
+      PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nz, sizeof(PetscScalar), (void **)&b->a));
       b->free_a = PETSC_TRUE;
     }
     b->i[0] = 0;
@@ -4579,9 +4579,9 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   nnz = 0;                                          /* Total number of unique nonzeros to be counted */
   jmap++;                                           /* Inc jmap by 1 for convenience */
 
-  PetscCall(PetscShmgetAllocateArray(M + 1, sizeof(PetscInt), (void **)&Ai)); /* CSR of A */
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), M + 1, sizeof(PetscInt), (void **)&Ai)); /* CSR of A */
   PetscCall(PetscArrayzero(Ai, M + 1));
-  PetscCall(PetscShmgetAllocateArray(coo_n - nneg, sizeof(PetscInt), (void **)&Aj)); /* We have at most coo_n-nneg unique nonzeros */
+  PetscCall(PetscShmgetAllocateArray(PCMPIActive(), coo_n - nneg, sizeof(PetscInt), (void **)&Aj)); /* We have at most coo_n-nneg unique nonzeros */
 
   PetscCall(PetscStrcmp("_internal_COO_mat_for_hypre", ((PetscObject)mat)->name, &hypre));
 
@@ -4685,7 +4685,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
     PetscCall(PetscFree(jmap));
     jmap = jmap_new;
 
-    PetscCall(PetscShmgetAllocateArray(nnz, sizeof(PetscInt), (void **)&Aj_new));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nnz, sizeof(PetscInt), (void **)&Aj_new));
     PetscCall(PetscArraycpy(Aj_new, Aj, nnz));
     PetscCall(PetscShmgetDeallocateArray((void **)&Aj));
     Aj = Aj_new;
@@ -4702,7 +4702,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   PetscCall(MatGetRootType_Private(mat, &rtype));
   if (!mat->structure_only) {
-    PetscCall(PetscShmgetAllocateArray(nnz, sizeof(PetscScalar), (void **)&Aa));
+    PetscCall(PetscShmgetAllocateArray(PCMPIActive(), nnz, sizeof(PetscScalar), (void **)&Aa));
     PetscCall(PetscArrayzero(Aa, nnz));
   }
   PetscCall(MatSetSeqAIJWithArrays_private(PETSC_COMM_SELF, M, N, Ai, Aj, Aa, rtype, mat));
@@ -4882,9 +4882,9 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
 
       /* allocate the matrix space */
       if (mallocmatspace) {
-        if (!A->structure_only) PetscCall(PetscShmgetAllocateArray(a->i[m], sizeof(PetscScalar), (void **)&c->a));
-        PetscCall(PetscShmgetAllocateArray(a->i[m], sizeof(PetscInt), (void **)&c->j));
-        PetscCall(PetscShmgetAllocateArray(m + 1, sizeof(PetscInt), (void **)&c->i));
+        if (!A->structure_only) PetscCall(PetscShmgetAllocateArray(PCMPIActive(), a->i[m], sizeof(PetscScalar), (void **)&c->a));
+        PetscCall(PetscShmgetAllocateArray(PCMPIActive(), a->i[m], sizeof(PetscInt), (void **)&c->j));
+        PetscCall(PetscShmgetAllocateArray(PCMPIActive(), m + 1, sizeof(PetscInt), (void **)&c->i));
         PetscCall(PetscArraycpy(c->i, a->i, m + 1));
         c->free_a  = PETSC_TRUE;
         c->free_ij = PETSC_TRUE;

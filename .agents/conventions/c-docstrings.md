@@ -3,7 +3,7 @@
 `petsclinter` enforces docstring formatting. See [petsc-lint](../skills/petsc-lint/SKILL.md) for commands and dependencies.
 
 - **Section order.** Sections in `/*@ ... @*/` always appear in this order:
-  1. One-line synopsis (`FunctionName - one-line description`)
+  1. Short synopsis (`FunctionName - short description`)
   2. Collectivity (`Collective`, `Logically Collective`, `Not Collective`, `Asynchronous`)
   3. `Input Parameter(s):`
   4. `Output Parameter(s):`
