@@ -199,7 +199,7 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
     PetscInt *ilocal = NULL;
     PetscSFNode *iremote = NULL;
     PetscInt allRoots = 0, allLeaves = 0, index = 0;
-    const PetscInt **subspaceIndices = NULL;  // TODO free me!
+    const PetscInt **subspaceIndices = NULL;
 
     PetscCall(PetscMalloc1(n, &subspaceIndices));
     for (PetscInt k = 0; k < n; ++k)
@@ -246,7 +246,6 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
 
       PetscCall(PetscSFGetGraph(subspaceSFs[k], NULL, &nleaves, &subilocal, &subiremote));
       for (PetscInt i = 0; i < nleaves; ++i) {
-        // Not sure about this
         ilocal[i+index] = subilocal ? subilocal[i] : i;
         iremote[i+index].rank = subiremote[i].rank;
         iremote[i+index].index = subiremote[i].index;
