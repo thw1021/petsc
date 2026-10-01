@@ -1298,6 +1298,8 @@ PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscCtxDestroyDefault()", ) static inline 
 
 PETSC_EXTERN PetscErrorCode PetscMonitorCompare(PetscErrorCode (*)(void), void *, PetscCtxDestroyFn *, PetscErrorCode (*)(void), void *, PetscCtxDestroyFn *, PetscBool *);
 
+/* generatefortranbindings.py requires the next line */
+#include <petscviewertypes.h>
 #include <petscoptions.h>
 
 PETSC_EXTERN PetscErrorCode PetscMallocTraceSet(PetscViewer, PetscBool, PetscLogDouble);

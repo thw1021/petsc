@@ -4,7 +4,7 @@
 #pragma once
 
 #include <petscdmplex.h>
-#include <petscviewer.h>
+#include <petscviewertypes.h>
 
 /* MANSEC = DM */
 /* SUBMANSEC = DMNetwork */

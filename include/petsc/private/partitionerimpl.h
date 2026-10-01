@@ -1,6 +1,6 @@
 #pragma once
 
-#include <petscviewer.h>
+#include <petscviewertypes.h>
 #include <petscpartitioner.h>
 #include <petsc/private/petscimpl.h>
 

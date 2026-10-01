@@ -1592,7 +1592,3 @@ typedef struct {
   PetscInt n;
   void    *addr[3];
 } PCMPIServerAddresses;
-
-#include <petscviewertypes.h>
-#include <petscdrawtypes.h>
-#include <petscoptionstypes.h>
