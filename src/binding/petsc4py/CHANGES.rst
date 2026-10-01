@@ -6,6 +6,12 @@ CHANGES: PETSc for Python
 :Contact: dalcinl@gmail.com
 
 
+Development
+===========
+
+- Add ``DMPlex.labelAddOverlap()``.
+
+
 Release 3.26.0
 ==============
 

@@ -584,7 +584,7 @@ static PetscErrorCode DMPlexTransformInitialize_DD(DMPlexTransform tr)
 
   Notes:
   Each stratum of the active label, set with `DMPlexTransformSetActive()`, marks the cells of one subdomain, and a cell
-  may belong to several subdomains. Each point of the original mesh produces one replica for each subdomain whose
+  may belong to several subdomains, for instance after growing the strata with `DMPlexLabelAddOverlap()`. Each point of the original mesh produces one replica for each subdomain whose
   cells contain it in their closure, and points outside every subdomain produce nothing. Replica r of a point belongs
   to its r-th smallest subdomain value, so `DMPlexTransformGetSourcePoint()` gives both the parent point and,
   with the label below, the subdomain of each new point.
@@ -599,7 +599,7 @@ static PetscErrorCode DMPlexTransformInitialize_DD(DMPlexTransform tr)
   each subdomain only contains cells owned by one process, and no labeled cell is in the halo, then the point `PetscSF`
   of the transformed mesh is empty.
 
-.seealso: [](plex_transform_table), `DMPlexTransform`, `DMPlexTransformType`, `DMPlexTransformSetActive()`,
+.seealso: [](plex_transform_table), `DMPlexTransform`, `DMPlexTransformType`, `DMPlexTransformSetActive()`, `DMPlexLabelAddOverlap()`,
           `DMPlexTransformDDSetIgnoreHalo()`, `DMPLEXTRANSFORMFILTER`, `DMPlexFilter()`
 M*/
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_DD(DMPlexTransform tr)

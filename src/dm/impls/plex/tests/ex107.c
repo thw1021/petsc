@@ -17,6 +17,8 @@ typedef struct {
   PetscReal slabOverlap; // Distance by which consecutive slabs overlap, for LABEL_SLABS
   PetscInt  numLocalSub; // Number of subdomains on each process, for LABEL_RANKS
   PetscBool labelHalo;   // Also mark the ghost cells with the subdomain of their owner, for LABEL_RANKS
+  PetscInt  grow;        // Number of layers of adjacent cells added to each subdomain
+  PetscBool fvAdjacency; // Grow subdomains through facets instead of vertices
   PetscBool checkReferenceCells;
 } AppCtx;
 
@@ -28,6 +30,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->slabOverlap         = 0.;
   options->numLocalSub         = 1;
   options->labelHalo           = PETSC_FALSE;
+  options->grow                = 0;
+  options->fvAdjacency         = PETSC_FALSE;
   options->checkReferenceCells = PETSC_FALSE;
   PetscOptionsBegin(comm, "", "Domain decomposition transform test options", "DMPLEX");
   PetscCall(PetscOptionsEnum("-label_type", "How subdomains are marked", __FILE__, LabelTypes, (PetscEnum)options->labelType, (PetscEnum *)&options->labelType, NULL));
@@ -35,6 +39,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsReal("-slab_overlap", "Distance by which consecutive slabs overlap", __FILE__, options->slabOverlap, &options->slabOverlap, NULL));
   PetscCall(PetscOptionsBoundedInt("-num_local_sub", "Number of subdomains on each process", __FILE__, options->numLocalSub, &options->numLocalSub, NULL, 1));
   PetscCall(PetscOptionsBool("-label_halo", "Mark the ghost cells with the subdomain of their owner", __FILE__, options->labelHalo, &options->labelHalo, NULL));
+  PetscCall(PetscOptionsBoundedInt("-grow", "Number of layers of adjacent cells added to each subdomain", __FILE__, options->grow, &options->grow, NULL, 0));
+  PetscCall(PetscOptionsBool("-fv_adjacency", "Grow subdomains through facets instead of vertices", __FILE__, options->fvAdjacency, &options->fvAdjacency, NULL));
   PetscCall(PetscOptionsBool("-check_reference_cells", "Build the reference-cell coordinate cache", __FILE__, options->checkReferenceCells, &options->checkReferenceCells, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -288,8 +294,10 @@ int main(int argc, char **argv)
   PetscCall(DMSetType(dm, DMPLEX));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+  if (user.fvAdjacency) PetscCall(DMSetBasicAdjacency(dm, PETSC_TRUE, PETSC_FALSE));
   PetscCall(CreateSubdomainLabel(dm, &user, &numSubdomains));
   PetscCall(DMGetLabel(dm, "subdomain", &label));
+  PetscCall(DMPlexLabelAddOverlap(dm, label, user.grow));
 
   PetscCall(DMPlexTransformCreate(PETSC_COMM_WORLD, &tr));
   PetscCall(PetscObjectSetName((PetscObject)tr, "DD"));
@@ -335,6 +343,14 @@ int main(int argc, char **argv)
       nsize: {{1 2}}
       args: -dm_distribute_overlap 1 -dd_dm_plex_transform_dd_ignore_halo {{0 1}}
 
+  # The same slabs, produced from disjoint slabs by growing each one by a layer of cells sharing a vertex or a facet
+  test:
+    suffix: slabs_grow
+    nsize: {{1 2 3}}
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 6,3 -petscpartitioner_type simple -num_slabs 3 -dm_distribute_overlap 1 \
+          -grow 1 -fv_adjacency {{0 1}} -dd_dm_plex_transform_dd_ignore_halo {{0 1}}
+    output_file: output/ex107_slabs.out
+
   test:
     suffix: hex_slabs
     nsize: {{1 2}}
@@ -346,6 +362,21 @@ int main(int argc, char **argv)
     nsize: {{1 2}}
     args: -dm_plex_shape doublet -dm_plex_dim 3 -dm_plex_simplex 1 -dm_refine 1 -petscpartitioner_type simple -num_slabs 2 -slab_overlap 0.25
     output_file: output/ex107_tet_slabs.out
+
+  # Disjoint tetrahedral slabs grown by a layer of cells sharing a vertex, or a facet, which adds fewer cells
+  testset:
+    nsize: {{1 2}}
+    args: -dm_plex_shape doublet -dm_plex_dim 3 -dm_plex_simplex 1 -dm_refine 1 -petscpartitioner_type simple -num_slabs 2 \
+          -dm_distribute_overlap 1 -grow 1
+
+    test:
+      suffix: tet_grow_vertex
+      output_file: output/ex107_tet_grow_vertex.out
+
+    test:
+      suffix: tet_grow_facet
+      args: -fv_adjacency
+      output_file: output/ex107_tet_grow_facet.out
 
   # Subdomains aligned with the partition, two on each process. Without a halo, no point is shared. With the subdomains
   # of the owners marked on the ghost cells, the replicas of these cells are shared with their owners.
@@ -360,6 +391,14 @@ int main(int argc, char **argv)
     test:
       suffix: ranks_halo
       args: -label_halo 1
+
+  # Growing rank subdomains into the mesh overlap creates replicas whose source cells are ghost cells on a different rank.
+  test:
+    suffix: ranks_grow_halo
+    nsize: 2
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 2,1 -petscpartitioner_type simple -dm_distribute_overlap 1 \
+          -label_type ranks -num_local_sub 1 -label_halo 0 -grow 1 -dd_dm_plex_transform_dd_ignore_halo 0
+    output_file: output/ex107_ranks_grow_halo.out
 
   # Preserve localized coordinates on periodic meshes.
   test:
