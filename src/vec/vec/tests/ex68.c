@@ -216,7 +216,7 @@ static PetscErrorCode TestMAXPYCoefficients(Vec x, PetscDeviceType type, PetscDe
   PetscCall(VecCreate(PETSC_COMM_WORLD, &ref));
   PetscCall(VecSetSizes(ref, n, PETSC_DECIDE));
   PetscCall(VecSetType(ref, VECSTANDARD));
-  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 9, &alpha));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 9, PETSC_DECIDE, &alpha));
   for (PetscInt j = 0; j < 9; ++j) ys[j] = y;
   for (PetscInt k = 0; k < ncounts; ++k) {
     PetscInt nv = counts[k];

@@ -48,8 +48,8 @@ static PetscErrorCode TestCopies(Mat A, PetscDeviceType type, PetscDeviceContext
   PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSeqAIJCopySubArray_C", &copy));
   PetscCheck(copy, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing device subarray copy implementation");
   PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
-  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 4, &host));
-  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_DEVICE, 4, &device));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 4, PETSC_DECIDE, &host));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_DEVICE, 4, sizeof(PetscScalar), &device));
 
   PetscCall(MatZeroEntries(A));
   PetscCall(PetscDeviceContextSynchronize(dctx));
@@ -163,8 +163,8 @@ static PetscErrorCode TestGetIJ(PetscDeviceType type, PetscDeviceContext dctx)
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatConvert(A, type == PETSC_DEVICE_CUDA ? MATSEQAIJCUSPARSE : MATSEQAIJHIPSPARSE, MAT_INPLACE_MATRIX, &A));
-  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 5, &rows));
-  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 1, &cols));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 5, PETSC_DECIDE, &rows));
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 1, PETSC_DECIDE, &cols));
   PetscCall(PetscDeviceContextGetStreamHandle(dctx, &stream));
   // Build the compressed device matrix before testing the full row-offset upload.
 #if PetscDefined(HAVE_CUDA)
@@ -413,7 +413,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDeviceContextGetCurrentContext(&saved));
   PetscCall(PetscDeviceContextGetDevice(saved, &device));
   PetscCall(PetscDeviceGetType(device, &type));
-  PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_HOST, 4, &input));
+  PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_HOST, 4, PETSC_DECIDE, &input));
   PetscCall(PetscDeviceContextSynchronize(saved));
   for (PetscInt i = 0; i < 4; ++i) input[i] = i + 1;
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, 4, 4, 1, NULL, &A));
