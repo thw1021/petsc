@@ -703,10 +703,10 @@ def findlmansec(dir):  # could use dir to determine mansec
 def getpossiblefunctions(pkgname):
    '''Gets a list of all the functions in the include/ directory that may be used in the binding for other languages'''
    try:
-     output = check_output('grep -F -e "' + pkgname.upper() + '_EXTERN PetscErrorCode" -e "static inline PetscErrorCode" include/*.h', shell=True).decode('utf-8')
+     output = check_output('grep -F -e "' + pkgname.upper() + '_EXTERN PetscErrorCode" -e "' + pkgname.upper() + '_EXTERN PetscBool" -e "static inline PetscErrorCode" include/*.h', shell=True).decode('utf-8')
    except subprocess.CalledProcessError as e:
      raise RuntimeError('Unable to find possible functions in the include files')
-   funs = output.replace('' + pkgname.upper() + '_EXTERN','').replace('PetscErrorCode','').replace('static inline','')
+   funs = output.replace('' + pkgname.upper() + '_EXTERN','').replace('PetscErrorCode','').replace('PetscBool','').replace('static inline','')
    functiontoinclude = {}
    for i in funs.split('\n'):
      file = i[i.find('/') + 1:i.find('.') + 2]
@@ -826,7 +826,7 @@ def parseFunction(line):
 def getFunctions(mansec, functiontoinclude, filename):
   '''Appends the functions found in filename to their associated class classes[i], or funcs[] if they are classless'''
   import re
-  regfun      = re.compile(r'^(?:static inline )?Petsc(ErrorCode|Byte) ')
+  regfun      = re.compile(r'^(?:static inline )?Petsc(ErrorCode|Byte|Bool) ')
   regarg      = re.compile(r'\([A-Za-z0-9*_\[\]\.]*[,\) ]')
   reg         = re.compile(r' ([*])*[a-zA-Z0-9_]*([\[\]]*)')
   regname     = re.compile(r' [*]*([a-zA-Z0-9_]*)[\[\]]*')
