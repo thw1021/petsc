@@ -10,7 +10,6 @@
 #include <petscmacros.h> // PETSC_NODISCARD, PETSC_CPP_VERSION
 #include <stddef.h>
 #include <stdbool.h>
-#include <petscviewertypes.h>
 
 /* SUBMANSEC = Sys */
 
@@ -1560,6 +1559,26 @@ M*/
 typedef void *PetscCtxRt;
 
 /*S
+  PetscCtxDestroyFn - A prototype of a `PetscErrorCode (*)(PetscCtxRt)` function that is used to free application contexts
+
+  Level: intermediate
+
+  Notes:
+  Used in the prototype of functions such as `DMSetApplicationContextDestroy()`
+
+  The function argument is a `PetscCtxRt` which is psychologically equivalent to a `void **` meaning that this function is called with a pointer to
+  the application context (which is itself a pointer) thus the destroy implementation must first reference the context via, for example,
+  `*(AppCtx **)arg`. Note that syntactically `PetscCtxRt` is defined as a `void *`, this is because C++ does
+  not accept passing a pointer to a pointer to a `void**` but it does accept passing a pointer to a pointer to `void *`.
+
+  PETSc destroy functions take the address of the context (rather than just the context) so that that the destroy function can "zero the pointer" when
+  appropriate, preventing accidental later use of a dangling pointer.
+
+.seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(PetscCtxRt ctx);
+
+/*S
    PCMPIServerAddresses - Small bookkeeping record used by the `PCMPI` server to track shared-memory address mappings that have been distributed across the participating MPI ranks
 
    Level: developer
@@ -1573,3 +1592,6 @@ typedef struct {
   PetscInt n;
   void    *addr[3];
 } PCMPIServerAddresses;
+
+#include <petscviewertypes.h>
+#include <petscdrawtypes.h>
