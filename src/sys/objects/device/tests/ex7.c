@@ -149,56 +149,141 @@ static PetscErrorCode TestAsyncCoherence(PetscDeviceContext dctx, PetscRandom ra
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckBarrierCompletion(PetscDeviceContext dctx, const char operation[])
+{
+  PetscStreamType stype;
+  PetscBool       idle;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+  PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+  PetscCheck(idle || (stype != PETSC_STREAM_DEFAULT_WITH_BARRIER && stype != PETSC_STREAM_NONBLOCKING_WITH_BARRIER), PETSC_COMM_SELF, PETSC_ERR_PLIB, "%s returned with pending work on stream type %s", operation, PetscStreamTypes[stype]);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestMemoryStreamTypes(PetscDeviceContext dctx, PetscMemType mtype)
+{
+  const PetscStreamType types[] = {PETSC_STREAM_DEFAULT, PETSC_STREAM_NONBLOCKING, PETSC_STREAM_DEFAULT_WITH_BARRIER, PETSC_STREAM_NONBLOCKING_WITH_BARRIER};
+  const PetscInt        n       = 4097;
+  PetscDeviceType       dtype;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetDeviceType(dctx, &dtype));
+  if (dtype != PETSC_DEVICE_CUDA && dtype != PETSC_DEVICE_HIP) PetscFunctionReturn(PETSC_SUCCESS);
+  for (size_t t = 0; t < PETSC_STATIC_ARRAY_LENGTH(types); ++t) {
+    PetscDeviceContext ctx;
+    unsigned char     *ptr, *host;
+
+    PetscCall(PetscDeviceContextDuplicate(dctx, &ctx));
+    PetscCall(PetscDeviceContextSetStreamType(ctx, types[t]));
+    PetscCall(PetscDeviceContextSetUp(ctx));
+    PetscCall(PetscDeviceMalloc(ctx, PETSC_MEMTYPE_HOST, n, &host));
+    // Warm the pool so allocation cannot hide a missing barrier through runtime initialization.
+    PetscCall(PetscDeviceMalloc(ctx, mtype, n, &ptr));
+    PetscCall(PetscDeviceFree(ctx, ptr));
+    PetscCall(PetscDeviceContextSynchronize(ctx));
+    for (PetscInt clear = 0; clear < 2; ++clear) {
+      PetscCall(PetscDeviceContextDelay(ctx, 0.02));
+      if (clear) PetscCall(PetscDeviceCalloc(ctx, mtype, n, &ptr));
+      else PetscCall(PetscDeviceMalloc(ctx, mtype, n, &ptr));
+      PetscCall(CheckBarrierCompletion(ctx, clear ? "PetscDeviceCalloc()" : "PetscDeviceMalloc()"));
+      PetscCall(PetscDeviceContextSynchronize(ctx));
+      if (clear) {
+        PetscCall(PetscDeviceArrayCopy(ctx, host, ptr, n));
+        PetscCall(PetscDeviceContextSynchronize(ctx));
+        for (PetscInt i = 0; i < n; ++i) PetscCheck(!host[i], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Calloc did not clear byte %" PetscInt_FMT, i);
+      }
+      PetscCall(PetscDeviceContextDelay(ctx, 0.02));
+      PetscCall(PetscDeviceMemset(ctx, ptr, 19 + clear, n));
+      PetscCall(CheckBarrierCompletion(ctx, "PetscDeviceMemset()"));
+      PetscCall(PetscDeviceContextSynchronize(ctx));
+      PetscCall(PetscDeviceContextDelay(ctx, 0.02));
+      PetscCall(PetscDeviceArrayCopy(ctx, host, ptr, n));
+      PetscCall(CheckBarrierCompletion(ctx, "PetscDeviceMemcpy()"));
+      PetscCall(PetscDeviceContextSynchronize(ctx));
+      for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == 19 + clear, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect value at byte %" PetscInt_FMT, i);
+      PetscCall(PetscDeviceContextDelay(ctx, 0.02));
+      PetscCall(PetscDeviceFree(ctx, ptr));
+      PetscCall(CheckBarrierCompletion(ctx, "PetscDeviceFree()"));
+      PetscCall(PetscDeviceContextSynchronize(ctx));
+    }
+    PetscCall(PetscDeviceFree(ctx, host));
+    PetscCall(PetscDeviceContextSynchronize(ctx));
+    PetscCall(PetscDeviceContextDestroy(&ctx));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
   PetscDeviceContext dctx;
   PetscRandom        rand;
+  PetscBool          test_stream_types = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
-  // A vile hack. The -info output is used to test correctness in this test which prints --
-  // among other things -- the PetscObjectId of the PetscDevicContext and the allocated memory.
-  //
-  // Due to device and host creating slightly different number of objects on startup there will
-  // be a mismatch in the ID's. So for the tests involving the host we sit here creating
-  // PetscContainers (and incrementing the global PetscObjectId counter) until it reaches some
-  // arbitrarily high number to ensure that our first PetscDeviceContext has the same ID across
-  // systems.
-  {
-    PetscObjectId prev_id = 0;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_stream_types", &test_stream_types, NULL));
+  if (test_stream_types) {
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(TestMemoryStreamTypes(dctx, PETSC_MEMTYPE_HOST));
+    PetscCall(TestMemoryStreamTypes(dctx, PETSC_MEMTYPE_DEVICE));
+  } else {
+    // A vile hack. The -info output is used to test correctness in this test which prints --
+    // among other things -- the PetscObjectId of the PetscDevicContext and the allocated memory.
+    //
+    // Due to device and host creating slightly different number of objects on startup there will
+    // be a mismatch in the ID's. So for the tests involving the host we sit here creating
+    // PetscContainers (and incrementing the global PetscObjectId counter) until it reaches some
+    // arbitrarily high number to ensure that our first PetscDeviceContext has the same ID across
+    // systems.
+    {
+      PetscObjectId prev_id = 0;
 
-    do {
-      PetscContainer c;
-      PetscObjectId  id;
+      do {
+        PetscContainer c;
+        PetscObjectId  id;
 
-      PetscCall(PetscContainerCreate(PETSC_COMM_WORLD, &c));
-      PetscCall(PetscObjectGetId((PetscObject)c, &id));
-      // sanity check, in case PetscContainer ever stops being a PetscObject
-      PetscCheck(id > prev_id, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscObjectIds are not increasing for successively created PetscContainers! current: %" PetscInt64_FMT ", previous: %" PetscInt64_FMT, id, prev_id);
-      prev_id = id;
-      PetscCall(PetscContainerDestroy(&c));
-    } while (prev_id < 50);
+        PetscCall(PetscContainerCreate(PETSC_COMM_WORLD, &c));
+        PetscCall(PetscObjectGetId((PetscObject)c, &id));
+        // sanity check, in case PetscContainer ever stops being a PetscObject
+        PetscCheck(id > prev_id, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscObjectIds are not increasing for successively created PetscContainers! current: %" PetscInt64_FMT ", previous: %" PetscInt64_FMT, id, prev_id);
+        prev_id = id;
+        PetscCall(PetscContainerDestroy(&c));
+      } while (prev_id < 50);
+    }
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+
+    PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
+    // this seed just so happens to keep the allocation size increasing
+    PetscCall(PetscRandomSetSeed(rand, 123));
+    PetscCall(PetscRandomSeed(rand));
+    PetscCall(PetscRandomSetFromOptions(rand));
+
+    PetscCall(TestAllocate(dctx, rand, PETSC_MEMTYPE_HOST));
+    PetscCall(TestAllocate(dctx, rand, PETSC_MEMTYPE_DEVICE));
+    PetscCall(TestAsyncCoherence(dctx, rand));
+
+    PetscCall(PetscRandomDestroy(&rand));
   }
-  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
-
-  PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
-  // this seed just so happens to keep the allocation size increasing
-  PetscCall(PetscRandomSetSeed(rand, 123));
-  PetscCall(PetscRandomSeed(rand));
-  PetscCall(PetscRandomSetFromOptions(rand));
-
-  PetscCall(TestAllocate(dctx, rand, PETSC_MEMTYPE_HOST));
-  PetscCall(TestAllocate(dctx, rand, PETSC_MEMTYPE_DEVICE));
-  PetscCall(TestAsyncCoherence(dctx, rand));
-
-  PetscCall(PetscRandomDestroy(&rand));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "EXIT_SUCCESS\n"));
   PetscCall(PetscFinalize());
   return 0;
 }
 
 /*TEST
+
+  testset:
+    args: -test_stream_types
+    output_file: output/ExitSuccess.out
+    test:
+      suffix: stream_types_cuda
+      requires: cuda
+      args: -default_device_type cuda
+    test:
+      suffix: stream_types_hip
+      requires: hip
+      args: -default_device_type hip
 
   testset:
     requires: defined(PETSC_USE_INFO) defined(PETSC_USE_DEBUG) defined(PETSC_DEVICELANGUAGE_CXX)
