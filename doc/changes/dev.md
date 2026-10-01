@@ -1,291 +1,103 @@
 # Changes: Development
 
-<!---
 % STYLE GUIDELINES:
 % * Capitalize sentences
 % * Use imperative, e.g., Add, Improve, Change, etc.
 % * Don't use a period (.) at the end of entries
 % * If multiple sentences are needed, use a period or semicolon to divide sentences, but not at the end of the final sentence
---->
 
-## General
+```{rubric} General:
+```
 
-- Increase the minimum required CUDA Toolkit version to 11.4
-- Change the policy so that documentation changes/fixes/additions are added to the `main` branch, not the `release` branch
-- Change `petscdiff` to treat ` < ` in expected output as text that must match instead of suppressing differences from numerical output
-- Change the `make branch-review` rule to `[PETSC_LLM_CLI=command] [PETSC_LLM_MODEL=modelname] make branch-review`. Add support for Gemini, Codex, OpenCode, and other LLM CLIs.
-  Replace the use of `CLAUDE_OPTS` with `PETSC_LLM_CLI_OPTS` and `PETSC_LLM_MODEL`
-- Add a CodeGraph skill and repository guidance so LLM coding tools automatically use an existing local PETSc CodeGraph index when navigating or reviewing source
-- Add `comm` and `prefix` as initial arguments to `PetscOptionsDeprecatedNoObject()`
-- Change the macros `PetscCallHDF5()`, `PetscCallHDF5ReturnNoCheck()`, `PetscCallHDF5Return()`, `PetscCallEGADS()`, `PetscCallSAWs()`, `PetscCallP4est()`, and
-  `PetscCallP4estReturn()` to be variadic and take the function arguments directly without requiring the parentheses that previously wrapped the function
-  arguments. For functions that take no arguments, a trailing comma after the function name is required per previous C standards
-- Change all use of Metis in the PETSc API to use METIS
-- Change `make clang-tidy` to require `--with-mpi=0`; add `PETSC_CLANG_TIDY_FIX=--fix` to apply fixits
-
-## Configure/Build
-
-- Increase the minimum required Python version for `./configure` to 3.6
-- Add `providesDocs` and `docsDirs` package attributes so that an external package's sources can be cloned and scanned to generate PETSc manual pages when the documentation is built
-- Add interface to LIBXSMM
-- Add package-version comparisons to test harness `requires`, such as `superlu_dist_version_ge(9,0,0)` or `PETSC_PKG_SUPERLU_DIST_VERSION_GE(9,0,0)`, using the versions recorded by configure
-- Add `--with-cuda-nvml`, off by default, so a CUDA build no longer depends at runtime on the driver-provided libnvidia-ml and its libraries run on machines without an NVIDIA driver; configure with `--with-cuda-nvml=1` (requires CUDA 12.2 or later) for GPU power and energy monitoring (`-log_view_gpu_energy`, `-log_view_gpu_energy_meter`)
-- Add detection of NVIDIA NVPL BLAS/LAPACK (for `aarch64`) so `--with-blaslapack-dir` pointing at an NVPL library directory works without listing the libraries by hand
-- Add OpenMP target offload support for CUDA/HIP with `--with-openmp` when compilers support it, and define macros `PETSC_HAVE_OPENMP_TARGET_OFFLOAD_{CC, CXX, FC}` accordingly
-
-## Sys
-
-- Add `PetscGetConfiguration()`
-- Add `PetscObjectViewSynchronizedFromOptions()`
-- Add `PetscSetMPIThreadRequiredType()`
-- Add `PetscOverrideIntelMKLCPUVendorDetection()`
-- Deprecate `PETSC_MPI_THREAD_REQUIRED`
-- Add support for running PETSc applications as MCP servers that can be accessed by LLMs
-- Add `PetscRandomAppendOptionsPrefix()` and `PetscRandomGetOptionsPrefix()`
-- Add `PetscCallLAPACKInfo()` for calling LAPACK routines with an `info` argument where the caller requires an `info` value of 0 for the program to continue
-- Add `PetscIntCSRView()` to inspect CSR graph
-- Change `-help 0`, `-help no`, `-help false` and `-help off` to turn the help output off; they previously turned it on
-- Add `-help mansec` to restrict the options help output to the options blocks in the given manual section; a comma-separated list may be given, for example `-help ksp,snes`
-- Add `Viewer` and `Bag` as the manual sections of, respectively, the viewer options an object creates, such as `-ksp_monitor` and `-ksp_view`, and the options registered by `PetscBagRegisterInt()` and the other `PetscBagRegister` routines; these are listed by `-help viewer` and `-help bag`, and not by the section of the object that creates them, so `-help ksp` does not list `-ksp_monitor`
-- Deprecate `PetscVoidFunction` and `PetscVoidStarFunction` in favor of `PetscVoidFn *` and `PetscVoidFn **`
-
-## Event Logging
-
-- Change `-log` and `-log_all` to only take optional filename arguments. They no longer take optional boolean argument
-
-## PetscViewer
-
-- Add support for writing CGNS descriptors on the base node: `PetscViewerCGNSGetDescriptors()`, `PetscViewerCGNSRestoreDescriptors()`, `PetscViewerCGNSSetDescriptor()`
-- Add `PetscViewerVTKWriteFn` as the typedef prototype for the `write()` function passed to `PetscViewerVTKAddField()`. This addition requires no changes to user source code
-
-## PetscDraw
-
-- Deprecate `PetscXIOErrorHandler` in favor of `PetscXIOErrorHandlerFn *`
-
-## AO
-
-
-## IS
-
-- Add `PetscLayoutGetComm()` to obtain the MPI communicator of a `PetscLayout`
-
-## VecScatter / PetscSF
-
-
-## PF
-
-
-## Vec
-
-- Add `VecCreateSeqWithArrayAndMemType()` and `VecCreateMPIWithArrayAndMemType()` to create array-style standard, CUDA, or HIP vectors from memory of a specified `PetscMemType`
-- Add `VecSetStdBasis()` API to set a vector to the i-th standard basis vector
-- Add Fortran bindings for `VecCUDAGetArray()`, `VecCUDARestoreArray()`, `VecHIPGetArray()`, `VecHIPRestoreArray()`, and their `Read` and `Write` variants; the returned pointer addresses device memory
-- Change the behavior of `VecPointwiseDivide()` implementing w = x / y: if a particular `y[i]` is zero and `x[i]` is also zero, `w[i]` is set to one (before it was set to zero).
-- Deprecate `-vec_view_stash` in favor of `-vec_stash_view`
-- Fix `VecKokkosPlaceArray()` and `VecKokkosResetArray()` so that `VecGetArray()` returns the placed array when the Kokkos host and device memory spaces are the same
-- Change `VecCreateSeqKokkosWithArray()` and `VecCreateMPIKokkosWithArray()` to create an array-less vector when passed a NULL array, as documented and as `VecCreateSeqWithArrayAndMemType()` does; previously the sequential variant allocated its own array and the parallel variant aborted on GPU backends
-
-## PetscSection
-
-
-## PetscPartitioner
-
-
-## Mat
-
-- Fix cleanup of additive `MATCOMPOSITE` matrices when `MatCompositeAddMat()` follows `MatMult()`
-- Fix an invalid free in `MatColoringDestroy()` for weights supplied with `MatColoringSetWeights()`
-- Speed up single-index-set `MatCreateSubMatrices()` reuse for `MATMPIAIJ` with sorted column subsets and unchanged structure
-- Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
-- Add `MATPRODUCT_AB` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL` with any matrix type
-- Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
-- Change `MatSeqAIJCUSPARSEGetIJ()`, `MatSeqAIJCUSPARSERestoreIJ()`, `MatSeqAIJHIPSPARSEGetIJ()` and `MatSeqAIJHIPSPARSERestoreIJ()` to return `PetscInt` indices instead of `int`
-- Add `MatNormApproximate()` to compute matrix norms approximately
-- Add `MatGetMultPetscSF()` to access the `PetscSF` used to communicate off-process vector entries in `MatMult()` for `MATMPIAIJ`, `MATMPIBAIJ`, `MATMPISBAIJ`, `MATMPIDENSE`, and `MATMPISELL`
-- Change `MATSEQSBAIJ` behavior in `MatPermute()` and `MatDiagonalScale()` to use `MATSEQBAIJ` when the result is not necessarily symmetric
-- Change `MatGetValues()` to respect the row or column orientation set with `MatSetOption(mat, MAT_ROW_ORIENTED, ...)`. This will break current code that calls
-  `MatSetOption(mat, MAT_ROW_ORIENTED, PETSC_FALSE)` and uses `MatGetValues()`
-- Add new `MatType` `MATSEQBAIJLIBXSMM` and `MATMPIBAIJLIBXSMM`
-- Add `MatFlag()`, the `Mat` counterpart of `VecFlag()`, implemented for `MATSEQDENSE` and `MATMPIDENSE`, and deprecate `MatSetInf()`, which no `MatType` implemented before
-- Fix `MatDenseGetColumnVec()`, `MatDenseGetColumnVecRead()` and `MatDenseGetColumnVecWrite()` on `MATDENSECUDA` and `MATDENSEHIP` matrices whose `VecType` is `VECKOKKOS`; the column `Vec` was placed as if it were a CUDA/HIP `Vec`, so the column data never reached it
-- Add device SpMM support for `MATPRODUCT_AB` and `MATPRODUCT_AtB` with a `MATAIJKOKKOS` matrix and dense matrices; previously these products looped `MatMult()` over the columns of the dense matrix
-- Change `MatCreateMAIJ()` to convert its result to `MATAIJKOKKOS` when the input matrix has that type, as is already done for `MATAIJCUSPARSE`; the `MATMAIJ` kernels read the host arrays of the input matrix directly and so miss values last updated on device
-- Change `MatDiagonalScale()` for `MATSEQDENSECUDA` and `MATSEQDENSEHIP` to check the memory type of the scaling `Vec` instead of its `VecType`, so device-resident vectors such as `VECKOKKOS` are consumed directly on the GPU instead of being copied through the host
-- Add `MatDenseUpdateColumnLayout()` to change the layout of input vectors of the matrix vector product
-- Change `MatGetState()` to return a `MatState` and add `MatStateCompare()`, `MatStateCompareUpdate()`, and `MatStateInvalidate()`
-- Fix `MatNorm()` for `MATMPIDENSE` to respect the leading dimension of the local matrix, which was previously ignored in parallel for `NORM_1` and `NORM_FROBENIUS` and gave wrong results, for example on matrices obtained with `MatDenseGetSubMatrix()`
-- Add device implementations of `MatNorm()` with `NORM_1`, `NORM_FROBENIUS`, and `NORM_INFINITY` for `MATDENSECUDA` and `MATDENSEHIP`; previously all norms copied the matrix to the host
-- Change `MatNorm()` for `MATMPIDENSE` to compute `NORM_FROBENIUS` and `NORM_INFINITY` via the local matrix norm, so `MATMPIDENSECUDA` and `MATMPIDENSEHIP` no longer copy to the host for those norms
-- Change `MatDiagonalScale()` for `MATMPIDENSE` to delegate to the local matrix, so `MATMPIDENSECUDA` and `MATMPIDENSEHIP` scale on the device instead of copying the local block through the host
-- Change `MATSELL` to honor `MatSetOption(mat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE)`; the option was previously accepted but silently ignored, so a matrix that sets it now gets a sparser nonzero structure
-- Fix `MatSetValues()` for `MATMPISELL` to ignore a new nonzero location when `MatSetOption(mat, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE)` was called; the value was previously inserted anyway, and written past the end of the row when its slice had no spare slot
-- Change `MatSetValues()` for `MATMPISELL` to skip, rather than error on, a new off-diagonal location when `MatSetOption(mat, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE)` was called, matching `MATMPIAIJ`
-- Fix `MatSetValues()` for `MATMPIAIJ` to decide the `MAT_IGNORE_ZERO_ENTRIES` diagonal exemption from the global row and column, not from the indices local to the diagonal block. The two differ only when the row and column layouts differ, where a zero off the diagonal could wrongly create a location and a zero on the diagonal could wrongly be dropped
-- Add device support for `MATPRODUCT_AB` with a `MATMPIAIJCUSPARSE`, `MATMPIAIJHIPSPARSE`, or `MATMPIAIJKOKKOS` matrix and a `MATMPIDENSECUDA` or `MATMPIDENSEHIP` matrix; the off-process rows of the dense matrix are communicated with a `PetscSF` directly from device memory and the off-diagonal contribution uses the device sparse-dense product, also with `-matproduct_batch_size`
-- Deprecate `MatPartitioningParmetisSetRepartition()`, `MatPartitioningParmetisSetCoarseSequential()`, and `MatPartitioningParmetisGetEdgeCut()` in favor of
-  `MatPartitioningParMETISSetRepartition()`, `MatPartitioningParMETISSetCoarseSequential()`, and `MatPartitioningParMETISGetEdgeCut()`
-- Deprecate `MatSolverFunction`, `MatHtoolKernel` and `MatH2OpusKernel` in favor of `MatSolverFn *`, `MatHtoolKernelFn *` and `MatH2OpusKernelFn *`
-- Change the application context argument of `MatCreateH2OpusFromKernel()` and of the `MatH2OpusKernelFn` callback from `void *` to `PetscCtx`; no user source changes are required
-- Add `MatNullSpaceLoad()` to load a `MatNullSpace` object dump in binary with `MatNullSpaceView()`
-- Fix the symbolic phase of a `MatProduct` with a dense result to propagate the `VecType` of the dense operand to the `Mat` it creates
-- Fix `MatDenseGetSubMatrix()` to propagate the `VecType` to the submatrix
-- Add `MatCreateNestFromMultipleShifts()` to create a `MATNEST` that represents a family of shifted matrices, and `MatCreateVecNestFromMultipleShifts()` to create a compatible `VECNEST` vector
-- Change `MatMatSolve()`, `MatMatSolveTranspose()` and `MatMatTransposeSolve()` to flag every entry of `X` with `MatFlag()` and skip the solve when the factorization failed, as `MatSolve()` already did for `x`
-
-## MatCoarsen
-
-
-## PC
-
-- Add `PCGAMGSetProlongatorFilter()` and `PCGAMGGetProlongatorFilter()` to set/get the threshold for filtering the prolongator in `PCGAMG`. The threshold is relative, applies to whole fine-node/coarse-node coupling blocks while preserving the near-null space, and must be in [0,1)
-- Add `PCGAMGSetProlongatorFilterScale()` and `PCGAMGGetProlongatorFilterScale()` to set/get the per-level scaling of the prolongator filter threshold in `PCGAMG`; the scale must be in [0,1]
-- `PCGAMGSetThresholdScale()` now requires its argument to be in [0,1]
-- `PCGAMGSetThreshold()` now requires each threshold value to be less than 1; negative values still mean keeping even zero entries in the graph. It is also now `Logically Collective` (checked in debug builds), matching `PCGAMGSetThresholdScale()`
-- Add `PC_HPDDM_COARSE_CORRECTION_DEFLATED_REVERSED` for applying the coarse correction after the fine correction in `PCHPDDM`
-- Add `PCAIR` and `PCPFLAREINV` manual pages, generated from the PFLARE sources when the documentation is built
-- Add `PCParametersInitialize`
-- Fix `PCMG` to honor `PCSetUseAmat(pc, PETSC_FALSE)` at all levels
-- Add `PCMatApplyRichardson()`, `PCMatApplyRichardsonExists()`, and `PCShellSetMatApplyRichardson()`, the block analogs of `PCApplyRichardson()`, `PCApplyRichardsonExists()`, and `PCShellSetApplyRichardson()`
-- Add the missing Fortran binding for `PCShellSetMatApply()`
-- Remove `PCSetDiagonalScale()`, `PCGetDiagonalScale()`, `PCDiagonalScaleLeft()`, and `PCDiagonalScaleRight()`
-- Add `PCBDDCLoadCustomization()` and `PCBDDCSaveCustomization()` to ease debugging of `PCBDDC`
-
-## KSP
-
-- Fix for `KSP` pre- and post-solve callbacks, that can now be used together with Eisenstat and Walker trick for `SNES`
-- Add `KSPPreSolve()` and `KSPPostSolve()` to run the registered `KSP` pre/post solve callbacks
-- Change `KSPSolve()` to run the `KSPSetPreSolve()` callback after `KSPSetUp()` and `KSPSetUpOnBlocks()` instead of before
-- Add `KSPIDR` — IDR(s) Induced Dimension Reduction Krylov solver (biorthogonal variant)
-- Add `KSPIDRSetS()`, `KSPIDRGetS()`, `KSPIDRSetRandom()`, `KSPIDRGetRandom()`, `KSPIDRSetCosine()`, and `KSPIDRGetCosine()`
-- Deprecate `KSPMonitorResidualShort()` and `-ksp_monitor_short`, remove the `preconditioned_residual_short` monitor registry name
-- Remove `-ksp_plot_eigenvalues`, `-ksp_plot_eigenvalues_explicitly`, `-ksp_plot_eigencontours` that have been deprecated since version 3.9
-- Remove `KSPSetDiagonalScale()`, `KSPGetDiagonalScale()`, `KSPSetDiagonalScaleFix()`, and `KSPGetDiagonalScaleFix()`, along with the `-ksp_diagonal_scale`, `-ksp_diagonal_scale_fix`, and `-ksp_view_diagonal_scale` options
-- Remove `KSPAGMRES` ([Wakam and Erhel, 2011](https://hal.inria.fr/inria-00638247/en)), which was never registered as a usable `KSPType`
-- Add native support for `KSPMatSolve()` and `KSPMatSolveTranspose()` with `KSPRICHARDSON`, which iterates on batches of or the entire block of right-hand sides instead of solving them one at a time
-- Add delegation of the `KSPRICHARDSON` block iteration to `PCMatApplyRichardson()` when the `PC` provides it, falling back to `PCApplyRichardson()` on one right-hand side at a time so that the result matches `KSPSolve()`
-- Change `KSPConvergedDefault()` to base the relative tolerance on the Frobenius norm of the batch of (preconditioned) right-hand sides during a `KSPMatSolve()` with a nonzero initial guess, matching `KSPSolve()`
-- Change `KSPMatSolve()` and `KSPMatSolveTranspose()` to reset the residual history at the start of each solve, and of each batch when `-ksp_matsolve_batch_size` is used, as `KSPSolve()` does, unless `KSPSetResidualHistory()` was called with `reset` set to `PETSC_FALSE`
-- Change `KSPRichardsonSetSelfScale()` to trigger a `KSPSetUp()` re-run when the flag changes, fixing an out-of-bounds work vector access when it was set after `KSPSetUp()`
-- GMRES orthogonalization routines have been promoted to the main `KSP` level, and GMRES has been dropped from the name. The new names are `KSPOrthogonalizationSet()`, `KSPOrthogonalizationGet()`, `KSPOrthogonalizationModifiedGramSchmidt()`, `KSPOrthogonalizationClassicalGramSchmidt()`, `KSPOrthogonalizationSetCGSRefinementType()`, `KSPOrthogonalizationGetCGSRefinementType()`. Note that the signature of orthogonalization functions has changed, see `KSPOrthogonalizationFn`. The related enumeration is now `KSP_ORTHOGONALIZATION_CGS_REFINE_*` and command-line options are now `-ksp_orthogonalization (cgs|mgs)` and `-ksp_orthogonalization_cgs_refinement_type (refine_never|refine_ifneeded|refine_always)`
-- Add new `KSPConvergedReason` `KSP_DIVERGED_INNER_SOLVE_FAILED` for solvers such as `KSPEKSM` that have an inner `KSP` object
-- Add `KSPEKSM` - the Extended Krylov Subspace Method for multiple shifted linear systems which can be defined via `MatCreateNestFromMultipleShifts()`
-- Add `KSPEKSMSetHapTol()`, `KSPEKSMGetHapTol()`, `KSPEKSMSetKSP()`, `KSPEKSMGetKSP()`, `KSPEKSMSetShift()`, and `KSPEKSMGetShift()`
-
-## SNES
-
-- Change `SNESSetUp()` to not overwrite the NPC application context if one has previously been set on the NPC
-- Change `SNESComputeJacobian()` to call the user-provided Jacobian function when a left NPC is active and the solver is not `SNESASPIN`
-- Add support for nonlinear preconditioners with a `DM` different from the parent `SNES` `DM`. Calling `SNESSetNPC()` will no longer enforce default parameters on the NPC
-- Change `-snes_mf` to respect an explicitly set `PC` type instead of silently overriding it with `PCNONE`; an explicitly requested `PC` that requires an assembled matrix now errors
-- Deprecate `SNESMonitorDefaultShort()` and `-snes_monitor_short`
-- Add `SNESFASSetUseCoarseCorrectionLineSearch()` and `-snes_fas_use_coarse_correction_linesearch` to implement the algorithm in {cite}`nash2000mgopt`.
-- Add `SNESFASGetCoarseCorrectionLineSearch()`
-- Change default linesearch for `SNESFAS` with `SNESFASType` of `SNES_FAS_ADDITIVE` to `SNESLINESEARCHSECANT`
-
-## SNESLineSearch
-
-- Deprecate `SNESLINESEARCHBASIC` in favor of `SNESLINESEARCHNONE`
-- Add `SNESLineSearchViewFromOptions()`
-
-## TS
-
-- Add `DMTSSetIFunctionPre()`
-- Add `TSDiscGradSetImplicitFormulation()`
-- Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
-- Add `TSIsImplicit()` that indicates if the `TSType` is implicit and uses `SNES` or `KSP`
-- Deprecate `TSRHSFunction`, `TSRHSJacobian`, `TSRHSJacobianP`, `TSSolutionFunction`, `TSForcingFunction`, `TSIFunction`, `TSIJacobian`, `TSI2Function`, `TSI2Jacobian`, `TSTransientVariable`, `TSGLLEAcceptFunction` and `TSAlpha2Predictor` in favor of a pointer to the corresponding `Fn` typedef, for example `TSRHSFunctionFn *`
-- Deprecate `DMDATSRHSFunctionLocal`, `DMDATSRHSJacobianLocal`, `DMDATSIFunctionLocal` and `DMDATSIJacobianLocal` in favor of `DMDATSRHSFunctionLocalFn *`, `DMDATSRHSJacobianLocalFn *`, `DMDATSIFunctionLocalFn *` and `DMDATSIJacobianLocalFn *`
-
-## TAO
-
-- Add `TaoGetDM()` and `TaoSetDM()`
-- Deprecate `TaoMonitorDefaultShort()`, `-tao_monitor_short`, and `-tao_monitor_short_interval`
-- Change the deprecated `TaoSMonitor()` and `-tao_smonitor` to use the full-precision default monitor
-- Add `TaoGetConvergedReasonString()` to retrieve a human readable string describing the `TaoConvergedReason`
-
-## TaoTerm
-
-
-## PetscRegressor
-
-
-## PetscDA
-
-- Add the `PetscDALETKFLocalizationType` enum (`PETSCDA_LETKF_LOC_NONE`, `PETSCDA_LETKF_LOC_GASPARI_COHN`, `PETSCDA_LETKF_LOC_GAUSSIAN`, `PETSCDA_LETKF_LOC_BOXCAR`) selecting the LETKF localization kernel
-- Add `PetscDALETKFSetLocalizationType()`, `PetscDALETKFGetLocalizationType()`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`, and `PetscDALETKFSetLocalizationCoordinates()`; the localization matrix is built lazily from these distance-based kernel parameters
-- Add `PetscDALETKFResetLocalization()` to drop the cached localization matrix so the next analysis rebuilds it from the current kernel parameters
-- Remove `PETSCDAETKF`; use `PETSCDALETKF` with `PetscDALETKFSetLocalizationType(da, PETSCDA_LETKF_LOC_NONE)` for identical behavior
-- Remove `PetscDAEnsembleSetSqrtType()`, `PetscDAEnsembleGetSqrtType()`, the `PetscDASqrtType` enum (`PETSCDA_SQRT_CHOLESKY`, `PETSCDA_SQRT_EIGEN`), and the `-petscda_ensemble_sqrt_type` option; the symmetric-eigendecomposition square root is now the only path
-- Remove `PetscDALETKFSetLocalization()`; use the distance-based API `PetscDALETKFSetLocalizationType()`, `PetscDALETKFSetLocalizationRadius()`, and `PetscDALETKFSetLocalizationCoordinates()` instead
-- Remove `PetscDALETKFSetObsPerVertex()` and `PetscDALETKFGetObsPerVertex()`; per-vertex observation counts are now derived from the distance-based localization kernel
-- Remove `PetscDALETKFGetLocalizationMatrix()`; the localization matrix is an internal cached object built lazily on the first analysis. Callers that previously supplied this matrix should switch to `PetscDALETKFSetLocalizationCoordinates()` and let the implementation build the matrix from the chosen kernel
-- Change the LETKF distance-based periodicity convention: per-axis periodicity is now activated by `bd[d] > 0.0` (the period), and negative `bd[d]` now raises `PETSC_ERR_ARG_OUTOFRANGE`; previously any non-zero `bd[d]` (including negative values) enabled periodicity
-- Add `PetscDAEnsembleForecastFn` typedef for the `PetscDAEnsembleForecast()` model callback
-- Change the `PetscDAEnsembleForecast()` model callback signature from `(Vec, Vec, PetscCtx)` to `(Mat, PetscCtx)`; the model now receives the entire ensemble matrix and advances all members in place. Existing per-member callbacks should iterate over the columns with `MatDenseGetColumnVec()`/`MatDenseRestoreColumnVec()` (see `ShallowWaterStep2D()` in `src/ml/da/tutorials/ex4.c`)
-- Change `-petscda_view` to fire at the tail of every `PetscDAEnsembleAnalysis()` call (mirroring `KSPSolve()`/`SNESSolve()`), so it now emits once per analysis cycle rather than once per run; code that wants a single end-of-run snapshot should call `PetscDAView()` explicitly after the assimilation loop
-
-## DM
-
-- Fix `DMLabelGetValueISGlobal()` to return an empty index set when no rank contributes label values, avoiding integer overflow in the allocation size
-- Change `DMLabelPropagatePush()` to take a reduce operator
-- Add `DMKSPSetCreateOperators()` to let the `DM` provide a pair of application specific `Mat` objects to inner `KSP` solvers.
-- Fix `DMGetLocalToGlobalMapping()` for a local section carrying a chart permutation (see `DMReorderSectionSetDefault()`); the map is now indexed by the local section offsets. The local section must now be set up with `PetscSectionSetUp()` before the mapping is built, otherwise an error is raised
-- Fix `DMSetLocalSection()` and `DMSetGlobalSection()` to invalidate a previously built section-derived local-to-global mapping, which was computed from the old sections; a mapping built by the `DM` implementation itself, such as by `DMDA` in `DMSetUp()`, is kept. `DMFOREST` with `p4est` shares its sections into its cached `DMPLEX` without going through those setters, and now invalidates the mapping there as well
-
-## DMSwarm
-
-- Add `DMSwarmProjectFields()` and `DMSwarmProjectGradientFields()`
-- Add `DMSwarmSort` class
-- Add `DMSwarmSortDestroy()` and `DMSwarmSortView()`
-- Allow `DMSwarmCellDMSetSort()` to take in `NULL` and clear the sort
-- Add `DMSwarmPreallocateMassMatrix()` and `DMSwarmFillMassMatrix()`
-- Change `DMSwarmCreateGlobalVectorFromField()` and `DMSwarmCreateLocalVectorFromField()` to require fields of type `PETSC_SCALAR` instead of `PETSC_REAL`; complex scalar builds now reject `PETSC_REAL` fields
-- Change `DMSwarmVectorDefineField()` and `DMSwarmVectorDefineFields()` to validate that every field has type `PETSC_REAL` or `PETSC_SCALAR`
-- Add support for `PETSC_SCALAR` fields alongside `PETSC_REAL` fields in `DMSwarmCreateGlobalVectorFromFields()`, `DMSwarmDestroyGlobalVectorFromFields()`, `DMSwarmCreateLocalVectorFromFields()`, and `DMSwarmDestroyLocalVectorFromFields()`
-- Change `DMSwarmAddCellDM()` to register coordinate fields as `PETSC_REAL` and require existing coordinate fields to have type `PETSC_REAL` instead of `PETSC_DOUBLE`; coordinate fields now follow the configured real precision, including single and `__float128` precision
-- Add support for `PETSC_SCALAR` weight fields in `DMSwarmComputeMoments()`, using the real part of each weight
-
-## DMPlex
-
-- Add `DMPlexSetClosurePermutationLexicographic()`
-- Add `DMPlexDrawCell()`
-- Add `DMPlexLabelCompleteStar()`
-- Add `DMPlexTransformCreateSplitCellLabel()` to mark the cells of a transformed mesh whose source cell was genuinely split
-- Add `DMPlexCreateColoringLabel()` to color a labeled subset of a stratum
-- Add `-dm_plex_coloring_ordering_type` to order the points with `MatGetOrdering()` before coloring them
-- Add `-dm_plex_coloring_local` to color the points each process owns by themselves, without communicating
-- Change the `distance` argument of `DMPlexCreateColoring()` to count applications of the adjacency through the mesh rather than hops in the graph of the stratum; the two agree at depth zero but differ elsewhere, most visibly at the cell stratum with finite-element adjacency
-- Change `DMPlexCreateColoring()` to weight the points lexically rather than randomly, which uses the optimal four colors for the vertices of a structured quadrilateral grid instead of seven
-- Add `DMPlexVecGetClosureAtDepth()`
-- Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
-- Add `DMPlexCopyFlags()`
-- Add `DMPlexRebalanceSharedLabelPoints()`
-- Add `DMPlexCheckLabel()` and `DMPlexReconcileLabel()`
-- Change CGNS viewer to use multi-component read/write interface for better performance
-- Add `DMPlexTransformOrderSupports()`
-- Add `DMPlexLabelCohesiveCheck()`
-- Add `DMPlexCheckOrientationLabel()`
-- Change `DMPlexLabelCohesiveComplete()` to remove split argument
-- Add `DM_COORD_MAP_TORUS`
-- Add `DM_COORD_MAP_ROTATE`
-- Add `DM_SHAPE_DIIID`
-- Add `DMPlexTriangleSetAngleBound()`, `DMPlexTriangleGetAngleBound()`, `DMPlexTetgenSetRadiusEdgeBound()`, `DMPlexTetgenGetRadiusEdgeBound()`, `DMPlexTetgenSetDihedralBound()`, `DMPlexTetgenGetDihedralBound()`
-- Remove `DMPlex_Surface_Grad()`, superseded by `DMPlexGeomDataAndGrads()`
-- Fix quadrature component indexing in `DMPlexComputeGradientClementInterpolant()` for multi-component fields
-
-## FE/FV
-
-
-## DMNetwork
-
-
-## DMStag
-
-
-## DT
-
-- Add `PetscWeakFormGetKeys()`
-
-## Fortran
-
-- Remove the `PetscOffset` datatype and the undocumented `PetscOffsetFortran()` routine; both were needed by the removed Fortran bindings that returned an array together with a separate index offset
+```{rubric} Configure/Build:
+```
+
+```{rubric} Sys:
+```
+
+```{rubric} Event Logging:
+```
+
+```{rubric} PetscViewer:
+```
+
+```{rubric} PetscDraw:
+```
+
+```{rubric} AO:
+```
+
+```{rubric} IS:
+```
+
+```{rubric} VecScatter / PetscSF:
+```
+
+```{rubric} PF:
+```
+
+```{rubric} Vec:
+```
+
+```{rubric} PetscSection:
+```
+
+```{rubric} PetscPartitioner:
+```
+
+```{rubric} Mat:
+```
+
+```{rubric} MatCoarsen:
+```
+
+```{rubric} PC:
+```
+
+```{rubric} KSP:
+```
+
+```{rubric} SNES:
+```
+
+```{rubric} SNESLineSearch:
+```
+
+```{rubric} TS:
+```
+
+```{rubric} TAO:
+```
+
+```{rubric} TaoTerm:
+```
+
+```{rubric} PetscRegressor:
+```
+
+```{rubric} PetscDA:
+```
+
+```{rubric} DM:
+```
+
+```{rubric} DMSwarm:
+```
+
+```{rubric} DMPlex:
+```
+
+```{rubric} FE/FV:
+```
+
+```{rubric} DMNetwork:
+```
+
+```{rubric} DMStag:
+```
+
+```{rubric} DT:
+```
+
+```{rubric} Fortran:
+```
