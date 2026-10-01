@@ -1,4 +1,4 @@
-static const char help[] = "Test CUDA/HIP AIJ and dense operations and array copies on the current device context.\n";
+static const char help[] = "Test CUDA/HIP AIJ, SELL, and dense operations and array copies on the current device context.\n";
 
 #include <petscmat.h>
 #include <petscdevice.h>
@@ -424,6 +424,164 @@ static PetscErrorCode WriteVector(Vec x, PetscDeviceType type, PetscDeviceContex
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckBarrier(PetscDeviceContext dctx)
+{
+  PetscStreamType streamtype;
+  PetscBool       idle;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Operation returned with work pending on a barrier context");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestSELL(PetscDeviceType type, PetscDeviceContext dctx)
+{
+  Mat                A, B;
+  Vec                x, y, z;
+  PetscScalar       *input;
+  const PetscScalar *a;
+  const PetscScalar  expected[] = {3, 3, 5, 9, 5, 8, 10};
+#if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
+  PetscLogEvent      event;
+  PetscEventPerfInfo before, after;
+  MatInfo            info;
+#endif
+
+  PetscFunctionBeginUser;
+#if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
+  PetscCall(PetscLogDefaultBegin());
+  PetscCall(PetscLogEventRegister("SELLUpdate", MAT_CLASSID, &event));
+#endif
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 32, PETSC_DECIDE, &input));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  for (PetscInt i = 0; i < 32; ++i) input[i] = i + 1;
+  PetscCall(MatCreate(PETSC_COMM_SELF, &A));
+  PetscCall(MatSetSizes(A, 32, 32, 32, 32));
+  PetscCall(MatSetType(A, MATSEQSELL));
+  PetscCall(MatSetUp(A));
+  for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(A, i, i, 2, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatConvert(A, type == PETSC_DEVICE_CUDA ? MATSEQSELLCUDA : MATSEQSELLHIP, MAT_INPLACE_MATRIX, &A));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatCreateVecs(A, &x, &y));
+  PetscCall(VecDuplicate(y, &z));
+  PetscCall(VecSet(x, 1));
+  PetscCall(VecSet(y, 1));
+  // Destroying a duplicate before its first upload must release its backend data.
+  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &B));
+  PetscCall(MatDestroy(&B));
+  // MatMultAdd() must also work before any multiply has initialized the device arrays.
+  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &B));
+  PetscCall(MatSetFromOptions(B));
+  for (size_t stage = 0; stage < PETSC_STATIC_ARRAY_LENGTH(expected); ++stage) {
+    Mat C = stage == 0 ? A : B;
+
+#if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
+    PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &before));
+    PetscCall(PetscLogEventBegin(event, C, 0, 0, 0));
+#endif
+    if (stage == 2) {
+      PetscCall(MatScale(A, 2));
+      PetscCall(MatCopy(A, B, SAME_NONZERO_PATTERN));
+      PetscCall(MatScale(A, 0.5));
+    } else if (stage == 3) {
+      PetscCall(MatSetOption(C, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE));
+      PetscCall(MatStoreValues(C));
+      PetscCall(MatScale(C, 2));
+    } else if (stage == 4) PetscCall(MatRetrieveValues(C));
+    else if (stage == 5) {
+      PetscCall(MatSetOption(C, MAT_NEW_NONZERO_LOCATIONS, PETSC_TRUE));
+      PetscCall(MatSetOption(C, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+      for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(C, i, (i + 1) % 32, 3, INSERT_VALUES));
+      PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+    } else if (stage == 6) {
+      for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(C, i, i, 6, INSERT_VALUES));
+      PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+    }
+    PetscCall(MatMultAdd(C, x, y, z));
+    PetscCall(CheckBarrier(dctx));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+#if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
+    PetscCall(PetscLogEventEnd(event, C, 0, 0, 0));
+    if (stage == 2 || stage == 3 || stage == 4 || stage == 6) {
+      PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &after));
+      PetscCall(MatGetInfo(C, MAT_LOCAL, &info));
+      PetscCheck(after.CpuToGpuSize - before.CpuToGpuSize == info.nz_used * sizeof(PetscScalar), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SELL values-only update stage %zu uploaded %g bytes instead of %g", stage, after.CpuToGpuSize - before.CpuToGpuSize, info.nz_used * sizeof(PetscScalar));
+    }
+#endif
+    PetscCall(VecGetArrayRead(z, &a));
+    for (PetscInt i = 0; i < 32; ++i) PetscCheck(a[i] == expected[stage], PETSC_COMM_SELF, PETSC_ERR_PLIB, "SELL MatMultAdd() stage %zu returned an incorrect entry %" PetscInt_FMT, stage, i);
+    PetscCall(VecRestoreArrayRead(z, &a));
+  }
+  PetscCall(MatDestroy(&B));
+  PetscCall(MatMult(A, x, z));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+
+  for (PetscInt op = 0; op < 4; ++op) {
+    PetscCall(VecSet(x, 0));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(WriteVector(x, type, dctx, input));
+    if (op == 1) PetscCall(MatMultAdd(A, x, y, z));
+    else PetscCall(MatMult(A, x, z));
+    PetscCall(CheckBarrier(dctx));
+    if (op == 2) {
+      // Upload new values after a queued multiply has consumed the old values.
+      for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(A, i, i, 3, INSERT_VALUES));
+      PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    } else if (op == 3) {
+      PetscCall(PetscDeviceContextDelay(dctx, 0.05));
+      PetscCall(MatZeroEntries(A));
+      PetscCall(CheckBarrier(dctx));
+    }
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(VecGetArrayRead(z, &a));
+    for (PetscInt i = 0; i < 32; ++i) PetscCheck(a[i] == (op == 3 ? 3 : 2) * input[i] + (op == 1), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SELL operation %" PetscInt_FMT " returned an incorrect entry %" PetscInt_FMT, op, i);
+    PetscCall(VecRestoreArrayRead(z, &a));
+  }
+  PetscCall(MatMult(A, x, z));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetArrayRead(z, &a));
+  for (PetscInt i = 0; i < 32; ++i) PetscCheck(a[i] == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SELL zeroing left a nonzero entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(z, &a));
+  // An empty matrix still needs device slice offsets before values-only updates.
+  PetscCall(MatCreateSeqSELL(PETSC_COMM_SELF, 32, 32, 0, NULL, &B));
+  PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatConvert(B, type == PETSC_DEVICE_CUDA ? MATSEQSELLCUDA : MATSEQSELLHIP, MAT_INPLACE_MATRIX, &B));
+  PetscCall(MatSetFromOptions(B));
+  for (PetscInt stage = 0; stage < 3; ++stage) {
+    if (stage == 1) PetscCall(MatScale(B, 2));
+    else if (stage == 2) {
+      PetscCall(MatSetOption(B, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+      for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(B, i, i, 2, INSERT_VALUES));
+      PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+    }
+    PetscCall(MatMult(B, x, z));
+    PetscCall(CheckBarrier(dctx));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(VecGetArrayRead(z, &a));
+    for (PetscInt i = 0; i < 32; ++i) PetscCheck(a[i] == (stage == 2 ? 2 * input[i] : 0), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Initially empty SELL matrix stage %" PetscInt_FMT " returned an incorrect entry %" PetscInt_FMT, stage, i);
+    PetscCall(VecRestoreArrayRead(z, &a));
+  }
+  PetscCall(MatDestroy(&B));
+  PetscCall(VecDestroy(&z));
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&A));
+  PetscCall(PetscDeviceFree(dctx, input));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TestDense(MPI_Comm comm, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
 {
   PetscErrorCode (*mult)(Mat, Vec, Vec, PetscInt, PetscInt) = NULL;
@@ -576,6 +734,7 @@ int main(int argc, char **argv)
     PetscCall(TestGetIJ(type, current));
     PetscCall(TestSparseOperations(A, type, current, input));
     PetscCall(TestSparseSolve(type, saved, current));
+    PetscCall(TestSELL(type, current));
     PetscCall(TestDense(PETSC_COMM_SELF, type, current, input));
     PetscCall(TestDense(PETSC_COMM_WORLD, type, current, input));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
@@ -599,9 +758,11 @@ int main(int argc, char **argv)
     test:
       suffix: cuda
       requires: cuda
+      args: -mat_sell_spmv_cuda_kernel 1
 
     test:
       suffix: hip
       requires: hip
+      args: -mat_sell_spmv_hip_kernel 1
 
 TEST*/
