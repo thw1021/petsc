@@ -90,6 +90,7 @@ PetscErrorCode DMPlexTransformRegister(const char name[], PetscErrorCode (*creat
 }
 
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Filter(DMPlexTransform);
+PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_DD(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Regular(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToBox(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToSimplex(DMPlexTransform);
@@ -116,6 +117,7 @@ PetscErrorCode DMPlexTransformRegisterAll(void)
   DMPlexTransformRegisterAllCalled = PETSC_TRUE;
 
   PetscCall(DMPlexTransformRegister(DMPLEXTRANSFORMFILTER, DMPlexTransformCreate_Filter));
+  PetscCall(DMPlexTransformRegister(DMPLEXTRANSFORMDD, DMPlexTransformCreate_DD));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINEREGULAR, DMPlexTransformCreate_Regular));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINETOBOX, DMPlexTransformCreate_ToBox));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINETOSIMPLEX, DMPlexTransformCreate_ToSimplex));
@@ -2262,6 +2264,7 @@ static PetscErrorCode DMPlexTransformCreateLabels(DMPlexTransform tr, DM rdm)
     PetscCall(DMGetLabel(rdm, lname, &labelNew));
     PetscCall(RefineLabel_Internal(tr, label, labelNew));
   }
+  PetscTryTypeMethod(tr, createlabels, rdm);
   PetscCall(PetscLogEventEnd(DMPLEXTRANSFORM_CreateLabels, tr, dm, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2342,6 +2345,11 @@ static PetscErrorCode DMPlexTransformCreateSF(DMPlexTransform tr, DM rdm)
   PetscFunctionBegin;
   PetscCall(DMPlexTransformGetDM(tr, &dm));
   PetscCall(PetscLogEventBegin(DMPLEXTRANSFORM_CreateSF, tr, dm, 0, 0));
+  if (tr->ops->createsf) {
+    PetscUseTypeMethod(tr, createsf, rdm);
+    PetscCall(PetscLogEventEnd(DMPLEXTRANSFORM_CreateSF, tr, dm, 0, 0));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(DMPlexGetChart(rdm, &pStartNew, &pEndNew));
   PetscCall(DMGetPointSF(dm, &sf));
   PetscCall(DMGetPointSF(rdm, &sfNew));
