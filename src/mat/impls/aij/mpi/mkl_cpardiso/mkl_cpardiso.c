@@ -910,6 +910,13 @@ static PetscErrorCode MatGetFactor_mpiaij_mkl_cpardiso(Mat A, MatFactorType ftyp
 
 PETSC_INTERN PetscErrorCode MatSolverTypeRegister_MKL_CPardiso(void)
 {
+  /* 
+   Force the linker to explicitly keep the link against libmkl_blacs_*_*.so, for example, libmkl_blacs_openmpi_ilp64.so, by referencing a symbol from it. Otherwise, the linker might remove the link from the link list at link time, causing runtime errors such as "Intel oneMKL FATAL ERROR: Cannot load symbol MKLMPI_Get_wrappers". BlasLapack.py ensures that the correct version of the library (for example, libmkl_blacs_openmpi_ilp64.so) is the one linked against.
+  */
+  volatile int _mkl_blacs_force_link = 0;
+  extern void  MKLMPI_Init(int *, char ***);
+  if (_mkl_blacs_force_link) MKLMPI_Init(NULL, NULL);
+
   PetscFunctionBegin;
   PetscCall(MatSolverTypeRegister(MATSOLVERMKL_CPARDISO, MATMPIAIJ, MAT_FACTOR_LU, MatGetFactor_mpiaij_mkl_cpardiso));
   PetscCall(MatSolverTypeRegister(MATSOLVERMKL_CPARDISO, MATSEQAIJ, MAT_FACTOR_LU, MatGetFactor_mpiaij_mkl_cpardiso));
