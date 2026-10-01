@@ -13,6 +13,7 @@ cdef extern from * nogil:
     PetscDMPlexTransformType DMPLEXREFINE1D
     PetscDMPlexTransformType DMPLEXEXTRUDETYPE
     PetscDMPlexTransformType DMPLEXTRANSFORMFILTER
+    PetscDMPlexTransformType DMPLEXTRANSFORMDD
 
     PetscErrorCode DMPlexCreate(MPI_Comm, PetscDM*)
     PetscErrorCode DMPlexCreateCohesiveSubmesh(PetscDM, PetscBool, const char[], PetscInt, PetscDM*)
