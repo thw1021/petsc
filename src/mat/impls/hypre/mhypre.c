@@ -2511,14 +2511,15 @@ static PetscErrorCode MatGetCurrentMemType_HYPRE(Mat A, PetscMemType *m)
 
    Level: intermediate
 
-   Note:
+   Notes:
    `MatConvert()` to `MATAIJ` resolves that alias against the memory in which the hypre matrix
    currently lives, so a device-resident hypre matrix converts to `MATSEQAIJCUSPARSE`,
-   `MATMPIAIJCUSPARSE`, `MATSEQAIJHIPSPARSE` or `MATMPIAIJHIPSPARSE`. Obtain the vectors for such
-   a matrix from `MatCreateVecs()`, or name `MATSEQAIJ` or `MATMPIAIJ` explicitly to convert to a
-   host matrix that works with host vectors.
+   `MATMPIAIJCUSPARSE`, `MATSEQAIJHIPSPARSE` or `MATMPIAIJHIPSPARSE`. To convert to a host-based matrix pass `MATSEQAIJ` or `MATMPIAIJ` to `MatConvert()`.
 
-.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatHYPRESetPreallocation`
+   As always, to obtain compatible vectors for the new matrix use `MatCreateVecs()`.
+
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatHYPRESetPreallocation()`, `MATAIJ`, `MatConvert()`,
+          `MATSEQAIJCUSPARSE`, `MATMPIAIJCUSPARSE`, `MATSEQAIJHIPSPARSE`, `MATMPIAIJHIPSPARSE`
 M*/
 PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
 {
