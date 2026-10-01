@@ -41,6 +41,21 @@ class TestPartitioner(unittest.TestCase):
         ):
             self.partitioner.setShellPartition(2, [1, 2], [0, 1])
 
+    def testPartitionGraph(self):
+        # A path of 6 vertices
+        start = [0, 1, 3, 5, 7, 9, 10]
+        adjacency = [1, 0, 2, 1, 3, 2, 4, 3, 5, 4]
+        self.partitioner.setShellPartition(2, [2, 4], [5, 0, 1, 2, 3, 4])
+        partSection, partition = self.partitioner.partition(2, start, adjacency)
+        self.assertEqual(partSection.getChart(), (0, 2))
+        self.assertEqual([partSection.getDof(p) for p in range(2)], [2, 4])
+        self.assertEqual(list(partition.getIndices()), [5, 0, 1, 2, 3, 4])
+
+        self.partitioner.setType(PETSc.Partitioner.Type.SIMPLE)
+        partSection, partition = self.partitioner.partition(3, start, adjacency)
+        self.assertEqual([partSection.getDof(p) for p in range(3)], [2, 2, 2])
+        self.assertEqual(list(partition.getIndices()), list(range(6)))
+
 
 class BaseTestPlex:
     COMM = PETSc.COMM_WORLD

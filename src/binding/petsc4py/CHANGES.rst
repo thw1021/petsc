@@ -10,6 +10,7 @@ Development
 ===========
 
 - Add ``DMPlex.labelAddOverlap()``.
+- Add ``Partitioner.partition()``.
 
 
 Release 3.26.0
