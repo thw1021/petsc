@@ -391,6 +391,10 @@ class PetscPyVista:
             a = np.zeros((pEnd - pStart, bs))
             b = v.getArray(readonly=1)
             for p in range(pStart, pEnd):
+                dof = s.getFieldDof(p, 0)
+                cdof = s.getFieldConstraintDof(p, 0)
+                if not dof - cdof:
+                    continue
                 off = s.getFieldOffset(p, 0)
                 a[p - pStart, :] = b[off : off + bs]
         return (v.name, a.ravel(), bs)
