@@ -1,4 +1,4 @@
-static const char help[] = "Test CUDA/HIP AIJ and dense operations and array copies on the current device context.\n";
+static const char help[] = "Test CUDA/HIP AIJ, SELL, and dense operations and array copies on the current device context.\n";
 
 #include <petscmat.h>
 #include <petscdevice.h>
@@ -421,6 +421,83 @@ static PetscErrorCode WriteVector(Vec x, PetscDeviceType type, PetscDeviceContex
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckBarrier(PetscDeviceContext dctx)
+{
+  PetscStreamType streamtype;
+  PetscBool       idle;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &streamtype));
+  if (streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+    PetscCall(PetscDeviceContextQueryIdle(dctx, &idle));
+    PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Operation returned with work pending on a barrier context");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestSELL(PetscDeviceType type, PetscDeviceContext dctx)
+{
+  Mat                A;
+  Vec                x, y, z;
+  PetscScalar       *input;
+  const PetscScalar *a;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, 32, PETSC_DECIDE, &input));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  for (PetscInt i = 0; i < 32; ++i) input[i] = i + 1;
+  PetscCall(MatCreate(PETSC_COMM_SELF, &A));
+  PetscCall(MatSetSizes(A, 32, 32, 32, 32));
+  PetscCall(MatSetType(A, type == PETSC_DEVICE_CUDA ? MATSEQSELLCUDA : MATSEQSELLHIP));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
+  for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(A, i, i, 2, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatCreateVecs(A, &x, &y));
+  PetscCall(VecDuplicate(y, &z));
+  PetscCall(VecSet(x, 1));
+  PetscCall(VecSet(y, 1));
+  PetscCall(MatMult(A, x, z));
+  PetscCall(MatMultAdd(A, x, y, z));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+
+  for (PetscInt op = 0; op < 4; ++op) {
+    PetscCall(VecSet(x, 0));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(WriteVector(x, type, dctx, input));
+    if (op == 1) PetscCall(MatMultAdd(A, x, y, z));
+    else PetscCall(MatMult(A, x, z));
+    PetscCall(CheckBarrier(dctx));
+    if (op == 2) {
+      // Upload new values after a queued multiply has consumed the old values.
+      for (PetscInt i = 0; i < 32; ++i) PetscCall(MatSetValue(A, i, i, 3, INSERT_VALUES));
+      PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    } else if (op == 3) {
+      PetscCall(PetscDeviceContextDelay(dctx, 0.05));
+      PetscCall(MatZeroEntries(A));
+      PetscCall(CheckBarrier(dctx));
+    }
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(VecGetArrayRead(z, &a));
+    for (PetscInt i = 0; i < 32; ++i) PetscCheck(a[i] == (op == 3 ? 3 : 2) * input[i] + (op == 1), PETSC_COMM_SELF, PETSC_ERR_PLIB, "SELL operation %" PetscInt_FMT " returned an incorrect entry %" PetscInt_FMT, op, i);
+    PetscCall(VecRestoreArrayRead(z, &a));
+  }
+  PetscCall(MatMult(A, x, z));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetArrayRead(z, &a));
+  for (PetscInt i = 0; i < 32; ++i) PetscCheck(a[i] == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SELL zeroing left a nonzero entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(z, &a));
+  PetscCall(VecDestroy(&z));
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&A));
+  PetscCall(PetscDeviceFree(dctx, input));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TestDense(MPI_Comm comm, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
 {
   PetscErrorCode (*mult)(Mat, Vec, Vec, PetscInt, PetscInt) = NULL;
@@ -573,6 +650,7 @@ int main(int argc, char **argv)
     PetscCall(TestGetIJ(type, current));
     PetscCall(TestSparseOperations(A, type, current, input));
     PetscCall(TestSparseSolve(type, saved, current));
+    PetscCall(TestSELL(type, current));
     PetscCall(TestDense(PETSC_COMM_SELF, type, current, input));
     PetscCall(TestDense(PETSC_COMM_WORLD, type, current, input));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
@@ -596,9 +674,11 @@ int main(int argc, char **argv)
     test:
       suffix: cuda
       requires: cuda
+      args: -mat_sell_spmv_cuda_kernel 1
 
     test:
       suffix: hip
       requires: hip
+      args: -mat_sell_spmv_hip_kernel 1
 
 TEST*/
