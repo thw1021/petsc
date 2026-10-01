@@ -54,7 +54,7 @@
 ```{rubric} PC:
 ```
 
-- Add `PCHPDDMSetDeflationMatScaling()` to share user-supplied partition-of-unity weights between custom coarse spaces and fine-level `PCASM` corrections
+- Add `PCHPDDMSetDeflationMatScaling()` to weight custom coarse spaces with user-supplied partition-of-unity weights. If the fine level is a `PCASM`, its default `PCASMType` is set to `PC_ASM_WEIGHTED`, in which case the weights are forwarded accordingly.
 
 ```{rubric} KSP:
 ```
