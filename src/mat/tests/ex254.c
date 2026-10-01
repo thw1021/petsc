@@ -28,10 +28,10 @@ static PetscErrorCode PreallocateDeviceCOO(Mat A, PetscInt n, const PetscInt i[]
   PetscCall(PetscDeviceGetType(device, &type));
   PetscCall(PetscDeviceContextGetStreamHandle(current, &stream));
   // Keep valid device pointers on ranks with no COO entries.
-  PetscCall(PetscDeviceMalloc(current, PETSC_MEMTYPE_HOST, n + 1, &hi));
-  PetscCall(PetscDeviceMalloc(current, PETSC_MEMTYPE_HOST, n + 1, &hj));
-  PetscCall(PetscDeviceCalloc(current, PETSC_MEMTYPE_DEVICE, n + 1, &di));
-  PetscCall(PetscDeviceCalloc(current, PETSC_MEMTYPE_DEVICE, n + 1, &dj));
+  PetscCall(PetscDeviceMalloc(current, PETSC_MEMTYPE_HOST, n + 1, PETSC_DECIDE, &hi));
+  PetscCall(PetscDeviceMalloc(current, PETSC_MEMTYPE_HOST, n + 1, PETSC_DECIDE, &hj));
+  PetscCall(PetscDeviceCalloc(current, PETSC_MEMTYPE_DEVICE, n + 1, PETSC_DECIDE, &di));
+  PetscCall(PetscDeviceCalloc(current, PETSC_MEMTYPE_DEVICE, n + 1, PETSC_DECIDE, &dj));
   PetscCall(PetscDeviceContextSynchronize(current));
   for (PetscInt k = 0; k < n; ++k) {
     hi[k] = i[k];
@@ -79,8 +79,8 @@ static PetscErrorCode TestCOOStreams(Mat ref, Mat A, PetscInt n, const PetscScal
   PetscCall(PetscDeviceContextGetDevice(saved, &device));
   PetscCall(PetscDeviceGetType(device, &type));
   PetscCall(PetscMalloc1(n + 1, &host));
-  PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_HOST, n + 1, &pinned));
-  PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_DEVICE, n + 1, &gpu));
+  PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_HOST, n + 1, PETSC_DECIDE, &pinned));
+  PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_DEVICE, n + 1, PETSC_DECIDE, &gpu));
   PetscCall(PetscDeviceContextSynchronize(saved));
   for (PetscInt k = 0; k < 2; ++k) {
     PetscCall(PetscDeviceContextDuplicate(saved, &current));

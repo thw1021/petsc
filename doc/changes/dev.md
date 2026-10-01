@@ -15,6 +15,7 @@
 ```{rubric} Sys:
 ```
 
+- Add an alignment argument before the output pointer to `PetscDeviceMalloc()` and `PetscDeviceCalloc()`; pass `PETSC_DECIDE` to retain inferred alignment, or a positive power of two to request stronger alignment
 - Add `PetscDeviceContextDelay()` to queue a timed host callback for testing CUDA and HIP stream ordering
 
 ```{rubric} Event Logging:
