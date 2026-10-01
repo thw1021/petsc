@@ -1595,3 +1595,4 @@ typedef struct {
 
 #include <petscviewertypes.h>
 #include <petscdrawtypes.h>
+#include <petscoptionstypes.h>
