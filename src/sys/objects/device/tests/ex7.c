@@ -248,17 +248,80 @@ static PetscErrorCode TestPinnedAllocationReuse(PetscDeviceContext dctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestMemoryAccessOrdering(PetscDeviceContext dctx)
+{
+  const PetscInt     n = 32769;
+  PetscDeviceContext producer, consumer;
+  unsigned char     *src[2], *dest, *host;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextDuplicate(dctx, &producer));
+  PetscCall(PetscDeviceContextSetStreamType(producer, PETSC_STREAM_NONBLOCKING));
+  PetscCall(PetscDeviceContextSetUp(producer));
+  PetscCall(PetscDeviceContextDuplicate(producer, &consumer));
+  PetscCall(PetscDeviceMalloc(producer, PETSC_MEMTYPE_DEVICE, n, &src[0]));
+  PetscCall(PetscDeviceMalloc(producer, PETSC_MEMTYPE_DEVICE, n, &src[1]));
+  PetscCall(PetscDeviceMalloc(producer, PETSC_MEMTYPE_DEVICE, n, &dest));
+  PetscCall(PetscDeviceMalloc(consumer, PETSC_MEMTYPE_HOST, n, &host));
+  PetscCall(PetscDeviceContextSynchronize(producer));
+  PetscCall(PetscDeviceContextSynchronize(consumer));
+  for (PetscInt pass = 0; pass < 4; ++pass) {
+    const PetscInt value = 37 + pass;
+
+    // The consumer must wait for the most recent memset, including repeated writes.
+    PetscCall(PetscDeviceMemset(producer, dest, 17, n));
+    PetscCall(PetscDeviceContextDelay(producer, 0.05));
+    PetscCall(PetscDeviceMemset(producer, dest, value, n));
+    PetscCall(PetscDeviceArrayCopy(consumer, host, dest, n));
+    PetscCall(PetscDeviceContextSynchronize(consumer));
+    for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == value, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Consumer read stale memset byte %" PetscInt_FMT " (got %u, expected %" PetscInt_FMT ")", i, (unsigned)host[i], value);
+    PetscCall(PetscDeviceContextSynchronize(producer));
+
+    PetscCall(PetscDeviceMemset(producer, src[0], value, n));
+    PetscCall(PetscDeviceMemset(producer, src[1], value + 32, n));
+    PetscCall(PetscDeviceContextSynchronize(producer));
+    // The destination dependency must cover the latest copy.
+    PetscCall(PetscDeviceArrayCopy(producer, dest, src[0], n));
+    PetscCall(PetscDeviceContextDelay(producer, 0.05));
+    PetscCall(PetscDeviceArrayCopy(producer, dest, src[1], n));
+    PetscCall(PetscDeviceArrayCopy(consumer, host, dest, n));
+    PetscCall(PetscDeviceContextSynchronize(consumer));
+    for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == value + 32, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Consumer read stale copy byte %" PetscInt_FMT " (got %u, expected %" PetscInt_FMT ")", i, (unsigned)host[i], value + 32);
+    PetscCall(PetscDeviceContextSynchronize(producer));
+
+    // The source dependency must protect a pending read from a later overwrite.
+    PetscCall(PetscDeviceArrayCopy(producer, dest, src[0], n));
+    PetscCall(PetscDeviceContextDelay(producer, 0.05));
+    PetscCall(PetscDeviceArrayCopy(producer, dest, src[0], n));
+    PetscCall(PetscDeviceMemset(consumer, src[0], value + 64, n));
+    PetscCall(PetscDeviceArrayCopy(producer, host, dest, n));
+    PetscCall(PetscDeviceContextSynchronize(producer));
+    PetscCall(PetscDeviceContextSynchronize(consumer));
+    for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == value, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Source overwritten before its copy at byte %" PetscInt_FMT " (got %u, expected %" PetscInt_FMT ")", i, (unsigned)host[i], value);
+  }
+  PetscCall(PetscDeviceFree(producer, src[0]));
+  PetscCall(PetscDeviceFree(producer, src[1]));
+  PetscCall(PetscDeviceFree(producer, dest));
+  PetscCall(PetscDeviceFree(consumer, host));
+  PetscCall(PetscDeviceContextSynchronize(producer));
+  PetscCall(PetscDeviceContextSynchronize(consumer));
+  PetscCall(PetscDeviceContextDestroy(&producer));
+  PetscCall(PetscDeviceContextDestroy(&consumer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
   PetscDeviceContext dctx;
   PetscRandom        rand;
-  PetscBool          test_stream_types = PETSC_FALSE, test_pinned_reuse = PETSC_FALSE;
+  PetscBool          test_stream_types = PETSC_FALSE, test_pinned_reuse = PETSC_FALSE, test_memory_access = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_stream_types", &test_stream_types, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_pinned_reuse", &test_pinned_reuse, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_memory_access", &test_memory_access, NULL));
   if (test_stream_types) {
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(TestMemoryStreamTypes(dctx, PETSC_MEMTYPE_HOST));
@@ -266,6 +329,9 @@ int main(int argc, char *argv[])
   } else if (test_pinned_reuse) {
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(TestPinnedAllocationReuse(dctx));
+  } else if (test_memory_access) {
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(TestMemoryAccessOrdering(dctx));
   } else {
     // A vile hack. The -info output is used to test correctness in this test which prints --
     // among other things -- the PetscObjectId of the PetscDevicContext and the allocated memory.
@@ -310,6 +376,18 @@ int main(int argc, char *argv[])
 }
 
 /*TEST
+
+  testset:
+    args: -test_memory_access
+    output_file: output/ExitSuccess.out
+    test:
+      suffix: memory_access_cuda
+      requires: cuda
+      args: -default_device_type cuda
+    test:
+      suffix: memory_access_hip
+      requires: hip
+      args: -default_device_type hip
 
   testset:
     requires: defined(PETSC_USE_DEBUG)
