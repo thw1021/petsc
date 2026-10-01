@@ -183,8 +183,7 @@ static PetscErrorCode PCPatchConstruct_User(void *vpatch, DM dm, PetscInt point,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS[] isets, const PetscSF *sf)
-static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const PetscSF *sf)
+static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS isets[], const PetscSF *sf)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
 
@@ -193,112 +192,77 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const Pe
     patch->sectionSF = sf[0];
     PetscCall(PetscObjectReference((PetscObject)patch->sectionSF));
   } else {
-    PetscInt     allRoots = 0, allLeaves = 0;
-    PetscInt     leafOffset    = 0;
-    PetscInt    *ilocal        = NULL;
-    PetscSFNode *iremote       = NULL;
-    PetscInt    *remoteOffsets = NULL;
-    PetscInt     index         = 0;
-    PetscHMapI   rankToIndex;
-    PetscInt     numRanks = 0;
-    PetscSFNode *remote   = NULL;
-    PetscSF      rankSF;
-    PetscInt    *ranks   = NULL;
-    PetscInt    *offsets = NULL;
-    MPI_Datatype contig;
-    PetscHSetI   ranksUniq;
-    PetscMPIInt  in;
+    /* To determine the SF for the full mixed space we need to combine the per-field SFs
+       with the per-field ISes to establish how each subspace maps to other ranks. Once
+       we have that we can then merge them. */
+    PetscSF *subspaceSFs = NULL;
+    PetscInt *ilocal = NULL;
+    PetscSFNode *iremote = NULL;
+    PetscInt allRoots = 0, allLeaves = 0, index = 0;
+    const PetscInt **subspaceIndices = NULL;  // TODO free me!
 
-    /* First figure out how many dofs there are in the concatenated numbering.
-       allRoots: number of owned global dofs;
-       allLeaves: number of visible dofs (global + ghosted).
-    */
-    for (PetscInt i = 0; i < n; ++i) {
+    PetscCall(PetscMalloc1(n, &subspaceIndices));
+    for (PetscInt k = 0; k < n; ++k)
+      PetscCall(ISGetIndices(isets[k], &subspaceIndices[k]));
+
+    PetscCall(PetscMalloc1(n, &subspaceSFs));
+    for (PetscInt k = 0; k < n; ++k) {
+      PetscInt size;
+      PetscInt *remoteOffsets = NULL;
+      PetscSection sec;
+
+      // Turn the IS into a PetscSection with 1 DoF per point
+      PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)isets[k]), &sec));
+      PetscCall(ISGetLocalSize(isets[k], &size));
+      PetscCall(PetscSectionSetChart(sec, 0, size));
+      for (PetscInt p = 0; p < size; ++p) {
+        PetscCall(PetscSectionSetDof(sec, p, 1));
+        PetscCall(PetscSectionSetOffset(sec, p, subspaceIndices[k][p]));
+      }
+
+      PetscCall(PetscMalloc1(size, &remoteOffsets));
+      PetscCall(PetscSFBcastBegin(sf[k], MPIU_INT, sec->atlasOff, remoteOffsets, MPI_REPLACE));
+      PetscCall(PetscSFBcastEnd(sf[k], MPIU_INT, sec->atlasOff, remoteOffsets, MPI_REPLACE));
+      PetscCall(PetscSFCreateSectionSF(sf[k], sec, remoteOffsets, sec, &subspaceSFs[k]));
+
+      PetscCall(PetscFree(remoteOffsets));
+    }
+
+    /* Now merge the subspace SFs into a single one. */
+    for (PetscInt k = 0; k < n; ++k) {
       PetscInt nroots, nleaves;
 
-      PetscCall(PetscSFGetGraph(sf[i], &nroots, &nleaves, NULL, NULL));
+      PetscCall(PetscSFGetGraph(subspaceSFs[k], &nroots, &nleaves, NULL, NULL));
       allRoots += nroots;
       allLeaves += nleaves;
     }
     PetscCall(PetscMalloc1(allLeaves, &ilocal));
     PetscCall(PetscMalloc1(allLeaves, &iremote));
-    /* Now build an SF that just contains process connectivity. */
-    PetscCall(PetscHSetICreate(&ranksUniq));
-    for (PetscInt i = 0; i < n; ++i) {
-      const PetscMPIInt *ranks = NULL;
-      PetscMPIInt        nranks;
 
-      PetscCall(PetscSFSetUp(sf[i]));
-      PetscCall(PetscSFGetRootRanks(sf[i], &nranks, &ranks, NULL, NULL, NULL));
-      /* These are all the ranks who communicate with me. */
-      for (PetscMPIInt j = 0; j < nranks; ++j) PetscCall(PetscHSetIAdd(ranksUniq, (PetscInt)ranks[j]));
-    }
-    PetscCall(PetscHSetIGetSize(ranksUniq, &numRanks));
-    PetscCall(PetscMalloc1(numRanks, &remote));
-    PetscCall(PetscMalloc1(numRanks, &ranks));
-    PetscCall(PetscHSetIGetElems(ranksUniq, &index, ranks));
+    for (PetscInt k = 0; k < n; ++k) {
+      PetscInt nleaves;
+      const PetscInt *subilocal = NULL;
+      const PetscSFNode *subiremote = NULL;
 
-    PetscCall(PetscHMapICreate(&rankToIndex));
-    for (PetscInt i = 0; i < numRanks; ++i) {
-      remote[i].rank  = ranks[i];
-      remote[i].index = 0;
-      PetscCall(PetscHMapISet(rankToIndex, ranks[i], i));
-    }
-    PetscCall(PetscFree(ranks));
-    PetscCall(PetscHSetIDestroy(&ranksUniq));
-    PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)pc), &rankSF));
-    PetscCall(PetscSFSetGraph(rankSF, 1, numRanks, NULL, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
-    PetscCall(PetscSFSetUp(rankSF));
-    /* OK, use it to communicate the root offset on the remote processes for each subspace. */
-    PetscCall(PetscMalloc1(n, &offsets));
-    PetscCall(PetscMalloc1(n * numRanks, &remoteOffsets));
-
-    offsets[0] = 0;
-    for (PetscInt i = 1; i < n; ++i) {
-      PetscInt nroots;
-
-      PetscCall(PetscSFGetGraph(sf[i - 1], &nroots, NULL, NULL, NULL));
-      offsets[i] = offsets[i - 1] + nroots;
-    }
-    /* Offsets are the offsets on the current process of the global dof numbering for the subspaces. */
-    PetscCall(PetscMPIIntCast(n, &in));
-    PetscCallMPI(MPI_Type_contiguous(in, MPIU_INT, &contig));
-    PetscCallMPI(MPI_Type_commit(&contig));
-
-    PetscCall(PetscSFBcastBegin(rankSF, contig, offsets, remoteOffsets, MPI_REPLACE));
-    PetscCall(PetscSFBcastEnd(rankSF, contig, offsets, remoteOffsets, MPI_REPLACE));
-    PetscCallMPI(MPI_Type_free(&contig));
-    PetscCall(PetscFree(offsets));
-    PetscCall(PetscSFDestroy(&rankSF));
-    /* Now remoteOffsets contains the offsets on the remote
-      processes who communicate with me.  So now we can
-      concatenate the list of SFs into a single one. */
-    index = 0;
-    for (PetscInt i = 0; i < n; ++i) {
-      const PetscSFNode *remote = NULL;
-      const PetscInt    *local  = NULL;
-      PetscInt           nroots, nleaves, j;
-
-      PetscCall(PetscSFGetGraph(sf[i], &nroots, &nleaves, &local, &remote));
-      for (j = 0; j < nleaves; ++j) {
-        PetscInt rank = remote[j].rank;
-        PetscInt idx, rootOffset;
-
-        PetscCall(PetscHMapIGet(rankToIndex, rank, &idx));
-        PetscCheck(idx != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Didn't find rank, huh?");
-        /* Offset on given rank for ith subspace */
-        rootOffset           = remoteOffsets[n * idx + i];
-        ilocal[index]        = (local ? local[j] : j) + leafOffset;
-        iremote[index].rank  = remote[j].rank;
-        iremote[index].index = remote[j].index + rootOffset;
-        ++index;
+      PetscCall(PetscSFGetGraph(subspaceSFs[k], NULL, &nleaves, &subilocal, &subiremote));
+      for (PetscInt i = 0; i < nleaves; ++i) {
+        // Not sure about this
+        ilocal[i+index] = subilocal ? subilocal[i] : i;
+        iremote[i+index].rank = subiremote[i].rank;
+        iremote[i+index].index = subiremote[i].index;
       }
-      leafOffset += nleaves;
+      index += nleaves;
     }
-    PetscCall(PetscHMapIDestroy(&rankToIndex));
-    PetscCall(PetscFree(remoteOffsets));
+
     PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)pc), &patch->sectionSF));
     PetscCall(PetscSFSetGraph(patch->sectionSF, allRoots, allLeaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER));
+
+    for (PetscInt k = 0; k < n; ++k)
+      PetscCall(ISRestoreIndices(isets[k], &subspaceIndices[k]));
+    PetscCall(PetscFree(subspaceIndices));
+    for (PetscInt k = 0; k < n; ++k)
+      PetscCall(PetscSFDestroy(&subspaceSFs[k]));
+    PetscCall(PetscFree(subspaceSFs));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -745,8 +709,7 @@ PetscErrorCode PCPatchSetDiscretisationInfo(PC pc, PetscInt nsubspaces, DM dms[]
     PetscCall(ISGetLocalSize(isets[i], &isSize));
     patch->localSize += isSize;
   }
-  // PetscCall(PCPatchCreateDefaultSF_Private(pc, nsubspaces, isets, sfs));
-  PetscCall(PCPatchCreateDefaultSF_Private(pc, nsubspaces, sfs));
+  PetscCall(PCPatchCreateDefaultSF_Private(pc, nsubspaces, isets, sfs));
   PetscCall(PetscFree(sfs));
 
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numGhostBcs, ghostBcDofs, PETSC_COPY_VALUES, &patch->ghostBcDofs));
@@ -1594,7 +1557,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   PetscCall(PetscHSetICreate(&artificialbcs));
 
   if (!patch->combined) {
-    PetscCall(PetscMalloc(patch->nsubspaces, &subspaceIndices));
+    PetscCall(PetscMalloc1(patch->nsubspaces, &subspaceIndices));
     for (i = 0; i < patch->nsubspaces; ++i)
       PetscCall(ISGetIndices(patch->isets[i], &subspaceIndices[i]));
   }
