@@ -178,14 +178,14 @@ PetscErrorCode VecAssemblyEnd(Vec vec)
   Both this routine and `VecSetValuesCOO()` do work proportional to the local size of `x` in addition to `ncoo`, even when `ncoo` is small.
   The interface is therefore most efficient when the COO entries cover most of the local portion of the vector and the vector is assembled repeatedly.
 
-  To only accumulate off-process contributions into their owning ranks, create a `PetscSF` once with `PetscSFSetGraphLayout()` and use
-  `PetscSFReduceBegin()` and `PetscSFReduceEnd()`, whose cost scales with the number of off-process contributions.
-
   Entries can be repeated, see `VecSetValuesCOO()`. Negative indices are not allowed unless vector option `VEC_IGNORE_NEGATIVE_INDICES` is set,
   in which case they, along with the corresponding entries in `VecSetValuesCOO()`, are ignored. If vector option `VEC_NO_OFF_PROC_ENTRIES` is set,
   remote entries are ignored, otherwise, they will be properly added or inserted to the vector.
 
-  The array coo_i[] may be freed immediately after calling this function.
+  `coo_i` may be freed immediately after calling this function.
+
+  An alternative, when only accumulating off-process contributions into their owning MPI processes, is to create a `PetscSF` once with
+  `PetscSFSetGraphLayout()` and use `PetscSFReduceBegin()` and `PetscSFReduceEnd()`, whose cost scales with the number of off-process contributions.
 
 .seealso: [](ch_vectors), `Vec`, `VecSetValuesCOO()`, `VecSetPreallocationCOOLocal()`, `PetscSFReduceBegin()`, `PetscSFReduceEnd()`
 @*/
