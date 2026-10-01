@@ -1,4 +1,4 @@
-static const char help[] = "Test CUDA/HIP AIJ operations and array copies on the current device context.\n";
+static const char help[] = "Test CUDA/HIP AIJ and dense operations and array copies on the current device context.\n";
 
 #include <petscmat.h>
 #include <petscdevice.h>
@@ -401,6 +401,100 @@ static PetscErrorCode TestSparseSolve(PetscDeviceType type, PetscDeviceContext s
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode WriteVector(Vec x, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
+{
+  PetscScalar *a;
+  PetscInt     n;
+  PetscMemType mtype;
+  void        *stream;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetLocalSize(x, &n));
+  PetscCall(VecGetArrayWriteAndMemType(x, &a, &mtype));
+  PetscCheck(PetscMemTypeDevice(mtype), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected a device array");
+  PetscCall(PetscDeviceContextGetStreamHandle(dctx, &stream));
+  PetscCall(PetscDeviceContextDelay(dctx, 0.05));
+#if PetscDefined(HAVE_CUDA)
+  if (type == PETSC_DEVICE_CUDA) PetscCallCUDA(cudaMemcpyAsync(a, input, n * sizeof(*a), cudaMemcpyHostToDevice, *(cudaStream_t *)stream));
+#endif
+#if PetscDefined(HAVE_HIP)
+  if (type == PETSC_DEVICE_HIP) PetscCallHIP(hipMemcpyAsync(a, input, n * sizeof(*a), hipMemcpyHostToDevice, *(hipStream_t *)stream));
+#endif
+  PetscCall(VecRestoreArrayWriteAndMemType(x, &a));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TestDense(MPI_Comm comm, PetscDeviceType type, PetscDeviceContext dctx, const PetscScalar input[])
+{
+  PetscErrorCode (*mult)(Mat, Vec, Vec, PetscInt, PetscInt) = NULL;
+  Mat                A;
+  Vec                x, y;
+  PetscScalar       *a;
+  const PetscScalar *b;
+  PetscMPIInt        rank, size;
+  PetscInt           n;
+
+  PetscFunctionBeginUser;
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(MatCreate(comm, &A));
+  PetscCall(MatSetSizes(A, 4, rank ? 0 : 4, PETSC_DECIDE, 4));
+  PetscCall(MatSetType(A, type == PETSC_DEVICE_CUDA ? MATDENSECUDA : MATDENSEHIP));
+  PetscCall(MatSetUp(A));
+  PetscCall(MatDenseGetArrayWrite(A, &a));
+  for (PetscInt j = 0; j < 4; ++j)
+    for (PetscInt i = 0; i < 4; ++i) a[4 * j + i] = i == j ? 2 : 0;
+  PetscCall(MatDenseRestoreArrayWrite(A, &a));
+  PetscCall(MatCreateVecs(A, &y, &x));
+  PetscCall(VecSet(x, 1));
+  PetscCall(VecSet(y, 0));
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatMultHermitianTransposeColumnRange_C", &mult));
+  PetscCheck(mult, comm, PETSC_ERR_PLIB, "Missing dense column-range multiply implementation");
+  PetscCall((*mult)(A, x, y, 1, 3));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(WriteVector(y, type, dctx, input));
+  PetscCall((*mult)(A, x, y, 1, 3));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(VecGetLocalSize(y, &n));
+  PetscCall(VecGetArrayRead(y, &b));
+  for (PetscInt i = 0; i < n; ++i) PetscCheck(b[i] == ((i == 1 || i == 2) ? 2 * size : input[i]), comm, PETSC_ERR_PLIB, "Dense column-range multiply returned an incorrect entry %" PetscInt_FMT, i);
+  PetscCall(VecRestoreArrayRead(y, &b));
+  PetscCall(MatDenseGetArrayRead(A, &b));
+  for (PetscInt j = 0; j < 4; ++j)
+    for (PetscInt i = 0; i < 4; ++i) PetscCheck(b[4 * j + i] == (i == j ? 2 : 0), comm, PETSC_ERR_PLIB, "Incorrect dense array entry");
+  PetscCall(MatDenseRestoreArrayRead(A, &b));
+  if (size == 1) {
+    Mat B, X;
+    IS  perm;
+
+    PetscCall(ISCreateStride(comm, 4, 0, 1, &perm));
+    PetscCall(MatLUFactor(A, perm, perm, NULL));
+    PetscCall(MatCreateSeqDense(comm, 4, 2, NULL, &B));
+    PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &X));
+    PetscCall(MatDenseGetArrayWrite(B, &a));
+    for (PetscInt j = 0; j < 2; ++j)
+      for (PetscInt i = 0; i < 4; ++i) a[4 * j + i] = (j + 1) * input[i];
+    PetscCall(MatDenseRestoreArrayWrite(B, &a));
+    // Host output requires a temporary device array on the solve's stream.
+    PetscCall(MatMatSolve(A, B, X));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceContextDelay(dctx, 0.05));
+    PetscCall(MatMatSolve(A, B, X));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(MatDenseGetArrayRead(X, &b));
+    for (PetscInt j = 0; j < 2; ++j)
+      for (PetscInt i = 0; i < 4; ++i) PetscCheck(PetscAbsScalar(b[4 * j + i] - (j + 1) * input[i] / 2) < PETSC_SMALL, comm, PETSC_ERR_PLIB, "Incorrect dense solve entry");
+    PetscCall(MatDenseRestoreArrayRead(X, &b));
+    PetscCall(MatDestroy(&X));
+    PetscCall(MatDestroy(&B));
+    PetscCall(ISDestroy(&perm));
+  }
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   Mat                   A, B;
@@ -482,6 +576,8 @@ int main(int argc, char **argv)
     PetscCall(TestGetIJ(type, current));
     PetscCall(TestSparseOperations(A, type, current, input));
     PetscCall(TestSparseSolve(type, saved, current));
+    PetscCall(TestDense(PETSC_COMM_SELF, type, current, input));
+    PetscCall(TestDense(PETSC_COMM_WORLD, type, current, input));
     PetscCall(PetscDeviceContextSetCurrentContext(saved));
     PetscCall(PetscDeviceContextDestroy(&current));
   }
@@ -498,6 +594,7 @@ int main(int argc, char **argv)
 
   testset:
     output_file: output/empty.out
+    nsize: {{1 2}}
 
     test:
       suffix: cuda
