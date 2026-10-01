@@ -346,6 +346,7 @@ PetscErrorCode PetscDeviceAllocate_Private(PetscDeviceContext dctx, PetscBool cl
   // Note this is a "write" so that the next dctx to try and read from the pointer has to wait
   // for the allocation to be ready
   PetscCall(PetscDeviceContextMarkIntentFromID(dctx, id, PETSC_MEMORY_ACCESS_WRITE, "memory allocation"));
+  PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -417,6 +418,7 @@ PetscErrorCode PetscDeviceDeallocate_Private(PetscDeviceContext dctx, void *PETS
     // if ptr still exists, then the device context could not handle it
     PetscCall(PetscFree(ptr));
     PetscCallCXX(map.erase(found_it));
+    PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -487,6 +489,7 @@ PetscErrorCode PetscDeviceMemcpy(PetscDeviceContext dctx, void *PETSC_RESTRICT d
       PetscCall(PetscMemcpy(dest, src, n));
     }
   }
+  PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -549,5 +552,6 @@ PetscErrorCode PetscDeviceMemset(PetscDeviceContext dctx, void *ptr, PetscInt v,
       std::memset(ptr, static_cast<int>(v), n);
     }
   }
+  PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
