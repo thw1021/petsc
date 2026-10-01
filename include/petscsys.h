@@ -1290,26 +1290,6 @@ M*/
 M*/
 #define PetscObjectParameterDeclarePtr(type, NAME) type *NAME, *default_##NAME
 
-/*S
-  PetscCtxDestroyFn - A prototype of a `PetscErrorCode (*)(PetscCtxRt)` function that is used to free application contexts
-
-  Level: intermediate
-
-  Notes:
-  Used in the prototype of functions such as `DMSetApplicationContextDestroy()`
-
-  The function argument is a `PetscCtxRt` which is psychologically equivalent to a `void **` meaning that this function is called with a pointer to
-  the application context (which is itself a pointer) thus the destroy implementation must first reference the context via, for example,
-  `*(AppCtx **)arg`. Note that syntactically `PetscCtxRt` is defined as a `void *`, this is because C++ does
-  not accept passing a pointer to a pointer to a `void**` but it does accept passing a pointer to a pointer to `void *`.
-
-  PETSc destroy functions take the address of the context (rather than just the context) so that that the destroy function can "zero the pointer" when
-  appropriate, preventing accidental later use of a dangling pointer.
-
-.seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(PetscCtxRt ctx);
-
 PETSC_EXTERN PetscCtxDestroyFn PetscCtxDestroyDefault;
 PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscCtxDestroyDefault()", ) static inline PetscErrorCode PetscContainerCtxDestroyDefault(PetscCtxRt a)
 {
@@ -1318,7 +1298,6 @@ PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscCtxDestroyDefault()", ) static inline 
 
 PETSC_EXTERN PetscErrorCode PetscMonitorCompare(PetscErrorCode (*)(void), void *, PetscCtxDestroyFn *, PetscErrorCode (*)(void), void *, PetscCtxDestroyFn *, PetscBool *);
 
-#include <petscviewertypes.h>
 #include <petscoptions.h>
 
 PETSC_EXTERN PetscErrorCode PetscMallocTraceSet(PetscViewer, PetscBool, PetscLogDouble);
