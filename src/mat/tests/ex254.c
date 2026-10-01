@@ -32,11 +32,11 @@ static PetscErrorCode PreallocateDeviceCOO(Mat A, PetscInt n, const PetscInt i[]
   PetscCall(PetscDeviceMalloc(current, PETSC_MEMTYPE_HOST, n + 1, &hj));
   PetscCall(PetscDeviceCalloc(current, PETSC_MEMTYPE_DEVICE, n + 1, &di));
   PetscCall(PetscDeviceCalloc(current, PETSC_MEMTYPE_DEVICE, n + 1, &dj));
+  PetscCall(PetscDeviceContextSynchronize(current));
   for (PetscInt k = 0; k < n; ++k) {
     hi[k] = i[k];
     hj[k] = j[k];
   }
-  PetscCall(PetscDeviceContextSynchronize(current));
   // Preallocation must read the updated indices, not the initial zeros.
   PetscCall(PetscDeviceContextDelay(current, 0.05));
   #if PetscDefined(HAVE_CUDA)
