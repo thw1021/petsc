@@ -407,7 +407,7 @@ macos-arm:
     - .coverage-disable
     - .test-petsc4py
   tags:
-    - os:macos-arm
+    - os:macos-arm-test
   variables:
     TEST_ARCH: arch-ci-macos-arm
     EXTRA_OPTIONS_INITIAL: -check_pointer_intensity 0 -error_output_stdout
@@ -424,7 +424,7 @@ macos-cxx-cmplx-pkgs-dbg-arm:
     - .coverage-disable
     - .test-petsc4py
   tags:
-    - os:macos-arm
+    - os:macos-arm-test
   variables:
     TEST_ARCH: arch-ci-macos-cxx-cmplx-pkgs-dbg-arm
     MAKE_CFLAGS: -Werror -Wno-deprecated
@@ -437,7 +437,7 @@ macos-cxx-pkgs-opt-arm:
     - .macos_test
     - .coverage-disable
   tags:
-    - os:macos-arm
+    - os:macos-arm-test
   variables:
     EXTRA_OPTIONS_INITIAL: -vecscatter_mpi1 false -options_left false
     TEST_ARCH: arch-ci-macos-cxx-pkgs-opt-arm
@@ -450,7 +450,7 @@ macos-opt-arm:
     - .macos_test
     - .coverage-disable
   tags:
-    - os:macos-arm
+    - os:macos-arm-test
   variables:
     TEST_ARCH: arch-ci-macos-opt-arm
     INIT_SCRIPT: .zprofile
