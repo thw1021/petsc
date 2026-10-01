@@ -414,6 +414,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDeviceContextGetDevice(saved, &device));
   PetscCall(PetscDeviceGetType(device, &type));
   PetscCall(PetscDeviceMalloc(saved, PETSC_MEMTYPE_HOST, 4, &input));
+  PetscCall(PetscDeviceContextSynchronize(saved));
   for (PetscInt i = 0; i < 4; ++i) input[i] = i + 1;
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, 4, 4, 1, NULL, &A));
   for (PetscInt i = 0; i < 4; ++i) PetscCall(MatSetValue(A, i, i, 1, INSERT_VALUES));

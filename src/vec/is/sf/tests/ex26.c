@@ -39,6 +39,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, &leaf));
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, &input));
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, &output));
+  PetscCall(PetscDeviceContextSynchronize(dctx[0]));
   remote[0].rank = remote[1].rank = (rank + 1) % size;
   remote[0].index                 = 3;
   remote[1].index                 = 1;

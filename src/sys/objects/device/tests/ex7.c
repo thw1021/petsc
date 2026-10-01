@@ -22,7 +22,7 @@ static PetscErrorCode TestAllocate(PetscDeviceContext dctx, PetscRandom rand, Pe
   PetscScalar *ptr, *tmp_ptr;
   PetscInt     n = 10;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (PetscMemTypeDevice(mtype)) {
     PetscDeviceType dtype;
 
@@ -36,6 +36,7 @@ static PetscErrorCode TestAllocate(PetscDeviceContext dctx, PetscRandom rand, Pe
   PetscCheck(ptr, PETSC_COMM_SELF, PETSC_ERR_POINTER, "PetscDeviceMalloc() return NULL pointer for %s allocation size %" PetscInt_FMT, PetscMemTypeToString(mtype), n);
   // this ensures the host pointer is at least valid
   if (PetscMemTypeHost(mtype)) {
+    PetscCall(PetscDeviceContextSynchronize(dctx));
     for (PetscInt i = 0; i < n; ++i) ptr[i] = (PetscScalar)i;
   }
   PetscCall(PetscDeviceFree(dctx, ptr));
@@ -216,20 +217,57 @@ static PetscErrorCode TestMemoryStreamTypes(PetscDeviceContext dctx, PetscMemTyp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TestPinnedAllocationReuse(PetscDeviceContext dctx)
+{
+  const PetscInt     n = 32769;
+  PetscDeviceContext ctx;
+  unsigned char     *input, *device, *result;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscDeviceContextDuplicate(dctx, &ctx));
+  PetscCall(PetscDeviceContextSetStreamType(ctx, PETSC_STREAM_NONBLOCKING));
+  PetscCall(PetscDeviceContextSetUp(ctx));
+  PetscCall(PetscDeviceMalloc(ctx, PETSC_MEMTYPE_HOST, n, &result));
+  PetscCall(PetscDeviceMalloc(ctx, PETSC_MEMTYPE_DEVICE, n, &device));
+  PetscCall(PetscDeviceMalloc(ctx, PETSC_MEMTYPE_HOST, n, &input));
+  for (PetscInt pass = 0; pass < 4; ++pass) {
+    PetscCall(PetscDeviceMemset(ctx, input, 37 + pass, n));
+    PetscCall(PetscDeviceContextSynchronize(ctx));
+    PetscCall(PetscDeviceContextDelay(ctx, 0.05));
+    PetscCall(PetscDeviceArrayCopy(ctx, device, input, n));
+    PetscCall(PetscDeviceFree(ctx, input));
+    // Reallocation, including debug initialization, must follow the pending upload.
+    PetscCall(PetscDeviceMalloc(ctx, PETSC_MEMTYPE_HOST, n, &input));
+    PetscCall(PetscDeviceArrayCopy(ctx, result, device, n));
+    PetscCall(PetscDeviceContextSynchronize(ctx));
+    for (PetscInt i = 0; i < n; ++i) PetscCheck(result[i] == 37 + pass, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Pinned allocation reuse corrupted byte %" PetscInt_FMT " (got %u, expected %" PetscInt_FMT ")", i, (unsigned)result[i], 37 + pass);
+  }
+  PetscCall(PetscDeviceFree(ctx, input));
+  PetscCall(PetscDeviceFree(ctx, device));
+  PetscCall(PetscDeviceFree(ctx, result));
+  PetscCall(PetscDeviceContextSynchronize(ctx));
+  PetscCall(PetscDeviceContextDestroy(&ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
   PetscDeviceContext dctx;
   PetscRandom        rand;
-  PetscBool          test_stream_types = PETSC_FALSE;
+  PetscBool          test_stream_types = PETSC_FALSE, test_pinned_reuse = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_stream_types", &test_stream_types, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_pinned_reuse", &test_pinned_reuse, NULL));
   if (test_stream_types) {
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(TestMemoryStreamTypes(dctx, PETSC_MEMTYPE_HOST));
     PetscCall(TestMemoryStreamTypes(dctx, PETSC_MEMTYPE_DEVICE));
+  } else if (test_pinned_reuse) {
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(TestPinnedAllocationReuse(dctx));
   } else {
     // A vile hack. The -info output is used to test correctness in this test which prints --
     // among other things -- the PetscObjectId of the PetscDevicContext and the allocated memory.
@@ -274,6 +312,19 @@ int main(int argc, char *argv[])
 }
 
 /*TEST
+
+  testset:
+    requires: defined(PETSC_USE_DEBUG)
+    args: -test_pinned_reuse
+    output_file: output/ExitSuccess.out
+    test:
+      suffix: pinned_reuse_cuda
+      requires: cuda
+      args: -default_device_type cuda
+    test:
+      suffix: pinned_reuse_hip
+      requires: hip
+      args: -default_device_type hip
 
   testset:
     args: -test_stream_types
