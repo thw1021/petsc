@@ -1,6 +1,6 @@
 #pragma once
 
-#include <petscviewer.h>
+#include <petscviewertypes.h>
 #include <petscvec.h>
 
 PETSC_EXTERN PetscErrorCode VecView_GLVis(Vec, PetscViewer);

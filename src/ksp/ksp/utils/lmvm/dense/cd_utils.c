@@ -1,10 +1,8 @@
 #include <../src/ksp/ksp/utils/lmvm/dense/denseqn.h> /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
 #include <petscmat.h>
-#include <petscsys.h>
 #include <petscsystypes.h>
 #include <petscis.h>
-#include <petscoptions.h>
 #include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
 

@@ -5,6 +5,7 @@
 
 #include <petscsys.h>
 #include <petscviewertypes.h>
+#include <petscdrawtypes.h>
 
 /* MANSEC = Sys */
 /* SUBMANSEC = Viewer */
