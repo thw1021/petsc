@@ -656,6 +656,22 @@ preceded by and followed by a blank line. For source code, this information is f
 > SUBMANSEC= DMPlex
 > ```
 
+### Include file contents
+
+PETSc provides public include C/C++ files for its API. Often material for a particular aspect of PETSc is split into two public include files with names of the form `petsc*.h`
+and `petsc*types.h`. For example, `petscsys.h` and `petscsystypes.h`. The objective of using two files is to reduce compile times of PETSc in two ways
+
+- When only the `petsc*types.h` information is needed to compile a source file, the compiler does not "waste time" processing everything in `petsc*.h`. For example, since the
+  solver APIs including
+  `PC`, `KSP`, `SNES`, `TS` API uses `DM` arguments all that source code must include `petscdmtypes.h` but, except for a very small number of source files, it does not need `petscdm.h`.
+
+- When developing new code and adding new function APIs into an existing `petsc*.h` only the source files that specifically need `petsc*.h` will get recompiled, those that use
+  `petsc*types.h` do not, thus changing a five minute recompile to a minute. Again, this is examplified with the solver APIs and `DM`.
+
+In general, the `petsc*types.h` file contains the non-function pointer typedefs (for example, `typedef _p_DM *DM`), enums and non-function-like C preprocessing macros (for example,
+`#define MATMPIAIJ mpiaij`). Function prototypes, function pointer typedefs (for example, `SNESFunctionFn`), and function-like C preprocessing macros
+(for example, `#define PetscMalloc1()`) are in `petsc*.h`. Exceptions to these general rules may exist for a specific reason.
+
 (manual_page_format)=
 
 ### Manual Page Format

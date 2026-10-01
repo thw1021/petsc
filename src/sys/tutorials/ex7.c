@@ -1,6 +1,5 @@
 const char help[] = "How to create a log handler using the PetscLogHandler interface";
 
-#include <petscsys.h>
 #include <petsc/private/hashmapi.h> // use PetscHMapI: a PetscInt -> PetscInt hashmap
 #include <petsctime.h>              // use PetscTimeSubtract() and PetscTimeAdd()
 #include <petscviewer.h>
