@@ -35,10 +35,10 @@ int main(int argc, char **argv)
     PetscCall(PetscDeviceContextSetUp(dctx[i]));
   }
   PetscCall(PetscDeviceContextSetCurrentContext(dctx[0]));
-  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, &root));
-  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, &leaf));
-  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, &input));
-  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, &output));
+  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, PETSC_DECIDE, &root));
+  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, PETSC_DECIDE, &leaf));
+  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, PETSC_DECIDE, &input));
+  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, PETSC_DECIDE, &output));
   PetscCall(PetscDeviceContextSynchronize(dctx[0]));
   remote[0].rank = remote[1].rank = (rank + 1) % size;
   remote[0].index                 = 3;
