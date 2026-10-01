@@ -183,6 +183,31 @@ class BaseTestPlex:
         self.assertNotEqual(numInterior, pEnd - pStart)
         self.assertEqual(numBoundary + numInterior, pEnd - pStart)
 
+    def testLabelAddOverlap(self):
+        cStart, cEnd = self.plex.getHeightStratum(0)
+        if cEnd - cStart == 0:
+            return
+
+        def vertex_neighbors(c):
+            points, _orient = self.plex.getTransitiveClosure(c, useCone=True)
+            neighbors = set()
+            for p in points:
+                star, _orient = self.plex.getTransitiveClosure(p, useCone=False)
+                neighbors.update(q for q in star if cStart <= q < cEnd)
+            return neighbors
+
+        label = PETSc.DMLabel().create('subdomains', comm=PETSc.COMM_SELF)
+        label.setValue(cStart, 1)
+        label.setValue(cEnd - 1, 2)
+        self.plex.labelAddOverlap(label, 1)
+        self.assertEqual(
+            set(label.getStratumIS(1).getIndices()), vertex_neighbors(cStart)
+        )
+        self.assertEqual(
+            set(label.getStratumIS(2).getIndices()), vertex_neighbors(cEnd - 1)
+        )
+        label.destroy()
+
     def testLocalSubmesh(self):
         for ovl in [0, 1, 2]:
             plex = self.plex.refine()
