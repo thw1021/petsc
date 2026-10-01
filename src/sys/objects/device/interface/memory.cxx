@@ -488,6 +488,8 @@ PetscErrorCode PetscDeviceMemcpy(PetscDeviceContext dctx, void *PETSC_RESTRICT d
       PetscCall(PetscDeviceCheckCapable_Private(dctx, mode == PETSC_DEVICE_COPY_HTOH, "copying"));
       PetscCall(PetscMemcpy(dest, src, n));
     }
+    PetscCall(PetscDeviceContextRecordMemoryAccess_Private(dctx, src_attr.id));
+    PetscCall(PetscDeviceContextRecordMemoryAccess_Private(dctx, dest_attr.id));
   }
   PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -551,6 +553,7 @@ PetscErrorCode PetscDeviceMemset(PetscDeviceContext dctx, void *ptr, PetscInt v,
       PetscCall(PetscDeviceCheckCapable_Private(dctx, PetscMemTypeHost(attr.mtype), "memsetting"));
       std::memset(ptr, static_cast<int>(v), n);
     }
+    PetscCall(PetscDeviceContextRecordMemoryAccess_Private(dctx, attr.id));
   }
   PetscCall(PetscDeviceContextSynchronizeIfWithBarrier_Internal(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
