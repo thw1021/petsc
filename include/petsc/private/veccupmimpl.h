@@ -364,12 +364,11 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::VecCUPMAllocateCheck_(Vec v) noexcept
   PetscFunctionBegin;
   if (!v->spptr) {
     /*
-      Every route to a device array reaches this allocation, and it is the point where a vector of
-      a host type would acquire one: its own operations then never consult that array, so the
-      result of a device operation on it is silently dropped. PetscCheckTypeNames() catches the
-      misuse only in a debug build, and the price of dropped results is paid in the optimized ones,
-      so check here as well. The check costs one comparison per vector because the surrounding
-      branch is taken only once.
+      This is where v first gets a CUPM device array, which only the CUPM vector types use. If v is
+      any other type, such as VECSEQ, its operations ignore that array, so any result a device
+      routine writes there is silently lost. PetscCheckTypeNames() catches this only in debug
+      builds, so check the type here too. The check runs only once per vector, on the first
+      allocation.
     */
     PetscBool iscupm;
 
