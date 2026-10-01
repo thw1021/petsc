@@ -372,16 +372,16 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Patch(SNES snes)
   Logically Collective
 
   Input Parameters:
-+ snes            - the `SNESPATCH` solver
-. nsubspaces      - the number of discretisation subspaces (e.g. fields)
-. dms             - array of length `nsubspaces` of `DM`s, one per subspace
-. isets           - array of length `nsubspaces` of `IS`s, mapping, subspace DoFs to DoFs in the full local space
-. dofsPerCell     - array of length `nsubspaces` giving the number of DoFs per cell for each subspace
-. cellDofMap      - array of length `nsubspaces`; entry `i` is a cell-to-DoF map for subspace `i`
-. numGhostBcs     - number of ghost (off-process) boundary-condition dofs
-. ghostBcDofs    - array of length `numGhostBcs` of the ghost boundary-condition dof indices
-. numGlobalBcs    - number of global boundary-condition dofs
-- globalBcDofs   - array of length `numGlobalBcs` of the global boundary-condition dof indices
++ snes         - the `SNESPATCH` solver
+. nsubspaces   - the number of discretisation subspaces (e.g. fields)
+. dms          - array of length `nsubspaces` of `DM`s, one per subspace
+. isets        - array of length `nsubspaces` of `IS`s, mapping subspace DoFs to DoFs in the full mixed space
+. dofsPerCell  - array of length `nsubspaces` giving the number of DoFs per cell for each subspace
+. cellDofMap   - array of length `nsubspaces`; entry `i` is a cell-to-DoF map for subspace `i`
+. numGhostBcs  - number of ghost (off-process) boundary-condition dofs
+. ghostBcDofs  - array of length `numGhostBcs` of the ghost boundary-condition dof indices
+. numGlobalBcs - number of global boundary-condition dofs
+- globalBcDofs - array of length `numGlobalBcs` of the global boundary-condition dof indices
 
   Level: advanced
 

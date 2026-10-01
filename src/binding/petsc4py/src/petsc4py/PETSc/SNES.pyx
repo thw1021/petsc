@@ -2445,6 +2445,7 @@ cdef class SNES(Object):
         CHKERR(PetscFree(dofsPerCell))
         CHKERR(PetscFree(cdms))
         CHKERR(PetscFree(ccellDofMaps))
+        CHKERR(PetscFree(cisets))
 
     def setPatchComputeOperator(self, operator, args=None, kargs=None) -> None:
         """Set patch compute operator."""

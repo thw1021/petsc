@@ -2600,6 +2600,7 @@ cdef class PC(Object):
         CHKERR(PetscFree(dofsPerCell))
         CHKERR(PetscFree(cdms))
         CHKERR(PetscFree(ccellDofMaps))
+        CHKERR(PetscFree(cisets))
 
     def setPatchComputeOperator(self, operator, args=None, kargs=None) -> None:
         """Set compute operator callbacks."""

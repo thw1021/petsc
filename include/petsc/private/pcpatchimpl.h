@@ -34,6 +34,7 @@ typedef struct {
   /* Dof layout */
   PetscBool     combined;   /* Use a combined space with all fields */
   PetscInt      nsubspaces; /* Number of fields */
+  PetscInt      localSize;  /* Number of local DoFs */
   PetscSF       sectionSF;  /* Combined SF mapping process local to global */
   PetscSection *dofSection; /* ?? For each field, patch -> # dofs in patch */
   IS           *isets;      /* Index set mapping unknowns in a subspace to the full local space */
