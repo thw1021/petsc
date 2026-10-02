@@ -1,6 +1,6 @@
 #pragma once
 
-#include <petscviewer.h>
+#include <petscviewertypes.h>
 #include <petscsys.h>
 
 struct _n_PetscViewerGLVisVecInfo {

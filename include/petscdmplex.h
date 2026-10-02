@@ -13,7 +13,7 @@
 #include <petscdstypes.h>
 #include <petscsftypes.h>
 #include <petscdmfield.h>
-#include <petscviewer.h>
+#include <petscviewertypes.h>
 #include <petsc/private/hashmapi.h>
 
 /* MANSEC = DM */

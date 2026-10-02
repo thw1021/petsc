@@ -1,5 +1,6 @@
 #pragma once
 
+#include <petscsys.h>
 #include <petscdevicetypes.h>
 #include <petscviewertypes.h>
 
