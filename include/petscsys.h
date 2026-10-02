@@ -46,76 +46,6 @@
 /* ========================================================================== */
 
 /*
-    Defines the interface to MPI allowing the use of all MPI functions.
-
-    PETSc does not use the C++ binding of MPI at ALL. The following flag
-    makes sure the C++ bindings are not included. The C++ bindings REQUIRE
-    putting mpi.h before ANY C++ include files, we cannot control this
-    with all PETSc users. Users who want to use the MPI C++ bindings can include
-    mpicxx.h directly in their code
-*/
-#if !defined(MPICH_SKIP_MPICXX)
-  #define MPICH_SKIP_MPICXX 1
-#endif
-#if !defined(OMPI_SKIP_MPICXX)
-  #define OMPI_SKIP_MPICXX 1
-#endif
-#if PetscDefined(HAVE_MPIUNI)
-  #include <petsc/mpiuni/mpi.h>
-#else
-  #include <mpi.h>
-#endif
-
-/*
-   Perform various sanity checks that the correct mpi.h is being included at compile time.
-   This usually happens because
-      * either an unexpected mpi.h is in the default compiler path (i.e. in /usr/include) or
-      * an extra include path -I/something (which contains the unexpected mpi.h) is being passed to the compiler
-   Note: with MPICH and OpenMPI, accept versions [x.y.z, x+1.0.0) as compatible
-*/
-#if PetscDefined(HAVE_MPIUNI)
-  #if !defined(MPIUNI_H)
-    #error "PETSc was configured with --with-mpi=0 but now appears to be compiling using a different mpi.h"
-  #endif
-#elif PetscDefined(HAVE_I_MPI)
-  #if !defined(I_MPI_NUMVERSION)
-    #error "PETSc was configured with I_MPI but now appears to be compiling using a non-I_MPI mpi.h"
-  #elif I_MPI_NUMVERSION != PETSC_PKG_I_MPI_NUMVERSION
-    #error "PETSc was configured with one I_MPI mpi.h version but now appears to be compiling using a different I_MPI mpi.h version"
-  #endif
-#elif PetscDefined(HAVE_MVAPICH2)
-  #if !defined(MVAPICH2_NUMVERSION)
-    #error "PETSc was configured with MVAPICH2 but now appears to be compiling using a non-MVAPICH2 mpi.h"
-  #elif MVAPICH2_NUMVERSION != PETSC_PKG_MVAPICH2_NUMVERSION
-    #error "PETSc was configured with one MVAPICH2 mpi.h version but now appears to be compiling using a different MVAPICH2 mpi.h version"
-  #endif
-#elif PetscDefined(HAVE_MPICH)
-  #if !defined(MPICH_NUMVERSION) || defined(MVAPICH2_NUMVERSION) || defined(I_MPI_NUMVERSION)
-    #error "PETSc was configured with MPICH but now appears to be compiling using a non-MPICH mpi.h"
-  #elif PETSC_PKG_MPICH_VERSION_GT(MPICH_NUMVERSION / 10000000, MPICH_NUMVERSION / 100000 % 100, MPICH_NUMVERSION / 1000 % 100)
-    #error "PETSc was configured with one MPICH mpi.h version but now appears to be compiling using an older MPICH mpi.h version"
-  #elif PETSC_PKG_MPICH_VERSION_LT(MPICH_NUMVERSION / 10000000, 0, 0)
-    #error "PETSc was configured with one MPICH mpi.h version but now appears to be compiling using a newer major MPICH mpi.h version"
-  #endif
-#elif PetscDefined(HAVE_OPENMPI)
-  #if !defined(OMPI_MAJOR_VERSION)
-    #error "PETSc was configured with Open MPI but now appears to be compiling using a non-Open MPI mpi.h"
-  #elif PETSC_PKG_OPENMPI_VERSION_GT(OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION, OMPI_RELEASE_VERSION)
-    #error "PETSc was configured with one Open MPI mpi.h version but now appears to be compiling using an older Open MPI mpi.h version"
-  #elif PETSC_PKG_OPENMPI_VERSION_LT(OMPI_MAJOR_VERSION, 0, 0)
-    #error "PETSc was configured with one Open MPI mpi.h version but now appears to be compiling using a newer major Open MPI mpi.h version"
-  #endif
-#elif defined(PETSC_HAVE_MSMPI_VERSION)
-  #if !defined(MSMPI_VER)
-    #error "PETSc was configured with MSMPI but now appears to be compiling using a non-MSMPI mpi.h"
-  #elif (MSMPI_VER != PETSC_HAVE_MSMPI_VERSION)
-    #error "PETSc was configured with one MSMPI mpi.h version but now appears to be compiling using a different MSMPI mpi.h version"
-  #endif
-#elif defined(OMPI_MAJOR_VERSION) || defined(MPICH_NUMVERSION) || defined(MSMPI_VER)
-  #error "PETSc was configured with undetermined MPI - but now appears to be compiling using any of Open MPI, MS-MPI or a MPICH variant"
-#endif
-
-/*
     Need to put stdio.h AFTER mpi.h for MPICH2 with C++ compiler
     see the top of mpicxx.h in the MPICH2 distribution.
 */
@@ -164,36 +94,6 @@ PETSC_EXTERN PetscBool PETSC_RUNNING_ON_VALGRIND;
     Defines elementary mathematics functions and constants.
 */
 #include <petscmath.h>
-
-/*MC
-   PETSC_COMM_WORLD - the equivalent of the `MPI_COMM_WORLD` communicator which represents all the processes that PETSc knows about.
-
-   Level: beginner
-
-   Notes:
-   By default `PETSC_COMM_WORLD` and `MPI_COMM_WORLD` are identical unless you wish to
-   run PETSc on ONLY a subset of `MPI_COMM_WORLD`. In that case create your new (smaller)
-   communicator, call it, say comm, and set `PETSC_COMM_WORLD` = comm BEFORE calling
-   `PetscInitialize()`, but after `MPI_Init()` has been called.
-
-   The value of `PETSC_COMM_WORLD` should never be used or accessed before `PetscInitialize()`
-   is called because it may not have a valid value yet.
-
-.seealso: `PETSC_COMM_SELF`
-M*/
-PETSC_EXTERN MPI_Comm PETSC_COMM_WORLD;
-
-/*MC
-   PETSC_COMM_SELF - This is always `MPI_COMM_SELF`
-
-   Level: beginner
-
-   Note:
-   Do not USE/access or set this variable before `PetscInitialize()` has been called.
-
-.seealso: `PETSC_COMM_WORLD`
-M*/
-#define PETSC_COMM_SELF MPI_COMM_SELF
 
 /*MC
    PETSC_MPI_THREAD_REQUIRED - the required threading support used if PETSc initializes MPI with `MPI_Init_thread()`.
