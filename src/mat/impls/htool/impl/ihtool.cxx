@@ -1106,6 +1106,7 @@ static PetscErrorCode MatTranspose_Htool(Mat A, MatReuse reuse, Mat *B)
 struct MatFactorCtx {
   htool::HMatrix<PetscScalar> *hmatrix; /* factorized HMatrix filled by MatFactorNumeric_Htool() */
   PetscScalar                  scale;   /* scaling factor from MatShellGetScalingShifts(), applied as inverse scaling in Mat[Mat]Solve() */
+  char                         ldlt;    /* symmetry ('S' or 'H') of an LDL^T factorization, or 0 for a Cholesky factorization */
 };
 
 static PetscErrorCode MatFactorCtxDestroy(PetscCtxRt ctx)
@@ -1144,6 +1145,7 @@ static inline PetscErrorCode MatSolve_Private(Mat A, htool::Matrix<PetscScalar> 
   PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call Mat%sFactorNumeric() before Mat%sSolve%s()", A->factortype == MAT_FACTOR_LU ? "LU" : "Cholesky", X.nb_cols() == 1 ? "" : "Mat", trans == 'N' ? "" : "Transpose");
   PetscCall(PetscContainerGetPointer(container, &data));
   if (A->factortype == MAT_FACTOR_LU) PetscCallExternalVoid("lu_solve", htool::lu_solve(trans, *data->hmatrix, X));
+  else if (data->ldlt) PetscCallExternalVoid("ldlt_solve", htool::ldlt_solve(data->ldlt, 'U', *data->hmatrix, X));
   else PetscCallExternalVoid("cholesky_solve", htool::cholesky_solve('U', *data->hmatrix, X));
   PetscCallExternalVoid("scale", htool::scale(1.0 / data->scale, X));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1192,6 +1194,7 @@ static PetscErrorCode MatFactorNumeric_Htool(Mat F, Mat A, const MatFactorInfo *
   Mat_Htool     *a;
   PetscContainer container;
   MatFactorCtx  *data;
+  char           symmetry;
 
   PetscFunctionBegin;
   PetscCall(MatShellGetContext(A, &a));
@@ -1202,7 +1205,10 @@ static PetscErrorCode MatFactorNumeric_Htool(Mat F, Mat A, const MatFactorInfo *
   delete data->hmatrix;
   data->hmatrix = new htool::HMatrix<PetscScalar>(*a->local_hmatrix_view);
   PetscCall(MatShellGetScalingShifts(A, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, &data->scale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+  symmetry   = data->hmatrix->get_symmetry();
+  data->ldlt = ftype == MAT_FACTOR_CHOLESKY && (A->spd == PETSC_BOOL3_FALSE || (PetscDefined(USE_COMPLEX) && symmetry == 'S')) ? (symmetry == 'N' ? 'S' : symmetry) : 0;
   if (ftype == MAT_FACTOR_LU) PetscCallExternalVoid("sequential_lu_factorization", htool::sequential_lu_factorization(*data->hmatrix));
+  else if (data->ldlt) PetscCallExternalVoid("sequential_ldlt_factorization", htool::sequential_ldlt_factorization(data->ldlt, 'U', *data->hmatrix));
   else PetscCallExternalVoid("sequential_cholesky_factorization", htool::sequential_cholesky_factorization('U', *data->hmatrix));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1314,6 +1320,13 @@ static PetscErrorCode MatHtoolCreateFromKernel_Htool(Mat A, PetscInt spacedim, c
 
    Options Database Key:
 .     -mat_type htool - matrix type to `MATHTOOL`
+
+   Note:
+   Sequential `MAT_FACTOR_LU` and `MAT_FACTOR_CHOLESKY` factorizations are available with `MATSOLVERHTOOL`. A `MAT_FACTOR_CHOLESKY`
+   factorization uses the upper triangular part of the matrix. It is a true Cholesky factorization, unless the matrix is flagged
+   as not symmetric positive definite with `MatSetOption()` and `MAT_SPD` set to `PETSC_FALSE`, or is complex symmetric and not
+   flagged with `MAT_HERMITIAN`. In these cases, an $LDL^T$ factorization with Bunch-Kaufman pivoting within dense diagonal blocks is
+   computed, with $L^T$ replaced by $L^H$ for a matrix flagged with `MAT_HERMITIAN`.
 
    Level: beginner
 
