@@ -706,13 +706,19 @@ static PetscErrorCode MatSetFromOptions_Htool(Mat A, PetscOptionItems PetscOptio
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Htool symmetry tag matching the current flags of A: 'H' (Hermitian, complex only), 'S' (symmetric), or 'N' */
+static inline char MatHtoolGetSymmetry_Private(Mat A)
+{
+  return PetscDefined(USE_COMPLEX) && A->hermitian == PETSC_BOOL3_TRUE ? 'H' : (A->symmetric == PETSC_BOOL3_TRUE ? 'S' : 'N');
+}
+
 static PetscErrorCode MatAssemblyEnd_Htool(Mat A, MatAssemblyType)
 {
   Mat_Htool                                                           *a;
   const PetscInt                                                      *ranges;
   PetscInt                                                            *offset;
   PetscMPIInt                                                          size, rank;
-  char                                                                 S = PetscDefined(USE_COMPLEX) && A->hermitian == PETSC_BOOL3_TRUE ? 'H' : (A->symmetric == PETSC_BOOL3_TRUE ? 'S' : 'N'), uplo = S == 'N' ? 'N' : 'U';
+  char                                                                 S = MatHtoolGetSymmetry_Private(A), uplo = S == 'N' ? 'N' : 'U';
   htool::VirtualGenerator<PetscScalar>                                *generator = nullptr;
   htool::ClusterTreeBuilder<PetscReal>                                 recursive_build_strategy;
   htool::Cluster<PetscReal>                                           *source_cluster;
@@ -1205,7 +1211,8 @@ static PetscErrorCode MatFactorNumeric_Htool(Mat F, Mat A, const MatFactorInfo *
   delete data->hmatrix;
   data->hmatrix = new htool::HMatrix<PetscScalar>(*a->local_hmatrix_view);
   PetscCall(MatShellGetScalingShifts(A, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, &data->scale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
-  symmetry   = data->hmatrix->get_symmetry();
+  symmetry = data->hmatrix->get_symmetry();
+  if (symmetry == 'N') symmetry = MatHtoolGetSymmetry_Private(A); // full storage, symmetry flags may have been set after MatAssemblyEnd()
   data->ldlt = ftype == MAT_FACTOR_CHOLESKY && (A->spd == PETSC_BOOL3_FALSE || (PetscDefined(USE_COMPLEX) && symmetry == 'S')) ? (symmetry == 'N' ? 'S' : symmetry) : 0;
   if (ftype == MAT_FACTOR_LU) PetscCallExternalVoid("sequential_lu_factorization", htool::sequential_lu_factorization(*data->hmatrix));
   else if (data->ldlt) PetscCallExternalVoid("sequential_ldlt_factorization", htool::sequential_ldlt_factorization(data->ldlt, 'U', *data->hmatrix));
@@ -1321,14 +1328,14 @@ static PetscErrorCode MatHtoolCreateFromKernel_Htool(Mat A, PetscInt spacedim, c
    Options Database Key:
 .     -mat_type htool - matrix type to `MATHTOOL`
 
+   Level: beginner
+
    Note:
    Sequential `MAT_FACTOR_LU` and `MAT_FACTOR_CHOLESKY` factorizations are available with `MATSOLVERHTOOL`. A `MAT_FACTOR_CHOLESKY`
    factorization uses the upper triangular part of the matrix. It is a true Cholesky factorization, unless the matrix is flagged
    as not symmetric positive definite with `MatSetOption()` and `MAT_SPD` set to `PETSC_FALSE`, or is complex symmetric and not
    flagged with `MAT_HERMITIAN`. In these cases, an $LDL^T$ factorization with Bunch-Kaufman pivoting within dense diagonal blocks is
    computed, with $L^T$ replaced by $L^H$ for a matrix flagged with `MAT_HERMITIAN`.
-
-   Level: beginner
 
 .seealso: [](ch_matrices), `Mat`, `MATH2OPUS`, `MATDENSE`, `MatCreateHtoolFromKernel()`, `MatHtoolSetKernel()`
 M*/
