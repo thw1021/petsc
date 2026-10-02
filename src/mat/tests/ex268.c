@@ -26,7 +26,7 @@ int main(int argc, char **argv)
   PetscMPIInt       size;
   PetscReal        *coords, *gcoords, norm, epsilon;
   MatHtoolKernelFn *kernel = GenEntries;
-  PetscBool         flg, sym = PETSC_FALSE;
+  PetscBool         flg, sym = PETSC_FALSE, spd = PETSC_FALSE, set_spd;
   PetscRandom       rdm;
   MatSolverType     type;
 
@@ -37,6 +37,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-K", &K, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-symmetric", &sym, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-spd", &spd, &set_spd));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-mat_htool_epsilon", &epsilon, NULL));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   M = size * m;
@@ -52,10 +53,12 @@ int main(int argc, char **argv)
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, gcoords, M * dim, MPIU_REAL, MPI_SUM, PETSC_COMM_WORLD));
   PetscCall(MatCreateHtoolFromKernel(PETSC_COMM_WORLD, m, m, M, M, dim, coords, coords, kernel, gcoords, &A));
   PetscCall(MatSetOption(A, MAT_SYMMETRIC, sym));
+  if (set_spd) PetscCall(MatSetOption(A, MAT_SPD, spd));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatConvert(A, MATDENSE, MAT_INITIAL_MATRIX, &Ad));
+  PetscCall(MatPropagateSymmetryOptions(A, Ad));
   PetscCall(MatMultEqual(A, Ad, 10, &flg));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Ax != Adx");
   PetscCall(MatCreateDense(PETSC_COMM_WORLD, m, PETSC_DECIDE, M, K, NULL, &X));
@@ -63,7 +66,7 @@ int main(int argc, char **argv)
   PetscCall(MatViewFromOptions(A, NULL, "-A"));
   PetscCall(MatViewFromOptions(Ad, NULL, "-Ad"));
   PetscCall(MatViewFromOptions(B, NULL, "-B"));
-  for (PetscInt i = 0; i < 2; ++i) {
+  for (PetscInt i = sym || spd ? 1 : 0; i < 2; ++i) { // LU requires full storage, i.e., a MATHTOOL not flagged symmetric
     PetscCall(MatGetFactor(A, MATSOLVERHTOOL, i == 0 ? MAT_FACTOR_LU : MAT_FACTOR_CHOLESKY, &F));
     PetscCall(MatGetFactor(Ad, MATSOLVERPETSC, i == 0 ? MAT_FACTOR_LU : MAT_FACTOR_CHOLESKY, &Fd));
     PetscCall(MatFactorGetSolverType(F, &type));
@@ -140,7 +143,21 @@ int main(int argc, char **argv)
       requires: htool
       suffix: 1
       nsize: 1
-      args: -mat_htool_epsilon 1.0e-11
+      args: -mat_htool_epsilon 1.0e-11 -symmetric {{false true}shared output}
+      output_file: output/empty.out
+
+   test:
+      requires: htool
+      suffix: ldlt
+      nsize: 1
+      args: -mat_htool_epsilon 1.0e-11 -spd false -symmetric {{false true}shared output}
+      output_file: output/empty.out
+
+   test:
+      requires: htool
+      suffix: spd
+      nsize: 1
+      args: -mat_htool_epsilon 1.0e-11 -spd
       output_file: output/empty.out
 
 TEST*/
