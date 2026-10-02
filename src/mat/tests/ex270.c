@@ -4,17 +4,6 @@
 
 static const char help[] = "Test MatGetValue/Row for hypre matrix on device\n";
 
-/*
-  Read back every entry of the locally owned rows of a banded matrix and compare against the values
-  that were assembled into it.
-
-  The half bandwidth has to be at least two. hypre fixes the position of the diagonal within a
-  diagonal block row and constrains the order of the remaining columns nowhere, and a row only
-  holds its diagonal past the second column, where those orders start to differ, once it is that
-  wide.
-
-  Each fill path hands hypre its sparsity pattern by a different route, so all three are covered.
-*/
 static PetscErrorCode CheckBandedMatrix(MPI_Comm comm, PetscInt N, PetscInt bw, const char fill[])
 {
   Mat         A;

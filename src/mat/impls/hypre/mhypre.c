@@ -2173,18 +2173,7 @@ static PetscErrorCode MatRestoreRow_HYPRE(Mat A, PetscInt row, PetscInt *nz, Pet
 }
 
 #if PetscDefined(HAVE_HYPRE_DEVICE)
-/*
-  Read the requested entries of a device-resident matrix out of the ParCSR arrays.
-
-  hypre fixes the position of the diagonal within a diagonal block row and constrains the order of
-  the remaining columns nowhere, so each row is scanned for the requested columns. Two properties
-  keep hypre's own IJ entry reader out of this path: its device implementation has required the
-  columns after the diagonal to ascend, which the host assembly PETSc reaches from
-  MatSetPreallocationCOO() and from MatConvert() to MATHYPRE does not deliver, and
-  HYPRE_ParCSRMatrixGetRow() holds one active row per matrix, which would invalidate a row the
-  caller is holding from MatGetRow().
-*/
-static PetscErrorCode MatGetValuesDevice_HYPRE_Private(Mat A, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], PetscScalar v[])
+static PetscErrorCode MatGetValues_HYPRE_Device(Mat A, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], PetscScalar v[])
 {
   hypre_ParCSRMatrix *parcsr;
   hypre_CSRMatrix    *block[2];
@@ -2203,7 +2192,7 @@ static PetscErrorCode MatGetValuesDevice_HYPRE_Private(Mat A, PetscInt m, const 
   rstart       = A->rmap->rstart;
   cstart       = A->cmap->rstart;
   cend         = A->cmap->rend;
-  PetscCheck(!hypre_CSRMatrixNumCols(block[1]) || col_map_offd, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "hypre matrix has off-diagonal columns but no host column map to resolve them");
+  PetscCheck(!hypre_CSRMatrixNumCols(block[1]) || col_map_offd, PETSC_COMM_SELF, PETSC_ERR_PLIB, "hypre matrix has off-diagonal columns but no host column map to resolve them");
 
   for (PetscInt i = 0; i < m; i++) {
     if (idxm[i] < 0) continue; /* ignore negative row indices */
@@ -2264,7 +2253,7 @@ static PetscErrorCode MatGetValues_HYPRE(Mat A, PetscInt m, const PetscInt idxm[
 
 #if PetscDefined(HAVE_HYPRE_DEVICE)
   if (hypre_IJMatrixMemoryLocation(hA->ij) == HYPRE_MEMORY_DEVICE) {
-    PetscCall(MatGetValuesDevice_HYPRE_Private(A, m, idxm, n, idxn, v));
+    PetscCall(MatGetValues_HYPRE_Device(A, m, idxm, n, idxn, v));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 #endif
