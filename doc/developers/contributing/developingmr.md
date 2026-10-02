@@ -191,6 +191,9 @@ $ git checkout -b yourname/fix-component-name origin/main
   `claude`, `gemini`, `codex`, and `opencode` are supported directly. For other LLM CLIs, you must export `PETSC_LLM_CLI_OPTS` with the appropriate value to make the CLI run
   the command-line request; for example, `PETSC_LLM_CLI_OPTS=--prompt`.
 
+  The review covers the working tree, so uncommitted changes to tracked files are reviewed along with the commits of the branch.
+  Untracked files are not reviewed; run `git add` on new files to include them.
+
   When possible (this depends on the capabilities of the LLM CLI), `make branch-review` runs interactively and leaves the terminal in the LLM CLI when the review is complete.
   This allows users to issue additional commands to the LLM CLI, such as requesting that it fix certain issues it may have detected in the review.
 

@@ -3,7 +3,8 @@
 Fetch and prepare the diff reviewed by the review skills in .agents/skills/.
 
   ai_review_fetch.py mr [IID]      remote merge request state; needs glab
-  ai_review_fetch.py branch [REF]  local REF against origin/main or origin/release
+  ai_review_fetch.py branch [REF]  local REF against origin/main or origin/release; for HEAD,
+                                   the working tree, including uncommitted changes to tracked files
 
 Both modes change to the repository root and write there the diff that is
 reviewed (mr-IID-diff.txt or branch-review.txt), in which the bodies of .out
@@ -20,7 +21,9 @@ import os
 import re
 import sys
 import json
+import shutil
 import argparse
+import tempfile
 import subprocess
 import urllib.parse
 
@@ -51,10 +54,10 @@ def flatten(raw):
   """Decode captured output to a single line, for embedding in a message."""
   return raw.decode('utf-8', 'replace').strip().replace('\n', ' ')
 
-def run(cmd, timeout, check=True):
+def run(cmd, timeout, check=True, env=None):
   """Run cmd, always as an argument list so no shell quoting or expansion applies."""
   try:
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, env=env)
   except FileNotFoundError:
     die('%s is not in PATH' % cmd[0])
   except subprocess.TimeoutExpired:
@@ -184,6 +187,25 @@ def cmd_mr(args):
   build(raw, 'mr-%s-diff.txt' % iid, files)
   emit('DRIFT', drift)
 
+def worktree_tree(timeout):
+  """Return the tree of the working tree, or None when its tracked files have no uncommitted changes.
+
+  The tree holds the staged and unstaged changes to files in the index; untracked files, such as
+  unignored build directories, are left out. It is written through a temporary copy of the index,
+  so the index of the caller is left unchanged.
+  """
+  _, out, _ = run(['git', 'status', '--porcelain', '--untracked-files=no'], timeout)
+  if not out.strip(): return None
+  _, out, _ = run(['git', 'rev-parse', '--git-path', 'index'], timeout)
+  index = out.decode('utf-8', 'replace').strip()
+  with tempfile.TemporaryDirectory(prefix='ai_review_fetch.') as tmpdir:
+    tmpindex = os.path.join(tmpdir, 'index')
+    if os.path.exists(index): shutil.copyfile(index, tmpindex)
+    env = dict(os.environ, GIT_INDEX_FILE=tmpindex)
+    run(['git', 'add', '-u'], timeout, env=env)
+    _, out, _ = run(['git', 'write-tree'], timeout, env=env)
+  return out.decode().strip()
+
 def cmd_branch(args):
   src = args.ref
   if not REF_RE.match(src): die('invalid ref %r' % src)
@@ -202,14 +224,29 @@ def cmd_branch(args):
   if code > 1: die('git merge-base --is-ancestor %s origin/release exited %d' % (forked, code))
   dest = 'origin/release' if code == 0 else 'origin/main'
 
-  _, raw, _ = run(['git', 'diff', '--no-ext-diff', '%s...%s' % (dest, src)], args.timeout)
-  if not raw.strip(): die('%s...%s is empty; nothing to review' % (dest, src))
-  _, out, _ = run(['git', 'diff', '--shortstat', '%s...%s' % (dest, src)], args.timeout)
+  # Reviewing HEAD covers the working tree, so changes are reviewed before they are committed
+  tree = worktree_tree(args.timeout) if src == 'HEAD' else None
+  if tree:
+    _, out, _ = run(['git', 'merge-base', dest, 'HEAD'], args.timeout)
+    target    = [out.decode().strip(), tree]
+  else: target = ['%s...%s' % (dest, src)]
+  if src == 'HEAD':
+    # --directory lists an untracked directory once, without reading its contents
+    _, out, _ = run(['git', 'ls-files', '-z', '--others', '--exclude-standard', '--directory'], args.timeout)
+    untracked = [path for path in out.decode('utf-8', 'replace').split('\0') if path]
+    if untracked:
+      shown = ' '.join(untracked[:5]) + (' ...' if len(untracked) > 5 else '')
+      count = '1 untracked path is' if len(untracked) == 1 else '%d untracked paths are' % len(untracked)
+      warn('%s not reviewed (%s); run git add on new files to include them' % (count, shown))
+  _, raw, _ = run(['git', 'diff', '--no-ext-diff'] + target, args.timeout)
+  if not raw.strip(): die('the changes of %s against %s are empty; nothing to review' % (src, dest))
+  _, out, _ = run(['git', 'diff', '--shortstat'] + target, args.timeout)
   shortstat = out.decode('utf-8', 'replace').strip()
   _, out, _ = run(['git', 'rev-parse', src], args.timeout)
 
   emit('SRC', src)
   emit('SRC_SHA', out.decode().strip())
+  emit('WORKTREE', 'yes' if tree else 'no')
   emit('DEST', dest)
   emit('SHORTSTAT', shortstat)
   build(raw, 'branch-review.txt')
@@ -224,7 +261,7 @@ def main():
   mode.add_argument('iid', nargs='?', help='merge request IID (default: the open merge request for the current branch)')
   mode.set_defaults(func=cmd_mr)
   mode = modes.add_parser('branch', parents=[common], help='diff a local ref against origin/main or origin/release')
-  mode.add_argument('ref', nargs='?', default='HEAD', help='ref to review (default: HEAD)')
+  mode.add_argument('ref', nargs='?', default='HEAD', help='ref to review (default: HEAD, which includes uncommitted changes to tracked files)')
   mode.set_defaults(func=cmd_branch)
   args = parser.parse_args()
   chdir_root(args.timeout)
