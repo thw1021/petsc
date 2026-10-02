@@ -8,6 +8,6 @@ argument-hint: <branch | commit-ref | empty for HEAD>
 
 Run `python3 lib/petsc/bin/maint/ai_review_fetch.py branch <SRC>` (path relative to the repository root) as a single shell command with no shell metacharacters. Stop and report if it exits non-zero.
 
-It writes `branch-review.txt`, and prints `SRC`, `SRC_SHA`, `DEST`, `SHORTSTAT`, `DIFF_FILE`, `FILES`, and `LINES`. State `DEST` and `SHORTSTAT`.
+It writes `branch-review.txt`, and prints `SRC`, `SRC_SHA`, `WORKTREE`, `DEST`, `SHORTSTAT`, `DIFF_FILE`, `FILES`, and `LINES`. State `DEST` and `SHORTSTAT`. `WORKTREE=yes` means the diff is of the working tree, including uncommitted changes to tracked files; say so in the report, and in Section 4 treat the working tree as the reviewed revision. Repeat every `WARNING:` line, such as the one naming untracked paths left out of the review.
 
 Follow @../review-mr/review-procedure.md (Sections 3–5), skipping parts marked **MR only**, to review and verify findings and compose the report. Report to stdout only.

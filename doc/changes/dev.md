@@ -9,6 +9,8 @@
 ```{rubric} General:
 ```
 
+- Change `make branch-review` to review the working tree, so uncommitted changes to tracked files are included
+
 ```{rubric} Configure/Build:
 ```
 
