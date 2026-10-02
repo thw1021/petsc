@@ -48,6 +48,8 @@
 ```{rubric} Mat:
 ```
 
+- Change `MatSetValuesCOO()` for `MATAIJ` and its device subtypes to generate an error when the nonzero pattern has changed since `MatSetPreallocationCOO()`, for example because `MatSetValues()` inserted a new nonzero; values were previously written into wrong locations in such a sequence of events
+
 ```{rubric} MatCoarsen:
 ```
 
