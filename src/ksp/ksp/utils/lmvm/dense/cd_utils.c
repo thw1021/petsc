@@ -3,7 +3,6 @@
 #include <petscmat.h>
 #include <petscsystypes.h>
 #include <petscis.h>
-#include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
 
 const char *const MatLMVMDenseTypes[] = {"reorder", "inplace", "MatLMVMDenseType", "MAT_LMVM_DENSE_", NULL};

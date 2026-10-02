@@ -4,8 +4,6 @@
 #include <petscmat.h>
 #include <petscsystypes.h>
 #include <petscis.h>
-#include <petscoptions.h>
-#include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
 
 static PetscErrorCode MatMult_LMVMDQN(Mat, Vec, Vec);

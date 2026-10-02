@@ -7,7 +7,6 @@
 #include <../src/mat/utils/freespace.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petscbt.h>
-#include <petsctime.h>
 #include <petsc/private/hashmapiv.h>
 #include <petsc/private/hashseti.h>
 #include <petscsf.h>

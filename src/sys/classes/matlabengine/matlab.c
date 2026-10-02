@@ -1,5 +1,4 @@
 #include <engine.h> /* MATLAB include file */
-#include <petscsys.h>
 #include <petscmatlab.h>
 #include <petsc/private/petscimpl.h>
 

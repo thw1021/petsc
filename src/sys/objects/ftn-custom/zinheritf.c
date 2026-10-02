@@ -1,6 +1,5 @@
 #include "petscfix.h"
 #include "petsc/private/ftnimpl.h"
-#include <petscoptions.h>
 #if PetscDefined(HAVE_FORTRAN_CAPS)
   #define petscobjectaddoptionshandler_ PETSCOBJECTADDOPTIONSHANDLER
 #elif !PetscDefined(HAVE_FORTRAN_UNDERSCORE)
