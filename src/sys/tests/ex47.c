@@ -1,6 +1,5 @@
 static char help[] = "Example for PetscOptionsInsertFileYAML\n";
 
-#include <petscsys.h>
 #include <petscviewer.h>
 
 int main(int argc, char **argv)

@@ -1,6 +1,5 @@
 static char help[] = "Tests repeatedly setting a window type.\n";
 
-#include <petscsys.h>
 #include <petscdraw.h>
 
 int main(int argc, char **argv)

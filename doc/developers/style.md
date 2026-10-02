@@ -672,7 +672,7 @@ In general, the `petsc*types.h` file contains the non-function pointer typedefs 
 `#define PETSC_DRAW_X "x"`). Function prototypes, function pointer typedefs (for example, `SNESFunctionFn`), and function-like C preprocessing macros
 (for example, `#define PetscMalloc1()`) are in `petsc*.h`. Exceptions to these general rules may exist for a specific reason.
 
-Each public header `petsc*.h` must include its corresponding `petsc*types.h` to ensure type definitions are available when the public header is included directly.
+Each public header `petsc*.h` must include its corresponding `petsc*types.h`, if it exists, to ensure type definitions are available when the public header is included directly.
 
 (manual_page_format)=
 

@@ -9,8 +9,8 @@
 #include <float.h>
 #include <sys/time.h>
 #include <stdlib.h>
-#include <omp.h>
 #include <petscsys.h>
+#include <omp.h>
 
 #define NTIMESINNER 1
 #define N           2 * 4 * 20000000
