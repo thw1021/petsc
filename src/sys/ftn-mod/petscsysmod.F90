@@ -4,10 +4,13 @@ module petscmpi
 #include "petsc/finclude/petscsys.h"
 #if defined(PETSC_HAVE_MPIUNI)
   use mpiuni
+  implicit none
 #else
 #if defined(PETSC_HAVE_MPI_FTN_MODULE)
   use PETSC_MPI_FTN_MODULE
+  implicit none
 #else
+  implicit none
 #include "mpif.h"
 #endif
 #endif
@@ -229,9 +232,9 @@ module petscsysdef
   PetscReal, parameter :: PETSC_MIN_REAL = -huge(1.0_PETSC_REAL_KIND)
   PetscReal, parameter :: PETSC_MACHINE_EPSILON = epsilon(1.0_PETSC_REAL_KIND)
   PetscReal, parameter :: PETSC_SQRT_MACHINE_EPSILON = sqrt(PETSC_MACHINE_EPSILON)
-  PetscReal :: PETSC_SMALL
-  PetscReal :: PETSC_INFINITY
-  PetscReal :: PETSC_NINFINITY
+  PetscReal, protected :: PETSC_SMALL
+  PetscReal, protected :: PETSC_INFINITY
+  PetscReal, protected :: PETSC_NINFINITY
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_CHARACTER
@@ -262,6 +265,15 @@ module petscsysdef
     sequence
     PetscReal, dimension(:), pointer :: ptr
   end type tPetscReal2D
+
+contains
+  subroutine petscsetmoduleblocknumeric(small, pinf, pninf) bind(c)
+    PetscReal small, pinf, pninf
+
+    PETSC_SMALL = small
+    PETSC_INFINITY = pinf
+    PETSC_NINFINITY = pninf
+  end subroutine petscsetmoduleblocknumeric
 
 end module petscsysdef
 
@@ -688,15 +700,3 @@ subroutine PetscSetModuleBlockMPI(freal, fscalar, fsum, finteger, fcbool)
   MPI_C_BOOL = fcbool
 #endif
 end subroutine PetscSetModuleBlockMPI
-
-subroutine PetscSetModuleBlockNumeric(small, pinf, pninf)
-  use petscsys, only: PETSC_SMALL, PETSC_INFINITY, PETSC_NINFINITY
-  use, intrinsic :: ISO_C_binding
-  implicit none
-
-  PetscReal small, pinf, pninf
-
-  PETSC_SMALL = small
-  PETSC_INFINITY = pinf
-  PETSC_NINFINITY = pninf
-end subroutine PetscSetModuleBlockNumeric
