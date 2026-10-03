@@ -4,10 +4,13 @@ module petscmpi
 #include "petsc/finclude/petscsys.h"
 #if defined(PETSC_HAVE_MPIUNI)
   use mpiuni
+  implicit none
 #else
 #if defined(PETSC_HAVE_MPI_FTN_MODULE)
   use PETSC_MPI_FTN_MODULE
+  implicit none
 #else
+  implicit none
 #include "mpif.h"
 #endif
 #endif
@@ -224,14 +227,14 @@ module petscsysdef
 !
 !     Basic math constants
 !
-  PetscReal PETSC_PI
-  PetscReal PETSC_MAX_REAL
-  PetscReal PETSC_MIN_REAL
-  PetscReal PETSC_MACHINE_EPSILON
-  PetscReal PETSC_SQRT_MACHINE_EPSILON
-  PetscReal PETSC_SMALL
-  PetscReal PETSC_INFINITY
-  PetscReal PETSC_NINFINITY
+  PetscReal, parameter :: PETSC_PI = acos(-1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MAX_REAL = huge(1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MIN_REAL = -huge(1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MACHINE_EPSILON = epsilon(1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_SQRT_MACHINE_EPSILON = sqrt(PETSC_MACHINE_EPSILON)
+  PetscReal, protected :: PETSC_SMALL
+  PetscReal, protected :: PETSC_INFINITY
+  PetscReal, protected :: PETSC_NINFINITY
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_CHARACTER
@@ -262,6 +265,15 @@ module petscsysdef
     sequence
     PetscReal, dimension(:), pointer :: ptr
   end type tPetscReal2D
+
+contains
+  subroutine petscsetmoduleblocknumeric(small, pinf, pninf) bind(c)
+    PetscReal small, pinf, pninf
+
+    PETSC_SMALL = small
+    PETSC_INFINITY = pinf
+    PETSC_NINFINITY = pninf
+  end subroutine petscsetmoduleblocknumeric
 
 end module petscsysdef
 
@@ -688,23 +700,3 @@ subroutine PetscSetModuleBlockMPI(freal, fscalar, fsum, finteger, fcbool)
   MPI_C_BOOL = fcbool
 #endif
 end subroutine PetscSetModuleBlockMPI
-
-subroutine PetscSetModuleBlockNumeric(pi, maxreal, minreal, eps, seps, small, pinf, pninf)
-  use petscsys, only: PETSC_PI, PETSC_MAX_REAL, PETSC_MIN_REAL, &
-                      PETSC_MACHINE_EPSILON, PETSC_SQRT_MACHINE_EPSILON, &
-                      PETSC_SMALL, PETSC_INFINITY, PETSC_NINFINITY
-  use, intrinsic :: ISO_C_binding
-  implicit none
-
-  PetscReal pi, maxreal, minreal, eps, seps
-  PetscReal small, pinf, pninf
-
-  PETSC_PI = pi
-  PETSC_MAX_REAL = maxreal
-  PETSC_MIN_REAL = minreal
-  PETSC_MACHINE_EPSILON = eps
-  PETSC_SQRT_MACHINE_EPSILON = seps
-  PETSC_SMALL = small
-  PETSC_INFINITY = pinf
-  PETSC_NINFINITY = pninf
-end subroutine PetscSetModuleBlockNumeric
