@@ -6,7 +6,6 @@
 
 #include <petscconf.h>
 #include <petscpkg_version.h>
-#include <petscconf_poison.h>
 #include <petscfix.h>
 #include <petscmacros.h> // PETSC_NODISCARD, PETSC_CPP_VERSION
 #include <stddef.h>

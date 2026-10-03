@@ -15,9 +15,6 @@
    directory as the other PETSc include files.
 */
 #include <petscconf.h>
-#include <petscpkg_version.h>
-#include <petscconf_poison.h>
-#include <petscfix.h>
 #include <petscmacros.h>
 
 /* SUBMANSEC = Sys */

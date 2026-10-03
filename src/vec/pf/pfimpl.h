@@ -2,7 +2,6 @@
 
 #include <petscpf.h>
 #include <petsc/private/petscimpl.h>
-#include <petscviewertypes.h>
 
 PETSC_EXTERN PetscBool      PFRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode PFRegisterAll(void);
