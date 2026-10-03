@@ -12,6 +12,8 @@
 ```{rubric} Configure/Build:
 ```
 
+- Remove the `--with-serialize-functions` configure option and the associated function-pointer serialization feature (`PETSC_SERIALIZE_FUNCTIONS`)
+
 ```{rubric} Sys:
 ```
 
