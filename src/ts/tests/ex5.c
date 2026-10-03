@@ -65,6 +65,7 @@ static char help[] = "Nonlinear, time-dependent. Developed from radiative_surfac
    and not as a predictive weather model.
 */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

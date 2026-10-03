@@ -1,5 +1,6 @@
 static const char help[] = "Tests PetscDeviceContextMarkIntentFromID().\n\n";
 
+#include <petscoptions.h>
 #include "petscdevicetestcommon.h"
 #include <petscviewer.h>
 

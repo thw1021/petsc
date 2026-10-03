@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/pcpatchimpl.h> /*I "petscpc.h" I*/
 #include <petsc/private/kspimpl.h>     /* For ksp->setfromoptionscalled */
 #include <petsc/private/vecimpl.h>     /* For vec->map */

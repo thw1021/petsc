@@ -18,6 +18,7 @@ F*/
   The discontinuities are detected with TSEvent.
  */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include "ex3.h"
 

@@ -1,5 +1,6 @@
 static char help[] = "Tests DMComposite routines.\n\n";
 
+#include <petscoptions.h>
 #include <petscdmredundant.h>
 #include <petscdm.h>
 #include <petscdmda.h>

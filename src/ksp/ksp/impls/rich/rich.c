@@ -1,6 +1,7 @@
 /*
             This implements Richardson Iteration.
 */
+#include <petscoptions.h>
 #include <../src/ksp/ksp/impls/rich/richardsonimpl.h> /*I "petscksp.h" I*/
 
 static PetscErrorCode KSPSetUp_Richardson(KSP ksp)

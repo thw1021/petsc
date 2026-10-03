@@ -1,5 +1,6 @@
 static char help[] = "Tests the use of interface functions for MATIS matrices and conversion routines.\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 PetscErrorCode TestMatZeroRows(Mat, Mat, PetscBool, IS, PetscScalar, PetscBool);

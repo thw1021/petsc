@@ -1,5 +1,6 @@
 static char help[] = "Tests MatGetColumnNorms()/Sums()/Means() for matrix read from file.";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

@@ -5,6 +5,7 @@ static char help[] = "A benchmark for testing PetscSortInt(), PetscSortIntSemiOr
                       -r <repeat times for each sort>, default=10 \n\
                       -d <average duplicates for each unique integer>, default=1, i.e., no duplicates \n\n";
 
+#include <petscoptions.h>
 #include <petscvec.h>
 int main(int argc, char **argv)
 {

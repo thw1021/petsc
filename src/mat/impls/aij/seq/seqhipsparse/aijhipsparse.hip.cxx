@@ -4,6 +4,7 @@
   Portions of this code are under:
   Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 */
+#include <petscoptions.h>
 #include <petscconf.h>
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <../src/mat/impls/sbaij/seq/sbaij.h>

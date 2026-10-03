@@ -7,6 +7,7 @@ static char help[] = "Reads a PETSc matrix and vector from a file; expands the m
      petscmat.h    - matrices
      petscis.h     - index sets            petscviewer.h - viewers
 */
+#include <petscoptions.h>
 #include <petscmat.h>
 
 /*

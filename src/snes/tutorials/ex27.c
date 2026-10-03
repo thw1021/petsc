@@ -87,6 +87,7 @@ This is also possible with the automated path
   -adapt_vec_view hdf5:${PWD}/mesh.h5::append
 */
 
+#include <petscoptions.h>
 #include <petscsnes.h>
 #include <petscdmplex.h>
 #include <petscdmadaptortypes.h>

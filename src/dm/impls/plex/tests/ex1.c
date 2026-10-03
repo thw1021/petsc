@@ -1,5 +1,6 @@
 static char help[] = "Tests various DMPlex routines to construct, refine and distribute a mesh.\n\n";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscdmplextransform.h>
 #include <petscsf.h>

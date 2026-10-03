@@ -1,5 +1,6 @@
 static char help[] = "Tests MatPtAP() for MPIMAIJ and MPIAIJ \n ";
 
+#include <petscoptions.h>
 #include <petscdmda.h>
 
 int main(int argc, char **argv)

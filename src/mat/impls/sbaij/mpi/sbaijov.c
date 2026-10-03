@@ -2,6 +2,7 @@
    Routines to compute overlapping regions of a parallel MPI matrix.
    Used for finding submatrices that were shared across processors.
 */
+#include <petscoptions.h>
 #include <../src/mat/impls/sbaij/mpi/mpisbaij.h>
 
 static PetscErrorCode MatIncreaseOverlap_MPISBAIJ_Once(Mat, PetscInt, IS *);

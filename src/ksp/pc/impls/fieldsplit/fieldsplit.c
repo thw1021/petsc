@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/pcimpl.h>  /*I "petscpc.h" I*/
 #include <petsc/private/kspimpl.h> /*  This is needed to provide the appropriate PETSC_EXTERN for KSP_Solve_FS ....*/
 #include <petsc/private/matimpl.h> /* MatScatterDense_Private() for PCMatApply() */

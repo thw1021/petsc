@@ -12,6 +12,7 @@ in current balance form using rectangular coordinates.\n\n";
   The gradient is computed with the discrete adjoint of an implicit theta method, see ex9busadj.c for details.
 */
 
+#include <petscoptions.h>
 #include <petsctao.h>
 #include <petscts.h>
 #include <petscdm.h>

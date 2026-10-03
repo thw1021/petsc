@@ -1,5 +1,6 @@
 const char help[] = "Test TAOLMVM on a least-squares problem";
 
+#include <petscoptions.h>
 #include <petsctao.h>
 
 typedef struct _n_AppCtx {

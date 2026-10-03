@@ -1,6 +1,7 @@
 /*
       Defines a SNES that can consist of a collection of SNESes
 */
+#include <petscoptions.h>
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 #include <petscblaslapack.h>
 

@@ -1,5 +1,6 @@
 static char help[] = "Tests the different MatColoring implementations.\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

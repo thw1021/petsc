@@ -1,5 +1,6 @@
 const char help[] = "Profile the performance of MATLMVM MatSolve() in a loop";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **argv)

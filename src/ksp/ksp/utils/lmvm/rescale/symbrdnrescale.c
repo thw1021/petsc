@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include "symbrdnrescale.h"
 
 PetscLogEvent SBRDN_Rescale;

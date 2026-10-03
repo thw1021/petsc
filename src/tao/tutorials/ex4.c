@@ -1,5 +1,6 @@
 static char help[] = "Simple example to test separable objective optimizers.\n";
 
+#include <petscoptions.h>
 #include <petsc.h>
 #include <petsctao.h>
 #include <petscvec.h>

@@ -1,5 +1,6 @@
 const char help[] = "Coverage and edge case test for LMVM";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **argv)

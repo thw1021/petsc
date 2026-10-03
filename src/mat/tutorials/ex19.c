@@ -1,5 +1,6 @@
 const char help[] = "Test MatCreateDenseFromVecType()\n\n";
 
+#include <petscoptions.h>
 #include <petscdevice_cuda.h>
 #include <petscmat.h>
 #include <petscconf.h>

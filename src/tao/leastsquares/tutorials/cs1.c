@@ -9,6 +9,7 @@
 
 */
 
+#include <petscoptions.h>
 #include <petsctao.h>
 
 /*

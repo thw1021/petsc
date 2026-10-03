@@ -1,4 +1,5 @@
 static char help[] = "Tests MatPermute() for a square matrix in parallel.\n\n";
+#include <petscoptions.h>
 #include <petscmat.h>
 /* Results:
    Sequential:

@@ -15,6 +15,7 @@ static const char help[] = "Time-dependent Brusselator reaction-diffusion PDE in
 */
 
 // PETSc includes:
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdmmoab.h>
 

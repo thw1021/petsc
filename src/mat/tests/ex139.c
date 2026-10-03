@@ -1,5 +1,6 @@
 const char help[] = "Test MatCreateLocalRef()\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 static PetscErrorCode GetLocalRef(Mat A, IS isrow, IS iscol, Mat *B)

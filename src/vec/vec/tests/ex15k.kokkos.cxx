@@ -12,6 +12,7 @@ static char help[] = "Benchmarking memory bandwidth with VecAXPY() on parallel v
   $ srun -n1 -c32 --cpu-bind=map_cpu:0 --gpus-per-node=8 --gpu-bind=map_gpu:0 ./ex15k -vec_type kokkos
 */
 
+#include <petscoptions.h>
 #include <petscvec.h>
 
 #if PetscDefined(HAVE_CUDA)

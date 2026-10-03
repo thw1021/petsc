@@ -5,6 +5,7 @@ differently from the way it is assembled.  Input arguments are:\n\
 
 /* Addendum: piggy-backing on this example to test KSPChebyshev methods */
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 PetscErrorCode FormElementStiffness(PetscReal H, PetscScalar *Ke)

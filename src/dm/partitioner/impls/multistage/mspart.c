@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscsf.h>
 #include <petscdmplex.h>
 #include <petsc/private/dmimpl.h>

@@ -1,5 +1,6 @@
 static char help[] = "Illustrates creating an options database.\n\n";
 
+#include <petscoptions.h>
 #include <petscviewer.h>
 int main(int argc, char **argv)
 {

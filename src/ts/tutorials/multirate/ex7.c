@@ -20,6 +20,7 @@ static const char help[] = "1D periodic Finite Volume solver by a particular slo
                            "                             alpha(k+1/2) = (h_k*h_(k+1))/(h_(k-1)+h_k)/(h_(k-1)+h_k+h_(k+1))                     \n"
                            "                             gamma(k+1/2) = h_k*(h_(k-1)+h_k)/(h_k+h_(k+1))/(h_(k-1)+h_k+h_(k+1))                 \n";
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

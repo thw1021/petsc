@@ -7,6 +7,7 @@
 
 static char help[] = " Demonstrate the use of MatConvert_Nest_AIJ\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

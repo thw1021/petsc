@@ -23,6 +23,7 @@ Input parameters include:\n";
   E = (v^2+omega^2*x^2-omega^2*h*v*x)/2
   ------------------------------------------------------------------------- */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscvec.h>
 

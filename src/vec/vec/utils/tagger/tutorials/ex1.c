@@ -1,5 +1,6 @@
 static char help[] = "VecTagger interface routines.\n\n";
 
+#include <petscoptions.h>
 #include <petscvec.h>
 
 static PetscErrorCode ISGetBlockGlobalIS(IS is, Vec vec, PetscInt bs, IS *isBlockGlobal)

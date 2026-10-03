@@ -8,6 +8,7 @@ static char help[] = "Reads a PETSc matrix and vector from a file and solves the
      petscis.h     - index sets            petscksp.h - Krylov subspace methods
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
+#include <petscoptions.h>
 #include <petscksp.h>
 #include <petscviewerhdf5.h>
 

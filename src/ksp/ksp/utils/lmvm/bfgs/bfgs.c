@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/ksp/ksp/utils/lmvm/symbrdn/symbrdn.h> /*I "petscksp.h" I*/
 #include <petsc/private/vecimpl.h>
 

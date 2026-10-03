@@ -4,6 +4,7 @@ static char help[] = "Tests C=A^T*B via MatTranspose() and MatMatMult(). \n\
   mpiexec -n <np> ./ex165 -fA A.dat -fB B.dat -view_C
  */
 
+#include <petscoptions.h>
 #include <petscmat.h>
 int main(int argc, char **args)
 {

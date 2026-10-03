@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscmacros.h>
 // We need to define this ahead of any other includes to make sure mkstemp is actually defined
 #if PetscDefined(HAVE_MKSTEMP)

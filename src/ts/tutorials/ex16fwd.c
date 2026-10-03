@@ -43,6 +43,7 @@ Input parameters include:\n\
 
   ------------------------------------------------------------------------- */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscmat.h>
 typedef struct _n_User *User;

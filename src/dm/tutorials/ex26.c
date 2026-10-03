@@ -1,5 +1,6 @@
 static char help[] = "Calculates moments for Gaussian functions.\n\n";
 
+#include <petscoptions.h>
 #include <petscdt.h>
 #include <petscvec.h>
 

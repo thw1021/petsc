@@ -1,5 +1,6 @@
 static char help[] = "Tests MatMult() on MatLoad() matrix \n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

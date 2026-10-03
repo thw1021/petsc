@@ -10,6 +10,7 @@
   This method is designed to be linearly implicit on F and can use an approximate and lagged Jacobian.
 
 */
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petscdm.h>
 

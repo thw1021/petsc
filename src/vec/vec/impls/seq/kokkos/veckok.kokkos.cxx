@@ -1,6 +1,7 @@
 /*
    Implements the sequential Kokkos vectors.
 */
+#include <petscoptions.h>
 #include <petsc_kokkos.hpp>
 #include <petscvec_kokkos.hpp>
 

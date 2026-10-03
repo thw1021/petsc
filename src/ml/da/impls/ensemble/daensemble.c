@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscda.h>
 #include <petsc/private/daimpl.h>
 #include <petscblaslapack.h>

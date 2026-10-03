@@ -11,6 +11,7 @@ in current balance form using rectangular coordinates.\n\n";
    The code computes the sensitivity of a final state w.r.t. initial conditions.
 */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

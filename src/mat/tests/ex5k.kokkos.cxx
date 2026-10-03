@@ -27,6 +27,7 @@ Examples:
     # 8 MPI ranks
     srun -N1 -n8 -c2 --gpus-per-node=8 --gpu-bind=closest ./ex5k -f HV15R.aij -mat_type aijkokkos
 */
+#include <petscoptions.h>
 #include <petscmat.h>
 
 #if PetscDefined(HAVE_CUDA)

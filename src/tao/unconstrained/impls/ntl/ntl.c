@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/tao/unconstrained/impls/ntl/ntlimpl.h>
 
 #include <petscksp.h>

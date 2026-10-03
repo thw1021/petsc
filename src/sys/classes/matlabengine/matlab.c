@@ -1,5 +1,5 @@
+#include <petscoptions.h>
 #include <engine.h> /* MATLAB include file */
-#include <petscsys.h>
 #include <petscmatlab.h> /*I   "petscmatlab.h"  I*/
 #include <petsc/private/petscimpl.h>
 

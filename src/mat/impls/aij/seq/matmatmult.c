@@ -3,6 +3,7 @@
           C = A * B
 */
 
+#include <petscoptions.h>
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <../src/mat/utils/freespace.h>
 #include <petsc/private/isimpl.h>

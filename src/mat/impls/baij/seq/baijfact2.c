@@ -2,6 +2,7 @@
     Factorization code for BAIJ format.
 */
 
+#include <petscoptions.h>
 #include <../src/mat/impls/baij/seq/baij.h>
 #include <petsc/private/kernels/blockinvert.h>
 #include <../src/mat/utils/freespace.h>

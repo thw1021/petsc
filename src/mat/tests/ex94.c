@@ -6,6 +6,7 @@ Input arguments are:\n\
    mpiexec -n 3 ./ex94 -f0 medium -f1 medium -f2 arco1 -f3 arco1 -matmatmult_mat_view
 */
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 /*

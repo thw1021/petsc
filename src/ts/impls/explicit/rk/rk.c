@@ -8,6 +8,7 @@
 
 */
 
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petscdm.h>
 #include <../src/ts/impls/explicit/rk/rk.h>

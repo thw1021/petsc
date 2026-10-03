@@ -30,6 +30,7 @@ static const char help[] = "1D periodic Finite Volume solver in slope-limiter fo
                            "Several initial conditions can be chosen with -initial N\n\n"
                            "The problem size should be set with -da_grid_x M\n\n";
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

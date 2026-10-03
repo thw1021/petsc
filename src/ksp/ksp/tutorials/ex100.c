@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscksp.h>
 
 // Keep this driver and the companion Python driver ex100.py in sync.

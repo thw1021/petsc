@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/ml/regressor/impls/linear/linearimpl.h> /*I "petscregressor.h" I*/
 
 const char *const PetscRegressorLinearTypes[] = {"ols", "lasso", "ridge", "RegressorLinearType", "REGRESSOR_LINEAR_", NULL};

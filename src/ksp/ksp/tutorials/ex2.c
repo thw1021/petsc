@@ -7,6 +7,7 @@ Input parameters include:\n\
 /*
   Include "petscksp.h" so that we can use KSP solvers.
 */
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

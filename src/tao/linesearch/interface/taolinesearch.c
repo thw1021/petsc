@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsctaolinesearch.h> /*I "petsctaolinesearch.h" I*/
 #include <petsc/private/taolinesearchimpl.h>
 

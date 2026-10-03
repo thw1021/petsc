@@ -29,6 +29,7 @@ static char help[] = "Solves a simple data assimilation problem with one dimensi
      petscksp.h   - linear solvers        petscsnes.h - nonlinear solvers
 */
 
+#include <petscoptions.h>
 #include <petsctao.h>
 #include <petscts.h>
 #include <petscdt.h>

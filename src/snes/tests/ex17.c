@@ -10,6 +10,7 @@ petscis.h     - index sets            petscksp.h - Krylov subspace methods
 petscviewer.h - viewers               petscpc.h  - preconditioners
 petscksp.h   - linear solvers
 */
+#include <petscoptions.h>
 #include <petscsnes.h>
 
 /*

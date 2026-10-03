@@ -1,4 +1,5 @@
 static char help[] = "Used to benchmark changes to the PETSc VecScatter routines\n\n";
+#include <petscoptions.h>
 #include <petscksp.h>
 extern PetscErrorCode PetscLogView_VecScatter(PetscViewer);
 

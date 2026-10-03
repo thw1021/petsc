@@ -1,5 +1,6 @@
 static char help[] = "Checks the functionality of DMGetInterpolation() on deformed grids.\n\n";
 
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 

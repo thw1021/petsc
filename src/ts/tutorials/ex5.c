@@ -46,6 +46,7 @@ Input parameters include:\n\
      petscviewer.h - viewers               petscpc.h   - preconditioners
      petscksp.h   - linear solvers        petscsnes.h - nonlinear solvers
 */
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdraw.h>
 

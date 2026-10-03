@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/snes/impls/fas/fasimpls.h> /*I  "petscsnes.h"  I*/
 
 const char *const SNESFASTypes[] = {"MULTIPLICATIVE", "ADDITIVE", "FULL", "KASKADE", "SNESFASType", "SNES_FAS", NULL};

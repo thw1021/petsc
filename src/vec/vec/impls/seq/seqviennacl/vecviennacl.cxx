@@ -2,6 +2,7 @@
    Implements the sequential ViennaCL vectors.
 */
 
+#include <petscoptions.h>
 #include <petscconf.h>
 #include <petsc/private/vecimpl.h> /*I "petscvec.h" I*/
 #include <../src/vec/vec/impls/dvecimpl.h>
