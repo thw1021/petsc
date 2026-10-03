@@ -2,7 +2,6 @@ static const char help[] = "STREAM benchmark specialized for SSE2\n\\n";
 
 /* Note: this file has been modified significantly from its original version */
 #include <emmintrin.h>
-#include <petsctime.h>
 #include <petscsys.h>
 #if defined(HAVE_NUMA)
   #include <numa.h>

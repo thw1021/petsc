@@ -1,6 +1,5 @@
 static char help[] = "Tests options database monitoring and precedence.\n\n";
 
-#include <petscsys.h>
 #include <petscviewer.h>
 
 PetscErrorCode PetscOptionsMonitorCustom(const char name[], const char value[], PetscOptionSource source, PetscCtx ctx)
