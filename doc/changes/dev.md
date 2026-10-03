@@ -49,6 +49,7 @@
 ```
 
 - Add `-mat_spd` to set `MAT_SPD` from the options database in `MatSetFromOptions()`
+- Change `MatSetOption()` to error when a symmetry-related option contradicts an already known property
 
 ```{rubric} MatCoarsen:
 ```
