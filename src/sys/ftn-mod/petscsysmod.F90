@@ -224,14 +224,14 @@ module petscsysdef
 !
 !     Basic math constants
 !
-  PetscReal PETSC_PI
-  PetscReal PETSC_MAX_REAL
-  PetscReal PETSC_MIN_REAL
-  PetscReal PETSC_MACHINE_EPSILON
-  PetscReal PETSC_SQRT_MACHINE_EPSILON
-  PetscReal PETSC_SMALL
-  PetscReal PETSC_INFINITY
-  PetscReal PETSC_NINFINITY
+  PetscReal, parameter :: PETSC_PI = acos(-1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MAX_REAL = huge(1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MIN_REAL = -huge(1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MACHINE_EPSILON = epsilon(1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_SQRT_MACHINE_EPSILON = sqrt(PETSC_MACHINE_EPSILON)
+  PetscReal :: PETSC_SMALL
+  PetscReal :: PETSC_INFINITY
+  PetscReal :: PETSC_NINFINITY
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_CHARACTER
@@ -689,21 +689,13 @@ subroutine PetscSetModuleBlockMPI(freal, fscalar, fsum, finteger, fcbool)
 #endif
 end subroutine PetscSetModuleBlockMPI
 
-subroutine PetscSetModuleBlockNumeric(pi, maxreal, minreal, eps, seps, small, pinf, pninf)
-  use petscsys, only: PETSC_PI, PETSC_MAX_REAL, PETSC_MIN_REAL, &
-                      PETSC_MACHINE_EPSILON, PETSC_SQRT_MACHINE_EPSILON, &
-                      PETSC_SMALL, PETSC_INFINITY, PETSC_NINFINITY
+subroutine PetscSetModuleBlockNumeric(small, pinf, pninf)
+  use petscsys, only: PETSC_SMALL, PETSC_INFINITY, PETSC_NINFINITY
   use, intrinsic :: ISO_C_binding
   implicit none
 
-  PetscReal pi, maxreal, minreal, eps, seps
   PetscReal small, pinf, pninf
 
-  PETSC_PI = pi
-  PETSC_MAX_REAL = maxreal
-  PETSC_MIN_REAL = minreal
-  PETSC_MACHINE_EPSILON = eps
-  PETSC_SQRT_MACHINE_EPSILON = seps
   PETSC_SMALL = small
   PETSC_INFINITY = pinf
   PETSC_NINFINITY = pninf
