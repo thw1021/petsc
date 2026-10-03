@@ -1497,7 +1497,7 @@ PETSC_EXTERN void PetscStackSAWsTakeAccess(void);
         (stack__).line[(stack__).currentsize]         = 0; \
         (stack__).petscroutine[(stack__).currentsize] = 0; \
       } \
-      (stack__).hotdepth = PetscMax((stack__).hotdepth - 1, 0); \
+      (stack__).hotdepth = (stack__).hotdepth > 0 ? (stack__).hotdepth - 1 : 0; \
     } while (0)
 
   /*MC
@@ -1652,7 +1652,7 @@ M*/
         petscstack.line[petscstack.currentsize]         = 0; \
         petscstack.petscroutine[petscstack.currentsize] = 0; \
       } \
-      petscstack.hotdepth = PetscMax(petscstack.hotdepth - 1, 0); \
+      petscstack.hotdepth = petscstack.hotdepth > 0 ? petscstack.hotdepth - 1 : 0; \
       PetscStackSAWsGrantAccess(); \
     } while (0)
 
