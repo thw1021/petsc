@@ -6490,6 +6490,11 @@ PetscErrorCode MatAssemblyEnd(Mat mat, MatAssemblyType type)
 
   Once `MAT_STRUCTURE_ONLY` has been set to `PETSC_TRUE`, it cannot be set back to `PETSC_FALSE`.
 
+  The matrix properties must be consistent with one another. `MAT_SPD` implies `MAT_SYMMETRIC`, and both
+  `MAT_SYMMETRIC` and `MAT_HERMITIAN` imply `MAT_STRUCTURALLY_SYMMETRIC`. Setting a property that contradicts
+  another known property generates an error. For real scalars, setting either `MAT_SYMMETRIC` or `MAT_HERMITIAN`
+  also sets the other to the same value.
+
   If using Fortran to compute a matrix, one may need to
   use the column-oriented option (or convert to the row-oriented
   format).
@@ -6587,32 +6592,33 @@ PetscErrorCode MatSetOption(Mat mat, MatOption op, PetscBool flg)
     mat->nooffproczerorows = flg;
     PetscFunctionReturn(PETSC_SUCCESS);
   case MAT_SPD:
+    PetscCheck(PetscDefined(USE_COMPLEX) || !flg || mat->symmetric != PETSC_BOOL3_FALSE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_SPD to PETSC_TRUE when MAT_SYMMETRIC is PETSC_FALSE");
+    PetscCheck(!flg || mat->structurally_symmetric != PETSC_BOOL3_FALSE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_SPD to PETSC_TRUE when MAT_STRUCTURALLY_SYMMETRIC is PETSC_FALSE");
     if (flg) {
       mat->spd                    = PETSC_BOOL3_TRUE;
       mat->symmetric              = PETSC_BOOL3_TRUE;
       mat->structurally_symmetric = PETSC_BOOL3_TRUE;
-#if !PetscDefined(USE_COMPLEX)
-      mat->hermitian = PETSC_BOOL3_TRUE;
-#endif
-    } else {
-      mat->spd = PETSC_BOOL3_FALSE;
-    }
+      if (!PetscDefined(USE_COMPLEX)) mat->hermitian = PETSC_BOOL3_TRUE;
+    } else mat->spd = PETSC_BOOL3_FALSE;
     break;
   case MAT_SYMMETRIC:
+    PetscCheck(flg || mat->spd != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_SYMMETRIC to PETSC_FALSE when MAT_SPD is PETSC_TRUE");
+    PetscCheck(!flg || mat->structurally_symmetric != PETSC_BOOL3_FALSE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_SYMMETRIC to PETSC_TRUE when MAT_STRUCTURALLY_SYMMETRIC is PETSC_FALSE");
     mat->symmetric = PetscBoolToBool3(flg);
     if (flg) mat->structurally_symmetric = PETSC_BOOL3_TRUE;
-#if !PetscDefined(USE_COMPLEX)
-    mat->hermitian = PetscBoolToBool3(flg);
-#endif
+    if (!PetscDefined(USE_COMPLEX)) mat->hermitian = PetscBoolToBool3(flg);
     break;
   case MAT_HERMITIAN:
+    PetscCheck(!flg || mat->structurally_symmetric != PETSC_BOOL3_FALSE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_HERMITIAN to PETSC_TRUE when MAT_STRUCTURALLY_SYMMETRIC is PETSC_FALSE");
+    PetscCheck(PetscDefined(USE_COMPLEX) || flg || mat->spd != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_HERMITIAN to PETSC_FALSE when MAT_SPD is PETSC_TRUE");
     mat->hermitian = PetscBoolToBool3(flg);
     if (flg) mat->structurally_symmetric = PETSC_BOOL3_TRUE;
-#if !PetscDefined(USE_COMPLEX)
-    mat->symmetric = PetscBoolToBool3(flg);
-#endif
+    if (!PetscDefined(USE_COMPLEX)) mat->symmetric = PetscBoolToBool3(flg);
     break;
   case MAT_STRUCTURALLY_SYMMETRIC:
+    PetscCheck(flg || mat->spd != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_STRUCTURALLY_SYMMETRIC to PETSC_FALSE when MAT_SPD is PETSC_TRUE");
+    PetscCheck(flg || mat->symmetric != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_STRUCTURALLY_SYMMETRIC to PETSC_FALSE when MAT_SYMMETRIC is PETSC_TRUE");
+    PetscCheck(flg || mat->hermitian != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "Cannot set MAT_STRUCTURALLY_SYMMETRIC to PETSC_FALSE when MAT_HERMITIAN is PETSC_TRUE");
     mat->structurally_symmetric = PetscBoolToBool3(flg);
     break;
   case MAT_SYMMETRY_ETERNAL:
