@@ -50,7 +50,6 @@ int main(int argc, char **args)
   return 0;
 }
 
-#include <petsctime.h>
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/kspimpl.h>
