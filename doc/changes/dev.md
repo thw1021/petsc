@@ -17,6 +17,8 @@
 ```{rubric} Sys:
 ```
 
+- Move the PETSc memory-management API (`PetscMalloc()`, `PetscFree()`, and related routines) into the new header `petscmem.h`; it remains available through `petscsys.h`
+
 ```{rubric} Event Logging:
 ```
 

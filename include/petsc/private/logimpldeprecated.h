@@ -1,5 +1,6 @@
 #pragma once
 
+#include <petsclog.h> // must precede petsclogdeprecated.h, which depends on it
 #include <petsclogdeprecated.h>
 #include <petscconf.h>
 

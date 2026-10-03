@@ -1438,6 +1438,16 @@ typedef struct {
 PETSC_EXTERN PetscStack petscstack;
 #endif
 
+/* These are used by the PetscStackPushNoCheck() machinery below; their full SAWs counterparts
+   (PetscObjectSAWs*(), PetscStackViewSAWs(), etc.) live in petscsys.h */
+#if PetscDefined(HAVE_SAWS)
+PETSC_EXTERN void PetscStackSAWsGrantAccess(void);
+PETSC_EXTERN void PetscStackSAWsTakeAccess(void);
+#else
+  #define PetscStackSAWsTakeAccess()
+  #define PetscStackSAWsGrantAccess()
+#endif
+
 #if PetscDefined(CLANG_STATIC_ANALYZER) || defined(__clang_analyzer__)
   #define PetscStackPushNoCheck(funct, petsc_routine, hot)
   #define PetscStackUpdateLine
