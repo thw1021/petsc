@@ -4,7 +4,6 @@
 #pragma once
 // IWYU pragma: private, include "petscsys.h"
 
-#include <petscmacros.h>
 #include <petscsystypes.h>
 
 #if defined(__cplusplus)

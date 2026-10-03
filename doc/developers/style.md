@@ -666,7 +666,7 @@ and `petsc*types.h`. For example, `petscsys.h` and `petscsystypes.h`. The object
   `PC`, `KSP`, `SNES`, `TS` all use `DM` arguments, the source code for them must include `petscdmtypes.h` but, except for a very small number of source files, it does not need `petscdm.h`.
 
 - When developing new code and adding new function APIs into an existing `petsc*.h`, only the source files that specifically need `petsc*.h` will get recompiled, those that use
-  `petsc*types.h` do not, thus changing a five minute recompile to a minute. Again, this is examplified with the solver APIs and `DM`.
+  `petsc*types.h` do not, thus changing a five minute recompile to a minute. Again, this is exemplified with the solver APIs and `DM`.
 
 In general, the `petsc*types.h` file contains the non-function pointer typedefs (for example, `typedef struct _p_DM *DM`), enums and non-function-like C preprocessing macros (for example,
 `#define PETSC_DRAW_X "x"`). Function prototypes, function pointer typedefs (for example, `SNESFunctionFn`), and function-like C preprocessing macros

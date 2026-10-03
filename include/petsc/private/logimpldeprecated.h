@@ -1,7 +1,5 @@
 #pragma once
 
-#include <petscsystypes.h>
-#include <petsclogtypes.h>
 #include <petsclogdeprecated.h>
 #include <petscconf.h>
 

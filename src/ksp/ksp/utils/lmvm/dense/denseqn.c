@@ -2,7 +2,6 @@
 #include <../src/ksp/ksp/utils/lmvm/blas_cyclic/blas_cyclic.h>
 #include <petscblaslapack.h>
 #include <petscmat.h>
-#include <petscsystypes.h>
 #include <petscis.h>
 #include <petsc/private/deviceimpl.h>
 

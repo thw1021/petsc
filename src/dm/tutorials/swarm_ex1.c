@@ -1,5 +1,4 @@
 #include "petscis.h"
-#include "petscsystypes.h"
 #include "petscvec.h"
 static char help[] = "Tests DMSwarm\n\n";
 
