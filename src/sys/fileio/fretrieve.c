@@ -2,6 +2,7 @@
       Code for opening and closing files.
 */
 #include <petsc/private/petscimpl.h>
+#include <petscoptions.h>
 #if PetscDefined(HAVE_PWD_H)
   #include <pwd.h>
 #endif

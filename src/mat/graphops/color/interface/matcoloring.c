@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/matimpl.h> /*I "petscmat.h"  I*/
 
 PetscFunctionList MatColoringList              = NULL;

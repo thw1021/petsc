@@ -1,4 +1,5 @@
 #include <petsc/private/petscimpl.h> /*I "petscsys.h" I*/
+#include <petscoptions.h>
 
 struct _n_PetscShmComm {
   PetscMPIInt *globranks;         /* global ranks of each rank in the shared memory communicator */

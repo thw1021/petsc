@@ -1,4 +1,5 @@
 #include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
+#include <petscoptions.h>
 
 PetscClassId PETSC_DRAW_CLASSID;
 

@@ -1,4 +1,5 @@
 #include <../src/sys/classes/viewer/impls/socket/socket.h> /*I "petscviewer.h" I*/
+#include <petscoptions.h>
 
 #if PetscDefined(NEEDS_UTYPE_TYPEDEFS)
 /* Some systems have inconsistent include files that use but do not

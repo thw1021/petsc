@@ -1197,7 +1197,7 @@ PETSC_EXTERN PetscErrorCode PetscMonitorCompare(PetscErrorCode (*)(void), void *
 
 /* generatefortranbindings.py requires the next line */
 #include <petscviewertypes.h>
-#include <petscoptions.h>
+#include <petscoptionstypes.h>
 
 PETSC_EXTERN PetscErrorCode PetscMallocTraceSet(PetscViewer, PetscBool, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscMallocTraceGet(PetscBool *);

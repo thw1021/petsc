@@ -5,6 +5,7 @@
 
 #include <petscoptionstypes.h>
 #include <petscviewertypes.h>
+#include <petscsys.h>
 
 /* SUBMANSEC = Sys */
 

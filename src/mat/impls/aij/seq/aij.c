@@ -3,6 +3,7 @@
   matrix storage format.
 */
 
+#include <petscoptions.h>
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <petscblaslapack.h>
 #include <petsc/private/kernels/blocktranspose.h>

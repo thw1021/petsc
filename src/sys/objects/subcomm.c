@@ -2,6 +2,7 @@
      Provides utility routines for split MPI communicator.
 */
 #include <petscviewer.h> /*I "petscsys.h" I*/
+#include <petscoptions.h>
 
 const char *const PetscSubcommTypes[] = {"GENERAL", "CONTIGUOUS", "INTERLACED", "PetscSubcommType", "PETSC_SUBCOMM_", NULL};
 

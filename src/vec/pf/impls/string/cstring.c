@@ -1,4 +1,5 @@
 #include <../src/vec/pf/pfimpl.h> /*I "petscpf.h" I*/
+#include <petscoptions.h>
 
 /*
         This PF generates a function on the fly and loads it into the running

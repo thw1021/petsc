@@ -1,5 +1,6 @@
 #include <petscdraw.h>
 #include <petsc/private/viewerimpl.h>
+#include <petscoptions.h>
 
 static PetscBool PetscSysPackageInitialized = PETSC_FALSE;
 

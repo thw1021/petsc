@@ -1,4 +1,5 @@
 #include <petscdraw.h> /*I "petscdraw.h" I*/
+#include <petscoptions.h>
 
 /*
     Set up a color map, using uniform separation in hue space.
