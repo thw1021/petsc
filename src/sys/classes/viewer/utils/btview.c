@@ -1,3 +1,4 @@
+#include <petscsys.h>
 #include <petscviewer.h>
 
 /*@

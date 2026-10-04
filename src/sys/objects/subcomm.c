@@ -1,6 +1,7 @@
 /*
      Provides utility routines for split MPI communicator.
 */
+#include <petscsys.h>
 #include <petscviewer.h> /*I "petscsys.h" I*/
 #include <petscoptions.h>
 

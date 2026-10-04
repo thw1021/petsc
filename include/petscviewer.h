@@ -3,9 +3,10 @@
 */
 #pragma once
 
-#include <petscsys.h>
 #include <petscviewertypes.h>
+#include <petscoptionstypes.h>
 #include <petscdrawtypes.h>
+#include <stdio.h>
 
 /* MANSEC = Sys */
 /* SUBMANSEC = Viewer */
