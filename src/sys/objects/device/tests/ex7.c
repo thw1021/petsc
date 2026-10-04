@@ -624,10 +624,10 @@ static PetscErrorCode CopyDeviceBytesToHost(PetscDeviceContext dctx, void *host,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestNullContextOrdering(PetscDeviceContext saved)
+static PetscErrorCode TestContextOrdering(PetscDeviceContext saved)
 {
   const PetscInt     n = 32769;
-  PetscDeviceContext current, other, contexts[3];
+  PetscDeviceContext current, other, standard, contexts[3];
   PetscDeviceType    dtype;
   unsigned char     *src, *dest, *host;
 
@@ -638,24 +638,25 @@ static PetscErrorCode TestNullContextOrdering(PetscDeviceContext saved)
   PetscCall(PetscDeviceContextSetStreamType(current, PETSC_STREAM_NONBLOCKING));
   PetscCall(PetscDeviceContextSetUp(current));
   PetscCall(PetscDeviceContextDuplicate(current, &other));
+  standard = PetscDeviceContextDefault;
   PetscCall(PetscDeviceContextSetCurrentContext(current));
-  contexts[0] = NULL;
+  contexts[0] = standard;
   contexts[1] = current;
   contexts[2] = other;
   PetscCall(PetscDeviceMalloc(current, PETSC_MEMTYPE_HOST, n, 128, &host));
 
-  // A NULL memory operation and PetscDeviceContextSynchronize(NULL) must select the same context.
-  PetscCall(PetscDeviceCalloc(NULL, PETSC_MEMTYPE_HOST, n, 128, &src));
-  PetscCall(PetscDeviceContextSynchronize(NULL));
+  // Memory operations must use the supplied context even when another context is current.
+  PetscCall(PetscDeviceCalloc(standard, PETSC_MEMTYPE_HOST, n, 128, &src));
+  PetscCall(PetscDeviceContextSynchronize(standard));
   PetscCall(PetscDeviceContextSynchronize(current));
   PetscCall(PetscDeviceContextDelay(current, 0.05));
-  PetscCall(PetscDeviceMemset(NULL, src, 73, n));
-  PetscCall(PetscDeviceContextSynchronize(NULL));
-  for (PetscInt i = 0; i < n; ++i) PetscCheck(src[i] == 73, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Synchronize(NULL) did not complete the NULL memory operation at byte %" PetscInt_FMT " (got %u)", i, (unsigned)src[i]);
+  PetscCall(PetscDeviceMemset(standard, src, 73, n));
+  PetscCall(PetscDeviceContextSynchronize(standard));
+  for (PetscInt i = 0; i < n; ++i) PetscCheck(src[i] == 73, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Synchronization did not complete the explicit-context memory operation at byte %" PetscInt_FMT " (got %u)", i, (unsigned)src[i]);
   PetscCall(PetscDeviceContextSynchronize(current));
-  PetscCall(PetscDeviceFree(NULL, src));
+  PetscCall(PetscDeviceFree(standard, src));
 
-  // Tracked accesses must carry dependencies between NULL, current, and another explicit context.
+  // Track dependencies between a default-stream context and two nonblocking contexts.
   for (PetscInt p = 0; p < 3; ++p) {
     for (PetscInt c = 0; c < 3; ++c) {
       PetscDeviceContext alloc = contexts[(p + c) % 3], producer = contexts[p], consumer = contexts[c];
@@ -680,37 +681,37 @@ static PetscErrorCode TestNullContextOrdering(PetscDeviceContext saved)
   }
   for (PetscInt c = 0; c < 3; ++c) PetscCall(PetscDeviceContextSynchronize(contexts[c]));
 
-  // Warm reuse before testing allocation on NULL followed by an untracked write on current.
-  PetscCall(PetscDeviceMalloc(NULL, PETSC_MEMTYPE_DEVICE, n, 128, &src));
-  PetscCall(PetscDeviceFree(NULL, src));
-  PetscCall(PetscDeviceContextSynchronize(NULL));
-  PetscCall(PetscDeviceContextDelay(NULL, 0.05));
-  PetscCall(PetscDeviceCalloc(NULL, PETSC_MEMTYPE_DEVICE, n, 128, &src));
-  PetscCall(PetscDeviceContextWaitForContext(current, NULL));
+  // Warm reuse before testing allocation on standard followed by an untracked write on current.
+  PetscCall(PetscDeviceMalloc(standard, PETSC_MEMTYPE_DEVICE, n, 128, &src));
+  PetscCall(PetscDeviceFree(standard, src));
+  PetscCall(PetscDeviceContextSynchronize(standard));
+  PetscCall(PetscDeviceContextDelay(standard, 0.05));
+  PetscCall(PetscDeviceCalloc(standard, PETSC_MEMTYPE_DEVICE, n, 128, &src));
+  PetscCall(PetscDeviceContextWaitForContext(current, standard));
   PetscCall(SetDeviceBytes(current, src, 63, n));
   PetscCall(PetscDeviceArrayCopy(current, host, src, n));
   PetscCall(PetscDeviceContextSynchronize(current));
   for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == 63, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Allocation-to-raw-write ordering corrupted byte %" PetscInt_FMT " (got %u)", i, (unsigned)host[i]);
 
-  // A raw producer is not registered with memory tracking, so copying on NULL needs a wait.
+  // A raw producer is not registered with memory tracking, so copying on standard needs a wait.
   PetscCall(PetscDeviceContextDelay(current, 0.05));
   PetscCall(SetDeviceBytes(current, src, 37, n));
-  PetscCall(PetscDeviceContextWaitForContext(NULL, current));
-  PetscCall(PetscDeviceArrayCopy(NULL, host, src, n));
-  PetscCall(PetscDeviceContextSynchronize(NULL));
+  PetscCall(PetscDeviceContextWaitForContext(standard, current));
+  PetscCall(PetscDeviceArrayCopy(standard, host, src, n));
+  PetscCall(PetscDeviceContextSynchronize(standard));
   for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == 37, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Raw-write-to-copy ordering corrupted byte %" PetscInt_FMT " (got %u)", i, (unsigned)host[i]);
 
-  // Releasing and reusing on NULL must also follow an untracked read on current.
+  // Releasing and reusing on standard must also follow an untracked read on current.
   PetscCall(PetscDeviceContextDelay(current, 0.05));
   PetscCall(CopyDeviceBytesToHost(current, host, src, n));
-  PetscCall(PetscDeviceContextWaitForContext(NULL, current));
-  PetscCall(PetscDeviceFree(NULL, src));
-  PetscCall(PetscDeviceMalloc(NULL, PETSC_MEMTYPE_DEVICE, n, 128, &src));
-  PetscCall(PetscDeviceMemset(NULL, src, 99, n));
-  PetscCall(PetscDeviceContextSynchronize(NULL));
+  PetscCall(PetscDeviceContextWaitForContext(standard, current));
+  PetscCall(PetscDeviceFree(standard, src));
+  PetscCall(PetscDeviceMalloc(standard, PETSC_MEMTYPE_DEVICE, n, 128, &src));
+  PetscCall(PetscDeviceMemset(standard, src, 99, n));
+  PetscCall(PetscDeviceContextSynchronize(standard));
   PetscCall(PetscDeviceContextSynchronize(current));
   for (PetscInt i = 0; i < n; ++i) PetscCheck(host[i] == 37, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Raw-read-to-reuse ordering corrupted byte %" PetscInt_FMT " (got %u)", i, (unsigned)host[i]);
-  PetscCall(PetscDeviceFree(NULL, src));
+  PetscCall(PetscDeviceFree(standard, src));
   PetscCall(PetscDeviceFree(current, host));
   for (PetscInt c = 0; c < 3; ++c) PetscCall(PetscDeviceContextSynchronize(contexts[c]));
   PetscCall(PetscDeviceContextSetCurrentContext(saved));
@@ -745,7 +746,7 @@ int main(int argc, char *argv[])
     PetscCall(TestMemoryAccessOrdering(dctx));
   } else if (test_context_policy) {
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
-    PetscCall(TestNullContextOrdering(dctx));
+    PetscCall(TestContextOrdering(dctx));
   } else if (test_alignment) {
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(TestTypeAlignment(dctx));
@@ -753,9 +754,8 @@ int main(int argc, char *argv[])
     PetscCall(TestAlignmentStress(dctx, PETSC_MEMTYPE_DEVICE));
     PetscCall(TestAlignmentOrdering(dctx, PETSC_MEMTYPE_HOST));
     PetscCall(TestAlignmentOrdering(dctx, PETSC_MEMTYPE_DEVICE));
-    // NULL selects the null context for the current device, including its host pool.
-    PetscCall(TestTypeAlignment(NULL));
-    PetscCall(PetscDeviceContextSynchronize(NULL));
+    PetscCall(TestTypeAlignment(PetscDeviceContextDefault));
+    PetscCall(PetscDeviceContextSynchronize(PetscDeviceContextDefault));
   } else {
     // A vile hack. The -info output is used to test correctness in this test which prints --
     // among other things -- the PetscObjectId of the PetscDevicContext and the allocated memory.
