@@ -1,6 +1,7 @@
 #pragma once
 
 #include <petsc/private/petscimpl.h>
+#include <petscoptions.h>
 PETSC_INTERN PetscErrorCode PETScParseFortranArgs_Private(int *, char ***);
 PETSC_EXTERN PetscErrorCode PetscMPIFortranDatatypeToC(MPI_Fint, MPI_Datatype *);
 PETSC_EXTERN void          *PETSC_NULL_MAT_POINTER_Fortran(void);

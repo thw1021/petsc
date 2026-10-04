@@ -3,6 +3,7 @@
    Requires pARMS 3.2 or later.
 */
 
+#include <petscoptions.h>
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 
 #if PetscDefined(USE_COMPLEX)

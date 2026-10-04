@@ -1,5 +1,6 @@
 static char help[] = "Interpolation Tests for Plex\n\n";
 
+#include <petscoptions.h>
 #include <petscsnes.h>
 #include <petscdmplex.h>
 #include <petscdmda.h>

@@ -20,6 +20,8 @@ It is copied and intended to move dirty codes from ksp/tutorials/ex10.c and simp
  \n\n";
 */
 
+#include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

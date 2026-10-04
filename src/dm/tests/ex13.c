@@ -4,6 +4,7 @@ static char help[] = "Tests loading DM vector from file.\n\n";
     ex14.c writes out the DMDA and vector read by this program.
 */
 
+#include <petscoptions.h>
 #include <petscdmda.h>
 
 int main(int argc, char **argv)

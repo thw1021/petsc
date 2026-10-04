@@ -10,6 +10,7 @@ Compare this to ex2 which solves the same problem without a DM.\n\n";
      petscis.h     - index sets            petscksp.h - Krylov subspace methods
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscksp.h>

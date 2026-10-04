@@ -1,8 +1,8 @@
 static char help[] = "Create and view a forest mesh\n\n";
 
+#include <petscoptions.h>
 #include <petscdmforest.h>
 #include <petscdmplex.h>
-#include <petscoptions.h>
 
 int main(int argc, char **argv)
 {

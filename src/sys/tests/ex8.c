@@ -1,6 +1,6 @@
 static char help[] = "Demonstrates BuildTwoSided functions.\n";
 
-#include <petscsys.h>
+#include <petscoptions.h>
 
 typedef struct {
   PetscInt    rank;

@@ -43,6 +43,7 @@ use compatible domain decomposition relative to the 3D DMDAs.
 
 */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

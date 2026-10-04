@@ -1,7 +1,7 @@
 static char help[] = "Applies the 2023 preconditioner of Benzi and Faccio\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
-#include <petscviewer.h>
 #include <petscvec.h>
 #include <petscis.h>
 #include <petscksp.h>
