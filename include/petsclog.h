@@ -5,7 +5,6 @@
 
 #include <petscsystypes.h>
 #include <petscerror.h>        // PetscCall(), PetscCallMPI()
-#include <petscmath.h>         // PetscScalar
 #include <petscoptionstypes.h> // PetscOptions
 #include <petsctime.h>
 #include <petscbt.h>
