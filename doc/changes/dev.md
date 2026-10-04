@@ -15,6 +15,7 @@
 ```{rubric} Sys:
 ```
 
+- Remove `PetscDefaultCudaStream` and `PetscDefaultHipStream`; obtain the native stream from a concrete `PetscDeviceContext` with `PetscDeviceContextGetStreamHandle()` instead
 - Replace implicit `NULL` contexts with `PetscDeviceContextDefault` in device-context and device-memory APIs to retain default-stream selection, or pass an explicit context. Add `PetscDeviceContextGetDefaultContext()` and petsc4py `DeviceContext.getDefault()` to capture the default context for the current device. Preserve destruction of null handles and the C-only device-interface fallback
 - Add an alignment argument before the output pointer to `PetscDeviceMalloc()` and `PetscDeviceCalloc()`; pass `PETSC_DECIDE` to retain inferred alignment, or a positive power of two to request stronger alignment
 - Add `PetscDeviceContextDelay()` to queue a timed host callback for testing CUDA and HIP stream ordering
