@@ -8,6 +8,7 @@ Parallel Test where zooms are parallel
 Return DMPatch from Zoom
 Override refine from DMPatch to split cells
  */
+#include <petscoptions.h>
 #include <petscdmpatch.h>
 
 typedef struct {

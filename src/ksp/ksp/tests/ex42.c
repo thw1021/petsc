@@ -1,5 +1,6 @@
 static char help[] = "Solves a linear system in parallel with MINRES.\n\n";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

@@ -1,5 +1,6 @@
 static char help[] = "Tests various routines in MatMAIJ format.\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 #define IMAX 15
 int main(int argc, char **args)

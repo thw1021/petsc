@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/partitionerimpl.h> /*I "petscpartitioner.h" I*/
 #include <petsc/private/matmetisimpl.h>
 #if PetscDefined(HAVE_PARMETIS)

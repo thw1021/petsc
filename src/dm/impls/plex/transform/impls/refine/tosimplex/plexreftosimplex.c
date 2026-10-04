@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/dmplextransformimpl.h> /*I "petscdmplextransform.h" I*/
 
 static PetscErrorCode DMPlexTransformView_ToSimplex(DMPlexTransform tr, PetscViewer viewer)

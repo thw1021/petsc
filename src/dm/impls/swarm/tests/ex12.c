@@ -1,5 +1,6 @@
 static char help[] = "Test periodic DMDA for DMSwarm point location.\n";
 
+#include <petscoptions.h>
 #include <petscdmda.h>
 #include <petscdmswarm.h>
 

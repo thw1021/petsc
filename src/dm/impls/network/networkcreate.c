@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/dmnetworkimpl.h> /*I   "petscdmnetwork.h"   I*/
 #include <petsc/private/vecimpl.h>
 

@@ -1,6 +1,6 @@
+#include <petscoptions.h>
 #include <petscdt.h>
 #include <petscdraw.h>
-#include <petscviewer.h>
 #include <petscksp.h>
 
 /*

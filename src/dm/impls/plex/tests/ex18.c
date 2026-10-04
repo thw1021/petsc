@@ -1,5 +1,6 @@
 static char help[] = "Tests for parallel mesh loading and parallel topological interpolation\n\n";
 
+#include <petscoptions.h>
 #include <petsc/private/dmpleximpl.h>
 /* List of test meshes
 

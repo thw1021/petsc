@@ -12,8 +12,12 @@
 ```{rubric} Configure/Build:
 ```
 
+- Remove the `--with-serialize-functions` configure option and the associated function-pointer serialization feature (`PETSC_SERIALIZE_FUNCTIONS`)
+
 ```{rubric} Sys:
 ```
+
+- Move the PETSc memory-management API (`PetscMalloc()`, `PetscFree()`, and related routines) into the new header `petscmem.h`; it remains available through `petscsys.h`
 
 ```{rubric} Event Logging:
 ```

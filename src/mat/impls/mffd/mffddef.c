@@ -29,6 +29,7 @@
    includes information about the computation of h. It is shared by
    all implementations that people provide
 */
+#include <petscoptions.h>
 #include <petsc/private/matimpl.h>
 #include <../src/mat/impls/mffd/mffdimpl.h> /*I  "petscmat.h"   I*/
 

@@ -1,5 +1,6 @@
 static char help[] = "Tests MatComputeOperator() and MatComputeOperatorTranspose()\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **argv)

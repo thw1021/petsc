@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petsc/private/matimpl.h>
 #include <petscblaslapack.h>

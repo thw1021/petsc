@@ -10,6 +10,7 @@ static char help[] = "Tests MatPermute() in parallel.\n\n";
    - mpisbaij: permutation not supported for this MATTYPE
  */
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **argv)

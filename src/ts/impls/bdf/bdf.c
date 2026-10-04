@@ -1,6 +1,7 @@
 /*
   Code for timestepping with BDF methods
 */
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I "petscts.h" I*/
 #include <petscdm.h>
 

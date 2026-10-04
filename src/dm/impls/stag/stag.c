@@ -4,6 +4,7 @@
    implementations of DM API functions, and other files here contain additional
    DMStag-specific API functions, as well as internal functions.
 */
+#include <petscoptions.h>
 #include <petsc/private/dmstagimpl.h> /*I  "petscdmstag.h"   I*/
 #include <petscsf.h>                  /*I  "petscdsf.h"   I*/
 

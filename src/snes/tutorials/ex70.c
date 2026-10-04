@@ -48,6 +48,7 @@ static char help[] = "Poiseuille flow problem. Viscous, laminar flow in a 2D cha
      the Schur complement, nor the corresponding preconditioner.
 */
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 typedef struct {

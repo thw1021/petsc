@@ -3,6 +3,7 @@ Reads PETSc matrix A B and C, then comput D=A*B*C \n\
 Input parameters include\n\
   -fA <input_file> -fB <input_file> -fC <input_file> \n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

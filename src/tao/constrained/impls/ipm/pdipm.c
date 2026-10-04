@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/tao/constrained/impls/ipm/pdipm.h>
 
 /*

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscmat.h>
 
 static char help[PETSC_MAX_PATH_LEN] = "Tests MatLoad() with MatCreateDense() for memory leak ";

@@ -5,6 +5,7 @@ Options:\n\
   -start <row> : the row from where the submat should be extracted\n\
   -m  <sx>  : the size of the submatrix\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 #include <petscvec.h>
 

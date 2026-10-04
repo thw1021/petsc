@@ -3,6 +3,7 @@ Options: \n\
 -mode {0,1} : 0 ==> DMDA, 1 ==> DMPLEX cell DM \n\
 -dim {2,3}  : spatial dimension\n";
 
+#include <petscoptions.h>
 #include <petsc.h>
 #include <petscdm.h>
 #include <petscdmda.h>

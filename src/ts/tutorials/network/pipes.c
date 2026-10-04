@@ -3,6 +3,7 @@ static char help[] = "This example demonstrates DMNetwork. It is used for testin
   Example: mpiexec -n <np> ./pipes -ts_max_steps 10
 */
 
+#include <petscoptions.h>
 #include "wash.h"
 
 /*

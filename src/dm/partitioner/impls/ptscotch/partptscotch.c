@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/partitionerimpl.h> /*I "petscpartitioner.h" I*/
 
 #if PetscDefined(HAVE_PTSCOTCH)

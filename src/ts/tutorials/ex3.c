@@ -48,6 +48,7 @@ Input parameters include:\n\
      petscksp.h   - linear solvers        petscsnes.h - nonlinear solvers
 */
 
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petscdraw.h>
 

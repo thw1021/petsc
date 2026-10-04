@@ -1,5 +1,6 @@
 static char help[] = "Tests MatCreateSubmatrix() with entire matrix, modified from ex59.c.";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

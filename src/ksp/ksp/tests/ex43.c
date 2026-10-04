@@ -10,6 +10,7 @@ using the aijcusparse class. Input parameters are:\n\
    \n\n";
 */
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **argv)

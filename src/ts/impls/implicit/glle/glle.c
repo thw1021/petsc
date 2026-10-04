@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/ts/impls/implicit/glle/glle.h> /*I   "petscts.h"   I*/
 #include <petscdm.h>
 #include <petscblaslapack.h>

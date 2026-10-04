@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/tao/leastsquares/impls/brgn/brgn.h> /*I "petsctao.h" I*/
 
 const char *const TaoBRGNRegularizationTypes[] = {"user", "l2prox", "l2pure", "l1dict", "lm", "TaoBRGNRegularizationType", "TAOBRGN_REGULARIZATION_", NULL};

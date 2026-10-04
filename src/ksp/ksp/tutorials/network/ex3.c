@@ -1,6 +1,7 @@
 static char help[] = "This example tests subnetwork coupling. \n\
               \n\n";
 
+#include <petscoptions.h>
 #include <petscdmnetwork.h>
 
 typedef struct {

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/regressorimpl.h>
 
 PetscBool         PetscRegressorRegisterAllCalled = PETSC_FALSE;

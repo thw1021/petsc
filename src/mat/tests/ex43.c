@@ -1,5 +1,6 @@
 static char help[] = "Saves a dense matrix in a dense format (binary).\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

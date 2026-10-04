@@ -1,5 +1,6 @@
 static char help[] = "Tests LU, Cholesky factorization and MatMatSolve() for an Elemental dense matrix.\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **argv)

@@ -6,6 +6,7 @@ Input arguments are:\n\
    mpiexec -n 3 ./ex62 -fA medium -fB medium
 */
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 /*

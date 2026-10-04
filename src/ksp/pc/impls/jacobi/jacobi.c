@@ -45,6 +45,7 @@
      pcimpl.h - private include file intended for use by all preconditioners
 */
 
+#include <petscoptions.h>
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 
 const char *const PCJacobiTypes[] = {"DIAGONAL", "ROWL1", "ROWMAX", "ROWSUM", "PCJacobiType", "PC_JACOBI_", NULL};

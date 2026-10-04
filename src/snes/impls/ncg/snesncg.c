@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/snes/impls/ncg/snesncgimpl.h> /*I "petscsnes.h" I*/
 const char *const SNESNCGTypes[] = {"FR", "PRP", "HS", "DY", "CD", "SNESNCGType", "SNES_NCG_", NULL};
 

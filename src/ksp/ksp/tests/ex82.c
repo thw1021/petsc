@@ -1,5 +1,6 @@
 static const char help[] = "Uses KSPComputeRitz() on a matrix loaded from disk\n";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **argv)

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include "symbrdn.h" /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
 

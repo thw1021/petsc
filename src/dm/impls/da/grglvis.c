@@ -1,5 +1,6 @@
 /* Routines to visualize DMDAs and fields through GLVis */
 
+#include <petscoptions.h>
 #include <petsc/private/dmdaimpl.h>
 #include <petsc/private/glvisviewerimpl.h>
 

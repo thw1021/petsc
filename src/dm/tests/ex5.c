@@ -2,6 +2,7 @@
   Test DMCreateMatrix() for structure_only
 */
 
+#include <petscoptions.h>
 #include <petscdmda.h>
 
 int main(int argc, char *argv[])

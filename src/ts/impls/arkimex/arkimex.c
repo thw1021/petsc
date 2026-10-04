@@ -9,6 +9,7 @@
   where F represents the stiff part of the physics and G represents the non-stiff part.
 
 */
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petscdm.h>
 #include <../src/ts/impls/arkimex/arkimex.h>

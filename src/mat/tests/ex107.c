@@ -1,5 +1,6 @@
 static char help[] = "Test MatCreate() with MAT_STRUCTURE_ONLY.\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **argv)
