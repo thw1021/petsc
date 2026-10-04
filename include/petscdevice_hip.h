@@ -165,7 +165,7 @@ M*/
 typedef cusolverStatus_t hipsolverStatus_t;
 
 /* Alias hipsolverDestroy to cusolverDnDestroy */
-static inline hipsolverStatus_t hipsolverDestroy(hipsolverHandle_t *hipsolverhandle)
+static inline hipsolverStatus_t hipsolverDestroy(hipsolverHandle_t hipsolverhandle)
 {
   return cusolverDnDestroy(hipsolverhandle);
 }
@@ -185,7 +185,7 @@ static inline hipsolverStatus_t hipsolverGetStream(hipsolverHandle_t handle, hip
 /* Alias hipsolverSetStream to cusolverDnSetStream */
 static inline hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handle, hipStream_t stream)
 {
-  return cusolveDnSetStream(handle, stream);
+  return cusolverDnSetStream(handle, stream);
 }
     #else /* __HIP_PLATFORM_HCC__ */
       #include <rocsolver.h>
@@ -219,7 +219,6 @@ static inline hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handle, hip
     #endif // __HIP_PLATFORM_NVCC__
   #endif   /* PETSC_PKG_HIP_VERSION_GE(4,5,0) */
 // REMOVE ME
-PETSC_EXTERN hipStream_t    PetscDefaultHipStream; // The default stream used by PETSc
 PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t *);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t *);
 PETSC_EXTERN PetscErrorCode PetscGetCurrentHIPStream(hipStream_t *);

@@ -24,6 +24,7 @@ Shared rules are below; optional skills provide task procedures through the codi
 - Use PETSc accessors for object metadata instead of reconstructing internal layouts in callers or bindings. If metadata is missing, extend the owning API and document returned data's size, ownership, and lifetime. If only the documentation is unclear, clarify it.
 - Fix only what the task requires. Report other improvements you notice, in scripts, makefiles, tools, or documentation, to the user separately with the file path and expected benefit; do not put them in the patch, review findings, or MR comments unless asked.
 - For source changes, check test blocks, expected outputs, and documentation; include headers and examples for public interfaces. Run relevant checks and tests.
+- Place tests with the PETSc package whose behavior they validate, following the organization under `src/` and the package's existing test directories. Test `Mat` behavior in `src/mat/tests/`, not in Vec tests; test `SNES` behavior in `src/snes/tests/`, not in KSP tests. A test may use supporting objects from its package's dependencies, such as Vecs in a Mat test, but must not turn a lower-level package's tests into tests of a higher-level package. Extend an existing test in the owning package when practical.
 - Final test changes must exercise successful behavior: do not add expected-error cases, assertions of expected error codes, or `PetscPushErrorHandler()`/`PetscPopErrorHandler()` calls.
 - The user selects `PETSC_ARCH`; reuse the value already supplied for the task. Ask if it is missing before configuring or building PETSc or petsc4py, running PETSc-dependent tests or executables, or importing petsc4py; pass it explicitly and never infer or change it unless asked. Architecture-independent checks need no architecture. Targets managing a dedicated default architecture, such as `make docs`, are exempt when using that default.
 - A documentation audit or review does not authorize a documentation build; run it only when explicitly requested or approved for the task.
@@ -68,6 +69,7 @@ unrelated conversations or prescribe the user's conversational style.
 - Function typedef names should end in `Fn`.
 - `MPI_Comm_size()` → local `size`; `MPI_Comm_rank()` → `rank`. No prefixed variants (`comm_size`, `nprocs`). If `size` is taken, rename the other local.
 - Reserve the `_p_` prefix for struct tags associated with PETSc objects, such as `_p_Mat`; other struct tags must not use it.
+- `PetscDeviceContextDefault` is for application use. Library operations must select a concrete context explicitly. Only its definition and public-interface validation and resolution machinery may use the placeholder internally; declarations, bindings, tests, and examples may reference it. Never store it in object state, dependency records, or backend calls.
 
 ## PETSc Data Type Rules
 
