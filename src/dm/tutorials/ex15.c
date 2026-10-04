@@ -1,6 +1,7 @@
 static char help[] = "Tests VecView() functionality with DMDA objects when using:"
                      "(i) a PetscViewer binary with MPI-IO support; and (ii) when the binary header is skipped.\n\n";
 
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 

@@ -1,5 +1,6 @@
 static char help[] = "Tests converting a SBAIJ matrix to BAIJ format with MatConvert. Modified from ex55.c\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 /* Usage: ./ex141 -mat_view */
 

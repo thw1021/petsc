@@ -1,5 +1,6 @@
 static char help[] = "Tests CG, MINRES and SYMMLQ on the symmetric indefinite matrices: afiro \n\n";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

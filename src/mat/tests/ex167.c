@@ -18,6 +18,7 @@ static char help[] = "Extract submatrices using unsorted indices. For SEQSBAIJ e
                 CANNOT automatically report inversions, because MatGetRow is not available.
 */
 
+#include <petscoptions.h>
 #include <petscmat.h>
 #include <petscis.h>
 

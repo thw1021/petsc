@@ -1,5 +1,6 @@
 static char help[] = "Demonstration of creating and viewing DMFields objects.\n\n";
 
+#include <petscoptions.h>
 #include <petscdmfield.h>
 #include <petscdmplex.h>
 #include <petscdmda.h>

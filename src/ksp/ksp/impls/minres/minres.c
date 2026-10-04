@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
 PETSC_INTERN PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP, PetscReal *, PetscReal *);

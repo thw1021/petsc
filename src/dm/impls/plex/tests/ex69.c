@@ -1,5 +1,6 @@
 static char help[] = "Tests for creation of cohesive meshes by transforms\n\n";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscsf.h>
 

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/tao/bound/impls/tron/tron.h>
 #include <../src/tao/matrix/submatfree.h>
 

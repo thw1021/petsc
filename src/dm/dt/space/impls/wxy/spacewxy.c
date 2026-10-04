@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/petscfeimpl.h> /*I "petscfe.h" I*/
 
 static PetscErrorCode PetscSpaceSetFromOptions_WXY(PetscSpace sp, PetscOptionItems PetscOptionsObject)

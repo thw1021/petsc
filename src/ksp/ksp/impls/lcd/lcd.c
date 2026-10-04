@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/ksp/ksp/impls/lcd/lcdimpl.h>
 
 static PetscErrorCode KSPSetUp_LCD(KSP ksp)

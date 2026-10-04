@@ -8,6 +8,7 @@ static char help[] = "Writes an array to a file, then reads an array from a file
 
     Note this also works for matrices with MatView() and MatLoad().
 */
+#include <petscoptions.h>
 #include <petscvec.h>
 
 int main(int argc, char **args)

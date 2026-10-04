@@ -1,5 +1,6 @@
 static char help[] = "Test DMStag explicit coordinate routines";
 
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmstag.h>
 

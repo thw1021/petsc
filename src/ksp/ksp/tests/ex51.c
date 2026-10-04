@@ -1,5 +1,6 @@
 static char help[] = "Test PCFailedReason.\n\n";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

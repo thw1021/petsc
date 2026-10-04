@@ -1,5 +1,6 @@
 static char help[] = "Tests MatSolve(), MatSolveTranspose() and MatMatSolve() with SEQDENSE\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

@@ -1,5 +1,6 @@
 static char help[] = "Test DMPlexGetCellType\n\n";
 
+#include <petscoptions.h>
 #include <petsc.h>
 
 int main(int argc, char **argv)

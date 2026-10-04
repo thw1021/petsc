@@ -1,5 +1,6 @@
 static char help[] = "Test DMStagVecSplitToDMDA()\n\n";
 
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmstag.h>
 

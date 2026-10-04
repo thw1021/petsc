@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/vecimpl.h> /*I "petscvec.h" I*/
 #include "../src/vec/vec/utils/tagger/impls/andor.h"
 

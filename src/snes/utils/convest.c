@@ -1,4 +1,4 @@
-#include "petscsys.h"
+#include <petscoptions.h>
 #include <petscconvest.h> /*I "petscconvest.h" I*/
 #include <petscdmplex.h>
 #include <petscds.h>

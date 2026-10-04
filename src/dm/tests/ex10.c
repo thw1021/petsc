@@ -4,6 +4,7 @@
     In this example vertices 0 and 1 are not connected to any edges.
 */
 
+#include <petscoptions.h>
 #include <petscdmnetwork.h>
 
 int main(int argc, char **argv)

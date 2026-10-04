@@ -60,6 +60,7 @@ There are two compile-time options:
   #import <PETSc/petsc/private/dmdaimpl.h> /* There is not yet a public interface to manipulate dm->ops */
 #else
 
+  #include <petscoptions.h>
   #include <petscsnes.h>
   #include <petsc/private/dmdaimpl.h> /* There is not yet a public interface to manipulate dm->ops */
 #endif

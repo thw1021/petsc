@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/snes/impls/tr/trimpl.h> /*I   "petscsnes.h"   I*/
 
 typedef struct {

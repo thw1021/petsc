@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/petscfvimpl.h> /*I "petscfv.h" I*/
 #include <petscdmplex.h>
 #include <petscdmplextransform.h>

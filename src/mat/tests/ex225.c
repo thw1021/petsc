@@ -1,5 +1,6 @@
 static char help[] = "Test Hypre matrix APIs\n";
 
+#include <petscoptions.h>
 #include <petscmathypre.h>
 
 int main(int argc, char **args)

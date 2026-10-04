@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsctaolinesearch.h>
 #include <../src/tao/bound/impls/bncg/bncg.h> /*I "petsctao.h" I*/
 #include <petscksp.h>

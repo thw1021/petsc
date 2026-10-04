@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>   /*I "petscmat.h" I*/
 #include <../src/mat/impls/sell/mpi/mpisell.h> /*I "petscmat.h" I*/
 #include <petsc/private/vecimpl.h>

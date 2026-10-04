@@ -1,8 +1,8 @@
 static char help[] = "Tests ISLocalToGlobalMappingGetInfo() and ISLocalToGlobalMappingGetNodeInfo().\n\n";
 
+#include <petscoptions.h>
 #include <petscis.h>
 #include <petscsf.h>
-#include <petscviewer.h>
 
 int main(int argc, char **argv)
 {

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/petscscalapack.h> /*I "petscmat.h" I*/
 
 const char       ScaLAPACKCitation[] = "@BOOK{scalapack-user-guide,\n"

@@ -33,6 +33,7 @@ This example treats the boundaries naively (by leaving ~zero velocity and
 stress there).
 */
 
+#include <petscoptions.h>
 #include <petscdmstag.h>
 #include <petscts.h>
 

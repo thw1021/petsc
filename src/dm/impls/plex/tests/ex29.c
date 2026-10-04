@@ -1,5 +1,6 @@
 static char help[] = "Test scalable partitioning on distributed meshes\n\n";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 
 enum {

@@ -1,5 +1,6 @@
 static char help[] = "First example in homogenization book\n\n";
 
+#include <petscoptions.h>
 #include <petscsnes.h>
 #include <petscdmplex.h>
 #include <petscds.h>

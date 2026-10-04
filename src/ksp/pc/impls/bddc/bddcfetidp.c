@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/pcbddcimpl.h>
 #include <petsc/private/pcbddcprivateimpl.h>
 #include <petscblaslapack.h>

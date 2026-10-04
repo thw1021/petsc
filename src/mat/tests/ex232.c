@@ -1,5 +1,6 @@
 /* tests MatSeqSBAIJSetPreallocationCSR() and MatMPISBAIJSetPreallocationCSR() */
 
+#include <petscoptions.h>
 #include <petsc.h>
 
 int main(int argc, char **args)

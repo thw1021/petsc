@@ -2,8 +2,8 @@
     Code for setting KSP options from the options database.
 */
 
+#include <petscoptions.h>
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
-#include <petscdraw.h>
 
 /*@
   KSPSetOptionsPrefix - Sets the prefix used for searching for all

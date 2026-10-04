@@ -3,6 +3,7 @@ This   Input parameters include\n\
   -f <input_file> : file to load \n\
   -partition -mat_partitioning_view \n\\n";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

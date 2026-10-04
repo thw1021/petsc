@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/petscdsimpl.h> /*I "petscds.h" I*/
 
 PetscClassId PETSCDS_CLASSID = 0;
