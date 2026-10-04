@@ -29,6 +29,7 @@ F*/
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include "ex3.h"
 

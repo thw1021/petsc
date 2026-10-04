@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/tao/constrained/impls/ipm/pdipm.h>
 
 /*

@@ -39,6 +39,7 @@ in current balance form using rectangular coordinates.\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

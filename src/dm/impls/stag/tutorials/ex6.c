@@ -34,6 +34,7 @@ stress there).
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmstag.h>
 #include <petscts.h>
 

@@ -3,6 +3,7 @@ Input arguments are:\n\
   -f <input_file> : file to load.  For example see $PETSC_DIR/share/petsc/datafiles/matrices\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

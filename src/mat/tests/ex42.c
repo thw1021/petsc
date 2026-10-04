@@ -6,6 +6,7 @@ Input arguments are:\n\
   -ov <overlap>   : >=0  amount of overlap between domains\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

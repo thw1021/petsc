@@ -5,6 +5,7 @@ This example supports automatic convergence estimation\n\
 and eventually adaptivity.\n\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmplex.h>
 #include <petscdmceed.h>
 #include <petscsnes.h>

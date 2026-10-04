@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/tao/bound/impls/tron/tron.h>
 #include <../src/tao/matrix/submatfree.h>
 

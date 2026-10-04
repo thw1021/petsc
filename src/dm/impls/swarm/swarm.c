@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include "petscdmswarm.h"
 #include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
 #include <petsc/private/hashsetij.h>

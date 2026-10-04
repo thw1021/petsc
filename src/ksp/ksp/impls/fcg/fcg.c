@@ -3,6 +3,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/ksp/ksp/impls/fcg/fcgimpl.h> /*I  "petscksp.h"  I*/
 extern PetscErrorCode KSPComputeExtremeSingularValues_CG(KSP, PetscReal *, PetscReal *);
 extern PetscErrorCode KSPComputeEigenvalues_CG(KSP, PetscInt, PetscReal *, PetscReal *, PetscInt *);

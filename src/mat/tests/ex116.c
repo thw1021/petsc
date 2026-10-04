@@ -8,6 +8,7 @@ Input parameters include\n\
 e.g. ./ex116 -f $DATAFILESPATH/matrices/small  \n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 #include <petscblaslapack.h>
 

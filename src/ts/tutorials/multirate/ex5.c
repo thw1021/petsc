@@ -22,6 +22,7 @@ static const char help[] = "1D periodic Finite Volume solver in slope-limiter fo
                            " you can choose the value of a by -physics_advect_a1 and -physics_advect_a2.\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

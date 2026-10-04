@@ -11,6 +11,7 @@ Example:
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

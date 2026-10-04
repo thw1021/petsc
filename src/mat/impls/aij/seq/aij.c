@@ -4,6 +4,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <petscblaslapack.h>
 #include <petsc/private/kernels/blocktranspose.h>

@@ -13,6 +13,7 @@ in current balance form using rectangular coordinates.\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsctao.h>
 #include <petscts.h>
 #include <petscdm.h>

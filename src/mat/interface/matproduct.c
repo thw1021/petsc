@@ -38,6 +38,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ(Mat);

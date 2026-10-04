@@ -61,6 +61,7 @@ There are two compile-time options:
 #else
 
   #include <petscoptions.h>
+  #include <petscviewer.h>
   #include <petscsnes.h>
   #include <petsc/private/dmdaimpl.h> /* There is not yet a public interface to manipulate dm->ops */
 #endif

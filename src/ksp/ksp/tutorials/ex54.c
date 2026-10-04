@@ -3,6 +3,7 @@ static char help[] = "Creates a matrix from quadrilateral finite elements in 2D,
   -alpha <v>      : scaling of material coefficient in embedded circle\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

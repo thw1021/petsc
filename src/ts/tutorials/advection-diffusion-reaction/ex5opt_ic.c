@@ -16,6 +16,7 @@ static char help[] = "Demonstrates adjoint sensitivity analysis for Reaction-Dif
  */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include "reaction_diffusion.h"
 #include <petscdm.h>
 #include <petscdmda.h>

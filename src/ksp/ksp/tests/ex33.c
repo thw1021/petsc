@@ -7,6 +7,7 @@ static char help[] = "Test MatGetInertia().\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 int main(int argc, char **args)
 {

@@ -60,6 +60,7 @@ For a Landau Damping verification run, we use
 
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petscdmplex.h>
 #include <petscdmswarm.h>

@@ -1,6 +1,7 @@
 /* Discretization tools */
 
 #include <petscdt.h> /*I "petscdt.h" I*/
+#include <petscviewer.h>
 #include <petscblaslapack.h>
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/dtimpl.h>

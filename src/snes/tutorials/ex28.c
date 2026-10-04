@@ -24,6 +24,7 @@ static const char help[] = "1D multiphysics prototype with analytic Jacobians to
  */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscsnes.h>
 #include <petscdm.h>
 #include <petscdmda.h>

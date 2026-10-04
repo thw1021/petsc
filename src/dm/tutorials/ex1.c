@@ -30,6 +30,7 @@ Use the options
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 

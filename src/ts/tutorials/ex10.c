@@ -10,6 +10,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

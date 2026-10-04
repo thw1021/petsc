@@ -48,6 +48,7 @@ static char help[] = "Performs adjoint sensitivity analysis for the van der Pol 
 
   ------------------------------------------------------------------------- */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petsctao.h>
 

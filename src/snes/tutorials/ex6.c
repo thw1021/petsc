@@ -2,6 +2,7 @@ static char help[] = "Newton method to solve u'' + u^{2} = f, sequentially.\n\
 This example employs a user-defined reasonview routine.\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscsnes.h>
 
 /*

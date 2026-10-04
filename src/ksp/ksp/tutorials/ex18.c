@@ -15,6 +15,7 @@ Input parameters include:\n\
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

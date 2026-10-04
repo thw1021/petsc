@@ -46,6 +46,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 
 const char *const PCJacobiTypes[] = {"DIAGONAL", "ROWL1", "ROWMAX", "ROWSUM", "PCJacobiType", "PC_JACOBI_", NULL};

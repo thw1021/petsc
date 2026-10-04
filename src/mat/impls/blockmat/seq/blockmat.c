@@ -3,6 +3,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/matimpl.h>          /*I "petscmat.h" I*/
 #include <../src/mat/impls/baij/seq/baij.h> /* use the common AIJ data-structure */
 

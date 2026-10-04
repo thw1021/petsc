@@ -3,6 +3,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/dmdaimpl.h> /*I  "petscdmda.h"   I*/
 
 /*@

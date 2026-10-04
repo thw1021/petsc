@@ -5,6 +5,7 @@ This example uses bilinear elements on the unit square.  Input arguments are:\n\
   -m <size> : problem size\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 PetscErrorCode FormElementStiffness(PetscReal H, PetscScalar *Ke)

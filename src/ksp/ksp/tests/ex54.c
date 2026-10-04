@@ -5,6 +5,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 PetscErrorCode fill(Mat m, Vec v)

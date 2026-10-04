@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsctao.h>
 /*
 Description:   ADMM tomography reconstruction example .

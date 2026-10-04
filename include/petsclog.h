@@ -873,6 +873,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
   Synopsis:
   #include <petsclog.h>
+  #include <petscoptions.h>
   PetscPreLoadBegin(PetscBool flag, const char name[])
 
   Not Collective; No Fortran Support

@@ -34,6 +34,7 @@ static const char help[] = "1D periodic Finite Volume solver in slope-limiter fo
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petscdm.h>
 #include <petscdmda.h>

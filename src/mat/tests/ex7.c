@@ -3,6 +3,7 @@ employ the KSP  interface to the linear solvers instead of using the factorizati
 routines directly.\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

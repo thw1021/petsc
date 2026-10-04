@@ -2,6 +2,7 @@ static char help[] = "The main goal of this code is to retrieve the original ele
                      "initial partitions (sInitialPartition)... but after the call to DMPlexDistribute";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc.h>
 
 /* Coordinates of a 2x5 rectangular mesh of quads : */

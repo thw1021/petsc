@@ -7,6 +7,7 @@
 #include <petscpartitioner.h>
 #include <petscdm.h>
 #include <petscdmplextypes.h>
+#include <petscdrawtypes.h>
 #include <petscdt.h>
 #include <petscfe.h>
 #include <petscfv.h>

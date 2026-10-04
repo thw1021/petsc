@@ -4,6 +4,7 @@ Options: \n\
 -dim {2,3}  : spatial dimension\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc.h>
 #include <petscdm.h>
 #include <petscdmda.h>

@@ -3,6 +3,7 @@
   matrix storage format.
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/mat/impls/baij/seq/baij.h> /*I   "petscmat.h"  I*/
 #include <petscblaslapack.h>
 #include <petsc/private/kernels/blockinvert.h>

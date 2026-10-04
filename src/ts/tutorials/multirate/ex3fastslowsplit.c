@@ -15,6 +15,7 @@ F*/
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 
 typedef struct {

@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/glvisviewerimpl.h>
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/dmpleximpl.h>

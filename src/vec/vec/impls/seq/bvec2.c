@@ -3,6 +3,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/vec/vec/impls/dvecimpl.h>     /*I "petscvec.h" I*/
 #include <../src/vec/vec/impls/mpi/pvecimpl.h> /* For VecView_MPI_HDF5 */
 #include <petsc/private/glvisviewerimpl.h>

@@ -32,6 +32,7 @@ Without -user_set_subdomains, the general PCGASM options are meaningful:\n\
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 PetscErrorCode AssembleMatrix(Mat, PetscInt m, PetscInt n);

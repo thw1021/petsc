@@ -5,6 +5,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 #include <petsc/private/isimpl.h>
 #include <petsc/private/vecimpl.h>

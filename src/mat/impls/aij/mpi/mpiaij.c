@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h> /*I "petscmat.h" I*/
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/sfimpl.h>

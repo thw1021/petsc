@@ -26,6 +26,7 @@ This example is intended to test VI solvers.\n\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmplex.h>
 #include <petscsnes.h>
 #include <petscds.h>

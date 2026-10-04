@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petsc/private/hashmapi.h>
 #include <petsc/private/matimpl.h>

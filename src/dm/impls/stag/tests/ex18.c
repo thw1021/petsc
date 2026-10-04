@@ -28,6 +28,7 @@ static char help[] = "Test: Solve a toy 2D problem on a staggered grid using 2-l
 
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscksp.h>
 #include <petscdmstag.h> /* Includes petscdmproduct.h */

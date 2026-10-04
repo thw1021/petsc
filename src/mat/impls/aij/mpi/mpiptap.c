@@ -4,6 +4,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <../src/mat/utils/freespace.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>

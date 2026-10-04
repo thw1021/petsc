@@ -1,4 +1,5 @@
 #include <../src/ksp/ksp/utils/lmvm/lmvm.h> /*I "petscksp.h" I*/
+#include <petscviewer.h>
 #include <petsc/private/deviceimpl.h>
 #include <petscblaslapack.h>
 

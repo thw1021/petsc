@@ -2,6 +2,7 @@
   Code for timestepping with implicit Theta method
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petscsnes.h>
 #include <petscdm.h>

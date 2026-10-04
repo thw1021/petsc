@@ -11,6 +11,7 @@ Input parameters include:\n\
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 #include <petscdmnetwork.h>
 

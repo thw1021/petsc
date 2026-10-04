@@ -1,6 +1,7 @@
 static char help[] = "Tests 1D discretization tools.\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdt.h>
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/dtimpl.h>

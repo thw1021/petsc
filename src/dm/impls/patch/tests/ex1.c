@@ -9,6 +9,7 @@ Return DMPatch from Zoom
 Override refine from DMPatch to split cells
  */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmpatch.h>
 
 typedef struct {

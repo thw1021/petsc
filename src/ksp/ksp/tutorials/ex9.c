@@ -12,6 +12,7 @@ structures throughout the process.  Note the various stages of event logging.\n\
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 /*

@@ -31,6 +31,7 @@ users manual for a discussion of preloading.  Input parameters include\n\
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 static PetscErrorCode TestBDDCCustomization(PC pc, Vec b)

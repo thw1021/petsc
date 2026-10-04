@@ -11,6 +11,7 @@ static char help[] = "Solves a tridiagonal linear system.\n\n";
   Note:  The corresponding uniprocessor example is ex1.c
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

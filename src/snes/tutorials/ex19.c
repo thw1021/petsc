@@ -66,6 +66,7 @@ The flow can be driven with the lid or with buoyancy or both:\n\
   #import <PETSc/petscdmda.h>
 #else
   #include <petscoptions.h>
+  #include <petscviewer.h>
   #include <petscsnes.h>
   #include <petscdm.h>
   #include <petscdmda.h>

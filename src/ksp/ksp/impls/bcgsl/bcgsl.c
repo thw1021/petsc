@@ -5,6 +5,7 @@
    round-off buildup.
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/kspimpl.h> /*I   "petscksp.h" I*/
 #include <../src/ksp/ksp/impls/bcgsl/bcgslimpl.h>
 #include <petscblaslapack.h>

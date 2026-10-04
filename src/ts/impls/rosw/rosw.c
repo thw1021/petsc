@@ -11,6 +11,7 @@
 
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petscdm.h>
 

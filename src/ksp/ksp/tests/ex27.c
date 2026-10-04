@@ -8,6 +8,7 @@ Test MatMatSolve().  Input parameters include\n\
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 extern PetscErrorCode PCShellApply_Matinv(PC, Vec, Vec);
 

@@ -24,6 +24,7 @@ to generate InitialSolution.heat
 
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscts.h>

@@ -20,6 +20,7 @@ or if the {\tt -hard} options is given
 \end{equation}
 F*/
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscsnes.h>
 
 /*

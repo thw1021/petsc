@@ -8,6 +8,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/matisimpl.h> /*I "petscmat.h" I*/
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petsc/private/sfimpl.h>

@@ -1,6 +1,7 @@
 static char help[] = "Tests MatDenseGetArray() and MatView()/MatLoad() with binary viewers.\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 static PetscErrorCode CheckValues(Mat A, PetscBool one)

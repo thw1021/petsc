@@ -10,6 +10,7 @@ Input arguments are\n\
 ----------------------------------------------------------------------------*/
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 #include <petscts.h>
 

@@ -8,6 +8,7 @@ static char help[] = "Test memory leak when duplicating a redundant matrix.\n\n"
      petscis.h     - index sets            petscviewer.h - viewers
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

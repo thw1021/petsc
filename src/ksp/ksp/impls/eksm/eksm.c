@@ -4,6 +4,7 @@
  */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/ksp/ksp/impls/eksm/eksmimpl.h> /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
 

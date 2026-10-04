@@ -19,6 +19,7 @@ static char help[] = "Nonlinear, time-dependent PDE in 2d.\n";
      petscksp.h   - linear solvers
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscts.h>

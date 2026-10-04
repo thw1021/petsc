@@ -5,6 +5,7 @@ is similar to ex40.c; here the index sets used are random. Input arguments are:\
   -ov <overlap>   : >=0  amount of overlap between domains\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

@@ -7,6 +7,7 @@ static char help[] = "Solves the incompressible, variable-viscosity Stokes equat
                      "-dump_solution: dump VTK files\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscksp.h>
 #include <petscdmstag.h>

@@ -7,6 +7,7 @@ Input arguments are:\n\
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 /*

@@ -3,6 +3,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/ksp/ksp/impls/gmres/dgmres/dgmresimpl.h> /*I  "petscksp.h"  I*/
 
 PetscLogEvent KSP_DGMRESComputeDeflationData, KSP_DGMRESApplyDeflation;

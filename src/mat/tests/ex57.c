@@ -6,6 +6,7 @@ Options:\n\
   -m  <sx>  : the size of the submatrix\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 #include <petscvec.h>
 

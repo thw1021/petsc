@@ -11,6 +11,7 @@ static char help[] = "This example demonstrates the use of DMNetwork with subnet
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include "power/power.h"
 #include "water/water.h"
 

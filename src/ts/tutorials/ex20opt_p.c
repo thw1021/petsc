@@ -10,6 +10,7 @@ Input parameters include:\n";
   The gradient is computed with the discrete adjoint of an implicit theta method, see ex20adj.c for details.
   ------------------------------------------------------------------------- */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsctao.h>
 #include <petscts.h>
 

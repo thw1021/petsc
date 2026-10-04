@@ -12,6 +12,7 @@ static char help[] = "Solve a small system and a large system through preloading
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 typedef enum {

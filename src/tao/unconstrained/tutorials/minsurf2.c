@@ -5,6 +5,7 @@
   petscdmda.h for distributed array
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsctao.h>
 #include <petscdmda.h>
 

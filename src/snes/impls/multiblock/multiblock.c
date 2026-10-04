@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 #include <petscdmcomposite.h>
 

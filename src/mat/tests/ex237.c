@@ -8,6 +8,7 @@ static char help[] = "Mini-app to benchmark matrix--matrix multiplication\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc.h>
 
 #if PetscDefined(HAVE_MKL_SPARSE_OPTIMIZE)

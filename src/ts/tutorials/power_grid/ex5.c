@@ -23,6 +23,7 @@ Power System Modeling and Scripting - F. Milano
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 
 #define freq    50

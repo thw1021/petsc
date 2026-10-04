@@ -4,6 +4,7 @@ static char help[] = "2D shallow water LETKF data assimilation example.\n"
                      "  ./ex4 -steps 100 -nx 41 -ny 41 -petscda_type letkf -petscda_ensemble_size 30\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscda.h>
 #include <petscdmda.h>
 #include <petscts.h>

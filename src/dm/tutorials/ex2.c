@@ -12,6 +12,7 @@ static char help[] = "Demonstrates Conway's Game of Life using a 2d DMDA.\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 

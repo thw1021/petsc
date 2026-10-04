@@ -28,6 +28,7 @@ Lots of information about the FEM assembly can be printed using
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmplex.h>
 #include <petscpc.h>
 #include <petscsnes.h>

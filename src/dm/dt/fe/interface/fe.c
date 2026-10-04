@@ -35,6 +35,7 @@ We will have three objects:
  - FEM: This keeps {P, P', Q}
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/petscfeimpl.h> /*I "petscfe.h" I*/
 #include <petscdmplex.h>
 

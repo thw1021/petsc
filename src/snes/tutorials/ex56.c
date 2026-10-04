@@ -6,6 +6,7 @@ of linear elasticity.  E=1.0, nu=1/3.\n\
 Unit cube domain with Dirichlet boundary\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmplex.h>
 #include <petscsnes.h>
 #include <petscds.h>

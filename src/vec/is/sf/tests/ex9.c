@@ -4,6 +4,7 @@ static char help[] = "This example shows 1) how to transfer vectors from a paren
   To run any example with VECCUDA vectors, add -vectype cuda to the argument list\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscvec.h>
 int main(int argc, char **argv)
 {

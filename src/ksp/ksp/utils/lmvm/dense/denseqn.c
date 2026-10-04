@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/ksp/ksp/utils/lmvm/dense/denseqn.h> /*I "petscksp.h" I*/
 #include <../src/ksp/ksp/utils/lmvm/blas_cyclic/blas_cyclic.h>
 #include <petscblaslapack.h>

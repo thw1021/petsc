@@ -7,6 +7,7 @@ Input parameters include:\n\
   -n <mesh_y>       : number of mesh points in y-direction\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 #if PetscDefined(HAVE_MUMPS)

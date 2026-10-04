@@ -10,6 +10,7 @@ static char help[] = "Reads a PETSc matrix and vector from a file and reorders i
      petscis.h     - index sets            petscviewer.h - viewers
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

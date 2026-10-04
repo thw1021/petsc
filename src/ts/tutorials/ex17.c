@@ -20,6 +20,7 @@ static const char help[] = "Time-dependent PDE in 1d. Simplified from ex15.c for
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscts.h>

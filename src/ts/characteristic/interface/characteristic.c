@@ -1,4 +1,5 @@
 #include <petsc/private/characteristicimpl.h> /*I "petsccharacteristic.h" I*/
+#include <petscviewer.h>
 #include <petscdmda.h>
 
 PetscClassId  CHARACTERISTIC_CLASSID;

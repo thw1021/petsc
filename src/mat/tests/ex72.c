@@ -20,6 +20,7 @@ The option -aij_only allows to use MATAIJ for all cases.\n\\n";
       when reading doubles, otherwise errors will occur.
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 #include "mmloader.h"
 

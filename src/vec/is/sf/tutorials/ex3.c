@@ -1,6 +1,7 @@
 static const char help[] = "Test freeing of MPI types in PetscSF\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscvec.h>
 #include <petscsf.h>
 

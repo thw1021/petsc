@@ -1,4 +1,5 @@
 #include "finitevolume1d.h"
+#include <petscviewer.h>
 #include <petscdmda.h>
 #include <petsc/private/tsimpl.h>
 

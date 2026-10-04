@@ -6,6 +6,7 @@ Load of 1.0 in x direction on all nodes (not a true uniform load).\n\
   -alpha <v>      : scaling of material coefficient in embedded circle\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)

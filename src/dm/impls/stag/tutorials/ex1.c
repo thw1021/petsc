@@ -71,6 +71,7 @@ static char help[] = "Solve a toy 1D problem on a staggered grid.\n\
 
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscksp.h>
 #include <petscdmstag.h>

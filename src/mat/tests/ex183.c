@@ -3,6 +3,7 @@ static char help[] = "Example of extracting an array of MPI submatrices from a g
                      "\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 PetscErrorCode MyISView(IS *rowis, IS *colis, PetscInt gs, PetscInt ss, PetscViewer viewer)

@@ -10,6 +10,7 @@ gp - global grid point number along the sliceaxis direction where the slice will
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmda.h>
 
 const char *const sliceaxes[] = {"X", "Y", "Z", "sliceaxis", "DM_", NULL};

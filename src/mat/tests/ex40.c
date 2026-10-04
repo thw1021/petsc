@@ -4,6 +4,7 @@ static char help[] = "Tests the parallel case for MatIncreaseOverlap(). Input ar
   -ov <overlap>   : >=0  amount of overlap between domains\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscmat.h>
 
 PetscErrorCode ISAllGatherDisjoint(IS iis, IS **ois)

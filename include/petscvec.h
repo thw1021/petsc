@@ -8,7 +8,7 @@
 #include <petscsys.h>
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
 #include <petscis.h>
-#include <petscviewer.h>
+#include <petscviewertypes.h>
 
 /* SUBMANSEC = Vec */
 

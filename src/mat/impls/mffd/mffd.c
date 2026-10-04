@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/mat/impls/shell/shell.h> /*I  "petscmat.h"   I*/
 #include <../src/mat/impls/mffd/mffdimpl.h>
 

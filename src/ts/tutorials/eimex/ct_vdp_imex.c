@@ -27,6 +27,7 @@ static char help[] = "Solves the van der Pol equation. \n Input parameters inclu
  */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmda.h>
 #include <petscts.h>
 

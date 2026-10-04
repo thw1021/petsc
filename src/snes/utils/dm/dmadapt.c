@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdmadaptor.h> /*I "petscdmadaptor.h" I*/
 #include <petscdmplex.h>
 #include <petscdmforest.h>

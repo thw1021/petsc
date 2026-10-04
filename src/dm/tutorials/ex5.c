@@ -1,6 +1,7 @@
 static char help[] = "Tests DMDAGetElements() and VecView() contour plotting for 2d DMDAs.\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 

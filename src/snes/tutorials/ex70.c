@@ -49,6 +49,7 @@ static char help[] = "Poiseuille flow problem. Viscous, laminar flow in a 2D cha
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscksp.h>
 
 typedef struct {

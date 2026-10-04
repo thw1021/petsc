@@ -2,6 +2,7 @@
        Code for Timestepping with explicit SSP.
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 
 PetscFunctionList TSSSPList = NULL;

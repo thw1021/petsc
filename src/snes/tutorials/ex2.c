@@ -13,6 +13,7 @@ This example employs a user-defined monitoring routine.\n\n";
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscsnes.h>
 
 /*

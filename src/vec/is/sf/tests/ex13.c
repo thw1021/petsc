@@ -2,6 +2,7 @@ static char help[] = "Scatters from a sequential vector to a parallel vector. \n
 uses block index sets\n\n";
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscvec.h>
 
 int main(int argc, char **argv)

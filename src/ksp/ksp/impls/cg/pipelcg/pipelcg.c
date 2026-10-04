@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/kspimpl.h>
 #include <petsc/private/vecimpl.h>
 

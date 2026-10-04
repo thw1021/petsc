@@ -1,6 +1,7 @@
 #pragma once
 
 #include <petscsys.h>
+#include <petscoptions.h>
 #include <HYPRE_config.h>
 #include <HYPRE_utilities.h>
 

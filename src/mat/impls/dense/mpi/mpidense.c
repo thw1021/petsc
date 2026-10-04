@@ -5,6 +5,7 @@
 */
 
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <../src/mat/impls/dense/mpi/mpidense.h> /*I   "petscmat.h"  I*/
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petscblaslapack.h>

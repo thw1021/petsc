@@ -53,6 +53,7 @@ Choose one of the two at runtime by -sa_method {track,global}. \n";
      petscksp.h    - linear solvers        petscsnes.h - nonlinear solvers
 */
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petscts.h>
 
 extern PetscErrorCode RHSFunction(TS, PetscReal, Vec, Vec, void *);

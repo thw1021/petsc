@@ -1,4 +1,5 @@
 #include <petscoptions.h>
+#include <petscviewer.h>
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 
 /*@
