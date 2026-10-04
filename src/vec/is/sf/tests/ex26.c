@@ -1,4 +1,4 @@
-static const char help[] = "Test reuse of CUDA/HIP SF links after changing the current device context.\n";
+static const char help[] = "Test CUDA/HIP SF link reuse and completion on barrier contexts.\n";
 
 #include <petscsf.h>
 #include <petscdevice.h>
@@ -17,12 +17,14 @@ int main(int argc, char **argv)
   PetscDevice        device;
   PetscDeviceType    type;
   PetscMemType       mtype;
-  PetscInt           local[] = {0, 2};
-  PetscInt          *root, *leaf, *input, *output;
+  PetscStreamType    streamtype = PETSC_STREAM_NONBLOCKING;
+  PetscInt           local[]    = {0, 2};
+  PetscInt          *root, *leaf, *update, *input, *output;
   PetscMPIInt        rank, size;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscOptionsGetEnum(NULL, NULL, "-stream_type", PetscStreamTypes, (PetscEnum *)&streamtype, NULL));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCall(PetscDeviceContextGetCurrentContext(&saved));
@@ -31,12 +33,13 @@ int main(int argc, char **argv)
   mtype = type == PETSC_DEVICE_CUDA ? PETSC_MEMTYPE_CUDA : PETSC_MEMTYPE_HIP;
   for (PetscInt i = 0; i < 2; ++i) {
     PetscCall(PetscDeviceContextDuplicate(saved, &dctx[i]));
-    PetscCall(PetscDeviceContextSetStreamType(dctx[i], PETSC_STREAM_NONBLOCKING));
+    PetscCall(PetscDeviceContextSetStreamType(dctx[i], streamtype));
     PetscCall(PetscDeviceContextSetUp(dctx[i]));
   }
   PetscCall(PetscDeviceContextSetCurrentContext(dctx[0]));
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, PETSC_DECIDE, &root));
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, PETSC_DECIDE, &leaf));
+  PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_DEVICE, 4, PETSC_DECIDE, &update));
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, PETSC_DECIDE, &input));
   PetscCall(PetscDeviceMalloc(dctx[0], PETSC_MEMTYPE_HOST, 4, PETSC_DECIDE, &output));
   PetscCall(PetscDeviceContextSynchronize(dctx[0]));
@@ -53,20 +56,55 @@ int main(int argc, char **argv)
     current = dctx[pass % 2];
     PetscCall(PetscDeviceContextSetCurrentContext(current));
     for (PetscInt i = 0; i < 4; ++i) input[i] = 100 * pass + 4 * rank + i;
-    if (pass) PetscCall(PetscDeviceContextDelay(current, 0.05));
-    PetscCall(PetscDeviceMemcpy(current, root, input, 4 * sizeof(*root)));
-    PetscCall(PetscSFBcastWithMemTypeBegin(sf, MPIU_INT, mtype, root, mtype, leaf, MPI_REPLACE));
-    PetscCall(PetscSFBcastEnd(sf, MPIU_INT, root, leaf, MPI_REPLACE));
-    PetscCall(PetscDeviceMemcpy(current, output, leaf, 4 * sizeof(*leaf)));
-    PetscCall(PetscDeviceContextSynchronize(current));
-    for (PetscInt i = 0; i < 2; ++i)
-      PetscCheck(output[local[i]] == 100 * pass + 4 * remote[i].rank + remote[i].index, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Pass %" PetscInt_FMT ", leaf %" PetscInt_FMT ": got %" PetscInt_FMT ", expected %" PetscInt_FMT, pass, local[i], output[local[i]],
-                 100 * pass + 4 * remote[i].rank + remote[i].index);
+    for (PetscInt op = 0; op < 3; ++op) {
+      if (pass) PetscCall(PetscDeviceContextDelay(current, 0.05));
+      PetscCall(PetscDeviceMemcpy(current, root, input, 4 * sizeof(*root)));
+      PetscCall(PetscDeviceMemcpy(current, leaf, input, 4 * sizeof(*leaf)));
+      if (op == 0) {
+        PetscCall(PetscSFBcastWithMemTypeBegin(sf, MPIU_INT, mtype, root, mtype, leaf, MPI_REPLACE));
+        if (pass) PetscCall(PetscDeviceContextDelay(current, 0.05));
+        PetscCall(PetscSFBcastEnd(sf, MPIU_INT, root, leaf, MPI_REPLACE));
+      } else if (op == 1) {
+        PetscCall(PetscSFReduceWithMemTypeBegin(sf, MPIU_INT, mtype, leaf, mtype, root, MPI_SUM));
+        if (pass) PetscCall(PetscDeviceContextDelay(current, 0.05));
+        PetscCall(PetscSFReduceEnd(sf, MPIU_INT, leaf, root, MPI_SUM));
+      } else {
+        PetscCall(PetscSFFetchAndOpWithMemTypeBegin(sf, MPIU_INT, mtype, root, mtype, leaf, mtype, update, MPI_SUM));
+        if (pass) PetscCall(PetscDeviceContextDelay(current, 0.05));
+        PetscCall(PetscSFFetchAndOpEnd(sf, MPIU_INT, root, leaf, update, MPI_SUM));
+      }
+      if (streamtype == PETSC_STREAM_DEFAULT_WITH_BARRIER || streamtype == PETSC_STREAM_NONBLOCKING_WITH_BARRIER) {
+        PetscBool idle;
+
+        PetscCall(PetscDeviceContextQueryIdle(current, &idle));
+        PetscCheck(idle, PETSC_COMM_SELF, PETSC_ERR_PLIB, "SF operation %" PetscInt_FMT " returned with work pending on a barrier context", op);
+      }
+      if (op != 1) {
+        PetscCall(PetscDeviceMemcpy(current, output, op == 0 ? leaf : update, 4 * sizeof(*output)));
+        PetscCall(PetscDeviceContextSynchronize(current));
+        for (PetscInt i = 0; i < 2; ++i)
+          PetscCheck(output[local[i]] == 100 * pass + 4 * remote[i].rank + remote[i].index, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Pass %" PetscInt_FMT ", operation %" PetscInt_FMT ", incorrect leaf %" PetscInt_FMT, pass, op, local[i]);
+      }
+      if (op != 0) {
+        PetscMPIInt prev = (rank + size - 1) % size;
+
+        PetscCall(PetscDeviceMemcpy(current, output, root, 4 * sizeof(*output)));
+        PetscCall(PetscDeviceContextSynchronize(current));
+        for (PetscInt i = 0; i < 4; ++i) {
+          PetscInt expected = input[i];
+
+          if (i == 3) expected += 100 * pass + 4 * prev;
+          if (i == 1) expected += 100 * pass + 4 * prev + 2;
+          PetscCheck(output[i] == expected, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Pass %" PetscInt_FMT ", operation %" PetscInt_FMT ", incorrect root %" PetscInt_FMT, pass, op, i);
+        }
+      }
+    }
   }
 
   PetscCall(PetscSFDestroy(&sf));
   PetscCall(PetscDeviceFree(dctx[0], root));
   PetscCall(PetscDeviceFree(dctx[0], leaf));
+  PetscCall(PetscDeviceFree(dctx[0], update));
   PetscCall(PetscDeviceFree(dctx[0], input));
   PetscCall(PetscDeviceFree(dctx[0], output));
   PetscCall(PetscDeviceContextSynchronize(dctx[0]));
@@ -81,7 +119,7 @@ int main(int argc, char **argv)
   testset:
     nsize: {{1 2}}
     output_file: output/empty.out
-    args: -sf_type {{basic neighbor}} -use_gpu_aware_mpi 0
+    args: -sf_type {{basic neighbor}} -use_gpu_aware_mpi 0 -stream_type {{nonblocking default_with_barrier nonblocking_with_barrier}}
 
     test:
       suffix: cuda
