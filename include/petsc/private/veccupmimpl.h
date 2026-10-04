@@ -1,5 +1,6 @@
 #pragma once
 
+#include <petscoptions.h>
 #include <petsc/private/vecimpl.h>
 #include <../src/vec/vec/impls/dvecimpl.h> // for Vec_Seq
 

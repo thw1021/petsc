@@ -15,6 +15,7 @@ static char help[] = "Simple Advection-diffusion equation solved using FVM in DM
    Contributed by: Mukkund Sunjii, Domenico Lahaye
 */
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscts.h>
 #include <petscblaslapack.h>

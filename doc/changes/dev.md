@@ -12,8 +12,17 @@
 ```{rubric} Configure/Build:
 ```
 
+- Remove the `--with-serialize-functions` configure option and the associated function-pointer serialization feature (`PETSC_SERIALIZE_FUNCTIONS`)
+
 ```{rubric} Sys:
 ```
+
+- Remove `petscoptions.h` from `petscsys.h`; code that calls the options database routines, such as `PetscOptionsGetInt()` and `PetscOptionsBegin()`, must now include `petscoptions.h` explicitly
+- Remove `petscviewer.h` from `petscsys.h`; code that calls the viewer routines must now include `petscviewer.h` explicitly
+- Reduce the include dependencies of `petscviewer.h`, `petscdraw.h`, `petscoptions.h`, `petscbt.h`, `petsclog.h`; code that relied on these headers
+  to pull in `petscsys.h` must include those headers directly
+
+- Move the PETSc memory-management API (`PetscMalloc()`, `PetscFree()`, and related routines) into the new header `petscmem.h`; it remains available through `petscsys.h`
 
 ```{rubric} Event Logging:
 ```

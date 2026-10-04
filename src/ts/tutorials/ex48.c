@@ -7,6 +7,7 @@ $\psi$, using auxiliary variables potential $\phi$ and (negative) current
 density $j_z$ \cite{Jardin04,Strauss98}.See http://arxiv.org/abs/  for more details
 F*/
 
+#include <petscoptions.h>
 #include <assert.h>
 #include <petscdmplex.h>
 #include <petscds.h>

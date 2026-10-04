@@ -16,7 +16,7 @@
    3) fix to set the block size based on the matrix block size
 
 */
-#include <petscmacros.h>
+#include <petscoptions.h>
 #if !PetscDefined(SKIP_COMPLEX)
   #define PETSC_SKIP_COMPLEX /* since spai uses I which conflicts with some complex implementations */
 #endif

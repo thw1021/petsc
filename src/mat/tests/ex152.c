@@ -11,7 +11,7 @@ static const char help[] = "Test ParMETIS handling of negative weights.\n\n";
  http://glaros.dtc.umn.edu/gkhome/node/837
 */
 
-#include <petscsys.h>
+#include <petscoptions.h>
 #include <petsc/private/matparmetisimpl.h>
 #include <parmetis.h>
 

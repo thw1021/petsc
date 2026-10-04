@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/mat/impls/adj/mpi/mpiadj.h> /*I "petscmat.h" I*/
 
 EXTERN_C_BEGIN

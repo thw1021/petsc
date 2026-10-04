@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <h2opusconf.h>
 /* skip compilation of this .cu file if H2OPUS is CPU only while PETSc has GPU support */
 #if !defined(__CUDACC__) || defined(H2OPUS_USE_GPU)

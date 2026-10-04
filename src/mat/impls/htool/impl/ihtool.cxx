@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/mat/impls/htool/htool.hpp> /*I "petscmat.h" I*/
 #include <petscdraw.h>
 #include <set>
