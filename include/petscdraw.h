@@ -2,8 +2,9 @@
   Interface to the PETSc graphics
 */
 #pragma once
-#include <petscsys.h>
 #include <petscdrawtypes.h>
+#include <petscviewertypes.h>
+#include <petscmath.h>
 
 /* MANSEC = Sys */
 /* SUBMANSEC = Draw */
