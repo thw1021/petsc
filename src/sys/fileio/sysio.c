@@ -1,4 +1,4 @@
-#include <petscoptions.h>
+#include <petscsys.h>
 #include <errno.h>
 #include <fcntl.h>
 #if PetscDefined(HAVE_UNISTD_H)
