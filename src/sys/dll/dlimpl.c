@@ -289,7 +289,6 @@ PetscErrorCode PetscDLSym(PetscDLHandle handle, const char symbol[], void **valu
   // clang-format on
 
   *value = *((void **)&dlsymbol);
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
