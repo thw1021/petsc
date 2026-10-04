@@ -165,7 +165,7 @@ M*/
 typedef cusolverStatus_t hipsolverStatus_t;
 
 /* Alias hipsolverDestroy to cusolverDnDestroy */
-static inline hipsolverStatus_t hipsolverDestroy(hipsolverHandle_t *hipsolverhandle)
+static inline hipsolverStatus_t hipsolverDestroy(hipsolverHandle_t hipsolverhandle)
 {
   return cusolverDnDestroy(hipsolverhandle);
 }
@@ -185,7 +185,7 @@ static inline hipsolverStatus_t hipsolverGetStream(hipsolverHandle_t handle, hip
 /* Alias hipsolverSetStream to cusolverDnSetStream */
 static inline hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handle, hipStream_t stream)
 {
-  return cusolveDnSetStream(handle, stream);
+  return cusolverDnSetStream(handle, stream);
 }
     #else /* __HIP_PLATFORM_HCC__ */
       #include <rocsolver.h>
