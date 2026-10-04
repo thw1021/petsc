@@ -3,7 +3,6 @@
 */
 
 #include <petscoptions.h>
-#include <petscpkg_version.h>
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 /* this include is needed ONLY to allow access to the private data inside the Mat object specific to hypre */
 #include <petsc/private/matimpl.h>

@@ -1,7 +1,6 @@
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <../src/vec/is/sf/impls/basic/sfbasic.h>
 #include <petscoptions.h>
-#include <petscpkg_version.h>
 
 /* Convenience local types and wrappers */
 #if PetscDefined(HAVE_MPI_LARGE_COUNT) && PetscDefined(USE_64BIT_INDICES)

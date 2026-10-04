@@ -9,7 +9,7 @@
 #include <float.h>
 #include <sys/time.h>
 #include <stdlib.h>
-#include <petscsys.h>
+#include <petscsystypes.h>
 #include <omp.h>
 
 #define NTIMESINNER 1

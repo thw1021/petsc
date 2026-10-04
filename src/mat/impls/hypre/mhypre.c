@@ -3,7 +3,6 @@
 */
 
 #include <petscoptions.h>
-#include <petscpkg_version.h>
 #include <petsc/private/petschypre.h>
 #include <petscmathypre.h>
 #include <petsc/private/matimpl.h>
