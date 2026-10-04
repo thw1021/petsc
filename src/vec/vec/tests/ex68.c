@@ -405,7 +405,7 @@ static PetscErrorCode TestRandom(Vec x, PetscDeviceType type, PetscDeviceContext
 static PetscErrorCode TestPlacedAllocation(Vec x, PetscDeviceType type, PetscDeviceContext current)
 {
   Vec                y;
-  PetscDeviceContext alloc;
+  PetscDeviceContext alloc, standard;
   PetscScalar       *p, *host;
   const PetscScalar *a;
   PetscInt           n;
@@ -413,10 +413,13 @@ static PetscErrorCode TestPlacedAllocation(Vec x, PetscDeviceType type, PetscDev
   PetscFunctionBeginUser;
   PetscCall(VecGetLocalSize(x, &n));
   PetscCall(VecDuplicate(x, &y));
+  PetscCall(PetscDeviceContextDuplicate(current, &standard));
+  PetscCall(PetscDeviceContextSetStreamType(standard, PETSC_STREAM_DEFAULT));
+  PetscCall(PetscDeviceContextSetUp(standard));
   for (PetscInt pass = 0; pass < 4; ++pass) {
     PetscBool cross = (PetscBool)(pass % 2);
 
-    alloc = cross ? NULL : current;
+    alloc = cross ? standard : current;
     PetscCall(VecSet(x, 1));
     PetscCall(VecSet(y, 1));
     PetscCall(PetscDeviceMalloc(alloc, PETSC_MEMTYPE_HOST, n, sizeof(PetscScalar), &host));
@@ -472,6 +475,7 @@ static PetscErrorCode TestPlacedAllocation(Vec x, PetscDeviceType type, PetscDev
     PetscCall(PetscDeviceFree(alloc, host));
     PetscCall(PetscDeviceContextSynchronize(alloc));
   }
+  PetscCall(PetscDeviceContextDestroy(&standard));
   PetscCall(VecDestroy(&y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
