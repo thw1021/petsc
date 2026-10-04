@@ -1,5 +1,6 @@
 static char help[] = "Element closure restrictions in tensor/lexicographic/spectral-element ordering using DMPlex\n\n";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscds.h>
 

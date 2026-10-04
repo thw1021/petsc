@@ -1,5 +1,6 @@
 static const char help[] = "Test VEC_SUBSET_OFF_PROC_ENTRIES\n\n";
 
+#include <petscoptions.h>
 #include <petsc.h>
 #include <petscvec.h>
 

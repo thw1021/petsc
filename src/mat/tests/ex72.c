@@ -19,6 +19,7 @@ The option -aij_only allows to use MATAIJ for all cases.\n\\n";
       its variants.  For example, use "%lf", "%lg", or "%le"
       when reading doubles, otherwise errors will occur.
 */
+#include <petscoptions.h>
 #include <petscmat.h>
 #include "mmloader.h"
 

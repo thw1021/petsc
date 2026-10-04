@@ -10,6 +10,7 @@ static char help[] = "Time-dependent PDE in 2d for calculating joint PDF. \n";
 
 */
 
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscts.h>

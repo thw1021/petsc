@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petsc/private/pcbddcimpl.h>
 #include <petsc/private/pcbddcprivateimpl.h>

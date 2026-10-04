@@ -1,5 +1,6 @@
 static char help[] = "Tests MatConvert from AIJ to MATIS with a block size greater than 1.\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 int main(int argc, char **args)
 {

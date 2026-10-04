@@ -2,9 +2,9 @@
         Provides an interface to the SuperLU_DIST sparse solver
 */
 
+#include <petscoptions.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
-#include <petscpkg_version.h>
 
 PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wundef")
 EXTERN_C_BEGIN

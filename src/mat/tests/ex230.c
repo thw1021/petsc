@@ -1,5 +1,6 @@
 static char help[] = "Example of using MatPreallocator\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 PetscErrorCode ex1_nonsquare_bs1(void)

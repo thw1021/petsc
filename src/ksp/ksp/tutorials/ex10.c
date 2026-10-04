@@ -11,6 +11,7 @@ static char help[] = "Solve a small system and a large system through preloading
      petscis.h     - index sets            petscksp.h - Krylov subspace methods
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
+#include <petscoptions.h>
 #include <petscksp.h>
 
 typedef enum {

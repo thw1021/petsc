@@ -1,6 +1,7 @@
 static char help[] = "Test MatCreateRedundantMatrix for rectangular matrix.\n\
                       Contributed by Jose E. Roman, July 2017\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 int main(int argc, char **args)
 {

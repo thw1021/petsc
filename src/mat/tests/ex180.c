@@ -1,5 +1,6 @@
 static char help[] = "Tests MatLoad() with blocksize set in program\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

@@ -1,5 +1,6 @@
 static char help[] = "Reads binary matrix - twice\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 int main(int argc, char **args)
 {

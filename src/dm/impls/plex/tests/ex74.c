@@ -1,5 +1,6 @@
 static char help[] = "Tests for submesh creation for periodic meshes\n\n";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petsc/private/dmimpl.h>
 #include <petscsf.h>

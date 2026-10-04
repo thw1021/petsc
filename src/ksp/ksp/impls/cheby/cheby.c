@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include "chebyshevimpl.h"
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 

@@ -1,6 +1,7 @@
 /*
   This file defines a "solve the problem redundantly on each subgroup of processor" preconditioner.
 */
+#include <petscoptions.h>
 #include <petsc/private/pcimpl.h>
 #include <petscksp.h> /*I "petscksp.h" I*/
 

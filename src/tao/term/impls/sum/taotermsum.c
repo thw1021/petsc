@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 #include <../src/tao/term/impls/sum/taotermsum.h>
 #include <ctype.h>

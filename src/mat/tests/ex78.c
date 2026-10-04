@@ -32,6 +32,7 @@ solu
 0 1.0
 */
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

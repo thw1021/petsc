@@ -1,5 +1,6 @@
 static char help[] = "Tests MatTranspose(), MatNorm(), MatAXPY() and MatAYPX().\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 static PetscErrorCode TransposeAXPY(Mat C, PetscScalar alpha, Mat mat, PetscErrorCode (*f)(Mat, Mat *))

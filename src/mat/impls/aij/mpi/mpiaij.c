@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h> /*I "petscmat.h" I*/
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/sfimpl.h>
@@ -4652,7 +4653,6 @@ static PetscErrorCode MatMergeSeqsToMPIDestroy(PetscCtxRt data)
 }
 
 #include <../src/mat/utils/freespace.h>
-#include <petscbt.h>
 
 /*@
   MatCreateMPIAIJSumSeqAIJNumeric - Fill the numerical values of an `MATMPIAIJ` matrix previously created by

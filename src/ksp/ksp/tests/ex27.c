@@ -7,6 +7,7 @@ Test MatMatSolve().  Input parameters include\n\
      ex27 -f0 <mat_binaryfile>
 */
 
+#include <petscoptions.h>
 #include <petscksp.h>
 extern PetscErrorCode PCShellApply_Matinv(PC, Vec, Vec);
 

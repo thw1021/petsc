@@ -1,5 +1,6 @@
 static char help[] = "Example of using graph partitioning to partition a graph\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 int main(int argc, char **args)

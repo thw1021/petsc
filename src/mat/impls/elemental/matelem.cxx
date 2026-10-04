@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/petscelemental.h>
 
 const char       ElementalCitation[] = "@Article{Elemental2012,\n"

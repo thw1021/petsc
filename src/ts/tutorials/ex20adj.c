@@ -47,6 +47,7 @@ static char help[] = "Performs adjoint sensitivity analysis for the van der Pol 
    See ex20.c for more details on the Jacobian.
 
   ------------------------------------------------------------------------- */
+#include <petscoptions.h>
 #include <petscts.h>
 #include <petsctao.h>
 

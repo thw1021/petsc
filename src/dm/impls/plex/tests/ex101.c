@@ -1,5 +1,6 @@
 static char help[] = "Verify isoperiodic cone corrections";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscsf.h>
 #define EX "ex101.c"

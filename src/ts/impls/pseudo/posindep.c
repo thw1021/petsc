@@ -1,6 +1,7 @@
 /*
        Code for Timestepping with implicit backwards Euler.
 */
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 
 #define TSADAPTTSPSEUDO "tspseudo"

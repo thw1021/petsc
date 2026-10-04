@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc.h>
 
 static char help[] = "Solves a linear system with a block of right-hand sides using KSPHPDDM.\n\n";

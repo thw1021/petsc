@@ -2,6 +2,7 @@
    This file contains routines for basic section object implementation.
 */
 
+#include <petscoptions.h>
 #include <petsc/private/sectionimpl.h> /*I  "petscsection.h"   I*/
 #include <petscsf.h>
 

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscfe.h>
 #include <petscdmplex.h>
 #include <petsc/private/hashmap.h>

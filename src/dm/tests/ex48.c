@@ -1,6 +1,7 @@
 static char help[] = "Test VTK structured (.vts)  and rectilinear (.vtr) viewer support with multi-dof DMDAs.\n\
                       Supply the -namefields flag to test with field names.\n\n";
 
+#include <petscoptions.h>
 #include <petscdm.h>
 #include <petscdmda.h>
 

@@ -27,6 +27,7 @@ Lots of information about the FEM assembly can be printed using
   -dm_plex_print_fem 3
 */
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscpc.h>
 #include <petscsnes.h>

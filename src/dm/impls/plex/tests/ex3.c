@@ -1,5 +1,6 @@
 static char help[] = "Check that a DM can accurately represent and interpolate functions of a given polynomial order\n\n";
 
+#include <petscoptions.h>
 #include <petscdmplex.h>
 #include <petscdm.h>
 #include <petscdmda.h>

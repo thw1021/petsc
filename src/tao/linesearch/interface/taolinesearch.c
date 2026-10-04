@@ -1,4 +1,5 @@
-#include <petsctaolinesearch.h> /*I "petsctaolinesearch.h" I*/
+#include <petscoptions.h>
+#include <petsctao.h>
 #include <petsc/private/taolinesearchimpl.h>
 
 PetscFunctionList TaoLineSearchList = NULL;

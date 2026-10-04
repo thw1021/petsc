@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petscvec.h>
 #include <petsc/private/dmimpl.h>      /*I      "petscdm.h"          I*/
 #include <petsc/private/dmlabelimpl.h> /*I      "petscdmlabel.h"     I*/

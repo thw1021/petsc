@@ -1,5 +1,6 @@
 static const char help[] = "Solves a Q2-Q1 Navier-Stokes problem.\n\n";
 
+#include <petscoptions.h>
 #include <petscksp.h>
 #include <petscdmda.h>
 

@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I "petscts.h"  I*/
 #include <petsc/private/tshistoryimpl.h>
 #include <petscdm.h>

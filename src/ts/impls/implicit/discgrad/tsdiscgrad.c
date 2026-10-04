@@ -1,6 +1,7 @@
 /*
   Code for timestepping with discrete gradient integrators
 */
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petscdm.h>
 #include <petsc/private/snesimpl.h> // To see inside DMSNES

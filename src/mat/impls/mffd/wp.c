@@ -27,6 +27,7 @@ M*/
 
    See snesmfjdef.c for  a full set of comments on the routines below.
 */
+#include <petscoptions.h>
 #include <petsc/private/matimpl.h>
 #include <../src/mat/impls/mffd/mffdimpl.h> /*I  "petscmat.h"   I*/
 

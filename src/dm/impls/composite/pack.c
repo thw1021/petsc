@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/dm/impls/composite/packimpl.h> /*I  "petscdmcomposite.h"  I*/
 #include <petsc/private/isimpl.h>
 #include <petsc/private/glvisviewerimpl.h>

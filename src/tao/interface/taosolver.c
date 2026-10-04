@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 #include <petsc/private/snesimpl.h>
 #include <petsc/private/kspimpl.h>

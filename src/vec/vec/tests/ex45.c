@@ -13,6 +13,7 @@ static char help[] = "Demonstrates VecStrideSubSetScatter() and VecStrideSubSetG
      petscviewer.h - viewers
 */
 
+#include <petscoptions.h>
 #include <petscvec.h>
 
 int main(int argc, char **argv)

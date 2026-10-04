@@ -1,5 +1,6 @@
 static char help[] = "Tests assembly of a matrix from another matrix's hash table.\n\n";
 
+#include <petscoptions.h>
 #include <petscmat.h>
 
 PetscErrorCode SetValues(Mat A, PetscBool zero, PetscBool insertvals)

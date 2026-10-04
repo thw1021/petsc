@@ -12,6 +12,7 @@ This example employs a user-defined monitoring routine.\n\n";
      petscksp.h   - linear solvers
 */
 
+#include <petscoptions.h>
 #include <petscsnes.h>
 
 /*

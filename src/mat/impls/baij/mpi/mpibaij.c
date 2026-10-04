@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h> /*I  "petscmat.h"  I*/
 
 #include <petsc/private/hashseti.h>

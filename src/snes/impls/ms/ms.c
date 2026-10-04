@@ -1,3 +1,4 @@
+#include <petscoptions.h>
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 
 static SNESMSType SNESMSDefault = SNESMSM62;

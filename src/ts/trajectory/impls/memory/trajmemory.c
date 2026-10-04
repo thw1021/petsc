@@ -1,5 +1,5 @@
+#include <petscoptions.h>
 #include <petsc/private/tsimpl.h> /*I "petscts.h"  I*/
-#include <petscsys.h>
 #if PetscDefined(HAVE_REVOLVE)
   #include <revolve_c.h>
 

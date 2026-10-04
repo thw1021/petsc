@@ -2,6 +2,7 @@ static char help[] = "Losing nullspaces in PCFIELDSPLIT after zeroing rows.\n";
 
 // Contributed by Jeremy Theler
 
+#include <petscoptions.h>
 #include <petscksp.h>
 
 int main(int argc, char **args)
