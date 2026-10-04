@@ -415,19 +415,7 @@ PetscErrorCode DMPlexTransformDestroy(DMPlexTransform *tr)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscTryTypeMethod(*tr, destroy);
-  PetscCall(DMDestroy(&(*tr)->dm));
-  PetscCall(DMLabelDestroy(&(*tr)->active));
-  PetscCall(DMLabelDestroy(&(*tr)->trType));
-  PetscCall(PetscFree2((*tr)->ctOrderOld, (*tr)->ctOrderInvOld));
-  PetscCall(PetscFree2((*tr)->ctOrderNew, (*tr)->ctOrderInvNew));
-  PetscCall(PetscFree2((*tr)->ctStart, (*tr)->ctStartNew));
-  PetscCall(PetscFree((*tr)->offset));
-  PetscCall(PetscFree2((*tr)->depthStart, (*tr)->depthEnd));
-  for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
-    PetscCall(PetscFEDestroy(&(*tr)->coordFE[c]));
-    PetscCall(PetscFEGeomDestroy(&(*tr)->refGeom[c]));
-  }
+  /* The cached subcell data is sized by DMPlexTransformCellTransform(), so free it before destroying the implementation data. */
   if ((*tr)->trVerts) {
     for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
       DMPolytopeType *rct;
@@ -444,6 +432,19 @@ PetscErrorCode DMPlexTransformDestroy(DMPlexTransform *tr)
       PetscCall(PetscFree((*tr)->trSubVerts[c]));
       PetscCall(PetscFree((*tr)->trVerts[c]));
     }
+  }
+  PetscTryTypeMethod(*tr, destroy);
+  PetscCall(DMDestroy(&(*tr)->dm));
+  PetscCall(DMLabelDestroy(&(*tr)->active));
+  PetscCall(DMLabelDestroy(&(*tr)->trType));
+  PetscCall(PetscFree2((*tr)->ctOrderOld, (*tr)->ctOrderInvOld));
+  PetscCall(PetscFree2((*tr)->ctOrderNew, (*tr)->ctOrderInvNew));
+  PetscCall(PetscFree2((*tr)->ctStart, (*tr)->ctStartNew));
+  PetscCall(PetscFree((*tr)->offset));
+  PetscCall(PetscFree2((*tr)->depthStart, (*tr)->depthEnd));
+  for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
+    PetscCall(PetscFEDestroy(&(*tr)->coordFE[c]));
+    PetscCall(PetscFEGeomDestroy(&(*tr)->refGeom[c]));
   }
   PetscCall(PetscFree3((*tr)->trNv, (*tr)->trVerts, (*tr)->trSubVerts));
   PetscCall(PetscFree2((*tr)->coordFE, (*tr)->refGeom));
@@ -1982,6 +1983,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
     PetscCall(DMPlexTransformSetDM(reftr, refdm));
     PetscCall(DMPlexTransformGetType(tr, &typeName));
     PetscCall(DMPlexTransformSetType(reftr, typeName));
+    PetscTryTypeMethod(reftr, setuprefcell);
     PetscCall(DMPlexTransformSetUp(reftr));
     PetscCall(DMPlexTransformApply(reftr, refdm, &trdm));
 

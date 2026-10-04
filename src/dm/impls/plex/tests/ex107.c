@@ -373,6 +373,21 @@ int main(int argc, char **argv)
       suffix: ranks_halo
       args: -label_halo 1
 
+  # Growing rank subdomains into the mesh overlap creates replicas whose source cells are ghost cells on a different rank.
+  test:
+    suffix: ranks_grow_halo
+    nsize: 2
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 2,1 -petscpartitioner_type simple -dm_distribute_overlap 1 \
+          -label_type ranks -num_local_sub 1 -label_halo 0 -grow 1 -dd_dm_plex_transform_dd_ignore_halo 0
+    output_file: output/ex107_ranks_grow_halo.out
+
+  # Localized periodic cell coordinates use a reference-cell transform, which must have an active subdomain label.
+  test:
+    suffix: periodic_ranks
+    nsize: 1
+    args: -dm_coord_space 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square_periodic.msh -label_type ranks -num_local_sub 1
+    output_file: output/ex107_periodic_ranks.out
+
   # One process owns no cells
   test:
     suffix: ranks_empty

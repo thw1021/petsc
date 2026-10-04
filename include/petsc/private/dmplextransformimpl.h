@@ -17,6 +17,7 @@ struct _n_DMPlexTransformOps {
   PetscErrorCode (*view)(DMPlexTransform, PetscViewer);
   PetscErrorCode (*setfromoptions)(DMPlexTransform, PetscOptionItems);
   PetscErrorCode (*setup)(DMPlexTransform);
+  PetscErrorCode (*setuprefcell)(DMPlexTransform); /* Configure the transform when applied to a reference cell */
   PetscErrorCode (*destroy)(DMPlexTransform);
   PetscErrorCode (*setdimensions)(DMPlexTransform, DM, DM);
   PetscErrorCode (*celltransform)(DMPlexTransform, DMPolytopeType, PetscInt, PetscInt *, PetscInt *, DMPolytopeType *[], PetscInt *[], PetscInt *[], PetscInt *[]);

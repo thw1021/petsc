@@ -1,7 +1,7 @@
 #include <petsc/private/dmplextransformimpl.h> /*I "petscdmplextransform.h" I*/
 
 /*
-  The domain decomposition transformation produces the disjoint union of the subdomains of a mesh.
+  The domain decomposition transformation produces the union of the subdomains of a mesh.
 
   Each stratum of the active label marks the cells of one subdomain, and a cell may belong to several subdomains. A
   point of the original mesh produces one replica for each subdomain whose cells contain the point in their closure,
@@ -269,10 +269,12 @@ static PetscErrorCode DMPlexTransformCellTransform_DD(DMPlexTransform tr, DMPoly
 }
 
 /*
-  Find the lowest rank among the gathered replicas [kStart, kEnd) of a point holding a replica in the subdomain value in
-  the closure of one of its owned cells
+  Find the lowest rank among the gathered replicas [kStart, kEnd) of a point holding a replica in the subdomain value
+
+  Input Parameters:
+. ownedOnly - Whether the replica must be in the closure of an owned cell
 */
-static PetscErrorCode DMPlexTransformDDGetLowestOwner_Private(PetscSection mSec, PetscInt kStart, PetscInt kEnd, const PetscInt mranks[], const PetscInt mvalues[], const PetscInt mowned[], const PetscInt mnew[], PetscInt value, PetscSFNode *owner)
+static PetscErrorCode DMPlexTransformDDGetLowestOwner_Private(PetscSection mSec, PetscInt kStart, PetscInt kEnd, const PetscInt mranks[], const PetscInt mvalues[], const PetscInt mowned[], const PetscInt mnew[], PetscInt value, PetscBool ownedOnly, PetscSFNode *owner)
 {
   PetscFunctionBegin;
   owner->rank  = -1;
@@ -284,7 +286,7 @@ static PetscErrorCode DMPlexTransformDDGetLowestOwner_Private(PetscSection mSec,
     PetscCall(PetscSectionGetDof(mSec, k, &kdof));
     PetscCall(PetscSectionGetOffset(mSec, k, &koff));
     for (PetscInt j = koff; j < koff + kdof; ++j) {
-      if (mvalues[j] != value || !mowned[j]) continue;
+      if (mvalues[j] != value || (ownedOnly && !mowned[j])) continue;
       owner->rank  = mranks[k];
       owner->index = mnew[j];
     }
@@ -294,9 +296,10 @@ static PetscErrorCode DMPlexTransformDDGetLowestOwner_Private(PetscSection mSec,
 
 /*
   The replicas of point q in subdomain s are owned by the rank owning q, if that rank has q in the closure of one of its
-  owned cells in s. Otherwise the lowest rank with q in the closure of one of its owned cells in s owns them. Each rank
-  marks the replicas in the closure of its owned cells, gathers, to the points it owns, the subdomain values, marks, and
-  new point numbers of the replicas on other ranks, decides the owner of each replica, and returns it.
+  owned cells in s. Otherwise the lowest rank with q in the closure of one of its owned cells in s owns them. If there
+  are no such cells, the lowest rank holding the replica owns it. Each rank marks the replicas in the closure of its
+  owned cells, gathers, to the points it owns, the subdomain values, marks, and new point numbers of the replicas on
+  other ranks, decides the owner of each replica, and returns it.
 */
 static PetscErrorCode DMPlexTransformCreateSF_DD(DMPlexTransform tr, DM rdm)
 {
@@ -406,7 +409,16 @@ static PetscErrorCode DMPlexTransformCreateSF_DD(DMPlexTransform tr, DM rdm)
       if (owned[off + r]) {
         owner[off + r].rank  = rank;
         owner[off + r].index = newPoints[off + r];
-      } else PetscCall(DMPlexTransformDDGetLowestOwner_Private(mSec, moff[q], moff[q + 1], mranks, mvalues, mowned, mnew, dd->subdomains[off + r], &owner[off + r]));
+      } else {
+        PetscCall(DMPlexTransformDDGetLowestOwner_Private(mSec, moff[q], moff[q + 1], mranks, mvalues, mowned, mnew, dd->subdomains[off + r], PETSC_TRUE, &owner[off + r]));
+        if (owner[off + r].rank < 0) {
+          PetscCall(DMPlexTransformDDGetLowestOwner_Private(mSec, moff[q], moff[q + 1], mranks, mvalues, mowned, mnew, dd->subdomains[off + r], PETSC_FALSE, &owner[off + r]));
+          if (owner[off + r].rank < 0 || rank < owner[off + r].rank) {
+            owner[off + r].rank  = rank;
+            owner[off + r].index = newPoints[off + r];
+          }
+        }
+      }
     }
     for (PetscInt k = moff[q]; k < moff[q + 1]; ++k) {
       PetscInt kdof, koff;
@@ -420,7 +432,16 @@ static PetscErrorCode DMPlexTransformCreateSF_DD(DMPlexTransform tr, DM rdm)
         if (r >= 0 && owned[off + r]) {
           mowner[j].rank  = rank;
           mowner[j].index = newPoints[off + r];
-        } else PetscCall(DMPlexTransformDDGetLowestOwner_Private(mSec, moff[q], moff[q + 1], mranks, mvalues, mowned, mnew, mvalues[j], &mowner[j]));
+        } else {
+          PetscCall(DMPlexTransformDDGetLowestOwner_Private(mSec, moff[q], moff[q + 1], mranks, mvalues, mowned, mnew, mvalues[j], PETSC_TRUE, &mowner[j]));
+          if (mowner[j].rank < 0) {
+            PetscCall(DMPlexTransformDDGetLowestOwner_Private(mSec, moff[q], moff[q + 1], mranks, mvalues, mowned, mnew, mvalues[j], PETSC_FALSE, &mowner[j]));
+            if (r >= 0 && (mowner[j].rank < 0 || rank < mowner[j].rank)) {
+              mowner[j].rank  = rank;
+              mowner[j].index = newPoints[off + r];
+            }
+          }
+        }
       }
     }
   }
@@ -505,12 +526,29 @@ static PetscErrorCode DMPlexTransformCreateLabels_DD(DMPlexTransform tr, DM rdm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexTransformSetUpReferenceCell_DD(DMPlexTransform tr)
+{
+  DMLabel  active;
+  DM       dm;
+  PetscInt cStart, cEnd;
+
+  PetscFunctionBegin;
+  PetscCall(DMPlexTransformGetDM(tr, &dm));
+  PetscCall(DMCreateLabel(dm, "subdomain"));
+  PetscCall(DMGetLabel(dm, "subdomain", &active));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  for (PetscInt c = cStart; c < cEnd; ++c) PetscCall(DMLabelSetValue(active, c, 0));
+  PetscCall(DMPlexTransformSetActive(tr, active));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMPlexTransformInitialize_DD(DMPlexTransform tr)
 {
   PetscFunctionBegin;
   tr->ops->view                  = DMPlexTransformView_DD;
   tr->ops->setfromoptions        = DMPlexTransformSetFromOptions_DD;
   tr->ops->setup                 = DMPlexTransformSetUp_DD;
+  tr->ops->setuprefcell          = DMPlexTransformSetUpReferenceCell_DD;
   tr->ops->destroy               = DMPlexTransformDestroy_DD;
   tr->ops->setdimensions         = DMPlexTransformSetDimensions_Internal;
   tr->ops->celltransform         = DMPlexTransformCellTransform_DD;
@@ -522,7 +560,7 @@ static PetscErrorCode DMPlexTransformInitialize_DD(DMPlexTransform tr)
 }
 
 /*MC
-  DMPLEXTRANSFORMDD - Transform producing the disjoint union of the, possibly overlapping, subdomains of a mesh
+  DMPLEXTRANSFORMDD - Transform producing the union of the possibly overlapping subdomains of a mesh
 
   Options Database Keys:
 + -dm_plex_transform_active name                 - The label whose strata mark the subdomain cells
@@ -542,9 +580,10 @@ static PetscErrorCode DMPlexTransformInitialize_DD(DMPlexTransform tr)
 
   In parallel, the subdomain values are global. The replicas of point p in subdomain s are owned by the process owning
   p, if p is in the closure of one of its owned cells in s. Otherwise the lowest process with p in the closure of one of
-  its owned cells in s owns them. Thus every owned point is in the closure of an owned cell. In particular, if each
-  subdomain only contains cells owned by one process, and no labeled cell is in the halo, then the point `PetscSF` of the
-  transformed mesh is empty.
+  its owned cells in s owns them. If no process has an owned cell in s containing p, the lowest process holding the
+  replica owns it. Thus every owned point is in the closure of an owned cell in the transformed mesh. In particular, if
+  each subdomain only contains cells owned by one process, and no labeled cell is in the halo, then the point `PetscSF`
+  of the transformed mesh is empty.
 
 .seealso: [](plex_transform_table), `DMPlexTransform`, `DMPlexTransformType`, `DMPlexTransformSetActive()`, `DMPlexLabelAddOverlap()`,
           `DMPlexTransformDDSetIgnoreHalo()`, `DMPLEXTRANSFORMFILTER`, `DMPlexFilter()`
