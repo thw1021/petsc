@@ -90,6 +90,7 @@ PetscErrorCode DMPlexTransformRegister(const char name[], PetscErrorCode (*creat
 }
 
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Filter(DMPlexTransform);
+PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_DD(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Regular(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToBox(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToSimplex(DMPlexTransform);
@@ -116,6 +117,7 @@ PetscErrorCode DMPlexTransformRegisterAll(void)
   DMPlexTransformRegisterAllCalled = PETSC_TRUE;
 
   PetscCall(DMPlexTransformRegister(DMPLEXTRANSFORMFILTER, DMPlexTransformCreate_Filter));
+  PetscCall(DMPlexTransformRegister(DMPLEXTRANSFORMDD, DMPlexTransformCreate_DD));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINEREGULAR, DMPlexTransformCreate_Regular));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINETOBOX, DMPlexTransformCreate_ToBox));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINETOSIMPLEX, DMPlexTransformCreate_ToSimplex));
@@ -413,19 +415,7 @@ PetscErrorCode DMPlexTransformDestroy(DMPlexTransform *tr)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscTryTypeMethod(*tr, destroy);
-  PetscCall(DMDestroy(&(*tr)->dm));
-  PetscCall(DMLabelDestroy(&(*tr)->active));
-  PetscCall(DMLabelDestroy(&(*tr)->trType));
-  PetscCall(PetscFree2((*tr)->ctOrderOld, (*tr)->ctOrderInvOld));
-  PetscCall(PetscFree2((*tr)->ctOrderNew, (*tr)->ctOrderInvNew));
-  PetscCall(PetscFree2((*tr)->ctStart, (*tr)->ctStartNew));
-  PetscCall(PetscFree((*tr)->offset));
-  PetscCall(PetscFree2((*tr)->depthStart, (*tr)->depthEnd));
-  for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
-    PetscCall(PetscFEDestroy(&(*tr)->coordFE[c]));
-    PetscCall(PetscFEGeomDestroy(&(*tr)->refGeom[c]));
-  }
+  /* The cached subcell data is sized by DMPlexTransformCellTransform(), so free it before destroying the implementation data. */
   if ((*tr)->trVerts) {
     for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
       DMPolytopeType *rct;
@@ -442,6 +432,19 @@ PetscErrorCode DMPlexTransformDestroy(DMPlexTransform *tr)
       PetscCall(PetscFree((*tr)->trSubVerts[c]));
       PetscCall(PetscFree((*tr)->trVerts[c]));
     }
+  }
+  PetscTryTypeMethod(*tr, destroy);
+  PetscCall(DMDestroy(&(*tr)->dm));
+  PetscCall(DMLabelDestroy(&(*tr)->active));
+  PetscCall(DMLabelDestroy(&(*tr)->trType));
+  PetscCall(PetscFree2((*tr)->ctOrderOld, (*tr)->ctOrderInvOld));
+  PetscCall(PetscFree2((*tr)->ctOrderNew, (*tr)->ctOrderInvNew));
+  PetscCall(PetscFree2((*tr)->ctStart, (*tr)->ctStartNew));
+  PetscCall(PetscFree((*tr)->offset));
+  PetscCall(PetscFree2((*tr)->depthStart, (*tr)->depthEnd));
+  for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
+    PetscCall(PetscFEDestroy(&(*tr)->coordFE[c]));
+    PetscCall(PetscFEGeomDestroy(&(*tr)->refGeom[c]));
   }
   PetscCall(PetscFree3((*tr)->trNv, (*tr)->trVerts, (*tr)->trSubVerts));
   PetscCall(PetscFree2((*tr)->coordFE, (*tr)->refGeom));
@@ -1980,6 +1983,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
     PetscCall(DMPlexTransformSetDM(reftr, refdm));
     PetscCall(DMPlexTransformGetType(tr, &typeName));
     PetscCall(DMPlexTransformSetType(reftr, typeName));
+    PetscTryTypeMethod(reftr, setuprefcell);
     PetscCall(DMPlexTransformSetUp(reftr));
     PetscCall(DMPlexTransformApply(reftr, refdm, &trdm));
 
@@ -2262,6 +2266,7 @@ static PetscErrorCode DMPlexTransformCreateLabels(DMPlexTransform tr, DM rdm)
     PetscCall(DMGetLabel(rdm, lname, &labelNew));
     PetscCall(RefineLabel_Internal(tr, label, labelNew));
   }
+  PetscTryTypeMethod(tr, createlabels, rdm);
   PetscCall(PetscLogEventEnd(DMPLEXTRANSFORM_CreateLabels, tr, dm, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2342,6 +2347,11 @@ static PetscErrorCode DMPlexTransformCreateSF(DMPlexTransform tr, DM rdm)
   PetscFunctionBegin;
   PetscCall(DMPlexTransformGetDM(tr, &dm));
   PetscCall(PetscLogEventBegin(DMPLEXTRANSFORM_CreateSF, tr, dm, 0, 0));
+  if (tr->ops->createsf) {
+    PetscUseTypeMethod(tr, createsf, rdm);
+    PetscCall(PetscLogEventEnd(DMPLEXTRANSFORM_CreateSF, tr, dm, 0, 0));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(DMPlexGetChart(rdm, &pStartNew, &pEndNew));
   PetscCall(DMGetPointSF(dm, &sf));
   PetscCall(DMGetPointSF(rdm, &sfNew));

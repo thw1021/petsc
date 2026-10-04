@@ -17,10 +17,13 @@ struct _n_DMPlexTransformOps {
   PetscErrorCode (*view)(DMPlexTransform, PetscViewer);
   PetscErrorCode (*setfromoptions)(DMPlexTransform, PetscOptionItems);
   PetscErrorCode (*setup)(DMPlexTransform);
+  PetscErrorCode (*setuprefcell)(DMPlexTransform); /* Configure the transform when applied to a reference cell */
   PetscErrorCode (*destroy)(DMPlexTransform);
   PetscErrorCode (*setdimensions)(DMPlexTransform, DM, DM);
   PetscErrorCode (*celltransform)(DMPlexTransform, DMPolytopeType, PetscInt, PetscInt *, PetscInt *, DMPolytopeType *[], PetscInt *[], PetscInt *[], PetscInt *[]);
   PetscErrorCode (*ordersupports)(DMPlexTransform, DM, DM);
+  PetscErrorCode (*createsf)(DMPlexTransform, DM);
+  PetscErrorCode (*createlabels)(DMPlexTransform, DM);
   PetscErrorCode (*getsubcellorientation)(DMPlexTransform, DMPolytopeType, PetscInt, PetscInt, DMPolytopeType, PetscInt, PetscInt, PetscInt *, PetscInt *);
   PetscErrorCode (*mapcoordinates)(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
   PetscErrorCode (*check)(DMPlexTransform, DM);
@@ -58,6 +61,17 @@ struct _p_DMPlexTransform {
 typedef struct {
   PetscInt dummy;
 } DMPlexTransform_Filter;
+
+typedef struct {
+  PetscBool      ignoreHalo;              // Flag to ignore labeled cells which are leaves of the point SF
+  PetscSection   subSec;                  // Number of subdomains containing each point of the original mesh
+  PetscInt      *subdomains;              // Sorted subdomain values of each point, laid out by subSec
+  PetscInt      *coneOff;                 // Offset into cones of the cone description of each point
+  PetscInt      *cones;                   // Cone descriptions of all replicas of each point
+  PetscInt      *ornts;                   // Zero orientations, long enough for any cone description
+  PetscInt      *sizes;                   // sizes[m] = m, the number of replicas of a point in m subdomains
+  DMPolytopeType types[DM_NUM_POLYTOPES]; // types[ct] = ct, the type produced by a point of type ct
+} DMPlexTransform_DD;
 
 typedef enum {
   NORMAL_DEFAULT,
