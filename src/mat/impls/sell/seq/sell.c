@@ -1610,6 +1610,9 @@ PetscErrorCode MatCopy_SeqSELL(Mat A, Mat B, MatStructure str)
 
     PetscCheck(a->sliidx[a->totalslices] == b->sliidx[b->totalslices], PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of nonzeros in two matrices are different");
     PetscCall(PetscArraycpy(b->val, a->val, a->sliidx[a->totalslices]));
+#if PetscDefined(HAVE_CUPM)
+    if (B->offloadmask != PETSC_OFFLOAD_UNALLOCATED) B->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   } else {
     PetscCall(MatCopy_Basic(A, B, str));
   }
@@ -1932,6 +1935,9 @@ static PetscErrorCode MatRetrieveValues_SeqSELL(Mat mat)
   PetscCheck(a->nonew, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
   PetscCheck(a->saved_values, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Must call MatStoreValues(A);first");
   PetscCall(PetscArraycpy(a->val, a->saved_values, a->sliidx[a->totalslices]));
+#if PetscDefined(HAVE_CUPM)
+  if (mat->offloadmask != PETSC_OFFLOAD_UNALLOCATED) mat->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
