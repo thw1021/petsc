@@ -51,6 +51,7 @@
 ```
 
 - Add device implementations of `MatNorm()` with `NORM_1`, `NORM_FROBENIUS`, and `NORM_INFINITY` for `MATAIJKOKKOS`; previously all norms copied the matrix values to the host
+- Add `MatGetRowSumAbs()` for `MATHYPRE`, on the host and the device, and device implementations of `MatGetRowSumAbs()` for `MATAIJCUSPARSE`, `MATAIJHIPSPARSE`, and `MATAIJKOKKOS`; previously the AIJ device types copied the matrix values to the host
 
 ```{rubric} MatCoarsen:
 ```
