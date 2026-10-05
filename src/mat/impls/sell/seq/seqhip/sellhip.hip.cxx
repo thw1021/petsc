@@ -8,18 +8,18 @@
 #define WARP_SIZE 64
 
 typedef struct {
-  PetscInt   maxallocmat;
-  PetscInt   totalentries;
-  PetscInt  *colidx; /* column index array, device pointer */
-  MatScalar *val;    /* value array, device pointer */
-  PetscInt   totalslices;
-  PetscInt  *sliidx; /* slice index array, device pointer */
-  PetscInt   nonzerostate;
-  PetscInt   kernelchoice;
-  PetscInt   blocky;
-  PetscInt   chunksperblock;
-  PetscInt   totalchunks;
-  PetscInt  *chunk_slice_map; /* starting slice for each chunk, device pointer */
+  PetscInt         maxallocmat;
+  PetscInt         totalentries;
+  PetscInt        *colidx; /* column index array, device pointer */
+  MatScalar       *val;    /* value array, device pointer */
+  PetscInt         totalslices;
+  PetscInt        *sliidx; /* slice index array, device pointer */
+  PetscObjectState nonzerostate;
+  PetscInt         kernelchoice;
+  PetscInt         blocky;
+  PetscInt         chunksperblock;
+  PetscInt         totalchunks;
+  PetscInt        *chunk_slice_map; /* starting slice for each chunk, device pointer */
 } Mat_SeqSELLHIP;
 
 static PetscErrorCode MatSeqSELLHIP_Destroy(Mat_SeqSELLHIP **hipstruct)
@@ -43,7 +43,7 @@ static PetscErrorCode MatSeqSELLHIPCopyToGPU(Mat A)
   PetscFunctionBegin;
   if (A->offloadmask == PETSC_OFFLOAD_UNALLOCATED || A->offloadmask == PETSC_OFFLOAD_CPU) {
     PetscCall(PetscLogEventBegin(MAT_HIPCopyToGPU, A, 0, 0, 0));
-    if (A->assembled && A->nonzerostate == hipstruct->nonzerostate) {
+    if (hipstruct->sliidx && A->nonzerostate == hipstruct->nonzerostate) {
       /* copy values only */
       PetscCallHIP(hipMemcpy(hipstruct->val, a->val, a->sliidx[a->totalslices] * sizeof(MatScalar), hipMemcpyHostToDevice));
       PetscCall(PetscLogCpuToGpu(a->sliidx[a->totalslices] * (sizeof(MatScalar))));
@@ -70,7 +70,8 @@ static PetscErrorCode MatSeqSELLHIPCopyToGPU(Mat A)
     }
     PetscCallHIP(WaitForHIP());
     PetscCall(PetscLogEventEnd(MAT_HIPCopyToGPU, A, 0, 0, 0));
-    A->offloadmask = PETSC_OFFLOAD_BOTH;
+    hipstruct->nonzerostate = A->nonzerostate;
+    A->offloadmask          = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
