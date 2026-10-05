@@ -94,8 +94,8 @@ Tao Object: 1 MPI process
     Newton steps: 19
     BFGS steps: 0
     Gradient steps: 8
-    nls ksp atol: 1
-    nls ksp rtol: 18
+    nls ksp atol: 0
+    nls ksp rtol: 19
     nls ksp ctol: 0
     nls ksp negc: 0
     nls ksp dtol: 0
