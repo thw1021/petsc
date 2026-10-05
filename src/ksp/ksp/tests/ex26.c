@@ -68,7 +68,7 @@ int main(int argc, char **argv)
   Mat         A, P = NULL, B, X;
   GridCtx     fine_ctx;
   KSP         ksp;
-  PetscBool   Brand = PETSC_FALSE, transpose = PETSC_FALSE, product = PETSC_FALSE, new_pattern = PETSC_FALSE, flg;
+  PetscBool   Brand = PETSC_FALSE, transpose = PETSC_FALSE, product = PETSC_FALSE, new_pattern = PETSC_FALSE, check_copies = PETSC_FALSE, flg;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -85,6 +85,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-product_into_solution", &product, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-lda_shift", &lda_shift, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-new_pattern", &new_pattern, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-check_copies", &check_copies, NULL));
+  if (check_copies) PetscCall(PetscLogDefaultBegin());
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Fine grid size %" PetscInt_FMT " by %" PetscInt_FMT "\n", fine_ctx.mx, fine_ctx.my));
 
   /* Set up distributed array for fine grid */
@@ -138,6 +140,24 @@ int main(int argc, char **argv)
   }
   if (transpose) PetscCall(KSPMatSolveTranspose(ksp, B, X));
   else PetscCall(KSPMatSolve(ksp, B, X));
+  if (check_copies) { /* the first solve sets the solver up, including the products it keeps, so a second solve with the same blocks runs on the device only */
+    PetscLogEvent event;
+
+    PetscCall(PetscLogEventRegister("SolveCheck", KSP_CLASSID, &event));
+    PetscCall(PetscLogEventBegin(event, 0, 0, 0, 0));
+    if (transpose) PetscCall(KSPMatSolveTranspose(ksp, B, X));
+    else PetscCall(KSPMatSolve(ksp, B, X));
+    PetscCall(PetscLogEventEnd(event, 0, 0, 0, 0));
+#if PetscDefined(HAVE_DEVICE)
+    {
+      PetscEventPerfInfo info;
+
+      PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &info));
+      PetscCheck(info.GpuToCpuCount == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "%g unexpected GPU to CPU copies (%g bytes) in the second block solve", info.GpuToCpuCount, info.GpuToCpuSize);
+      PetscCheck(info.CpuToGpuCount == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "%g unexpected CPU to GPU copies (%g bytes) in the second block solve", info.CpuToGpuCount, info.CpuToGpuSize);
+    }
+#endif
+  }
   PetscCall(MatViewFromOptions(X, NULL, "-debug"));
 
   PetscCall(PetscObjectTypeCompare((PetscObject)ksp, KSPPREONLY, &flg));
@@ -347,6 +367,61 @@ PetscErrorCode FormJacobian_Grid(GridCtx *grid, Mat jac)
       suffix: matcycles_lda
       nsize: 2
       args: -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -ksp_matsolve_batch_size {{4 7}shared output} -lda_shift 3
+
+    # a second block solve must not copy between the host and the device, the coarse level uses PCJACOBI since the default
+    # PCLU and PCREDUNDANT factor on the host, -check_copies in parallel requires GPU-aware MPI: without it PetscSF stages the
+    # device buffers of the scatters through the host, and those copies are logged inside KSPMatSolve()
+    testset:
+      requires: cuda kokkos_kernels defined(PETSC_USE_LOG)
+      args: -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -mg_coarse_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -dm_mat_type aijkokkos -dm_vec_type kokkos -rhs_mat_type densecuda -rhs_mat_vec_type kokkos -check_copies
+      output_file: output/ex26_matcycles_copies.out
+
+      test:
+        suffix: matcycles_kokkos_cuda_copies
+
+      test:
+        suffix: matcycles_kokkos_cuda_copies_par
+        nsize: 2
+        requires: defined(PETSC_HAVE_MPI_GPU_AWARE)
+
+    testset:
+      requires: cuda defined(PETSC_USE_LOG)
+      args: -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -mg_coarse_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -dm_mat_type aijcusparse -dm_vec_type cuda -rhs_mat_type densecuda -check_copies
+      output_file: output/ex26_matcycles_copies.out
+
+      test:
+        suffix: matcycles_cuda_copies
+
+      test:
+        suffix: matcycles_cuda_copies_par
+        nsize: 2
+        requires: defined(PETSC_HAVE_MPI_GPU_AWARE)
+
+    testset:
+      requires: hip kokkos_kernels defined(PETSC_USE_LOG)
+      args: -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -mg_coarse_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -dm_mat_type aijkokkos -dm_vec_type kokkos -rhs_mat_type densehip -rhs_mat_vec_type kokkos -check_copies
+      output_file: output/ex26_matcycles_copies.out
+
+      test:
+        suffix: matcycles_kokkos_hip_copies
+
+      test:
+        suffix: matcycles_kokkos_hip_copies_par
+        nsize: 2
+        requires: defined(PETSC_HAVE_MPI_GPU_AWARE)
+
+    testset:
+      requires: hip defined(PETSC_USE_LOG)
+      args: -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -mg_coarse_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -dm_mat_type aijhipsparse -dm_vec_type hip -rhs_mat_type densehip -check_copies
+      output_file: output/ex26_matcycles_copies.out
+
+      test:
+        suffix: matcycles_hip_copies
+
+      test:
+        suffix: matcycles_hip_copies_par
+        nsize: 2
+        requires: defined(PETSC_HAVE_MPI_GPU_AWARE)
 
     test:
       suffix: matcycles_richardson_transpose
