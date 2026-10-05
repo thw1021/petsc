@@ -284,7 +284,7 @@ PetscErrorCode Device<T>::select_device_petsc_decide_(MPI_Comm comm, PetscInt nd
 template <DeviceType T>
 PetscErrorCode Device<T>::get_device_placement_in_cpuset_(PetscInt dev_count, hwloc_cpuset_t superset_cpuset, hwloc_obj_t process_cpu_obj, hwloc_topology_t topology, PetscInt *relative_device_index) noexcept
 {
-  // hwloc_bitmap_weight returns the number of non-zero entries in a cpuset.
+  // hwloc_bitmap_weight() returns the number of non-zero entries in a cpuset.
   PetscInt cores_in_anc_obj = hwloc_bitmap_weight(superset_cpuset);
   PetscInt ctr              = 0;
 
@@ -321,7 +321,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
     HwlocBitmap              sibling_cpuset(hwloc_bitmap_alloc());
     HwlocTopology            topology;
 
-    // Ensure initId->first is set to a sensible fallback value if any hwloc
+    // Ensure *initId is set to a sensible fallback value if any hwloc
     // calls fail.
     *initId = PETSC_DECIDE;
 
@@ -329,7 +329,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
     for (PetscInt idev = 0; idev < ndev; idev++) {
       auto cerr = cupmDeviceGetPCIBusId(&device_addrs[idev][0], 32, idev);
       if (cerr != cupmSuccess) {
-        // Do not set deferredError_ here to allow fallback to select_device_petsc_decide_
+        // Do not set deferredError_ here to allow fallback to select_device_petsc_decide_()
         // which doesn't rely on any cupm calls.
         *success = PETSC_FALSE;
         PetscFunctionReturn(PETSC_SUCCESS);
@@ -344,10 +344,16 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
 
     // Causes binding functions to call OS-specific system calls - required for determining
     // current CPU binding
-    if (hwloc_topology_set_flags(topology.get(), HWLOC_TOPOLOGY_FLAG_IS_THISSYSTEM) == -1) PetscFunctionReturn(PETSC_ERR_LIB);
+    if (hwloc_topology_set_flags(topology.get(), HWLOC_TOPOLOGY_FLAG_IS_THISSYSTEM) == -1) {
+      *success = PETSC_FALSE;
+      PetscFunctionReturn(PETSC_ERR_LIB);
+    }
     // By default IO devices (i.e. GPUs, storage, etc.) are filtered out. GPUs are considered
     // important. This filter makes sure those are included in the detected topology.
-    if (hwloc_topology_set_io_types_filter(topology.get(), HWLOC_TYPE_FILTER_KEEP_IMPORTANT) == -1) PetscFunctionReturn(PETSC_ERR_LIB);
+    if (hwloc_topology_set_io_types_filter(topology.get(), HWLOC_TYPE_FILTER_KEEP_IMPORTANT) == -1) {
+      *success = PETSC_FALSE;
+      PetscFunctionReturn(PETSC_ERR_LIB);
+    }
     if (hwloc_topology_load(topology.get()) == -1) {
       *success = PETSC_FALSE;
       PetscFunctionReturn(PETSC_SUCCESS);
@@ -358,8 +364,11 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
       *success = PETSC_FALSE;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
-    if (hwloc_get_cpubind(topology.get(), cpuset_mine.get(), HWLOC_CPUBIND_THREAD) == -1) PetscFunctionReturn(PETSC_ERR_LIB);
-    // The cpuset returned from hwloc_get_cpubind is in OS-order, which is not necessarily
+    if (hwloc_get_cpubind(topology.get(), cpuset_mine.get(), HWLOC_CPUBIND_THREAD) == -1) {
+      *success = PETSC_FALSE;
+      PetscFunctionReturn(PETSC_ERR_LIB);
+    }
+    // The cpuset returned from hwloc_get_cpubind() is in OS-order, which is not necessarily
     // the same as the topological order. Create a PU object from the first CPU detected
     // in this cpuset. A PU object is the lowest object in any hwloc topology. It is not
     // allowed to have any child objects.
@@ -378,7 +387,7 @@ PetscErrorCode Device<T>::select_device_topology_aware_(PetscInt ndev, int *init
         PetscFunctionReturn(PETSC_SUCCESS);
       }
       // hwloc does not consider IO devices to have ancestor or child objects, therefore
-      // a call to hwloc_get_non_io_ancestor_obj is required for each device to find the
+      // a call to hwloc_get_non_io_ancestor_obj() is required for each device to find the
       // nearest non-IO device that has the same locality as the GPU. hwloc_get_common_ancestor
       // object returns the lowest-level object ('Group', CPU socket, Machine, etc) that contains
       // both the GPU and the first CPU core in the current cpuset.
@@ -433,7 +442,6 @@ PetscErrorCode Device<T>::select_device_(MPI_Comm comm, int *dev_id) noexcept
 {
   int         ndev          = 0;
   cupmError_t cerr          = cupmSuccess;
-  PetscBool   hwloc_success = PETSC_TRUE;
 
   PetscFunctionBegin;
   if ((cerr = cupmGetDeviceCount(&ndev))) {
@@ -445,8 +453,9 @@ PetscErrorCode Device<T>::select_device_(MPI_Comm comm, int *dev_id) noexcept
   PetscCall(PetscDeviceCheckDeviceCount_Internal(ndev));
 #if PetscDefined(HAVE_HWLOC)
   if (*dev_id == PETSC_DEVICE_TOPOLOGY_AWARE) {
+    PetscBool hwloc_success = PETSC_TRUE;
     PetscCall(select_device_topology_aware_(ndev, dev_id, &hwloc_success));
-    // If select_device_topology_aware_ fails, it will set initId.first to
+    // If select_device_topology_aware_() fails, it will set *dev_id to
     // PETSC_DECIDE in order to fall through to the default algorithm
     if (!hwloc_success) PetscCall(PetscInfo(nullptr, "Topology aware GPU device allocation failed. Falling back to default algorithm\n"));
   }
@@ -478,6 +487,7 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   PetscCall(PetscMPIIntCast(initId.first, &dev_id));
   if (initType.first == PETSC_DEVICE_INIT_NONE) {
     // initType overrides initView
+    dev_id         = PETSC_CUPM_DEVICE_NONE;
     initView.first = PETSC_FALSE;
   } else {
     PetscCall(select_device_(comm, &dev_id));
@@ -506,15 +516,15 @@ PetscErrorCode Device<T>::init_device_id_(PetscInt *inid) const noexcept
 {
   auto id = *inid == PETSC_DECIDE ? defaultDevice_ : (int)*inid;
 
-  // In this callpath, a negative inid may be passed from PetscDeviceCreate.
+  // In this callpath, a negative inid may be passed from PetscDeviceCreate().
   // If this happens, -1 (PETSC_DECIDE) is intercepted above, but any other
   // negative value will be passed to the select_device_ function. Positive
   // values (i.e. the user has selected a specific device) always override
   // negative values.
 
   PetscFunctionBegin;
-  PetscCheck(defaultDevice_ != PETSC_CUPM_DEVICE_NONE, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Trying to retrieve a %s PetscDevice when it has been disabled", cupmName());
   PetscCheck(deferredError_ == cupmSuccess, PETSC_COMM_SELF, PETSC_ERR_GPU, "Cannot lazily initialize PetscDevice: %s error %d (%s) : %s", cupmName(), static_cast<PetscErrorCode>(deferredError_), cupmGetErrorName(deferredError_), cupmGetErrorString(deferredError_));
+  PetscCheck(defaultDevice_ != PETSC_CUPM_DEVICE_NONE, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Trying to retrieve a %s PetscDevice when it has been disabled", cupmName());
 
   if (id < 0) PetscCall(select_device_(deviceComm_, &id));
 
