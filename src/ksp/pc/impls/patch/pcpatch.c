@@ -195,20 +195,19 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
     /* To determine the SF for the full mixed space we need to combine the per-field SFs
        with the per-field ISes to establish how each subspace maps to other ranks. Once
        we have that we can then merge them. */
-    PetscSF *subspaceSFs = NULL;
-    PetscInt *ilocal = NULL;
-    PetscSFNode *iremote = NULL;
-    PetscInt allRoots = 0, allLeaves = 0, index = 0;
+    PetscSF         *subspaceSFs = NULL;
+    PetscInt        *ilocal = NULL;
+    PetscSFNode     *iremote = NULL;
+    PetscInt         allRoots = 0, allLeaves = 0, index = 0;
     const PetscInt **subspaceIndices = NULL;
 
     PetscCall(PetscMalloc1(n, &subspaceIndices));
-    for (PetscInt k = 0; k < n; ++k)
-      PetscCall(ISGetIndices(isets[k], &subspaceIndices[k]));
+    for (PetscInt k = 0; k < n; ++k) PetscCall(ISGetIndices(isets[k], &subspaceIndices[k]));
 
     PetscCall(PetscMalloc1(n, &subspaceSFs));
     for (PetscInt k = 0; k < n; ++k) {
-      PetscInt size;
-      PetscInt *remoteOffsets = NULL;
+      PetscInt     size;
+      PetscInt    *remoteOffsets = NULL;
       PetscSection sec;
 
       // Turn the IS into a PetscSection with 1 DoF per point
@@ -240,15 +239,15 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
     PetscCall(PetscMalloc1(allLeaves, &iremote));
 
     for (PetscInt k = 0; k < n; ++k) {
-      PetscInt nleaves;
-      const PetscInt *subilocal = NULL;
+      PetscInt           nleaves;
+      const PetscInt    *subilocal = NULL;
       const PetscSFNode *subiremote = NULL;
 
       PetscCall(PetscSFGetGraph(subspaceSFs[k], NULL, &nleaves, &subilocal, &subiremote));
       for (PetscInt i = 0; i < nleaves; ++i) {
-        ilocal[i+index] = subilocal ? subilocal[i] : i;
-        iremote[i+index].rank = subiremote[i].rank;
-        iremote[i+index].index = subiremote[i].index;
+        ilocal[i + index]        = subilocal ? subilocal[i] : i;
+        iremote[i + index].rank  = subiremote[i].rank;
+        iremote[i + index].index = subiremote[i].index;
       }
       index += nleaves;
     }
@@ -259,8 +258,7 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
     for (PetscInt k = 0; k < n; ++k)
       PetscCall(ISRestoreIndices(isets[k], &subspaceIndices[k]));
     PetscCall(PetscFree(subspaceIndices));
-    for (PetscInt k = 0; k < n; ++k)
-      PetscCall(PetscSFDestroy(&subspaceSFs[k]));
+    for (PetscInt k = 0; k < n; ++k) PetscCall(PetscSFDestroy(&subspaceSFs[k]));
     PetscCall(PetscFree(subspaceSFs));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -693,7 +691,7 @@ PetscErrorCode PCPatchSetDiscretisationInfo(PC pc, PetscInt nsubspaces, DM dms[]
 
   patch->nsubspaces       = nsubspaces;
   patch->totalDofsPerCell = 0;
-  patch->localSize = 0;
+  patch->localSize        = 0;
   for (i = 0; i < nsubspaces; ++i) {
     PetscCall(DMGetLocalSection(dms[i], &patch->dofSection[i]));
     PetscCall(PetscObjectReference((PetscObject)patch->dofSection[i]));
@@ -1485,7 +1483,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   PetscInt        *globalDofsArrayWithArtificial = NULL;
   PetscInt        *globalDofsArrayWithAll        = NULL;
   PetscInt         globalIndex                   = 0;
-  const PetscInt       **subspaceIndices               = NULL;
+  const PetscInt **subspaceIndices               = NULL;
   PetscInt         key                           = 0;
   PetscInt         asmKey                        = 0;
   DM               dm                            = NULL, plex;
@@ -1557,8 +1555,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
   if (!patch->combined) {
     PetscCall(PetscMalloc1(patch->nsubspaces, &subspaceIndices));
-    for (i = 0; i < patch->nsubspaces; ++i)
-      PetscCall(ISGetIndices(patch->isets[i], &subspaceIndices[i]));
+    for (i = 0; i < patch->nsubspaces; ++i) PetscCall(ISGetIndices(patch->isets[i], &subspaceIndices[i]));
   }
 
   PetscCall(ISGetIndices(cells, &cellsArray));
@@ -1659,14 +1656,11 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
         newCellsArray[i] = cell;
         for (j = 0; j < dofsPerCell; ++j) {
           /* For each global dof, map it into contiguous local storage. */
-          PetscInt globalDof;
-          PetscInt       localDof;
-          PetscBool      isGlobalBcDof, isArtificialBcDof;
+          PetscInt  globalDof, localDof;
+          PetscBool isGlobalBcDof, isArtificialBcDof;
 
-          if (patch->combined)
-            globalDof = cellDofMap[cell * dofsPerCell + j];
-          else
-            globalDof = subspaceIndices[k][cellDofMap[cell * dofsPerCell + j]];
+          if (patch->combined) globalDof = cellDofMap[cell * dofsPerCell + j];
+          else globalDof = subspaceIndices[k][cellDofMap[cell * dofsPerCell + j]];
 
           /* first, check if this is either a globally enforced or locally enforced BC dof */
           PetscCall(PetscHSetIHas(globalBcs, globalDof, &isGlobalBcDof));
@@ -1772,12 +1766,10 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
         if (cellNumbering) PetscCall(PetscSectionGetOffset(cellNumbering, c, &cell));
         for (j = 0; j < dofsPerCell; ++j) {
-          PetscInt globalDof;
+          PetscInt       globalDof;
           const PetscInt localDof = dofsArray[key];
-          if (patch->combined)
-            globalDof = cellDofMap[cell * dofsPerCell + j];
-          else
-            globalDof = subspaceIndices[k][cellDofMap[cell * dofsPerCell + j]];
+          if (patch->combined) globalDof = cellDofMap[cell * dofsPerCell + j];
+          else globalDof = subspaceIndices[k][cellDofMap[cell * dofsPerCell + j]];
           if (localDof >= 0) PetscCall(PetscHMapISet(ht, globalDof, localDof));
           if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
             const PetscInt localDofWithArtificial = dofsArrayWithArtificial[key];
@@ -1869,10 +1861,8 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
           for (j = 0; j < dofsPerCell; ++j) {
             PetscInt globalDof, localDof;
 
-            if (patch->combined)
-              globalDof = cellDofMap[cell * dofsPerCell + j];
-            else
-              globalDof = subspaceIndices[k][cellDofMap[cell * dofsPerCell + j]];
+            if (patch->combined) globalDof = cellDofMap[cell * dofsPerCell + j];
+            else globalDof = subspaceIndices[k][cellDofMap[cell * dofsPerCell + j]];
             PetscCall(PetscHMapIGet(ht, globalDof, &localDof));
             /* If it's not in the hash table, i.e. is a BC dof,
  then the PetscHSetIMap above gives -1, which matches
@@ -1908,8 +1898,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) PetscCall(PetscFree(dofsArrayWithArtificial));
   if (isNonlinear) PetscCall(PetscFree(dofsArrayWithAll));
   if (!patch->combined) {
-    for (i = 0; i < patch->nsubspaces; ++i)
-      PetscCall(ISRestoreIndices(patch->isets[i], &subspaceIndices[i]));
+    for (i = 0; i < patch->nsubspaces; ++i) PetscCall(ISRestoreIndices(patch->isets[i], &subspaceIndices[i]));
     PetscCall(PetscFree(subspaceIndices));
   }
   /* Create placeholder section for map from points to patch dofs */
@@ -2883,7 +2872,7 @@ static PetscErrorCode PCSetUp_PATCH(PC pc)
     PetscCall(PetscLogEventBegin(PC_Patch_CreatePatches, pc, 0, 0, 0));
 
     isNonlinear = patch->isNonlinear;
-    if (!patch->nsubspaces) {  // SetDiscretisationInfo not called
+    if (!patch->nsubspaces) { // SetDiscretisationInfo not called
       DM           dm, plex;
       PetscSection s;
       PetscInt     cStart, cEnd, c, Nf, f, numGlobalBcs = 0, *globalBcs, *Nb, **cellDofs;
