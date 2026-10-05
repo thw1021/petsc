@@ -1054,8 +1054,7 @@ static PetscErrorCode PCPatchGetGlobalDofs(PC pc, PetscSection dofSection[], Pet
       PC_PATCH *patch = (PC_PATCH *)pc->data;
       PetscInt  fdof;
 
-      // assert off is NULL, non interleaved layout, cannot compute offset
-
+      PetscCheck(!off, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "off cannot be determined for PCPatchGetGlobalDofs if f is not provided because it is ambiguous");
       if (dof) {
         *dof = 0;
         for (PetscInt g = 0; g < patch->nsubspaces; ++g) {
