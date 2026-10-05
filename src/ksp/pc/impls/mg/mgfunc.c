@@ -1,4 +1,5 @@
 #include <petsc/private/pcmgimpl.h> /*I "petscksp.h" I*/
+#include <petscdm.h>
 
 /*@
   PCMGResidualDefault - Default routine to calculate the residual.
@@ -414,7 +415,10 @@ PetscErrorCode PCMGSetRScale(PC pc, PetscInt l, Vec rscale)
   When evaluating a function on a coarse level one does not want to do F(R * x) one does F(rscale * R * x) where rscale is 1 over the row sums of R.
   It is preferable to use `PCMGGetInjection()` to control moving primal vectors.
 
-.seealso: [](ch_ksp), `PCMG`, `PCMGSetInterpolation()`, `PCMGGetRestriction()`, `PCMGGetInjection()`
+  If the `PC` has a `DM`, the scaling is computed with `DMCreateInterpolationScale()` from the `DM` of each level.
+  Otherwise the coarse level is identified by the dimensions of R, which must not be square.
+
+.seealso: [](ch_ksp), `PCMG`, `PCMGSetInterpolation()`, `PCMGGetRestriction()`, `PCMGGetInjection()`, `DMCreateInterpolationScale()`
 @*/
 PetscErrorCode PCMGGetRScale(PC pc, PetscInt l, Vec *rscale)
 {
@@ -425,7 +429,15 @@ PetscErrorCode PCMGGetRScale(PC pc, PetscInt l, Vec *rscale)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscCheck(mglevels, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must set MG levels before calling");
   PetscCheck(l > 0 && l < mg->nlevels, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Level %" PetscInt_FMT " must be in range {1,...,%" PetscInt_FMT "}", l, mg->nlevels - 1);
-  if (!mglevels[l]->rscale) {
+  if (!mglevels[l]->rscale && pc->dm) {
+    Mat R;
+    DM  dmfine, dmcoarse;
+
+    PetscCall(PCMGGetRestriction(pc, l, &R));
+    PetscCall(KSPGetDM(mglevels[l]->smoothd, &dmfine));
+    PetscCall(KSPGetDM(mglevels[l - 1]->smoothd, &dmcoarse));
+    PetscCall(DMCreateInterpolationScale(dmcoarse, dmfine, R, &mglevels[l]->rscale));
+  } else if (!mglevels[l]->rscale) {
     Mat      R;
     Vec      X, Y, coarse, fine;
     PetscInt M, N;
