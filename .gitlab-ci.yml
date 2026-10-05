@@ -437,6 +437,7 @@ ai-review:
     - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
     - if [ ! -z ${GCOV_MODULES+x} ]; then module --trace load ${GCOV_MODULES}; module list; fi
     - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; if [ -f ${HOME}/${INIT_SCRIPT} ]; then source ${HOME}/${INIT_SCRIPT}; else source ${INIT_SCRIPT}; fi; fi
+    - if [ ! -z ${MERGE_MAIN+x} ]; then echo "merging main branch"; git fetch --unshallow --tags origin +main:remotes/origin/main; git merge -q --no-commit origin/main; fi
     - if [ "${RUN_GCOV}" == 1 ]; then
       printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n";
       gcovr --version;
@@ -611,6 +612,21 @@ linux-gcc-quad-64idx-dbg:
     - linux-gcov
   variables:
     TEST_ARCH: arch-ci-linux-gcc-quad-64idx-dbg
+
+main-linux-gcc-pkgs-opt:
+  extends:
+    - .stage-2
+    - .linux_test
+  tags:
+    - gce-u24-stage2, linux-gcov
+  variables:
+    TEST_ARCH: arch-ci-linux-gcc-pkgs-opt
+    MERGE_MAIN: yes
+  only:
+    variables:
+      - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "release"
+      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+  allow_failure: true
 
 linux-gcc-pkgs-opt:
   extends:
