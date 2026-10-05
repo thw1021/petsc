@@ -931,7 +931,7 @@ static PetscErrorCode MatZeroEntries_SeqSELLHIP(Mat A)
 static PetscErrorCode MatDestroy_SeqSELLHIP(Mat A)
 {
   PetscFunctionBegin;
-  if (A->factortype == MAT_FACTOR_NONE && A->offloadmask != PETSC_OFFLOAD_UNALLOCATED) PetscCall(MatSeqSELLHIP_Destroy((Mat_SeqSELLHIP **)&A->spptr));
+  if (A->factortype == MAT_FACTOR_NONE) PetscCall(MatSeqSELLHIP_Destroy((Mat_SeqSELLHIP **)&A->spptr));
   PetscCall(MatDestroy_SeqSELL(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

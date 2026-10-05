@@ -938,7 +938,7 @@ static PetscErrorCode MatZeroEntries_SeqSELLCUDA(Mat A)
 static PetscErrorCode MatDestroy_SeqSELLCUDA(Mat A)
 {
   PetscFunctionBegin;
-  if (A->factortype == MAT_FACTOR_NONE && A->offloadmask != PETSC_OFFLOAD_UNALLOCATED) PetscCall(MatSeqSELLCUDA_Destroy((Mat_SeqSELLCUDA **)&A->spptr));
+  if (A->factortype == MAT_FACTOR_NONE) PetscCall(MatSeqSELLCUDA_Destroy((Mat_SeqSELLCUDA **)&A->spptr));
   PetscCall(MatDestroy_SeqSELL(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

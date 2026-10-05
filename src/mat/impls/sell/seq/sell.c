@@ -900,10 +900,10 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   PetscCall(ISDestroy(&a->icol));
   PetscCall(PetscFree(a->saved_values));
   PetscCall(PetscFree2(a->getrowcols, a->getrowvals));
-  PetscCall(PetscFree(A->data));
 #if PetscDefined(HAVE_CUPM)
   PetscCall(PetscFree(a->chunk_slice_map));
 #endif
+  PetscCall(PetscFree(A->data));
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatStoreValues_C", NULL));
