@@ -18,7 +18,7 @@ static PetscErrorCode GenEntries(PetscInt sdim, PetscInt M, PetscInt N, const Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if PetscDefined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
 /* GenEntries() scaled by the unitary diag(exp(i x_0)) on both sides: Hermitian, but not symmetric */
 static PetscErrorCode GenEntriesHermitian(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *J, const PetscInt *K, PetscScalar *ptr, PetscCtx ctx)
 {
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-symmetric", &sym, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-hermitian", &herm, &set_herm));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-spd", &spd, &set_spd));
-#if PetscDefined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
   if (herm) kernel = GenEntriesHermitian;
 #endif
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-mat_htool_epsilon", &epsilon, NULL));
