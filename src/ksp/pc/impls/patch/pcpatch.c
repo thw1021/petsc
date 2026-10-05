@@ -196,8 +196,8 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
        with the per-field ISes to establish how each subspace maps to other ranks. Once
        we have that we can then merge them. */
     PetscSF         *subspaceSFs = NULL;
-    PetscInt        *ilocal = NULL;
-    PetscSFNode     *iremote = NULL;
+    PetscInt        *ilocal      = NULL;
+    PetscSFNode     *iremote     = NULL;
     PetscInt         allRoots = 0, allLeaves = 0, index = 0;
     const PetscInt **subspaceIndices = NULL;
 
@@ -240,7 +240,7 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
 
     for (PetscInt k = 0; k < n; ++k) {
       PetscInt           nleaves;
-      const PetscInt    *subilocal = NULL;
+      const PetscInt    *subilocal  = NULL;
       const PetscSFNode *subiremote = NULL;
 
       PetscCall(PetscSFGetGraph(subspaceSFs[k], NULL, &nleaves, &subilocal, &subiremote));
@@ -255,8 +255,7 @@ static PetscErrorCode PCPatchCreateDefaultSF_Private(PC pc, PetscInt n, const IS
     PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)pc), &patch->sectionSF));
     PetscCall(PetscSFSetGraph(patch->sectionSF, allRoots, allLeaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER));
 
-    for (PetscInt k = 0; k < n; ++k)
-      PetscCall(ISRestoreIndices(isets[k], &subspaceIndices[k]));
+    for (PetscInt k = 0; k < n; ++k) PetscCall(ISRestoreIndices(isets[k], &subspaceIndices[k]));
     PetscCall(PetscFree(subspaceIndices));
     for (PetscInt k = 0; k < n; ++k) PetscCall(PetscSFDestroy(&subspaceSFs[k]));
     PetscCall(PetscFree(subspaceSFs));
