@@ -141,6 +141,8 @@ PetscSectionGetFieldOffset(PetscSection, PetscInt point, PetscInt field, PetscIn
 
 The value in the array is then accessed with `array[offset + d]`, where `d` in `[0, ndof)` is the dof to access.
 
+(sec_petscsection_globalsection)=
+
 ## Global Sections: Constrained and Distributed Data
 
 To handle distributed data and data with constraints, we use a pair of `PetscSections` called the `localSection` and `globalSection`.
@@ -150,7 +152,7 @@ Their use for each is described below.
 
 `PetscSection` can also be applied to distributed problems as well.
 This is done using the same local/global system described in {any}`sec_localglobal`.
-To do this, we introduce three new concepts; a `localSection`, `globalSection`, `pointSF`, and `sectionSF`.
+To do this, we introduce four new concepts; a `localSection`, `globalSection`, `pointSF`, and `sectionSF`.
 
 Assume the mesh points of the "global" mesh are partitioned among processes and that some mesh points are shared between multiple processes (i.e there is an overlap in the partitions).
 The shared mesh points define the ghost/halo points needed in many PDE problems.
@@ -158,10 +160,10 @@ For each shared mesh point, appoint one process to be the owner of that mesh poi
 To describe this parallel mesh point layout, we use a `PetscSF` and call it the `pointSF`.
 The `pointSF` describes which processes "own" which mesh points and which process is the owner of each shared mesh point.
 
-Next, for each process define a `PetscSection` that describes the mapping between that process's partition (including shared mesh points) and the data stored on it and call it the `localSection`.
-The `localSection` describes the layout of the local vector.
+Next, for each process, define the `localSection`, which is a `PetscSection` that describes the data stored on the process's mesh points (including shared mesh points).
+The `localSection` describes the data layout of the local vector. The `globalSection` describes the data layout of the global vector.
 To generate the `globalSection` we use `PetscSectionCreateGlobalSection()`, which takes the `localSection` and `pointSF` as inputs.
-The global section returns $-(dof+1)$ for the number of dofs on an unowned (ghost) point, and traditionally $-(off+1)$ for its offset on the owning process.
+The global section returns $-(dof+1)$ for the number of dofs on an unowned (ghost) point, and by convention $-(off+1)$ for its offset on the owning process.
 This behavior of the offsets is controlled via an argument to `PetscSectionCreateGlobalSection()`.
 The `globalSection` can be used to create global vectors, just as the local section is used to create local vectors.
 
@@ -214,6 +216,38 @@ A vanilla `PetscSection` (what's been described up till now) gives a relatively 
 A `PetscSection` can store and use this extra information in the form of **closures**, **symmetries**, and **closure permutations**.
 These features currently target `DMPlex` and other unstructured grid descriptions.
 A description of those features will be left to {any}`ch_unstructured`.
+
+## Redistributing Data Described by a PetscSection
+
+Alternatively, this could be described as redistribution of local sections? IDK if I want to make the connection to localSections for this, as that might be more confusing (localSection inclines that there is a point-overlap in the pointSF, whereas for the redistribution it's kinda assumed there isn't one, at least in the majority of use cases I can think of.)
+
+When dealing with parallel data using global sections (see {any}`sec_petscsection_globalsection`), it is assumed that the vast majority of the data is always held locally and only small portions of the local data must be communicated.
+This assumption means that the overlap of points between the local and global sections is small.
+If we set the `pointSF` to hold the relative location for every single point, then most of the leaves would point to themselves (i.e. the vast majority of points own themselves).
+To reduce redundant information, the global section system denotes these "identity" leaves
+In other words, the `pointSF` only
+First, the global section inherits the same chart as the local section.
+Second, any local points that do not have leaves in the `pointSF` are implicitly assumed to be kept in the global section.
+These assumptions are often valid for data that is related to a mesh and continuously used in computation.
+
+But what if you have data, described by a `PetscSection`, that needs to be completely redistributed, with a completely-independent section to describe the new layout, and with no assumptions made about the `pointSF`?
+This is what `PetscSFDistributeSection()` addresses.
+It takes a `originalSection` and `pointSF` to create a `newSection` and a `remoteOffsets`array.
+Compared to the global section system described in {any}`sec_petscsection_globalsection`, `originalSection` is analogous to the local section and `newSection` is analogous to the global section.
+The `pointSF` describes the new distribution of points, with each edge connecting the original section chart with the new section chart on other ranks.
+As such, there are no assumptions made about the `pointSF`; if a local point does not have a edge associated with it, the data associated with that point will be not be represented in the new section.
+Rather than assume the same chart for the original and new sections, `PetscSFDistributeSection()` creates an entirely new `PetscSection` describing the data layout of
+
+Compared to `PetscSFSetGraphSection()`, `PetscSFCreateSectionSF()` needs a `remoteOffsets` array.
+In the global-section-system, the equivalent offset information is stored in the global section itself, via the negative offsets in the section.
+
+By way of example, assume that you have some distributed data associated at vertices of a mesh and that the data layout is described by a `PetscSection` at each rank.
+If the mesh is repartitioned or redistributed across ranks, the data associated with each point needs to be communicated to their new locations.
+This is where `PetscSFDistributeSection()` and `PetscSFCreateSectionSF()` come into play.
+
+Data described by a `PetscSection` can be redistributed to different ranks.
+This process is similar, but different to that described in {any}`sec_petscsection_globalsection` for two reasons.
+First, the redistribution process is often (but not limited to) one direction; we want to move data to some new location, but 
 
 ```{rubric} Footnotes
 ```
