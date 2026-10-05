@@ -2217,6 +2217,13 @@ static PetscErrorCode MatDuplicateNoCreate_SeqSELL(Mat C, Mat A, MatDuplicateOpt
   PetscCall(PetscLayoutReference(A->cmap, &C->cmap));
 
   c->sliceheight = a->sliceheight;
+  c->totalslices = a->totalslices;
+#if PetscDefined(HAVE_CUPM)
+  c->chunksize   = a->chunksize;
+  c->totalchunks = a->totalchunks;
+  PetscCall(PetscMalloc1(c->totalchunks, &c->chunk_slice_map));
+  PetscCall(PetscArraycpy(c->chunk_slice_map, a->chunk_slice_map, c->totalchunks));
+#endif
   PetscCall(PetscMalloc1(c->sliceheight * totalslices, &c->rlen));
   PetscCall(PetscMalloc1(totalslices + 1, &c->sliidx));
 
