@@ -42,9 +42,28 @@ typedef struct {
 
 static PetscErrorCode FormJacobian_Grid(GridCtx *, Mat);
 
+/* Copies A into a new dense matrix of the same type and layout, stored with a leading dimension larger by shift */
+static PetscErrorCode DuplicateWithLDA(Mat A, PetscInt shift, Mat *B)
+{
+  MatType  type;
+  PetscInt m, n, M, N;
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetType(A, &type));
+  PetscCall(MatGetLocalSize(A, &m, &n));
+  PetscCall(MatGetSize(A, &M, &N));
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)A), B));
+  PetscCall(MatSetSizes(*B, m, n, M, N));
+  PetscCall(MatSetType(*B, type));
+  PetscCall(MatDenseSetLDA(*B, m + shift));
+  PetscCall(MatSetUp(*B));
+  PetscCall(MatCopy(A, *B, SAME_NONZERO_PATTERN));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
-  PetscInt    i, its, Nx = PETSC_DECIDE, Ny = PETSC_DECIDE, nlocal, nrhs = 1;
+  PetscInt    i, its, Nx = PETSC_DECIDE, Ny = PETSC_DECIDE, nlocal, nrhs = 1, lda_shift = 0;
   PetscScalar one = 1.0;
   Mat         A, P = NULL, B, X;
   GridCtx     fine_ctx;
@@ -64,6 +83,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-rand", &Brand, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-transpose", &transpose, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-product_into_solution", &product, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-lda_shift", &lda_shift, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-new_pattern", &new_pattern, NULL));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Fine grid size %" PetscInt_FMT " by %" PetscInt_FMT "\n", fine_ctx.mx, fine_ctx.my));
 
@@ -135,6 +155,23 @@ int main(int argc, char **argv)
     }
     PetscCall(MatDenseRestoreArrayRead(X, &XX));
     PetscCall(VecRestoreArrayRead(fine_ctx.x, &xx));
+  }
+
+  if (lda_shift) { /* solve again with the same blocks stored with a larger leading dimension, which the solver must handle with what it kept from the first solve */
+    Mat       B2, X2;
+    PetscReal norm, err;
+
+    PetscCall(DuplicateWithLDA(B, lda_shift, &B2));
+    PetscCall(DuplicateWithLDA(X, lda_shift, &X2));
+    PetscCall(MatZeroEntries(X2));
+    if (transpose) PetscCall(KSPMatSolveTranspose(ksp, B2, X2));
+    else PetscCall(KSPMatSolve(ksp, B2, X2));
+    PetscCall(MatNorm(X, NORM_FROBENIUS, &norm));
+    PetscCall(MatAXPY(X2, -1.0, X, SAME_NONZERO_PATTERN));
+    PetscCall(MatNorm(X2, NORM_FROBENIUS, &err));
+    PetscCheck(err <= PETSC_SMALL * norm, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Solution with a larger leading dimension has error %g relative to %g", (double)err, (double)norm);
+    PetscCall(MatDestroy(&B2));
+    PetscCall(MatDestroy(&X2));
   }
 
   if (new_pattern) { /* solve again after storing an explicit zero at a new location of A, which changes its nonzero pattern and the columns its rows couple to on other processes, but not the solution */
@@ -304,6 +341,12 @@ PetscErrorCode FormJacobian_Grid(GridCtx *grid, Mat jac)
       suffix: matcycles_new_pattern
       nsize: 2
       args: -ksp_type preonly -pc_type mg -pc_use_amat -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin both -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -new_pattern
+
+    test:
+      # a second solve with blocks of a larger leading dimension
+      suffix: matcycles_lda
+      nsize: 2
+      args: -ksp_type preonly -pc_type mg -mx 5 -my 5 -pc_mg_levels 3 -pc_mg_galerkin -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}shared output} -nrhs 7 -ksp_matsolve_batch_size {{4 7}shared output} -lda_shift 3
 
     test:
       suffix: matcycles_richardson_transpose

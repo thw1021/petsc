@@ -10701,20 +10701,30 @@ PetscErrorCode MatRARt(Mat A, Mat R, MatReuse scall, PetscReal fill, Mat *C)
    which for MATMPIAIJ times MATMPIDENSE allocates the work matrices and the PetscSF of the scatter again
 
    The symbolic phase depends on the nonzero structure of A, so a product bound to a different A, or to an A whose nonzero
-   pattern changed since, is set up again, while a different B of the same shape is only bound to the product. The nonzero
-   state of a parallel matrix is the same on all processes, so all of them take the same branch
+   pattern changed since, is set up again, while a different dense B of the same shape and leading dimension is only bound
+   to the product. The nonzero state of a parallel matrix is the same on all processes, so all of them take the same branch
 */
 PetscErrorCode MatProductComputeWithMat_Private(Mat A, Mat B, MatProductType ptype, Mat D)
 {
   Mat_Product     *product = D->product;
   PetscObjectState state;
-  PetscBool        flg;
+  PetscInt         lda, plda;
+  PetscBool        flg, setup;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)D, &flg, MATSEQDENSE, MATMPIDENSE, ""));
   PetscCheck(flg, PetscObjectComm((PetscObject)D), PETSC_ERR_SUP, "The result must be dense, not %s", ((PetscObject)D)->type_name);
   PetscCall(MatGetNonzeroState(A, &state));
-  if (!product || product->type != ptype || product->A != A || product->Anonzerostate != state) {
+  setup = (PetscBool)(!product || product->type != ptype || product->A != A || product->Anonzerostate != state);
+  if (!setup && product->B != B) {
+    /* the symbolic phase may depend on the leading dimension of B, as the PetscSF of MATMPIAIJ times MATMPIDENSE does, and that
+       dimension may differ on some processes only, while setting the product up again is collective */
+    PetscCall(MatDenseGetLDA(B, &lda));
+    PetscCall(MatDenseGetLDA(product->B, &plda));
+    setup = (PetscBool)(lda != plda);
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &setup, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)D)));
+  }
+  if (setup) {
     PetscCall(PetscInfo(D, "Setting up the %s product into the supplied dense matrix\n", MatProductTypes[ptype]));
     PetscCall(MatProductCreateWithMat(A, B, NULL, D));
     D->product->api_user = PETSC_TRUE;

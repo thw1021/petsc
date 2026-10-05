@@ -14,4 +14,5 @@ typedef struct {
   PetscBool        transpose; /* direction the product cached in R was set up with */
   PetscObjectId    id;        /* identity of the operator the product cached in R was set up with */
   PetscObjectState state;     /* nonzero state of that operator, only a change of nonzero pattern invalidates the symbolic phase, new values do not */
+  PetscInt         lda;       /* leading dimension of the block of solutions the product cached in R was set up with */
 } KSP_Richardson;

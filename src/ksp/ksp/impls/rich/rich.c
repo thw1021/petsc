@@ -173,6 +173,7 @@ static PetscErrorCode KSPMatSolveResetBlocks_Richardson(KSP ksp)
   richardsonP->transpose = PETSC_FALSE;
   richardsonP->id        = 0;
   richardsonP->state     = 0;
+  richardsonP->lda       = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -191,7 +192,7 @@ static PetscErrorCode KSPMatSolve_Richardson(KSP ksp, Mat B, Mat X)
   PetscReal        rnorm = 0.0;
   Mat              Amat, Pmat, R, Z;
   Vec              cb, cx;
-  PetscInt         i, maxit, m, mn, n, nn, N, NN;
+  PetscInt         i, maxit, m, mn, n, nn, N, NN, lda;
   KSP_Richardson  *richardsonP = (KSP_Richardson *)ksp->data;
   PetscBool        exists, matexists, match = PETSC_FALSE, reuse = PETSC_FALSE;
   PetscObjectId    id;
@@ -252,17 +253,19 @@ static PetscErrorCode KSPMatSolve_Richardson(KSP ksp, Mat B, Mat X)
   }
 
   PetscCall(PetscInfo(ksp, "Iterating on each batch of right-hand sides, by default the whole block\n"));
-  /* R and Z are cached between calls, they are rebuilt only when the shape or the type of the block of right-hand sides, the direction of the solve, or the nonzero pattern of the operator changes,
-     the local column layout is part of the shape since MatDenseGetSubMatrix() may distribute two batches of the same global width differently */
+  /* R and Z are cached between calls, they are rebuilt only when the shape or the type of the block of right-hand sides, the direction of the solve, the nonzero pattern of the operator,
+     or the leading dimension of the block of solutions changes, the local column layout is part of the shape since MatDenseGetSubMatrix() may distribute two batches of the same global
+     width differently, and the symbolic phase of the product may depend on the leading dimension, as the PetscSF of MATMPIAIJ times MATMPIDENSE does */
   PetscCall(MatGetLocalSize(B, &m, &mn));
   PetscCall(MatGetSize(B, NULL, &N));
   PetscCall(PetscObjectGetId((PetscObject)Amat, &id));
   PetscCall(MatGetNonzeroState(Amat, &state));
+  PetscCall(MatDenseGetLDA(X, &lda));
   if (richardsonP->R) { /* a process without cached work blocks of vectors contributes PETSC_FALSE to the reduction below */
     PetscCall(MatGetLocalSize(richardsonP->R, &n, &nn));
     PetscCall(MatGetSize(richardsonP->R, NULL, &NN));
     if (n == m && nn == mn && NN == N) PetscCall(PetscObjectTypeCompare((PetscObject)richardsonP->R, ((PetscObject)B)->type_name, &reuse));
-    if (richardsonP->transpose != ksp->transpose_solve || richardsonP->id != id || richardsonP->state != state) reuse = PETSC_FALSE;
+    if (richardsonP->transpose != ksp->transpose_solve || richardsonP->id != id || richardsonP->state != state || richardsonP->lda != lda) reuse = PETSC_FALSE;
   }
   /* the local sizes above may match on some processes only, while both branches below are collective, so the verdict must be the same on all of them */
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &reuse, 1, MPI_C_BOOL, MPI_LAND, PetscObjectComm((PetscObject)ksp)));
@@ -282,6 +285,7 @@ static PetscErrorCode KSPMatSolve_Richardson(KSP ksp, Mat B, Mat X)
     richardsonP->transpose = ksp->transpose_solve;
     richardsonP->id        = id;
     richardsonP->state     = state;
+    richardsonP->lda       = lda;
   }
   R = richardsonP->R;
   Z = richardsonP->Z;

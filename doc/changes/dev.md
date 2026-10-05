@@ -59,9 +59,12 @@
 ```
 
 - Change `PCMG` applied with `PCMatApply()` to keep the `MatProduct` of each block residual, restriction, and interpolation between applications, so that their symbolic phase, which for `MATMPIAIJ` times `MATMPIDENSE` allocates work matrices and a `PetscSF`, is not redone on every application; `PCMGMatResidualDefault()` and `PCMGMatResidualTransposeDefault()` keep the product attached to the residual block
+- Fix `PCMatApply()` with `PCMG` erroring when called again with blocks of a different leading dimension
 
 ```{rubric} KSP:
 ```
+
+- Fix `KSPMatSolve()` with `KSPRICHARDSON` erroring when called again with a block of solutions of a different leading dimension
 
 ```{rubric} SNES:
 ```
