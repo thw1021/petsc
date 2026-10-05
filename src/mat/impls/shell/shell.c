@@ -533,13 +533,13 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
     }
     switch (product->type) {
     case MATPRODUCT_AB: /* s L A R B + v L R B + L D R B */
-      if (shell->right) PetscCall(MatDiagonalScale(mdata->B, shell->right, NULL));
+      PetscCall(MatDiagonalScale(mdata->B, shell->right, NULL));
       break;
     case MATPRODUCT_AtB: /* s R A^t L B + v R L B + R D L B */
-      if (shell->left) PetscCall(MatDiagonalScale(mdata->B, shell->left, NULL));
+      PetscCall(MatDiagonalScale(mdata->B, shell->left, NULL));
       break;
     case MATPRODUCT_ABt: /* s L A R B^t + v L R B^t + L D R B^t */
-      if (shell->right) PetscCall(MatDiagonalScale(mdata->B, NULL, shell->right));
+      PetscCall(MatDiagonalScale(mdata->B, NULL, shell->right));
       break;
     case MATPRODUCT_RARt: /* s B L A R B^t + v B L R B^t + B L D R B^t */
       if (shell->right && shell->left) {
@@ -549,7 +549,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
         PetscCheck(flg, PetscObjectComm((PetscObject)D), PETSC_ERR_SUP, "MatProductSymbolic type %s not supported for %s and %s matrices because left scaling != from right scaling", MatProductTypes[product->type], ((PetscObject)A)->type_name,
                    ((PetscObject)B)->type_name);
       }
-      if (shell->right) PetscCall(MatDiagonalScale(mdata->B, NULL, shell->right));
+      PetscCall(MatDiagonalScale(mdata->B, NULL, shell->right));
       break;
     case MATPRODUCT_PtAP: /* s B^t L A R B + v B^t L R B + B^t L D R B */
       if (shell->right && shell->left) {
@@ -559,7 +559,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
         PetscCheck(flg, PetscObjectComm((PetscObject)D), PETSC_ERR_SUP, "MatProductSymbolic type %s not supported for %s and %s matrices because left scaling != from right scaling", MatProductTypes[product->type], ((PetscObject)A)->type_name,
                    ((PetscObject)B)->type_name);
       }
-      if (shell->right) PetscCall(MatDiagonalScale(mdata->B, shell->right, NULL));
+      PetscCall(MatDiagonalScale(mdata->B, shell->right, NULL));
       break;
     default:
       SETERRQ(PetscObjectComm((PetscObject)D), PETSC_ERR_SUP, "MatProductSymbolic type %s not supported for %s and %s matrices", MatProductTypes[product->type], ((PetscObject)A)->type_name, ((PetscObject)B)->type_name);
