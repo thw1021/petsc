@@ -952,32 +952,6 @@ inline PetscErrorCode VecSeq_CUPM<T>::SetStdBasis(Vec s, PetscInt i) noexcept
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-namespace kernels
-{
-
-template <std::size_t N>
-struct MAXPYCoefficients {
-  PetscScalar values[N];
-};
-
-template <typename... Args>
-PETSC_KERNEL_DECL static void MAXPY_kernel(const PetscInt size, PetscScalar *PETSC_RESTRICT xptr, const MAXPYCoefficients<sizeof...(Args)> alpha, Args... yptr)
-{
-  constexpr int      N        = sizeof...(Args);
-  const PetscScalar *yptr_p[] = {yptr...};
-
-  ::Petsc::device::cupm::kernels::util::grid_stride_1D(size, [&](PetscInt i) {
-    auto sum = xptr[i];
-
-#pragma unroll
-    for (auto j = 0; j < N; ++j) sum += alpha.values[j] * yptr_p[j][i];
-    xptr[i] = sum;
-  });
-  return;
-}
-
-} // namespace kernels
-
 namespace detail
 {
 
@@ -993,19 +967,39 @@ struct repeat_type {
 
 } // namespace detail
 
+namespace kernels
+{
+
+template <std::size_t... Idx>
+PETSC_KERNEL_DECL static void MAXPY_kernel(const PetscInt size, PetscScalar *PETSC_RESTRICT xptr, typename detail::repeat_type<PetscScalar, Idx>::type... alpha, typename detail::repeat_type<const PetscScalar *, Idx>::type... yptr)
+{
+  constexpr int      N        = sizeof...(Idx);
+  const PetscScalar  aptr[]   = {alpha...};
+  const PetscScalar *yptr_p[] = {yptr...};
+
+  ::Petsc::device::cupm::kernels::util::grid_stride_1D(size, [&](PetscInt i) {
+    auto sum = xptr[i];
+
+#pragma unroll
+    for (auto j = 0; j < N; ++j) sum += aptr[j] * yptr_p[j][i];
+    xptr[i] = sum;
+  });
+  return;
+}
+
+} // namespace kernels
+
 template <device::cupm::DeviceType T>
 template <std::size_t... Idx>
 inline PetscErrorCode VecSeq_CUPM<T>::MAXPY_kernel_dispatch_(PetscDeviceContext dctx, cupmStream_t stream, PetscScalar *xptr, const PetscScalar *aptr, const Vec *yin, PetscInt size, util::index_sequence<Idx...>) noexcept
 {
-  const kernels::MAXPYCoefficients<sizeof...(Idx)> alpha{{aptr[Idx]...}};
-
   PetscFunctionBegin;
   // clang-format off
   PetscCall(
     PetscCUPMLaunchKernel1D(
       size, 0, stream,
-      kernels::MAXPY_kernel<typename detail::repeat_type<const PetscScalar *, Idx>::type...>,
-      size, xptr, alpha, DeviceArrayRead(dctx, yin[Idx]).data()...
+      kernels::MAXPY_kernel<Idx...>,
+      size, xptr, aptr[Idx]..., DeviceArrayRead(dctx, yin[Idx]).data()...
     )
   );
   // clang-format on
