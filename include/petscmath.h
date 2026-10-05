@@ -2036,7 +2036,12 @@ static const PetscReal PETSC_MACHINE_EPSILON      = __FLT16_EPSILON__;
 static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 0.03125F; // printf("%.5f\n",sqrtf(__FLT16_EPSILON__));
 static const PetscReal PETSC_SMALL                = PetscRealConstant(5.e-3);
 #endif
+#if PetscDefined(HAVE_WINDOWS_H)
+  #define PETSC_MIN_REAL (-PETSC_MAX_REAL)
+#else
 static const PetscReal PETSC_MIN_REAL = (-PETSC_MAX_REAL);
+#endif
+
 /*MC
   PETSC_INFINITY - a finite number that represents infinity for setting certain bounds in `Tao`
 
@@ -2047,7 +2052,11 @@ static const PetscReal PETSC_MIN_REAL = (-PETSC_MAX_REAL);
 
 .seealso: `PETSC_NINFINITY`, `SNESVIGetVariableBounds()`, `SNESVISetComputeVariableBounds()`, `SNESVISetVariableBounds()`
 M*/
+#if PetscDefined(HAVE_WINDOWS_H)
+  #define PETSC_INFINITY (PETSC_MAX_REAL / 4.0)
+#else
 static const PetscReal PETSC_INFINITY = PETSC_MAX_REAL / 4.0;
+#endif
 
 /*MC
   PETSC_NINFINITY - a finite number that represents negative infinity for setting certain bounds in `Tao`
@@ -2059,7 +2068,11 @@ static const PetscReal PETSC_INFINITY = PETSC_MAX_REAL / 4.0;
 
 .seealso: `PETSC_INFINITY`, `SNESVIGetVariableBounds()`, `SNESVISetComputeVariableBounds()`, `SNESVISetVariableBounds()`
 M*/
+#if PetscDefined(HAVE_WINDOWS_H)
+  #define PETSC_NINFINITY (-PETSC_INFINITY)
+#else
 static const PetscReal PETSC_NINFINITY = (-PETSC_INFINITY);
+#endif
 
 PETSC_EXTERN PetscBool  PetscIsInfReal(PetscReal);
 PETSC_EXTERN PetscBool  PetscIsNanReal(PetscReal);
