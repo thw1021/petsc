@@ -10,7 +10,7 @@ EXTERN_C_BEGIN
 EXTERN_C_END
 
 /*
-  PetscPTScotchPartitionGraph_Private - Partitions a graph distributed over comm with PT-SCOTCH
+  PetscPTSCOTCHPartitionGraph_Private - Partitions a graph distributed over comm with PT-SCOTCH
 
   Collective
 
@@ -52,7 +52,7 @@ EXTERN_C_END
 
 .seealso: `PetscCommCreateNonempty()`, `MATPARTITIONINGPTSCOTCH`, `PETSCPARTITIONERPTSCOTCH`
 */
-PetscErrorCode PetscPTScotchPartitionGraph_Private(MPI_Comm comm, const PetscInt ranges[], PetscInt xadj[], PetscInt adjncy[], PetscInt vwgt[], PetscInt adjwgt[], PetscBool useadjwgt, PetscInt nparts, PetscInt tpwgts[], PetscInt strategy, double imbalance, PetscInt assignment[])
+PetscErrorCode PetscPTSCOTCHPartitionGraph_Private(MPI_Comm comm, const PetscInt ranges[], PetscInt xadj[], PetscInt adjncy[], PetscInt vwgt[], PetscInt adjwgt[], PetscBool useadjwgt, PetscInt nparts, PetscInt tpwgts[], PetscInt strategy, double imbalance, PetscInt assignment[])
 {
   MPI_Comm     gcomm;
   SCOTCH_Arch  archdat;
@@ -92,7 +92,7 @@ PetscErrorCode PetscPTScotchPartitionGraph_Private(MPI_Comm comm, const PetscInt
     if (tpwgts) PetscCallExternal(SCOTCH_archCmpltw, &archdat, archnbr, tpwgts);
     else PetscCallExternal(SCOTCH_archCmplt, &archdat, archnbr);
     PetscCallExternal(SCOTCH_graphMap, &grafdat, &archdat, &stradat, assignment);
-    SCOTCH_graphExit(&grafdat);
+    PetscCallExternalVoid("SCOTCH_graphExit", SCOTCH_graphExit(&grafdat));
   } else {
     SCOTCH_Dgraph   grafdat;
     SCOTCH_Dmapping mappdat;
@@ -106,11 +106,11 @@ PetscErrorCode PetscPTScotchPartitionGraph_Private(MPI_Comm comm, const PetscInt
     else PetscCallExternal(SCOTCH_archCmplt, &archdat, archnbr);
     PetscCallExternal(SCOTCH_dgraphMapInit, &grafdat, &mappdat, &archdat, assignment);
     PetscCallExternal(SCOTCH_dgraphMapCompute, &grafdat, &mappdat, &stradat);
-    SCOTCH_dgraphMapExit(&grafdat, &mappdat);
-    SCOTCH_dgraphExit(&grafdat);
+    PetscCallExternalVoid("SCOTCH_dgraphMapExit", SCOTCH_dgraphMapExit(&grafdat, &mappdat));
+    PetscCallExternalVoid("SCOTCH_dgraphExit", SCOTCH_dgraphExit(&grafdat));
   }
-  SCOTCH_archExit(&archdat);
-  SCOTCH_stratExit(&stradat);
+  PetscCallExternalVoid("SCOTCH_archExit", SCOTCH_archExit(&archdat));
+  PetscCallExternalVoid("SCOTCH_stratExit", SCOTCH_stratExit(&stradat));
   PetscCall(PetscFree(edlotabempty));
   PetscCall(PetscCommDestroyNonempty(comm, &gcomm));
   PetscFunctionReturn(PETSC_SUCCESS);

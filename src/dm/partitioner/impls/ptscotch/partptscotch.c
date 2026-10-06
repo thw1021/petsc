@@ -170,7 +170,7 @@ static PetscErrorCode PetscPartitionerPartition_PTScotch(PetscPartitioner part, 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-petscpartititoner_use_vertex_weight", &usevwgt, NULL));
     /* edgeSection is the same on every process, so it reports edge weights where adjwgt cannot:
        a process owning no edges allocates nothing and passes a null array. */
-    PetscCall(PetscPTScotchPartitionGraph_Private(pts->pcomm, vtxdist, xadj, adjncy, usevwgt ? vwgt : NULL, adjwgt, (PetscBool)(edgeSection != NULL), nparts, tpwgts, strat, (double)pts->imbalance, assignment));
+    PetscCall(PetscPTSCOTCHPartitionGraph_Private(pts->pcomm, vtxdist, xadj, adjncy, usevwgt ? vwgt : NULL, adjwgt, (PetscBool)(edgeSection != NULL), nparts, tpwgts, strat, (double)pts->imbalance, assignment));
   }
   PetscCall(PetscFree(vwgt));
   PetscCall(PetscFree(adjwgt));

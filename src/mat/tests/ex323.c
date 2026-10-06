@@ -26,7 +26,7 @@ int main(int argc, char **args)
      vertices and no edges. Its weight arrays then come back null from a zero-size allocation while
      the other processes supply real weights, which is the disagreement SCOTCH_dgraphBuild()
      rejects. Two processes must still own vertices, since
-     PetscPTScotchPartitionGraph_Private() partitions with the sequential SCOTCH_graphBuild() when
+     PetscPTSCOTCHPartitionGraph_Private() partitions with the sequential SCOTCH_graphBuild() when
      every vertex lives on one process.
      Each nonempty process owns several vertices to keep the total vertex load well above the
      number of parts: PT-SCOTCH divides by a per-part average load that truncates to zero for a

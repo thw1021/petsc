@@ -347,7 +347,7 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
     /* MatMPIAdjSetPreallocation_MPIAdj() already reduced whether any process supplies edge weights,
        which a process owning no edges cannot report through adj->values alone. */
     useedgeweights = (PetscBool)(part->use_edge_weights && adj->useedgeweights);
-    PetscCall(PetscPTScotchPartitionGraph_Private(comm, mat->rmap->range, adj->i, adj->j, veloloctab, edloloctab, useedgeweights, nparts, velotab, scotch->strategy, scotch->imbalance, locals));
+    PetscCall(PetscPTSCOTCHPartitionGraph_Private(comm, mat->rmap->range, adj->i, adj->j, veloloctab, edloloctab, useedgeweights, nparts, velotab, scotch->strategy, scotch->imbalance, locals));
     PetscCall(PetscFree(velotab));
   }
   PetscCallMPI(MPI_Comm_free(&comm));
