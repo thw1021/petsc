@@ -41,7 +41,7 @@ int main(int argc, char **argv)
   PetscMPIInt       size;
   PetscReal        *coords, *gcoords, norm, epsilon;
   MatHtoolKernelFn *kernel = GenEntries;
-  PetscBool         flg, sym = PETSC_FALSE, herm = PETSC_FALSE, set_herm, spd = PETSC_FALSE, set_spd;
+  PetscBool         flg, sym = PETSC_FALSE, set_sym, herm = PETSC_FALSE, set_herm, spd = PETSC_FALSE, set_spd;
   PetscRandom       rdm;
   MatSolverType     type;
 
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n_local", &n, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-K", &K, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-symmetric", &sym, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-symmetric", &sym, &set_sym));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-hermitian", &herm, &set_herm));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-spd", &spd, &set_spd));
 #if PetscDefined(USE_COMPLEX)
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
   PetscCall(PetscArraycpy(gcoords + begin * dim, coords, m * dim));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, gcoords, M * dim, MPIU_REAL, MPI_SUM, PETSC_COMM_WORLD));
   PetscCall(MatCreateHtoolFromKernel(PETSC_COMM_WORLD, m, m, M, M, dim, coords, coords, kernel, gcoords, &A));
-  PetscCall(MatSetOption(A, MAT_SYMMETRIC, sym));
+  if (set_sym) PetscCall(MatSetOption(A, MAT_SYMMETRIC, sym));
   if (set_herm) PetscCall(MatSetOption(A, MAT_HERMITIAN, herm));
   if (set_spd) PetscCall(MatSetOption(A, MAT_SPD, spd));
   PetscCall(MatSetFromOptions(A));
