@@ -1,0 +1,190 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 MMAP anonymous implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=da593796123f99307b486350f8b2ef6ae7d2c375: (HEAD, origin/feature/gparity-merge-april24) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : This rank is running on host Spire
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent host   allocations: SMALL 8 LARGE 2 HUGE 0
+Grid : Message : MemoryManager::Init() cache pool for recent device allocations: SMALL 16 LARGE 8 Huge 0
+Grid : Message : MemoryManager::Init() cache pool for recent shared allocations: SMALL 16 LARGE 8 Huge 0
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.486600 s : Loading configuration from /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125
+Grid : Message : 0.490200 s : * BEGIN_HEADER
+Grid : Message : 0.490500 s : * HDR_VERSION = 1.0
+Grid : Message : 0.491100 s : * DATATYPE = 4D_SU3_GAUGE_3x3
+Grid : Message : 0.491300 s : * STORAGE_FORMAT = 
+Grid : Message : 0.491500 s : * DIMENSION_1 = 8
+Grid : Message : 0.491700 s : * DIMENSION_2 = 8
+Grid : Message : 0.491900 s : * DIMENSION_3 = 8
+Grid : Message : 0.492100 s : * DIMENSION_4 = 8
+Grid : Message : 0.492300 s : * LINK_TRACE = 0.001096773314
+Grid : Message : 0.492500 s : * PLAQUETTE  = 0.5841722839
+Grid : Message : 0.492700 s : * BOUNDARY_1 = PERIODIC
+Grid : Message : 0.492900 s : * BOUNDARY_2 = PERIODIC
+Grid : Message : 0.493100 s : * BOUNDARY_3 = PERIODIC
+Grid : Message : 0.493300 s : * BOUNDARY_4 = PERIODIC
+Grid : Message : 0.493500 s : * CHECKSUM =   c1eabea0
+Grid : Message : 0.493700 s : * SCIDAC_CHECKSUMA =          0
+Grid : Message : 0.493900 s : * SCIDAC_CHECKSUMB =          0
+Grid : Message : 0.494100 s : * ENSEMBLE_ID = UKQCD
+Grid : Message : 0.494300 s : * ENSEMBLE_LABEL = DWF
+Grid : Message : 0.494500 s : * SEQUENCE_NUMBER = 1
+Grid : Message : 0.494700 s : * CREATOR = paboyle
+Grid : Message : 0.495000 s : * CREATOR_HARDWARE = x1922c6s1b0n0-x86_64-Linux-5.14.21-150400.24.55-default
+Grid : Message : 0.495200 s : * CREATION_DATE = Mon May 20 21:03:16 2024 UTC
+Grid : Message : 0.495400 s : * ARCHIVE_DATE = Mon May 20 21:03:16 2024 UTC
+Grid : Message : 0.495600 s : * FLOATING_POINT = IEEE64BIG
+Grid : Message : 0.495800 s : * END_HEADER
+Grid : Message : 0.577500 s : IOobject: C++ read I/O /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 : 2359296 bytes and offset 646
+Grid : Message : 0.644700 s : IOobject:  read  2359296 bytes in 0.000361 s 6232.69 MB/s 
+Grid : Message : 0.655500 s : IOobject: endian and checksum overhead 0.000288 s
+Grid : Message : 0.687100 s : readLatticeObject: vectorize overhead 0.000261 s
+Grid : Message : 0.249690 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 checksum c1eabea0 header   c1eabea0
+Grid : Message : 0.249720 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 plaquette 0.584172 header    0.584172
+Grid : Message : 0.249780 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 link_trace 0.00109677 header    0.00109677
+Grid : Message : 0.249810 s : NERSC Configuration /home/rylanor/Projects/qcd/PETSc-Grid/ckpoint_EODWF_lat.125 and plaquette, link trace, and checksum agree
+ Set 16384 gauge links 
+ Grid lsites 4096
+  1 EPS nconv=0 first unconverged value (error) 0.0715143+0.357344i (8.62483890e-01)
+  2 EPS nconv=0 first unconverged value (error) 0.0598275+0.368848i (4.31681624e-01)
+  3 EPS nconv=0 first unconverged value (error) 0.0562872+0.203428i (6.22220065e-01)
+  4 EPS nconv=0 first unconverged value (error) 0.0524652+0.362757i (9.56631711e-02)
+  5 EPS nconv=0 first unconverged value (error) 0.051252+0.363028i (4.16048503e-02)
+  6 EPS nconv=0 first unconverged value (error) 0.0516564+0.36367i (4.57508437e-02)
+  7 EPS nconv=0 first unconverged value (error) 0.051488+0.363771i (1.89931995e-02)
+  8 EPS nconv=0 first unconverged value (error) 0.051447+0.363906i (6.37944032e-03)
+  9 EPS nconv=0 first unconverged value (error) 0.0512808-0.363916i (6.11482019e-03)
+ 10 EPS nconv=0 first unconverged value (error) 0.0513515-0.363936i (2.28082090e-03)
+ 11 EPS nconv=0 first unconverged value (error) 0.051344+0.363948i (2.37206202e-04)
+ 12 EPS nconv=0 first unconverged value (error) 0.0513444+0.363951i (5.91944626e-05)
+ 13 EPS nconv=0 first unconverged value (error) 0.0513435+0.363951i (1.41077310e-05)
+ 14 EPS nconv=0 first unconverged value (error) 0.051343-0.363951i (2.00687653e-05)
+ 15 EPS nconv=0 first unconverged value (error) 0.0513435+0.363951i (8.58235619e-07)
+ 16 EPS nconv=0 first unconverged value (error) 0.0513435-0.363951i (1.08143081e-06)
+ 17 EPS nconv=0 first unconverged value (error) 0.0513435-0.363951i (1.63075883e-07)
+ 18 EPS nconv=0 first unconverged value (error) 0.0513435-0.363951i (3.39196930e-08)
+ 19 EPS nconv=4 first unconverged value (error) 0.0576616-0.241295i (1.42857668e-07)
+ 20 EPS nconv=5 first unconverged value (error) 0.0576616-0.241295i (3.52458047e-08)
+ 21 EPS nconv=10 first unconverged value (error) 0.0654661-0.279862i (3.97035044e-08)
+ 22 EPS nconv=12 first unconverged value (error) 0.0689077-0.227389i (2.80453339e-08)
+ 23 EPS nconv=16 first unconverged value (error) 0.0718223-0.34101i (2.58492682e-08)
+ 24 EPS nconv=18 first unconverged value (error) 0.0773447+0.374342i (7.44633595e-08)
+ 25 EPS nconv=18 first unconverged value (error) 0.0773447+0.374342i (1.21552947e-08)
+ 26 EPS nconv=21 first unconverged value (error) 0.0856114+0.442045i (3.21098138e-07)
+ 27 EPS nconv=21 first unconverged value (error) 0.0856115+0.442045i (1.65890277e-07)
+ 28 EPS nconv=21 first unconverged value (error) 0.0856115+0.442045i (5.76351931e-08)
+ 29 EPS nconv=22 first unconverged value (error) 0.0856115+0.442045i (1.78390103e-08)
+ 30 EPS nconv=23 first unconverged value (error) 0.0900142+0.485432i (2.22255283e-08)
+ 31 EPS nconv=24 first unconverged value (error) 0.0900142-0.485432i (1.30949660e-07)
+ 32 EPS nconv=24 first unconverged value (error) 0.0900142-0.485432i (6.06561260e-08)
+ 33 EPS nconv=24 first unconverged value (error) 0.0900142-0.485432i (3.27424311e-08)
+ 34 EPS nconv=24 first unconverged value (error) 0.0900142-0.485432i (1.39674348e-08)
+ 35 EPS nconv=33 first unconverged value (error) 0.103052-0.428982i (6.33489823e-07)
+ 36 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (3.19095126e-07)
+ 37 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (1.57407551e-07)
+ 38 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (6.48373020e-08)
+ 39 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (5.59446214e-08)
+ 40 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (3.60888476e-08)
+ 41 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (2.52766194e-08)
+ 42 EPS nconv=33 first unconverged value (error) 0.103052+0.428982i (1.25404761e-08)
+ 43 EPS nconv=37 first unconverged value (error) 0.107574+0.403128i (5.11989632e-07)
+ 44 EPS nconv=37 first unconverged value (error) 0.107574-0.403128i (9.22161203e-08)
+ 45 EPS nconv=37 first unconverged value (error) 0.107574+0.403128i (1.62315336e-07)
+ 46 EPS nconv=37 first unconverged value (error) 0.107574+0.403128i (9.24742010e-08)
+ 47 EPS nconv=37 first unconverged value (error) 0.107574-0.403128i (2.58976280e-08)
+ 48 EPS nconv=37 first unconverged value (error) 0.107574-0.403128i (2.00698075e-08)
+ 49 EPS nconv=37 first unconverged value (error) 0.107574-0.403128i (1.05579182e-08)
+ 50 EPS nconv=41 first unconverged value (error) 0.110409-0.362309i (4.67970661e-08)
+ 51 EPS nconv=42 first unconverged value (error) 0.110409-0.362309i (3.40754103e-08)
+ 52 EPS nconv=42 first unconverged value (error) 0.110409-0.362309i (2.35807685e-08)
+ 53 EPS nconv=42 first unconverged value (error) 0.110409-0.362309i (1.07041182e-08)
+ 54 EPS nconv=45 first unconverged value (error) 0.11392+0.482463i (2.47403088e-08)
+ 55 EPS nconv=45 first unconverged value (error) 0.11392+0.482463i (1.73107968e-08)
+ 56 EPS nconv=46 first unconverged value (error) 0.11392+0.482463i (1.40467273e-08)
+ 57 EPS nconv=49 first unconverged value (error) 0.119012-0.414224i (3.00781301e-07)
+Eigenvalue 0: 0.0513435 + -0.363951 i
+Eigenvalue 1: 0.0513435 + 0.363951 i
+Eigenvalue 2: 0.0563128 + -0.129655 i
+Eigenvalue 3: 0.0563128 + 0.129655 i
+Eigenvalue 4: 0.0576616 + -0.241295 i
+Eigenvalue 5: 0.0576616 + 0.241295 i
+Eigenvalue 6: 0.0594517 + 0.189945 i
+Eigenvalue 7: 0.0594517 + -0.189945 i
+Eigenvalue 8: 0.0603451 + 0.446789 i
+Eigenvalue 9: 0.0603451 + -0.446789 i
+Eigenvalue 10: 0.0654661 + 0.279862 i
+Eigenvalue 11: 0.0654661 + -0.279862 i
+Eigenvalue 12: 0.0689077 + 0.227389 i
+Eigenvalue 13: 0.0689077 + -0.227389 i
+Eigenvalue 14: 0.0697992 + 0.466758 i
+Eigenvalue 15: 0.0697992 + -0.466758 i
+Eigenvalue 16: 0.0718223 + -0.34101 i
+Eigenvalue 17: 0.0718223 + 0.34101 i
+Eigenvalue 18: 0.0773447 + -0.374342 i
+Eigenvalue 19: 0.0773447 + 0.374342 i
+Eigenvalue 20: 0.0791297 + 9.29603e-12 i
+Eigenvalue 21: 0.0856115 + -0.442045 i
+Eigenvalue 22: 0.0856115 + 0.442045 i
+Eigenvalue 23: 0.0900142 + 0.485432 i
+Eigenvalue 24: 0.0900142 + -0.485432 i
+Eigenvalue 25: 0.0910452 + 0.132416 i
+Eigenvalue 26: 0.0910452 + -0.132416 i
+Eigenvalue 27: 0.0960203 + -0.311546 i
+Eigenvalue 28: 0.0960203 + 0.311546 i
+Eigenvalue 29: 0.0978568 + -0.200582 i
+Eigenvalue 30: 0.0978568 + 0.200582 i
+Eigenvalue 31: 0.102659 + -0.566088 i
+Eigenvalue 32: 0.102659 + 0.566088 i
+Eigenvalue 33: 0.103052 + 0.428982 i
+Eigenvalue 34: 0.103052 + -0.428982 i
+Eigenvalue 35: 0.104751 + 0.252995 i
+Eigenvalue 36: 0.104751 + -0.252995 i
+Eigenvalue 37: 0.107574 + -0.403128 i
+Eigenvalue 38: 0.107574 + 0.403128 i
+Eigenvalue 39: 0.108316 + -0.590305 i
+Eigenvalue 40: 0.108316 + 0.590305 i
+Eigenvalue 41: 0.110409 + 0.362309 i
+Eigenvalue 42: 0.110409 + -0.362309 i
+Eigenvalue 43: 0.111351 + -0.545565 i
+Eigenvalue 44: 0.111351 + 0.545565 i
+Eigenvalue 45: 0.11392 + -0.482463 i
+Eigenvalue 46: 0.11392 + 0.482463 i
+Eigenvalue 47: 0.117371 + 0.622249 i
+Eigenvalue 48: 0.117371 + -0.622249 i
+WARNING! There are options you set that were not used!
+WARNING! could be spelling mistake, etc!
+There is one unused database option. It is:
+Option left: name:--grid value: 8.8.8.8 source: command line
