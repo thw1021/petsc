@@ -2036,7 +2036,7 @@ static const PetscReal PETSC_MACHINE_EPSILON      = __FLT16_EPSILON__;
 static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 3.1250e-02F; // printf("%.*e\n", __FLT16_DECIMAL_DIG__-1, sqrtf(__FLT16_EPSILON__))
 static const PetscReal PETSC_SMALL                = PetscRealConstant(5.e-3);
 #endif
-#if PetscDefined(HAVE_WINDOWS_H)
+#if PetscDefined(HAVE_WINDOWS_H) || defined(__INTEL_COMPILER)
   #define PETSC_MIN_REAL (-PETSC_MAX_REAL)
 #else
 static const PetscReal PETSC_MIN_REAL = (-PETSC_MAX_REAL);
@@ -2052,7 +2052,7 @@ static const PetscReal PETSC_MIN_REAL = (-PETSC_MAX_REAL);
 
 .seealso: `PETSC_NINFINITY`, `SNESVIGetVariableBounds()`, `SNESVISetComputeVariableBounds()`, `SNESVISetVariableBounds()`
 M*/
-#if PetscDefined(HAVE_WINDOWS_H)
+#if PetscDefined(HAVE_WINDOWS_H) || defined(__INTEL_COMPILER)
   #define PETSC_INFINITY (PETSC_MAX_REAL / 4.0)
 #else
 static const PetscReal PETSC_INFINITY = PETSC_MAX_REAL / 4.0;
@@ -2068,7 +2068,7 @@ static const PetscReal PETSC_INFINITY = PETSC_MAX_REAL / 4.0;
 
 .seealso: `PETSC_INFINITY`, `SNESVIGetVariableBounds()`, `SNESVISetComputeVariableBounds()`, `SNESVISetVariableBounds()`
 M*/
-#if PetscDefined(HAVE_WINDOWS_H)
+#if PetscDefined(HAVE_WINDOWS_H) || defined(__INTEL_COMPILER)
   #define PETSC_NINFINITY (-PETSC_INFINITY)
 #else
 static const PetscReal PETSC_NINFINITY = (-PETSC_INFINITY);
