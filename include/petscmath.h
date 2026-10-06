@@ -2015,25 +2015,25 @@ M*/
 static const PetscReal PETSC_MAX_REAL             = FLT_MAX;
 static const PetscReal PETSC_REAL_MIN             = FLT_MIN;
 static const PetscReal PETSC_MACHINE_EPSILON      = FLT_EPSILON;
-static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 3.45266977e-04F; // printf("%.8e\n",sqrtf(FLT_EPSILON))
+static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 3.45266977e-04F; // printf("%.*e\n", FLT_DECIMAL_DIG-1, sqrtf(FLT_EPSILON))
 static const PetscReal PETSC_SMALL                = PetscRealConstant(1.e-5);
 #elif PetscDefined(USE_REAL_DOUBLE)
 static const PetscReal PETSC_MAX_REAL             = DBL_MAX;
 static const PetscReal PETSC_REAL_MIN             = DBL_MIN;
 static const PetscReal PETSC_MACHINE_EPSILON      = DBL_EPSILON;
-static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 1.49011611938476562e-08; // printf("%.17e\n",sqrt(DBL_EPSILON))
+static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 1.4901161193847656e-08; // printf("%.*e\n", DBL_DECIMAL_DIG-1, sqrt(DBL_EPSILON))
 static const PetscReal PETSC_SMALL                = PetscRealConstant(1.e-10);
 #elif PetscDefined(USE_REAL___FLOAT128)
 static const PetscReal PETSC_MAX_REAL             = FLT128_MAX;
 static const PetscReal PETSC_REAL_MIN             = FLT128_MIN;
 static const PetscReal PETSC_MACHINE_EPSILON      = FLT128_EPSILON;
-static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 1.387778780781445675529539585113525391e-17; // printf("%.36Qe\n",sqrtq(FLT128_EPSILON));
+static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 1.38777878078144567552953958511352539e-17Q; // printf("%.*Qe\n", __FLT128_DECIMAL_DIG__-1, sqrtq(FLT128_EPSILON))
 static const PetscReal PETSC_SMALL                = PetscRealConstant(1.e-20);
 #elif PetscDefined(USE_REAL___FP16)
 static const PetscReal PETSC_MAX_REAL             = __FLT16_MAX__;
 static const PetscReal PETSC_REAL_MIN             = __FLT16_MIN__;
 static const PetscReal PETSC_MACHINE_EPSILON      = __FLT16_EPSILON__;
-static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 0.03125F; // printf("%.5f\n",sqrtf(__FLT16_EPSILON__));
+static const PetscReal PETSC_SQRT_MACHINE_EPSILON = 3.1250e-02F; // printf("%.*e\n", __FLT16_DECIMAL_DIG__-1, sqrtf(__FLT16_EPSILON__))
 static const PetscReal PETSC_SMALL                = PetscRealConstant(5.e-3);
 #endif
 #if PetscDefined(HAVE_WINDOWS_H)
