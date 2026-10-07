@@ -1596,7 +1596,7 @@ static PetscErrorCode PCGAMGProlongatorBlockFilter_AGG(PC pc, Mat Prol, PetscInt
   PetscReal   *cn_n2;
   PetscReal    thr2 = thr * thr;
   PetscScalar *zeros;
-  PetscBool    no_off_proc, ishipsparse;
+  PetscBool    no_off_proc;
 
   PetscFunctionBegin;
   PetscCall(MatGetBlockSizes(Prol, &rbs, &cbs));
