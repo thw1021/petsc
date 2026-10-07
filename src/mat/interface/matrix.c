@@ -5941,6 +5941,7 @@ PetscErrorCode MatDiagonalScale(Mat mat, Vec l, Vec r)
   PetscBool flg = PETSC_FALSE;
 
   PetscFunctionBegin;
+  if (!l && !r) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscValidType(mat, 1);
   if (l) {
@@ -5954,7 +5955,6 @@ PetscErrorCode MatDiagonalScale(Mat mat, Vec l, Vec r)
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   MatCheckPreallocated(mat, 1);
-  if (!l && !r) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscLogEventBegin(MAT_Scale, mat, 0, 0, 0));
   PetscUseTypeMethod(mat, diagonalscale, l, r);
