@@ -25,6 +25,7 @@ darwin*/*
 arch-*/*
 *-arch-*/*
 petsc-install/*
+/install/
 batch-test
 c_test
 RDict.db
